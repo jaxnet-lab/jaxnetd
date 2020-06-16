@@ -22,6 +22,3 @@ WORKDIR /root/
 COPY --from=0 /go/src/gitlab.com/jaxnet/core/shard.core .
 
 RUN chmod +x ./app
-
-CMD nice -n 20 ./app
-
