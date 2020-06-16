@@ -11,7 +11,7 @@ variables:
   API_APP_IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
 
 before_script:
-- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.discretemind.com:5555
+- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com
 - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
 - eval $(ssh-agent -s)
 - echo "$JAX_KEY" > ./key.file
