@@ -30,6 +30,7 @@ shard-core-1:
   tags:
     - docker
   before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
     - eval $(ssh-agent -s)
     - echo "$JAX_KEY" > ./key.file
     - chmod 400 ./key.file
