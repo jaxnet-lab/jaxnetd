@@ -41,3 +41,23 @@ shard-core-1:
     - ssh jax@116.202.107.209 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh jax@116.202.107.209 "(docker stop shard-core || true) && (docker rm shard-core || true)"
     - ssh jax@116.202.107.209 "docker run -d --network host --restart=always --name shard-core $IMAGE"
+
+shard-core-2:
+  stage: deploy
+  when: manual
+  tags:
+    - docker
+  script:
+    - ssh jax@116.203.250.136 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
+    - ssh jax@116.203.250.136 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+    - ssh jax@116.203.250.136 "docker run -d --network host --restart=always --name shard-core $IMAGE"
+
+shard-core-3:
+  stage: deploy
+  when: manual
+  tags:
+    - docker
+  script:
+    - ssh jax@116.202.97.45 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
+    - ssh jax@116.202.97.45 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+    - ssh jax@116.202.97.45 "docker run -d --network host --restart=always --name shard-core $IMAGE"
