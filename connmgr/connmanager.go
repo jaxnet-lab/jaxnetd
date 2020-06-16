@@ -57,6 +57,7 @@ const (
 type ConnReq struct {
 	// The following variables must only be used atomically.
 	id uint64
+	ShardID   uint64
 
 	Addr      net.Addr
 	Permanent bool

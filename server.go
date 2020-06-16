@@ -1887,6 +1887,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// TODO: if too many, nuke a non-perm peer.
 		go s.connManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
+			ShardID:   1010101,
 			Permanent: msg.permanent,
 		})
 		msg.reply <- nil
@@ -2864,6 +2865,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 
 		go s.connManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
+			ShardID:   1010101,
 			Permanent: true,
 		})
 	}

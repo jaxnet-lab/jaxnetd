@@ -1,0 +1,43 @@
+image: docker:git
+services:
+- docker:dind
+
+stages:
+- build
+- deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  API_APP_IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+
+before_script:
+- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.discretemind.com:5555
+- 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+- eval $(ssh-agent -s)
+- echo "$JAX_KEY" > ./key.file
+- chmod 400 ./key.file
+- ssh-add ./key.file
+- mkdir -p ~/.ssh
+- '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+- ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
+
+build:
+  stage: build
+  only:
+    - master
+  tags:
+    - docker
+  script:
+    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $API_APP_IMAGE
+    - docker push $API_APP_IMAGE
+
+#shard-core:
+#  stage: deploy
+#  when: manual
+#  tags:
+#    - docker
+#  before_script:
+#  script:
+#    - ssh root@161.35.57.7 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.discretemind.com:5555 && docker pull $API_APP_IMAGE"
+#    - ssh root@161.35.57.7 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+#    - ssh root@161.35.57.7 "docker run -d --network host --restart=failure --name shard-core $API_APP_IMAGE"
