@@ -40,4 +40,4 @@ shard-core-1:
   script:
     - ssh jax@116.202.107.209 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh jax@116.202.107.209 "(docker stop shard-core || true) && (docker rm shard-core || true)"
-    - ssh jax@116.202.107.209 "docker run -d --network host --restart=failure --name shard-core $IMAGE"
+    - ssh jax@116.202.107.209 "docker run -d --network host --restart=always --name shard-core $IMAGE"
