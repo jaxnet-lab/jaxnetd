@@ -8,10 +8,15 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  API_APP_IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+  IMAGE: shard.core
+#  //:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+
+#before_script:
+#  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
 
 before_script:
-  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $REGISTRY_URL
+
 
 build:
   stage: build
@@ -20,8 +25,10 @@ build:
   before_script:
 
   script:
-    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $API_APP_IMAGE
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com && docker push $API_APP_IMAGE
+    - docker build -t $REGISTRY_URL/$IMAGE .
+    - docker push $REGISTRY_URL/$IMAGE:latest
+#    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $API_APP_IMAGE
+#    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com && docker push $API_APP_IMAGE
 
 
 #before_script:
