@@ -15,6 +15,14 @@ variables:
 
 before_script:
   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+  - eval $(ssh-agent -s)
+  - echo "$JAX_KEY" > ./key.file
+  - chmod 400 ./key.file
+  - ssh-add ./key.file
+  - mkdir -p ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
 
 build:
   stage: build
@@ -29,15 +37,6 @@ shard-core-1:
   when: manual
   tags:
     - docker
-  before_script:
-    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
-    - eval $(ssh-agent -s)
-    - echo "$JAX_KEY" > ./key.file
-    - chmod 400 ./key.file
-    - ssh-add ./key.file
-    - mkdir -p ~/.ssh
-    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    - ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
   script:
     - ssh jax@116.202.107.209 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh jax@116.202.107.209 "(docker stop shard-core || true) && (docker rm shard-core || true)"
