@@ -22,7 +22,7 @@ build:
     - docker
   script:
     - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
-    - ocker push $IMAGE
+    - docker push $IMAGE
 #    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com && docker push $API_APP_IMAGE
 
 
