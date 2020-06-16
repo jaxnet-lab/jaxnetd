@@ -8,7 +8,7 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/core/shard.core/:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+  IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
 
 #before_script:
 #  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
@@ -20,8 +20,6 @@ build:
   stage: build
   tags:
     - docker
-  before_script:
-
   script:
     - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
     - ocker push $IMAGE
