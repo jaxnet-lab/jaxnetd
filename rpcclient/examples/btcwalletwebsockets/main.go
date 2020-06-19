@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 )
 
 func main() {
@@ -33,11 +33,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "localhost:18332",
 		Endpoint:     "ws",
-		User:         "yourrpcuser",
-		Pass:         "yourrpcpass",
+		Host:         "0.0.0.0:8334",
+		User:         "somerpc",
+		Pass:         "somerpc",
+		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 		Certificates: certs,
 	}
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)

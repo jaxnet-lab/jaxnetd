@@ -7,10 +7,8 @@ package main
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/limits"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -43,11 +41,11 @@ var winServiceMain func() (bool, error)
 // requested from the service control manager.
 func btcdMain(serverChan chan<- *server) error {
 
-	params := &chaincfg.JaxNetParams
-	params.Name = "jaxnet"
-	params.Net = wire.BitcoinNet(0x12121212)
-	params.PubKeyHashAddrID = byte(0x6F)
-	params.PrivateKeyID = byte(0x80)
+	//params := &chaincfg.JaxNetParams
+	//params.Name = "jaxnet"
+	//params.Net = wire.BitcoinNet(0x12121212)
+	//params.PubKeyHashAddrID = byte(0x6F)
+	//params.PrivateKeyID = byte(0x80)
 	//
 	//fmt.Println(params.Net, activeNetParams.Net)
 	//fmt.Println(params.PubKeyHashAddrID, activeNetParams.PubKeyHashAddrID)

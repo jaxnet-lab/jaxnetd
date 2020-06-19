@@ -5,14 +5,13 @@
 package main
 
 import (
-	"io/ioutil"
+	"fmt"
 	"log"
-	"path/filepath"
 	"time"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 func main() {
@@ -32,17 +31,18 @@ func main() {
 	}
 
 	// Connect to local btcd RPC server using websockets.
-	btcdHomeDir := btcutil.AppDataDir("btcd", false)
-	certs, err := ioutil.ReadFile(filepath.Join(btcdHomeDir, "rpc.cert"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	//btcdHomeDir := btcutil.AppDataDir("btcd", false)
+	//certs, err := ioutil.ReadFile(filepath.Join(btcdHomeDir, "rpc.cert"))
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "localhost:8334",
-		Endpoint:     "ws",
-		User:         "yourrpcuser",
-		Pass:         "yourrpcpass",
-		Certificates: certs,
+		Endpoint:   "ws",
+		Host:       "0.0.0.0:8334",
+		User:       "somerpc",
+		Pass:       "somerpc",
+		DisableTLS: true, // Bitcoin core does not provide TLS by default
+		//Certificates: certs,
 	}
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)
 	if err != nil {
@@ -71,6 +71,14 @@ func main() {
 		client.Shutdown()
 		log.Println("Client shutdown complete.")
 	})
+
+	v, err := client.Version()
+	fmt.Println(v, err)
+
+	balance, err := client.GetBalance("mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx")
+	fmt.Println(balance, err)
+
+	//client.EstimateSmartFee(1, )
 
 	// Wait until the client either shuts down gracefully (or the user
 	// terminates the process with Ctrl+C).

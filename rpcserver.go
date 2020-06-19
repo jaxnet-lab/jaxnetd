@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
@@ -41,7 +42,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"github.com/btcsuite/websocket"
 )
 
 // API version constants
@@ -173,6 +173,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"verifychain":           handleVerifyChain,
 	"verifymessage":         handleVerifyMessage,
 	"version":               handleVersion,
+	"getnetworkinfo":        handleGetnetworkinfo,
 }
 
 // list of commands that we recognize, but for which btcd has no support because
@@ -228,7 +229,6 @@ var rpcUnimplemented = map[string]struct{}{
 	"estimatepriority": {},
 	"getchaintips":     {},
 	"getmempoolentry":  {},
-	"getnetworkinfo":   {},
 	"getwork":          {},
 	"invalidateblock":  {},
 	"preciousblock":    {},
@@ -1182,6 +1182,7 @@ func softForkStatus(state blockchain.ThresholdState) (string, error) {
 
 // handleGetBlockChainInfo implements the getblockchaininfo command.
 func handleGetBlockChainInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	fmt.Println("handleGetBlockChainInfo")
 	// Obtain a snapshot of the current best known blockchain state. We'll
 	// populate the response to this call primarily from this snapshot.
 	params := s.cfg.ChainParams
@@ -2764,6 +2765,7 @@ func handleGetTxOut(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 // handleHelp implements the help command.
 func handleHelp(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.HelpCmd)
+	fmt.Println("handleHelp ")
 
 	// Provide a usage overview of all commands when no specific command
 	// was specified.
@@ -3629,6 +3631,16 @@ func handleVersion(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (in
 	return result, nil
 }
 
+func handleGetnetworkinfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	result := btcjson.NewGetNetworkInfoCmd()
+	fmt.Println("NetworkInfo: ", result)
+	return struct {
+		Subversion string `json:"subversion"`
+	}{
+		Subversion: "1.0.0",
+	}, nil
+}
+
 // rpcServer provides a concurrent safe RPC server to a chain server.
 type rpcServer struct {
 	started                int32
@@ -3837,6 +3849,7 @@ type parsedRPCCmd struct {
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
 func (s *rpcServer) standardCmdResult(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
+	fmt.Println("standardCmdResult ", cmd)
 	handler, ok := rpcHandlers[cmd.method]
 	if ok {
 		goto handled
@@ -4329,6 +4342,7 @@ func newRPCServer(config *rpcserverConfig) (*rpcServer, error) {
 // Callback for notifications from blockchain.  It notifies clients that are
 // long polling for changes or subscribed to websockets notifications.
 func (s *rpcServer) handleBlockchainNotification(notification *blockchain.Notification) {
+	fmt.Println("handleBlockchainNotification ", notification)
 	switch notification.Type {
 	case blockchain.NTBlockAccepted:
 		block, ok := notification.Data.(*btcutil.Block)

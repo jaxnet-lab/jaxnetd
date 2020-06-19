@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
@@ -13,7 +14,7 @@ import (
 func main() {
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "0.0.0.0:8334",
+		Host:         "0.0.0.0:8332",
 		User:         "somerpc",
 		Pass:         "somerpc",
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
@@ -33,4 +34,14 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("Block count: %d", blockCount)
+
+	balance, err := client.GetBalance("mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx")
+	fmt.Println(balance, err)
+	info, err := client.GetInfo()
+	fmt.Printf("%+v\n", info)
+	v, err := client.Version()
+	fmt.Printf("%+v\n", v)
+
+	bi, err := client.GetBlockChainInfo()
+	fmt.Printf("%+v\n", bi)
 }
