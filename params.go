@@ -39,7 +39,7 @@ var mainNetParams = params{
 // to emulate the full reference implementation RPC API.
 var jaxNetParams = params{
 	Params:  &chaincfg.JaxNetParams,
-	rpcPort: "8444",
+	rpcPort: "8334",
 }
 
 // regressionNetParams contains parameters specific to the regression test

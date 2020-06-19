@@ -25,10 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 var (
@@ -1477,6 +1477,7 @@ func parseBitcoindVersion(version string) BackendVersion {
 // BackendVersion retrieves the version of the backend the client is currently
 // connected to.
 func (c *Client) BackendVersion() (BackendVersion, error) {
+	fmt.Println("Backend version")
 	c.backendVersionMu.Lock()
 	defer c.backendVersionMu.Unlock()
 

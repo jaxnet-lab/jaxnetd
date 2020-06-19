@@ -445,12 +445,16 @@ func NewGetMiningInfoCmd() *GetMiningInfoCmd {
 }
 
 // GetNetworkInfoCmd defines the getnetworkinfo JSON-RPC command.
-type GetNetworkInfoCmd struct{}
+type GetNetworkInfoCmd struct {
+	//Subversion string `json:"subversion"`
+}
 
 // NewGetNetworkInfoCmd returns a new instance which can be used to issue a
 // getnetworkinfo JSON-RPC command.
 func NewGetNetworkInfoCmd() *GetNetworkInfoCmd {
-	return &GetNetworkInfoCmd{}
+	return &GetNetworkInfoCmd{
+		//Subversion: "1.3.0",
+	}
 }
 
 // GetNetTotalsCmd defines the getnettotals JSON-RPC command.

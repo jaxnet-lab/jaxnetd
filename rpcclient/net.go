@@ -6,6 +6,7 @@ package rpcclient
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 )
@@ -251,6 +252,7 @@ type FutureGetNetworkInfoResult chan *response
 // Receive waits for the response promised by the future and returns data about
 // the current network.
 func (r FutureGetNetworkInfoResult) Receive() (*btcjson.GetNetworkInfoResult, error) {
+	fmt.Println("FutureGetNetworkInfoResult", r)
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -272,12 +274,14 @@ func (r FutureGetNetworkInfoResult) Receive() (*btcjson.GetNetworkInfoResult, er
 //
 // See GetNetworkInfo for the blocking version and more details.
 func (c *Client) GetNetworkInfoAsync() FutureGetNetworkInfoResult {
+	fmt.Println("GetNetworkInfoAsync")
 	cmd := btcjson.NewGetNetworkInfoCmd()
 	return c.sendCmd(cmd)
 }
 
 // GetNetworkInfo returns data about the current network.
 func (c *Client) GetNetworkInfo() (*btcjson.GetNetworkInfoResult, error) {
+	fmt.Println("GetNetworkInfo")
 	return c.GetNetworkInfoAsync().Receive()
 }
 

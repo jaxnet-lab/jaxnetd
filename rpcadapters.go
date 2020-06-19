@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"sync/atomic"
 
@@ -78,6 +79,7 @@ var _ rpcserverConnManager = &rpcConnManager{}
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
 func (cm *rpcConnManager) Connect(addr string, permanent bool) error {
+	fmt.Println("Connect ", addr)
 	replyChan := make(chan error)
 	cm.server.query <- connectNodeMsg{
 		addr:      addr,

@@ -20,15 +20,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"github.com/btcsuite/websocket"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -1314,6 +1314,7 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
+		fmt.Println("ws message ", msg, err)
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
@@ -1736,6 +1737,7 @@ func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
 // handleWebsocketHelp implements the help command for websocket connections.
 func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, error) {
 	cmd, ok := icmd.(*btcjson.HelpCmd)
+	fmt.Println("handleWebsocketHelp", cmd, ok)
 	if !ok {
 		return nil, btcjson.ErrRPCInternal
 	}
