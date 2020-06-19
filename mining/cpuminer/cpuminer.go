@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 const (
@@ -336,7 +336,11 @@ out:
 
 		// Choose a payment address at random.
 		rand.Seed(time.Now().UnixNano())
+		//fmt.Println("m.cfg.MiningAddrs", m.cfg.MiningAddrs)
+		//fmt.Println("rand.Intn(len(m.cfg.MiningAddrs)) ", rand.Intn(len(m.cfg.MiningAddrs)))
 		payToAddr := m.cfg.MiningAddrs[rand.Intn(len(m.cfg.MiningAddrs))]
+
+		fmt.Println("payToAddr: ", payToAddr.String())
 
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially

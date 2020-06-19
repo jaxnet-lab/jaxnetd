@@ -1887,6 +1887,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 		// TODO: if too many, nuke a non-perm peer.
 		go s.connManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
+			ShardID:   1010101,
 			Permanent: msg.permanent,
 		})
 		msg.reply <- nil
@@ -2338,8 +2339,11 @@ func (s *server) Start() {
 		s.rpcServer.Start()
 	}
 
+	//fmt.Println("Attemp to Start miner")
+
 	// Start the CPU miner if generation is enabled.
 	if cfg.Generate {
+		fmt.Println("Start miner")
 		s.cpuMiner.Start()
 	}
 }
@@ -2864,6 +2868,7 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 
 		go s.connManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
+			ShardID:   1010101,
 			Permanent: true,
 		})
 	}
@@ -2922,6 +2927,7 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 
 	listeners := make([]net.Listener, 0, len(netAddrs))
 	for _, addr := range netAddrs {
+		fmt.Println("Run listener ", addr.Network(), addr.String())
 		listener, err := net.Listen(addr.Network(), addr.String())
 		if err != nil {
 			srvrLog.Warnf("Can't listen on %s: %v", addr, err)

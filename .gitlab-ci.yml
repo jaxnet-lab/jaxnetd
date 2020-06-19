@@ -1,0 +1,63 @@
+image: docker:git
+services:
+  - docker:dind
+
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+
+#before_script:
+#  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+  - eval $(ssh-agent -s)
+  - echo "$JAX_KEY" > ./key.file
+  - chmod 400 ./key.file
+  - ssh-add ./key.file
+  - mkdir -p ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
+
+build:
+  stage: build
+  tags:
+    - docker
+  script:
+    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
+    - docker push $IMAGE
+
+shard-core-1:
+  stage: deploy
+  when: manual
+  tags:
+    - docker
+  script:
+    - ssh jax@116.202.107.209 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
+    - ssh jax@116.202.107.209 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+    - ssh jax@116.202.107.209 "docker run -d -v /home/shard.core:/root/.btcd -p 8444:8444 -p 8334:8334 --restart=always --name shard-core $IMAGE"
+
+shard-core-2:
+  stage: deploy
+  when: manual
+  tags:
+    - docker
+  script:
+    - ssh jax@116.203.250.136 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
+    - ssh jax@116.203.250.136 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+    - ssh jax@116.203.250.136 "docker run -d -v /home/shard.core:/root/.btcd -p 8444:8444 -p 8334:8334 --restart=always --name shard-core $IMAGE"
+
+shard-core-3:
+  stage: deploy
+  when: manual
+  tags:
+    - docker
+  script:
+    - ssh jax@116.202.97.45 "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
+    - ssh jax@116.202.97.45 "(docker stop shard-core || true) && (docker rm shard-core || true)"
+    - ssh jax@116.202.97.45 "docker run -d -v /home/shard.core:/root/.btcd -p 8444:8444 -p 8334:8334 --restart=always --name shard-core $IMAGE"

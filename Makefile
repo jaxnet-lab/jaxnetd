@@ -9,7 +9,7 @@ dep:
 #	cp configuration-manager $(DESTDIR)
 
 build:
-#	 go build -o app .
+	 go build -o shardcore .
 
 clean:
 	go clean
