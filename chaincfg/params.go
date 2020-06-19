@@ -328,6 +328,86 @@ var MainNetParams = Params{
 	HDCoinType: 0,
 }
 
+var JaxNetParams = Params{
+	Name:        "jaxnet",
+	Net:         wire.JaxNet,
+	DefaultPort: "8444",
+	DNSSeeds:    []DNSSeed{
+		//{"seed.bitcoin.sipa.be", true},
+		//{"dnsseed.bluematt.me", true},
+		//{"dnsseed.bitcoin.dashjr.org", false},
+		//{"seed.bitcoinstats.com", true},
+		//{"seed.bitnodes.io", false},
+		//{"seed.bitcoin.jonasschnelli.ch", true},
+	},
+
+	// Chain parameters
+	GenesisBlock:             &genesisBlock,
+	GenesisHash:              &genesisHash,
+	PowLimit:                 mainPowLimit,
+	PowLimitBits:             0x1d00ffff,
+	BIP0034Height:            227931, // 000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8
+	BIP0065Height:            388381, // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
+	BIP0066Height:            363725, // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 210000,
+	TargetTimespan:           time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+	ReduceMinDifficulty:      false,
+	MinDiffReductionTime:     0,
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Consensus rule change deployments.
+	//
+	// The miner confirmation window is defined as:
+	//   target proof of work timespan / target proof of work spacing
+	RuleChangeActivationThreshold: 1916, // 95% of MinerConfirmationWindow
+	MinerConfirmationWindow:       2016, //
+	Deployments: [DefinedDeployments]ConsensusDeployment{
+		DeploymentTestDummy: {
+			BitNumber:  28,
+			StartTime:  1199145601, // January 1, 2008 UTC
+			ExpireTime: 1230767999, // December 31, 2008 UTC
+		},
+		DeploymentCSV: {
+			BitNumber:  0,
+			StartTime:  1462060800, // May 1st, 2016
+			ExpireTime: 1493596800, // May 1st, 2017
+		},
+		DeploymentSegwit: {
+			BitNumber:  1,
+			StartTime:  1479168000, // November 15, 2016 UTC
+			ExpireTime: 1510704000, // November 15, 2017 UTC.
+		},
+	},
+
+	// Mempool parameters
+	RelayNonStdTxs: false,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "bc", // always bc for main net
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x00, // starts with 1
+	ScriptHashAddrID:        0x05, // starts with 3
+	PrivateKeyID:            0x80, // starts with 5 (uncompressed) or K (compressed)
+	WitnessPubKeyHashAddrID: 0x06, // starts with p2
+	WitnessScriptHashAddrID: 0x0A, // starts with 7Xh
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x88, 0xad, 0xe4}, // starts with xprv
+	HDPublicKeyID:  [4]byte{0x04, 0x88, 0xb2, 0x1e}, // starts with xpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 0,
+}
+
 // RegressionNetParams defines the network parameters for the regression test
 // Bitcoin network.  Not to be confused with the test Bitcoin network (version
 // 3), this network is sometimes simply called "testnet".

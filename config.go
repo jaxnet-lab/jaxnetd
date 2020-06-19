@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
+	flags "github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -29,12 +31,10 @@ import (
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"github.com/btcsuite/go-socks/socks"
-	flags "github.com/jessevdk/go-flags"
 )
 
 const (
-	defaultConfigFilename        = "btcd.conf"
+	defaultConfigFilename        = "shard.conf"
 	defaultDataDirname           = "data"
 	defaultLogLevel              = "info"
 	defaultLogDirname            = "logs"
@@ -405,6 +405,13 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 // command line options.  Command line options always take precedence.
 func loadConfig() (*config, []string, error) {
 	// Default config.
+	fileName := os.Getenv("configName")
+	fmt.Println("fileName ", fileName)
+	if fileName != "" {
+		defaultConfigFile = filepath.Join(defaultHomeDir, fileName)
+	}
+	fmt.Println("defaultConfigFile ", defaultConfigFile)
+
 	cfg := config{
 		ConfigFile:           defaultConfigFile,
 		DebugLevel:           defaultLogLevel,
@@ -485,6 +492,7 @@ func loadConfig() (*config, []string, error) {
 			}
 		}
 
+		fmt.Println("File ", preCfg.ConfigFile)
 		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
@@ -870,7 +878,9 @@ func loadConfig() (*config, []string, error) {
 	// Check mining addresses are valid and saved parsed versions.
 	cfg.miningAddrs = make([]btcutil.Address, 0, len(cfg.MiningAddrs))
 	for _, strAddr := range cfg.MiningAddrs {
+		fmt.Println("strAddr ", strAddr, activeNetParams.Params.Name, activeNetParams.Params.Net)
 		addr, err := btcutil.DecodeAddress(strAddr, activeNetParams.Params)
+		fmt.Println(addr, err)
 		if err != nil {
 			str := "%s: mining address '%s' failed to decode: %v"
 			err := fmt.Errorf(str, funcName, strAddr, err)

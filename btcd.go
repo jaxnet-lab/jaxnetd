@@ -7,8 +7,10 @@ package main
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/limits"
+	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -17,7 +19,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
-
 )
 
 const (
@@ -41,9 +42,53 @@ var winServiceMain func() (bool, error)
 // notified with the server once it is setup so it can gracefully stop it when
 // requested from the service control manager.
 func btcdMain(serverChan chan<- *server) error {
+
+	params := &chaincfg.JaxNetParams
+	params.Name = "jaxnet"
+	params.Net = wire.BitcoinNet(0x12121212)
+	params.PubKeyHashAddrID = byte(0x6F)
+	params.PrivateKeyID = byte(0x80)
+	//
+	//fmt.Println(params.Net, activeNetParams.Net)
+	//fmt.Println(params.PubKeyHashAddrID, activeNetParams.PubKeyHashAddrID)
+	//fmt.Println(params.PrivateKeyID, activeNetParams.PrivateKeyID)
+	//toAddress, err := btcutil.DecodeAddress("mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx", params)
+	//fmt.Println(toAddress, err)
+
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
+	fmt.Println("read config")
 	tcfg, _, err := loadConfig()
+
+	//if port := os.Getenv("port"); port != "" {
+	//	tcfg.Listeners = []string{port}
+	//}
+	//
+	//if dataDir := os.Getenv("datadir"); dataDir != "" {
+	//	tcfg.DataDir = dataDir
+	//	tcfg.LogDir = dataDir
+	//}
+	//
+	//if seeds := os.Getenv("seeds"); seeds != "" {
+	//	tcfg.AddPeers = strings.Split(seeds, ";")
+	//}
+
+	//tcfg.DisableDNSSeed = true
+	//tcfg.Generate = true
+
+	//params := &chaincfg.JaxNetParams
+	//params.Name = "jaxnet"
+	//params.Net = wire.BitcoinNet(0xD9B4BEF9)
+	//params.PubKeyHashAddrID = byte(0x6F)
+	//params.PrivateKeyID = byte(0x80)
+	////
+	//toAddress, err := btcutil.DecodeAddress("mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx", params)
+	//
+	//fmt.Println("Listeners ", tcfg.Listeners)
+	//fmt.Println("AddPeers ", tcfg.AddPeers)
+	//fmt.Println("DataDir ", tcfg.DataDir)
+	//fmt.Printf("conf: %+v\n", tcfg)
+	//tcfg.miningAddrs = []btcutil.Address{toAddress}
 	if err != nil {
 		return err
 	}

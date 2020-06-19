@@ -2339,8 +2339,11 @@ func (s *server) Start() {
 		s.rpcServer.Start()
 	}
 
+	//fmt.Println("Attemp to Start miner")
+
 	// Start the CPU miner if generation is enabled.
 	if cfg.Generate {
+		fmt.Println("Start miner")
 		s.cpuMiner.Start()
 	}
 }
