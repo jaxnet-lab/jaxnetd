@@ -26,6 +26,9 @@ before_script:
 
 build:
   stage: build
+  only:
+    - master
+    - dev
   tags:
     - docker
   script:
@@ -34,6 +37,9 @@ build:
 
 shard-core-1:
   stage: deploy
+  only:
+    - master
+    - dev
   when: manual
   tags:
     - docker
@@ -44,6 +50,9 @@ shard-core-1:
 
 shard-core-2:
   stage: deploy
+  only:
+    - master
+    - dev
   when: manual
   tags:
     - docker
@@ -54,6 +63,9 @@ shard-core-2:
 
 shard-core-3:
   stage: deploy
+  only:
+    - master
+    - dev
   when: manual
   tags:
     - docker

@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 const (
@@ -441,9 +441,12 @@ func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
 func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, error) {
+	fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
 	best := g.chain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
+
+	fmt.Println("Height ", nextBlockHeight)
 
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
@@ -504,8 +507,10 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	log.Debugf("Considering %d transactions for inclusion to new block",
 		len(sourceTxns))
 
+	fmt.Println("Start main loop", len(sourceTxns))
 mempoolLoop:
 	for _, txDesc := range sourceTxns {
+		fmt.Println("source trx", txDesc)
 		// A block can't have more than one coinbase or contain
 		// non-finalized transactions.
 		tx := txDesc.Tx
