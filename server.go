@@ -2927,6 +2927,7 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 
 	listeners := make([]net.Listener, 0, len(netAddrs))
 	for _, addr := range netAddrs {
+		fmt.Println("Run listener ", addr.Network(), addr.String())
 		listener, err := net.Listen(addr.Network(), addr.String())
 		if err != nil {
 			srvrLog.Warnf("Can't listen on %s: %v", addr, err)

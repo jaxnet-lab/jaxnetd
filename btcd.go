@@ -190,6 +190,7 @@ func btcdMain(serverChan chan<- *server) error {
 	}
 
 	// Create server and start it.
+	fmt.Println("cfg.Listeners...", cfg.Listeners)
 	server, err := newServer(cfg.Listeners, cfg.AgentBlacklist,
 		cfg.AgentWhitelist, db, activeNetParams.Params, interrupt)
 	if err != nil {
