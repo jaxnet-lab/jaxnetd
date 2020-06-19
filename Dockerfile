@@ -23,4 +23,7 @@ COPY --from=0 /go/src/gitlab.com/jaxnet/core/shard.core .
 
 RUN chmod +x ./shardcore
 
+EXPOSE 8444
+EXPOSE 8334
+
 CMD ./shardcore
