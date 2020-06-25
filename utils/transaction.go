@@ -48,7 +48,6 @@ func main() {
 	}
 
 	tx := wire.NewMsgTx(wire.TxVersion)
-	tx.
 
 	hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
 	if err != nil {
