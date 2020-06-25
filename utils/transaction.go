@@ -28,27 +28,27 @@ type utxo struct {
 }
 
 func main() {
-	params := &chaincfg.MainNetParams
-	params.Name = "jaxnet"
-	params.Net = wire.BitcoinNet(0x0B110907)
-	params.PubKeyHashAddrID = byte(0x6F)
-	params.PrivateKeyID = byte(0x80)
+	//params := &chaincfg.MainNetParams
+	//params.Name = "jaxnet"
+	//params.Net = wire.BitcoinNet(0x0B110907)
+	//params.PubKeyHashAddrID = byte(0x6F)
+	//params.PrivateKeyID = byte(0x80)
 
-	toAddress, err := btcutil.DecodeAddress(toAddress, params)
+	toAddress, err := btcutil.DecodeAddress(toAddress, &chaincfg.JaxNetParams)
 	if err != nil {
 		log.Fatalf("invalid address: %v", err)
 	}
 
 	unspentTx := utxo{
-		Address:     "mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx",
+		Address:     "1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh",
 		TxID:        "5de1f708644f269f4fd87c648cc5d67cac64ebcf5b743f5d5063a141d6a01f14",
 		OutputIndex: 0,
 		Script:      "76a9142351cbad27a2607960ba370dccd1400c481230fa88ac",
 		Satoshis:    8125000,
-		Height:      1291076,
 	}
 
 	tx := wire.NewMsgTx(wire.TxVersion)
+	tx.
 
 	hash, err := chainhash.NewHashFromStr(unspentTx.TxID)
 	if err != nil {

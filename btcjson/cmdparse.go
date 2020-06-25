@@ -129,9 +129,11 @@ func UnmarshalCmd(r *Request) (interface{}, error) {
 	// Loop through each of the struct fields and unmarshal the associated
 	// parameter into them.
 	for i := 0; i < numParams; i++ {
+
 		rvf := rv.Field(i)
 		// Unmarshal the parameter into the struct field.
 		concreteVal := rvf.Addr().Interface()
+
 		if err := json.Unmarshal(r.Params[i], &concreteVal); err != nil {
 			// The most common error is the wrong type, so
 			// explicitly detect that error and make it nicer.

@@ -4,8 +4,14 @@ go 1.14
 
 require (
 	github.com/aead/siphash v1.0.1
+	github.com/btcsuite/btcd v0.20.1-beta // indirect
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v1.0.2 // indirect
+	github.com/btcsuite/btcwallet v0.11.0 // indirect
+	github.com/btcsuite/btcwallet/wallet/txauthor v1.0.0 // indirect
+	github.com/btcsuite/btcwallet/wallet/txrules v1.0.0 // indirect
+	github.com/btcsuite/btcwallet/walletdb v1.0.0 // indirect
+	github.com/btcsuite/btcwallet/wtxmgr v1.0.0 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/btcsuite/goleveldb v1.0.0
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792

@@ -1099,7 +1099,7 @@ import (
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"github.com/btcsuite/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 func main() {
@@ -1163,7 +1163,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"github.com/btcsuite/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 func main() {
@@ -1255,7 +1255,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"github.com/btcsuite/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 func main() {

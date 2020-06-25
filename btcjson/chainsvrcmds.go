@@ -231,6 +231,12 @@ type GetBlockStatsCmd struct {
 	Stats        *[]string
 }
 
+// GetBlockStatsCmd defines the getblockstats JSON-RPC command.
+type GetChainStatsCmd struct {
+	HashOrHeight HashOrHeight
+	Stats        *[]string
+}
+
 // NewGetBlockStatsCmd returns a new instance which can be used to issue a
 // getblockstats JSON-RPC command. Either height or hash must be specified.
 func NewGetBlockStatsCmd(hashOrHeight HashOrHeight, stats *[]string) *GetBlockStatsCmd {
@@ -850,6 +856,7 @@ func init() {
 	MustRegisterCmd("getblockchaininfo", (*GetBlockChainInfoCmd)(nil), flags)
 	MustRegisterCmd("getblockcount", (*GetBlockCountCmd)(nil), flags)
 	MustRegisterCmd("getblockhash", (*GetBlockHashCmd)(nil), flags)
+	MustRegisterCmd("getchaintxstats", (*GetChainStatsCmd)(nil), flags)
 	MustRegisterCmd("getblockheader", (*GetBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("getblockstats", (*GetBlockStatsCmd)(nil), flags)
 	MustRegisterCmd("getblocktemplate", (*GetBlockTemplateCmd)(nil), flags)
