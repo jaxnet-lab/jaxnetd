@@ -3676,7 +3676,7 @@ func handleGetnetworkinfo(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
-		Subversion: "/Satoshi:1.3.0/",
+		Subversion: "/Satoshi:0.18.0/",
 	}, nil
 }
 
