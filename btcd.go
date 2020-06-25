@@ -55,7 +55,6 @@ func btcdMain(serverChan chan<- *server) error {
 
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
-	fmt.Println("read config")
 	tcfg, _, err := loadConfig()
 
 	//if port := os.Getenv("port"); port != "" {
@@ -188,7 +187,6 @@ func btcdMain(serverChan chan<- *server) error {
 	}
 
 	// Create server and start it.
-	fmt.Println("cfg.Listeners...", cfg.Listeners)
 	server, err := newServer(cfg.Listeners, cfg.AgentBlacklist,
 		cfg.AgentWhitelist, db, activeNetParams.Params, interrupt)
 	if err != nil {

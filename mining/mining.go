@@ -507,10 +507,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	log.Debugf("Considering %d transactions for inclusion to new block",
 		len(sourceTxns))
 
-	fmt.Println("Start main loop", len(sourceTxns))
 mempoolLoop:
 	for _, txDesc := range sourceTxns {
-		fmt.Println("source trx", txDesc)
 		// A block can't have more than one coinbase or contain
 		// non-finalized transactions.
 		tx := txDesc.Tx

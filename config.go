@@ -406,11 +406,9 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	fileName := os.Getenv("configName")
-	fmt.Println("fileName ", fileName)
 	if fileName != "" {
 		defaultConfigFile = filepath.Join(defaultHomeDir, fileName)
 	}
-	fmt.Println("defaultConfigFile ", defaultConfigFile)
 
 	cfg := config{
 		ConfigFile:           defaultConfigFile,
@@ -463,7 +461,6 @@ func loadConfig() (*config, []string, error) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show usage", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", version())
 		os.Exit(0)
 	}
 
@@ -492,7 +489,6 @@ func loadConfig() (*config, []string, error) {
 			}
 		}
 
-		fmt.Println("File ", preCfg.ConfigFile)
 		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
@@ -878,9 +874,7 @@ func loadConfig() (*config, []string, error) {
 	// Check mining addresses are valid and saved parsed versions.
 	cfg.miningAddrs = make([]btcutil.Address, 0, len(cfg.MiningAddrs))
 	for _, strAddr := range cfg.MiningAddrs {
-		fmt.Println("strAddr ", strAddr, activeNetParams.Params.Name, activeNetParams.Params.Net)
 		addr, err := btcutil.DecodeAddress(strAddr, activeNetParams.Params)
-		fmt.Println(addr, err)
 		if err != nil {
 			str := "%s: mining address '%s' failed to decode: %v"
 			err := fmt.Errorf(str, funcName, strAddr, err)

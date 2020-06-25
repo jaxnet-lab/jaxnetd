@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"sync"
 	"time"
 
@@ -43,7 +44,7 @@ var (
 	// defaultNumWorkers is the default number of workers to use for mining
 	// and is based on the number of processor cores.  This helps ensure the
 	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = uint32(2)
+	defaultNumWorkers = uint32(runtime.NumCPU())
 )
 
 // Config is a descriptor containing the cpu miner configuration.
@@ -296,8 +297,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 //
 // It must be run as a goroutine.
 func (m *CPUMiner) generateBlocks(quit chan struct{}) {
-	log.Tracef("Starting generate blocks worker")
-	fmt.Println("Start generation worker")
 
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.

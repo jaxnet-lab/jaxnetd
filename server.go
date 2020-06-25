@@ -2876,7 +2876,6 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	if !cfg.DisableRPC {
 		// Setup listeners for the configured RPC listen addresses and
 		// TLS settings.
-		fmt.Println("setup rpc ")
 		rpcListeners, err := setupRPCListeners()
 		if err != nil {
 			return nil, err
