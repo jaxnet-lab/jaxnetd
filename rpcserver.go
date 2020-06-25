@@ -873,6 +873,7 @@ func handleGetChaintxStats(s *rpcServer, cmd interface{}, closeChan <-chan struc
 
 //estimatesmartfee
 func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+
 	//c := cmd.(*btcjson.EstimateSmartFeeCmd)
 
 	//if s.cfg.FeeEstimator == nil {

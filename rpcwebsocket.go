@@ -1314,7 +1314,7 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
-		fmt.Println("ws message ", msg, err)
+		fmt.Println("ws message ", string(msg), err)
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {

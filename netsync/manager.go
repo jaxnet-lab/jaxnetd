@@ -400,8 +400,6 @@ func (sm *SyncManager) handleNewPeerMsg(peer *peerpkg.Peer) {
 		return
 	}
 
-	log.Infof("New valid peer %s (%s)", peer, peer.UserAgent())
-
 	// Initialize the peer state
 	isSyncCandidate := sm.isSyncCandidate(peer)
 	sm.peerStates[peer] = &peerSyncState{
@@ -482,8 +480,6 @@ func (sm *SyncManager) handleDonePeerMsg(peer *peerpkg.Peer) {
 
 	// Remove the peer from the list of candidate peers.
 	delete(sm.peerStates, peer)
-
-	log.Infof("Lost peer %s", peer)
 
 	sm.clearRequestedState(state)
 
