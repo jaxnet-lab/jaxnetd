@@ -43,7 +43,7 @@ var (
 	// defaultNumWorkers is the default number of workers to use for mining
 	// and is based on the number of processor cores.  This helps ensure the
 	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = uint32(1)
+	defaultNumWorkers = uint32(2)
 )
 
 // Config is a descriptor containing the cpu miner configuration.
@@ -388,6 +388,7 @@ func (m *CPUMiner) miningWorkerController() {
 	}
 
 	// Launch the current number of workers by default.
+	fmt.Println("Mining workers ", m.numWorkers)
 	runningWorkers = make([]chan struct{}, 0, m.numWorkers)
 	launchWorkers(m.numWorkers)
 
@@ -525,6 +526,7 @@ func (m *CPUMiner) SetNumWorkers(numWorkers int32) {
 	} else {
 		m.numWorkers = uint32(numWorkers)
 	}
+	fmt.Println("Start miner with workers: ", numWorkers)
 
 	// When the miner is already running, notify the controller about the
 	// the change.
