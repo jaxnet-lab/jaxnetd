@@ -24,6 +24,17 @@ type GetBlockHeaderVerboseResult struct {
 	NextHash      string  `json:"nextblockhash,omitempty"`
 }
 
+type GetChainStatsResult struct {
+	Time                   int64  `json:"time"`
+	Txs                    int64  `json:"txcount"`
+	Txrate                 string `json:"txrate"`
+	WindowFinalBlockHash   string `json:"window_final_block_hash"`
+	WindowFinalBlockHeight int64  `json:"window_final_block_height"`
+	WindowBlockCount       int64  `json:"window_block_count"`
+	WindowTxCount          int64  `json:"window_tx_count"`
+	WindowInterval         int64  `json:"window_interval"`
+}
+
 // GetBlockStatsResult models the data from the getblockstats command.
 type GetBlockStatsResult struct {
 	AverageFee         int64   `json:"avgfee"`

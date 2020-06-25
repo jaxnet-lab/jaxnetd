@@ -158,6 +158,7 @@ func RegisterCmd(method string, cmd interface{}, flags UsageFlag) error {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
+	fmt.Println("register ", method)
 	if _, ok := methodToConcreteType[method]; ok {
 		str := fmt.Sprintf("method %q is already registered", method)
 		return makeError(ErrDuplicateMethod, str)
