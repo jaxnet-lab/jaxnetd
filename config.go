@@ -925,6 +925,7 @@ func loadConfig() (*config, []string, error) {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},
+			"0.0.0.0":   {}, //TODO: setup tls
 			"::1":       {},
 		}
 		for _, addr := range cfg.RPCListeners {

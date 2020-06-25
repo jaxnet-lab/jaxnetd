@@ -14,11 +14,11 @@ import (
 func main() {
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "0.0.0.0:8334",
+		Host:         "116.202.107.209:8334",
 		User:         "somerpc",
 		Pass:         "somerpc",
-		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
-		DisableTLS:   true, // Bitcoin core does not provide TLS by default
+		HTTPPostMode: true,  // Bitcoin core only supports HTTP POST mode
+		DisableTLS:   false, // Bitcoin core does not provide TLS by default
 	}
 	// Notice the notification parameter is nil since notifications are
 	// not supported in HTTP POST mode.
