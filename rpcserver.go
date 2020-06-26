@@ -874,8 +874,11 @@ func handleGetChaintxStats(s *rpcServer, cmd interface{}, closeChan <-chan struc
 //estimatesmartfee
 func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 
-	//c := cmd.(*btcjson.EstimateSmartFeeCmd)
-
+	//c := cmd.(*btcjson.EstimateSmartFeeResult)
+	rate := 1.0
+	res := btcjson.EstimateSmartFeeResult{
+		FeeRate: &rate,
+	}
 	//if s.cfg.FeeEstimator == nil {
 	//	return nil, errors.New("Fee estimation disabled")
 	//}
@@ -891,7 +894,7 @@ func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan stru
 	//}
 
 	// Convert to satoshis per kb.
-	return float64(1), nil
+	return res, nil
 }
 
 // handleEstimateFee handles estimatefee commands.

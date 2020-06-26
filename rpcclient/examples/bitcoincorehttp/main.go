@@ -65,7 +65,7 @@ func main() {
 	//fmt.Println(params.PubKeyHashAddrID, activeNetParams.PubKeyHashAddrID)
 	//fmt.Println(params.PrivateKeyID, activeNetParams.PrivateKeyID)
 	//1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh
-	jaxAddres, err := btcutil.DecodeAddress("1PyzUu6wxXcukgdvjRyvJhxfP6V65mkPpP", &chaincfg.JaxNetParams)
+	jaxAddres, err := btcutil.DecodeAddress("15VS71vPzPMxY5fXwJUVkqyHge94g4Uub4", &chaincfg.JaxNetParams)
 
 	//fmt.Println("ImportAddress")
 	//if err := client.ImportAddress("1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh"); err != nil{
@@ -82,12 +82,12 @@ func main() {
 	//	fmt.Println("Can't import KPK", err)
 	//}
 
-	if err := client.SetAccount(jaxAddres, "JaxMain"); err != nil {
-		fmt.Println("Error SetAccount", err)
-	}
-	if err := client.CreateNewAccount("JaxMiner"); err != nil {
-		fmt.Println(err)
-	}
+	//if err := client.SetAccount(jaxAddres, "JaxMain"); err != nil {
+	//	fmt.Println("Error SetAccount", err)
+	//}
+	//if err := client.CreateNewAccount("JaxMiner"); err != nil {
+	//	fmt.Println(err)
+	//}
 
 	accs, err := client.ListAccounts()
 	fmt.Println("Accounts", accs)
@@ -95,15 +95,15 @@ func main() {
 	err = client.SetTxFee(0)
 	fmt.Println("SetTxFee", err)
 
-	ok, err := client.SendFrom("default", jaxAddres, 0)
-	fmt.Println("Move trx ", ok, err)
+	//ok, err := client.SendFrom("default", jaxAddres, 0)
+	//fmt.Println("Move trx ", ok, err)
 
 	aaddr, err := client.GetAccountAddress("JaxMiner")
 	fmt.Println("JaxMiner address: ", aaddr, err)
 
 	//fmt.Println(toAddress, err)
 	aa, err := client.GetReceivedByAddress(jaxAddres)
-	fmt.Println("GetReceivedByAddress", aa, err)
+	fmt.Println("GetReceivedByAddress", aa, jaxAddres.String(), err)
 
 	bl, err := client.GetBalance("JaxMiner")
 	fmt.Println("GetBalance", bl, err)
@@ -129,13 +129,13 @@ func main() {
 
 	//acc, err := client.GetAccount(toAddress)
 	//fmt.Println("Account ", acc, err)
-	fmt.Println("Create account")
-	if err = client.CreateNewAccount("MainAccount"); err != nil {
-		fmt.Println("FAiled to create account ", err)
-	}
+	//fmt.Println("Create account")
+	//if err = client.CreateNewAccount("MainAccount"); err != nil {
+	//	fmt.Println("FAiled to create account ", err)
+	//}
 
-	accAddress, err := client.GetAccountAddress("MainAccount")
-	fmt.Println("Acc address ", accAddress.String(), err)
+	//accAddress, err := client.GetAccountAddress("MainAccount")
+	//fmt.Println("Acc address ", accAddress.String(), err)
 
 	balance, err := client.GetBalance("MainAccount")
 	fmt.Println("balance", balance, err)
