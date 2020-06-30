@@ -273,6 +273,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				}
 
 				m.g.UpdateBlockTime(msgBlock)
+				bd = header.BlockData()
 
 			default:
 				// Non-blocking select to fall through
@@ -282,12 +283,12 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// hash is actually a double sha256 (two hashes), so
 			// increment the number of hashes completed for each
 			// attempt accordingly.
-			//header.Nonce = i
+			header.Nonce = i
 
 			binary.LittleEndian.PutUint32(bd[noncePosition:], i)
 			hash := chainhash.DoubleHashH(bd)
 			//if i%100 == 0 && worker == 1 {
-			//	fmt.Printf("1 %d. %d %s %x\n", worker, header.Nonce, hash.String(), bd)
+			//	fmt.Printf("%d. %d %s %x\n", worker, header.Nonce, hash.String(), bd)
 			//}
 			hashesCompleted += 2
 
