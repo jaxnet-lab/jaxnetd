@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/minio/sha256-simd"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -286,10 +287,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			header.Nonce = i
 
 			binary.LittleEndian.PutUint32(bd[noncePosition:], i)
-			hash := chainhash.DoubleHashH(bd)
-			//if i%100 == 0 && worker == 1 {
-			//	fmt.Printf("%d. %d %s %x\n", worker, header.Nonce, hash.String(), bd)
+			hash := DoubleHashH(bd)
+			//if worker == 1 {
+			//	fmt.Printf("%s:%s\n", hash.String(), DoubleHashH(bd).String())
 			//}
+
 			hashesCompleted += 2
 
 			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
@@ -301,6 +303,11 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	}
 
 	return false
+}
+
+func DoubleHashH(b []byte) chainhash.Hash {
+	first := sha256.Sum256(b)
+	return sha256.Sum256(first[:])
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.

@@ -6,11 +6,25 @@ package mining
 
 import (
 	"container/heap"
+	s2 "crypto/sha256"
+	"fmt"
+	"github.com/minio/sha256-simd"
 	"math/rand"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
+
+func TestSsh256(t *testing.T) {
+	h1 := sha256.Sum256([]byte("test test test"))
+	h2 := sha256.Sum256(h1[:])
+	g1 := s2.Sum256([]byte("test test test"))
+	g2 := s2.Sum256(g1[:])
+	fmt.Printf("%x:%x\n", h1, g1)
+	fmt.Printf("%x:%x\n", h2, g2)
+}
+
+//
 
 // TestTxFeePrioHeap ensures the priority queue for transaction fees and
 // priorities works as expected.

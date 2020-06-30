@@ -26,9 +26,12 @@ require (
 	github.com/lightninglabs/neutrino v0.11.0 // indirect
 	github.com/lightningnetwork/lnd/clock v1.0.1
 	github.com/lightningnetwork/lnd/queue v1.0.1
+	github.com/minio/highwayhash v1.0.0 // indirect
+	github.com/minio/sha256-simd v0.1.1
 	github.com/stretchr/testify v1.6.1
 	go.etcd.io/bbolt v1.3.3
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	google.golang.org/grpc v1.29.1
 )
