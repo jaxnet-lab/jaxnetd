@@ -224,7 +224,9 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	header := &msgBlock.Header
 	targetDifficulty := blockchain.CompactToBig(header.Bits)
 
-	//fmt.Println("targetDifficulty ", targetDifficulty, "enOffset ", enOffset)
+	prefixBytes := make([]byte, 32-len(targetDifficulty.Bytes()))
+
+	fmt.Printf("Difficulty %x %x %d\n", targetDifficulty.Bytes(), prefixBytes, len(prefixBytes))
 
 	// Initial state.
 	lastGenerated := time.Now()
@@ -284,7 +286,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// hash is actually a double sha256 (two hashes), so
 			// increment the number of hashes completed for each
 			// attempt accordingly.
-			header.Nonce = i
 
 			binary.LittleEndian.PutUint32(bd[noncePosition:], i)
 			hash := DoubleHashH(bd)
@@ -294,11 +295,21 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			hashesCompleted += 2
 
+			//if bytes.Equal(hash[28:], []byte{0, 0, 0,0}) {
 			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+				fmt.Printf("%x %x\n", hash[:], prefixBytes)
 				fmt.Println("m.updateHashes: ", hashesCompleted)
+				header.Nonce = i
 				m.updateHashes <- hashesCompleted
 				return true
 			}
+			//}
+
+			//if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+			//	fmt.Println("m.updateHashes: ", hashesCompleted)
+			//	m.updateHashes <- hashesCompleted
+			//	return true
+			//}
 		}
 	}
 
