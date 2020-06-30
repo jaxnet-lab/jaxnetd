@@ -5,6 +5,7 @@
 package cpuminer
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -224,9 +225,10 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	header := &msgBlock.Header
 	targetDifficulty := blockchain.CompactToBig(header.Bits)
 
+	prefixSize := len(targetDifficulty.Bytes())
 	prefixBytes := make([]byte, 32-len(targetDifficulty.Bytes()))
 
-	fmt.Printf("Difficulty %x %x %d\n", targetDifficulty.Bytes(), prefixBytes, len(prefixBytes))
+	fmt.Printf("Difficulty %x %x %d\n", targetDifficulty.Bytes(), prefixBytes, prefixSize)
 
 	// Initial state.
 	lastGenerated := time.Now()
@@ -295,15 +297,15 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			hashesCompleted += 2
 
-			//if bytes.Equal(hash[28:], []byte{0, 0, 0,0}) {
-			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-				fmt.Printf("%x %x\n", hash[:], prefixBytes)
-				fmt.Println("m.updateHashes: ", hashesCompleted)
-				header.Nonce = i
-				m.updateHashes <- hashesCompleted
-				return true
+			if bytes.Equal(hash[prefixSize:], prefixBytes) {
+				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+					fmt.Printf("%x %x\n", hash[:], prefixBytes)
+					fmt.Println("m.updateHashes: ", hashesCompleted)
+					header.Nonce = i
+					m.updateHashes <- hashesCompleted
+					return true
+				}
 			}
-			//}
 
 			//if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 			//	fmt.Println("m.updateHashes: ", hashesCompleted)
