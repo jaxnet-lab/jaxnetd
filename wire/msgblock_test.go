@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 // TestBlock tests the MsgBlock API.
@@ -22,9 +22,10 @@ func TestBlock(t *testing.T) {
 	// Block 1 header.
 	prevHash := &blockOne.Header.PrevBlock
 	merkleHash := &blockOne.Header.MerkleRoot
+	mmrHash := &blockOne.Header.MerkleMountainRange
 	bits := blockOne.Header.Bits
 	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "block"

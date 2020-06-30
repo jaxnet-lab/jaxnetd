@@ -1161,21 +1161,22 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	params := s.cfg.ChainParams
 	blockHeader := &blk.MsgBlock().Header
 	blockReply := btcjson.GetBlockVerboseResult{
-		Hash:          c.Hash,
-		Version:       blockHeader.Version,
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version),
-		MerkleRoot:    blockHeader.MerkleRoot.String(),
-		PreviousHash:  blockHeader.PrevBlock.String(),
-		Nonce:         blockHeader.Nonce,
-		Time:          blockHeader.Timestamp.Unix(),
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        int64(blockHeight),
-		Size:          int32(len(blkBytes)),
-		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:        int32(blockchain.GetBlockWeight(blk)),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits), 16),
-		Difficulty:    getDifficultyRatio(blockHeader.Bits, params),
-		NextHash:      nextHashString,
+		Hash:                c.Hash,
+		Version:             blockHeader.Version,
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
+		MerkleRoot:          blockHeader.MerkleRoot.String(),
+		PreviousHash:        blockHeader.PrevBlock.String(),
+		MerkleMountainRange: blockHeader.MerkleMountainRange.String(),
+		Nonce:               blockHeader.Nonce,
+		Time:                blockHeader.Timestamp.Unix(),
+		Confirmations:       int64(1 + best.Height - blockHeight),
+		Height:              int64(blockHeight),
+		Size:                int32(len(blkBytes)),
+		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:              int32(blockchain.GetBlockWeight(blk)),
+		Bits:                strconv.FormatInt(int64(blockHeader.Bits), 16),
+		Difficulty:          getDifficultyRatio(blockHeader.Bits, params),
+		NextHash:            nextHashString,
 	}
 
 	if *c.Verbosity == 1 {
@@ -1410,18 +1411,19 @@ func handleGetBlockHeader(s *rpcServer, cmd interface{}, closeChan <-chan struct
 
 	params := s.cfg.ChainParams
 	blockHeaderReply := btcjson.GetBlockHeaderVerboseResult{
-		Hash:          c.Hash,
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        blockHeight,
-		Version:       blockHeader.Version,
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version),
-		MerkleRoot:    blockHeader.MerkleRoot.String(),
-		NextHash:      nextHashString,
-		PreviousHash:  blockHeader.PrevBlock.String(),
-		Nonce:         uint64(blockHeader.Nonce),
-		Time:          blockHeader.Timestamp.Unix(),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits), 16),
-		Difficulty:    getDifficultyRatio(blockHeader.Bits, params),
+		Hash:                c.Hash,
+		Confirmations:       int64(1 + best.Height - blockHeight),
+		Height:              blockHeight,
+		Version:             blockHeader.Version,
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
+		MerkleRoot:          blockHeader.MerkleRoot.String(),
+		MerkleMountainRange: blockHeader.MerkleMountainRange.String(),
+		NextHash:            nextHashString,
+		PreviousHash:        blockHeader.PrevBlock.String(),
+		Nonce:               uint64(blockHeader.Nonce),
+		Time:                blockHeader.Timestamp.Unix(),
+		Bits:                strconv.FormatInt(int64(blockHeader.Bits), 16),
+		Difficulty:          getDifficultyRatio(blockHeader.Bits, params),
 	}
 	return blockHeaderReply, nil
 }
@@ -1642,9 +1644,9 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		state.minTimestamp = minTimestamp
 
 		rpcsLog.Debugf("Generated block template (timestamp %v, "+
-			"target %s, merkle root %s)",
+			"target %s, merkle root %s, mmr %s)",
 			msgBlock.Header.Timestamp, targetDifficulty,
-			msgBlock.Header.MerkleRoot)
+			msgBlock.Header.MerkleRoot, msgBlock.Header.MerkleMountainRange.String())
 
 		// Notify any clients that are long polling about the new
 		// template.

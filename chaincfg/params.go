@@ -351,6 +351,11 @@ var JaxNetParams = Params{
 	MinDiffReductionTime:     0,
 	GenerateSupported:        false,
 
+	//RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+	//	ReduceMinDifficulty:      true,
+	//	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
+	//	GenerateSupported:        false,
+
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},
 

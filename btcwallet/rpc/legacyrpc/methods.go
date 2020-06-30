@@ -632,16 +632,17 @@ func importPrivKey(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	// Import the private key, handling any errors.
-	_, err = w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+	res, err := w.ImportPrivateKey(waddrmgr.KeyScopeBIP0044, wif, nil, *cmd.Rescan)
+
 	switch {
 	case waddrmgr.IsError(err, waddrmgr.ErrDuplicateAddress):
 		// Do not return duplicate key errors to the client.
-		return nil, nil
+		return res, nil
 	case waddrmgr.IsError(err, waddrmgr.ErrLocked):
-		return nil, &ErrWalletUnlockNeeded
+		return res, &ErrWalletUnlockNeeded
 	}
 
-	return nil, err
+	return res, err
 }
 
 // keypoolRefill handles the keypoolrefill command. Since we handle the keypool
@@ -1379,11 +1380,14 @@ func makeOutputs(pairs map[string]btcutil.Amount, chainParams *chaincfg.Params) 
 func sendPairs(w *wallet.Wallet, amounts map[string]btcutil.Amount,
 	account uint32, minconf int32, feeSatPerKb btcutil.Amount) (string, error) {
 
+	fmt.Println("makeOutputs ", amounts, w.ChainParams())
 	outputs, err := makeOutputs(amounts, w.ChainParams())
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("SendOutputs", account, minconf)
 	tx, err := w.SendOutputs(outputs, account, minconf, feeSatPerKb, "")
+	fmt.Println("Send r ", tx, err)
 	if err != nil {
 		if err == txrules.ErrAmountNegative {
 			return "", ErrNeedPositiveAmount
@@ -1528,6 +1532,7 @@ func sendToAddress(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	pairs := map[string]btcutil.Amount{
 		cmd.Address: amt,
 	}
+	fmt.Println("Send Pairs")
 
 	// sendtoaddress always spends from the default account, this matches bitcoind
 	return sendPairs(w, pairs, waddrmgr.DefaultAccountNum, 1,

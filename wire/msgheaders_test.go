@@ -62,9 +62,10 @@ func TestHeaders(t *testing.T) {
 func TestHeadersWire(t *testing.T) {
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot
+	mmrHash := &blockOne.Header.MerkleMountainRange
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBlockHeader(1, &hash, &merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, &hash, &merkleHash, mmrHash, bits, nonce)
 	bh.Version = blockOne.Header.Version
 	bh.Timestamp = blockOne.Header.Timestamp
 
@@ -230,9 +231,11 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot
+	mmrHash := blockOne.Header.MerkleMountainRange
+
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBlockHeader(1, &hash, &merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, &hash, &merkleHash, &mmrHash, bits, nonce)
 	bh.Version = blockOne.Header.Version
 	bh.Timestamp = blockOne.Header.Timestamp
 
@@ -269,7 +272,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	// Intentionally invalid block header that has a transaction count used
 	// to force errors.
-	bhTrans := NewBlockHeader(1, &hash, &merkleHash, bits, nonce)
+	bhTrans := NewBlockHeader(1, &hash, &merkleHash, &mmrHash, bits, nonce)
 	bhTrans.Version = blockOne.Header.Version
 	bhTrans.Timestamp = blockOne.Header.Timestamp
 

@@ -109,11 +109,13 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool) (
 	tx *txauthor.AuthoredTx, err error) {
 
+	fmt.Println("w.requireChainClient")
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println(w.db.BeginReadWriteTx)
 	dbtx, err := w.db.BeginReadWriteTx()
 	if err != nil {
 		return nil, err
@@ -128,11 +130,13 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		return nil, err
 	}
 
+	fmt.Println("Find output", account)
 	eligible, err := w.findEligibleOutputs(dbtx, account, minconf, bs)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("makeInputSource")
 	inputSource := makeInputSource(eligible)
 	changeSource := func() ([]byte, error) {
 		// Derive the change output script. We'll use the default key
@@ -156,8 +160,10 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		}
 		return txscript.PayToAddrScript(changeAddr)
 	}
+	fmt.Println("NewUnsignedTransaction")
 	tx, err = txauthor.NewUnsignedTransaction(outputs, feeSatPerKb,
 		inputSource, changeSource)
+	fmt.Println("tx ", tx, err)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +183,13 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		return tx, nil
 	}
 
+	fmt.Println("AddAllInputScripts")
 	err = tx.AddAllInputScripts(secretSource{w.Manager, addrmgrNs})
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("validateMsgTx")
 	err = validateMsgTx(tx.Tx, tx.PrevScripts, tx.PrevInputValues)
 	if err != nil {
 		return nil, err
@@ -220,6 +228,7 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 	txmgrNs := dbtx.ReadBucket(wtxmgrNamespaceKey)
 
 	unspent, err := w.TxStore.UnspentOutputs(txmgrNs)
+	fmt.Println("unspent, err ", unspent, err)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +270,9 @@ func (w *Wallet) findEligibleOutputs(dbtx walletdb.ReadTx, account uint32, minco
 		if err != nil || len(addrs) != 1 {
 			continue
 		}
+		fmt.Println("w.Manager.AddrAccount ", addrmgrNs, addrs[0])
 		_, addrAcct, err := w.Manager.AddrAccount(addrmgrNs, addrs[0])
+		fmt.Println("addrAcct, err ", addrAcct, err)
 		if err != nil || addrAcct != account {
 			continue
 		}

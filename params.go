@@ -11,7 +11,7 @@ import (
 
 // activeNetParams is a pointer to the parameters specific to the
 // currently active bitcoin network.
-var activeNetParams = &jaxNetParams
+var activeNetParams = &JaxNetParams
 
 // params is used to group parameters for various networks such as the main
 // network and test networks.
@@ -37,7 +37,7 @@ var mainNetParams = params{
 // separate wallet process listens on the well-known port and forwards requests
 // it does not handle on to btcd.  This approach allows the wallet process
 // to emulate the full reference implementation RPC API.
-var jaxNetParams = params{
+var JaxNetParams = params{
 	Params:  &chaincfg.JaxNetParams,
 	rpcPort: "8334",
 }

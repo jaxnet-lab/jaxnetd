@@ -5,8 +5,8 @@
 package main
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/jaxnet"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/netparams"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 var activeNet = &JaxNetParams
@@ -14,7 +14,7 @@ var activeNet = &JaxNetParams
 // MainNetParams contains parameters specific running btcwallet and
 // btcd on the main network (wire.MainNet).
 var JaxNetParams = netparams.Params{
-	Params:        &jaxnet.JaxNetParams,
+	Params:        &chaincfg.JaxNetParams,
 	RPCClientPort: "8334",
 	RPCServerPort: "8332",
 }

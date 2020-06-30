@@ -1162,6 +1162,7 @@ out:
 				txr.resp <- createTxResponse{nil, err}
 				continue
 			}
+			fmt.Println("w.txToOutputs")
 			tx, err := w.txToOutputs(txr.outputs, txr.account,
 				txr.minconf, txr.feeSatPerKB, txr.dryRun)
 			heldUnlock.release()
@@ -1196,6 +1197,7 @@ func (w *Wallet) CreateSimpleTx(account uint32, outputs []*wire.TxOut,
 	}
 	w.createTxRequests <- req
 	resp := <-req.resp
+	fmt.Println("resp ", resp)
 	return resp.tx, resp.err
 }
 
@@ -3221,6 +3223,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 	// transaction will be added to the database in order to ensure that we
 	// continue to re-broadcast the transaction upon restarts until it has
 	// been confirmed.
+	fmt.Println("CreateSimpleTx")
 	createdTx, err := w.CreateSimpleTx(
 		account, outputs, minconf, satPerKb, false,
 	)
@@ -3228,6 +3231,7 @@ func (w *Wallet) SendOutputs(outputs []*wire.TxOut, account uint32,
 		return nil, err
 	}
 
+	fmt.Println("reliablyPublishTransaction", createdTx.Tx)
 	txHash, err := w.reliablyPublishTransaction(createdTx.Tx, label)
 	if err != nil {
 		return nil, err

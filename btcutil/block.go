@@ -10,7 +10,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"io"
-
 )
 
 // OutOfRangeError describes an error due to accessing an element that is out
@@ -37,7 +36,7 @@ type Block struct {
 	serializedBlockNoWitness []byte          // Serialized bytes for block w/o witness data
 	blockHash                *chainhash.Hash // Cached block hash
 	blockHeight              int32           // Height in the main block chain
-	transactions             []*Tx   // Transactions
+	transactions             []*Tx           // Transactions
 	txnsGenerated            bool            // ALL wrapped transactions generated
 }
 
@@ -45,6 +44,10 @@ type Block struct {
 func (b *Block) MsgBlock() *wire.MsgBlock {
 	// Return the cached block.
 	return b.msgBlock
+}
+
+func (b *Block) UpdateSignatureScript(script []byte) {
+	b.msgBlock.Transactions[0].TxIn[0].SignatureScript = script
 }
 
 // Bytes returns the serialized bytes for the Block.  This is equivalent to

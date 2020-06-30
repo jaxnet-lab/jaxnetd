@@ -7,6 +7,7 @@ package txauthor
 
 import (
 	"errors"
+	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txrules"
@@ -86,12 +87,15 @@ type ChangeSource func() ([]byte, error)
 func NewUnsignedTransaction(outputs []*wire.TxOut, relayFeePerKb btcutil.Amount,
 	fetchInputs InputSource, fetchChange ChangeSource) (*AuthoredTx, error) {
 
+	fmt.Println("sum ", outputs)
 	targetAmount := SumOutputValues(outputs)
 	estimatedSize := txsizes.EstimateVirtualSize(0, 1, 0, outputs, true)
 	targetFee := txrules.FeeForSerializeSize(relayFeePerKb, estimatedSize)
 
 	for {
+		fmt.Println("fetchInputs", targetAmount+targetFee)
 		inputAmount, inputs, inputValues, scripts, err := fetchInputs(targetAmount + targetFee)
+		fmt.Println(inputAmount, inputs, inputValues, scripts, err)
 		if err != nil {
 			return nil, err
 		}

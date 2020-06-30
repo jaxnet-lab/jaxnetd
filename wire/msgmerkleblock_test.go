@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 // TestMerkleBlock tests the MsgMerkleBlock API.
@@ -24,9 +24,10 @@ func TestMerkleBlock(t *testing.T) {
 	// Block 1 header.
 	prevHash := &blockOne.Header.PrevBlock
 	merkleHash := &blockOne.Header.MerkleRoot
+	mmrHash := &blockOne.Header.MerkleMountainRange
 	bits := blockOne.Header.Bits
 	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
@@ -116,9 +117,10 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
 	prevHash := &blockOne.Header.PrevBlock
 	merkleHash := &blockOne.Header.MerkleRoot
+	mmrHash := &blockOne.Header.MerkleMountainRange
 	bits := blockOne.Header.Bits
 	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, bits, nonce)
+	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
 
 	msg := NewMsgMerkleBlock(bh)
 

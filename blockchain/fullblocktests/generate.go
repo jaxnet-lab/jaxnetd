@@ -20,11 +20,11 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 const (
@@ -313,6 +313,20 @@ func calcMerkleRoot(txns []*wire.MsgTx) chainhash.Hash {
 	return *merkles[len(merkles)-1]
 }
 
+//TODO: Calculate MMR
+func calcMmrRoot(txns []*wire.MsgTx) chainhash.Hash {
+	if len(txns) == 0 {
+		return chainhash.Hash{}
+	}
+
+	utilTxns := make([]*btcutil.Tx, 0, len(txns))
+	for _, tx := range txns {
+		utilTxns = append(utilTxns, btcutil.NewTx(tx))
+	}
+	merkles := blockchain.BuildMerkleTreeStore(utilTxns, false)
+	return *merkles[len(merkles)-1]
+}
+
 // solveBlock attempts to find a nonce which makes the passed block header hash
 // to a value less than the target difficulty.  When a successful solution is
 // found true is returned and the nonce field of the passed header is updated
@@ -523,12 +537,17 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	// Perform any block munging just before solving.  Only recalculate the
 	// merkle root if it wasn't manually changed by a munge function.
 	curMerkleRoot := block.Header.MerkleRoot
+	curMmrRoot := block.Header.MerkleMountainRange
 	curNonce := block.Header.Nonce
 	for _, f := range mungers {
 		f(&block)
 	}
 	if block.Header.MerkleRoot == curMerkleRoot {
 		block.Header.MerkleRoot = calcMerkleRoot(block.Transactions)
+	}
+
+	if block.Header.MerkleMountainRange == curMmrRoot {
+		block.Header.MerkleMountainRange = calcMmrRoot(block.Transactions)
 	}
 
 	// Only solve the block if the nonce wasn't manually changed by a munge
