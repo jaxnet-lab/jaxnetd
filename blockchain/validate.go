@@ -76,7 +76,7 @@ func isNullOutpoint(outpoint *wire.OutPoint) bool {
 // header. Blocks with version 2 and above satisfy this criteria. See BIP0034
 // for further information.
 func ShouldHaveSerializedBlockHeight(header *shard.Header) bool {
-	return header.Version >= serializedHeightVersion
+	return header.Version() >= serializedHeightVersion
 }
 
 // IsCoinBaseTx determines whether or not a transaction is a coinbase.  A coinbase
@@ -307,7 +307,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 //    difficulty is not performed.
 func checkProofOfWork(header *shard.Header, powLimit *big.Int, flags BehaviorFlags) error {
 	// The target difficulty must be larger than zero.
-	target := CompactToBig(header.Bits)
+	target := CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
 		str := fmt.Sprintf("block target difficulty of %064x is too low",
 			target)
@@ -530,7 +530,8 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	// merkle root matches here.
 	merkles := BuildMerkleTreeStore(block.Transactions(), false)
 	calculatedMerkleRoot := merkles[len(merkles)-1]
-	if !header.MerkleRoot.IsEqual(calculatedMerkleRoot) {
+	root := header.MerkleRoot()
+	if !root.IsEqual(calculatedMerkleRoot) {
 		str := fmt.Sprintf("block merkle root is invalid - block "+
 			"header indicates %v, but calculated value is %v",
 			header.MerkleRoot, calculatedMerkleRoot)
@@ -653,7 +654,7 @@ func (b *BlockChain) checkBlockHeaderContext(header *shard.Header, prevNode *blo
 		if err != nil {
 			return err
 		}
-		blockDifficulty := header.Bits
+		blockDifficulty := header.Bits()
 		if blockDifficulty != expectedDifficulty {
 			str := "block difficulty of %d is not the expected value of %d"
 			str = fmt.Sprintf(str, blockDifficulty, expectedDifficulty)
@@ -701,9 +702,9 @@ func (b *BlockChain) checkBlockHeaderContext(header *shard.Header, prevNode *blo
 	// has upgraded.  These were originally voted on by BIP0034,
 	// BIP0065, and BIP0066.
 	params := b.chainParams
-	if header.Version < 2 && blockHeight >= params.BIP0034Height ||
-		header.Version < 3 && blockHeight >= params.BIP0066Height ||
-		header.Version < 4 && blockHeight >= params.BIP0065Height {
+	if header.Version() < 2 && blockHeight >= params.BIP0034Height ||
+		header.Version() < 3 && blockHeight >= params.BIP0066Height ||
+		header.Version() < 4 && blockHeight >= params.BIP0065Height {
 
 		str := "new blocks with version %d are no longer valid"
 		str = fmt.Sprintf(str, header.Version)
@@ -1164,13 +1165,13 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// Enforce DER signatures for block versions 3+ once the historical
 	// activation threshold has been reached.  This is part of BIP0066.
 	blockHeader := &block.MsgBlock().Header
-	if blockHeader.Version >= 3 && node.height >= b.chainParams.BIP0066Height {
+	if blockHeader.Version() >= 3 && node.height >= b.chainParams.BIP0066Height {
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}
 
 	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the historical
 	// activation threshold has been reached.  This is part of BIP0065.
-	if blockHeader.Version >= 4 && node.height >= b.chainParams.BIP0065Height {
+	if blockHeader.Version() >= 4 && node.height >= b.chainParams.BIP0065Height {
 		scriptFlags |= txscript.ScriptVerifyCheckLockTimeVerify
 	}
 

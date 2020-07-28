@@ -51,7 +51,7 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncodi
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := shard.ReadBlockHeader(r, pver, &msg.Header)
+	err := shard.ReadBlockHeader(r, &msg.Header)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncodi
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := shard.WriteBlockHeader(w, pver, &msg.Header)
+	err := shard.WriteBlockHeader(w, &msg.Header)
 	if err != nil {
 		return err
 	}

@@ -225,7 +225,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	// Create some convenience variables.
 	header := &msgBlock.Header
-	targetDifficulty := blockchain.CompactToBig(header.Bits)
+	targetDifficulty := blockchain.CompactToBig(header.Bits())
 
 	prefixSize := len(targetDifficulty.Bytes())
 	prefixBytes := make([]byte, 32-len(targetDifficulty.Bytes()))
@@ -304,7 +304,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 					fmt.Printf("%x %x\n", hash[:], prefixBytes)
 					fmt.Println("m.updateHashes: ", hashesCompleted)
-					header.Nonce = i
+					header.SetNonce(i)
 					m.updateHashes <- hashesCompleted
 					return true
 				}

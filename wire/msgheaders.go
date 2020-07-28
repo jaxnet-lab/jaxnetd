@@ -57,7 +57,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 	msg.Headers = make([]*shard.Header, 0, count)
 	for i := uint64(0); i < count; i++ {
 		bh := &headers[i]
-		err := shard.ReadBlockHeader(r, pver, bh)
+		err := shard.ReadBlockHeader(r, bh)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	}
 
 	for _, bh := range msg.Headers {
-		err := shard.WriteBlockHeader(w, pver, bh)
+		err := shard.WriteBlockHeader(w, bh)
 		if err != nil {
 			return err
 		}

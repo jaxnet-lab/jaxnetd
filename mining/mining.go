@@ -882,7 +882,7 @@ mempoolLoop:
 	log.Debugf("Created new block template (%d transactions, %d in "+
 		"fees, %d signature operations cost, %d weight, target difficulty "+
 		"%064x)", len(msgBlock.Transactions), totalFees, blockSigOpCost,
-		blockWeight, blockchain.CompactToBig(msgBlock.Header.Bits))
+		blockWeight, blockchain.CompactToBig(msgBlock.Header.Bits()))
 
 	return &BlockTemplate{
 		Block:             &msgBlock,
@@ -913,7 +913,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 		if err != nil {
 			return err
 		}
-		msgBlock.Header.Bits = difficulty
+		msgBlock.Header.SetBits(difficulty)
 	}
 
 	return nil
@@ -944,7 +944,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 	block := btcutil.NewBlock(msgBlock)
 
 	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-	msgBlock.Header.MerkleRoot = *merkles[len(merkles)-1]
+	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
 	return nil
 }
 

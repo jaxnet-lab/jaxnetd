@@ -109,12 +109,12 @@ type blockNode struct {
 func initBlockNode(node *blockNode, blockHeader *shard.Header, parent *blockNode) {
 	*node = blockNode{
 		hash:       blockHeader.BlockHash(),
-		workSum:    CalcWork(blockHeader.Bits),
-		version:    blockHeader.Version,
-		bits:       blockHeader.Bits,
-		nonce:      blockHeader.Nonce,
+		workSum:    CalcWork(blockHeader.Bits()),
+		version:    blockHeader.Version(),
+		bits:       blockHeader.Bits(),
+		nonce:      blockHeader.Nonce(),
 		timestamp:  blockHeader.Timestamp().Unix(),
-		merkleRoot: blockHeader.MerkleRoot,
+		merkleRoot: blockHeader.MerkleRoot(),
 	}
 	if parent != nil {
 		node.parent = parent

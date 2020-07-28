@@ -20,18 +20,18 @@ const BlockHeaderLen = 80
 type BlockHeader interface {
 	//BlockData() []byte
 	BlockHash() chainhash.Hash
-	//PrevBlock() chainhash.Hash
+	PrevBlock() chainhash.Hash
 	Timestamp() time.Time
 	SetTimestamp(time.Time)
-	//SetNonce(uint32)
-	//MerkleRoot() chainhash.Hash
-	//SetMerkleRoot(chainhash.Hash)
-	//MerkleMountainRange() chainhash.Hash
-	//Bits() uint32
-	//SetBits(uint32)
-	//Nonce() uint32
-	//
-	//Version() int32
+	MerkleRoot() chainhash.Hash
+	SetMerkleRoot(chainhash.Hash)
+	MerkleMountainRange() chainhash.Hash
+	Bits() uint32
+	SetBits(uint32)
+	Nonce() uint32
+	SetNonce(uint32)
+
+	Version() int32
 	//Read(r io.Reader) error
 	//Write(r io.Writer) error
 	//Size() int
