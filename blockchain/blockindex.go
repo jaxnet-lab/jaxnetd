@@ -5,6 +5,7 @@
 package blockchain
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math/big"
 	"sort"
@@ -106,7 +107,7 @@ type blockNode struct {
 // calculating the height and workSum from the respective fields on the parent.
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
-func initBlockNode(node *blockNode, blockHeader *shard.Header, parent *blockNode) {
+func initBlockNode(node *blockNode, blockHeader chain.BlockHeader, parent *blockNode) {
 	*node = blockNode{
 		hash:       blockHeader.BlockHash(),
 		workSum:    CalcWork(blockHeader.Bits()),
@@ -126,7 +127,7 @@ func initBlockNode(node *blockNode, blockHeader *shard.Header, parent *blockNode
 // newBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func newBlockNode(blockHeader *shard.Header, parent *blockNode) *blockNode {
+func newBlockNode(blockHeader chain.BlockHeader, parent *blockNode) *blockNode {
 	var node blockNode
 	initBlockNode(&node, blockHeader, parent)
 	return &node

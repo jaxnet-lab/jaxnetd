@@ -2633,7 +2633,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			// This should NEVER be nil because the most recent
 			// block is always pushed back by resetHeaderState
 			knownEl := b.headerList.Back()
-			var knownHead *shard.Header
+			var knownHead chain.BlockHeader
 			for j := uint32(prevNode.Height); j > backHeight; j-- {
 				if knownEl != nil {
 					knownHead = &knownEl.Header
@@ -2794,7 +2794,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 }
 
 // checkHeaderSanity checks the PoW, and timestamp of a block header.
-func (b *blockManager) checkHeaderSanity(blockHeader *shard.Header,
+func (b *blockManager) checkHeaderSanity(blockHeader chain.BlockHeader,
 	maxTimestamp time.Time, reorgAttempt bool) error {
 	diff, err := b.calcNextRequiredDifficulty(
 		blockHeader.Timestamp, reorgAttempt)

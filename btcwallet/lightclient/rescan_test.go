@@ -31,7 +31,7 @@ type mockChainSource struct {
 	bestBlock             headerfs.BlockStamp
 	blockHeightIndex      map[chainhash.Hash]uint32
 	blockHashesByHeight   map[uint32]*chainhash.Hash
-	blockHeaders          map[chainhash.Hash]*shard.Header
+	blockHeaders          map[chainhash.Hash]chain.BlockHeader
 	blocks                map[chainhash.Hash]*btcutil.Block
 	failGetFilter         bool // if true, returns nil filter in GetCFilter
 	filters               map[chainhash.Hash]*gcs.Filter
@@ -49,7 +49,7 @@ func newMockChainSource(numBlocks int) *mockChainSource {
 
 		blockHeightIndex:      make(map[chainhash.Hash]uint32),
 		blockHashesByHeight:   make(map[uint32]*chainhash.Hash),
-		blockHeaders:          make(map[chainhash.Hash]*shard.Header),
+		blockHeaders:          make(map[chainhash.Hash]chain.BlockHeader),
 		blocks:                make(map[chainhash.Hash]*btcutil.Block),
 		filterHeadersByHeight: make(map[uint32]*chainhash.Hash),
 		filters:               make(map[chainhash.Hash]*gcs.Filter),
@@ -106,7 +106,7 @@ func (c *mockChainSource) addNewBlock(notify bool) headerfs.BlockStamp {
 //
 // NOTE: The header's PrevBlock should properly point to the best block in the
 // chain.
-func (c *mockChainSource) addNewBlockWithHeader(header *shard.Header,
+func (c *mockChainSource) addNewBlockWithHeader(header chain.BlockHeader,
 	notify bool) headerfs.BlockStamp {
 
 	c.mu.Lock()
@@ -206,7 +206,7 @@ func (c *mockChainSource) BestBlock() (*headerfs.BlockStamp, error) {
 
 // GetBlockHeaderByHeight returns the header of the block with the given height.
 func (c *mockChainSource) GetBlockHeaderByHeight(
-	height uint32) (*shard.Header, error) {
+	height uint32) (chain.BlockHeader, error) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -224,7 +224,7 @@ func (c *mockChainSource) GetBlockHeaderByHeight(
 
 // GetBlockHeader returns the header of the block with the given hash.
 func (c *mockChainSource) GetBlockHeader(
-	hash *chainhash.Hash) (*shard.Header, uint32, error) {
+	hash *chainhash.Hash) (chain.BlockHeader, uint32, error) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -355,7 +355,7 @@ func newRescanTestContext(t *testing.T, numBlocks int,
 	blocksDisconnected := make(chan headerfs.BlockStamp)
 	ntfnHandlers := rpcclient.NotificationHandlers{
 		OnFilteredBlockConnected: func(height int32,
-			header *shard.Header, _ []*btcutil.Tx) {
+			header chain.BlockHeader, _ []*btcutil.Tx) {
 
 			blocksConnected <- headerfs.BlockStamp{
 				Hash:      header.BlockHash(),
@@ -364,7 +364,7 @@ func newRescanTestContext(t *testing.T, numBlocks int,
 			}
 		},
 		OnFilteredBlockDisconnected: func(height int32,
-			header *shard.Header) {
+			header chain.BlockHeader) {
 
 			blocksDisconnected <- headerfs.BlockStamp{
 				Hash:      header.BlockHash(),

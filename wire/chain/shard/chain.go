@@ -1,6 +1,9 @@
 package shard
 
-import "gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"io"
+)
 
 //
 type shardChain struct {
@@ -24,14 +27,13 @@ func (c *shardChain) NewHeader() chain.BlockHeader {
 //	return [32]byte{}
 //}
 
-//func (c *shardChain) DecodeHeader(r io.Reader) (chain.BlockHeader, error) {
-//	h := &Header{}
-//	err := ReadBlockHeader(r, h)
-//	return h, err
-//}
-//
-//func (c *shardChain) EncodeHeader(w io.Writer, h chain.BlockHeader) error {
-//	//h := &Header{}
-//	header := h.(*Header)
-//	return WriteBlockHeader(w,0,  header)
-//}
+func (c *shardChain) Read(r io.Reader) (chain.BlockHeader, error) {
+	h := &Header{}
+	err := readBlockHeader(r, h)
+	return h, err
+}
+
+func (c *shardChain) Write(w io.Writer, h chain.BlockHeader) error {
+	header := h.(*Header)
+	return writeBlockHeader(w, header)
+}

@@ -538,7 +538,7 @@ var (
 	}
 )
 
-func heightToHeader(height uint32) *shard.Header {
+func heightToHeader(height uint32) chain.BlockHeader {
 	header := &BlockHeader{Nonce: height}
 	return header
 }
@@ -573,7 +573,7 @@ func runCheckCFCheckptSanityTestCase(t *testing.T, testCase *cfCheckptTestCase) 
 
 	var (
 		height uint32
-		header *shard.Header
+		header chain.BlockHeader
 	)
 	for i, point := range testCase.storepoints {
 		cfBatch := make([]headerfs.FilterHeader, 0, wire.CFCheckptInterval)

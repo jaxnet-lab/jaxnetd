@@ -9,6 +9,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/limits"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -56,6 +58,7 @@ func btcdMain(serverChan chan<- *server) error {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	tcfg, _, err := loadConfig()
+	chain.SetChain(shard.Chain())
 
 	//if port := os.Getenv("port"); port != "" {
 	//	tcfg.Listeners = []string{port}

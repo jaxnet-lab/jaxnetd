@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"math"
 	"math/big"
 	"time"
@@ -75,7 +75,7 @@ func isNullOutpoint(outpoint *wire.OutPoint) bool {
 // coinbase transaction. Judgement is based on the block version in the block
 // header. Blocks with version 2 and above satisfy this criteria. See BIP0034
 // for further information.
-func ShouldHaveSerializedBlockHeight(header *shard.Header) bool {
+func ShouldHaveSerializedBlockHeight(header chain.BlockHeader) bool {
 	return header.Version() >= serializedHeightVersion
 }
 
@@ -305,7 +305,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 // The flags modify the behavior of this function as follows:
 //  - BFNoPoWCheck: The check to ensure the block hash is less than the target
 //    difficulty is not performed.
-func checkProofOfWork(header *shard.Header, powLimit *big.Int, flags BehaviorFlags) error {
+func checkProofOfWork(header chain.BlockHeader, powLimit *big.Int, flags BehaviorFlags) error {
 	// The target difficulty must be larger than zero.
 	target := CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
@@ -341,7 +341,7 @@ func checkProofOfWork(header *shard.Header, powLimit *big.Int, flags BehaviorFla
 // difficulty is in min/max range and that the block hash is less than the
 // target difficulty as claimed.
 func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
-	return checkProofOfWork(&block.MsgBlock().Header, powLimit, BFNone)
+	return checkProofOfWork(block.MsgBlock().Header, powLimit, BFNone)
 }
 
 // CountSigOps returns the number of signature operations for all transaction
@@ -428,7 +428,7 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
-func checkBlockHeaderSanity(header *shard.Header, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func checkBlockHeaderSanity(header chain.BlockHeader, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	// Ensure the proof of work bits in the block header is in min/max range
 	// and the block hash is less than the target value described by the
 	// bits.
@@ -467,7 +467,7 @@ func checkBlockHeaderSanity(header *shard.Header, powLimit *big.Int, timeSource 
 // are needed to pass along to checkBlockHeaderSanity.
 func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	msgBlock := block.MsgBlock()
-	header := &msgBlock.Header
+	header := msgBlock.Header
 	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
 	if err != nil {
 		return err
@@ -643,7 +643,7 @@ func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 //    the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockHeaderContext(header *shard.Header, prevNode *blockNode, flags BehaviorFlags) error {
+func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode *blockNode, flags BehaviorFlags) error {
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches
@@ -727,7 +727,7 @@ func (b *BlockChain) checkBlockHeaderContext(header *shard.Header, prevNode *blo
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode, flags BehaviorFlags) error {
 	// Perform all block header related validation checks.
-	header := &block.MsgBlock().Header
+	header := block.MsgBlock().Header
 	err := b.checkBlockHeaderContext(header, prevNode, flags)
 	if err != nil {
 		return err
@@ -1164,7 +1164,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 
 	// Enforce DER signatures for block versions 3+ once the historical
 	// activation threshold has been reached.  This is part of BIP0066.
-	blockHeader := &block.MsgBlock().Header
+	blockHeader := block.MsgBlock().Header
 	if blockHeader.Version() >= 3 && node.height >= b.chainParams.BIP0066Height {
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}
@@ -1276,6 +1276,6 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	// is not needed and thus extra work can be avoided.
 	view := NewUtxoViewpoint()
 	view.SetBestHash(&tip.hash)
-	newNode := newBlockNode(&header, tip)
+	newNode := newBlockNode(header, tip)
 	return b.checkConnectBlock(newNode, block, view, nil)
 }

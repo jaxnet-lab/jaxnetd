@@ -945,7 +945,7 @@ func (s *ChainService) GetBlockHash(height int64) (*chainhash.Hash, error) {
 // GetBlockHeader returns the block header for the given block hash, or an
 // error if the hash doesn't exist or is unknown.
 func (s *ChainService) GetBlockHeader(
-	blockHash *chainhash.Hash) (*shard.Header, error) {
+	blockHash *chainhash.Hash) (chain.BlockHeader, error) {
 	header, _, err := s.BlockHeaders.FetchHeader(blockHash)
 	return header, err
 }
@@ -1580,13 +1580,13 @@ var _ ChainSource = (*RescanChainSource)(nil)
 
 // GetBlockHeaderByHeight returns the header of the block with the given height.
 func (s *RescanChainSource) GetBlockHeaderByHeight(
-	height uint32) (*shard.Header, error) {
+	height uint32) (chain.BlockHeader, error) {
 	return s.BlockHeaders.FetchHeaderByHeight(height)
 }
 
 // GetBlockHeader returns the header of the block with the given hash.
 func (s *RescanChainSource) GetBlockHeader(
-	hash *chainhash.Hash) (*shard.Header, uint32, error) {
+	hash *chainhash.Hash) (chain.BlockHeader, uint32, error) {
 	return s.BlockHeaders.FetchHeader(hash)
 }
 

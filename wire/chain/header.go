@@ -2,6 +2,7 @@ package chain
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"io"
 	"time"
 )
 
@@ -18,7 +19,7 @@ const (
 const BlockHeaderLen = 80
 
 type BlockHeader interface {
-	//BlockData() []byte
+	BlockData() []byte
 	BlockHash() chainhash.Hash
 	PrevBlock() chainhash.Hash
 	Timestamp() time.Time
@@ -33,7 +34,7 @@ type BlockHeader interface {
 
 	Version() int32
 	//Read(r io.Reader) error
-	//Write(r io.Writer) error
+	Write(r io.Writer) error
 	//Size() int
 }
 

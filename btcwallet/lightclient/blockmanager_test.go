@@ -114,7 +114,7 @@ type headers struct {
 // checkpoints from the given genesis. The onCheckpoint method will be called
 // with the current cf header on each checkpoint to modify the derivation of
 // the next interval
-func generateHeaders(genesisBlockHeader *shard.Header,
+func generateHeaders(genesisBlockHeader chain.BlockHeader,
 	genesisFilterHeader *chainhash.Hash,
 	onCheckpoint func(*chainhash.Hash)) (*headers, error) {
 

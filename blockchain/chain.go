@@ -9,6 +9,7 @@ import (
 	"container/list"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"sync"
 	"time"
@@ -1589,7 +1590,7 @@ func (b *BlockChain) LocateBlocks(locator BlockLocator, hashStop *chainhash.Hash
 // See the comment on the exported function for more details on special cases.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Hash, maxHeaders uint32) []shard.Header {
+func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Hash, maxHeaders uint32) []chain.BlockHeader {
 	// Find the node after the first known block in the locator and the
 	// total number of nodes after it needed while respecting the stop hash
 	// and max entries.
@@ -1599,9 +1600,9 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	}
 
 	// Populate and return the found headers.
-	headers := make([]shard.Header, 0, total)
+	headers := make([]chain.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, node.Header())
+		headers = append(headers, chain.NewHeader())
 		node = b.bestChain.Next(node)
 	}
 	return headers
@@ -1620,7 +1621,7 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 //   after the genesis block will be returned
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Hash) []shard.Header {
+func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Hash) []chain.BlockHeader {
 	b.chainLock.RLock()
 	headers := b.locateHeaders(locator, hashStop, wire.MaxBlockHeadersPerMsg)
 	b.chainLock.RUnlock()

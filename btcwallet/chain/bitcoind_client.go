@@ -162,7 +162,7 @@ func (c *BitcoindClient) GetBlockHash(height int64) (*chainhash.Hash, error) {
 
 // GetBlockHeader returns a block header from the hash.
 func (c *BitcoindClient) GetBlockHeader(
-	hash *chainhash.Hash) (*shard.Header, error) {
+	hash *chainhash.Hash) (chain.BlockHeader, error) {
 
 	return c.chainConn.client.GetBlockHeader(hash)
 }
@@ -685,7 +685,7 @@ func (c *BitcoindClient) onBlockConnected(hash *chainhash.Hash, height int32,
 // found within the block being connected. This will queue a
 // FilteredBlockConnected notification to the caller.
 func (c *BitcoindClient) onFilteredBlockConnected(height int32,
-	header *shard.Header, relevantTxs []*wtxmgr.TxRecord) {
+	header chain.BlockHeader, relevantTxs []*wtxmgr.TxRecord) {
 
 	if c.shouldNotifyBlocks() {
 		select {

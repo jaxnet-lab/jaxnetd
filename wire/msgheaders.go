@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
@@ -21,11 +22,11 @@ const MaxBlockHeadersPerMsg = 2000
 // per message is currently 2000.  See MsgGetHeaders for details on requesting
 // the headers.
 type MsgHeaders struct {
-	Headers []*shard.Header
+	Headers []chain.BlockHeader
 }
 
 // AddBlockHeader adds a new block header to the message.
-func (msg *MsgHeaders) AddBlockHeader(bh *shard.Header) error {
+func (msg *MsgHeaders) AddBlockHeader(bh chain.BlockHeader) error {
 	if len(msg.Headers)+1 > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
@@ -53,15 +54,14 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 
 	// Create a contiguous slice of headers to deserialize into in order to
 	// reduce the number of allocations.
-	headers := make([]shard.Header, count)
-	msg.Headers = make([]*shard.Header, 0, count)
+	headers := make([]chain.BlockHeader, count)
+	msg.Headers = make([]chain.BlockHeader, 0, count)
 	for i := uint64(0); i < count; i++ {
-		bh := &headers[i]
-		err := shard.ReadBlockHeader(r, bh)
+		bh, err := chain.ReadBlockHeader(r)
 		if err != nil {
 			return err
 		}
-
+		headers[i] = bh
 		txCount, err := encoder.ReadVarInt(r, pver)
 		if err != nil {
 			return err
@@ -96,7 +96,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	}
 
 	for _, bh := range msg.Headers {
-		err := shard.WriteBlockHeader(w, bh)
+		err := chain.WriteBlockHeader(w, bh)
 		if err != nil {
 			return err
 		}
@@ -133,6 +133,6 @@ func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 // Message interface.  See MsgHeaders for details.
 func NewMsgHeaders() *MsgHeaders {
 	return &MsgHeaders{
-		Headers: make([]*shard.Header, 0, MaxBlockHeadersPerMsg),
+		Headers: make([]chain.BlockHeader, 0, MaxBlockHeadersPerMsg),
 	}
 }

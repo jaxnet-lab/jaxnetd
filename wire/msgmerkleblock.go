@@ -6,7 +6,7 @@ package wire
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
@@ -24,7 +24,7 @@ const maxFlagsPerMerkleBlock = maxTxPerBlock / 8
 //
 // This message was not added until protocol version BIP0037Version.
 type MsgMerkleBlock struct {
-	Header       shard.Header
+	Header       chain.BlockHeader
 	Transactions uint32
 	Hashes       []*chainhash.Hash
 	Flags        []byte
@@ -44,14 +44,14 @@ func (msg *MsgMerkleBlock) AddTxHash(hash *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (err error) {
 	if pver < BIP0037Version {
 		str := fmt.Sprintf("merkleblock message invalid for protocol "+
 			"version %d", pver)
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := shard.ReadBlockHeader(r, &msg.Header)
+	msg.Header, err = chain.ReadBlockHeader(r)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncodi
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := shard.WriteBlockHeader(w, &msg.Header)
+	err := chain.WriteBlockHeader(w, msg.Header)
 	if err != nil {
 		return err
 	}
@@ -151,9 +151,9 @@ func (msg *MsgMerkleBlock) MaxPayloadLength(pver uint32) uint32 {
 
 // NewMsgMerkleBlock returns a new bitcoin merkleblock message that conforms to
 // the Message interface.  See MsgMerkleBlock for details.
-func NewMsgMerkleBlock(bh *shard.Header) *MsgMerkleBlock {
+func NewMsgMerkleBlock(bh chain.BlockHeader) *MsgMerkleBlock {
 	return &MsgMerkleBlock{
-		Header:       *bh,
+		Header:       bh,
 		Transactions: 0,
 		Hashes:       make([]*chainhash.Hash, 0),
 		Flags:        make([]byte, 0),

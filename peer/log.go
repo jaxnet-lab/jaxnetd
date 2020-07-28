@@ -178,7 +178,7 @@ func messageSummary(msg wire.Message) string {
 			formatLockTime(msg.LockTime))
 
 	case *wire.MsgBlock:
-		header := &msg.Header
+		header := msg.Header
 		return fmt.Sprintf("hash %s, ver %d, %d tx, %s", msg.BlockHash(),
 			header.Version, len(msg.Transactions), header.Timestamp)
 

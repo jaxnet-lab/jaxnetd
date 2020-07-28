@@ -31,7 +31,7 @@ func newMockBlockHeaderStore() *mockBlockHeaderStore {
 	}
 }
 
-func (m *mockBlockHeaderStore) ChainTip() (*shard.Header,
+func (m *mockBlockHeaderStore) ChainTip() (chain.BlockHeader,
 	uint32, error) {
 	return nil, 0, nil
 
@@ -42,7 +42,7 @@ func (m *mockBlockHeaderStore) LatestBlockLocator() (
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
-	*shard.Header, error) {
+	chain.BlockHeader, error) {
 
 	if header, ok := m.heights[height]; ok {
 		return &header, nil
@@ -66,7 +66,7 @@ func (m *mockBlockHeaderStore) RollbackLastBlock() (*headerfs.BlockStamp,
 }
 
 func (m *mockBlockHeaderStore) FetchHeader(h *chainhash.Hash) (
-	*shard.Header, uint32, error) {
+	chain.BlockHeader, uint32, error) {
 	if header, ok := m.headers[*h]; ok {
 		return &header, 0, nil
 	}

@@ -78,7 +78,7 @@ var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet 
 // public transaction ledger for the main network.
 
 var genesisBlock = wire.MsgBlock{
-	Header:       *shard.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }
 
@@ -99,7 +99,7 @@ var regTestGenesisMerkleRoot = genesisMerkleRoot
 // regTestGenesisBlock defines the genesis block of the block chain which serves
 // as the public transaction ledger for the regression test network.
 var regTestGenesisBlock = wire.MsgBlock{
-	Header:       *shard.NewBlockHeader(1, chainhash.Hash{}, regTestGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x207fffff, 2),
+	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, regTestGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x207fffff, 2),
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }
 
@@ -120,7 +120,7 @@ var testNet3GenesisMerkleRoot = genesisMerkleRoot
 // testNet3GenesisBlock defines the genesis block of the block chain which
 // serves as the public transaction ledger for the test network (version 3).
 var testNet3GenesisBlock = wire.MsgBlock{
-	Header:       *shard.NewBlockHeader(1, chainhash.Hash{}, testNet3GenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x1d00ffff, 0x18aea41a),
+	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, testNet3GenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x1d00ffff, 0x18aea41a),
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }
 
@@ -141,6 +141,6 @@ var simNetGenesisMerkleRoot = genesisMerkleRoot
 // simNetGenesisBlock defines the genesis block of the block chain which serves
 // as the public transaction ledger for the simulation test network.
 var simNetGenesisBlock = wire.MsgBlock{
-	Header:       *shard.NewBlockHeader(1, chainhash.Hash{}, simNetGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1401292357, 0), 0x207fffff, 2),
+	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, simNetGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1401292357, 0), 0x207fffff, 2),
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }

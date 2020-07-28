@@ -14,6 +14,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"math"
 	"runtime"
 	"time"
@@ -262,7 +265,7 @@ func opReturnScript(data []byte) []byte {
 // uniqueOpReturnScript returns a standard provably-pruneable OP_RETURN script
 // with a random uint64 encoded as the data.
 func uniqueOpReturnScript() []byte {
-	rand, err := wire.RandomUint64()
+	rand, err := encoder.RandomUint64()
 	if err != nil {
 		panic(err)
 	}
@@ -335,7 +338,7 @@ func calcMmrRoot(txns []*wire.MsgTx) chainhash.Hash {
 // NOTE: This function will never solve blocks with a nonce of 0.  This is done
 // so the 'nextBlock' function can properly detect when a nonce was modified by
 // a munge function.
-func solveBlock(header *shard.Header) bool {
+func solveBlock(header chain.BlockHeader) bool {
 	// sbResult is used by the solver goroutines to send results.
 	type sbResult struct {
 		found bool
@@ -344,10 +347,10 @@ func solveBlock(header *shard.Header) bool {
 
 	// solver accepts a block header and a nonce range to test. It is
 	// intended to be run as a goroutine.
-	targetDifficulty := blockchain.CompactToBig(header.Bits)
+	targetDifficulty := blockchain.CompactToBig(header.Bits())
 	quit := make(chan bool)
 	results := make(chan sbResult)
-	solver := func(hdr shard.Header, startNonce, stopNonce uint32) {
+	solver := func(hdr chain.BlockHeader, startNonce, stopNonce uint32) {
 		// We need to modify the nonce field of the header, so make sure
 		// we work with a copy of the original header.
 		for i := startNonce; i >= startNonce && i <= stopNonce; i++ {
@@ -355,7 +358,7 @@ func solveBlock(header *shard.Header) bool {
 			case <-quit:
 				return
 			default:
-				hdr.Nonce = i
+				hdr.SetNonce(i)
 				hash := hdr.BlockHash()
 				if blockchain.HashToBig(&hash).Cmp(
 					targetDifficulty) <= 0 {
@@ -378,13 +381,13 @@ func solveBlock(header *shard.Header) bool {
 		if i == numCores-1 {
 			rangeStop = stopNonce
 		}
-		go solver(*header, rangeStart, rangeStop)
+		go solver(header, rangeStart, rangeStop)
 	}
 	for i := uint32(0); i < numCores; i++ {
 		result := <-results
 		if result.found {
 			close(quit)
-			header.Nonce = result.nonce
+			header.SetNonce(result.nonce)
 			return true
 		}
 	}
@@ -519,40 +522,33 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	if nextHeight == 1 {
 		ts = time.Unix(time.Now().Unix(), 0)
 	} else {
-		ts = g.tip.Header.Timestamp.Add(time.Second)
+		ts = g.tip.Header.Timestamp().Add(time.Second)
 	}
 
 	block := wire.MsgBlock{
-		Header: shard.Header{
-			Version:    1,
-			PrevBlock:  g.tip.BlockHash(),
-			MerkleRoot: calcMerkleRoot(txns),
-			Bits:       g.params.PowLimitBits,
-			Timestamp:  ts,
-			Nonce:      0, // To be solved.
-		},
+		Header:       shard.NewBlockHeader(1, g.tip.BlockHash(), calcMerkleRoot(txns), chainhash.Hash{}, ts, g.params.PowLimitBits, 0),
 		Transactions: txns,
 	}
 
 	// Perform any block munging just before solving.  Only recalculate the
 	// merkle root if it wasn't manually changed by a munge function.
-	curMerkleRoot := block.Header.MerkleRoot
-	curMmrRoot := block.Header.MerkleMountainRange
-	curNonce := block.Header.Nonce
+	curMerkleRoot := block.Header.MerkleRoot()
+	curMmrRoot := block.Header.MerkleMountainRange()
+	curNonce := block.Header.Nonce()
 	for _, f := range mungers {
 		f(&block)
 	}
-	if block.Header.MerkleRoot == curMerkleRoot {
-		block.Header.MerkleRoot = calcMerkleRoot(block.Transactions)
+	if block.Header.MerkleRoot() == curMerkleRoot {
+		block.Header.SetMerkleRoot(calcMerkleRoot(block.Transactions))
 	}
 
-	if block.Header.MerkleMountainRange == curMmrRoot {
-		block.Header.MerkleMountainRange = calcMmrRoot(block.Transactions)
+	if block.Header.MerkleMountainRange() == curMmrRoot {
+		//block.Header.MerkleMountainRange calcMmrRoot(block.Transactions)
 	}
 
 	// Only solve the block if the nonce wasn't manually changed by a munge
 	// function.
-	if block.Header.Nonce == curNonce && !solveBlock(&block.Header) {
+	if block.Header.Nonce() == curNonce && !solveBlock(block.Header) {
 		panic(fmt.Sprintf("Unable to solve block at height %d",
 			nextHeight))
 	}
@@ -626,7 +622,7 @@ func (g *testGenerator) saveSpendableCoinbaseOuts() {
 	// reaching the block that has already had the coinbase outputs
 	// collected.
 	var collectBlocks []*wire.MsgBlock
-	for b := g.tip; b != nil; b = g.blocks[b.Header.PrevBlock] {
+	for b := g.tip; b != nil; b = g.blocks[b.Header.PrevBlock()] {
 		if b.BlockHash() == g.prevCollectedHash {
 			break
 		}
@@ -654,7 +650,7 @@ func nonCanonicalVarInt(val uint32) []byte {
 // encoding.
 func encodeNonCanonicalBlock(b *wire.MsgBlock) []byte {
 	var buf bytes.Buffer
-	b.Header.BtcEncode(&buf, 0, wire.BaseEncoding)
+	b.Header().BtcEncode(&buf, 0, wire.BaseEncoding)
 	buf.Write(nonCanonicalVarInt(uint32(len(b.Transactions))))
 	for _, tx := range b.Transactions {
 		tx.BtcEncode(&buf, 0, wire.BaseEncoding)
@@ -767,7 +763,7 @@ func (g *testGenerator) assertTipBlockHash(expected chainhash.Hash) {
 // assertTipBlockMerkleRoot panics if the merkle root in header of the current
 // tip block associated with the generator does not match the specified hash.
 func (g *testGenerator) assertTipBlockMerkleRoot(expected chainhash.Hash) {
-	hash := g.tip.Header.MerkleRoot
+	hash := g.tip.Header.MerkleRoot()
 	if hash != expected {
 		panic(fmt.Sprintf("merkle root of block %q (height %d) is %v "+
 			"instead of expected %v", g.tipName, g.tipHeight, hash,
@@ -1462,7 +1458,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		for {
 			// Keep incrementing the nonce until the hash treated as
 			// a uint256 is higher than the limit.
-			b46.Header.Nonce++
+			b46.Header.SetNonce(b46.Header.Nonce() + 1)
 			blockHash := b46.BlockHash()
 			hashNum := blockchain.HashToBig(&blockHash)
 			if hashNum.Cmp(g.params.PowLimit) >= 0 {
@@ -1481,7 +1477,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b47", outs[14], func(b *wire.MsgBlock) {
 		// 3 hours in the future clamped to 1 second precision.
 		nowPlus3Hours := time.Now().Add(time.Hour * 3)
-		b.Header.Timestamp = time.Unix(nowPlus3Hours.Unix(), 0)
+		b.Header.SetTimestamp(time.Unix(nowPlus3Hours.Unix(), 0))
 	})
 	rejected(blockchain.ErrTimeTooNew)
 
@@ -1491,7 +1487,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//                 \-> b48(14)
 	g.setTip("b43")
 	g.nextBlock("b48", outs[14], func(b *wire.MsgBlock) {
-		b.Header.MerkleRoot = chainhash.Hash{}
+		b.Header.SetMerkleRoot(chainhash.Hash{})
 	})
 	rejected(blockchain.ErrBadMerkleRoot)
 
@@ -1501,7 +1497,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//                 \-> b49(14)
 	g.setTip("b43")
 	g.nextBlock("b49", outs[14], func(b *wire.MsgBlock) {
-		b.Header.Bits--
+		b.Header.SetBits(b.Header.Bits() - 1)
 	})
 	rejected(blockchain.ErrUnexpectedDifficulty)
 
@@ -1516,7 +1512,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	// involves an unsolvable block.
 	{
 		origHash := b49a.BlockHash()
-		b49a.Header.Bits = 0x01810000 // -1 in compact form.
+		b49a.Header.SetBits(0x01810000) // -1 in compact form.
 		g.updateBlockState("b49a", origHash, "b49a", b49a)
 	}
 	rejected(blockchain.ErrUnexpectedDifficulty)
@@ -1574,11 +1570,11 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//   ... -> b33(9) -> b35(10) -> b39(11) -> b42(12) -> b43(13) -> b53(14)
 	//                                                                       \-> b54(15)
 	g.nextBlock("b54", outs[15], func(b *wire.MsgBlock) {
-		medianBlock := g.blocks[b.Header.PrevBlock]
+		medianBlock := g.blocks[b.Header.PrevBlock()]
 		for i := 0; i < medianTimeBlocks/2; i++ {
-			medianBlock = g.blocks[medianBlock.Header.PrevBlock]
+			medianBlock = g.blocks[medianBlock.Header.PrevBlock()]
 		}
-		b.Header.Timestamp = medianBlock.Header.Timestamp
+		b.Header.SetTimestamp(medianBlock.Header.Timestamp())
 	})
 	rejected(blockchain.ErrTimeTooOld)
 
@@ -1588,12 +1584,12 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	//   ... -> b33(9) -> b35(10) -> b39(11) -> b42(12) -> b43(13) -> b53(14) -> b55(15)
 	g.setTip("b53")
 	g.nextBlock("b55", outs[15], func(b *wire.MsgBlock) {
-		medianBlock := g.blocks[b.Header.PrevBlock]
+		medianBlock := g.blocks[b.Header.PrevBlock()]
 		for i := 0; i < medianTimeBlocks/2; i++ {
-			medianBlock = g.blocks[medianBlock.Header.PrevBlock]
+			medianBlock = g.blocks[medianBlock.Header.PrevBlock()]
 		}
-		medianBlockTime := medianBlock.Header.Timestamp
-		b.Header.Timestamp = medianBlockTime.Add(time.Second)
+		medianBlockTime := medianBlock.Header.Timestamp()
+		b.Header.SetTimestamp(medianBlockTime.Add(time.Second))
 	})
 	accepted()
 
@@ -1650,7 +1646,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	})
 	g.assertTipBlockNumTxns(4)
 	g.assertTipBlockHash(b57.BlockHash())
-	g.assertTipBlockMerkleRoot(b57.Header.MerkleRoot)
+	g.assertTipBlockMerkleRoot(b57.Header.MerkleRoot())
 	rejected(blockchain.ErrDuplicateTx)
 
 	// Since the two blocks have the same hash and the generator state now
@@ -1738,7 +1734,7 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	g.nextBlock("b61", outs[18], func(b *wire.MsgBlock) {
 		// Duplicate the coinbase of the parent block to force the
 		// condition.
-		parent := g.blocks[b.Header.PrevBlock]
+		parent := g.blocks[b.Header.PrevBlock()]
 		b.Transactions[0] = parent.Transactions[0]
 	})
 	rejected(blockchain.ErrOverwriteTx)

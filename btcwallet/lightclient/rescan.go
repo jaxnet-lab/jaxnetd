@@ -50,10 +50,10 @@ type ChainSource interface {
 
 	// GetBlockHeaderByHeight returns the header of the block with the given
 	// height.
-	GetBlockHeaderByHeight(uint32) (*shard.Header, error)
+	GetBlockHeaderByHeight(uint32) (chain.BlockHeader, error)
 
 	// GetBlockHeader returns the header of the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (*shard.Header, uint32, error)
+	GetBlockHeader(*chainhash.Hash) (chain.BlockHeader, uint32, error)
 
 	// GetBlock returns the block with the given hash.
 	GetBlock(chainhash.Hash, ...QueryOption) (*btcutil.Block, error)
@@ -1004,7 +1004,7 @@ func extractBlockMatches(chain ChainSource, ro *rescanOptions,
 // This differs from notifyBlock in that is expects the caller to already have
 // obtained the target filter.
 func notifyBlockWithFilter(chain ChainSource, ro *rescanOptions,
-	curHeader *shard.Header, curStamp *headerfs.BlockStamp,
+	curHeader chain.BlockHeader, curStamp *headerfs.BlockStamp,
 	filter *gcs.Filter) error {
 
 	// Based on what we find within the block or the filter, we'll be
@@ -1099,7 +1099,7 @@ func blockFilterMatches(chain ChainSource, ro *rescanOptions,
 // updateFilter atomically updates the filter and rewinds to the specified
 // height if not 0.
 func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
-	curStamp *headerfs.BlockStamp, curHeader *shard.Header) (bool, error) {
+	curStamp *headerfs.BlockStamp, curHeader chain.BlockHeader) (bool, error) {
 
 	ro.watchAddrs = append(ro.watchAddrs, update.addrs...)
 	ro.watchInputs = append(ro.watchInputs, update.inputs...)
@@ -1125,7 +1125,7 @@ func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
 	}
 
 	var (
-		header  *shard.Header
+		header  chain.BlockHeader
 		height  uint32
 		rewound bool
 		err     error

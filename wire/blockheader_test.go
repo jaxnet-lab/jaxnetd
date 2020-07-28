@@ -79,11 +79,11 @@ func TestBlockHeaderWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *shard.Header   // Data to encode
-		out  *shard.Header   // Expected decoded data
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding variant to use
+		in   chain.BlockHeader // Data to encode
+		out  chain.BlockHeader // Expected decoded data
+		buf  []byte            // Wire encoding
+		pver uint32            // Protocol version for wire encoding
+		enc  MessageEncoding   // Message encoding variant to use
 	}{
 		// Latest protocol version.
 		{
@@ -218,9 +218,9 @@ func TestBlockHeaderSerialize(t *testing.T) {
 	}
 
 	tests := []struct {
-		in  *shard.Header // Data to encode
-		out *shard.Header // Expected decoded data
-		buf []byte        // Serialized data
+		in  chain.BlockHeader // Data to encode
+		out chain.BlockHeader // Expected decoded data
+		buf []byte            // Serialized data
 	}{
 		{
 			baseBlockHdr,

@@ -863,7 +863,7 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = *shard.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
+	msgBlock.Header = shard.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err

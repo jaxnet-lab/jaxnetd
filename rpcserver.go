@@ -15,7 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
@@ -748,7 +748,7 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 // createTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
 func createTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
-	txHash string, blkHeader *shard.Header, blkHash string,
+	txHash string, blkHeader chain.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
 
 	mtxHex, err := messageToHex(mtx)
@@ -1162,7 +1162,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	}
 
 	params := s.cfg.ChainParams
-	blockHeader := &blk.MsgBlock().Header
+	blockHeader := blk.MsgBlock().Header
 	blockReply := btcjson.GetBlockVerboseResult{
 		Hash:                c.Hash,
 		Version:             blockHeader.Version(),
@@ -1718,7 +1718,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	// invalid block templates.
 	template := state.template
 	msgBlock := template.Block
-	header := &msgBlock.Header
+	header := msgBlock.Header
 	adjustedTime := state.timeSource.AdjustedTime()
 	maxTime := adjustedTime.Add(time.Second * blockchain.MaxTimeOffsetSeconds)
 	if header.Timestamp().After(maxTime) {
@@ -2340,7 +2340,7 @@ func handleGetHeaders(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) 
 	hexBlockHeaders := make([]string, len(headers))
 	var buf bytes.Buffer
 	for i, h := range headers {
-		err := h.Serialize(&buf)
+		err := h.Write(&buf)
 		if err != nil {
 			return nil, internalRPCError(err.Error(),
 				"Failed to serialize block header")
@@ -2682,7 +2682,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 	}
 
 	// The verbose flag is set, so generate the JSON object and return it.
-	var blkHeader *shard.Header
+	var blkHeader chain.BlockHeader
 	var blkHashStr string
 	var chainHeight int32
 	if blkHash != nil {
@@ -3310,7 +3310,7 @@ func handleSearchRawTransactions(s *rpcServer, cmd interface{}, closeChan <-chan
 		// so conditionally fetch block details here.  This will be
 		// reflected in the final JSON output (mempool won't have
 		// confirmations or block information).
-		var blkHeader *shard.Header
+		var blkHeader chain.BlockHeader
 		var blkHashStr string
 		var blkHeight int32
 		if blkHash := rtx.blkHash; blkHash != nil {
@@ -4317,7 +4317,7 @@ type rpcserverSyncManager interface {
 	// block in the provided locators until the provided stop hash or the
 	// current tip is reached, up to a max of wire.MaxBlockHeadersPerMsg
 	// hashes.
-	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []shard.Header
+	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader
 }
 
 // rpcserverConfig is a descriptor containing the RPC server configuration.

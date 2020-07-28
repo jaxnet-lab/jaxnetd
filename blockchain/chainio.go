@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math/big"
 	"sync"
@@ -1007,7 +1008,7 @@ func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := btcutil.NewBlock(b.chainParams.GenesisBlock)
 	genesisBlock.SetHeight(0)
-	header := &genesisBlock.MsgBlock().Header
+	header := genesisBlock.MsgBlock().Header
 	node := newBlockNode(header, nil)
 	node.status = statusDataStored | statusValid
 	b.bestChain.SetTip(node)
@@ -1254,7 +1255,7 @@ func (b *BlockChain) initChainState() error {
 
 // deserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func deserializeBlockRow(blockRow []byte) (*shard.Header, blockStatus, error) {
+func deserializeBlockRow(blockRow []byte) (chain.BlockHeader, blockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	var header shard.Header
@@ -1273,7 +1274,7 @@ func deserializeBlockRow(blockRow []byte) (*shard.Header, blockStatus, error) {
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*shard.Header, error) {
+func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (chain.BlockHeader, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
@@ -1290,7 +1291,7 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*shard.Header,
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
 // block header for the provided height.
-func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (*shard.Header, error) {
+func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (chain.BlockHeader, error) {
 	hash, err := dbFetchHashByHeight(dbTx, height)
 	if err != nil {
 		return nil, err

@@ -38,7 +38,7 @@ package wire
 //// header.
 //const blockHeaderLen = 80
 //
-//func (h *shard.Header) BlockData() []byte {
+//func (h chain.BlockHeader) BlockData() []byte {
 //	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 //	_ = writeBlockHeader(buf, 0, h)
 //	return buf.Bytes()
