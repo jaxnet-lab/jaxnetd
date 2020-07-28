@@ -259,7 +259,7 @@ func (q *blockRetryQueue) pop() *blockntfns.Connected {
 
 // remove removes the block from the queue and any others that follow it. If the
 // block doesn't exit within the queue, then this acts as a NOP.
-func (q *blockRetryQueue) remove(header shard.Header) {
+func (q *blockRetryQueue) remove(header shard.header) {
 	headerIdx := -1
 	targetHash := header.BlockHash()
 	for i, block := range q.blocks {
@@ -361,7 +361,7 @@ func rescan(chain ChainSource, options ...RescanOption) error {
 
 	// Track our position in the chain.
 	var (
-		curHeader shard.Header
+		curHeader shard.header
 		curStamp  headerfs.BlockStamp
 	)
 
@@ -901,7 +901,7 @@ rescanLoop:
 
 // notifyBlock calls appropriate listeners based on the block filter.
 func notifyBlock(chain ChainSource, ro *rescanOptions,
-	curHeader shard.Header, curStamp headerfs.BlockStamp,
+	curHeader shard.header, curStamp headerfs.BlockStamp,
 	scanning bool) error {
 
 	// Find relevant transactions based on watch list. If scanning is

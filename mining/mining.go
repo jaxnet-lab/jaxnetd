@@ -967,7 +967,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 //
 //
 //	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-//	msgBlock.Header.MerkleRoot = *merkles[len(merkles)-1]
+//	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
 //	return nil
 //}
 
@@ -991,7 +991,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 //	// Recalculate the merkle root with the updated extra nonce.
 //	block := btcutil.NewBlock(msgBlock)
 //	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-//	msgBlock.Header.MerkleRoot = *merkles[len(merkles)-1]
+//	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
 //	return nil
 //}
 

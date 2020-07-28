@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"sync"
 	"time"
 
@@ -1271,11 +1270,11 @@ func (b *BlockChain) BestSnapshot() *BestState {
 // HeaderByHash returns the block header identified by the given hash or an
 // error if it doesn't exist. Note that this will return headers from both the
 // main and side chains.
-func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (shard.Header, error) {
+func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (chain.BlockHeader, error) {
 	node := b.index.LookupNode(hash)
 	if node == nil {
 		err := fmt.Errorf("block %s is not known", hash)
-		return shard.Header{}, err
+		return chain.NewHeader(), err
 	}
 
 	return node.Header(), nil

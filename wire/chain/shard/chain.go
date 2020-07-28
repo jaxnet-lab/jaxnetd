@@ -15,7 +15,7 @@ func Chain() chain.IChain {
 }
 
 func (c *shardChain) NewHeader() chain.BlockHeader {
-	return &Header{}
+	return &header{}
 }
 
 //
@@ -28,12 +28,12 @@ func (c *shardChain) NewHeader() chain.BlockHeader {
 //}
 
 func (c *shardChain) Read(r io.Reader) (chain.BlockHeader, error) {
-	h := &Header{}
+	h := &header{}
 	err := readBlockHeader(r, h)
 	return h, err
 }
 
 func (c *shardChain) Write(w io.Writer, h chain.BlockHeader) error {
-	header := h.(*Header)
+	header := h.(*header)
 	return writeBlockHeader(w, header)
 }

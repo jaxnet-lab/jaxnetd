@@ -543,7 +543,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	}
 
 	if block.Header.MerkleMountainRange() == curMmrRoot {
-		//block.Header.MerkleMountainRange calcMmrRoot(block.Transactions)
+		//block.header.MerkleMountainRange calcMmrRoot(block.Transactions)
 	}
 
 	// Only solve the block if the nonce wasn't manually changed by a munge

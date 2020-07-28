@@ -1383,7 +1383,7 @@ func handleGetBlockHeader(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	// header as a hex-encoded string.
 	if c.Verbose != nil && !*c.Verbose {
 		var headerBuf bytes.Buffer
-		err := blockHeader.Serialize(&headerBuf)
+		err := blockHeader.Read(&headerBuf)
 		if err != nil {
 			context := "Failed to serialize block header"
 			return nil, internalRPCError(err.Error(), context)
@@ -2693,7 +2693,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 			return nil, internalRPCError(err.Error(), context)
 		}
 
-		blkHeader = &header
+		blkHeader = header
 		blkHashStr = blkHash.String()
 		chainHeight = s.cfg.Chain.BestSnapshot().Height
 	}
@@ -3330,7 +3330,7 @@ func handleSearchRawTransactions(s *rpcServer, cmd interface{}, closeChan <-chan
 				return nil, internalRPCError(err.Error(), context)
 			}
 
-			blkHeader = &header
+			blkHeader = header
 			blkHashStr = blkHash.String()
 			blkHeight = height
 		}

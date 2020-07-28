@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// MaxBlockHeaderPayload is the maximum number of bytes a block Header can be.
+// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 // Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 // PrevBlock and MerkleRoot hashes.
 const MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
@@ -18,11 +18,11 @@ const MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
 
 // BlockHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
-type Header struct {
+type header struct {
 	// Version of the block.  This is not the same as the protocol version.
 	version int32
 
-	// Hash of the previous block Header in the block chain.
+	// Hash of the previous block header in the block chain.
 	prevBlock chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
@@ -42,21 +42,21 @@ type Header struct {
 }
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
-// Header.
+// header.
 const blockHeaderLen = 80
 
-func (h *Header) PrevBlock() chainhash.Hash {
+func (h *header) PrevBlock() chainhash.Hash {
 	return h.prevBlock
 }
 
-func (h *Header) BlockData() []byte {
+func (h *header) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 	_ = writeBlockHeader(buf, h)
 	return buf.Bytes()
 }
 
-// BlockHash computes the block identifier hash for the given block Header.
-func (h *Header) BlockHash() chainhash.Hash {
+// BlockHash computes the block identifier hash for the given block header.
+func (h *header) BlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 	_ = writeBlockHeader(buf, h)
 
@@ -67,7 +67,7 @@ func (h *Header) BlockHash() chainhash.Hash {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
-func (h *Header) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (h *header) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
 	return readBlockHeader(r, h)
 }
 
@@ -75,24 +75,24 @@ func (h *Header) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding
 // This is part of the Message interface implementation.
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
-func (h *Header) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (h *header) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	return writeBlockHeader(w, h)
 }
 
-// Deserialize decodes a block Header from r into the receiver using a format
+// Deserialize decodes a block header from r into the receiver using a format
 // that is suitable for long-term storage such as a database while respecting
 // the Version field.
-func (h *Header) Deserialize(r io.Reader) error {
+func (h *header) Read(r io.Reader) error {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of readBlockHeader.
 	return readBlockHeader(r, h)
 }
 
-// Serialize encodes a block Header from r into the receiver using a format
+// Serialize encodes a block header from r into the receiver using a format
 // that is suitable for long-term storage such as a database while respecting
 // the Version field.
-func (h *Header) Serialize(w io.Writer) error {
+func (h *header) Serialize(w io.Writer) error {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of WriteBlockHeader.
@@ -105,11 +105,11 @@ func (h *Header) Serialize(w io.Writer) error {
 func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 	mmr chainhash.Hash,
 	timestamp time.Time,
-	bits uint32, nonce uint32) *Header {
+	bits uint32, nonce uint32) *header {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
-	return &Header{
+	return &header{
 		version:             version,
 		prevBlock:           prevHash,
 		merkleRoot:          merkleRootHash,
@@ -120,19 +120,19 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 	}
 }
 
-// readBlockHeader reads a bitcoin block Header from r.  See Deserialize for
+// readBlockHeader reads a bitcoin block header from r.  See Deserialize for
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
-func readBlockHeader(r io.Reader, bh *Header) error {
+func readBlockHeader(r io.Reader, bh *header) error {
 	return encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot,
 		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce)
 }
 
-// WriteBlockHeader writes a bitcoin block Header to w.  See Serialize for
+// WriteBlockHeader writes a bitcoin block header to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
-func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
-	bh := header.(*Header)
+func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
+	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
 	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot,
 		sec, bh.bits, bh.nonce)
@@ -140,11 +140,11 @@ func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
 
 //// BlockHeader defines information about a block and is used in the bitcoin
 //// block (MsgBlock) and headers (MsgHeaders) messages.
-//type Header struct {
+//type header struct {
 //	// Version of the block.  This is not the same as the protocol version.
 //	version int32
 //
-//	// Hash of the previous block Header in the block chain.
+//	// Hash of the previous block header in the block chain.
 //	prevBlock chainhash.Hash
 //
 //	// Merkle tree reference to hash of all transactions for the block.
@@ -164,7 +164,7 @@ func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
 //}
 //
 //func NewHeader(version int32, prev chainhash.Hash, merkeleRoot chainhash.Hash, ts time.Time, bits uint32, nonce uint32) chain.BlockHeader {
-//	return &Header{
+//	return &header{
 //		version:    version,
 //		prevBlock:  prev,
 //		merkleRoot: merkeleRoot,
@@ -175,22 +175,22 @@ func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
 //}
 //
 //// blockHeaderLen is a constant that represents the number of bytes for a block
-//// Header.
+//// header.
 //const blockHeaderLen = 80
 //
-//func (h *Header) Size() int {
+//func (h *header) Size() int {
 //	return blockHeaderLen
 //}
 //
-//func (h *Header) BlockData() []byte {
+//func (h *header) BlockData() []byte {
 //	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 //	_ = WriteBlockHeader(buf, h)
 //	return buf.Bytes()
 //}
 //
-//// BlockHash computes the block identifier hash for the given block Header.
-//func (h *Header) BlockHash() chainhash.Hash {
-//	// Encode the Header and double sha256 everything prior to the number of
+//// BlockHash computes the block identifier hash for the given block header.
+//func (h *header) BlockHash() chainhash.Hash {
+//	// Encode the header and double sha256 everything prior to the number of
 //	// transactions.  Ignore the error returns since there is no way the
 //	// encode could fail except being out of memory which would cause a
 //	// run-time panic.
@@ -207,7 +207,7 @@ func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
 //// This is part of the Message interface implementation.
 //// See Deserialize for decoding block headers stored to disk, such as in a
 //// database, as opposed to decoding block headers from the wire.
-////func (h *Header) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+////func (h *header) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
 ////	return readBlockHeader(r, h)
 ////}
 //
@@ -215,71 +215,71 @@ func writeBlockHeader(w io.Writer, header chain.BlockHeader) error {
 //// This is part of the Message interface implementation.
 //// See Serialize for encoding block headers to be stored to disk, such as in a
 //// database, as opposed to encoding block headers for the wire.
-//func (h *Header) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+//func (h *header) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 //	return WriteBlockHeader(w, h)
 //}
 //
-//func (h *Header) PrevBlock() *chainhash.Hash {
+//func (h *header) PrevBlock() *chainhash.Hash {
 //	return &h.prevBlock
 //}
 //
-func (h *Header) Timestamp() time.Time {
+func (h *header) Timestamp() time.Time {
 	return h.timestamp
 }
 
 //
-func (h *Header) MerkleRoot() chainhash.Hash {
+func (h *header) MerkleRoot() chainhash.Hash {
 	return h.merkleRoot
 }
 
-func (h *Header) SetMerkleRoot(hash chainhash.Hash) {
+func (h *header) SetMerkleRoot(hash chainhash.Hash) {
 	h.merkleRoot = hash
 }
 
-func (h *Header) MerkleMountainRange() chainhash.Hash {
+func (h *header) MerkleMountainRange() chainhash.Hash {
 	return h.merkleMountainRange
 }
 
 //
-func (h *Header) SetTimestamp(t time.Time) {
+func (h *header) SetTimestamp(t time.Time) {
 	h.timestamp = t
 }
 
-func (h *Header) Nonce() uint32 {
+func (h *header) Nonce() uint32 {
 	return h.nonce
 }
 
-func (h *Header) SetNonce(n uint32) {
+func (h *header) SetNonce(n uint32) {
 	h.nonce = n
 }
 
-func (h *Header) Bits() uint32 {
+func (h *header) Bits() uint32 {
 	return h.bits
 }
 
-func (h *Header) SetBits(bits uint32) {
+func (h *header) SetBits(bits uint32) {
 	h.bits = bits
 }
 
-func (h *Header) Version() int32 {
+func (h *header) Version() int32 {
 	return h.version
 }
 
 //
-//// Deserialize decodes a block Header from r into the receiver using a format
+//// Deserialize decodes a block header from r into the receiver using a format
 //// that is suitable for long-term storage such as a database while respecting
 //// the Version field.
-//func (h *Header) Deserialize(r io.Reader) error {
+//func (h *header) Deserialize(r io.Reader) error {
 //	// At the current time, there is no difference between the wire encoding
 //	// at protocol version 0 and the stable long-term storage format.  As
 //	// a result, make use of readBlockHeader.
 //	return readBlockHeader(r, h)
 //}
 //
-//// Serialize encodes a block Header from r into the receiver using a format
+//// Serialize encodes a block header from r into the receiver using a format
 //// that is suitable for long-term storage such as a database while respecting
 //// the Version field.
-func (h *Header) Write(w io.Writer) error {
+func (h *header) Write(w io.Writer) error {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of WriteBlockHeader.
@@ -287,11 +287,11 @@ func (h *Header) Write(w io.Writer) error {
 }
 
 //
-//func (h *Header) Read(r io.Reader) error {
+//func (h *header) Read(r io.Reader) error {
 //	return readBlockHeader(r, h)
 //}
 //
-//func (h *Header) Write(w io.Writer) error {
+//func (h *header) Write(w io.Writer) error {
 //	return WriteBlockHeader(w, h)
 //}
 //
@@ -300,11 +300,11 @@ func (h *Header) Write(w io.Writer) error {
 //// block with defaults for the remaining fields.
 //func NewBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
 //	mmr *chainhash.Hash,
-//	bits uint32, nonce uint32) *Header {
+//	bits uint32, nonce uint32) *header {
 //
 //	// Limit the timestamp to one second precision since the protocol
 //	// doesn't support better.
-//	return &Header{
+//	return &header{
 //		version:             version,
 //		prevBlock:           *prevHash,
 //		merkleRoot:          *merkleRootHash,
@@ -315,19 +315,19 @@ func (h *Header) Write(w io.Writer) error {
 //	}
 //}
 //
-//// readBlockHeader reads a bitcoin block Header from r.  See Deserialize for
+//// readBlockHeader reads a bitcoin block header from r.  See Deserialize for
 //// decoding block headers stored to disk, such as in a database, as opposed to
 //// decoding from the wire.
-//func readBlockHeader(r io.Reader, bh *Header) error {
+//func readBlockHeader(r io.Reader, bh *header) error {
 //	//TODO: use encoder from chain
 //	return encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot,
 //		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce)
 //}
 //
-//// WriteBlockHeader writes a bitcoin block Header to w.  See Serialize for
+//// WriteBlockHeader writes a bitcoin block header to w.  See Serialize for
 //// encoding block headers to be stored to disk, such as in a database, as
 //// opposed to encoding for the wire.
-//func WriteBlockHeader(w io.Writer, bh *Header) error {
+//func WriteBlockHeader(w io.Writer, bh *header) error {
 //	sec := uint32(bh.timestamp.Unix())
 //	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot,
 //		sec, bh.bits, bh.nonce)

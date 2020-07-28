@@ -1258,8 +1258,8 @@ func (b *BlockChain) initChainState() error {
 func deserializeBlockRow(blockRow []byte) (chain.BlockHeader, blockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
-	var header shard.Header
-	err := header.Deserialize(buffer)
+	header := chain.NewHeader()
+	err := header.Read(buffer)
 	if err != nil {
 		return nil, statusNone, err
 	}
@@ -1269,7 +1269,7 @@ func deserializeBlockRow(blockRow []byte) (chain.BlockHeader, blockStatus, error
 		return nil, statusNone, err
 	}
 
-	return &header, blockStatus(statusByte), nil
+	return header, blockStatus(statusByte), nil
 }
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
@@ -1280,13 +1280,13 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (chain.BlockHea
 		return nil, err
 	}
 
-	var header shard.Header
-	err = header.Deserialize(bytes.NewReader(headerBytes))
+	header := chain.NewHeader()
+	err = header.Read(bytes.NewReader(headerBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	return &header, nil
+	return header, nil
 }
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
@@ -1326,7 +1326,7 @@ func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, blockHdrSize+1))
 	header := node.Header()
-	err := header.Serialize(w)
+	err := header.Write(w)
 	if err != nil {
 		return err
 	}

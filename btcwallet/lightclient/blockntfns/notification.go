@@ -8,9 +8,9 @@ import (
 // BlockNtfn is an interface that coalesces all the different types of block
 // notifications.
 type BlockNtfn interface {
-	// Header returns the header of the block for which this notification is
+	// header returns the header of the block for which this notification is
 	// for.
-	Header() shard.Header
+	Header() shard.header
 
 	// Height returns the height of the block for which this notification is
 	// for.
@@ -18,13 +18,13 @@ type BlockNtfn interface {
 
 	// ChainTip returns the header of the new tip of the chain after
 	// processing the block being connected/disconnected.
-	ChainTip() shard.Header
+	ChainTip() shard.header
 }
 
 // Connected is a block notification that gets dispatched to clients when the
 // filter header of a new block has been found that extends the current chain.
 type Connected struct {
-	header shard.Header
+	header shard.header
 	height uint32
 }
 
@@ -32,12 +32,12 @@ type Connected struct {
 var _ BlockNtfn = (*Connected)(nil)
 
 // NewBlockConnected creates a new Connected notification for the given block.
-func NewBlockConnected(header shard.Header, height uint32) *Connected {
+func NewBlockConnected(header shard.header, height uint32) *Connected {
 	return &Connected{header: header, height: height}
 }
 
-// Header returns the header of the block extending the chain.
-func (n *Connected) Header() shard.Header {
+// header returns the header of the block extending the chain.
+func (n *Connected) Header() shard.header {
 	return n.header
 }
 
@@ -48,7 +48,7 @@ func (n *Connected) Height() uint32 {
 
 // ChainTip returns the header of the new tip of the chain after processing the
 // block being connected.
-func (n *Connected) ChainTip() shard.Header {
+func (n *Connected) ChainTip() shard.header {
 	return n.header
 }
 
@@ -61,9 +61,9 @@ func (n *Connected) String() string {
 // Disconnected if a notification that gets dispatched to clients when a reorg
 // has been detected at the tip of the chain.
 type Disconnected struct {
-	headerDisconnected shard.Header
+	headerDisconnected shard.header
 	heightDisconnected uint32
-	chainTip           shard.Header
+	chainTip           shard.header
 }
 
 // A compile-time check to ensure Disconnected satisfies the BlockNtfn
@@ -71,8 +71,8 @@ type Disconnected struct {
 var _ BlockNtfn = (*Disconnected)(nil)
 
 // NewBlockDisconnected creates a Disconnected notification for the given block.
-func NewBlockDisconnected(headerDisconnected shard.Header,
-	heightDisconnected uint32, chainTip shard.Header) *Disconnected {
+func NewBlockDisconnected(headerDisconnected shard.header,
+	heightDisconnected uint32, chainTip shard.header) *Disconnected {
 
 	return &Disconnected{
 		headerDisconnected: headerDisconnected,
@@ -81,8 +81,8 @@ func NewBlockDisconnected(headerDisconnected shard.Header,
 	}
 }
 
-// Header returns the header of the block being disconnected.
-func (n *Disconnected) Header() shard.Header {
+// header returns the header of the block being disconnected.
+func (n *Disconnected) Header() shard.header {
 	return n.headerDisconnected
 }
 
@@ -93,7 +93,7 @@ func (n *Disconnected) Height() uint32 {
 
 // ChainTip returns the header of the new tip of the chain after processing the
 // block being disconnected.
-func (n *Disconnected) ChainTip() shard.Header {
+func (n *Disconnected) ChainTip() shard.header {
 	return n.chainTip
 }
 

@@ -33,7 +33,7 @@ type BlockHeader interface {
 	SetNonce(uint32)
 
 	Version() int32
-	//Read(r io.Reader) error
+	Read(r io.Reader) error
 	Write(r io.Writer) error
 	//Size() int
 }

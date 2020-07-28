@@ -15,7 +15,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"net"
@@ -1735,14 +1734,14 @@ func (s *server) handleRelayInvMsg(state *peerState, msg relayMsg) {
 		// generate and send a headers message instead of an inventory
 		// message.
 		if msg.invVect.Type == types.InvTypeBlock && sp.WantsHeaders() {
-			blockHeader, ok := msg.data.(shard.Header)
+			blockHeader, ok := msg.data.(chain.BlockHeader)
 			if !ok {
 				peerLog.Warnf("Underlying data for headers" +
 					" is not a block header")
 				return
 			}
 			msgHeaders := wire.NewMsgHeaders()
-			if err := msgHeaders.AddBlockHeader(&blockHeader); err != nil {
+			if err := msgHeaders.AddBlockHeader(blockHeader); err != nil {
 				peerLog.Errorf("Failed to add block"+
 					" header: %v", err)
 				return

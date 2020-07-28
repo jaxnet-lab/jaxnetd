@@ -133,16 +133,16 @@ func newBlockNode(blockHeader chain.BlockHeader, parent *blockNode) *blockNode {
 	return &node
 }
 
-// Header constructs a block header from the node and returns it.
+// header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) Header() shard.Header {
+func (node *blockNode) Header() chain.BlockHeader {
 	// No lock is needed because all accessed fields are immutable.
 	prevHash := &zeroHash
 	if node.parent != nil {
 		prevHash = &node.parent.hash
 	}
-	return *shard.NewBlockHeader(node.version, *prevHash, node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
+	return shard.NewBlockHeader(node.version, *prevHash, node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
 }
 
 // Ancestor returns the ancestor block node at the provided height by following
