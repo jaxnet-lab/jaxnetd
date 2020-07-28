@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -49,7 +50,7 @@ type ChainSource interface {
 
 	// GetBlockHeaderByHeight returns the header of the block with the given
 	// height.
-	Getshard.HeaderByHeight(uint32) (*shard.Header, error)
+	GetBlockHeaderByHeight(uint32) (*shard.Header, error)
 
 	// GetBlockHeader returns the header of the block with the given hash.
 	GetBlockHeader(*chainhash.Hash) (*shard.Header, uint32, error)
@@ -258,7 +259,7 @@ func (q *blockRetryQueue) pop() *blockntfns.Connected {
 
 // remove removes the block from the queue and any others that follow it. If the
 // block doesn't exit within the queue, then this acts as a NOP.
-func (q *blockRetryQueue) remove(header BlockHeader) {
+func (q *blockRetryQueue) remove(header shard.Header) {
 	headerIdx := -1
 	targetHash := header.BlockHash()
 	for i, block := range q.blocks {
@@ -360,7 +361,7 @@ func rescan(chain ChainSource, options ...RescanOption) error {
 
 	// Track our position in the chain.
 	var (
-		curHeader BlockHeader
+		curHeader shard.Header
 		curStamp  headerfs.BlockStamp
 	)
 
@@ -900,7 +901,7 @@ rescanLoop:
 
 // notifyBlock calls appropriate listeners based on the block filter.
 func notifyBlock(chain ChainSource, ro *rescanOptions,
-	curHeader BlockHeader, curStamp headerfs.BlockStamp,
+	curHeader shard.Header, curStamp headerfs.BlockStamp,
 	scanning bool) error {
 
 	// Find relevant transactions based on watch list. If scanning is

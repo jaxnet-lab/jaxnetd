@@ -434,7 +434,8 @@ func (view *UtxoViewpoint) disconnectTransactions(db database.DB, block *btcutil
 
 	// Update the best hash for view to the previous block since all of the
 	// transactions for the current block have been disconnected.
-	view.SetBestHash(&block.MsgBlock().Header.PrevBlock)
+	h := block.MsgBlock().Header.PrevBlock()
+	view.SetBestHash(&h)
 	return nil
 }
 

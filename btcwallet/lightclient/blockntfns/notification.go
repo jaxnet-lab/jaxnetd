@@ -2,8 +2,7 @@ package blockntfns
 
 import (
 	"fmt"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 )
 
 // BlockNtfn is an interface that coalesces all the different types of block
@@ -73,7 +72,7 @@ var _ BlockNtfn = (*Disconnected)(nil)
 
 // NewBlockDisconnected creates a Disconnected notification for the given block.
 func NewBlockDisconnected(headerDisconnected shard.Header,
-	heightDisconnected uint32, chainTip wire.BlockHeader) *Disconnected {
+	heightDisconnected uint32, chainTip shard.Header) *Disconnected {
 
 	return &Disconnected{
 		headerDisconnected: headerDisconnected,
@@ -83,7 +82,7 @@ func NewBlockDisconnected(headerDisconnected shard.Header,
 }
 
 // Header returns the header of the block being disconnected.
-func (n *Disconnected) Header() wire.BlockHeader {
+func (n *Disconnected) Header() shard.Header {
 	return n.headerDisconnected
 }
 
@@ -94,7 +93,7 @@ func (n *Disconnected) Height() uint32 {
 
 // ChainTip returns the header of the new tip of the chain after processing the
 // block being disconnected.
-func (n *Disconnected) ChainTip() wire.BlockHeader {
+func (n *Disconnected) ChainTip() shard.Header {
 	return n.chainTip
 }
 

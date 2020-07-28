@@ -240,7 +240,8 @@ func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 			break
 		}
 		orphanRoot = prevHash
-		prevHash = &orphan.block.MsgBlock().Header.PrevBlock
+		h := orphan.block.MsgBlock().Header.PrevBlock()
+		prevHash = &h
 	}
 
 	return orphanRoot
@@ -261,8 +262,8 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash := &orphan.block.MsgBlock().Header.PrevBlock
-	orphans := b.prevOrphans[*prevHash]
+	prevHash := orphan.block.MsgBlock().Header.PrevBlock()
+	orphans := b.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
 		if hash.IsEqual(orphanHash) {
@@ -272,12 +273,12 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 			i--
 		}
 	}
-	b.prevOrphans[*prevHash] = orphans
+	b.prevOrphans[prevHash] = orphans
 
 	// Remove the map entry altogether if there are no longer any orphans
 	// which depend on the parent hash.
-	if len(b.prevOrphans[*prevHash]) == 0 {
-		delete(b.prevOrphans, *prevHash)
+	if len(b.prevOrphans[prevHash]) == 0 {
+		delete(b.prevOrphans, prevHash)
 	}
 }
 
@@ -325,8 +326,8 @@ func (b *BlockChain) addOrphanBlock(block *btcutil.Block) {
 	b.orphans[*block.Hash()] = oBlock
 
 	// Add to previous hash lookup index for faster dependency lookups.
-	prevHash := &block.MsgBlock().Header.PrevBlock
-	b.prevOrphans[*prevHash] = append(b.prevOrphans[*prevHash], oBlock)
+	prevHash := block.MsgBlock().Header.PrevBlock()
+	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }
 
 // SequenceLock represents the converted relative lock-time in seconds, and
@@ -563,7 +564,7 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block,
 	view *UtxoViewpoint, stxos []SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
-	prevHash := &block.MsgBlock().Header.PrevBlock
+	prevHash := block.MsgBlock().Header.PrevBlock()
 	if !prevHash.IsEqual(&b.bestChain.Tip().hash) {
 		return AssertError("connectBlock must be called with a block " +
 			"that extends the main chain")
@@ -1099,7 +1100,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 
 	// We are extending the main (best) chain with a new block.  This is the
 	// most common case.
-	parentHash := &block.MsgBlock().Header.PrevBlock
+	parentHash := block.MsgBlock().Header.PrevBlock()
 	if parentHash.IsEqual(&b.bestChain.Tip().hash) {
 		// Skip checks if node has already been fully validated.
 		fastAdd = fastAdd || b.index.NodeStatus(node).KnownValid()
@@ -1108,7 +1109,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 		// to the main chain without violating any rules and without
 		// actually connecting the block.
 		view := NewUtxoViewpoint()
-		view.SetBestHash(parentHash)
+		view.SetBestHash(&parentHash)
 		stxos := make([]SpentTxOut, 0, countSpentOutputs(block))
 		if !fastAdd {
 			err := b.checkConnectBlock(node, block, view, &stxos)
@@ -1179,7 +1180,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 	if node.workSum.Cmp(b.bestChain.Tip().workSum) <= 0 {
 		// Log information about how the block is forking the chain.
 		fork := b.bestChain.FindFork(node)
-		if fork.hash.IsEqual(parentHash) {
+		if fork.hash.IsEqual(&parentHash) {
 			log.Infof("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.hash, fork.height, fork.hash)

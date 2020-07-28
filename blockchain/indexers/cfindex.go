@@ -183,11 +183,11 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 
 	// Then fetch the previous block's filter header.
 	var prevHeader *chainhash.Hash
-	ph := &block.MsgBlock().Header.PrevBlock
+	ph := block.MsgBlock().Header.PrevBlock()
 	if ph.IsEqual(&zeroHash) {
 		prevHeader = &zeroHash
 	} else {
-		pfh, err := dbFetchFilterIdxEntry(dbTx, hkey, ph)
+		pfh, err := dbFetchFilterIdxEntry(dbTx, hkey, &ph)
 		if err != nil {
 			return err
 		}

@@ -162,7 +162,7 @@ func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockC
 		}
 
 		blockHash := header.BlockHash()
-		prevHash := header.PrevBlock
+		prevHash := header.PrevBlock()
 
 		if blocksMap[blockHash] == nil {
 			blocksMap[blockHash] = &blockChainContext{height: -1}

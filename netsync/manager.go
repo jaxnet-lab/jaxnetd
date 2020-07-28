@@ -929,7 +929,8 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 		// add it to the list of headers.
 		node := headerNode{hash: &blockHash}
 		prevNode := prevNodeEl.Value.(*headerNode)
-		if prevNode.hash.IsEqual(&blockHeader.PrevBlock) {
+		h := blockHeader.PrevBlock()
+		if prevNode.hash.IsEqual(&h) {
 			node.height = prevNode.height + 1
 			e := sm.headerList.PushBack(&node)
 			if sm.startHeader == nil {

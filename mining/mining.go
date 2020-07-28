@@ -863,13 +863,7 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = shard.Header{
-		Version:    nextBlockVersion,
-		PrevBlock:  best.Hash,
-		MerkleRoot: *merkles[len(merkles)-1],
-		Timestamp:  ts,
-		Bits:       reqDifficulty,
-	}
+	msgBlock.Header = *shard.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err
@@ -911,7 +905,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	// the median time of the last several blocks per the chain consensus
 	// rules.
 	newTime := medianAdjustedTime(g.chain.BestSnapshot(), g.timeSource)
-	msgBlock.Header.Timestamp = newTime
+	msgBlock.Header.SetTimestamp(newTime)
 
 	// Recalculate the difficulty if running on a network that requires it.
 	if g.chainParams.ReduceMinDifficulty {

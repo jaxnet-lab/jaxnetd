@@ -24,8 +24,8 @@ import (
 func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags) (bool, error) {
 	// The height of this block is one more than the referenced previous
 	// block.
-	prevHash := &block.MsgBlock().Header.PrevBlock
-	prevNode := b.index.LookupNode(prevHash)
+	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevNode := b.index.LookupNode(&prevHash)
 	if prevNode == nil {
 		str := fmt.Sprintf("previous block %s is unknown", prevHash)
 		return false, ruleError(ErrPreviousBlockUnknown, str)

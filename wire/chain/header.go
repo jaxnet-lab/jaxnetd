@@ -2,6 +2,7 @@ package chain
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"time"
 )
 
 const MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
@@ -20,8 +21,8 @@ type BlockHeader interface {
 	//BlockData() []byte
 	BlockHash() chainhash.Hash
 	//PrevBlock() chainhash.Hash
-	//Timestamp() time.Time
-	//SetTimestamp(time.Time)
+	Timestamp() time.Time
+	SetTimestamp(time.Time)
 	//SetNonce(uint32)
 	//MerkleRoot() chainhash.Hash
 	//SetMerkleRoot(chainhash.Hash)

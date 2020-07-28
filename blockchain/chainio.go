@@ -1170,13 +1170,14 @@ func (b *BlockChain) initChainState() error {
 						"first entry in block index to be genesis block, "+
 						"found %s", blockHash))
 				}
-			} else if header.PrevBlock == lastNode.hash {
+			} else if header.PrevBlock() == lastNode.hash {
 				// Since we iterate block headers in order of height, if the
 				// blocks are mostly linear there is a very good chance the
 				// previous header processed is the parent.
 				parent = lastNode
 			} else {
-				parent = b.index.LookupNode(&header.PrevBlock)
+				prev := header.PrevBlock()
+				parent = b.index.LookupNode(&prev)
 				if parent == nil {
 					return AssertError(fmt.Sprintf("initChainState: Could "+
 						"not find parent for block %s", header.BlockHash()))

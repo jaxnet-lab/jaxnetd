@@ -184,7 +184,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	if checkpointNode != nil {
 		// Ensure the block timestamp is after the checkpoint timestamp.
 		checkpointTime := time.Unix(checkpointNode.timestamp, 0)
-		if blockHeader.Timestamp.Before(checkpointTime) {
+		if blockHeader.Timestamp().Before(checkpointTime) {
 			str := fmt.Sprintf("block %v has timestamp %v before "+
 				"last checkpoint timestamp %v", blockHash,
 				blockHeader.Timestamp, checkpointTime)
@@ -197,7 +197,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			// check ensures the proof of work is at least the minimum
 			// expected based on elapsed time since the last checkpoint and
 			// maximum adjustment allowed by the retarget rules.
-			duration := blockHeader.Timestamp.Sub(checkpointTime)
+			duration := blockHeader.Timestamp().Sub(checkpointTime)
 			requiredTarget := CompactToBig(b.calcEasiestDifficulty(
 				checkpointNode.bits, duration))
 			currentTarget := CompactToBig(blockHeader.Bits)
@@ -211,8 +211,8 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 	}
 
 	// Handle orphan blocks.
-	prevHash := &blockHeader.PrevBlock
-	prevHashExists, err := b.blockExists(prevHash)
+	prevHash := blockHeader.PrevBlock()
+	prevHashExists, err := b.blockExists(&prevHash)
 	if err != nil {
 		return false, false, err
 	}

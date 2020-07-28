@@ -22,7 +22,7 @@ type Header struct {
 	Version int32
 
 	// Hash of the previous block Header in the block chain.
-	PrevBlock chainhash.Hash
+	prevBlock chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	MerkleRoot chainhash.Hash
@@ -31,7 +31,7 @@ type Header struct {
 
 	// Time the block was created.  This is, unfortunately, encoded as a
 	// uint32 on the wire and therefore is limited to 2106.
-	Timestamp time.Time
+	timestamp time.Time
 
 	// Difficulty target for the block.
 	Bits uint32
@@ -43,6 +43,10 @@ type Header struct {
 // blockHeaderLen is a constant that represents the number of bytes for a block
 // Header.
 const blockHeaderLen = 80
+
+func (h *Header) PrevBlock() chainhash.Hash {
+	return h.prevBlock
+}
 
 func (h *Header) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
@@ -97,18 +101,19 @@ func (h *Header) Serialize(w io.Writer) error {
 // NewBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
-	mmr *chainhash.Hash,
+func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
+	mmr chainhash.Hash,
+	timestamp time.Time,
 	bits uint32, nonce uint32) *Header {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &Header{
 		Version:             version,
-		PrevBlock:           *prevHash,
-		MerkleRoot:          *merkleRootHash,
-		MerkleMountainRange: *mmr,
-		Timestamp:           time.Unix(time.Now().Unix(), 0),
+		prevBlock:           prevHash,
+		MerkleRoot:          merkleRootHash,
+		MerkleMountainRange: mmr,
+		timestamp:           timestamp, //time.Unix(time.Now().Unix(), 0),
 		Bits:                bits,
 		Nonce:               nonce,
 	}
@@ -118,16 +123,16 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func ReadBlockHeader(r io.Reader, pver uint32, bh *Header) error {
-	return encoder.ReadElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
-		(*encoder.Uint32Time)(&bh.Timestamp), &bh.Bits, &bh.Nonce)
+	return encoder.ReadElements(r, &bh.Version, &bh.prevBlock, &bh.MerkleRoot,
+		(*encoder.Uint32Time)(&bh.timestamp), &bh.Bits, &bh.Nonce)
 }
 
 // WriteBlockHeader writes a bitcoin block Header to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func WriteBlockHeader(w io.Writer, pver uint32, bh *Header) error {
-	sec := uint32(bh.Timestamp.Unix())
-	return encoder.WriteElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
+	sec := uint32(bh.timestamp.Unix())
+	return encoder.WriteElements(w, bh.Version, &bh.prevBlock, &bh.MerkleRoot,
 		sec, bh.Bits, bh.Nonce)
 }
 
@@ -216,9 +221,10 @@ func WriteBlockHeader(w io.Writer, pver uint32, bh *Header) error {
 //	return &h.prevBlock
 //}
 //
-//func (h *Header) Timestamp() time.Time {
-//	return h.timestamp
-//}
+func (h *Header) Timestamp() time.Time {
+	return h.timestamp
+}
+
 //
 //func (h *Header) MerkleRoot() chainhash.Hash {
 //	return h.merkleRoot
@@ -232,9 +238,10 @@ func WriteBlockHeader(w io.Writer, pver uint32, bh *Header) error {
 //	return h.merkleMountainRange
 //}
 //
-//func (h *Header) SetTimestamp(t time.Time) {
-//	h.timestamp = t
-//}
+func (h *Header) SetTimestamp(t time.Time) {
+	h.timestamp = t
+}
+
 //func (h *Header) SetNonce(n uint32) {
 //	h.nonce = n
 //}

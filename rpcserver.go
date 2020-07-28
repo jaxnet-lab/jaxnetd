@@ -771,8 +771,8 @@ func createTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 
 	if blkHeader != nil {
 		// This is not a typo, they are identical in bitcoind as well.
-		txReply.Time = blkHeader.Timestamp.Unix()
-		txReply.Blocktime = blkHeader.Timestamp.Unix()
+		txReply.Time = blkHeader.Timestamp().Unix()
+		txReply.Blocktime = blkHeader.Timestamp().Unix()
 		txReply.BlockHash = blkHash
 		txReply.Confirmations = uint64(1 + chainHeight - blkHeight)
 	}
@@ -1168,10 +1168,10 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 		Version:             blockHeader.Version,
 		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
 		MerkleRoot:          blockHeader.MerkleRoot.String(),
-		PreviousHash:        blockHeader.PrevBlock.String(),
+		PreviousHash:        blockHeader.PrevBlock().String(),
 		MerkleMountainRange: blockHeader.MerkleMountainRange.String(),
 		Nonce:               blockHeader.Nonce,
-		Time:                blockHeader.Timestamp.Unix(),
+		Time:                blockHeader.Timestamp().Unix(),
 		Confirmations:       int64(1 + best.Height - blockHeight),
 		Height:              int64(blockHeight),
 		Size:                int32(len(blkBytes)),
@@ -1422,9 +1422,9 @@ func handleGetBlockHeader(s *rpcServer, cmd interface{}, closeChan <-chan struct
 		MerkleRoot:          blockHeader.MerkleRoot.String(),
 		MerkleMountainRange: blockHeader.MerkleMountainRange.String(),
 		NextHash:            nextHashString,
-		PreviousHash:        blockHeader.PrevBlock.String(),
+		PreviousHash:        blockHeader.PrevBlock().String(),
 		Nonce:               uint64(blockHeader.Nonce),
-		Time:                blockHeader.Timestamp.Unix(),
+		Time:                blockHeader.Timestamp().Unix(),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits), 16),
 		Difficulty:          getDifficultyRatio(blockHeader.Bits, params),
 	}
@@ -1721,7 +1721,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	header := &msgBlock.Header
 	adjustedTime := state.timeSource.AdjustedTime()
 	maxTime := adjustedTime.Add(time.Second * blockchain.MaxTimeOffsetSeconds)
-	if header.Timestamp.After(maxTime) {
+	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
 			Message: fmt.Sprintf("The template time is after the "+
@@ -1790,9 +1790,9 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	templateID := encodeTemplateID(state.prevHash, state.lastGenerated)
 	reply := btcjson.GetBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits), 16),
-		CurTime:      header.Timestamp.Unix(),
+		CurTime:      header.Timestamp().Unix(),
 		Height:       int64(template.Height),
-		PreviousHash: header.PrevBlock.String(),
+		PreviousHash: header.PrevBlock().String(),
 		WeightLimit:  blockchain.MaxBlockWeight,
 		SigOpLimit:   blockchain.MaxBlockSigOpsCost,
 		SizeLimit:    wire.MaxBlockPayload,
@@ -1890,14 +1890,14 @@ func handleGetBlockTemplateLongPoll(s *rpcServer, longPollID string, useCoinbase
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := &state.template.Block.Header.PrevBlock
-	if !prevHash.IsEqual(prevTemplateHash) ||
+	prevTemplateHash := state.template.Block.Header.PrevBlock()
+	if !prevHash.IsEqual(&prevTemplateHash) ||
 		lastGenerated != state.lastGenerated.Unix() {
 
 		// Include whether or not it is valid to submit work against the
 		// old block template depending on whether or not a solution has
 		// already been found and added to the block chain.
-		submitOld := prevHash.IsEqual(prevTemplateHash)
+		submitOld := prevHash.IsEqual(&prevTemplateHash)
 		result, err := state.blockTemplateResult(useCoinbaseValue,
 			&submitOld)
 		if err != nil {
@@ -1938,7 +1938,8 @@ func handleGetBlockTemplateLongPoll(s *rpcServer, longPollID string, useCoinbase
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block chain.
-	submitOld := prevHash.IsEqual(&state.template.Block.Header.PrevBlock)
+	h := state.template.Block.Header.PrevBlock()
+	submitOld := prevHash.IsEqual(&h)
 	result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {
 		return nil, err
@@ -2174,8 +2175,8 @@ func handleGetBlockTemplateProposal(s *rpcServer, request *btcjson.TemplateReque
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevHash := s.cfg.Chain.BestSnapshot().Hash
-	prevHash := &block.MsgBlock().Header.PrevBlock
-	if !expectedPrevHash.IsEqual(prevHash) {
+	prevHash := block.MsgBlock().Header.PrevBlock()
+	if !expectedPrevHash.IsEqual(&prevHash) {
 		return "bad-prevblk", nil
 	}
 
@@ -2501,16 +2502,16 @@ func handleGetNetworkHashPS(s *rpcServer, cmd interface{}, closeChan <-chan stru
 		}
 
 		if curHeight == startHeight {
-			minTimestamp = header.Timestamp
+			minTimestamp = header.Timestamp()
 			maxTimestamp = minTimestamp
 		} else {
 			totalWork.Add(totalWork, blockchain.CalcWork(header.Bits))
 
-			if minTimestamp.After(header.Timestamp) {
-				minTimestamp = header.Timestamp
+			if minTimestamp.After(header.Timestamp()) {
+				minTimestamp = header.Timestamp()
 			}
-			if maxTimestamp.Before(header.Timestamp) {
-				maxTimestamp = header.Timestamp
+			if maxTimestamp.Before(header.Timestamp()) {
+				maxTimestamp = header.Timestamp()
 			}
 		}
 	}
@@ -3338,8 +3339,8 @@ func handleSearchRawTransactions(s *rpcServer, cmd interface{}, closeChan <-chan
 		if blkHeader != nil {
 			// This is not a typo, they are identical in Bitcoin
 			// Core as well.
-			result.Time = blkHeader.Timestamp.Unix()
-			result.Blocktime = blkHeader.Timestamp.Unix()
+			result.Time = blkHeader.Timestamp().Unix()
+			result.Blocktime = blkHeader.Timestamp().Unix()
 			result.BlockHash = blkHashStr
 			result.Confirmations = uint64(1 + best.Height - blkHeight)
 		}

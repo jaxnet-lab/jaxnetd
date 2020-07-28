@@ -113,7 +113,7 @@ func initBlockNode(node *blockNode, blockHeader *shard.Header, parent *blockNode
 		version:    blockHeader.Version,
 		bits:       blockHeader.Bits,
 		nonce:      blockHeader.Nonce,
-		timestamp:  blockHeader.Timestamp.Unix(),
+		timestamp:  blockHeader.Timestamp().Unix(),
 		merkleRoot: blockHeader.MerkleRoot,
 	}
 	if parent != nil {
@@ -141,15 +141,7 @@ func (node *blockNode) Header() shard.Header {
 	if node.parent != nil {
 		prevHash = &node.parent.hash
 	}
-	return shard.Header{
-		Version:             node.version,
-		PrevBlock:           *prevHash,
-		MerkleRoot:          node.merkleRoot,
-		MerkleMountainRange: node.mmrRoot,
-		Timestamp:           time.Unix(node.timestamp, 0),
-		Bits:                node.bits,
-		Nonce:               node.nonce,
-	}
+	return *shard.NewBlockHeader(node.version, *prevHash, node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
 }
 
 // Ancestor returns the ancestor block node at the provided height by following

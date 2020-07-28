@@ -168,7 +168,8 @@ func (m *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	// a new block, but the check only happens periodically, so it is
 	// possible a block was found and submitted in between.
 	msgBlock := block.MsgBlock()
-	if !msgBlock.Header.PrevBlock.IsEqual(&m.g.BestSnapshot().Hash) {
+	h := msgBlock.Header.PrevBlock()
+	if !h.IsEqual(&m.g.BestSnapshot().Hash) {
 		log.Debugf("Block submitted via CPU miner with previous "+
 			"block %s is stale", msgBlock.Header.PrevBlock)
 		return false
@@ -264,7 +265,8 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				// The current block is stale if the best block
 				// has changed.
 				best := m.g.BestSnapshot()
-				if !header.PrevBlock.IsEqual(&best.Hash) {
+				h := header.PrevBlock()
+				if !(&h).IsEqual(&best.Hash) {
 					return false
 				}
 
