@@ -6,10 +6,10 @@ package ffldb
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"github.com/btcsuite/btclog"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
 
 var log = btclog.Disabled
@@ -19,7 +19,7 @@ const (
 )
 
 // parseArgs parses the arguments from the database Open/Create methods.
-func parseArgs(funcName string, args ...interface{}) (string, wire.BitcoinNet, error) {
+func parseArgs(funcName string, args ...interface{}) (string, types.BitcoinNet, error) {
 	if len(args) != 2 {
 		return "", 0, fmt.Errorf("invalid arguments to %s.%s -- "+
 			"expected database path and block network", dbType,
@@ -32,7 +32,7 @@ func parseArgs(funcName string, args ...interface{}) (string, wire.BitcoinNet, e
 			"expected database path string", dbType, funcName)
 	}
 
-	network, ok := args[1].(wire.BitcoinNet)
+	network, ok := args[1].(types.BitcoinNet)
 	if !ok {
 		return "", 0, fmt.Errorf("second argument to %s.%s is invalid -- "+
 			"expected block network", dbType, funcName)

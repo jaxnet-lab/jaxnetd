@@ -6,7 +6,7 @@ package main
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 )
 
 // activeNetParams is a pointer to the parameters specific to the
@@ -77,7 +77,7 @@ var simNetParams = params{
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {
-	case wire.TestNet3:
+	case types.TestNet3:
 		return "testnet"
 	default:
 		return chainParams.Name

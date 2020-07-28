@@ -7,6 +7,7 @@ package wire
 import (
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -53,19 +54,19 @@ func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
 // This is part of the Message interface implementation.
 func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	// Read filter type
-	err := readElement(r, &msg.FilterType)
+	err := encoder.ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Read stop hash
-	err = readElement(r, &msg.StopHash)
+	err = encoder.ReadElement(r, &msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Read number of filter headers
-	count, err := ReadVarInt(r, pver)
+	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 	msg.FilterHeaders = make([]*chainhash.Hash, count)
 	for i := uint64(0); i < count; i++ {
 		var cfh chainhash.Hash
-		err := readElement(r, &cfh)
+		err := encoder.ReadElement(r, &cfh)
 		if err != nil {
 			return err
 		}
@@ -94,26 +95,26 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 // This is part of the Message interface implementation.
 func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
 	// Write filter type
-	err := writeElement(w, msg.FilterType)
+	err := encoder.WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Write stop hash
-	err = writeElement(w, msg.StopHash)
+	err = encoder.WriteElement(w, msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Write length of FilterHeaders slice
 	count := len(msg.FilterHeaders)
-	err = WriteVarInt(w, pver, uint64(count))
+	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, cfh := range msg.FilterHeaders {
-		err := writeElement(w, cfh)
+		err := encoder.WriteElement(w, cfh)
 		if err != nil {
 			return err
 		}

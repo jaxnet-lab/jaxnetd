@@ -1423,7 +1423,7 @@ func startRescan(t *testing.T, svc *neutrino.ChainService, addr btcutil.Address,
 				},
 				OnFilteredBlockConnected: func(
 					height int32,
-					header *wire.BlockHeader,
+					header *shard.Header,
 					relevantTxs []*btcutil.Tx) {
 					rescanMtx.Lock()
 					ourKnownTxsByFilteredBlock[header.BlockHash()] =
@@ -1437,7 +1437,7 @@ func startRescan(t *testing.T, svc *neutrino.ChainService, addr btcutil.Address,
 				},
 				OnFilteredBlockDisconnected: func(
 					height int32,
-					header *wire.BlockHeader) {
+					header *shard.Header) {
 					rescanMtx.Lock()
 					delete(ourKnownTxsByFilteredBlock,
 						header.BlockHash())

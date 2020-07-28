@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.
@@ -453,8 +453,8 @@ func nodeHashes(nodes []*blockNode, indexes ...int) []chainhash.Hash {
 // nodeHeaders is a convenience function that returns the headers for all of
 // the passed indexes of the provided nodes.  It is used to construct expected
 // located headers in the tests.
-func nodeHeaders(nodes []*blockNode, indexes ...int) []wire.BlockHeader {
-	headers := make([]wire.BlockHeader, 0, len(indexes))
+func nodeHeaders(nodes []*blockNode, indexes ...int) []BlockHeader {
+	headers := make([]BlockHeader, 0, len(indexes))
 	for _, idx := range indexes {
 		headers = append(headers, nodes[idx].Header())
 	}
@@ -492,11 +492,11 @@ func TestLocateInventory(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		locator    BlockLocator       // locator for requested inventory
-		hashStop   chainhash.Hash     // stop hash for locator
-		maxAllowed uint32             // max to locate, 0 = wire const
-		headers    []wire.BlockHeader // expected located headers
-		hashes     []chainhash.Hash   // expected located hashes
+		locator    BlockLocator     // locator for requested inventory
+		hashStop   chainhash.Hash   // stop hash for locator
+		maxAllowed uint32           // max to locate, 0 = wire const
+		headers    []BlockHeader    // expected located headers
+		hashes     []chainhash.Hash // expected located hashes
 	}{
 		{
 			// Empty block locators and unknown stop hash.  No
@@ -768,7 +768,7 @@ func TestLocateInventory(t *testing.T) {
 	}
 	for _, test := range tests {
 		// Ensure the expected headers are located.
-		var headers []wire.BlockHeader
+		var headers []BlockHeader
 		if test.maxAllowed != 0 {
 			// Need to use the unexported function to override the
 			// max allowed for headers.

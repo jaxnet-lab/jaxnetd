@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"strings"
 	"time"
@@ -83,8 +84,8 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 			"*bytes.Buffer")
 	}
 
-	err := readElements(buf, &msg.ProtocolVersion, &msg.Services,
-		(*int64Time)(&msg.Timestamp))
+	err := encoder.ReadElements(buf, &msg.ProtocolVersion, &msg.Services,
+		(*encoder.Int64Time)(&msg.Timestamp))
 	if err != nil {
 		return err
 	}
@@ -104,13 +105,13 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 		}
 	}
 	if buf.Len() > 0 {
-		err = readElement(buf, &msg.Nonce)
+		err = encoder.ReadElement(buf, &msg.Nonce)
 		if err != nil {
 			return err
 		}
 	}
 	if buf.Len() > 0 {
-		userAgent, err := ReadVarString(buf, pver)
+		userAgent, err := encoder.ReadVarString(buf, pver)
 		if err != nil {
 			return err
 		}
@@ -124,7 +125,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 	// Protocol versions >= 209 added a last known block field.  It is only
 	// considered present if there are bytes remaining in the message.
 	if buf.Len() > 0 {
-		err = readElement(buf, &msg.LastBlock)
+		err = encoder.ReadElement(buf, &msg.LastBlock)
 		if err != nil {
 			return err
 		}
@@ -140,7 +141,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 		// field is true when transactions should be relayed, so reverse
 		// it for the DisableRelayTx field.
 		var relayTx bool
-		readElement(r, &relayTx)
+		encoder.ReadElement(r, &relayTx)
 		msg.DisableRelayTx = !relayTx
 	}
 
@@ -155,7 +156,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return err
 	}
 
-	err = writeElements(w, msg.ProtocolVersion, msg.Services,
+	err = encoder.WriteElements(w, msg.ProtocolVersion, msg.Services,
 		msg.Timestamp.Unix())
 	if err != nil {
 		return err
@@ -171,17 +172,17 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return err
 	}
 
-	err = writeElement(w, msg.Nonce)
+	err = encoder.WriteElement(w, msg.Nonce)
 	if err != nil {
 		return err
 	}
 
-	err = WriteVarString(w, pver, msg.UserAgent)
+	err = encoder.WriteVarString(w, pver, msg.UserAgent)
 	if err != nil {
 		return err
 	}
 
-	err = writeElement(w, msg.LastBlock)
+	err = encoder.WriteElement(w, msg.LastBlock)
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	// the wire encoding for the field is true when transactions should be
 	// relayed, so reverse it from the DisableRelayTx field.
 	if pver >= BIP0037Version {
-		err = writeElement(w, !msg.DisableRelayTx)
+		err = encoder.WriteElement(w, !msg.DisableRelayTx)
 		if err != nil {
 			return err
 		}

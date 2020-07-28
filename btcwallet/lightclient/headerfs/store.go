@@ -367,7 +367,7 @@ type BlockHeader struct {
 
 // toIndexEntry converts the BlockHeader into a matching headerEntry. This
 // method is used when a header is to be written to disk.
-func (b *BlockHeader) toIndexEntry() headerEntry {
+func (b *shard.Header) toIndexEntry() headerEntry {
 	return headerEntry{
 		hash:   b.BlockHash(),
 		height: b.Height,

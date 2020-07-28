@@ -9,6 +9,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -152,7 +153,7 @@ func migrateBlockIndex(db database.DB) error {
 func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
-		var header wire.BlockHeader
+		var header shard.Header
 		endOffset := blockHdrOffset + blockHdrSize
 		headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]
 		err := header.Deserialize(bytes.NewReader(headerBytes))

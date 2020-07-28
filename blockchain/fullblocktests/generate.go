@@ -335,7 +335,7 @@ func calcMmrRoot(txns []*wire.MsgTx) chainhash.Hash {
 // NOTE: This function will never solve blocks with a nonce of 0.  This is done
 // so the 'nextBlock' function can properly detect when a nonce was modified by
 // a munge function.
-func solveBlock(header *wire.BlockHeader) bool {
+func solveBlock(header *shard.Header) bool {
 	// sbResult is used by the solver goroutines to send results.
 	type sbResult struct {
 		found bool
@@ -347,7 +347,7 @@ func solveBlock(header *wire.BlockHeader) bool {
 	targetDifficulty := blockchain.CompactToBig(header.Bits)
 	quit := make(chan bool)
 	results := make(chan sbResult)
-	solver := func(hdr wire.BlockHeader, startNonce, stopNonce uint32) {
+	solver := func(hdr shard.Header, startNonce, stopNonce uint32) {
 		// We need to modify the nonce field of the header, so make sure
 		// we work with a copy of the original header.
 		for i := startNonce; i >= startNonce && i <= stopNonce; i++ {
@@ -523,7 +523,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	}
 
 	block := wire.MsgBlock{
-		Header: wire.BlockHeader{
+		Header: shard.Header{
 			Version:    1,
 			PrevBlock:  g.tip.BlockHash(),
 			MerkleRoot: calcMerkleRoot(txns),

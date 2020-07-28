@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 // mainNetGenesisHash is the hash of the first block in the block chain for the

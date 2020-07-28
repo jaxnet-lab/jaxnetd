@@ -43,7 +43,7 @@ var (
 // a slice of them.
 //
 // NOTE: copied from btcsuite/btcd/database/ffldb/interface_test.go
-func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) (
+func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) (
 	[]*btcutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)

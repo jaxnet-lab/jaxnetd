@@ -5,7 +5,8 @@
 package wire
 
 import (
-	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -25,49 +26,50 @@ const (
 )
 
 // InvType represents the allowed types of inventory vectors.  See InvVect.
-type InvType uint32
+//type InvType uint32
 
-// These constants define the various supported inventory vector types.
-const (
-	InvTypeError                InvType = 0
-	InvTypeTx                   InvType = 1
-	InvTypeBlock                InvType = 2
-	InvTypeFilteredBlock        InvType = 3
-	InvTypeWitnessBlock         InvType = InvTypeBlock | InvWitnessFlag
-	InvTypeWitnessTx            InvType = InvTypeTx | InvWitnessFlag
-	InvTypeFilteredWitnessBlock InvType = InvTypeFilteredBlock | InvWitnessFlag
-)
+//// These constants define the various supported inventory vector types.
+//const (
+//	InvTypeError                InvType = 0
+//	InvTypeTx                   InvType = 1
+//	InvTypeBlock                InvType = 2
+//	InvTypeFilteredBlock        InvType = 3
+//	InvTypeWitnessBlock         InvType = InvTypeBlock | InvWitnessFlag
+//	InvTypeWitnessTx            InvType = InvTypeTx | InvWitnessFlag
+//	InvTypeFilteredWitnessBlock InvType = InvTypeFilteredBlock | InvWitnessFlag
+//)
 
 // Map of service flags back to their constant names for pretty printing.
-var ivStrings = map[InvType]string{
-	InvTypeError:                "ERROR",
-	InvTypeTx:                   "MSG_TX",
-	InvTypeBlock:                "MSG_BLOCK",
-	InvTypeFilteredBlock:        "MSG_FILTERED_BLOCK",
-	InvTypeWitnessBlock:         "MSG_WITNESS_BLOCK",
-	InvTypeWitnessTx:            "MSG_WITNESS_TX",
-	InvTypeFilteredWitnessBlock: "MSG_FILTERED_WITNESS_BLOCK",
+var ivStrings = map[types.InvType]string{
+	types.InvTypeError:                "ERROR",
+	types.InvTypeTx:                   "MSG_TX",
+	types.InvTypeBlock:                "MSG_BLOCK",
+	types.InvTypeFilteredBlock:        "MSG_FILTERED_BLOCK",
+	types.InvTypeWitnessBlock:         "MSG_WITNESS_BLOCK",
+	types.InvTypeWitnessTx:            "MSG_WITNESS_TX",
+	types.InvTypeFilteredWitnessBlock: "MSG_FILTERED_WITNESS_BLOCK",
 }
 
-// String returns the InvType in human-readable form.
-func (invtype InvType) String() string {
-	if s, ok := ivStrings[invtype]; ok {
-		return s
-	}
-
-	return fmt.Sprintf("Unknown InvType (%d)", uint32(invtype))
-}
+//
+//// String returns the InvType in human-readable form.
+//func (invtype InvType) String() string {
+//	if s, ok := ivStrings[invtype]; ok {
+//		return s
+//	}
+//
+//	return fmt.Sprintf("Unknown InvType (%d)", uint32(invtype))
+//}
 
 // InvVect defines a bitcoin inventory vector which is used to describe data,
 // as specified by the Type field, that a peer wants, has, or does not have to
 // another peer.
 type InvVect struct {
-	Type InvType        // Type of data
+	Type types.InvType  // Type of data
 	Hash chainhash.Hash // Hash of the data
 }
 
 // NewInvVect returns a new InvVect using the provided type and hash.
-func NewInvVect(typ InvType, hash *chainhash.Hash) *InvVect {
+func NewInvVect(typ types.InvType, hash *chainhash.Hash) *InvVect {
 	return &InvVect{
 		Type: typ,
 		Hash: *hash,
@@ -77,10 +79,10 @@ func NewInvVect(typ InvType, hash *chainhash.Hash) *InvVect {
 // readInvVect reads an encoded InvVect from r depending on the protocol
 // version.
 func readInvVect(r io.Reader, pver uint32, iv *InvVect) error {
-	return readElements(r, &iv.Type, &iv.Hash)
+	return encoder.ReadElements(r, &iv.Type, &iv.Hash)
 }
 
 // writeInvVect serializes an InvVect to w depending on the protocol version.
 func writeInvVect(w io.Writer, pver uint32, iv *InvVect) error {
-	return writeElements(w, iv.Type, &iv.Hash)
+	return encoder.WriteElements(w, iv.Type, &iv.Hash)
 }

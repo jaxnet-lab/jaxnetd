@@ -33,7 +33,7 @@ type NeutrinoClient struct {
 	dequeueNotification     chan interface{}
 	startTime               time.Time
 	lastProgressSent        bool
-	lastFilteredBlockHeader *wire.BlockHeader
+	lastFilteredBlockHeader *shard.Header
 	currentBlock            chan *waddrmgr.BlockStamp
 
 	quit       chan struct{}
@@ -154,7 +154,7 @@ func (s *NeutrinoClient) GetBlockHash(height int64) (*chainhash.Hash, error) {
 // GetBlockHeader returns the block header for the given block hash, or an error
 // if the client has been shut down or the hash doesn't exist or is unknown.
 func (s *NeutrinoClient) GetBlockHeader(
-	blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+	blockHash *chainhash.Hash) (*shard.Header, error) {
 	return s.CS.GetBlockHeader(blockHash)
 }
 
@@ -503,7 +503,7 @@ func (s *NeutrinoClient) SetStartTime(startTime time.Time) {
 // onFilteredBlockConnected sends appropriate notifications to the notification
 // channel.
 func (s *NeutrinoClient) onFilteredBlockConnected(height int32,
-	header *wire.BlockHeader, relevantTxs []*btcutil.Tx) {
+	header *shard.Header, relevantTxs []*btcutil.Tx) {
 	ntfn := FilteredBlockConnected{
 		Block: &wtxmgr.BlockMeta{
 			Block: wtxmgr.Block{

@@ -477,7 +477,7 @@ func (net *netParams) ReadFrom(r io.Reader) (int64, error) {
 		return n64, err
 	}
 
-	switch wire.BitcoinNet(binary.LittleEndian.Uint32(uint32Bytes)) {
+	switch types.BitcoinNet(binary.LittleEndian.Uint32(uint32Bytes)) {
 	case jaxnet.JaxNet:
 		*net = (netParams)(chaincfg.MainNetParams)
 	case wire.MainNet:

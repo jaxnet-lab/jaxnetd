@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -28,7 +29,7 @@ func (msg *MsgFeeFilter) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding
 		return messageError("MsgFeeFilter.BtcDecode", str)
 	}
 
-	return readElement(r, &msg.MinFee)
+	return encoder.ReadElement(r, &msg.MinFee)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
@@ -40,7 +41,7 @@ func (msg *MsgFeeFilter) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding
 		return messageError("MsgFeeFilter.BtcEncode", str)
 	}
 
-	return writeElement(w, msg.MinFee)
+	return encoder.WriteElement(w, msg.MinFee)
 }
 
 // Command returns the protocol command string for the message.  This is part

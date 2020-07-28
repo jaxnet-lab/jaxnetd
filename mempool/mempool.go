@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -938,7 +939,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 
 		if !segwitActive {
 			simnetHint := ""
-			if mp.cfg.ChainParams.Net == wire.SimNet {
+			if mp.cfg.ChainParams.Net == types.SimNet {
 				bestHeight := mp.cfg.BestHeight()
 				simnetHint = fmt.Sprintf(" (The threshold for segwit activation is 300 blocks on simnet, "+
 					"current best height is %d)", bestHeight)

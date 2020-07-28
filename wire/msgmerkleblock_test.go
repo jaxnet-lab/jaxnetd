@@ -376,7 +376,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 // merkleBlockOne is a merkle block created from block one of the block chain
 // where the first transaction matches.
 var merkleBlockOne = MsgMerkleBlock{
-	Header: BlockHeader{
+	Header: shard.Header{
 		Version: 1,
 		PrevBlock: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,

@@ -6,13 +6,14 @@ package peer
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btclog"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"github.com/btcsuite/btclog"
 )
 
 const (
@@ -89,15 +90,15 @@ func invSummary(invList []*wire.InvVect) string {
 	if invLen == 1 {
 		iv := invList[0]
 		switch iv.Type {
-		case wire.InvTypeError:
+		case types.InvTypeError:
 			return fmt.Sprintf("error %s", iv.Hash)
-		case wire.InvTypeWitnessBlock:
+		case types.InvTypeWitnessBlock:
 			return fmt.Sprintf("witness block %s", iv.Hash)
-		case wire.InvTypeBlock:
+		case types.InvTypeBlock:
 			return fmt.Sprintf("block %s", iv.Hash)
-		case wire.InvTypeWitnessTx:
+		case types.InvTypeWitnessTx:
 			return fmt.Sprintf("witness tx %s", iv.Hash)
-		case wire.InvTypeTx:
+		case types.InvTypeTx:
 			return fmt.Sprintf("tx %s", iv.Hash)
 		}
 

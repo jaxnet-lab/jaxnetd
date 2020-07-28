@@ -2633,7 +2633,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			// This should NEVER be nil because the most recent
 			// block is always pushed back by resetHeaderState
 			knownEl := b.headerList.Back()
-			var knownHead *wire.BlockHeader
+			var knownHead *shard.Header
 			for j := uint32(prevNode.Height); j > backHeight; j-- {
 				if knownEl != nil {
 					knownHead = &knownEl.Header
@@ -2794,7 +2794,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 }
 
 // checkHeaderSanity checks the PoW, and timestamp of a block header.
-func (b *blockManager) checkHeaderSanity(blockHeader *wire.BlockHeader,
+func (b *blockManager) checkHeaderSanity(blockHeader *shard.Header,
 	maxTimestamp time.Time, reorgAttempt bool) error {
 	diff, err := b.calcNextRequiredDifficulty(
 		blockHeader.Timestamp, reorgAttempt)
@@ -2969,7 +2969,7 @@ func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32
 }
 
 // onBlockConnected queues a block notification that extends the current chain.
-func (b *blockManager) onBlockConnected(header wire.BlockHeader, height uint32) {
+func (b *blockManager) onBlockConnected(header shard.Header, height uint32) {
 	select {
 	case b.blockNtfnChan <- blockntfns.NewBlockConnected(header, height):
 	case <-b.quit:
@@ -2978,8 +2978,8 @@ func (b *blockManager) onBlockConnected(header wire.BlockHeader, height uint32) 
 
 // onBlockDisconnected queues a block notification that reorgs the current
 // chain.
-func (b *blockManager) onBlockDisconnected(headerDisconnected wire.BlockHeader,
-	heightDisconnected uint32, newChainTip wire.BlockHeader) {
+func (b *blockManager) onBlockDisconnected(headerDisconnected shard.Header,
+	heightDisconnected uint32, newChainTip shard.Header) {
 
 	select {
 	case b.blockNtfnChan <- blockntfns.NewBlockDisconnected(

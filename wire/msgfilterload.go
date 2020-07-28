@@ -6,28 +6,30 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 )
 
 // BloomUpdateType specifies how the filter is updated when a match is found
-type BloomUpdateType uint8
-
-const (
-	// BloomUpdateNone indicates the filter is not adjusted when a match is
-	// found.
-	BloomUpdateNone BloomUpdateType = 0
-
-	// BloomUpdateAll indicates if the filter matches any data element in a
-	// public key script, the outpoint is serialized and inserted into the
-	// filter.
-	BloomUpdateAll BloomUpdateType = 1
-
-	// BloomUpdateP2PubkeyOnly indicates if the filter matches a data
-	// element in a public key script and the script is of the standard
-	// pay-to-pubkey or multisig, the outpoint is serialized and inserted
-	// into the filter.
-	BloomUpdateP2PubkeyOnly BloomUpdateType = 2
-)
+//type BloomUpdateType uint8
+//
+//const (
+//	// BloomUpdateNone indicates the filter is not adjusted when a match is
+//	// found.
+//	BloomUpdateNone BloomUpdateType = 0
+//
+//	// BloomUpdateAll indicates if the filter matches any data element in a
+//	// public key script, the outpoint is serialized and inserted into the
+//	// filter.
+//	BloomUpdateAll BloomUpdateType = 1
+//
+//	// BloomUpdateP2PubkeyOnly indicates if the filter matches a data
+//	// element in a public key script and the script is of the standard
+//	// pay-to-pubkey or multisig, the outpoint is serialized and inserted
+//	// into the filter.
+//	BloomUpdateP2PubkeyOnly BloomUpdateType = 2
+//)
 
 const (
 	// MaxFilterLoadHashFuncs is the maximum number of hash functions to
@@ -46,7 +48,7 @@ type MsgFilterLoad struct {
 	Filter    []byte
 	HashFuncs uint32
 	Tweak     uint32
-	Flags     BloomUpdateType
+	Flags     types.BloomUpdateType
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
@@ -59,13 +61,13 @@ func (msg *MsgFilterLoad) BtcDecode(r io.Reader, pver uint32, enc MessageEncodin
 	}
 
 	var err error
-	msg.Filter, err = ReadVarBytes(r, pver, MaxFilterLoadFilterSize,
+	msg.Filter, err = encoder.ReadVarBytes(r, pver, MaxFilterLoadFilterSize,
 		"filterload filter size")
 	if err != nil {
 		return err
 	}
 
-	err = readElements(r, &msg.HashFuncs, &msg.Tweak, &msg.Flags)
+	err = encoder.ReadElements(r, &msg.HashFuncs, &msg.Tweak, &msg.Flags)
 	if err != nil {
 		return err
 	}
@@ -101,12 +103,12 @@ func (msg *MsgFilterLoad) BtcEncode(w io.Writer, pver uint32, enc MessageEncodin
 		return messageError("MsgFilterLoad.BtcEncode", str)
 	}
 
-	err := WriteVarBytes(w, pver, msg.Filter)
+	err := encoder.WriteVarBytes(w, pver, msg.Filter)
 	if err != nil {
 		return err
 	}
 
-	return writeElements(w, msg.HashFuncs, msg.Tweak, msg.Flags)
+	return encoder.WriteElements(w, msg.HashFuncs, msg.Tweak, msg.Flags)
 }
 
 // Command returns the protocol command string for the message.  This is part
@@ -120,13 +122,13 @@ func (msg *MsgFilterLoad) Command() string {
 func (msg *MsgFilterLoad) MaxPayloadLength(pver uint32) uint32 {
 	// Num filter bytes (varInt) + filter + 4 bytes hash funcs +
 	// 4 bytes tweak + 1 byte flags.
-	return uint32(VarIntSerializeSize(MaxFilterLoadFilterSize)) +
+	return uint32(encoder.VarIntSerializeSize(MaxFilterLoadFilterSize)) +
 		MaxFilterLoadFilterSize + 9
 }
 
 // NewMsgFilterLoad returns a new bitcoin filterload message that conforms to
 // the Message interface.  See MsgFilterLoad for details.
-func NewMsgFilterLoad(filter []byte, hashFuncs uint32, tweak uint32, flags BloomUpdateType) *MsgFilterLoad {
+func NewMsgFilterLoad(filter []byte, hashFuncs uint32, tweak uint32, flags types.BloomUpdateType) *MsgFilterLoad {
 	return &MsgFilterLoad{
 		Filter:    filter,
 		HashFuncs: hashFuncs,

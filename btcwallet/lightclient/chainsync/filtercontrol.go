@@ -15,7 +15,7 @@ var ErrCheckpointMismatch = fmt.Errorf("checkpoint doesn't match")
 // filterHeaderCheckpoints holds a mapping from heights to filter headers for
 // various heights. We use them to check whether peers are serving us the
 // expected filter headers.
-var filterHeaderCheckpoints = map[wire.BitcoinNet]map[uint32]*chainhash.Hash{
+var filterHeaderCheckpoints = map[types.BitcoinNet]map[uint32]*chainhash.Hash{
 	// Mainnet filter header checkpoints.
 	chaincfg.MainNetParams.Net: map[uint32]*chainhash.Hash{
 		100000: hashFromStr("f28cbc1ab369eb01b7b5fe8bf59763abb73a31471fe404a26a06be4153aa7fa5"),

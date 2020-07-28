@@ -20,11 +20,11 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
-		OnFilteredBlockConnected: func(height int32, header *wire.BlockHeader, txns []*btcutil.Tx) {
+		OnFilteredBlockConnected: func(height int32, header *shard.Header, txns []*btcutil.Tx) {
 			log.Printf("Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp)
 		},
-		OnFilteredBlockDisconnected: func(height int32, header *wire.BlockHeader) {
+		OnFilteredBlockDisconnected: func(height int32, header *shard.Header) {
 			log.Printf("Block disconnected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp)
 		},

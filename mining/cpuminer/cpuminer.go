@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/minio/sha256-simd"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -214,7 +215,7 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	// Choose a random extra nonce offset for this block template and
 	// worker.
-	enOffset, err := wire.RandomUint64()
+	enOffset, err := encoder.RandomUint64()
 	if err != nil {
 		log.Errorf("Unexpected error while generating random "+
 			"extra nonce offset: %v", err)

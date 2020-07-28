@@ -49,10 +49,10 @@ type ChainSource interface {
 
 	// GetBlockHeaderByHeight returns the header of the block with the given
 	// height.
-	GetBlockHeaderByHeight(uint32) (*wire.BlockHeader, error)
+	Getshard.HeaderByHeight(uint32) (*shard.Header, error)
 
 	// GetBlockHeader returns the header of the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, uint32, error)
+	GetBlockHeader(*chainhash.Hash) (*shard.Header, uint32, error)
 
 	// GetBlock returns the block with the given hash.
 	GetBlock(chainhash.Hash, ...QueryOption) (*btcutil.Block, error)
@@ -258,7 +258,7 @@ func (q *blockRetryQueue) pop() *blockntfns.Connected {
 
 // remove removes the block from the queue and any others that follow it. If the
 // block doesn't exit within the queue, then this acts as a NOP.
-func (q *blockRetryQueue) remove(header wire.BlockHeader) {
+func (q *blockRetryQueue) remove(header BlockHeader) {
 	headerIdx := -1
 	targetHash := header.BlockHash()
 	for i, block := range q.blocks {
@@ -360,7 +360,7 @@ func rescan(chain ChainSource, options ...RescanOption) error {
 
 	// Track our position in the chain.
 	var (
-		curHeader wire.BlockHeader
+		curHeader BlockHeader
 		curStamp  headerfs.BlockStamp
 	)
 
@@ -900,7 +900,7 @@ rescanLoop:
 
 // notifyBlock calls appropriate listeners based on the block filter.
 func notifyBlock(chain ChainSource, ro *rescanOptions,
-	curHeader wire.BlockHeader, curStamp headerfs.BlockStamp,
+	curHeader BlockHeader, curStamp headerfs.BlockStamp,
 	scanning bool) error {
 
 	// Find relevant transactions based on watch list. If scanning is
@@ -1003,7 +1003,7 @@ func extractBlockMatches(chain ChainSource, ro *rescanOptions,
 // This differs from notifyBlock in that is expects the caller to already have
 // obtained the target filter.
 func notifyBlockWithFilter(chain ChainSource, ro *rescanOptions,
-	curHeader *wire.BlockHeader, curStamp *headerfs.BlockStamp,
+	curHeader *shard.Header, curStamp *headerfs.BlockStamp,
 	filter *gcs.Filter) error {
 
 	// Based on what we find within the block or the filter, we'll be
@@ -1098,7 +1098,7 @@ func blockFilterMatches(chain ChainSource, ro *rescanOptions,
 // updateFilter atomically updates the filter and rewinds to the specified
 // height if not 0.
 func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
-	curStamp *headerfs.BlockStamp, curHeader *wire.BlockHeader) (bool, error) {
+	curStamp *headerfs.BlockStamp, curHeader *shard.Header) (bool, error) {
 
 	ro.watchAddrs = append(ro.watchAddrs, update.addrs...)
 	ro.watchInputs = append(ro.watchInputs, update.inputs...)
@@ -1124,7 +1124,7 @@ func (ro *rescanOptions) updateFilter(chain ChainSource, update *updateOptions,
 	}
 
 	var (
-		header  *wire.BlockHeader
+		header  *shard.Header
 		height  uint32
 		rewound bool
 		err     error

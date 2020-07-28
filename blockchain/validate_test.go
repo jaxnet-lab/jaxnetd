@@ -236,7 +236,7 @@ func TestCheckSerializedHeight(t *testing.T) {
 // Block100000 defines block 100,000 of the block chain.  It is used to
 // test Block operations.
 var Block100000 = wire.MsgBlock{
-	Header: wire.BlockHeader{
+	Header: shard.Header{
 		Version: 1,
 		PrevBlock: chainhash.Hash([32]byte{ // Make go vet happy.
 			0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,

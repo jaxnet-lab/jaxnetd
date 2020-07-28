@@ -586,7 +586,7 @@ func TestUtxoScannerCancelRequest(t *testing.T) {
 // Block99999 defines block 99,999 of the main chain. It is used to test a
 // rescan consisting of multiple blocks.
 var Block99999 = wire.MsgBlock{
-	Header: wire.BlockHeader{
+	Header: shard.Header{
 		Version: 1,
 		PrevBlock: chainhash.Hash([32]byte{
 			0x1d, 0x35, 0xce, 0x8c, 0x72, 0x5a, 0x13, 0x56,
@@ -646,7 +646,7 @@ var Block99999 = wire.MsgBlock{
 // Block100000 defines block 100,000 of the block chain.  It is used to test
 // Block operations.
 var Block100000 = wire.MsgBlock{
-	Header: wire.BlockHeader{
+	Header: shard.Header{
 		Version: 1,
 		PrevBlock: chainhash.Hash([32]byte{ // Make go vet happy.
 			0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,

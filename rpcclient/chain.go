@@ -480,7 +480,7 @@ type FutureGetBlockHeaderResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // blockheader requested from the server given its hash.
-func (r FutureGetBlockHeaderResult) Receive() (*wire.BlockHeader, error) {
+func (r FutureGetBlockHeaderResult) Receive() (*shard.Header, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (r FutureGetBlockHeaderResult) Receive() (*wire.BlockHeader, error) {
 	}
 
 	// Deserialize the blockheader and return it.
-	var bh wire.BlockHeader
+	var bh shard.Header
 	err = bh.Deserialize(bytes.NewReader(serializedBH))
 	if err != nil {
 		return nil, err
@@ -527,7 +527,7 @@ func (c *Client) GetBlockHeaderAsync(blockHash *chainhash.Hash) FutureGetBlockHe
 //
 // See GetBlockHeaderVerbose to retrieve a data structure with information about the
 // block instead.
-func (c *Client) GetBlockHeader(blockHash *chainhash.Hash) (*wire.BlockHeader, error) {
+func (c *Client) GetBlockHeader(blockHash *chainhash.Hash) (*shard.Header, error) {
 	return c.GetBlockHeaderAsync(blockHash).Receive()
 }
 

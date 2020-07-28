@@ -5,6 +5,7 @@
 package blockchain
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math/big"
 	"sort"
 	"sync"
@@ -13,7 +14,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // blockStatus is a bit field representing the validation state of the block.
@@ -106,7 +106,7 @@ type blockNode struct {
 // calculating the height and workSum from the respective fields on the parent.
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
-func initBlockNode(node *blockNode, blockHeader *wire.BlockHeader, parent *blockNode) {
+func initBlockNode(node *blockNode, blockHeader *shard.Header, parent *blockNode) {
 	*node = blockNode{
 		hash:       blockHeader.BlockHash(),
 		workSum:    CalcWork(blockHeader.Bits),
@@ -126,7 +126,7 @@ func initBlockNode(node *blockNode, blockHeader *wire.BlockHeader, parent *block
 // newBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func newBlockNode(blockHeader *wire.BlockHeader, parent *blockNode) *blockNode {
+func newBlockNode(blockHeader *shard.Header, parent *blockNode) *blockNode {
 	var node blockNode
 	initBlockNode(&node, blockHeader, parent)
 	return &node
@@ -135,13 +135,13 @@ func newBlockNode(blockHeader *wire.BlockHeader, parent *blockNode) *blockNode {
 // Header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) Header() wire.BlockHeader {
+func (node *blockNode) Header() shard.Header {
 	// No lock is needed because all accessed fields are immutable.
 	prevHash := &zeroHash
 	if node.parent != nil {
 		prevHash = &node.parent.hash
 	}
-	return wire.BlockHeader{
+	return shard.Header{
 		Version:             node.version,
 		PrevBlock:           *prevHash,
 		MerkleRoot:          node.merkleRoot,

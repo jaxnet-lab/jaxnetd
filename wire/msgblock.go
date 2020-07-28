@@ -7,6 +7,9 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -41,7 +44,7 @@ type TxLoc struct {
 // block message.  It is used to deliver block and transaction information in
 // response to a getdata message (MsgGetData) for a given block hash.
 type MsgBlock struct {
-	Header       BlockHeader
+	Header       shard.Header
 	Transactions []*MsgTx
 }
 
@@ -62,12 +65,12 @@ func (msg *MsgBlock) ClearTransactions() {
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-	err := readBlockHeader(r, pver, &msg.Header)
+	err := shard.ReadBlockHeader(r, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	txCount, err := ReadVarInt(r, pver)
+	txCount, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -132,12 +135,12 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of existing wire protocol functions.
-	err := readBlockHeader(r, 0, &msg.Header)
+	err := shard.ReadBlockHeader(r, 0, &msg.Header)
 	if err != nil {
 		return nil, err
 	}
 
-	txCount, err := ReadVarInt(r, 0)
+	txCount, err := encoder.ReadVarInt(r, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +177,12 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-	err := writeBlockHeader(w, pver, &msg.Header)
+	err := shard.WriteBlockHeader(w, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	err = WriteVarInt(w, pver, uint64(len(msg.Transactions)))
+	err = encoder.WriteVarInt(w, uint64(len(msg.Transactions)))
 	if err != nil {
 		return err
 	}
@@ -228,7 +231,7 @@ func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
 func (msg *MsgBlock) SerializeSize() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := blockHeaderLen + VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := chain.BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
@@ -242,7 +245,7 @@ func (msg *MsgBlock) SerializeSize() int {
 func (msg *MsgBlock) SerializeSizeStripped() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := blockHeaderLen + VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := chain.BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()
@@ -282,7 +285,7 @@ func (msg *MsgBlock) TxHashes() ([]chainhash.Hash, error) {
 
 // NewMsgBlock returns a new bitcoin block message that conforms to the
 // Message interface.  See MsgBlock for details.
-func NewMsgBlock(blockHeader *BlockHeader) *MsgBlock {
+func NewMsgBlock(blockHeader *shard.Header) *MsgBlock {
 	return &MsgBlock{
 		Header:       *blockHeader,
 		Transactions: make([]*MsgTx, 0, defaultTransactionAlloc),

@@ -33,7 +33,7 @@ type Node struct {
 	Height int32
 
 	// Header is the header that this node represents.
-	Header wire.BlockHeader
+	Header BlockHeader
 
 	prev *Node
 }

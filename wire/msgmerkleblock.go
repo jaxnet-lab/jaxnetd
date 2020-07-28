@@ -6,6 +6,8 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -22,7 +24,7 @@ const maxFlagsPerMerkleBlock = maxTxPerBlock / 8
 //
 // This message was not added until protocol version BIP0037Version.
 type MsgMerkleBlock struct {
-	Header       BlockHeader
+	Header       shard.Header
 	Transactions uint32
 	Hashes       []*chainhash.Hash
 	Flags        []byte
@@ -49,18 +51,18 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncodi
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := readBlockHeader(r, pver, &msg.Header)
+	err := shard.ReadBlockHeader(r, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	err = readElement(r, &msg.Transactions)
+	err = encoder.ReadElement(r, &msg.Transactions)
 	if err != nil {
 		return err
 	}
 
 	// Read num block locator hashes and limit to max.
-	count, err := ReadVarInt(r, pver)
+	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -76,14 +78,14 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncodi
 	msg.Hashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		hash := &hashes[i]
-		err := readElement(r, hash)
+		err := encoder.ReadElement(r, hash)
 		if err != nil {
 			return err
 		}
 		msg.AddTxHash(hash)
 	}
 
-	msg.Flags, err = ReadVarBytes(r, pver, maxFlagsPerMerkleBlock,
+	msg.Flags, err = encoder.ReadVarBytes(r, pver, maxFlagsPerMerkleBlock,
 		"merkle block flags size")
 	return err
 }
@@ -111,28 +113,28 @@ func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncodi
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := writeBlockHeader(w, pver, &msg.Header)
+	err := shard.WriteBlockHeader(w, pver, &msg.Header)
 	if err != nil {
 		return err
 	}
 
-	err = writeElement(w, msg.Transactions)
+	err = encoder.WriteElement(w, msg.Transactions)
 	if err != nil {
 		return err
 	}
 
-	err = WriteVarInt(w, pver, uint64(numHashes))
+	err = encoder.WriteVarInt(w, uint64(numHashes))
 	if err != nil {
 		return err
 	}
 	for _, hash := range msg.Hashes {
-		err = writeElement(w, hash)
+		err = encoder.WriteElement(w, hash)
 		if err != nil {
 			return err
 		}
 	}
 
-	return WriteVarBytes(w, pver, msg.Flags)
+	return encoder.WriteVarBytes(w, pver, msg.Flags)
 }
 
 // Command returns the protocol command string for the message.  This is part
@@ -149,7 +151,7 @@ func (msg *MsgMerkleBlock) MaxPayloadLength(pver uint32) uint32 {
 
 // NewMsgMerkleBlock returns a new bitcoin merkleblock message that conforms to
 // the Message interface.  See MsgMerkleBlock for details.
-func NewMsgMerkleBlock(bh *BlockHeader) *MsgMerkleBlock {
+func NewMsgMerkleBlock(bh *shard.Header) *MsgMerkleBlock {
 	return &MsgMerkleBlock{
 		Header:       *bh,
 		Transactions: 0,

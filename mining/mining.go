@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -25,7 +27,7 @@ const (
 
 	// blockHeaderOverhead is the max number of bytes it takes to serialize
 	// a block header and max possible transaction count.
-	blockHeaderOverhead = wire.MaxBlockHeaderPayload + wire.MaxVarIntPayload
+	blockHeaderOverhead = shard.MaxBlockHeaderPayload + wire.MaxVarIntPayload
 
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
@@ -796,7 +798,7 @@ mempoolLoop:
 	// block weight for the real transaction count and coinbase value with
 	// the total fees accordingly.
 	blockWeight -= wire.MaxVarIntPayload -
-		(uint32(wire.VarIntSerializeSize(uint64(len(blockTxns)))) *
+		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) *
 			blockchain.WitnessScaleFactor)
 	coinbaseTx.MsgTx().TxOut[0].Value += totalFees
 	txFees[0] = -totalFees
@@ -861,7 +863,7 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = wire.BlockHeader{
+	msgBlock.Header = shard.Header{
 		Version:    nextBlockVersion,
 		PrevBlock:  best.Hash,
 		MerkleRoot: *merkles[len(merkles)-1],

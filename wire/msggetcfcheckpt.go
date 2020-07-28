@@ -5,6 +5,7 @@
 package wire
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -21,23 +22,23 @@ type MsgGetCFCheckpt struct {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgGetCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
-	err := readElement(r, &msg.FilterType)
+	err := encoder.ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	return readElement(r, &msg.StopHash)
+	return encoder.ReadElement(r, &msg.StopHash)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgGetCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
-	err := writeElement(w, msg.FilterType)
+	err := encoder.WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	return writeElement(w, &msg.StopHash)
+	return encoder.WriteElement(w, &msg.StopHash)
 }
 
 // Command returns the protocol command string for the message.  This is part

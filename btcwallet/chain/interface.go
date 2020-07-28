@@ -35,7 +35,7 @@ type Interface interface {
 	GetBestBlock() (*chainhash.Hash, int32, error)
 	GetBlock(*chainhash.Hash) (*wire.MsgBlock, error)
 	GetBlockHash(int64) (*chainhash.Hash, error)
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, error)
+	GetBlockHeader(*chainhash.Hash) (*shard.Header, error)
 	IsCurrent() bool
 	FilterBlocks(*FilterBlocksRequest) (*FilterBlocksResponse, error)
 	BlockStamp() (*waddrmgr.BlockStamp, error)

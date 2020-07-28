@@ -12,8 +12,8 @@ import (
 // mockBlockHeaderStore is an implementation of the BlockHeaderStore backed by
 // a simple map.
 type mockBlockHeaderStore struct {
-	headers map[chainhash.Hash]wire.BlockHeader
-	heights map[uint32]wire.BlockHeader
+	headers map[chainhash.Hash]BlockHeader
+	heights map[uint32]BlockHeader
 }
 
 // A compile-time check to ensure the mockBlockHeaderStore adheres to the
@@ -26,12 +26,12 @@ var _ headerfs.BlockHeaderStore = (*mockBlockHeaderStore)(nil)
 // interface.
 func newMockBlockHeaderStore() *mockBlockHeaderStore {
 	return &mockBlockHeaderStore{
-		headers: make(map[chainhash.Hash]wire.BlockHeader),
-		heights: make(map[uint32]wire.BlockHeader),
+		headers: make(map[chainhash.Hash]BlockHeader),
+		heights: make(map[uint32]BlockHeader),
 	}
 }
 
-func (m *mockBlockHeaderStore) ChainTip() (*wire.BlockHeader,
+func (m *mockBlockHeaderStore) ChainTip() (*shard.Header,
 	uint32, error) {
 	return nil, 0, nil
 
@@ -42,7 +42,7 @@ func (m *mockBlockHeaderStore) LatestBlockLocator() (
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
-	*wire.BlockHeader, error) {
+	*shard.Header, error) {
 
 	if header, ok := m.heights[height]; ok {
 		return &header, nil
@@ -52,7 +52,7 @@ func (m *mockBlockHeaderStore) FetchHeaderByHeight(height uint32) (
 }
 
 func (m *mockBlockHeaderStore) FetchHeaderAncestors(uint32,
-	*chainhash.Hash) ([]wire.BlockHeader, uint32, error) {
+	*chainhash.Hash) ([]BlockHeader, uint32, error) {
 
 	return nil, 0, nil
 }
@@ -66,7 +66,7 @@ func (m *mockBlockHeaderStore) RollbackLastBlock() (*headerfs.BlockStamp,
 }
 
 func (m *mockBlockHeaderStore) FetchHeader(h *chainhash.Hash) (
-	*wire.BlockHeader, uint32, error) {
+	*shard.Header, uint32, error) {
 	if header, ok := m.headers[*h]; ok {
 		return &header, 0, nil
 	}

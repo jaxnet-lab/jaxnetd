@@ -26,7 +26,7 @@ func chainedNodes(parent *blockNode, numNodes int) []*blockNode {
 	for i := 0; i < numNodes; i++ {
 		// This is invalid, but all that is needed is enough to get the
 		// synthetic tests to work.
-		header := wire.BlockHeader{Nonce: testNoncePrng.Uint32()}
+		header := encoder.WriteElement{Nonce: testNoncePrng.Uint32()}
 		if tip != nil {
 			header.PrevBlock = tip.hash
 		}

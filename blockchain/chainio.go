@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math/big"
 	"sync"
 	"time"
@@ -22,7 +23,7 @@ const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
-	blockHdrSize = wire.MaxBlockHeaderPayload
+	blockHdrSize = shard.MaxBlockHeaderPayload
 
 	// latestUtxoSetBucketVersion is the current version of the utxo set
 	// bucket that is used to track all unspent outputs.
@@ -1252,10 +1253,10 @@ func (b *BlockChain) initChainState() error {
 
 // deserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, error) {
+func deserializeBlockRow(blockRow []byte) (*shard.Header, blockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
-	var header wire.BlockHeader
+	var header shard.Header
 	err := header.Deserialize(buffer)
 	if err != nil {
 		return nil, statusNone, err
@@ -1271,13 +1272,13 @@ func deserializeBlockRow(blockRow []byte) (*wire.BlockHeader, blockStatus, error
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*wire.BlockHeader, error) {
+func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*shard.Header, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
 	}
 
-	var header wire.BlockHeader
+	var header shard.Header
 	err = header.Deserialize(bytes.NewReader(headerBytes))
 	if err != nil {
 		return nil, err
@@ -1288,7 +1289,7 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (*wire.BlockHea
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
 // block header for the provided height.
-func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (*wire.BlockHeader, error) {
+func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (*shard.Header, error) {
 	hash, err := dbFetchHashByHeight(dbTx, height)
 	if err != nil {
 		return nil, err

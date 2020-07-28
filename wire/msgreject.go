@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -81,21 +82,21 @@ func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 	}
 
 	// Command that was rejected.
-	cmd, err := ReadVarString(r, pver)
+	cmd, err := encoder.ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
 	msg.Cmd = cmd
 
 	// Code indicating why the command was rejected.
-	err = readElement(r, &msg.Code)
+	err = encoder.ReadElement(r, &msg.Code)
 	if err != nil {
 		return err
 	}
 
 	// Human readable string with specific details (over and above the
 	// reject code above) about why the command was rejected.
-	reason, err := ReadVarString(r, pver)
+	reason, err := encoder.ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 	// CmdBlock and CmdTx messages have an additional hash field that
 	// identifies the specific block or transaction.
 	if msg.Cmd == CmdBlock || msg.Cmd == CmdTx {
-		err := readElement(r, &msg.Hash)
+		err := encoder.ReadElement(r, &msg.Hash)
 		if err != nil {
 			return err
 		}
@@ -123,20 +124,20 @@ func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) e
 	}
 
 	// Command that was rejected.
-	err := WriteVarString(w, pver, msg.Cmd)
+	err := encoder.WriteVarString(w, pver, msg.Cmd)
 	if err != nil {
 		return err
 	}
 
 	// Code indicating why the command was rejected.
-	err = writeElement(w, msg.Code)
+	err = encoder.WriteElement(w, msg.Code)
 	if err != nil {
 		return err
 	}
 
 	// Human readable string with specific details (over and above the
 	// reject code above) about why the command was rejected.
-	err = WriteVarString(w, pver, msg.Reason)
+	err = encoder.WriteVarString(w, pver, msg.Reason)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) e
 	// CmdBlock and CmdTx messages have an additional hash field that
 	// identifies the specific block or transaction.
 	if msg.Cmd == CmdBlock || msg.Cmd == CmdTx {
-		err := writeElement(w, &msg.Hash)
+		err := encoder.WriteElement(w, &msg.Hash)
 		if err != nil {
 			return err
 		}

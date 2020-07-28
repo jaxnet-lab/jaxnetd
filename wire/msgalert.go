@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -149,7 +150,7 @@ type Alert struct {
 
 // Serialize encodes the alert to w using the alert protocol encoding format.
 func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
-	err := writeElements(w, alert.Version, alert.RelayUntil,
+	err := encoder.WriteElements(w, alert.Version, alert.RelayUntil,
 		alert.Expiration, alert.ID, alert.Cancel)
 	if err != nil {
 		return err
@@ -161,18 +162,18 @@ func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
 			"[count %v, max %v]", count, maxCountSetCancel)
 		return messageError("Alert.Serialize", str)
 	}
-	err = WriteVarInt(w, pver, uint64(count))
+	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 	for i := 0; i < count; i++ {
-		err = writeElement(w, alert.SetCancel[i])
+		err = encoder.WriteElement(w, alert.SetCancel[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = writeElements(w, alert.MinVer, alert.MaxVer)
+	err = encoder.WriteElements(w, alert.MinVer, alert.MaxVer)
 	if err != nil {
 		return err
 	}
@@ -183,36 +184,36 @@ func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
 			"[count %v, max %v]", count, maxCountSetSubVer)
 		return messageError("Alert.Serialize", str)
 	}
-	err = WriteVarInt(w, pver, uint64(count))
+	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 	for i := 0; i < count; i++ {
-		err = WriteVarString(w, pver, alert.SetSubVer[i])
+		err = encoder.WriteVarString(w, pver, alert.SetSubVer[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = writeElement(w, alert.Priority)
+	err = encoder.WriteElement(w, alert.Priority)
 	if err != nil {
 		return err
 	}
-	err = WriteVarString(w, pver, alert.Comment)
+	err = encoder.WriteVarString(w, pver, alert.Comment)
 	if err != nil {
 		return err
 	}
-	err = WriteVarString(w, pver, alert.StatusBar)
+	err = encoder.WriteVarString(w, pver, alert.StatusBar)
 	if err != nil {
 		return err
 	}
-	return WriteVarString(w, pver, alert.Reserved)
+	return encoder.WriteVarString(w, pver, alert.Reserved)
 }
 
 // Deserialize decodes from r into the receiver using the alert protocol
 // encoding format.
 func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
-	err := readElements(r, &alert.Version, &alert.RelayUntil,
+	err := encoder.ReadElements(r, &alert.Version, &alert.RelayUntil,
 		&alert.Expiration, &alert.ID, &alert.Cancel)
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
 	// SetCancel: first read a VarInt that contains
 	// count - the number of Cancel IDs, then
 	// iterate count times and read them
-	count, err := ReadVarInt(r, pver)
+	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -232,20 +233,20 @@ func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
 	}
 	alert.SetCancel = make([]int32, count)
 	for i := 0; i < int(count); i++ {
-		err := readElement(r, &alert.SetCancel[i])
+		err := encoder.ReadElement(r, &alert.SetCancel[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = readElements(r, &alert.MinVer, &alert.MaxVer)
+	err = encoder.ReadElements(r, &alert.MinVer, &alert.MaxVer)
 	if err != nil {
 		return err
 	}
 
 	// SetSubVer: similar to SetCancel
 	// but read count number of sub-version strings
-	count, err = ReadVarInt(r, pver)
+	count, err = encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -256,25 +257,25 @@ func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
 	}
 	alert.SetSubVer = make([]string, count)
 	for i := 0; i < int(count); i++ {
-		alert.SetSubVer[i], err = ReadVarString(r, pver)
+		alert.SetSubVer[i], err = encoder.ReadVarString(r, pver)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = readElement(r, &alert.Priority)
+	err = encoder.ReadElement(r, &alert.Priority)
 	if err != nil {
 		return err
 	}
-	alert.Comment, err = ReadVarString(r, pver)
+	alert.Comment, err = encoder.ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
-	alert.StatusBar, err = ReadVarString(r, pver)
+	alert.StatusBar, err = encoder.ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
-	alert.Reserved, err = ReadVarString(r, pver)
+	alert.Reserved, err = encoder.ReadVarString(r, pver)
 	return err
 }
 
@@ -336,7 +337,7 @@ type MsgAlert struct {
 func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	var err error
 
-	msg.SerializedPayload, err = ReadVarBytes(r, pver, MaxMessagePayload,
+	msg.SerializedPayload, err = encoder.ReadVarBytes(r, pver, MaxMessagePayload,
 		"alert serialized payload")
 	if err != nil {
 		return err
@@ -347,7 +348,7 @@ func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 		msg.Payload = nil
 	}
 
-	msg.Signature, err = ReadVarBytes(r, pver, MaxMessagePayload,
+	msg.Signature, err = encoder.ReadVarBytes(r, pver, MaxMessagePayload,
 		"alert signature")
 	return err
 }
@@ -375,11 +376,11 @@ func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 	if slen == 0 {
 		return messageError("MsgAlert.BtcEncode", "empty serialized payload")
 	}
-	err = WriteVarBytes(w, pver, serializedpayload)
+	err = encoder.WriteVarBytes(w, pver, serializedpayload)
 	if err != nil {
 		return err
 	}
-	return WriteVarBytes(w, pver, msg.Signature)
+	return encoder.WriteVarBytes(w, pver, msg.Signature)
 }
 
 // Command returns the protocol command string for the message.  This is part

@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -38,19 +39,19 @@ type MsgCFilter struct {
 // This is part of the Message interface implementation.
 func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	// Read filter type
-	err := readElement(r, &msg.FilterType)
+	err := encoder.ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Read the hash of the filter's block
-	err = readElement(r, &msg.BlockHash)
+	err = encoder.ReadElement(r, &msg.BlockHash)
 	if err != nil {
 		return err
 	}
 
 	// Read filter data
-	msg.Data, err = ReadVarBytes(r, pver, MaxCFilterDataSize,
+	msg.Data, err = encoder.ReadVarBytes(r, pver, MaxCFilterDataSize,
 		"cfilter data")
 	return err
 }
@@ -65,17 +66,17 @@ func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) er
 		return messageError("MsgCFilter.BtcEncode", str)
 	}
 
-	err := writeElement(w, msg.FilterType)
+	err := encoder.WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	err = writeElement(w, msg.BlockHash)
+	err = encoder.WriteElement(w, msg.BlockHash)
 	if err != nil {
 		return err
 	}
 
-	return WriteVarBytes(w, pver, msg.Data)
+	return encoder.WriteVarBytes(w, pver, msg.Data)
 }
 
 // Deserialize decodes a filter from r into the receiver using a format that is
@@ -103,7 +104,7 @@ func (msg *MsgCFilter) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgCFilter) MaxPayloadLength(pver uint32) uint32 {
-	return uint32(VarIntSerializeSize(MaxCFilterDataSize)) +
+	return uint32(encoder.VarIntSerializeSize(MaxCFilterDataSize)) +
 		MaxCFilterDataSize + chainhash.HashSize + 1
 }
 

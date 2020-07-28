@@ -9,16 +9,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/database/internal/treap"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/comparer"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
@@ -26,6 +24,9 @@ import (
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/opt"
 	"github.com/btcsuite/goleveldb/leveldb/util"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/database/internal/treap"
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
-	blockHdrSize = wire.MaxBlockHeaderPayload
+	blockHdrSize = shard.MaxBlockHeaderPayload
 
 	// blockHdrOffset defines the offsets into a block index row for the
 	// block header.
@@ -1240,7 +1241,7 @@ func (tx *transaction) fetchBlockRow(hash *chainhash.Hash) ([]byte, error) {
 
 // FetchBlockHeader returns the raw serialized bytes for the block header
 // identified by the given hash.  The raw bytes are in the format returned by
-// Serialize on a wire.BlockHeader.
+// Serialize on a BlockHeader.
 //
 // Returns the following errors as required by the interface contract:
 //   - ErrBlockNotFound if the requested block hash does not exist
@@ -1264,7 +1265,7 @@ func (tx *transaction) FetchBlockHeader(hash *chainhash.Hash) ([]byte, error) {
 
 // FetchBlockHeaders returns the raw serialized bytes for the block headers
 // identified by the given hashes.  The raw bytes are in the format returned by
-// Serialize on a wire.BlockHeader.
+// Serialize on a encoder.WriteElement.
 //
 // Returns the following errors as required by the interface contract:
 //   - ErrBlockNotFound if the any of the requested block hashes do not exist
@@ -1982,7 +1983,7 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, network wire.BitcoinNet, create bool) (database.DB, error) {
+func openDB(dbPath string, network types.BitcoinNet, create bool) (database.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)

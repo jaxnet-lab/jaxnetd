@@ -6,6 +6,8 @@ package wire
 
 import (
 	"fmt"
+	"github.com/btcsuite/btcd/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -35,7 +37,7 @@ func (msg *MsgNotFound) AddInvVect(iv *InvVect) error {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgNotFound) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-	count, err := ReadVarInt(r, pver)
+	count, err := wire.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -72,7 +74,7 @@ func (msg *MsgNotFound) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding)
 		return messageError("MsgNotFound.BtcEncode", str)
 	}
 
-	err := WriteVarInt(w, pver, uint64(count))
+	err := encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}

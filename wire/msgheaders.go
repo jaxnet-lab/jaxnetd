@@ -6,6 +6,8 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -19,11 +21,11 @@ const MaxBlockHeadersPerMsg = 2000
 // per message is currently 2000.  See MsgGetHeaders for details on requesting
 // the headers.
 type MsgHeaders struct {
-	Headers []*BlockHeader
+	Headers []*shard.Header
 }
 
 // AddBlockHeader adds a new block header to the message.
-func (msg *MsgHeaders) AddBlockHeader(bh *BlockHeader) error {
+func (msg *MsgHeaders) AddBlockHeader(bh *shard.Header) error {
 	if len(msg.Headers)+1 > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
@@ -37,7 +39,7 @@ func (msg *MsgHeaders) AddBlockHeader(bh *BlockHeader) error {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-	count, err := ReadVarInt(r, pver)
+	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -51,16 +53,16 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 
 	// Create a contiguous slice of headers to deserialize into in order to
 	// reduce the number of allocations.
-	headers := make([]BlockHeader, count)
-	msg.Headers = make([]*BlockHeader, 0, count)
+	headers := make([]shard.Header, count)
+	msg.Headers = make([]*shard.Header, 0, count)
 	for i := uint64(0); i < count; i++ {
 		bh := &headers[i]
-		err := readBlockHeader(r, pver, bh)
+		err := shard.ReadBlockHeader(r, pver, bh)
 		if err != nil {
 			return err
 		}
 
-		txCount, err := ReadVarInt(r, pver)
+		txCount, err := encoder.ReadVarInt(r, pver)
 		if err != nil {
 			return err
 		}
@@ -88,13 +90,13 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return messageError("MsgHeaders.BtcEncode", str)
 	}
 
-	err := WriteVarInt(w, pver, uint64(count))
+	err := encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, bh := range msg.Headers {
-		err := writeBlockHeader(w, pver, bh)
+		err := shard.WriteBlockHeader(w, pver, bh)
 		if err != nil {
 			return err
 		}
@@ -103,7 +105,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		// of transactions on header messages.  This is really just an
 		// artifact of the way the original implementation serializes
 		// block headers, but it is required.
-		err = WriteVarInt(w, pver, 0)
+		err = encoder.WriteVarInt(w, 0)
 		if err != nil {
 			return err
 		}
@@ -123,7 +125,7 @@ func (msg *MsgHeaders) Command() string {
 func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Num headers (varInt) + max allowed headers (header length + 1 byte
 	// for the number of transactions which is always 0).
-	return MaxVarIntPayload + ((MaxBlockHeaderPayload + 1) *
+	return MaxVarIntPayload + ((shard.MaxBlockHeaderPayload + 1) *
 		MaxBlockHeadersPerMsg)
 }
 
@@ -131,6 +133,6 @@ func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 // Message interface.  See MsgHeaders for details.
 func NewMsgHeaders() *MsgHeaders {
 	return &MsgHeaders{
-		Headers: make([]*BlockHeader, 0, MaxBlockHeadersPerMsg),
+		Headers: make([]*shard.Header, 0, MaxBlockHeadersPerMsg),
 	}
 }

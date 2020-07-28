@@ -50,7 +50,7 @@ var (
 	// regTestGenesisBlock defines the genesis block of the block chain which serves
 	// as the public transaction ledger for the regression test network.
 	regTestGenesisBlock = wire.MsgBlock{
-		Header: wire.BlockHeader{
+		Header: shard.Header{
 			Version:    1,
 			PrevBlock:  *newHashFromStr("0000000000000000000000000000000000000000000000000000000000000000"),
 			MerkleRoot: *newHashFromStr("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"),

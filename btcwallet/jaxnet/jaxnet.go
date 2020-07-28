@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var JaxNet wire.BitcoinNet = 0x12121212
+var JaxNet types.BitcoinNet = 0x12121212
 
 var genesisBlock = wire.MsgBlock{
 	Header: wire.BlockHeader{

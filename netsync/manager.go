@@ -7,6 +7,7 @@ package netsync
 import (
 	"container/list"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math/rand"
 	"net"
 	"sync"
@@ -849,7 +850,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			continue
 		}
 
-		iv := wire.NewInvVect(wire.InvTypeBlock, node.hash)
+		iv := wire.NewInvVect(types.InvTypeBlock, node.hash)
 		haveInv, err := sm.haveInventory(iv)
 		if err != nil {
 			log.Warnf("Unexpected failure when checking for "+
@@ -866,7 +867,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			// post-fork, then ensure that we receive all the
 			// witness data in the blocks.
 			if sm.syncPeer.IsWitnessEnabled() {
-				iv.Type = wire.InvTypeWitnessBlock
+				iv.Type = types.InvTypeWitnessBlock
 			}
 
 			gdmsg.AddInvVect(iv)
@@ -997,16 +998,16 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 // are in the memory pool (either the main pool or orphan pool).
 func (sm *SyncManager) haveInventory(invVect *wire.InvVect) (bool, error) {
 	switch invVect.Type {
-	case wire.InvTypeWitnessBlock:
+	case types.InvTypeWitnessBlock:
 		fallthrough
-	case wire.InvTypeBlock:
+	case types.InvTypeBlock:
 		// Ask chain if the block is known to it in any form (main
 		// chain, side chain, or orphan).
 		return sm.chain.HaveBlock(&invVect.Hash)
 
-	case wire.InvTypeWitnessTx:
+	case types.InvTypeWitnessTx:
 		fallthrough
-	case wire.InvTypeTx:
+	case types.InvTypeTx:
 		// Ask the transaction memory pool if the transaction is known
 		// to it in any form (main pool or orphan).
 		if sm.txMemPool.HaveTransaction(&invVect.Hash) {
@@ -1056,7 +1057,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	lastBlock := -1
 	invVects := imsg.inv.InvList
 	for i := len(invVects) - 1; i >= 0; i-- {
-		if invVects[i].Type == wire.InvTypeBlock {
+		if invVects[i].Type == types.InvTypeBlock {
 			lastBlock = i
 			break
 		}
@@ -1093,10 +1094,10 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	for i, iv := range invVects {
 		// Ignore unsupported inventory types.
 		switch iv.Type {
-		case wire.InvTypeBlock:
-		case wire.InvTypeTx:
-		case wire.InvTypeWitnessBlock:
-		case wire.InvTypeWitnessTx:
+		case types.InvTypeBlock:
+		case types.InvTypeTx:
+		case types.InvTypeWitnessBlock:
+		case types.InvTypeWitnessTx:
 		default:
 			continue
 		}
@@ -1119,7 +1120,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 		if !haveInv {
-			if iv.Type == wire.InvTypeTx {
+			if iv.Type == types.InvTypeTx {
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
@@ -1131,7 +1132,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			// peers, as after segwit activation we only want to
 			// download from peers that can provide us full witness
 			// data for blocks.
-			if !peer.IsWitnessEnabled() && iv.Type == wire.InvTypeBlock {
+			if !peer.IsWitnessEnabled() && iv.Type == types.InvTypeBlock {
 				continue
 			}
 
@@ -1140,7 +1141,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 
-		if iv.Type == wire.InvTypeBlock {
+		if iv.Type == types.InvTypeBlock {
 			// The block is an orphan block that we already have.
 			// When the existing orphan was processed, it requested
 			// the missing parent blocks.  When this scenario
@@ -1192,9 +1193,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 		requestQueue = requestQueue[1:]
 
 		switch iv.Type {
-		case wire.InvTypeWitnessBlock:
+		case types.InvTypeWitnessBlock:
 			fallthrough
-		case wire.InvTypeBlock:
+		case types.InvTypeBlock:
 			// Request the block if there is not already a pending
 			// request.
 			if _, exists := sm.requestedBlocks[iv.Hash]; !exists {
@@ -1203,16 +1204,16 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				state.requestedBlocks[iv.Hash] = struct{}{}
 
 				if peer.IsWitnessEnabled() {
-					iv.Type = wire.InvTypeWitnessBlock
+					iv.Type = types.InvTypeWitnessBlock
 				}
 
 				gdmsg.AddInvVect(iv)
 				numRequested++
 			}
 
-		case wire.InvTypeWitnessTx:
+		case types.InvTypeWitnessTx:
 			fallthrough
-		case wire.InvTypeTx:
+		case types.InvTypeTx:
 			// Request the transaction if there is not already a
 			// pending request.
 			if _, exists := sm.requestedTxns[iv.Hash]; !exists {
@@ -1223,7 +1224,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// If the peer is capable, request the txn
 				// including all witness data.
 				if peer.IsWitnessEnabled() {
-					iv.Type = wire.InvTypeWitnessTx
+					iv.Type = types.InvTypeWitnessTx
 				}
 
 				gdmsg.AddInvVect(iv)
@@ -1361,7 +1362,7 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		}
 
 		// Generate the inventory vector and relay it.
-		iv := wire.NewInvVect(wire.InvTypeBlock, block.Hash())
+		iv := wire.NewInvVect(types.InvTypeBlock, block.Hash())
 		sm.peerNotifier.RelayInventory(iv, block.MsgBlock().Header)
 
 	// A block has been connected to the main block chain.

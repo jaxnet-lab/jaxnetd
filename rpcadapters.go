@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"sync/atomic"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -276,6 +277,6 @@ func (b *rpcSyncMgr) SyncPeerID() int32 {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []wire.BlockHeader {
+func (b *rpcSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []shard.Header {
 	return b.server.chain.LocateHeaders(locators, hashStop)
 }

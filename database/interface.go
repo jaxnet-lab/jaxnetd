@@ -251,7 +251,7 @@ type Tx interface {
 
 	// FetchBlockHeader returns the raw serialized bytes for the block
 	// header identified by the given hash.  The raw bytes are in the format
-	// returned by Serialize on a wire.BlockHeader.
+	// returned by Serialize on a BlockHeader.
 	//
 	// It is highly recommended to use this function (or FetchBlockHeaders)
 	// to obtain block headers over the FetchBlockRegion(s) functions since
@@ -274,7 +274,7 @@ type Tx interface {
 
 	// FetchBlockHeaders returns the raw serialized bytes for the block
 	// headers identified by the given hashes.  The raw bytes are in the
-	// format returned by Serialize on a wire.BlockHeader.
+	// format returned by Serialize on a BlockHeader.
 	//
 	// It is highly recommended to use this function (or FetchBlockHeader)
 	// to obtain block headers over the FetchBlockRegion(s) functions since

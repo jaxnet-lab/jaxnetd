@@ -6,6 +6,7 @@ package chaincfg
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"math/big"
 	"strings"
@@ -111,7 +112,7 @@ type Params struct {
 	Name string
 
 	// Net defines the magic bytes used to identify the network.
-	Net wire.BitcoinNet
+	Net types.BitcoinNet
 
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string
@@ -224,7 +225,7 @@ type Params struct {
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
 	Name:        "mainnet",
-	Net:         wire.MainNet,
+	Net:         types.MainNet,
 	DefaultPort: "8333",
 	DNSSeeds: []DNSSeed{
 		{"seed.bitcoin.sipa.be", true},
@@ -330,7 +331,7 @@ var MainNetParams = Params{
 
 var JaxNetParams = Params{
 	Name:        "jaxnet",
-	Net:         wire.JaxNet,
+	Net:         types.JaxNet,
 	DefaultPort: "8444",
 	DNSSeeds:    []DNSSeed{},
 
@@ -411,7 +412,7 @@ var JaxNetParams = Params{
 // 3), this network is sometimes simply called "testnet".
 var RegressionNetParams = Params{
 	Name:        "regtest",
-	Net:         wire.TestNet,
+	Net:         types.TestNet,
 	DefaultPort: "18444",
 	DNSSeeds:    []DNSSeed{},
 
@@ -485,7 +486,7 @@ var RegressionNetParams = Params{
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
 	Name:        "testnet3",
-	Net:         wire.TestNet3,
+	Net:         types.TestNet3,
 	DefaultPort: "18333",
 	DNSSeeds: []DNSSeed{
 		{"testnet-seed.bitcoin.jonasschnelli.ch", true},
@@ -585,7 +586,7 @@ var TestNet3Params = Params{
 // just turn into another public testnet.
 var SimNetParams = Params{
 	Name:        "simnet",
-	Net:         wire.SimNet,
+	Net:         types.SimNet,
 	DefaultPort: "18555",
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
@@ -669,7 +670,7 @@ var (
 )
 
 var (
-	registeredNets       = make(map[wire.BitcoinNet]struct{})
+	registeredNets       = make(map[types.BitcoinNet]struct{})
 	pubKeyHashAddrIDs    = make(map[byte]struct{})
 	scriptHashAddrIDs    = make(map[byte]struct{})
 	bech32SegwitPrefixes = make(map[string]struct{})

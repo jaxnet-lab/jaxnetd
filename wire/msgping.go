@@ -5,6 +5,7 @@
 package wire
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -32,7 +33,7 @@ func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) err
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
 	if pver > BIP0031Version {
-		err := readElement(r, &msg.Nonce)
+		err := encoder.ReadElement(r, &msg.Nonce)
 		if err != nil {
 			return err
 		}
@@ -48,7 +49,7 @@ func (msg *MsgPing) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) err
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
 	if pver > BIP0031Version {
-		err := writeElement(w, msg.Nonce)
+		err := encoder.WriteElement(w, msg.Nonce)
 		if err != nil {
 			return err
 		}

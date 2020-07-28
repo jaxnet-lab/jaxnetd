@@ -13,9 +13,9 @@ import (
 	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -200,7 +200,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, error) {
+func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -213,7 +213,7 @@ func (r FutureGetCurrentNetResult) Receive() (wire.BitcoinNet, error) {
 		return 0, err
 	}
 
-	return wire.BitcoinNet(net), nil
+	return types.BitcoinNet(net), nil
 }
 
 // GetCurrentNetAsync returns an instance of a type that can be used to get the
@@ -231,7 +231,7 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // GetCurrentNet returns the network the server is running on.
 //
 // NOTE: This is a btcd extension.
-func (c *Client) GetCurrentNet() (wire.BitcoinNet, error) {
+func (c *Client) GetCurrentNet() (types.BitcoinNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
 

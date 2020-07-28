@@ -15,6 +15,9 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -745,7 +748,7 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 // createTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
 func createTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
-	txHash string, blkHeader *wire.BlockHeader, blkHash string,
+	txHash string, blkHeader *shard.Header, blkHash string,
 	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
 
 	mtxHex, err := messageToHex(mtx)
@@ -2678,7 +2681,7 @@ func handleGetRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan str
 	}
 
 	// The verbose flag is set, so generate the JSON object and return it.
-	var blkHeader *wire.BlockHeader
+	var blkHeader *shard.Header
 	var blkHashStr string
 	var chainHeight int32
 	if blkHash != nil {
@@ -2850,7 +2853,7 @@ func handleHelp(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (inter
 // handlePing implements the ping command.
 func handlePing(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Ask server to ping \o_
-	nonce, err := wire.RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		return nil, internalRPCError("Not sending ping - failed to "+
 			"generate nonce: "+err.Error(), "")
@@ -3306,7 +3309,7 @@ func handleSearchRawTransactions(s *rpcServer, cmd interface{}, closeChan <-chan
 		// so conditionally fetch block details here.  This will be
 		// reflected in the final JSON output (mempool won't have
 		// confirmations or block information).
-		var blkHeader *wire.BlockHeader
+		var blkHeader *shard.Header
 		var blkHashStr string
 		var blkHeight int32
 		if blkHash := rtx.blkHash; blkHash != nil {
@@ -3441,7 +3444,7 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 	// Keep track of all the sendrawtransaction request txns so that they
 	// can be rebroadcast if they don't make their way into a block.
 	txD := acceptedTxs[0]
-	iv := wire.NewInvVect(wire.InvTypeTx, txD.Tx.Hash())
+	iv := wire.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
 	s.cfg.ConnMgr.AddRebroadcastInventory(iv, txD)
 
 	return tx.Hash().String(), nil
@@ -3632,8 +3635,8 @@ func handleVerifyMessage(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 	// Validate the signature - this just shows that it was valid at all.
 	// we will compare it with the key next.
 	var buf bytes.Buffer
-	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	wire.WriteVarString(&buf, 0, c.Message)
+	encoder.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
+	encoder.WriteVarString(&buf, 0, c.Message)
 	expectedMessageHash := chainhash.DoubleHashB(buf.Bytes())
 	pk, wasCompressed, err := btcec.RecoverCompact(btcec.S256(), sig,
 		expectedMessageHash)
@@ -4313,7 +4316,7 @@ type rpcserverSyncManager interface {
 	// block in the provided locators until the provided stop hash or the
 	// current tip is reached, up to a max of wire.MaxBlockHeadersPerMsg
 	// hashes.
-	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []wire.BlockHeader
+	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []shard.Header
 }
 
 // rpcserverConfig is a descriptor containing the RPC server configuration.

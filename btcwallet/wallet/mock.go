@@ -36,7 +36,7 @@ func (m *mockChainClient) GetBlockHash(int64) (*chainhash.Hash, error) {
 	return nil, nil
 }
 
-func (m *mockChainClient) GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader,
+func (m *mockChainClient) GetBlockHeader(*chainhash.Hash) (*shard.Header,
 	error) {
 	return nil, nil
 }

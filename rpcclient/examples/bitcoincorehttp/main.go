@@ -142,7 +142,7 @@ func main() {
 
 	//params := &chaincfg.JaxNetParams
 	//params.Name = "jaxnet"
-	//params.Net = wire.BitcoinNet(0x12121212)
+	//params.Net = types.BitcoinNet(0x12121212)
 	//params.PubKeyHashAddrID = byte(0x6F)
 	//params.PrivateKeyID = byte(0x80)
 	//

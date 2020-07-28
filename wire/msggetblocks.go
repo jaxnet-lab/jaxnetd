@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -51,13 +52,13 @@ func (msg *MsgGetBlocks) AddBlockLocatorHash(hash *chainhash.Hash) error {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgGetBlocks) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
-	err := readElement(r, &msg.ProtocolVersion)
+	err := encoder.ReadElement(r, &msg.ProtocolVersion)
 	if err != nil {
 		return err
 	}
 
 	// Read num block locator hashes and limit to max.
-	count, err := ReadVarInt(r, pver)
+	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -73,14 +74,14 @@ func (msg *MsgGetBlocks) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding
 	msg.BlockLocatorHashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		hash := &locatorHashes[i]
-		err := readElement(r, hash)
+		err := encoder.ReadElement(r, hash)
 		if err != nil {
 			return err
 		}
 		msg.AddBlockLocatorHash(hash)
 	}
 
-	return readElement(r, &msg.HashStop)
+	return encoder.ReadElement(r, &msg.HashStop)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
@@ -93,24 +94,24 @@ func (msg *MsgGetBlocks) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding
 		return messageError("MsgGetBlocks.BtcEncode", str)
 	}
 
-	err := writeElement(w, msg.ProtocolVersion)
+	err := encoder.WriteElement(w, msg.ProtocolVersion)
 	if err != nil {
 		return err
 	}
 
-	err = WriteVarInt(w, pver, uint64(count))
+	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, hash := range msg.BlockLocatorHashes {
-		err = writeElement(w, hash)
+		err = encoder.WriteElement(w, hash)
 		if err != nil {
 			return err
 		}
 	}
 
-	return writeElement(w, &msg.HashStop)
+	return encoder.WriteElement(w, &msg.HashStop)
 }
 
 // Command returns the protocol command string for the message.  This is part

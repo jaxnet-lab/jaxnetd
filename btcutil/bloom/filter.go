@@ -7,6 +7,7 @@ package bloom
 import (
 	"encoding/binary"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"sync"
 
@@ -43,7 +44,7 @@ type Filter struct {
 //
 // For more information on what values to use for both elements and fprate,
 // see https://en.wikipedia.org/wiki/Bloom_filter.
-func NewFilter(elements, tweak uint32, fprate float64, flags wire.BloomUpdateType) *Filter {
+func NewFilter(elements, tweak uint32, fprate float64, flags types.BloomUpdateType) *Filter {
 	// Massage the false positive rate to sane values.
 	if fprate > 1.0 {
 		fprate = 1.0
@@ -252,10 +253,10 @@ func (bf *Filter) AddOutPoint(outpoint *wire.OutPoint) {
 // This function MUST be called with the filter lock held.
 func (bf *Filter) maybeAddOutpoint(pkScript []byte, outHash *chainhash.Hash, outIdx uint32) {
 	switch bf.msgFilterLoad.Flags {
-	case wire.BloomUpdateAll:
+	case types.BloomUpdateAll:
 		outpoint := wire.NewOutPoint(outHash, outIdx)
 		bf.addOutPoint(outpoint)
-	case wire.BloomUpdateP2PubkeyOnly:
+	case types.BloomUpdateP2PubkeyOnly:
 		class := txscript.GetScriptClass(pkScript)
 		if class == txscript.PubKeyTy || class == txscript.MultiSigTy {
 			outpoint := wire.NewOutPoint(outHash, outIdx)

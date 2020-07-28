@@ -8,11 +8,11 @@ package gcs
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"sort"
 
 	"github.com/aead/siphash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"github.com/kkdai/bstream"
 )
 
@@ -202,7 +202,7 @@ func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
 // filter as returned by NBytes().
 func FromNBytes(P uint8, M uint64, d []byte) (*Filter, error) {
 	buffer := bytes.NewBuffer(d)
-	N, err := wire.ReadVarInt(buffer, varIntProtoVer)
+	N, err := encoder.ReadVarInt(buffer, varIntProtoVer)
 	if err != nil {
 		return nil, err
 	}
@@ -224,9 +224,9 @@ func (f *Filter) Bytes() ([]byte, error) {
 // not include P (returned by a separate method) or the key used by SipHash.
 func (f *Filter) NBytes() ([]byte, error) {
 	var buffer bytes.Buffer
-	buffer.Grow(wire.VarIntSerializeSize(uint64(f.n)) + len(f.filterData))
+	buffer.Grow(encoder.VarIntSerializeSize(uint64(f.n)) + len(f.filterData))
 
-	err := wire.WriteVarInt(&buffer, varIntProtoVer, uint64(f.n))
+	err := encoder.WriteVarInt(&buffer, uint64(f.n))
 	if err != nil {
 		return nil, err
 	}
@@ -252,9 +252,9 @@ func (f *Filter) PBytes() ([]byte, error) {
 // does not include the key used by SipHash.
 func (f *Filter) NPBytes() ([]byte, error) {
 	var buffer bytes.Buffer
-	buffer.Grow(wire.VarIntSerializeSize(uint64(f.n)) + 1 + len(f.filterData))
+	buffer.Grow(encoder.VarIntSerializeSize(uint64(f.n)) + 1 + len(f.filterData))
 
-	err := wire.WriteVarInt(&buffer, varIntProtoVer, uint64(f.n))
+	err := encoder.WriteVarInt(&buffer, uint64(f.n))
 	if err != nil {
 		return nil, err
 	}

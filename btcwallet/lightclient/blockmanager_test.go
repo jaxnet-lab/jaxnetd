@@ -114,7 +114,7 @@ type headers struct {
 // checkpoints from the given genesis. The onCheckpoint method will be called
 // with the current cf header on each checkpoint to modify the derivation of
 // the next interval
-func generateHeaders(genesisBlockHeader *wire.BlockHeader,
+func generateHeaders(genesisBlockHeader *shard.Header,
 	genesisFilterHeader *chainhash.Hash,
 	onCheckpoint func(*chainhash.Hash)) (*headers, error) {
 
@@ -777,7 +777,7 @@ func TestBlockManagerDetectBadPeers(t *testing.T) {
 		fType           = wire.GCSFilterRegular
 		filterBytes, _  = correctFilter.NBytes()
 		filterHash, _   = builder.GetFilterHash(correctFilter)
-		blockHeader     = wire.BlockHeader{}
+		blockHeader     = shard.Header{}
 		targetBlockHash = block.BlockHash()
 
 		peers  = []string{"good1:1", "good2:1", "bad:1", "good3:1"}

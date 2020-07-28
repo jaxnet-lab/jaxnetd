@@ -6,6 +6,7 @@ package wire
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 )
 
@@ -35,7 +36,7 @@ func (msg *MsgFilterAdd) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding
 	}
 
 	var err error
-	msg.Data, err = ReadVarBytes(r, pver, MaxFilterAddDataSize,
+	msg.Data, err = encoder.ReadVarBytes(r, pver, MaxFilterAddDataSize,
 		"filteradd data")
 	return err
 }
@@ -56,7 +57,7 @@ func (msg *MsgFilterAdd) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding
 		return messageError("MsgFilterAdd.BtcEncode", str)
 	}
 
-	return WriteVarBytes(w, pver, msg.Data)
+	return encoder.WriteVarBytes(w, pver, msg.Data)
 }
 
 // Command returns the protocol command string for the message.  This is part
@@ -68,7 +69,7 @@ func (msg *MsgFilterAdd) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgFilterAdd) MaxPayloadLength(pver uint32) uint32 {
-	return uint32(VarIntSerializeSize(MaxFilterAddDataSize)) +
+	return uint32(encoder.VarIntSerializeSize(MaxFilterAddDataSize)) +
 		MaxFilterAddDataSize
 }
 

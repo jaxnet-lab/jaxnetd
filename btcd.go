@@ -43,7 +43,7 @@ func btcdMain(serverChan chan<- *server) error {
 
 	//params := &chaincfg.JaxNetParams
 	//params.Name = "jaxnet"
-	//params.Net = wire.BitcoinNet(0x12121212)
+	//params.Net = types.BitcoinNet(0x12121212)
 	//params.PubKeyHashAddrID = byte(0x6F)
 	//params.PrivateKeyID = byte(0x80)
 	//
@@ -75,7 +75,7 @@ func btcdMain(serverChan chan<- *server) error {
 
 	//params := &chaincfg.JaxNetParams
 	//params.Name = "jaxnet"
-	//params.Net = wire.BitcoinNet(0xD9B4BEF9)
+	//params.Net = types.BitcoinNet(0xD9B4BEF9)
 	//params.PubKeyHashAddrID = byte(0x6F)
 	//params.PrivateKeyID = byte(0x80)
 	////

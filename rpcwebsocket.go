@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"math"
 	"sync"
@@ -1712,7 +1713,7 @@ func (c *wsClient) WaitForShutdown() {
 func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
 	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 
-	sessionID, err := wire.RandomUint64()
+	sessionID, err := encoder.RandomUint64()
 	if err != nil {
 		return nil, err
 	}

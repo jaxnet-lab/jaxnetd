@@ -10,6 +10,8 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"math/rand"
 	"net"
@@ -18,12 +20,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"github.com/btcsuite/go-socks/socks"
-	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -1083,7 +1085,7 @@ func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
 // to send malformed messages without the peer being disconnected.
 func (p *Peer) isAllowedReadError(err error) bool {
 	// Only allow read errors in regression test mode.
-	if p.cfg.ChainParams.Net != wire.TestNet {
+	if p.cfg.ChainParams.Net != types.TestNet {
 		return false
 	}
 
@@ -1597,8 +1599,8 @@ out:
 				// If this is a new block, then we'll blast it
 				// out immediately, sipping the inv trickle
 				// queue.
-				if iv.Type == wire.InvTypeBlock ||
-					iv.Type == wire.InvTypeWitnessBlock {
+				if iv.Type == types.InvTypeBlock ||
+					iv.Type == types.InvTypeWitnessBlock {
 
 					invMsg := wire.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
@@ -1781,7 +1783,7 @@ out:
 	for {
 		select {
 		case <-pingTicker.C:
-			nonce, err := wire.RandomUint64()
+			nonce, err := encoder.RandomUint64()
 			if err != nil {
 				log.Errorf("Not sending ping to %s: %v", p, err)
 				continue

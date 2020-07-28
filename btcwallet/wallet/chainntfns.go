@@ -368,7 +368,7 @@ type chainConn interface {
 	GetBlockHash(int64) (*chainhash.Hash, error)
 
 	// GetBlockHeader returns the header for the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (*wire.BlockHeader, error)
+	GetBlockHeader(*chainhash.Hash) (*shard.Header, error)
 }
 
 // birthdayStore is an interface that abstracts the wallet's sync-related

@@ -13,7 +13,7 @@ import (
 )
 
 var Block100000 = wire.MsgBlock{
-	Header: wire.BlockHeader{
+	Header: shard.Header{
 		Version: 1,
 		PrevBlock: chainhash.Hash([32]byte{ // Make go vet happy.
 			0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,
