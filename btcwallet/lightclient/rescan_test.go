@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"os"
 	"reflect"
 	"runtime/pprof"
@@ -60,7 +61,7 @@ func newMockChainSource(numBlocks int) *mockChainSource {
 
 	chain.blockHeightIndex[*genesisHash] = 0
 	chain.blockHashesByHeight[0] = genesisHash
-	chain.blockHeaders[*genesisHash] = &genesisBlock.Header
+	chain.blockHeaders[*genesisHash] = genesisBlock.Header
 	chain.blocks[*genesisHash] = btcutil.NewBlock(genesisBlock)
 
 	filter, _ := gcs.FromBytes(0, builder.DefaultP, builder.DefaultM, nil)
@@ -72,7 +73,7 @@ func newMockChainSource(numBlocks int) *mockChainSource {
 	chain.bestBlock = headerfs.BlockStamp{
 		Height:    0,
 		Hash:      *genesisHash,
-		Timestamp: genesisBlock.Header.Timestamp,
+		Timestamp: genesisBlock.Header.Timestamp(),
 	}
 
 	for i := 0; i < numBlocks-1; i++ {
@@ -90,14 +91,12 @@ func (c *mockChainSource) addNewBlock(notify bool) headerfs.BlockStamp {
 	prevHash := c.bestBlock.Hash
 	c.mu.Unlock()
 
-	genesisTimestamp := c.ChainParams().GenesisBlock.Header.Timestamp
-	header := &chain.BlockHeader{
-		PrevBlock: prevHash,
-		Timestamp: genesisTimestamp.Add(
-			time.Duration(newHeight) * 10 * time.Minute,
-		),
-	}
-
+	genesisTimestamp := c.ChainParams().GenesisBlock.Header.Timestamp()
+	header := chain.NewHeader()
+	header.SetPrevBlock(prevHash)
+	header.SetTimestamp(genesisTimestamp.Add(
+		time.Duration(newHeight) * 10 * time.Minute,
+	))
 	return c.addNewBlockWithHeader(header, notify)
 }
 
@@ -127,12 +126,12 @@ func (c *mockChainSource) addNewBlockWithHeader(header chain.BlockHeader,
 
 	c.bestBlock.Height++
 	c.bestBlock.Hash = newHash
-	c.bestBlock.Timestamp = header.Timestamp
+	c.bestBlock.Timestamp = header.Timestamp()
 	bestBlock := c.bestBlock
 	c.mu.Unlock()
 
 	if notify {
-		c.ntfnChan <- blockntfns.NewBlockConnected(*header, newHeight)
+		c.ntfnChan <- blockntfns.NewBlockConnected(header, newHeight)
 	}
 
 	return bestBlock
@@ -144,7 +143,7 @@ func (c *mockChainSource) rollback(notify bool) headerfs.BlockStamp {
 	c.mu.Lock()
 	curHeight := uint32(c.bestBlock.Height)
 	curHeader := c.blockHeaders[c.bestBlock.Hash]
-	prevHeader := c.blockHeaders[curHeader.PrevBlock]
+	prevHeader := c.blockHeaders[curHeader.PrevBlock()]
 
 	delete(c.blockHeightIndex, c.bestBlock.Hash)
 	delete(c.blockHashesByHeight, curHeight)
@@ -155,14 +154,14 @@ func (c *mockChainSource) rollback(notify bool) headerfs.BlockStamp {
 	delete(c.filters, c.bestBlock.Hash)
 
 	c.bestBlock.Height--
-	c.bestBlock.Hash = curHeader.PrevBlock
-	c.bestBlock.Timestamp = prevHeader.Timestamp
+	c.bestBlock.Hash = curHeader.PrevBlock()
+	c.bestBlock.Timestamp = prevHeader.Timestamp()
 	bestBlock := c.bestBlock
 	c.mu.Unlock()
 
 	if notify {
 		c.ntfnChan <- blockntfns.NewBlockDisconnected(
-			*curHeader, curHeight, *prevHeader,
+			curHeader, curHeight, prevHeader,
 		)
 	}
 
@@ -326,7 +325,7 @@ func (c *mockChainSource) Subscribe(
 	for i := bestHeight + 1; i <= uint32(c.bestBlock.Height); i++ {
 		hash := c.blockHashesByHeight[i]
 		header := c.blockHeaders[*hash]
-		c.ntfnChan <- blockntfns.NewBlockConnected(*header, i)
+		c.ntfnChan <- blockntfns.NewBlockConnected(header, i)
 	}
 
 	return &blockntfns.Subscription{
@@ -360,7 +359,7 @@ func newRescanTestContext(t *testing.T, numBlocks int,
 			blocksConnected <- headerfs.BlockStamp{
 				Hash:      header.BlockHash(),
 				Height:    height,
-				Timestamp: header.Timestamp,
+				Timestamp: header.Timestamp(),
 			}
 		},
 		OnFilteredBlockDisconnected: func(height int32,
@@ -369,7 +368,7 @@ func newRescanTestContext(t *testing.T, numBlocks int,
 			blocksDisconnected <- headerfs.BlockStamp{
 				Hash:      header.BlockHash(),
 				Height:    height,
-				Timestamp: header.Timestamp,
+				Timestamp: header.Timestamp(),
 			}
 		},
 	}
@@ -601,11 +600,11 @@ func TestRescanReorgAllRetryBlocks(t *testing.T) {
 	// successfully.
 	ctx.chain.setFailGetFilter(false)
 
+	h := chain.NewHeader()
+	h.SetPrevBlock(bestBlock.Hash)
 	// We'll then add two new blocks from a different chain to ensure the
 	// rescan can properly follow it.
-	newBlock1 := ctx.chain.addNewBlockWithHeader(
-		&chain.BlockHeader{PrevBlock: bestBlock.Hash}, true,
-	)
+	newBlock1 := ctx.chain.addNewBlockWithHeader(h, true)
 	if newBlock1.Hash == block1.Hash {
 		ctx.t.Fatal("expected different hashes for blocks on " +
 			"different chains")
@@ -649,7 +648,7 @@ func TestRescanRetryBlocksAfterCatchingUp(t *testing.T) {
 	// manually.
 	block2 := ctx.chain.addNewBlock(false)
 	block3 := ctx.chain.addNewBlock(false)
-	ctx.chain.ntfnChan <- blockntfns.NewBlockConnected(chain.BlockHeader{}, 0)
+	ctx.chain.ntfnChan <- blockntfns.NewBlockConnected(chain.NewHeader(), 0)
 
 	// Revert the mocked chain so that block filters can be retrieved
 	// successfully.

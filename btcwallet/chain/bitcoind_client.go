@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -185,7 +186,7 @@ func (c *BitcoindClient) IsCurrent() bool {
 	if err != nil {
 		return false
 	}
-	return bestHeader.Timestamp.After(time.Now().Add(-isCurrentDelta))
+	return bestHeader.Timestamp().After(time.Now().Add(-isCurrentDelta))
 }
 
 // GetRawTransactionVerbose returns a transaction from the tx hash.
@@ -614,7 +615,7 @@ func (c *BitcoindClient) ntfnHandler() {
 			c.bestBlockMtx.RLock()
 			bestBlock := c.bestBlock
 			c.bestBlockMtx.RUnlock()
-			if newBlock.Header.PrevBlock == bestBlock.Hash {
+			if newBlock.Header.PrevBlock() == bestBlock.Hash {
 				newBlockHeight := bestBlock.Height + 1
 				_ = c.filterBlock(newBlock, newBlockHeight, true)
 
@@ -622,7 +623,7 @@ func (c *BitcoindClient) ntfnHandler() {
 				// make it our new best block.
 				bestBlock.Hash = newBlock.BlockHash()
 				bestBlock.Height = newBlockHeight
-				bestBlock.Timestamp = newBlock.Header.Timestamp
+				bestBlock.Timestamp = newBlock.Header.Timestamp()
 
 				c.bestBlockMtx.Lock()
 				c.bestBlock = bestBlock
@@ -695,7 +696,7 @@ func (c *BitcoindClient) onFilteredBlockConnected(height int32,
 					Hash:   header.BlockHash(),
 					Height: height,
 				},
-				Time: header.Timestamp,
+				Time: header.Timestamp(),
 			},
 			RelevantTxs: relevantTxs,
 		}:
@@ -809,7 +810,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 	// This will let us fast-forward despite any future reorgs.
 	blocksToNotify := list.New()
 	blocksToNotify.PushFront(reorgBlock)
-	previousBlock := reorgBlock.Header.PrevBlock
+	previousBlock := reorgBlock.Header.PrevBlock()
 	for i := bestHeight - 1; i >= currentBlock.Height; i-- {
 		block, err := c.GetBlock(&previousBlock)
 		if err != nil {
@@ -817,7 +818,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 				previousBlock, err)
 		}
 		blocksToNotify.PushFront(block)
-		previousBlock = block.Header.PrevBlock
+		previousBlock = block.Header.PrevBlock()
 	}
 
 	// Rewind back to the last common ancestor block using the previous
@@ -833,7 +834,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 
 	// Then, we'll walk backwards in the chain until we find our common
 	// ancestor.
-	for previousBlock != currentHeader.PrevBlock {
+	for previousBlock != currentHeader.PrevBlock() {
 		// Since the previous hashes don't match, the current block has
 		// been reorged out of the chain, so we should send a
 		// BlockDisconnected notification for it.
@@ -844,18 +845,18 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 			&currentBlock.Hash, currentBlock.Height,
 			currentBlock.Timestamp,
 		)
-
+		h := currentHeader.PrevBlock()
 		// Our current block should now reflect the previous one to
 		// continue the common ancestor search.
-		currentHeader, err = c.GetBlockHeader(&currentHeader.PrevBlock)
+		currentHeader, err = c.GetBlockHeader(&h)
 		if err != nil {
 			return fmt.Errorf("unable to get block header for %v: %v",
-				currentHeader.PrevBlock, err)
+				currentHeader.PrevBlock(), err)
 		}
 
 		currentBlock.Height--
-		currentBlock.Hash = currentHeader.PrevBlock
-		currentBlock.Timestamp = currentHeader.Timestamp
+		currentBlock.Hash = currentHeader.PrevBlock()
+		currentBlock.Timestamp = currentHeader.Timestamp()
 
 		// Store the correct block in our list in order to notify it
 		// once we've found our common ancestor.
@@ -865,7 +866,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 				previousBlock, err)
 		}
 		blocksToNotify.PushFront(block)
-		previousBlock = block.Header.PrevBlock
+		previousBlock = block.Header.PrevBlock()
 	}
 
 	// Disconnect the last block from the old chain. Since the previous
@@ -875,7 +876,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 		currentBlock.Height, currentBlock.Hash)
 
 	c.onBlockDisconnected(
-		&currentBlock.Hash, currentBlock.Height, currentHeader.Timestamp,
+		&currentBlock.Hash, currentBlock.Height, currentHeader.Timestamp(),
 	)
 
 	currentBlock.Height--
@@ -895,7 +896,7 @@ func (c *BitcoindClient) reorg(currentBlock waddrmgr.BlockStamp,
 
 		currentBlock.Height = nextHeight
 		currentBlock.Hash = nextHash
-		currentBlock.Timestamp = nextHeader.Timestamp
+		currentBlock.Timestamp = nextHeader.Timestamp()
 
 		blocksToNotify.Remove(blocksToNotify.Front())
 	}
@@ -1013,14 +1014,14 @@ func (c *BitcoindClient) rescan(start chainhash.Hash) error {
 				return err
 			}
 			block = &wire.MsgBlock{
-				Header: *header,
+				Header: header,
 			}
 
-			afterBirthday = c.birthday.Before(header.Timestamp)
+			afterBirthday = c.birthday.Before(header.Timestamp())
 			if afterBirthday {
 				c.onRescanProgress(
 					previousHash, i,
-					block.Header.Timestamp,
+					block.Header.Timestamp(),
 				)
 			}
 		}
@@ -1032,7 +1033,7 @@ func (c *BitcoindClient) rescan(start chainhash.Hash) error {
 			}
 		}
 
-		for block.Header.PrevBlock.String() != previousHeader.Hash {
+		for block.Header.PrevBlock().String() != previousHeader.Hash {
 			// If we're in this for loop, it looks like we've been
 			// reorganized. We now walk backwards to the common
 			// ancestor between the best chain and the known chain.
@@ -1095,8 +1096,8 @@ func (c *BitcoindClient) rescan(start chainhash.Hash) error {
 		previousHeader = &btcjson.GetBlockHeaderVerboseResult{
 			Hash:         blockHash.String(),
 			Height:       i,
-			PreviousHash: block.Header.PrevBlock.String(),
-			Time:         block.Header.Timestamp.Unix(),
+			PreviousHash: block.Header.PrevBlock().String(),
+			Time:         block.Header.Timestamp().Unix(),
 		}
 		headers.PushBack(previousHeader)
 
@@ -1105,7 +1106,7 @@ func (c *BitcoindClient) rescan(start chainhash.Hash) error {
 
 		if i%10000 == 0 {
 			c.onRescanProgress(
-				previousHash, i, block.Header.Timestamp,
+				previousHash, i, block.Header.Timestamp(),
 			)
 		}
 
@@ -1153,11 +1154,11 @@ func (c *BitcoindClient) filterBlock(block *wire.MsgBlock, height int32,
 	// If this block happened before the client's birthday or we have
 	// nothing to filter for, then we'll skip it entirely.
 	blockHash := block.BlockHash()
-	if !c.shouldFilterBlock(block.Header.Timestamp) {
+	if !c.shouldFilterBlock(block.Header.Timestamp()) {
 		if notify {
-			c.onFilteredBlockConnected(height, &block.Header, nil)
+			c.onFilteredBlockConnected(height, block.Header, nil)
 			c.onBlockConnected(
-				&blockHash, height, block.Header.Timestamp,
+				&blockHash, height, block.Header.Timestamp(),
 			)
 		}
 		return nil
@@ -1173,7 +1174,7 @@ func (c *BitcoindClient) filterBlock(block *wire.MsgBlock, height int32,
 	blockDetails := &btcjson.BlockDetails{
 		Hash:   blockHash.String(),
 		Height: height,
-		Time:   block.Header.Timestamp.Unix(),
+		Time:   block.Header.Timestamp().Unix(),
 	}
 
 	// Now, we'll through all of the transactions in the block keeping track
@@ -1211,8 +1212,8 @@ func (c *BitcoindClient) filterBlock(block *wire.MsgBlock, height int32,
 	c.watchMtx.Unlock()
 
 	if notify {
-		c.onFilteredBlockConnected(height, &block.Header, relevantTxs)
-		c.onBlockConnected(&blockHash, height, block.Header.Timestamp)
+		c.onFilteredBlockConnected(height, block.Header, relevantTxs)
+		c.onBlockConnected(&blockHash, height, block.Header.Timestamp())
 	}
 
 	return relevantTxs

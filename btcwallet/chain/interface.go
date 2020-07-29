@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"

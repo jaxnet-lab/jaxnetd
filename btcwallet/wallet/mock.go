@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -36,7 +37,7 @@ func (m *mockChainClient) GetBlockHash(int64) (*chainhash.Hash, error) {
 	return nil, nil
 }
 
-func (m *mockChainClient) GetBlockHeader(*chainhash.Hash) (chain.BlockHeader,
+func (m *mockChainClient) GetBlockHeader(*chainhash.Hash) (chain2.BlockHeader,
 	error) {
 	return nil, nil
 }

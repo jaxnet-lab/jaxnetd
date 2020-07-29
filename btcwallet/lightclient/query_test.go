@@ -4,6 +4,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"math/big"
 	"math/rand"
@@ -32,7 +33,7 @@ var (
 	maxPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = types.TestNet3
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.
@@ -261,7 +262,7 @@ func TestBlockCache(t *testing.T) {
 	var size uint64
 	for i, b := range blocks {
 		header := headerfs.BlockHeader{
-			BlockHeader: &b.MsgBlock().Header,
+			BlockHeader: b.MsgBlock().Header,
 			Height:      uint32(i),
 		}
 		headers.WriteHeaders(header)
@@ -301,7 +302,7 @@ func TestBlockCache(t *testing.T) {
 		}
 
 		inv := getData.InvList[0]
-		if inv.Type != wire.InvTypeWitnessBlock {
+		if inv.Type != types.InvTypeWitnessBlock {
 			t.Fatalf("unexpected inv type: %v", inv.Type)
 		}
 

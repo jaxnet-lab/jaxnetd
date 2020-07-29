@@ -79,7 +79,7 @@ func formatLockTime(lockTime uint32) string {
 }
 
 // invSummary returns an inventory message as a human-readable string.
-func invSummary(invList []*wire.InvVect) string {
+func invSummary(invList []*types.InvVect) string {
 	// No inventory.
 	invLen := len(invList)
 	if invLen == 0 {
@@ -180,7 +180,7 @@ func messageSummary(msg wire.Message) string {
 	case *wire.MsgBlock:
 		header := msg.Header
 		return fmt.Sprintf("hash %s, ver %d, %d tx, %s", msg.BlockHash(),
-			header.Version, len(msg.Transactions), header.Timestamp)
+			header.Version(), len(msg.Transactions), header.Timestamp())
 
 	case *wire.MsgInv:
 		return invSummary(msg.InvList)

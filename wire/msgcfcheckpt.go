@@ -52,7 +52,7 @@ func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
 	// Read filter type
 	err := encoder.ReadElement(r, &msg.FilterType)
 	if err != nil {
@@ -93,7 +93,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
 	// Write filter type
 	err := encoder.WriteElement(w, msg.FilterType)
 	if err != nil {

@@ -409,7 +409,7 @@ func (msg *MsgTx) Copy() *MsgTx {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding transactions stored to disk, such as in a
 // database, as opposed to decoding transactions from the wire.
-func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
 	version, err := encoder.BinarySerializer.Uint32(r, littleEndian)
 	if err != nil {
 		return err
@@ -679,7 +679,7 @@ func (msg *MsgTx) DeserializeNoWitness(r io.Reader) error {
 // This is part of the Message interface implementation.
 // See Serialize for encoding transactions to be stored to disk, such as in a
 // database, as opposed to encoding transactions for the wire.
-func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	err := encoder.BinarySerializer.PutUint32(w, littleEndian, uint32(msg.Version))
 	if err != nil {
 		return err

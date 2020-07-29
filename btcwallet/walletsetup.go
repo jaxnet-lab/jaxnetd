@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,7 +21,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb"
 	_ "gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb/bdb"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // networkDir returns the directory name of a network directory to hold wallet
@@ -33,7 +33,7 @@ func networkDir(dataDir string, chainParams *chaincfg.Params) string {
 	// paramaters will likely be switched to being named "testnet3" in the
 	// future.  This is done to future proof that change, and an upgrade
 	// plan to move the testnet3 data directory can be worked out later.
-	if chainParams.Net == wire.TestNet3 {
+	if chainParams.Net == types.TestNet3 {
 		netname = "testnet"
 	}
 

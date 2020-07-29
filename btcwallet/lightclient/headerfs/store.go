@@ -533,7 +533,7 @@ func (h *blockHeaderStore) CheckConnectivity() error {
 			newHeader, err = h.readHeader(height)
 			if err != nil {
 				return fmt.Errorf("Couldn't retrieve header %s:"+
-					" %s", header.PrevBlock, err)
+					" %s", header.PrevBlock(), err)
 			}
 			newHeaderHash := newHeader.BlockHash()
 
@@ -562,7 +562,7 @@ func (h *blockHeaderStore) CheckConnectivity() error {
 				return fmt.Errorf("Block %s doesn't match "+
 					"block %s's PrevBlock (%s)",
 					newHeader.BlockHash(),
-					header.BlockHash(), header.PrevBlock)
+					header.BlockHash(), header.PrevBlock())
 			}
 
 			// As all the checks have passed, we'll now reset our

@@ -48,7 +48,7 @@ to a remote node running a bitcoin peer.  Example syntax is:
 	// Use the most recent protocol version supported by the package and the
 	// main bitcoin network.
 	pver := wire.ProtocolVersion
-	btcnet := wire.MainNet
+	btcnet := types.TestNet3
 
 	// Reads and validates the next bitcoin message from conn using the
 	// protocol version pver and the bitcoin network btcnet.  The returns
@@ -73,7 +73,7 @@ from a remote peer is:
 	// Use the most recent protocol version supported by the package and the
 	// main bitcoin network.
 	pver := wire.ProtocolVersion
-	btcnet := wire.MainNet
+	btcnet := types.TestNet3
 
 	// Create a new getaddr bitcoin message.
 	msg := wire.NewMsgGetAddr()

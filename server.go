@@ -15,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"net"
@@ -131,12 +132,12 @@ type broadcastInventoryAdd relayMsg
 
 // broadcastInventoryDel is a type used to declare that the InvVect it contains
 // needs to be removed from the rebroadcast map
-type broadcastInventoryDel *wire.InvVect
+type broadcastInventoryDel *types.InvVect
 
 // relayMsg packages an inventory vector along with the newly discovered
 // inventory so the relay has access to that information.
 type relayMsg struct {
-	invVect *wire.InvVect
+	invVect *types.InvVect
 	data    interface{}
 }
 
@@ -516,9 +517,9 @@ func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 		// or only the transactions that match the filter when there is
 		// one.
 		if !sp.filter.IsLoaded() || sp.filter.MatchTxAndUpdate(txDesc.Tx) {
-			iv := wire.NewInvVect(types.InvTypeTx, txDesc.Tx.Hash())
+			iv := types.NewInvVect(types.InvTypeTx, txDesc.Tx.Hash())
 			invMsg.AddInvVect(iv)
-			if len(invMsg.InvList)+1 > wire.MaxInvPerMsg {
+			if len(invMsg.InvList)+1 > types.MaxInvPerMsg {
 				break
 			}
 		}
@@ -545,7 +546,7 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 	// Convert the raw MsgTx to a btcutil.Tx which provides some convenience
 	// methods and things such as hash caching.
 	tx := btcutil.NewTx(msg)
-	iv := wire.NewInvVect(types.InvTypeTx, tx.Hash())
+	iv := types.NewInvVect(types.InvTypeTx, tx.Hash())
 	sp.AddKnownInventory(iv)
 
 	// Queue the transaction up to be handled by the sync manager and
@@ -565,7 +566,7 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	block := btcutil.NewBlockFromBlockAndBytes(msg, buf)
 
 	// Add the block to the known inventory for the peer.
-	iv := wire.NewInvVect(types.InvTypeBlock, block.Hash())
+	iv := types.NewInvVect(types.InvTypeBlock, block.Hash())
 	sp.AddKnownInventory(iv)
 
 	// Queue the block up to be handled by the block
@@ -640,7 +641,7 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 	// bursts of small requests are not penalized as that would potentially ban
 	// peers performing IBD.
 	// This incremental score decays each minute to half of its value.
-	sp.addBanScore(0, uint32(length)*99/wire.MaxInvPerMsg, "getdata")
+	sp.addBanScore(0, uint32(length)*99/types.MaxInvPerMsg, "getdata")
 
 	// We wait on this wait channel periodically to prevent queuing
 	// far more data than we can send in a reasonable time, wasting memory.
@@ -726,7 +727,7 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	// Generate inventory message.
 	invMsg := wire.NewMsgInv()
 	for i := range hashList {
-		iv := wire.NewInvVect(types.InvTypeBlock, &hashList[i])
+		iv := types.NewInvVect(types.InvTypeBlock, &hashList[i])
 		invMsg.AddInvVect(iv)
 	}
 
@@ -1326,7 +1327,7 @@ func randomUint16Number(max uint16) uint16 {
 
 // AddRebroadcastInventory adds 'iv' to the list of inventories to be
 // rebroadcasted at random intervals until they show up in a block.
-func (s *server) AddRebroadcastInventory(iv *wire.InvVect, data interface{}) {
+func (s *server) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&s.shutdown) != 0 {
 		return
@@ -1337,7 +1338,7 @@ func (s *server) AddRebroadcastInventory(iv *wire.InvVect, data interface{}) {
 
 // RemoveRebroadcastInventory removes 'iv' from the list of items to be
 // rebroadcasted if present.
-func (s *server) RemoveRebroadcastInventory(iv *wire.InvVect) {
+func (s *server) RemoveRebroadcastInventory(iv *types.InvVect) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&s.shutdown) != 0 {
 		return
@@ -1350,7 +1351,7 @@ func (s *server) RemoveRebroadcastInventory(iv *wire.InvVect) {
 // passed transactions to all connected peers.
 func (s *server) relayTransactions(txns []*mempool.TxDesc) {
 	for _, txD := range txns {
-		iv := wire.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
+		iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
 		s.RelayInventory(iv, txD)
 	}
 }
@@ -1379,14 +1380,14 @@ func (s *server) TransactionConfirmed(tx *btcutil.Tx) {
 		return
 	}
 
-	iv := wire.NewInvVect(types.InvTypeTx, tx.Hash())
+	iv := types.NewInvVect(types.InvTypeTx, tx.Hash())
 	s.RemoveRebroadcastInventory(iv)
 }
 
 // pushTxMsg sends a tx message for the provided transaction hash to the
 // connected peer.  An error is returned if the transaction hash is not known.
 func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Attempt to fetch the requested transaction from the pool.  A
 	// call could be made to check for existence first, but simply trying
@@ -1415,7 +1416,7 @@ func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<-
 // pushBlockMsg sends a block message for the provided block hash to the
 // connected peer.  An error is returned if the block hash is not known.
 func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
@@ -1470,7 +1471,7 @@ func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 	if sendInv {
 		best := sp.server.chain.BestSnapshot()
 		invMsg := wire.NewMsgInvSizeHint(1)
-		iv := wire.NewInvVect(types.InvTypeBlock, &best.Hash)
+		iv := types.NewInvVect(types.InvTypeBlock, &best.Hash)
 		invMsg.AddInvVect(iv)
 		sp.QueueMessage(invMsg, doneChan)
 		sp.continueHash = nil
@@ -1483,7 +1484,7 @@ func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 // loaded, this call will simply be ignored if there is no filter loaded.  An
 // error is returned if the block hash is not known.
 func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
-	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
+	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Do not send a response if the peer doesn't have a filter loaded.
 	if !sp.filter.IsLoaded() {
@@ -2192,7 +2193,7 @@ func (s *server) BanPeer(sp *serverPeer) {
 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
-func (s *server) RelayInventory(invVect *wire.InvVect, data interface{}) {
+func (s *server) RelayInventory(invVect *types.InvVect, data interface{}) {
 	s.relayInv <- relayMsg{invVect: invVect, data: data}
 }
 
@@ -2259,7 +2260,7 @@ func (s *server) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight i
 func (s *server) rebroadcastHandler() {
 	// Wait 5 min before first tx rebroadcast.
 	timer := time.NewTimer(5 * time.Minute)
-	pendingInvs := make(map[wire.InvVect]interface{})
+	pendingInvs := make(map[types.InvVect]interface{})
 
 out:
 	for {

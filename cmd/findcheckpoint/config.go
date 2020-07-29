@@ -6,15 +6,15 @@ package main
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 
+	flags "github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -59,14 +59,14 @@ func validDbType(dbType string) bool {
 // time of writing, btcd currently places blocks for testnet version 3 in the
 // data and log directory "testnet", which does not match the Name field of the
 // chaincfg parameters.  This function can be used to override this directory name
-// as "testnet" when the passed active network matches wire.TestNet3.
+// as "testnet" when the passed active network matches types.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
 // "testnet3" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
-	case wire.TestNet3:
+	case types.TestNet3:
 		return "testnet"
 	default:
 		return chainParams.Name

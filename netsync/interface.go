@@ -11,7 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 )
 
 // PeerNotifier exposes methods to notify peers of status changes to
@@ -22,7 +22,7 @@ type PeerNotifier interface {
 
 	UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight int32, updateSource *peer.Peer)
 
-	RelayInventory(invVect *wire.InvVect, data interface{})
+	RelayInventory(invVect *types.InvVect, data interface{})
 
 	TransactionConfirmed(tx *btcutil.Tx)
 }

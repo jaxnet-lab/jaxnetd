@@ -12,7 +12,7 @@ import (
 var activeNet = &JaxNetParams
 
 // MainNetParams contains parameters specific running btcwallet and
-// btcd on the main network (wire.MainNet).
+// btcd on the main network (types.TestNet3).
 var JaxNetParams = netparams.Params{
 	Params:        &chaincfg.JaxNetParams,
 	RPCClientPort: "8334",

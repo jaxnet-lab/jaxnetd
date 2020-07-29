@@ -151,7 +151,7 @@ func (c *RPCClient) IsCurrent() bool {
 	if err != nil {
 		return false
 	}
-	return bestHeader.Timestamp.After(time.Now().Add(-isCurrentDelta))
+	return bestHeader.Timestamp().After(time.Now().Add(-isCurrentDelta))
 }
 
 // Rescan wraps the normal Rescan command with an additional paramter that

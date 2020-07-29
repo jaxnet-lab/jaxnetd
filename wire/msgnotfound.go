@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcd/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 )
 
@@ -19,14 +20,14 @@ import (
 // Use the AddInvVect function to build up the list of inventory vectors when
 // sending a notfound message to another peer.
 type MsgNotFound struct {
-	InvList []*InvVect
+	InvList []*types.InvVect
 }
 
 // AddInvVect adds an inventory vector to the message.
-func (msg *MsgNotFound) AddInvVect(iv *InvVect) error {
-	if len(msg.InvList)+1 > MaxInvPerMsg {
+func (msg *MsgNotFound) AddInvVect(iv *types.InvVect) error {
+	if len(msg.InvList)+1 > types.MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [max %v]",
-			MaxInvPerMsg)
+			types.MaxInvPerMsg)
 		return messageError("MsgNotFound.AddInvVect", str)
 	}
 
@@ -36,25 +37,25 @@ func (msg *MsgNotFound) AddInvVect(iv *InvVect) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgNotFound) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *MsgNotFound) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
 	count, err := wire.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 
 	// Limit to max inventory vectors per message.
-	if count > MaxInvPerMsg {
+	if count > types.MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [%v]", count)
 		return messageError("MsgNotFound.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of inventory vectors to deserialize into in
 	// order to reduce the number of allocations.
-	invList := make([]InvVect, count)
-	msg.InvList = make([]*InvVect, 0, count)
+	invList := make([]types.InvVect, count)
+	msg.InvList = make([]*types.InvVect, 0, count)
 	for i := uint64(0); i < count; i++ {
 		iv := &invList[i]
-		err := readInvVect(r, pver, iv)
+		err := encoder.ReadInvVect(r, iv)
 		if err != nil {
 			return err
 		}
@@ -66,10 +67,10 @@ func (msg *MsgNotFound) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding)
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgNotFound) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgNotFound) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	// Limit to max inventory vectors per message.
 	count := len(msg.InvList)
-	if count > MaxInvPerMsg {
+	if count > types.MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [%v]", count)
 		return messageError("MsgNotFound.BtcEncode", str)
 	}
@@ -80,7 +81,7 @@ func (msg *MsgNotFound) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding)
 	}
 
 	for _, iv := range msg.InvList {
-		err := writeInvVect(w, pver, iv)
+		err := encoder.WriteInvVect(w, iv)
 		if err != nil {
 			return err
 		}
@@ -100,13 +101,13 @@ func (msg *MsgNotFound) Command() string {
 func (msg *MsgNotFound) MaxPayloadLength(pver uint32) uint32 {
 	// Max var int 9 bytes + max InvVects at 36 bytes each.
 	// Num inventory vectors (varInt) + max allowed inventory vectors.
-	return encoder.MaxVarIntPayload + (MaxInvPerMsg * maxInvVectPayload)
+	return encoder.MaxVarIntPayload + (types.MaxInvPerMsg * types.MaxInvVectPayload)
 }
 
 // NewMsgNotFound returns a new bitcoin notfound message that conforms to the
 // Message interface.  See MsgNotFound for details.
 func NewMsgNotFound() *MsgNotFound {
 	return &MsgNotFound{
-		InvList: make([]*InvVect, 0, defaultInvListAlloc),
+		InvList: make([]*types.InvVect, 0, defaultInvListAlloc),
 	}
 }

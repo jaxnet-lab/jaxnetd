@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"net"
 	"reflect"
@@ -139,11 +140,11 @@ func TestAddrWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgAddr        // Message to encode
-		out  *MsgAddr        // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgAddr                // Message to encode
+		out  *MsgAddr                // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no addresses.
 		{
@@ -255,13 +256,13 @@ func TestAddrWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgAddr        // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgAddr                // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in addresses count

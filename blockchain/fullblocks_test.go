@@ -8,6 +8,8 @@ package blockchain_test
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +32,7 @@ const (
 	testDbRoot = "testdbs"
 
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = types.TestNet3
 )
 
 // filesExists returns whether or not the named file or directory exists.

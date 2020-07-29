@@ -6,6 +6,8 @@ package neutrino
 import (
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"net"
 	"strconv"
 	"sync"
@@ -158,7 +160,7 @@ type ServerPeer struct {
 	server         *ChainService
 	persistent     bool
 	continueHash   *chainhash.Hash
-	requestQueue   []*wire.InvVect
+	requestQueue   []*types.InvVect
 	knownAddresses map[string]struct{}
 	banScore       connmgr.DynamicBanScore
 	quit           chan struct{}
@@ -308,7 +310,7 @@ func (sp *ServerPeer) OnInv(p *peer.Peer, msg *wire.MsgInv) {
 	log.Tracef("Got inv with %d items from %s", len(msg.InvList), p.Addr())
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
 	for _, invVect := range msg.InvList {
-		if invVect.Type == wire.InvTypeTx {
+		if invVect.Type == types.InvTypeTx {
 			log.Tracef("Ignoring tx %s in inv from %v -- "+
 				"SPV mode", invVect.Hash, sp)
 			if sp.ProtocolVersion() >= wire.BIP0037Version {

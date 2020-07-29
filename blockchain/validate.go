@@ -444,7 +444,7 @@ func checkBlockHeaderSanity(header chain.BlockHeader, powLimit *big.Int, timeSou
 	// instead of converting to seconds everywhere.
 	if !header.Timestamp().Equal(time.Unix(header.Timestamp().Unix(), 0)) {
 		str := fmt.Sprintf("block timestamp of %v has a higher "+
-			"precision than one second", header.Timestamp)
+			"precision than one second", header.Timestamp())
 		return ruleError(ErrInvalidTime, str)
 	}
 
@@ -453,7 +453,7 @@ func checkBlockHeaderSanity(header chain.BlockHeader, powLimit *big.Int, timeSou
 		MaxTimeOffsetSeconds)
 	if header.Timestamp().After(maxTimestamp) {
 		str := fmt.Sprintf("block timestamp of %v is too far in the "+
-			"future", header.Timestamp)
+			"future", header.Timestamp())
 		return ruleError(ErrTimeTooNew, str)
 	}
 
@@ -534,7 +534,7 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 	if !root.IsEqual(calculatedMerkleRoot) {
 		str := fmt.Sprintf("block merkle root is invalid - block "+
 			"header indicates %v, but calculated value is %v",
-			header.MerkleRoot, calculatedMerkleRoot)
+			header.MerkleRoot(), calculatedMerkleRoot)
 		return ruleError(ErrBadMerkleRoot, str)
 	}
 
@@ -1258,7 +1258,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	header := block.MsgBlock().Header
 	if tip.hash != header.PrevBlock() {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
-			"instead got %v", tip.hash, header.PrevBlock)
+			"instead got %v", tip.hash, header.PrevBlock())
 		return ruleError(ErrPrevBlockNotBest, str)
 	}
 

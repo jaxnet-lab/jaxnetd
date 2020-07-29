@@ -333,7 +333,7 @@ func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, 
 type outMsg struct {
 	msg      wire.Message
 	doneChan chan<- struct{}
-	encoding wire.MessageEncoding
+	encoding encoder.MessageEncoding
 }
 
 // stallControlCmd represents the command of a stall control message.
@@ -450,7 +450,7 @@ type Peer struct {
 	verAckReceived       bool
 	witnessEnabled       bool
 
-	wireEncoding wire.MessageEncoding
+	wireEncoding encoder.MessageEncoding
 
 	knownInventory     *mruInventoryMap
 	prevGetBlocksMtx   sync.Mutex
@@ -476,7 +476,7 @@ type Peer struct {
 	outputQueue   chan outMsg
 	sendQueue     chan outMsg
 	sendDoneQueue chan struct{}
-	outputInvChan chan *wire.InvVect
+	outputInvChan chan *types.InvVect
 	inQuit        chan struct{}
 	queueQuit     chan struct{}
 	outQuit       chan struct{}
@@ -518,7 +518,7 @@ func (p *Peer) UpdateLastAnnouncedBlock(blkHash *chainhash.Hash) {
 // for the peer.
 //
 // This function is safe for concurrent access.
-func (p *Peer) AddKnownInventory(invVect *wire.InvVect) {
+func (p *Peer) AddKnownInventory(invVect *types.InvVect) {
 	p.knownInventory.Add(invVect)
 }
 
@@ -1007,7 +1007,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 }
 
 // readMessage reads the next bitcoin message from the peer with logging.
-func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, error) {
+func (p *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, []byte, error) {
 	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.conn,
 		p.ProtocolVersion(), p.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&p.bytesReceived, uint64(n))
@@ -1040,7 +1040,7 @@ func (p *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte,
 }
 
 // writeMessage sends a bitcoin message to the peer with logging.
-func (p *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
+func (p *Peer) writeMessage(msg wire.Message, enc encoder.MessageEncoding) error {
 	// Don't do anything if we're disconnecting.
 	if atomic.LoadInt32(&p.disconnect) != 0 {
 		return nil
@@ -1624,7 +1624,7 @@ out:
 			// drain the inventory send queue.
 			invMsg := wire.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
-				iv := invSendQueue.Remove(e).(*wire.InvVect)
+				iv := invSendQueue.Remove(e).(*types.InvVect)
 
 				// Don't send inventory that became known after
 				// the initial check.
@@ -1810,7 +1810,7 @@ func (p *Peer) QueueMessage(msg wire.Message, doneChan chan<- struct{}) {
 //
 // This function is safe for concurrent access.
 func (p *Peer) QueueMessageWithEncoding(msg wire.Message, doneChan chan<- struct{},
-	encoding wire.MessageEncoding) {
+	encoding encoder.MessageEncoding) {
 
 	// Avoid risk of deadlock if goroutine already exited.  The goroutine
 	// we will be sending to hangs around until it knows for a fact that
@@ -1831,7 +1831,7 @@ func (p *Peer) QueueMessageWithEncoding(msg wire.Message, doneChan chan<- struct
 // Inventory that the peer is already known to have is ignored.
 //
 // This function is safe for concurrent access.
-func (p *Peer) QueueInventory(invVect *wire.InvVect) {
+func (p *Peer) QueueInventory(invVect *types.InvVect) {
 	// Don't add the inventory to the send queue if the peer is already
 	// known to have it.
 	if p.knownInventory.Exists(invVect) {
@@ -2231,7 +2231,7 @@ func newPeerBase(origCfg *Config, inbound bool) *Peer {
 		outputQueue:     make(chan outMsg, outputBufferSize),
 		sendQueue:       make(chan outMsg, 1),   // nonblocking sync
 		sendDoneQueue:   make(chan struct{}, 1), // nonblocking sync
-		outputInvChan:   make(chan *wire.InvVect, outputBufferSize),
+		outputInvChan:   make(chan *types.InvVect, outputBufferSize),
 		inQuit:          make(chan struct{}),
 		queueQuit:       make(chan struct{}),
 		outQuit:         make(chan struct{}),

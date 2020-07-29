@@ -15,7 +15,7 @@ func main() {
 func GenerateKeyAddress() ([]byte, string) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
-		fmt.Printf("failed to make privKey for %s: %v", err)
+		fmt.Printf("failed to make privKey for  %v", err)
 	}
 
 	pk := (*btcec.PublicKey)(&key.PublicKey).

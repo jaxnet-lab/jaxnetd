@@ -63,7 +63,7 @@ func (msg *MsgBlock) ClearTransactions() {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
-func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (err error) {
+func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
 	msg.Header, err = chain.ReadBlockHeader(r)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // This is part of the Message interface implementation.
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
-func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	err := chain.WriteBlockHeader(w, msg.Header)
 	if err != nil {
 		return err

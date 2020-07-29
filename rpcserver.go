@@ -1166,7 +1166,7 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	blockReply := btcjson.GetBlockVerboseResult{
 		Hash:                c.Hash,
 		Version:             blockHeader.Version(),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
 		PreviousHash:        blockHeader.PrevBlock().String(),
 		MerkleMountainRange: blockHeader.MerkleMountainRange().String(),
@@ -1418,7 +1418,7 @@ func handleGetBlockHeader(s *rpcServer, cmd interface{}, closeChan <-chan struct
 		Confirmations:       int64(1 + best.Height - blockHeight),
 		Height:              blockHeight,
 		Version:             blockHeader.Version(),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version),
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
 		MerkleMountainRange: blockHeader.MerkleMountainRange().String(),
 		NextHash:            nextHashString,
@@ -3445,7 +3445,7 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 	// Keep track of all the sendrawtransaction request txns so that they
 	// can be rebroadcast if they don't make their way into a block.
 	txD := acceptedTxs[0]
-	iv := wire.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
+	iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
 	s.cfg.ConnMgr.AddRebroadcastInventory(iv, txD)
 
 	return tx.Hash().String(), nil
@@ -4286,7 +4286,7 @@ type rpcserverConnManager interface {
 	// AddRebroadcastInventory adds the provided inventory to the list of
 	// inventories to be rebroadcast at random intervals until they show up
 	// in a block.
-	AddRebroadcastInventory(iv *wire.InvVect, data interface{})
+	AddRebroadcastInventory(iv *types.InvVect, data interface{})
 
 	// RelayTransactions generates and relays inventory vectors for all of
 	// the passed transactions to all connected peers.

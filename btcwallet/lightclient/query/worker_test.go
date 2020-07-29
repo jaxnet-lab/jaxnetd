@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ type mockPeer struct {
 var _ Peer = (*mockPeer)(nil)
 
 func (m *mockPeer) QueueMessageWithEncoding(msg wire.Message,
-	doneChan chan<- struct{}, encoding wire.MessageEncoding) {
+	doneChan chan<- struct{}, encoding encoder.MessageEncoding) {
 
 	m.requests <- msg
 }

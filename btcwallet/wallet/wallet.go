@@ -409,7 +409,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 			err := w.Manager.SetSyncedTo(ns, &waddrmgr.BlockStamp{
 				Hash:      *startHash,
 				Height:    startHeight,
-				Timestamp: startHeader.Timestamp,
+				Timestamp: startHeader.Timestamp(),
 			})
 			if err != nil {
 				return err
@@ -456,7 +456,7 @@ func (w *Wallet) syncWithChain(birthdayStamp *waddrmgr.BlockStamp) error {
 
 			rollbackStamp.Hash = *chainHash
 			rollbackStamp.Height = height
-			rollbackStamp.Timestamp = header.Timestamp
+			rollbackStamp.Timestamp = header.Timestamp()
 
 			if bytes.Equal(hash[:], chainHash[:]) {
 				break
@@ -598,7 +598,7 @@ func locateBirthdayBlock(chainClient chainConn,
 		}
 
 		log.Debugf("Checking candidate block: height=%v, hash=%v, "+
-			"timestamp=%v", mid, hash, header.Timestamp)
+			"timestamp=%v", mid, hash, header.Timestamp())
 
 		// If the search happened to reach either of our range extremes,
 		// then we'll just use that as there's nothing left to search.
@@ -606,29 +606,29 @@ func locateBirthdayBlock(chainClient chainConn,
 			birthdayBlock = &waddrmgr.BlockStamp{
 				Hash:      *hash,
 				Height:    int32(mid),
-				Timestamp: header.Timestamp,
+				Timestamp: header.Timestamp(),
 			}
 			break
 		}
 
 		// The block's timestamp is more than 2 hours after the
 		// birthday, so look for a lower block.
-		if header.Timestamp.Sub(birthday) > birthdayBlockDelta {
+		if header.Timestamp().Sub(birthday) > birthdayBlockDelta {
 			right = mid
 			continue
 		}
 
 		// The birthday is more than 2 hours before the block's
 		// timestamp, so look for a higher block.
-		if header.Timestamp.Sub(birthday) < -birthdayBlockDelta {
+		if header.Timestamp().Sub(birthday) < -birthdayBlockDelta {
 			left = mid
 			continue
 		}
 
 		birthdayBlock = &waddrmgr.BlockStamp{
 			Hash:      *hash,
-			Height:    int32(mid),
-			Timestamp: header.Timestamp,
+			Height:    mid,
+			Timestamp: header.Timestamp(),
 		}
 		break
 	}
@@ -707,7 +707,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 		blocks = append(blocks, &waddrmgr.BlockStamp{
 			Hash:      *hash,
 			Height:    height,
-			Timestamp: header.Timestamp,
+			Timestamp: header.Timestamp(),
 		})
 
 		// It's possible for us to run into blocks before our birthday
@@ -715,7 +715,7 @@ func (w *Wallet) recovery(chainClient chain.Interface,
 		// sure to not add those to the batch.
 		if height >= birthdayBlock.Height {
 			recoveryMgr.AddToBlockBatch(
-				hash, height, header.Timestamp,
+				hash, height, header.Timestamp(),
 			)
 		}
 
@@ -2740,14 +2740,14 @@ func (w *Wallet) ImportPrivateKey(scope waddrmgr.KeyScope, wif *btcutil.WIF,
 		bs = &waddrmgr.BlockStamp{
 			Hash:      *w.chainParams.GenesisHash,
 			Height:    0,
-			Timestamp: w.chainParams.GenesisBlock.Header.Timestamp,
+			Timestamp: w.chainParams.GenesisBlock.Header.Timestamp(),
 		}
 	} else if bs.Timestamp.IsZero() {
 		// Only update the new birthday time from default value if we
 		// actually have timestamp info in the header.
 		header, err := w.chainClient.GetBlockHeader(&bs.Hash)
 		if err == nil {
-			bs.Timestamp = header.Timestamp
+			bs.Timestamp = header.Timestamp()
 		}
 	}
 

@@ -61,13 +61,10 @@ const (
 	CmdCFCheckpt    = "cfcheckpt"
 )
 
-// MessageEncoding represents the wire message encoding format to be used.
-type MessageEncoding uint32
-
 const (
 	// BaseEncoding encodes all messages in the default format specified
 	// for the Bitcoin wire protocol.
-	BaseEncoding MessageEncoding = 1 << iota
+	BaseEncoding encoder.MessageEncoding = 1 << iota
 
 	// WitnessEncoding encodes all messages other than transaction messages
 	// using the default Bitcoin wire protocol specification. For transaction
@@ -84,8 +81,8 @@ var LatestEncoding = WitnessEncoding
 // and may therefore contain additional or fewer fields than those which
 // are used directly in the protocol encoded message.
 type Message interface {
-	BtcDecode(io.Reader, uint32, MessageEncoding) error
-	BtcEncode(io.Writer, uint32, MessageEncoding) error
+	BtcDecode(io.Reader, uint32, encoder.MessageEncoding) error
+	BtcEncode(io.Writer, uint32, encoder.MessageEncoding) error
 	Command() string
 	MaxPayloadLength(uint32) uint32
 }
@@ -263,7 +260,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet types.BitcoinNet
 // to specify the message encoding format to be used when serializing wire
 // messages.
 func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
-	btcnet types.BitcoinNet, encoding MessageEncoding) (int, error) {
+	btcnet types.BitcoinNet, encoding encoder.MessageEncoding) (int, error) {
 
 	totalBytes := 0
 
@@ -340,7 +337,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // allows the caller to specify which message encoding is to to consult when
 // decoding wire messages.
 func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet types.BitcoinNet,
-	enc MessageEncoding) (int, Message, []byte, error) {
+	enc encoder.MessageEncoding) (int, Message, []byte, error) {
 
 	totalBytes := 0
 	n, hdr, err := readMessageHeader(r)

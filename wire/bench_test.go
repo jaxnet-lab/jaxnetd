@@ -506,12 +506,12 @@ func BenchmarkDecodeInv(b *testing.B) {
 	// Create a message with the maximum number of entries.
 	pver := ProtocolVersion
 	var m MsgInv
-	for i := 0; i < MaxInvPerMsg; i++ {
+	for i := 0; i < types.MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(NewInvVect(types.InvTypeBlock, hash))
+		m.AddInvVect(types.NewInvVect(types.InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -536,12 +536,12 @@ func BenchmarkDecodeNotFound(b *testing.B) {
 	// Create a message with the maximum number of entries.
 	pver := ProtocolVersion
 	var m MsgNotFound
-	for i := 0; i < MaxInvPerMsg; i++ {
+	for i := 0; i < types.MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(NewInvVect(types.InvTypeBlock, hash))
+		m.AddInvVect(types.NewInvVect(types.InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.

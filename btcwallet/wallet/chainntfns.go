@@ -7,6 +7,7 @@ package wallet
 import (
 	"bytes"
 	"fmt"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/chain"
@@ -15,7 +16,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wtxmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -66,7 +66,7 @@ func (w *Wallet) handleChainNotifications() {
 				bs := waddrmgr.BlockStamp{
 					Height:    i,
 					Hash:      *hash,
-					Timestamp: header.Timestamp,
+					Timestamp: header.Timestamp(),
 				}
 				err = w.Manager.SetSyncedTo(ns, &bs)
 				if err != nil {
@@ -253,7 +253,7 @@ func (w *Wallet) disconnectBlock(dbtx walletdb.ReadWriteTx, b wtxmgr.BlockMeta) 
 				return err
 			}
 
-			bs.Timestamp = header.Timestamp
+			bs.Timestamp = header.Timestamp()
 			err = w.Manager.SetSyncedTo(addrmgrNs, &bs)
 			if err != nil {
 				return err
@@ -368,7 +368,7 @@ type chainConn interface {
 	GetBlockHash(int64) (*chainhash.Hash, error)
 
 	// GetBlockHeader returns the header for the block with the given hash.
-	GetBlockHeader(*chainhash.Hash) (chain.BlockHeader, error)
+	GetBlockHeader(*chainhash.Hash) (chain2.BlockHeader, error)
 }
 
 // birthdayStore is an interface that abstracts the wallet's sync-related

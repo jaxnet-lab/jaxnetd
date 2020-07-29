@@ -33,7 +33,7 @@ func TestLocateBirthdayBlock(t *testing.T) {
 		blockInterval = birthdayBlockDelta + 1
 	)
 
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp()
 
 	testCases := []struct {
 		name           string

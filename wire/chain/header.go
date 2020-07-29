@@ -2,6 +2,7 @@ package chain
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"time"
 )
@@ -20,6 +21,7 @@ type BlockHeader interface {
 	BlockData() []byte
 	BlockHash() chainhash.Hash
 	PrevBlock() chainhash.Hash
+	SetPrevBlock(prevBlock chainhash.Hash)
 	Timestamp() time.Time
 	SetTimestamp(time.Time)
 	MerkleRoot() chainhash.Hash
@@ -33,6 +35,7 @@ type BlockHeader interface {
 	Version() int32
 	Read(r io.Reader) error
 	Write(r io.Writer) error
+	BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error
 	//Size() int
 }
 

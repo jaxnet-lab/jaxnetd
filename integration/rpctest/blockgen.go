@@ -6,6 +6,8 @@ package rpctest
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math"
 	"math/big"
 	"runtime"
@@ -42,7 +44,7 @@ func solveBlock(header chain.BlockHeader, targetDifficulty *big.Int) bool {
 			case <-quit:
 				return
 			default:
-				hdr.Nonce = i
+				hdr.SetNonce(i)
 				hash := hdr.BlockHash()
 				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 					select {
@@ -71,13 +73,13 @@ func solveBlock(header chain.BlockHeader, targetDifficulty *big.Int) bool {
 		if i == numCores-1 {
 			rangeStop = stopNonce
 		}
-		go solver(*header, rangeStart, rangeStop)
+		go solver(header, rangeStart, rangeStop)
 	}
 	for i := uint32(0); i < numCores; i++ {
 		result := <-results
 		if result.found {
 			close(quit)
-			header.Nonce = result.nonce
+			header.SetNonce(result.nonce)
 			return true
 		}
 	}
@@ -147,11 +149,11 @@ func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	if prevBlock == nil {
 		prevHash = net.GenesisHash
 		blockHeight = 1
-		prevBlockTime = net.GenesisBlock.Header.Timestamp.Add(time.Minute)
+		prevBlockTime = net.GenesisBlock.Header.Timestamp().Add(time.Minute)
 	} else {
 		prevHash = prevBlock.Hash()
 		blockHeight = prevBlock.Height() + 1
-		prevBlockTime = prevBlock.MsgBlock().Header.Timestamp
+		prevBlockTime = prevBlock.MsgBlock().Header.Timestamp()
 	}
 
 	// If a target block time was specified, then use that as the header's
@@ -183,20 +185,14 @@ func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	}
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var block wire.MsgBlock
-	block.Header = chain.BlockHeader{
-		Version:    blockVersion,
-		PrevBlock:  *prevHash,
-		MerkleRoot: *merkles[len(merkles)-1],
-		Timestamp:  ts,
-		Bits:       net.PowLimitBits,
-	}
+	block.Header = shard.NewBlockHeader(blockVersion, *prevHash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, net.PowLimitBits, 0)
 	for _, tx := range blockTxns {
 		if err := block.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err
 		}
 	}
 
-	found := solveBlock(&block.Header, net.PowLimit)
+	found := solveBlock(block.Header, net.PowLimit)
 	if !found {
 		return nil, errors.New("Unable to solve block")
 	}

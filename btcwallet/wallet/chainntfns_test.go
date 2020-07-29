@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"reflect"
 	"testing"
 	"time"
@@ -54,11 +55,11 @@ func createMockChainConn(genesis *wire.MsgBlock, n uint32,
 	c.blocks[genesisHash] = genesis
 
 	for i := uint32(1); i <= n; i++ {
-		prevTimestamp := c.blocks[c.blockHashes[i-1]].Header.Timestamp
+		prevTimestamp := c.blocks[c.blockHashes[i-1]].Header.Timestamp()
+		h := chain.NewHeader()
+		h.SetTimestamp(prevTimestamp.Add(blockInterval))
 		block := &wire.MsgBlock{
-			Header: chain.BlockHeader{
-				Timestamp: prevTimestamp.Add(blockInterval),
-			},
+			Header: h,
 		}
 
 		blockHash := block.BlockHash()
@@ -98,7 +99,7 @@ func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (chain.BlockHeader,
 		return nil, fmt.Errorf("header for block %v not found", hash)
 	}
 
-	return &block.Header, nil
+	return block.Header, nil
 }
 
 // mockBirthdayStore is a mock in-memory implementation of the birthdayStore interface
@@ -210,7 +211,7 @@ func TestBirthdaySanityCheckLowerEstimate(t *testing.T) {
 
 	// We'll start by defining our birthday timestamp to be around the
 	// timestamp of the 1337th block.
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp()
 	birthday := genesisTimestamp.Add(1337 * defaultBlockInterval)
 
 	// We'll establish a connection to a mock chain of 5000 blocks.
@@ -263,7 +264,7 @@ func TestBirthdaySanityCheckHigherEstimate(t *testing.T) {
 
 	// We'll start by defining our birthday timestamp to be around the
 	// timestamp of the 1337th block.
-	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp
+	genesisTimestamp := chainParams.GenesisBlock.Header.Timestamp()
 	birthday := genesisTimestamp.Add(1337 * defaultBlockInterval)
 
 	// We'll establish a connection to a mock chain of 5000 blocks.
@@ -280,7 +281,7 @@ func TestBirthdaySanityCheckHigherEstimate(t *testing.T) {
 		birthdayBlock: &waddrmgr.BlockStamp{
 			Hash:      bestBlock.BlockHash(),
 			Height:    5000,
-			Timestamp: bestBlock.Header.Timestamp,
+			Timestamp: bestBlock.Header.Timestamp(),
 		},
 		birthdayBlockVerified: false,
 		syncedTo: waddrmgr.BlockStamp{

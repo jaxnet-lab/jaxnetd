@@ -107,8 +107,8 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 			candidates = append(candidates, &checkpoint)
 		}
 
-		prevHash := &block.MsgBlock().Header.PrevBlock
-		block, err = chain.BlockByHash(prevHash)
+		prevHash := block.MsgBlock().Header.PrevBlock()
+		block, err = chain.BlockByHash(&prevHash)
 		if err != nil {
 			return nil, err
 		}

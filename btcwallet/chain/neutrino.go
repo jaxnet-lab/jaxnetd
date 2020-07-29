@@ -3,6 +3,7 @@ package chain
 import (
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"sync"
 	"time"
 
@@ -385,7 +386,7 @@ func (s *NeutrinoClient) Rescan(startHash *chainhash.Hash, addrs []btcutil.Addre
 		case s.enqueueNotification <- &RescanFinished{
 			Hash:   startHash,
 			Height: int32(bestBlock.Height),
-			Time:   header.Timestamp,
+			Time:   header.Timestamp(),
 		}:
 		case <-s.quit:
 			return nil
@@ -510,12 +511,12 @@ func (s *NeutrinoClient) onFilteredBlockConnected(height int32,
 				Hash:   header.BlockHash(),
 				Height: height,
 			},
-			Time: header.Timestamp,
+			Time: header.Timestamp(),
 		},
 	}
 	for _, tx := range relevantTxs {
 		rec, err := wtxmgr.NewTxRecordFromMsgTx(tx.MsgTx(),
-			header.Timestamp)
+			header.Timestamp())
 		if err != nil {
 			log.Errorf("Cannot create transaction record for "+
 				"relevant tx: %s", err)
@@ -657,7 +658,7 @@ func (s *NeutrinoClient) dispatchRescanFinished() {
 	case s.enqueueNotification <- &RescanFinished{
 		Hash:   &bs.Hash,
 		Height: bs.Height,
-		Time:   header.Timestamp,
+		Time:   header.Timestamp(),
 	}:
 	case <-s.quit:
 		return

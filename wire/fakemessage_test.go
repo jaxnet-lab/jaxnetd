@@ -4,7 +4,10 @@
 
 package wire
 
-import "io"
+import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"io"
+)
 
 // fakeMessage implements the Message interface and is used to force encode
 // errors in messages.
@@ -17,14 +20,14 @@ type fakeMessage struct {
 
 // BtcDecode doesn't do anything.  It just satisfies the wire.Message
 // interface.
-func (msg *fakeMessage) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+func (msg *fakeMessage) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
 	return nil
 }
 
 // BtcEncode writes the payload field of the fake message or forces an error
 // if the forceEncodeErr flag of the fake message is set.  It also satisfies the
 // wire.Message interface.
-func (msg *fakeMessage) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+func (msg *fakeMessage) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	if msg.forceEncodeErr {
 		err := &MessageError{
 			Func:        "fakeMessage.BtcEncode",

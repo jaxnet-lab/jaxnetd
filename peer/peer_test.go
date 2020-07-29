@@ -7,6 +7,8 @@ package peer_test
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"net"
 	"strconv"
@@ -515,8 +517,8 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnBlock",
-			wire.NewMsgBlock(wire.NewBlockHeader(1,
-				&chainhash.Hash{}, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)),
+			wire.NewMsgBlock(shard.NewBlockHeader(1,
+				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
 		},
 		{
 			"OnInv",
@@ -577,12 +579,12 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnFilterLoad",
-			wire.NewMsgFilterLoad([]byte{0x01}, 10, 0, wire.BloomUpdateNone),
+			wire.NewMsgFilterLoad([]byte{0x01}, 10, 0, types.BloomUpdateNone),
 		},
 		{
 			"OnMerkleBlock",
-			wire.NewMsgMerkleBlock(wire.NewBlockHeader(1,
-				&chainhash.Hash{}, &chainhash.Hash{}, &chainhash.Hash{}, 1, 1)),
+			wire.NewMsgMerkleBlock(shard.NewBlockHeader(1,
+				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
 		},
 		// only one version message is allowed
 		// only one verack message is allowed
@@ -657,7 +659,7 @@ func TestOutboundPeer(t *testing.T) {
 
 	// Test Queue Inv
 	fakeBlockHash := &chainhash.Hash{0: 0x00, 1: 0x01}
-	fakeInv := wire.NewInvVect(wire.InvTypeBlock, fakeBlockHash)
+	fakeInv := types.NewInvVect(types.InvTypeBlock, fakeBlockHash)
 
 	// Should be noops as the peer could not connect.
 	p.QueueInventory(fakeInv)

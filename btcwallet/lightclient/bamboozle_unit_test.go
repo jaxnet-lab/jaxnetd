@@ -2,6 +2,7 @@ package neutrino
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -539,7 +540,8 @@ var (
 )
 
 func heightToHeader(height uint32) chain.BlockHeader {
-	header := &BlockHeader{Nonce: height}
+	header := chain.NewHeader()
+	header.SetNonce(height)
 	return header
 }
 

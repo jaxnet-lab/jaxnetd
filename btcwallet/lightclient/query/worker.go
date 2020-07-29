@@ -2,9 +2,8 @@ package query
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"time"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 var (
@@ -26,7 +25,7 @@ var (
 type queryJob struct {
 	index      uint64
 	timeout    time.Duration
-	encoding   wire.MessageEncoding
+	encoding   encoder.MessageEncoding
 	cancelChan <-chan struct{}
 	*Request
 }

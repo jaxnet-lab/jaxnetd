@@ -6,12 +6,12 @@ package main
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"log"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 func main() {
@@ -22,11 +22,11 @@ func main() {
 	ntfnHandlers := rpcclient.NotificationHandlers{
 		OnFilteredBlockConnected: func(height int32, header chain.BlockHeader, txns []*btcutil.Tx) {
 			log.Printf("Block connected: %v (%d) %v",
-				header.BlockHash(), height, header.Timestamp)
+				header.BlockHash(), height, header.Timestamp())
 		},
 		OnFilteredBlockDisconnected: func(height int32, header chain.BlockHeader) {
 			log.Printf("Block disconnected: %v (%d) %v",
-				header.BlockHash(), height, header.Timestamp)
+				header.BlockHash(), height, header.Timestamp())
 		},
 	}
 

@@ -7,6 +7,8 @@ package wire
 import (
 	"bytes"
 	"crypto/rand"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"reflect"
 	"testing"
@@ -22,12 +24,12 @@ func TestMerkleBlock(t *testing.T) {
 	enc := BaseEncoding
 
 	// Block 1 header.
-	prevHash := &blockOne.Header.PrevBlock
-	merkleHash := &blockOne.Header.MerkleRoot
-	mmrHash := &blockOne.Header.MerkleMountainRange
-	bits := blockOne.Header.Bits
-	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
+	prevHash := blockOne.Header.PrevBlock()
+	merkleHash := blockOne.Header.MerkleRoot()
+	mmrHash := blockOne.Header.MerkleMountainRange()
+	bits := blockOne.Header.Bits()
+	nonce := blockOne.Header.Nonce()
+	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
@@ -115,12 +117,12 @@ func TestMerkleBlock(t *testing.T) {
 // the latest protocol version and decoding with BIP0031Version.
 func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
-	prevHash := &blockOne.Header.PrevBlock
-	merkleHash := &blockOne.Header.MerkleRoot
-	mmrHash := &blockOne.Header.MerkleMountainRange
-	bits := blockOne.Header.Bits
-	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
+	prevHash := blockOne.Header.PrevBlock()
+	merkleHash := blockOne.Header.MerkleRoot()
+	mmrHash := blockOne.Header.MerkleMountainRange()
+	bits := blockOne.Header.Bits()
+	nonce := blockOne.Header.Nonce()
+	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	msg := NewMsgMerkleBlock(bh)
 
@@ -145,11 +147,11 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 // various numbers of transaction hashes and protocol versions.
 func TestMerkleBlockWire(t *testing.T) {
 	tests := []struct {
-		in   *MsgMerkleBlock // Message to encode
-		out  *MsgMerkleBlock // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgMerkleBlock         // Message to encode
+		out  *MsgMerkleBlock         // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -206,13 +208,13 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	wireErr := &MessageError{}
 
 	tests := []struct {
-		in       *MsgMerkleBlock // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgMerkleBlock         // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Force error in version.
 		{
@@ -332,7 +334,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed tx hashes.
 	var buf bytes.Buffer
-	WriteVarInt(&buf, pver, maxTxPerBlock+1)
+	encoder.WriteVarInt(&buf, maxTxPerBlock+1)
 	numHashesOffset := 84
 	exceedMaxHashes := make([]byte, numHashesOffset)
 	copy(exceedMaxHashes, merkleBlockOneBytes[:numHashesOffset])
@@ -341,17 +343,17 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed flag bytes.
 	buf.Reset()
-	WriteVarInt(&buf, pver, maxFlagsPerMerkleBlock+1)
+	encoder.WriteVarInt(&buf, maxFlagsPerMerkleBlock+1)
 	numFlagBytesOffset := 117
 	exceedMaxFlagBytes := make([]byte, numFlagBytesOffset)
 	copy(exceedMaxFlagBytes, merkleBlockOneBytes[:numFlagBytesOffset])
 	exceedMaxFlagBytes = append(exceedMaxFlagBytes, buf.Bytes()...)
 
 	tests := []struct {
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
-		err  error           // Expected error
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
+		err  error                   // Expected error
 	}{
 		// Block that claims to have more than max allowed hashes.
 		{exceedMaxHashes, pver, BaseEncoding, &MessageError{}},
@@ -376,24 +378,25 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 // merkleBlockOne is a merkle block created from block one of the block chain
 // where the first transaction matches.
 var merkleBlockOne = MsgMerkleBlock{
-	Header: shard.Header{
-		Version: 1,
-		PrevBlock: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	Header: shard.NewBlockHeader(
+		1,
+		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 			0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,
 			0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c,
 			0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}),
-		MerkleRoot: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+		},
+		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x98, 0x20, 0x51, 0xfd, 0x1e, 0x4b, 0xa7, 0x44,
 			0xbb, 0xbe, 0x68, 0x0e, 0x1f, 0xee, 0x14, 0x67,
 			0x7b, 0xa1, 0xa3, 0xc3, 0x54, 0x0b, 0xf7, 0xb1,
 			0xcd, 0xb6, 0x06, 0xe8, 0x57, 0x23, 0x3e, 0x0e,
-		}),
-		Timestamp: time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
-		Bits:      0x1d00ffff,               // 486604799
-		Nonce:     0x9962e301,               // 2573394689
-	},
+		},
+		chainhash.Hash{},
+		time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
+		0x1d00ffff,               // 486604799
+		0x9962e301,               // 2573394689
+	),
 	Transactions: 1,
 	Hashes: []*chainhash.Hash{
 		(*chainhash.Hash)(&[chainhash.HashSize]byte{ // Make go vet happy.

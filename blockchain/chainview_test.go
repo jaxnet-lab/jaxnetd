@@ -28,9 +28,9 @@ func chainedNodes(parent *blockNode, numNodes int) []*blockNode {
 		header := chain.NewHeader()
 		header.SetNonce(testNoncePrng.Uint32())
 		if tip != nil {
-			header.PrevBlock() = tip.hash
+			header.SetPrevBlock(tip.hash)
 		}
-		nodes[i] = newBlockNode(&header, tip)
+		nodes[i] = newBlockNode(header, tip)
 		tip = nodes[i]
 	}
 	return nodes

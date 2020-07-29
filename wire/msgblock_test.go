@@ -6,6 +6,8 @@ package wire
 
 import (
 	"bytes"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
 	"reflect"
 	"testing"
@@ -20,12 +22,12 @@ func TestBlock(t *testing.T) {
 	pver := ProtocolVersion
 
 	// Block 1 header.
-	prevHash := &blockOne.Header.PrevBlock
-	merkleHash := &blockOne.Header.MerkleRoot
-	mmrHash := &blockOne.Header.MerkleMountainRange
-	bits := blockOne.Header.Bits
-	nonce := blockOne.Header.Nonce
-	bh := NewBlockHeader(1, prevHash, merkleHash, mmrHash, bits, nonce)
+	prevHash := blockOne.Header.PrevBlock()
+	merkleHash := blockOne.Header.MerkleRoot()
+	mmrHash := blockOne.Header.MerkleMountainRange()
+	bits := blockOne.Header.Bits()
+	nonce := blockOne.Header.Nonce()
+	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "block"
@@ -111,12 +113,12 @@ func TestBlockHash(t *testing.T) {
 // of transaction inputs and outputs and protocol versions.
 func TestBlockWire(t *testing.T) {
 	tests := []struct {
-		in     *MsgBlock       // Message to encode
-		out    *MsgBlock       // Expected decoded message
-		buf    []byte          // Wire encoding
-		txLocs []TxLoc         // Expected transaction locations
-		pver   uint32          // Protocol version for wire encoding
-		enc    MessageEncoding // Message encoding format
+		in     *MsgBlock               // Message to encode
+		out    *MsgBlock               // Expected decoded message
+		buf    []byte                  // Wire encoding
+		txLocs []TxLoc                 // Expected transaction locations
+		pver   uint32                  // Protocol version for wire encoding
+		enc    encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -210,13 +212,13 @@ func TestBlockWireErrors(t *testing.T) {
 	pver := uint32(60002)
 
 	tests := []struct {
-		in       *MsgBlock       // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgBlock               // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Force error in version.
 		{&blockOne, blockOneBytes, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -397,10 +399,10 @@ func TestBlockOverflowErrors(t *testing.T) {
 	pver := uint32(70001)
 
 	tests := []struct {
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
-		err  error           // Expected error
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
+		err  error                   // Expected error
 	}{
 		// Block that claims to have ~uint64(0) transactions.
 		{
@@ -459,7 +461,7 @@ func TestBlockOverflowErrors(t *testing.T) {
 // various blocks is accurate.
 func TestBlockSerializeSize(t *testing.T) {
 	// Block with no transactions.
-	noTxBlock := NewMsgBlock(&blockOne.Header)
+	noTxBlock := NewMsgBlock(blockOne.Header)
 
 	tests := []struct {
 		in   *MsgBlock // Block to encode
@@ -485,25 +487,24 @@ func TestBlockSerializeSize(t *testing.T) {
 
 // blockOne is the first block in the mainnet block chain.
 var blockOne = MsgBlock{
-	Header: BlockHeader{
-		Version: 1,
-		PrevBlock: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	Header: shard.NewBlockHeader(1,
+		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 			0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,
 			0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c,
 			0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}),
-		MerkleRoot: chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+		},
+		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x98, 0x20, 0x51, 0xfd, 0x1e, 0x4b, 0xa7, 0x44,
 			0xbb, 0xbe, 0x68, 0x0e, 0x1f, 0xee, 0x14, 0x67,
 			0x7b, 0xa1, 0xa3, 0xc3, 0x54, 0x0b, 0xf7, 0xb1,
 			0xcd, 0xb6, 0x06, 0xe8, 0x57, 0x23, 0x3e, 0x0e,
-		}),
-
-		Timestamp: time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
-		Bits:      0x1d00ffff,               // 486604799
-		Nonce:     0x9962e301,               // 2573394689
-	},
+		},
+		chainhash.Hash{},
+		time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
+		0x1d00ffff,               // 486604799
+		0x9962e301,               // 2573394689
+	),
 	Transactions: []*MsgTx{
 		{
 			Version: 1,

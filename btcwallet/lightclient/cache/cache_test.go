@@ -67,7 +67,7 @@ func TestBlockFilterCaches(t *testing.T) {
 
 		// Add the block to the block caches, using the block INV
 		// vector as key.
-		blockKey := wire.NewInvVect(
+		blockKey := types.NewInvVect(
 			types.InvTypeWitnessBlock, &blockHash,
 		)
 		for _, c := range blockCaches {
@@ -95,7 +95,7 @@ func TestBlockFilterCaches(t *testing.T) {
 		}
 
 		// Check block caches.
-		blockKey := wire.NewInvVect(
+		blockKey := types.NewInvVect(
 			types.InvTypeWitnessBlock, &blockHash,
 		)
 		for _, c := range blockCaches {

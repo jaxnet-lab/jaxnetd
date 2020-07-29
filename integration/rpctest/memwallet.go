@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"

@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"math"
 	"sync"
@@ -2354,8 +2355,8 @@ fetchRange:
 		// messages, but this mirrors the limiting logic used in the
 		// peer-to-peer protocol.
 		maxLoopBlock := maxBlock
-		if maxLoopBlock-minBlock > wire.MaxInvPerMsg {
-			maxLoopBlock = minBlock + wire.MaxInvPerMsg
+		if maxLoopBlock-minBlock > types.MaxInvPerMsg {
+			maxLoopBlock = minBlock + types.MaxInvPerMsg
 		}
 		hashList, err := chain.HeightRange(minBlock, maxLoopBlock)
 		if err != nil {

@@ -8,6 +8,7 @@ package txrules
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"

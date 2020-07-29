@@ -42,6 +42,10 @@ func (h *header) PrevBlock() chainhash.Hash {
 	return h.prevBlock
 }
 
+func (h *header) SetPrevBlock(prevBlock chainhash.Hash) {
+	h.prevBlock = prevBlock
+}
+
 func (h *header) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, maxBlockHeaderPayload))
 	_ = writeBlockHeader(buf, h)

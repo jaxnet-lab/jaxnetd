@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"io"
 	"io/ioutil"
 	"os"
@@ -946,14 +947,15 @@ func testRandomBlocks(harness *neutrinoHarness, t *testing.T) {
 					blockHash)
 				return
 			}
+			h := blockHeader.PrevBlock()
 			// Get previous basic filter header from the database.
 			prevHeader, err := harness.svc.RegFilterHeaders.
-				FetchHeader(&blockHeader.PrevBlock)
+				FetchHeader(&h)
 			if err != nil {
 				errChan <- fmt.Errorf("Couldn't get basic "+
 					"filter header for block %d (%s) from "+
 					"DB: %s", height-1,
-					blockHeader.PrevBlock, err)
+					blockHeader.PrevBlock(), err)
 				return
 			}
 			// Get current basic filter header from the database.

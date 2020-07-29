@@ -109,13 +109,11 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 	minconf int32, feeSatPerKb btcutil.Amount, dryRun bool) (
 	tx *txauthor.AuthoredTx, err error) {
 
-	fmt.Println("w.requireChainClient")
 	chainClient, err := w.requireChainClient()
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(w.db.BeginReadWriteTx)
 	dbtx, err := w.db.BeginReadWriteTx()
 	if err != nil {
 		return nil, err
@@ -130,13 +128,11 @@ func (w *Wallet) txToOutputs(outputs []*wire.TxOut, account uint32,
 		return nil, err
 	}
 
-	fmt.Println("Find output", account)
 	eligible, err := w.findEligibleOutputs(dbtx, account, minconf, bs)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("makeInputSource")
 	inputSource := makeInputSource(eligible)
 	changeSource := func() ([]byte, error) {
 		// Derive the change output script. We'll use the default key

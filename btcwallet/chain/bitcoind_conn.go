@@ -3,6 +3,7 @@ package chain
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"net"
 	"sync"

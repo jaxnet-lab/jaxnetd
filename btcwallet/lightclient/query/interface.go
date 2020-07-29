@@ -1,6 +1,7 @@
 package query
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
@@ -25,7 +26,7 @@ type queryOptions struct {
 
 	// encoding lets the query know which encoding to use when queueing
 	// messages to a peer.
-	encoding wire.MessageEncoding
+	encoding encoder.MessageEncoding
 
 	// cancelChan is an optional channel that can be closed to indicate
 	// that the query should be canceled.
@@ -64,7 +65,7 @@ func Timeout(timeout time.Duration) QueryOption {
 
 // Encoding is a query option that allows the caller to set a message encoding
 // for the query messages.
-func Encoding(encoding wire.MessageEncoding) QueryOption {
+func Encoding(encoding encoder.MessageEncoding) QueryOption {
 	return func(qo *queryOptions) {
 		qo.encoding = encoding
 	}
@@ -128,7 +129,7 @@ type Peer interface {
 	// QueueMessageWithEncoding adds the passed bitcoin message to the peer
 	// send queue.
 	QueueMessageWithEncoding(msg wire.Message, doneChan chan<- struct{},
-		encoding wire.MessageEncoding)
+		encoding encoder.MessageEncoding)
 
 	// SubscribeRecvMsg adds a OnRead subscription to the peer. All bitcoin
 	// messages received from this peer will be sent on the returned

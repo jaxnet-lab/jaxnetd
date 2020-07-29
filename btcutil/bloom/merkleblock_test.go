@@ -7,12 +7,13 @@ package bloom_test
 import (
 	"bytes"
 	"encoding/hex"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 func TestMerkleBlock3(t *testing.T) {
@@ -35,7 +36,7 @@ func TestMerkleBlock3(t *testing.T) {
 		return
 	}
 
-	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
+	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
 
 	inputStr := "63194f18be0af63f2c6bc9dc0f777cbefed3d9415c4af83f3ee3a3d669c00cb5"
 	hash, err := chainhash.NewHashFromStr(inputStr)

@@ -6,6 +6,8 @@ package rpctest
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io/ioutil"
 	"net"
 	"os"
@@ -106,13 +108,11 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	// Add a flag for the appropriate network type based on the provided
 	// chain params.
 	switch activeNet.Net {
-	case wire.MainNet:
-		// No extra flags since mainnet is the default
-	case wire.TestNet3:
+	case types.TestNet3:
 		extraArgs = append(extraArgs, "--testnet")
-	case wire.TestNet:
+	case types.TestNet:
 		extraArgs = append(extraArgs, "--regtest")
-	case wire.SimNet:
+	case types.SimNet:
 		extraArgs = append(extraArgs, "--simnet")
 	default:
 		return nil, fmt.Errorf("rpctest.New must be called with one " +

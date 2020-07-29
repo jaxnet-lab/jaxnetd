@@ -4,6 +4,8 @@ package neutrino
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"sync"
 	"time"
 
@@ -72,7 +74,7 @@ type queryOptions struct {
 
 	// encoding lets the query know which encoding to use when queueing
 	// messages to a peer.
-	encoding wire.MessageEncoding
+	encoding encoder.MessageEncoding
 
 	// doneChan lets the query signal the caller when it's done, in case
 	// it's run in a goroutine.
@@ -165,7 +167,7 @@ func PeerConnectTimeout(timeout time.Duration) QueryOption {
 
 // Encoding is a query option that allows the caller to set a message encoding
 // for the query messages.
-func Encoding(encoding wire.MessageEncoding) QueryOption {
+func Encoding(encoding encoder.MessageEncoding) QueryOption {
 	return func(qo *queryOptions) {
 		qo.encoding = encoding
 	}
@@ -956,13 +958,13 @@ func (s *ChainService) GetBlock(blockHash chainhash.Hash,
 	// to use.
 	qo := defaultQueryOptions()
 	qo.applyQueryOptions(options...)
-	invType := wire.InvTypeWitnessBlock
+	invType := types.InvTypeWitnessBlock
 	if qo.encoding == wire.BaseEncoding {
-		invType = wire.InvTypeBlock
+		invType = types.InvTypeBlock
 	}
 
 	// Create an inv vector for getting this block.
-	inv := wire.NewInvVect(invType, &blockHash)
+	inv := types.NewInvVect(invType, &blockHash)
 
 	// If the block is already in the cache, we can return it immediately.
 	blockValue, err := s.BlockCache.Get(*inv)
@@ -1075,15 +1077,15 @@ func (s *ChainService) sendTransaction(tx *wire.MsgTx, options ...QueryOption) e
 	// messages for the transaction.
 	qo := defaultQueryOptions()
 	qo.applyQueryOptions(options...)
-	invType := wire.InvTypeWitnessTx
+	invType := types.InvTypeWitnessTx
 	if qo.encoding == wire.BaseEncoding {
-		invType = wire.InvTypeTx
+		invType = types.InvTypeTx
 	}
 
 	// Create an inv.
 	txHash := tx.TxHash()
 	inv := wire.NewMsgInv()
-	inv.AddInvVect(wire.NewInvVect(invType, &txHash))
+	inv.AddInvVect(types.NewInvVect(invType, &txHash))
 
 	// We'll gather all of the peers who replied to our query, along with
 	// the ones who rejected it and their reason for rejecting it. We'll use

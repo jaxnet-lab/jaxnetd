@@ -8,9 +8,8 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"sync"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // mruInventoryMap provides a concurrency safe map that is limited to a maximum
@@ -18,8 +17,8 @@ import (
 // exceeded.
 type mruInventoryMap struct {
 	invMtx  sync.Mutex
-	invMap  map[wire.InvVect]*list.Element // nearly O(1) lookups
-	invList *list.List                     // O(1) insert, update, delete
+	invMap  map[types.InvVect]*list.Element // nearly O(1) lookups
+	invList *list.List                      // O(1) insert, update, delete
 	limit   uint
 }
 
@@ -48,7 +47,7 @@ func (m *mruInventoryMap) String() string {
 // Exists returns whether or not the passed inventory item is in the map.
 //
 // This function is safe for concurrent access.
-func (m *mruInventoryMap) Exists(iv *wire.InvVect) bool {
+func (m *mruInventoryMap) Exists(iv *types.InvVect) bool {
 	m.invMtx.Lock()
 	_, exists := m.invMap[*iv]
 	m.invMtx.Unlock()
@@ -61,7 +60,7 @@ func (m *mruInventoryMap) Exists(iv *wire.InvVect) bool {
 // item makes it the most recently used item.
 //
 // This function is safe for concurrent access.
-func (m *mruInventoryMap) Add(iv *wire.InvVect) {
+func (m *mruInventoryMap) Add(iv *types.InvVect) {
 	m.invMtx.Lock()
 	defer m.invMtx.Unlock()
 
@@ -83,7 +82,7 @@ func (m *mruInventoryMap) Add(iv *wire.InvVect) {
 	// node so a new one doesn't have to be allocated.
 	if uint(len(m.invMap))+1 > m.limit {
 		node := m.invList.Back()
-		lru := node.Value.(*wire.InvVect)
+		lru := node.Value.(*types.InvVect)
 
 		// Evict least recently used item.
 		delete(m.invMap, *lru)
@@ -104,7 +103,7 @@ func (m *mruInventoryMap) Add(iv *wire.InvVect) {
 // Delete deletes the passed inventory item from the map (if it exists).
 //
 // This function is safe for concurrent access.
-func (m *mruInventoryMap) Delete(iv *wire.InvVect) {
+func (m *mruInventoryMap) Delete(iv *types.InvVect) {
 	m.invMtx.Lock()
 	if node, exists := m.invMap[*iv]; exists {
 		m.invList.Remove(node)
@@ -119,7 +118,7 @@ func (m *mruInventoryMap) Delete(iv *wire.InvVect) {
 // new entry.
 func newMruInventoryMap(limit uint) *mruInventoryMap {
 	m := mruInventoryMap{
-		invMap:  make(map[wire.InvVect]*list.Element),
+		invMap:  make(map[types.InvVect]*list.Element),
 		invList: list.New(),
 		limit:   limit,
 	}

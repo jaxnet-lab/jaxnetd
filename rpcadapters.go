@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"sync/atomic"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -216,7 +217,7 @@ func (cm *rpcConnManager) BroadcastMessage(msg wire.Message) {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
-func (cm *rpcConnManager) AddRebroadcastInventory(iv *wire.InvVect, data interface{}) {
+func (cm *rpcConnManager) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
 	cm.server.AddRebroadcastInventory(iv, data)
 }
 

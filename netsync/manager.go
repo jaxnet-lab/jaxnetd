@@ -35,11 +35,11 @@ const (
 
 	// maxRequestedBlocks is the maximum number of requested block
 	// hashes to store in memory.
-	maxRequestedBlocks = wire.MaxInvPerMsg
+	maxRequestedBlocks = types.MaxInvPerMsg
 
 	// maxRequestedTxns is the maximum number of requested transactions
 	// hashes to store in memory.
-	maxRequestedTxns = wire.MaxInvPerMsg
+	maxRequestedTxns = types.MaxInvPerMsg
 
 	// maxStallDuration is the time after which we will disconnect our
 	// current sync peer if we haven't made progress.
@@ -143,7 +143,7 @@ type headerNode struct {
 // about a peer.
 type peerSyncState struct {
 	syncCandidate   bool
-	requestQueue    []*wire.InvVect
+	requestQueue    []*types.InvVect
 	requestedTxns   map[chainhash.Hash]struct{}
 	requestedBlocks map[chainhash.Hash]struct{}
 }
@@ -850,7 +850,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			continue
 		}
 
-		iv := wire.NewInvVect(types.InvTypeBlock, node.hash)
+		iv := types.NewInvVect(types.InvTypeBlock, node.hash)
 		haveInv, err := sm.haveInventory(iv)
 		if err != nil {
 			log.Warnf("Unexpected failure when checking for "+
@@ -874,7 +874,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			numRequested++
 		}
 		sm.startHeader = e.Next()
-		if numRequested >= wire.MaxInvPerMsg {
+		if numRequested >= types.MaxInvPerMsg {
 			break
 		}
 	}
@@ -997,7 +997,7 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 // inventory can be when it is in different states such as blocks that are part
 // of the main chain, on a side chain, in the orphan pool, and transactions that
 // are in the memory pool (either the main pool or orphan pool).
-func (sm *SyncManager) haveInventory(invVect *wire.InvVect) (bool, error) {
+func (sm *SyncManager) haveInventory(invVect *types.InvVect) (bool, error) {
 	switch invVect.Type {
 	case types.InvTypeWitnessBlock:
 		fallthrough
@@ -1233,7 +1233,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			}
 		}
 
-		if numRequested >= wire.MaxInvPerMsg {
+		if numRequested >= types.MaxInvPerMsg {
 			break
 		}
 	}
@@ -1363,7 +1363,7 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		}
 
 		// Generate the inventory vector and relay it.
-		iv := wire.NewInvVect(types.InvTypeBlock, block.Hash())
+		iv := types.NewInvVect(types.InvTypeBlock, block.Hash())
 		sm.peerNotifier.RelayInventory(iv, block.MsgBlock().Header)
 
 	// A block has been connected to the main block chain.

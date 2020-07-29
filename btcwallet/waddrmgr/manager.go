@@ -1775,7 +1775,7 @@ func Create(ns walletdb.ReadWriteBucket,
 	createdAt := &BlockStamp{
 		Hash:      *chainParams.GenesisHash,
 		Height:    0,
-		Timestamp: chainParams.GenesisBlock.Header.Timestamp,
+		Timestamp: chainParams.GenesisBlock.Header.Timestamp(),
 	}
 
 	// Create the initial sync state.

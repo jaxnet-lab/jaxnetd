@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"sync"
 	"time"
 
@@ -1568,8 +1569,8 @@ func signMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	}
 
 	var buf bytes.Buffer
-	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	wire.WriteVarString(&buf, 0, cmd.Message)
+	encoder.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
+	encoder.WriteVarString(&buf, 0, cmd.Message)
 	messageHash := chainhash.DoubleHashB(buf.Bytes())
 	sigbytes, err := btcec.SignCompact(btcec.S256(), privKey,
 		messageHash, true)
@@ -1853,8 +1854,8 @@ func verifyMessage(icmd interface{}, w *wallet.Wallet) (interface{}, error) {
 	// Validate the signature - this just shows that it was valid at all.
 	// we will compare it with the key next.
 	var buf bytes.Buffer
-	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	wire.WriteVarString(&buf, 0, cmd.Message)
+	encoder.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
+	encoder.WriteVarString(&buf, 0, cmd.Message)
 	expectedMessageHash := chainhash.DoubleHashB(buf.Bytes())
 	pk, wasCompressed, err := btcec.RecoverCompact(btcec.S256(), sig,
 		expectedMessageHash)
