@@ -7,13 +7,11 @@ import (
 var DefaultChain IChain
 
 type IChain interface {
-	//DecodeHeader(r io.Reader) (BlockHeader, error)
-	//EncodeHeader(w io.Writer, h BlockHeader) error
-	//Serialize(h BlockHeader, w io.Writer) error
-	//Deserialize(r io.Reader) (BlockHeader, error)
 	Read(r io.Reader) (BlockHeader, error)
 	Write(w io.Writer, h BlockHeader) error
 	NewHeader() BlockHeader
+	MaxBlockHeaderPayload() int
+	BlockHeaderOverhead() int
 	//BlockOne()
 	//GenesisHash() chainhash.Hash
 }
@@ -38,4 +36,12 @@ func ReadBlockHeader(r io.Reader) (res BlockHeader, err error) {
 // opposed to encoding for the wire.
 func WriteBlockHeader(w io.Writer, bh BlockHeader) error {
 	return DefaultChain.Write(w, bh)
+}
+
+func MaxBlockHeaderPayload() int {
+	return DefaultChain.MaxBlockHeaderPayload()
+}
+
+func BlockHeaderOverhead() int {
+	return DefaultChain.BlockHeaderOverhead()
 }

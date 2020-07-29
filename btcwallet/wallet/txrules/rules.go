@@ -26,7 +26,7 @@ func GetDustThreshold(scriptSize int, relayFeePerKb btcutil.Amount) btcutil.Amou
 	// to be compressed P2PKH as this is the most common script type.  Use
 	// the average size of a compressed P2PKH redeem input (148) rather than
 	// the largest possible (txsizes.RedeemP2PKHInputSize).
-	totalSize := 8 + wire.VarIntSerializeSize(uint64(scriptSize)) +
+	totalSize := 8 + encoder.VarIntSerializeSize(uint64(scriptSize)) +
 		scriptSize + 148
 
 	byteFee := relayFeePerKb / 1000

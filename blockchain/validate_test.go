@@ -5,6 +5,8 @@
 package blockchain
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math"
 	"reflect"
 	"testing"
@@ -130,7 +132,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 
 	// Block 4 should connect even if proof of work is invalid.
 	invalidPowBlock := *blocks[4].MsgBlock()
-	invalidPowBlock.Header.Nonce++
+	invalidPowBlock.Header.SetNonce(invalidPowBlock.Header.Nonce() + 1)
 	err = chain.CheckConnectBlockTemplate(btcutil.NewBlock(&invalidPowBlock))
 	if err != nil {
 		t.Fatalf("CheckConnectBlockTemplate: Received unexpected error on "+
@@ -139,7 +141,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 
 	// Invalid block building on chain tip should fail to connect.
 	invalidBlock := *blocks[4].MsgBlock()
-	invalidBlock.Header.Bits--
+	invalidBlock.Header.SetBits(invalidBlock.Header.Bits() - 1)
 	err = chain.CheckConnectBlockTemplate(btcutil.NewBlock(&invalidBlock))
 	if err == nil {
 		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
@@ -160,8 +162,8 @@ func TestCheckBlockSanity(t *testing.T) {
 
 	// Ensure a block that has a timestamp with a precision higher than one
 	// second fails.
-	timestamp := block.MsgBlock().Header.Timestamp
-	block.MsgBlock().Header.Timestamp = timestamp.Add(time.Nanosecond)
+	timestamp := block.MsgBlock().Header.Timestamp()
+	block.MsgBlock().Header.SetTimestamp(timestamp.Add(time.Nanosecond))
 	err = CheckBlockSanity(block, powLimit, timeSource)
 	if err == nil {
 		t.Errorf("CheckBlockSanity: error is nil when it shouldn't be")
@@ -236,24 +238,23 @@ func TestCheckSerializedHeight(t *testing.T) {
 // Block100000 defines block 100,000 of the block chain.  It is used to
 // test Block operations.
 var Block100000 = wire.MsgBlock{
-	Header: shard.Header{
-		Version: 1,
-		PrevBlock: chainhash.Hash([32]byte{ // Make go vet happy.
-			0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,
-			0x21, 0xa6, 0xc3, 0x01, 0x1d, 0xd3, 0x30, 0xd9,
-			0xdf, 0x07, 0xb6, 0x36, 0x16, 0xc2, 0xcc, 0x1f,
-			0x1c, 0xd0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}), // 000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250
-		MerkleRoot: chainhash.Hash([32]byte{ // Make go vet happy.
+	Header: shard.NewBlockHeader(1, [32]byte{ // Make go vet happy.
+		0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,
+		0x21, 0xa6, 0xc3, 0x01, 0x1d, 0xd3, 0x30, 0xd9,
+		0xdf, 0x07, 0xb6, 0x36, 0x16, 0xc2, 0xcc, 0x1f,
+		0x1c, 0xd0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+	},
+		[32]byte{ // Make go vet happy.
 			0x66, 0x57, 0xa9, 0x25, 0x2a, 0xac, 0xd5, 0xc0,
 			0xb2, 0x94, 0x09, 0x96, 0xec, 0xff, 0x95, 0x22,
 			0x28, 0xc3, 0x06, 0x7c, 0xc3, 0x8d, 0x48, 0x85,
 			0xef, 0xb5, 0xa4, 0xac, 0x42, 0x47, 0xe9, 0xf3,
-		}), // f3e94742aca4b5ef85488dc37c06c3282295ffec960994b2c0d5ac2a25a95766
-		Timestamp: time.Unix(1293623863, 0), // 2010-12-29 11:57:43 +0000 UTC
-		Bits:      0x1b04864c,               // 453281356
-		Nonce:     0x10572b0f,               // 274148111
-	},
+		},
+		chainhash.Hash{},
+		time.Unix(1293623863, 0),
+		0x1b04864c,
+		0x10572b0f,
+	),
 	Transactions: []*wire.MsgTx{
 		{
 			Version: 1,

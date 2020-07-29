@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"os"
 	"path/filepath"
 	"sync"
@@ -36,7 +37,7 @@ type BlockStamp struct {
 type BlockHeaderStore interface {
 	// ChainTip returns the best known block header and height for the
 	// BlockHeaderStore.
-	ChainTip() (*wire.BlockHeader, uint32, error)
+	ChainTip() (chain.BlockHeader, uint32, error)
 
 	// LatestBlockLocator returns the latest block locator object based on
 	// the tip of the current main chain from the PoV of the
@@ -45,7 +46,7 @@ type BlockHeaderStore interface {
 
 	// FetchHeaderByHeight attempts to retrieve a target block header based
 	// on a block height.
-	FetchHeaderByHeight(height uint32) (*wire.BlockHeader, error)
+	FetchHeaderByHeight(height uint32) (chain.BlockHeader, error)
 
 	// FetchHeaderAncestors fetches the numHeaders block headers that are
 	// the ancestors of the target stop hash. A total of numHeaders+1
@@ -54,7 +55,7 @@ type BlockHeaderStore interface {
 	// stop hash. We'll also return the starting height of the header range
 	// as well so callers can compute the height of each header without
 	// knowing the height of the stop hash.
-	FetchHeaderAncestors(uint32, *chainhash.Hash) ([]wire.BlockHeader,
+	FetchHeaderAncestors(uint32, *chainhash.Hash) ([]chain.BlockHeader,
 		uint32, error)
 
 	// HeightFromHash returns the height of a particular block header given
@@ -63,7 +64,7 @@ type BlockHeaderStore interface {
 
 	// FetchHeader attempts to retrieve a block header determined by the
 	// passed block height.
-	FetchHeader(*chainhash.Hash) (*wire.BlockHeader, uint32, error)
+	FetchHeader(*chainhash.Hash) (chain.BlockHeader, uint32, error)
 
 	// WriteHeaders adds a set of headers to the BlockHeaderStore in a
 	// single atomic transaction.
@@ -182,7 +183,7 @@ func NewBlockHeaderStore(filePath string, db walletdb.DB,
 	// written the initial genesis header to disk, so we'll do so now.
 	if fileInfo.Size() == 0 {
 		genesisHeader := BlockHeader{
-			BlockHeader: &netParams.GenesisBlock.Header,
+			BlockHeader: netParams.GenesisBlock.Header,
 			Height:      0,
 		}
 		if err := bhs.WriteHeaders(genesisHeader); err != nil {
@@ -238,7 +239,7 @@ func NewBlockHeaderStore(filePath string, db walletdb.DB,
 // block height.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) FetchHeader(hash *chainhash.Hash) (*wire.BlockHeader, uint32, error) {
+func (h *blockHeaderStore) FetchHeader(hash *chainhash.Hash) (chain.BlockHeader, uint32, error) {
 	// Lock store for read.
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
@@ -256,14 +257,14 @@ func (h *blockHeaderStore) FetchHeader(hash *chainhash.Hash) (*wire.BlockHeader,
 		return nil, 0, err
 	}
 
-	return &header, height, nil
+	return header, height, nil
 }
 
 // FetchHeaderByHeight attempts to retrieve a target block header based on a
 // block height.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (*wire.BlockHeader, error) {
+func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (chain.BlockHeader, error) {
 	// Lock store for read.
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
@@ -276,7 +277,7 @@ func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (*wire.BlockHeader
 		return nil, err
 	}
 
-	return &header, nil
+	return header, nil
 }
 
 // FetchHeaderAncestors fetches the numHeaders block headers that are the
@@ -288,7 +289,7 @@ func (h *blockHeaderStore) FetchHeaderByHeight(height uint32) (*wire.BlockHeader
 //
 // NOTE: Part of the BlockHeaderStore interface.
 func (h *blockHeaderStore) FetchHeaderAncestors(numHeaders uint32,
-	stopHash *chainhash.Hash) ([]wire.BlockHeader, uint32, error) {
+	stopHash *chainhash.Hash) ([]chain.BlockHeader, uint32, error) {
 
 	// First, we'll find the final header in the range, this will be the
 	// ending height of our scan.
@@ -338,7 +339,7 @@ func (h *blockHeaderStore) RollbackLastBlock() (*BlockStamp, error) {
 	if err != nil {
 		return nil, err
 	}
-	prevHeaderHash := bestHeader.PrevBlock
+	prevHeaderHash := bestHeader.PrevBlock()
 
 	// Now that we have the information we need to return from this
 	// function, we can now truncate the header file, and then use the hash
@@ -358,7 +359,7 @@ func (h *blockHeaderStore) RollbackLastBlock() (*BlockStamp, error) {
 
 // BlockHeader is a Bitcoin block header that also has its height included.
 type BlockHeader struct {
-	*wire.BlockHeader
+	chain.BlockHeader
 
 	// Height is the height of this block header within the current main
 	// chain.
@@ -367,7 +368,7 @@ type BlockHeader struct {
 
 // toIndexEntry converts the BlockHeader into a matching headerEntry. This
 // method is used when a header is to be written to disk.
-func (b chain.BlockHeader) toIndexEntry() headerEntry {
+func (b BlockHeader) toIndexEntry() headerEntry {
 	return headerEntry{
 		hash:   b.BlockHash(),
 		height: b.Height,
@@ -393,7 +394,7 @@ func (h *blockHeaderStore) WriteHeaders(hdrs ...BlockHeader) error {
 	// Next, we'll write out all the passed headers in series into the
 	// buffer we just extracted from the pool.
 	for _, header := range hdrs {
-		if err := header.Serialize(headerBuf); err != nil {
+		if err := header.Write(headerBuf); err != nil {
 			return err
 		}
 	}
@@ -525,7 +526,7 @@ func (h *blockHeaderStore) CheckConnectivity() error {
 		// header file to ensure each header connects properly and the
 		// index entries are also accurate. To do this, we start from a
 		// height of one before our current tip.
-		var newHeader wire.BlockHeader
+		var newHeader chain.BlockHeader
 		for height := tipHeight - 1; height > 0; height-- {
 			// First, read the block header for this block height,
 			// and also compute the block hash for it.
@@ -557,7 +558,7 @@ func (h *blockHeaderStore) CheckConnectivity() error {
 			// Finally, we'll assert that this new header is
 			// actually the prev header of the target header from
 			// the last loop. This ensures connectivity.
-			if newHeader.BlockHash() != header.PrevBlock {
+			if newHeader.BlockHash() != header.PrevBlock() {
 				return fmt.Errorf("Block %s doesn't match "+
 					"block %s's PrevBlock (%s)",
 					newHeader.BlockHash(),
@@ -578,7 +579,7 @@ func (h *blockHeaderStore) CheckConnectivity() error {
 // blockHeaderStore.
 //
 // NOTE: Part of the BlockHeaderStore interface.
-func (h *blockHeaderStore) ChainTip() (*wire.BlockHeader, uint32, error) {
+func (h *blockHeaderStore) ChainTip() (chain.BlockHeader, uint32, error) {
 	// Lock store for read.
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
@@ -593,7 +594,7 @@ func (h *blockHeaderStore) ChainTip() (*wire.BlockHeader, uint32, error) {
 		return nil, 0, err
 	}
 
-	return &latestHeader, tipHeight, nil
+	return latestHeader, tipHeight, nil
 }
 
 // FilterHeaderStore is an implementation of a fully fledged database for any
@@ -648,7 +649,7 @@ func NewFilterHeaderStore(filePath string, db walletdb.DB,
 
 			genesisFilterHash, err = builder.MakeHeaderForFilter(
 				basicFilter,
-				netParams.GenesisBlock.Header.PrevBlock,
+				netParams.GenesisBlock.Header.PrevBlock(),
 			)
 			if err != nil {
 				return nil, err

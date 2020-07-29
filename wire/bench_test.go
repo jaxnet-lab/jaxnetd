@@ -8,10 +8,15 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io/ioutil"
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
@@ -64,7 +69,7 @@ var genesisCoinbaseTx = MsgTx{
 // a single byte variable length integer.
 func BenchmarkWriteVarInt1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarInt(ioutil.Discard, 0, 1)
+		encoder.WriteVarInt(ioutil.Discard, 1)
 	}
 }
 
@@ -72,7 +77,7 @@ func BenchmarkWriteVarInt1(b *testing.B) {
 // a three byte variable length integer.
 func BenchmarkWriteVarInt3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarInt(ioutil.Discard, 0, 65535)
+		encoder.WriteVarInt(ioutil.Discard, 65535)
 	}
 }
 
@@ -80,7 +85,7 @@ func BenchmarkWriteVarInt3(b *testing.B) {
 // a five byte variable length integer.
 func BenchmarkWriteVarInt5(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarInt(ioutil.Discard, 0, 4294967295)
+		encoder.WriteVarInt(ioutil.Discard, 4294967295)
 	}
 }
 
@@ -88,7 +93,7 @@ func BenchmarkWriteVarInt5(b *testing.B) {
 // a nine byte variable length integer.
 func BenchmarkWriteVarInt9(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarInt(ioutil.Discard, 0, 18446744073709551615)
+		encoder.WriteVarInt(ioutil.Discard, 18446744073709551615)
 	}
 }
 
@@ -99,7 +104,7 @@ func BenchmarkReadVarInt1(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarInt(r, 0)
+		encoder.ReadVarInt(r, 0)
 	}
 }
 
@@ -110,7 +115,7 @@ func BenchmarkReadVarInt3(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarInt(r, 0)
+		encoder.ReadVarInt(r, 0)
 	}
 }
 
@@ -121,7 +126,7 @@ func BenchmarkReadVarInt5(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarInt(r, 0)
+		encoder.ReadVarInt(r, 0)
 	}
 }
 
@@ -132,7 +137,7 @@ func BenchmarkReadVarInt9(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarInt(r, 0)
+		encoder.ReadVarInt(r, 0)
 	}
 }
 
@@ -143,7 +148,7 @@ func BenchmarkReadVarStr4(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarString(r, 0)
+		encoder.ReadVarString(r, 0)
 	}
 }
 
@@ -154,7 +159,7 @@ func BenchmarkReadVarStr10(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		ReadVarString(r, 0)
+		encoder.ReadVarString(r, 0)
 	}
 }
 
@@ -162,7 +167,7 @@ func BenchmarkReadVarStr10(b *testing.B) {
 // four byte variable length string.
 func BenchmarkWriteVarStr4(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarString(ioutil.Discard, 0, "test")
+		encoder.WriteVarString(ioutil.Discard, 0, "test")
 	}
 }
 
@@ -170,7 +175,7 @@ func BenchmarkWriteVarStr4(b *testing.B) {
 // ten byte variable length string.
 func BenchmarkWriteVarStr10(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		WriteVarString(ioutil.Discard, 0, "test012345")
+		encoder.WriteVarString(ioutil.Discard, 0, "test012345")
 	}
 }
 
@@ -362,10 +367,10 @@ func BenchmarkReadBlockHeader(b *testing.B) {
 		0x00, // TxnCount Varint
 	}
 	r := bytes.NewReader(buf)
-	var header BlockHeader
+	header := chain.NewHeader()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		readBlockHeader(r, 0, &header)
+		header.Read(r)
 	}
 }
 
@@ -374,7 +379,7 @@ func BenchmarkReadBlockHeader(b *testing.B) {
 func BenchmarkWriteBlockHeader(b *testing.B) {
 	header := blockOne.Header
 	for i := 0; i < b.N; i++ {
-		writeBlockHeader(ioutil.Discard, 0, &header)
+		header.Write(ioutil.Discard)
 	}
 }
 
@@ -419,7 +424,7 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddBlockHeader(NewBlockHeader(1, hash, hash, hash, 0, uint32(i)))
+		m.AddBlockHeader(shard.NewBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i)))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -506,7 +511,7 @@ func BenchmarkDecodeInv(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(NewInvVect(InvTypeBlock, hash))
+		m.AddInvVect(NewInvVect(types.InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -536,7 +541,7 @@ func BenchmarkDecodeNotFound(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(NewInvVect(InvTypeBlock, hash))
+		m.AddInvVect(NewInvVect(types.InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -565,7 +570,7 @@ func BenchmarkDecodeMerkleBlock(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 	}
-	m.Header = *NewBlockHeader(1, hash, hash, hash, 0, uint32(10000))
+	m.Header = shard.NewBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(10000))
 	for i := 0; i < 105; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {

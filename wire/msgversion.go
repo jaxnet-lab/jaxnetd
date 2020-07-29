@@ -214,7 +214,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 	// remote and local net addresses + nonce 8 bytes + length of user
 	// agent (varInt) + max allowed useragent length + last block 4 bytes +
 	// relay transactions flag 1 byte.
-	return 33 + (maxNetAddressPayload(pver) * 2) + MaxVarIntPayload +
+	return 33 + (maxNetAddressPayload(pver) * 2) + encoder.MaxVarIntPayload +
 		MaxUserAgentLen
 }
 

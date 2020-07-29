@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	// MaxVarIntPayload is the maximum payload size for a variable length integer.
-	MaxVarIntPayload = 9
 
 	// binaryFreeListMaxItems is the number of buffers to keep in the free
 	// list to use for binary serialization and deserialization.

@@ -9,13 +9,6 @@ import (
 	"time"
 )
 
-// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
-// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
-// PrevBlock and MerkleRoot hashes.
-const MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
-
-//
-
 // BlockHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
 type header struct {
@@ -50,14 +43,14 @@ func (h *header) PrevBlock() chainhash.Hash {
 }
 
 func (h *header) BlockData() []byte {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
+	buf := bytes.NewBuffer(make([]byte, 0, maxBlockHeaderPayload))
 	_ = writeBlockHeader(buf, h)
 	return buf.Bytes()
 }
 
 // BlockHash computes the block identifier hash for the given block header.
 func (h *header) BlockHash() chainhash.Hash {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
+	buf := bytes.NewBuffer(make([]byte, 0, maxBlockHeaderPayload))
 	_ = writeBlockHeader(buf, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())

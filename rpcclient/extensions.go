@@ -11,11 +11,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -247,7 +248,7 @@ type FutureGetHeadersResult chan *response
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, error) {
+func (r FutureGetHeadersResult) Receive() ([]chain.BlockHeader, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -260,14 +261,14 @@ func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, error) {
 		return nil, err
 	}
 
-	// Deserialize the []string into []wire.BlockHeader.
-	headers := make([]wire.BlockHeader, len(result))
+	// Deserialize the []string into []chain.BlockHeader.
+	headers := make([]chain.BlockHeader, len(result))
 	for i, headerHex := range result {
 		serialized, err := hex.DecodeString(headerHex)
 		if err != nil {
 			return nil, err
 		}
-		err = headers[i].Deserialize(bytes.NewReader(serialized))
+		err = headers[i].Read(bytes.NewReader(serialized))
 		if err != nil {
 			return nil, err
 		}
@@ -301,7 +302,7 @@ func (c *Client) GetHeadersAsync(blockLocators []chainhash.Hash, hashStop *chain
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BlockHeader, error) {
+func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]chain.BlockHeader, error) {
 	return c.GetHeadersAsync(blockLocators, hashStop).Receive()
 }
 

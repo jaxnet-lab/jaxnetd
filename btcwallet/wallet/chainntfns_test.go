@@ -56,7 +56,7 @@ func createMockChainConn(genesis *wire.MsgBlock, n uint32,
 	for i := uint32(1); i <= n; i++ {
 		prevTimestamp := c.blocks[c.blockHashes[i-1]].Header.Timestamp
 		block := &wire.MsgBlock{
-			Header: wire.BlockHeader{
+			Header: chain.BlockHeader{
 				Timestamp: prevTimestamp.Add(blockInterval),
 			},
 		}
@@ -92,7 +92,7 @@ func (c *mockChainConn) GetBlockHash(height int64) (*chainhash.Hash, error) {
 }
 
 // GetBlockHeader returns the header for the block with the given hash.
-func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (*wire.BlockHeader, error) {
+func (c *mockChainConn) GetBlockHeader(hash *chainhash.Hash) (chain.BlockHeader, error) {
 	block, ok := c.blocks[*hash]
 	if !ok {
 		return nil, fmt.Errorf("header for block %v not found", hash)

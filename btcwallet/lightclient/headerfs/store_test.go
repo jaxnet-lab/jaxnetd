@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 func createTestBlockHeaderStore() (func(), walletdb.DB, string,
@@ -47,14 +47,13 @@ func createTestBlockHeaderStore() (func(), walletdb.DB, string,
 
 func createTestBlockHeaderChain(numHeaders uint32) []BlockHeader {
 	blockHeaders := make([]BlockHeader, numHeaders)
-	prevHeader := &chaincfg.SimNetParams.GenesisBlock.Header
+	prevHeader := chaincfg.SimNetParams.GenesisBlock.Header
 	for i := uint32(1); i <= numHeaders; i++ {
-		bitcoinHeader := &wire.BlockHeader{
-			Bits:      uint32(rand.Int31()),
-			Nonce:     uint32(rand.Int31()),
-			Timestamp: prevHeader.Timestamp.Add(time.Minute * 1),
-			PrevBlock: prevHeader.BlockHash(),
-		}
+		bitcoinHeader := shard.NewBlockHeader(0, prevHeader.BlockHash(), chainhash.Hash{}, chainhash.Hash{},
+			prevHeader.Timestamp().Add(time.Minute*1),
+			uint32(rand.Int31()),
+			uint32(rand.Int31()),
+		)
 
 		blockHeaders[i-1] = BlockHeader{
 			BlockHeader: bitcoinHeader,
@@ -119,10 +118,10 @@ func TestBlockHeaderStoreOperations(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unable to fetch header by height: %v", err)
 		}
-		if !reflect.DeepEqual(*header.BlockHeader, *dbHeader) {
+		if !reflect.DeepEqual(header.BlockHeader, dbHeader) {
 			t.Fatalf("retrieved by height headers don't match up: "+
-				"expected %v, got %v", spew.Sdump(*header.BlockHeader),
-				spew.Sdump(*dbHeader))
+				"expected %v, got %v", spew.Sdump(header.BlockHeader),
+				spew.Sdump(dbHeader))
 		}
 
 		blockHash := header.BlockHash()
@@ -130,7 +129,7 @@ func TestBlockHeaderStoreOperations(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unable to fetch header by hash: %v", err)
 		}
-		if !reflect.DeepEqual(*dbHeader, *header.BlockHeader) {
+		if !reflect.DeepEqual(dbHeader, header.BlockHeader) {
 			t.Fatalf("retrieved by hash headers don't match up: "+
 				"expected %v, got %v", spew.Sdump(header),
 				spew.Sdump(dbHeader))
@@ -192,7 +191,7 @@ func TestBlockHeaderStoreRecovery(t *testing.T) {
 	// Next, in order to simulate a partial write, we'll roll back the
 	// internal index by 5 blocks.
 	for i := 0; i < 5; i++ {
-		newTip := blockHeaders[len(blockHeaders)-i-1].PrevBlock
+		newTip := blockHeaders[len(blockHeaders)-i-1].PrevBlock()
 		if err := bhs.truncateIndex(&newTip, true); err != nil {
 			t.Fatalf("unable to truncate index: %v", err)
 		}
@@ -506,7 +505,7 @@ func TestBlockHeadersFetchHeaderAncestors(t *testing.T) {
 	for i := 0; i < len(diskHeaders); i++ {
 		diskHeader := diskHeaders[i]
 		blockHeader := blockHeaders[i].BlockHeader
-		if !reflect.DeepEqual(diskHeader, *blockHeader) {
+		if !reflect.DeepEqual(diskHeader, blockHeader) {
 			t.Fatalf("header mismatch, expected %v got %v",
 				spew.Sdump(blockHeader), spew.Sdump(diskHeader))
 		}

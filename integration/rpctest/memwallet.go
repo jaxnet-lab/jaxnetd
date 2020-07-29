@@ -12,13 +12,13 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
 )
 
 var (
@@ -179,7 +179,7 @@ func (m *memWallet) SetRPCClient(rpcClient *rpcclient.Client) {
 // IngestBlock is a call-back which is to be triggered each time a new block is
 // connected to the main chain. It queues the update for the chain syncer,
 // calling the private version in sequential order.
-func (m *memWallet) IngestBlock(height int32, header *wire.BlockHeader, filteredTxns []*btcutil.Tx) {
+func (m *memWallet) IngestBlock(height int32, header chain.BlockHeader, filteredTxns []*btcutil.Tx) {
 	// Append this new chain update to the end of the queue of new chain
 	// updates.
 	m.chainMtx.Lock()
@@ -299,7 +299,7 @@ func (m *memWallet) evalInputs(inputs []*wire.TxIn, undo *undoEntry) {
 // UnwindBlock is a call-back which is to be executed each time a block is
 // disconnected from the main chain. It queues the update for the chain syncer,
 // calling the private version in sequential order.
-func (m *memWallet) UnwindBlock(height int32, header *wire.BlockHeader) {
+func (m *memWallet) UnwindBlock(height int32, header chain.BlockHeader) {
 	// Append this new chain update to the end of the queue of new chain
 	// updates.
 	m.chainMtx.Lock()

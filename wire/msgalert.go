@@ -78,7 +78,7 @@ const maxSignatureSize = 72
 //
 // MessagePayload = VarInt(Alert) + Alert + VarInt(Signature) + Signature
 // MaxMessagePayload = maxAlertSize + max(VarInt) + maxSignatureSize + 1
-const maxAlertSize = MaxMessagePayload - maxSignatureSize - MaxVarIntPayload - 1
+const maxAlertSize = MaxMessagePayload - maxSignatureSize - encoder.MaxVarIntPayload - 1
 
 // maxCountSetCancel is the maximum number of cancel IDs that could possibly
 // fit into a maximum size alert.
@@ -87,7 +87,7 @@ const maxAlertSize = MaxMessagePayload - maxSignatureSize - MaxVarIntPayload - 1
 // for caculating maximum number of cancel IDs, set all other var  sizes to 0
 // maxAlertSize = fixedAlertSize + (MaxVarIntPayload-1) + x*sizeOf(int32)
 // x = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 4
-const maxCountSetCancel = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 4
+const maxCountSetCancel = (maxAlertSize - fixedAlertSize - encoder.MaxVarIntPayload + 1) / 4
 
 // maxCountSetSubVer is the maximum number of subversions that could possibly
 // fit into a maximum size alert.
@@ -98,7 +98,7 @@ const maxCountSetCancel = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1)
 // x = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / sizeOf(string)
 // subversion would typically be something like "/Satoshi:0.7.2/" (15 bytes)
 // so assuming < 255 bytes, sizeOf(string) = sizeOf(uint8) + 255 = 256
-const maxCountSetSubVer = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 256
+const maxCountSetSubVer = (maxAlertSize - fixedAlertSize - encoder.MaxVarIntPayload + 1) / 256
 
 // Alert contains the data deserialized from the MsgAlert payload.
 type Alert struct {

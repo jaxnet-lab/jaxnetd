@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-const MaxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
-
 // FilterType is used to represent a filter type.
 type FilterType uint8
 

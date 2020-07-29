@@ -3,10 +3,10 @@ package headerfs
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"os"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // ErrHeaderNotFound is returned when a target header on disk (flat file) can't
@@ -64,7 +64,7 @@ func (h *headerStore) readRaw(seekDist uint64) ([]byte, error) {
 // NOTE: The end height is _inclusive_ so we'll fetch all headers from the
 // startHeight up to the end height, including the final header.
 func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
-	endHeight uint32) ([]wire.BlockHeader, error) {
+	endHeight uint32) ([]chain.BlockHeader, error) {
 
 	// Based on the defined header type, we'll determine the number of
 	// bytes that we need to read from the file.
@@ -78,10 +78,10 @@ func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
 	// We'll now incrementally parse out the set of individual headers from
 	// our set of serialized contiguous raw headers.
 	numHeaders := endHeight - startHeight + 1
-	headers := make([]wire.BlockHeader, 0, numHeaders)
+	headers := make([]chain.BlockHeader, 0, numHeaders)
 	for headerReader.Len() != 0 {
-		var nextHeader wire.BlockHeader
-		if err := nextHeader.Deserialize(headerReader); err != nil {
+		var nextHeader chain.BlockHeader
+		if err := nextHeader.Read(headerReader); err != nil {
 			return nil, err
 		}
 
@@ -93,8 +93,8 @@ func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
 
 // readHeader reads a full block header from the flat-file. The header read is
 // determined by the hight value.
-func (h *blockHeaderStore) readHeader(height uint32) (wire.BlockHeader, error) {
-	var header wire.BlockHeader
+func (h *blockHeaderStore) readHeader(height uint32) (chain.BlockHeader, error) {
+	var header chain.BlockHeader
 
 	// Each header is 80 bytes, so using this information, we'll seek a
 	// distance to cover that height based on the size of block headers.
@@ -109,7 +109,7 @@ func (h *blockHeaderStore) readHeader(height uint32) (wire.BlockHeader, error) {
 	headerReader := bytes.NewReader(rawHeader)
 
 	// Finally, decode the raw bytes into a proper bitcoin header.
-	if err := header.Deserialize(headerReader); err != nil {
+	if err := header.Read(headerReader); err != nil {
 		return header, err
 	}
 

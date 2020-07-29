@@ -1,8 +1,18 @@
 package shard
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"io"
+)
+
+const (
+
+	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
+	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
+	// PrevBlock and MerkleRoot hashes.
+	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
 )
 
 //
@@ -36,4 +46,12 @@ func (c *shardChain) Read(r io.Reader) (chain.BlockHeader, error) {
 func (c *shardChain) Write(w io.Writer, h chain.BlockHeader) error {
 	header := h.(*header)
 	return writeBlockHeader(w, header)
+}
+
+func (c *shardChain) MaxBlockHeaderPayload() int {
+	return maxBlockHeaderPayload
+}
+
+func (c *shardChain) BlockHeaderOverhead() int {
+	return maxBlockHeaderPayload + encoder.MaxVarIntPayload
 }

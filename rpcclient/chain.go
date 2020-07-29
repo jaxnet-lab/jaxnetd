@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -499,13 +500,13 @@ func (r FutureGetBlockHeaderResult) Receive() (chain.BlockHeader, error) {
 	}
 
 	// Deserialize the blockheader and return it.
-	var bh shard.Header
-	err = bh.Deserialize(bytes.NewReader(serializedBH))
+	bh := chain.NewHeader()
+	err = bh.Read(bytes.NewReader(serializedBH))
 	if err != nil {
 		return nil, err
 	}
 
-	return &bh, err
+	return bh, err
 }
 
 // GetBlockHeaderAsync returns an instance of a type that can be used to get the

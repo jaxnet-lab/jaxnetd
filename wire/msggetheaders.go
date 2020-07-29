@@ -123,7 +123,7 @@ func (msg *MsgGetHeaders) Command() string {
 func (msg *MsgGetHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Version 4 bytes + num block locator hashes (varInt) + max allowed block
 	// locators + hash stop.
-	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg *
+	return 4 + encoder.MaxVarIntPayload + (MaxBlockLocatorsPerMsg *
 		chainhash.HashSize) + chainhash.HashSize
 }
 

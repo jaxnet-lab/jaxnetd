@@ -164,7 +164,7 @@ func TestRebroadcast(t *testing.T) {
 	}
 
 	// Trigger a new block notification to rebroadcast the transactions.
-	ntfnChan <- blockntfns.NewBlockConnected(wire.BlockHeader{}, 100)
+	ntfnChan <- blockntfns.NewBlockConnected(chain.BlockHeader{}, 100)
 
 	// They should all be broadcast in their expected dependency order.
 	assertBroadcastOrder(txs)
@@ -173,7 +173,7 @@ func TestRebroadcast(t *testing.T) {
 	// The transactions should be rebroadcast again to ensure they properly
 	// propagate throughout the network.
 	ntfnChan <- blockntfns.NewBlockDisconnected(
-		wire.BlockHeader{}, 100, wire.BlockHeader{},
+		chain.BlockHeader{}, 100, chain.BlockHeader{},
 	)
 
 	// This time however, only the last two transactions will be rebroadcast

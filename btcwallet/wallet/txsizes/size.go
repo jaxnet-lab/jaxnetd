@@ -7,6 +7,7 @@ package txsizes
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // Worst case script and input/output size estimates.
@@ -137,8 +138,8 @@ func EstimateSerializeSize(inputCount int, txOuts []*wire.TxOut, addChangeOutput
 	}
 
 	// 8 additional bytes are for version and locktime
-	return 8 + wire.VarIntSerializeSize(uint64(inputCount)) +
-		wire.VarIntSerializeSize(uint64(outputCount)) +
+	return 8 + encoder.VarIntSerializeSize(uint64(inputCount)) +
+		encoder.VarIntSerializeSize(uint64(outputCount)) +
 		inputCount*RedeemP2PKHInputSize +
 		SumOutputSerializeSizes(txOuts) +
 		changeSize
@@ -163,9 +164,9 @@ func EstimateVirtualSize(numP2PKHIns, numP2WPKHIns, numNestedP2WPKHIns int,
 	// number of transaction inputs and outputs + size of redeem scripts +
 	// the size out the serialized outputs and change.
 	baseSize := 8 +
-		wire.VarIntSerializeSize(
+		encoder.VarIntSerializeSize(
 			uint64(numP2PKHIns+numP2WPKHIns+numNestedP2WPKHIns)) +
-		wire.VarIntSerializeSize(uint64(len(txOuts))) +
+		encoder.VarIntSerializeSize(uint64(len(txOuts))) +
 		numP2PKHIns*RedeemP2PKHInputSize +
 		numP2WPKHIns*RedeemP2WPKHInputSize +
 		numNestedP2WPKHIns*RedeemNestedP2WPKHInputSize +
@@ -178,7 +179,7 @@ func EstimateVirtualSize(numP2PKHIns, numP2WPKHIns, numNestedP2WPKHIns int,
 	if numP2WPKHIns+numNestedP2WPKHIns > 0 {
 		// Additional 2 weight units for segwit marker + flag.
 		witnessWeight = 2 +
-			wire.VarIntSerializeSize(
+			encoder.VarIntSerializeSize(
 				uint64(numP2WPKHIns+numNestedP2WPKHIns)) +
 			numP2WPKHIns*RedeemP2WPKHInputWitnessWeight +
 			numNestedP2WPKHIns*RedeemP2WPKHInputWitnessWeight

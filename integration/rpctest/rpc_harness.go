@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 const (
@@ -171,7 +171,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	// callback.
 	if handlers.OnFilteredBlockConnected != nil {
 		obc := handlers.OnFilteredBlockConnected
-		handlers.OnFilteredBlockConnected = func(height int32, header *wire.BlockHeader, filteredTxns []*btcutil.Tx) {
+		handlers.OnFilteredBlockConnected = func(height int32, header chain.BlockHeader, filteredTxns []*btcutil.Tx) {
 			wallet.IngestBlock(height, header, filteredTxns)
 			obc(height, header, filteredTxns)
 		}
@@ -181,7 +181,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	}
 	if handlers.OnFilteredBlockDisconnected != nil {
 		obd := handlers.OnFilteredBlockDisconnected
-		handlers.OnFilteredBlockDisconnected = func(height int32, header *wire.BlockHeader) {
+		handlers.OnFilteredBlockDisconnected = func(height int32, header chain.BlockHeader) {
 			wallet.UnwindBlock(height, header)
 			obd(height, header)
 		}

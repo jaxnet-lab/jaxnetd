@@ -5,6 +5,7 @@
 package blockchain
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"reflect"
 	"testing"
 	"time"
@@ -127,7 +128,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	// Generate enough synthetic blocks to activate CSV.
 	chain := newFakeChain(netParams)
 	node := chain.bestChain.Tip()
-	blockTime := node.Header().Timestamp
+	blockTime := node.Header().Timestamp()
 	numBlocksToActivate := (netParams.MinerConfirmationWindow * 3)
 	for i := uint32(0); i < numBlocksToActivate; i++ {
 		blockTime = blockTime.Add(time.Second)
@@ -453,8 +454,8 @@ func nodeHashes(nodes []*blockNode, indexes ...int) []chainhash.Hash {
 // nodeHeaders is a convenience function that returns the headers for all of
 // the passed indexes of the provided nodes.  It is used to construct expected
 // located headers in the tests.
-func nodeHeaders(nodes []*blockNode, indexes ...int) []BlockHeader {
-	headers := make([]BlockHeader, 0, len(indexes))
+func nodeHeaders(nodes []*blockNode, indexes ...int) []chain.BlockHeader {
+	headers := make([]chain.BlockHeader, 0, len(indexes))
 	for _, idx := range indexes {
 		headers = append(headers, nodes[idx].Header())
 	}
@@ -469,16 +470,16 @@ func TestLocateInventory(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a
 	tip := tstTip
-	chain := newFakeChain(&chaincfg.MainNetParams)
-	branch0Nodes := chainedNodes(chain.bestChain.Genesis(), 18)
+	ch := newFakeChain(&chaincfg.MainNetParams)
+	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 2)
 	for _, node := range branch0Nodes {
-		chain.index.AddNode(node)
+		ch.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
-		chain.index.AddNode(node)
+		ch.index.AddNode(node)
 	}
-	chain.bestChain.SetTip(tip(branch0Nodes))
+	ch.bestChain.SetTip(tip(branch0Nodes))
 
 	// Create chain views for different branches of the overall chain to
 	// simulate a local and remote node on different parts of the chain.
@@ -492,11 +493,11 @@ func TestLocateInventory(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		locator    BlockLocator     // locator for requested inventory
-		hashStop   chainhash.Hash   // stop hash for locator
-		maxAllowed uint32           // max to locate, 0 = wire const
-		headers    []BlockHeader    // expected located headers
-		hashes     []chainhash.Hash // expected located hashes
+		locator    BlockLocator        // locator for requested inventory
+		hashStop   chainhash.Hash      // stop hash for locator
+		maxAllowed uint32              // max to locate, 0 = wire const
+		headers    []chain.BlockHeader // expected located headers
+		hashes     []chainhash.Hash    // expected located hashes
 	}{
 		{
 			// Empty block locators and unknown stop hash.  No
@@ -768,16 +769,16 @@ func TestLocateInventory(t *testing.T) {
 	}
 	for _, test := range tests {
 		// Ensure the expected headers are located.
-		var headers []BlockHeader
+		var headers []chain.BlockHeader
 		if test.maxAllowed != 0 {
 			// Need to use the unexported function to override the
 			// max allowed for headers.
-			chain.chainLock.RLock()
-			headers = chain.locateHeaders(test.locator,
+			ch.chainLock.RLock()
+			headers = ch.locateHeaders(test.locator,
 				&test.hashStop, test.maxAllowed)
-			chain.chainLock.RUnlock()
+			ch.chainLock.RUnlock()
 		} else {
-			headers = chain.LocateHeaders(test.locator,
+			headers = ch.LocateHeaders(test.locator,
 				&test.hashStop)
 		}
 		if !reflect.DeepEqual(headers, test.headers) {
@@ -791,7 +792,7 @@ func TestLocateInventory(t *testing.T) {
 		if test.maxAllowed != 0 {
 			maxAllowed = test.maxAllowed
 		}
-		hashes := chain.LocateBlocks(test.locator, &test.hashStop,
+		hashes := ch.LocateBlocks(test.locator, &test.hashStop,
 			maxAllowed)
 		if !reflect.DeepEqual(hashes, test.hashes) {
 			t.Errorf("%s: unxpected hashes -- got %v, want %v",

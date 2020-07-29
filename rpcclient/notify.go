@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 var (
@@ -103,7 +104,7 @@ type NotificationHandlers struct {
 	// NotifyBlocks has been made to register for the notification and the
 	// function is non-nil.  Its parameters differ from OnBlockConnected: it
 	// receives the block's height, header, and relevant transactions.
-	OnFilteredBlockConnected func(height int32, header *wire.BlockHeader,
+	OnFilteredBlockConnected func(height int32, header chain.BlockHeader,
 		txs []*btcutil.Tx)
 
 	// OnBlockDisconnected is invoked when a block is disconnected from the
@@ -119,7 +120,7 @@ type NotificationHandlers struct {
 	// preceding NotifyBlocks has been made to register for the notification
 	// and the call to function is non-nil.  Its parameters differ from
 	// OnBlockDisconnected: it receives the block's height and header.
-	OnFilteredBlockDisconnected func(height int32, header *wire.BlockHeader)
+	OnFilteredBlockDisconnected func(height int32, header chain.BlockHeader)
 
 	// OnRecvTx is invoked when a transaction that receives funds to a
 	// registered address is received into the memory pool and also
@@ -531,7 +532,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
-	*wire.BlockHeader, []*btcutil.Tx, error) {
+	chain.BlockHeader, []*btcutil.Tx, error) {
 
 	if len(params) < 3 {
 		return 0, nil, nil, wrongNumParams(len(params))
@@ -551,8 +552,8 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	var blockHeader wire.BlockHeader
-	err = blockHeader.Deserialize(bytes.NewReader(blockHeaderBytes))
+	blockHeader := chain.NewHeader()
+	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -578,7 +579,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		}
 	}
 
-	return blockHeight, &blockHeader, transactions, nil
+	return blockHeight, blockHeader, transactions, nil
 }
 
 // parseFilteredBlockDisconnectedParams parses out the parameters included in a
@@ -587,7 +588,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 // NOTE: This is a btcd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
-	*wire.BlockHeader, error) {
+	chain.BlockHeader, error) {
 	if len(params) < 2 {
 		return 0, nil, wrongNumParams(len(params))
 	}
@@ -606,13 +607,13 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	var blockHeader wire.BlockHeader
-	err = blockHeader.Deserialize(bytes.NewReader(blockHeaderBytes))
+	blockHeader := chain.NewHeader()
+	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, err
 	}
 
-	return blockHeight, &blockHeader, nil
+	return blockHeight, blockHeader, nil
 }
 
 func parseHexParam(param json.RawMessage) ([]byte, error) {

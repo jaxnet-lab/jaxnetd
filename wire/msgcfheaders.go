@@ -168,7 +168,7 @@ func (msg *MsgCFHeaders) Command() string {
 func (msg *MsgCFHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Hash size + filter type + num headers (varInt) +
 	// (header size * max headers).
-	return 1 + chainhash.HashSize + chainhash.HashSize + MaxVarIntPayload +
+	return 1 + chainhash.HashSize + chainhash.HashSize + encoder.MaxVarIntPayload +
 		(MaxCFHeaderPayload * MaxCFHeadersPerMsg)
 }
 

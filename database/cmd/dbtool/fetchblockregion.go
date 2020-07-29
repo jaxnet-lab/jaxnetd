@@ -8,9 +8,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"strconv"
 	"time"
-
 )
 
 // blockRegionCmd defines the configuration options for the fetchblockregion

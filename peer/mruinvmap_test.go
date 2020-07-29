@@ -7,6 +7,7 @@ package peer
 import (
 	"crypto/rand"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -23,7 +24,7 @@ func TestMruInventoryMap(t *testing.T) {
 	invVects := make([]*wire.InvVect, 0, numInvVects)
 	for i := 0; i < numInvVects; i++ {
 		hash := &chainhash.Hash{byte(i)}
-		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
+		iv := wire.NewInvVect(types.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
 
@@ -81,7 +82,7 @@ testLoop:
 			origLruIndex := numInvVects - test.limit
 			mruInvMap.Add(invVects[origLruIndex])
 
-			iv := wire.NewInvVect(wire.InvTypeBlock,
+			iv := wire.NewInvVect(types.InvTypeBlock,
 				&chainhash.Hash{0x00, 0x01})
 			mruInvMap.Add(iv)
 
@@ -124,8 +125,8 @@ func TestMruInventoryMapStringer(t *testing.T) {
 	// inventory stringer code.
 	hash1 := &chainhash.Hash{0x01}
 	hash2 := &chainhash.Hash{0x02}
-	iv1 := wire.NewInvVect(wire.InvTypeBlock, hash1)
-	iv2 := wire.NewInvVect(wire.InvTypeBlock, hash2)
+	iv1 := wire.NewInvVect(types.InvTypeBlock, hash1)
+	iv2 := wire.NewInvVect(types.InvTypeBlock, hash2)
 
 	// Create new mru inventory map and add the inventory vectors.
 	mruInvMap := newMruInventoryMap(uint(2))
@@ -156,7 +157,7 @@ func BenchmarkMruInventoryList(b *testing.B) {
 		hashBytes := make([]byte, chainhash.HashSize)
 		rand.Read(hashBytes)
 		hash, _ := chainhash.NewHash(hashBytes)
-		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
+		iv := wire.NewInvVect(types.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
 	b.StartTimer()

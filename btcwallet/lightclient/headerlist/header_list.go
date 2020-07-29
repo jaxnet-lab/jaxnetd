@@ -1,6 +1,8 @@
 package headerlist
 
-import "gitlab.com/jaxnet/core/shard.core.git/wire"
+import (
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+)
 
 // Chain is an interface that stores a list of Nodes. Each node represents a
 // header in the main chain and also includes a height along with it. This is
@@ -33,7 +35,7 @@ type Node struct {
 	Height int32
 
 	// Header is the header that this node represents.
-	Header BlockHeader
+	Header chain.BlockHeader
 
 	prev *Node
 }

@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
@@ -36,7 +36,7 @@ const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
-	blockHdrSize = shard.MaxBlockHeaderPayload
+	//blockHdrSize = shard.MaxBlockHeaderPayload
 
 	// blockHdrOffset defines the offsets into a block index row for the
 	// block header.
@@ -1259,7 +1259,7 @@ func (tx *transaction) FetchBlockHeader(hash *chainhash.Hash) ([]byte, error) {
 	return tx.FetchBlockRegion(&database.BlockRegion{
 		Hash:   hash,
 		Offset: 0,
-		Len:    blockHdrSize,
+		Len:    uint32(chain.MaxBlockHeaderPayload()),
 	})
 }
 
@@ -1283,7 +1283,7 @@ func (tx *transaction) FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, err
 	for i := range hashes {
 		regions[i].Hash = &hashes[i]
 		regions[i].Offset = 0
-		regions[i].Len = blockHdrSize
+		regions[i].Len = uint32(chain.MaxBlockHeaderPayload())
 	}
 	return tx.FetchBlockRegions(regions)
 }

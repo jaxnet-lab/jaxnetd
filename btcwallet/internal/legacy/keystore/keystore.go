@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/jaxnet"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -31,7 +32,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -480,11 +480,11 @@ func (net *netParams) ReadFrom(r io.Reader) (int64, error) {
 	switch types.BitcoinNet(binary.LittleEndian.Uint32(uint32Bytes)) {
 	case jaxnet.JaxNet:
 		*net = (netParams)(chaincfg.MainNetParams)
-	case wire.MainNet:
+	case types.MainNet:
 		*net = (netParams)(chaincfg.MainNetParams)
-	case wire.TestNet3:
+	case types.TestNet3:
 		*net = (netParams)(chaincfg.TestNet3Params)
-	case wire.SimNet:
+	case types.SimNet:
 		*net = (netParams)(chaincfg.SimNetParams)
 	default:
 		return n64, errors.New("unknown network")

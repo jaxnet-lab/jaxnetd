@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"math/big"
 	"sync"
 	"time"
@@ -24,7 +23,7 @@ const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
-	blockHdrSize = shard.MaxBlockHeaderPayload
+	//blockHdrSize = shard.MaxBlockHeaderPayload
 
 	// latestUtxoSetBucketVersion is the current version of the utxo set
 	// bucket that is used to track all unspent outputs.
@@ -1324,7 +1323,7 @@ func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, erro
 // index bucket. This overwrites the current entry if there exists one.
 func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
 	// Serialize block data to be stored.
-	w := bytes.NewBuffer(make([]byte, 0, blockHdrSize+1))
+	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
 	header := node.Header()
 	err := header.Write(w)
 	if err != nil {

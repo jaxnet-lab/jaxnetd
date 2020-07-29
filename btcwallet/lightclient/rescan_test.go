@@ -91,7 +91,7 @@ func (c *mockChainSource) addNewBlock(notify bool) headerfs.BlockStamp {
 	c.mu.Unlock()
 
 	genesisTimestamp := c.ChainParams().GenesisBlock.Header.Timestamp
-	header := &shard.Header{
+	header := &chain.BlockHeader{
 		PrevBlock: prevHash,
 		Timestamp: genesisTimestamp.Add(
 			time.Duration(newHeight) * 10 * time.Minute,
@@ -604,7 +604,7 @@ func TestRescanReorgAllRetryBlocks(t *testing.T) {
 	// We'll then add two new blocks from a different chain to ensure the
 	// rescan can properly follow it.
 	newBlock1 := ctx.chain.addNewBlockWithHeader(
-		&shard.Header{PrevBlock: bestBlock.Hash}, true,
+		&chain.BlockHeader{PrevBlock: bestBlock.Hash}, true,
 	)
 	if newBlock1.Hash == block1.Hash {
 		ctx.t.Fatal("expected different hashes for blocks on " +
@@ -649,7 +649,7 @@ func TestRescanRetryBlocksAfterCatchingUp(t *testing.T) {
 	// manually.
 	block2 := ctx.chain.addNewBlock(false)
 	block3 := ctx.chain.addNewBlock(false)
-	ctx.chain.ntfnChan <- blockntfns.NewBlockConnected(shard.Header{}, 0)
+	ctx.chain.ntfnChan <- blockntfns.NewBlockConnected(chain.BlockHeader{}, 0)
 
 	// Revert the mocked chain so that block filters can be retrieved
 	// successfully.

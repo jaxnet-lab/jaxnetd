@@ -2,14 +2,14 @@ package blockntfns_test
 
 import (
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"testing"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/blockntfns"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
-var emptyHeader wire.BlockHeader
+var emptyHeader chain.BlockHeader
 
 type mockNtfnSource struct {
 	blockChan         chan blockntfns.BlockNtfn

@@ -11,6 +11,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"hash/crc32"
 	"io"
 	"os"
@@ -22,12 +23,11 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 var (
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = types.MainNet
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.

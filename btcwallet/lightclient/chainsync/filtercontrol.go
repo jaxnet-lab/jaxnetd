@@ -2,6 +2,7 @@ package chainsync
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"

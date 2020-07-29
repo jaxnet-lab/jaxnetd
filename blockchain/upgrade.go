@@ -100,7 +100,7 @@ func migrateBlockIndex(db database.DB) error {
 
 		// Find blocks on the main chain with the block graph and current tip.
 		determineMainChainBlocks(blocksMap, tip)
-
+		blockHdrSize := uint32(chain.MaxBlockHeaderPayload())
 		// Now that we have heights for all blocks, scan the old block index
 		// bucket and insert all rows into the new one.
 		return v1BlockIdxBucket.ForEach(func(hashBytes, blockRow []byte) error {
@@ -154,6 +154,7 @@ func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockC
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
 		header := chain.NewHeader()
+		blockHdrSize := uint32(chain.MaxBlockHeaderPayload())
 		endOffset := blockHdrOffset + blockHdrSize
 		headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]
 		err := header.Read(bytes.NewReader(headerBytes))

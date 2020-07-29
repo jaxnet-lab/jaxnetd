@@ -6,11 +6,10 @@ package blockchain
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"math/rand"
 	"reflect"
 	"testing"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // testNoncePrng provides a deterministic prng for the nonce in generated fake
@@ -26,9 +25,10 @@ func chainedNodes(parent *blockNode, numNodes int) []*blockNode {
 	for i := 0; i < numNodes; i++ {
 		// This is invalid, but all that is needed is enough to get the
 		// synthetic tests to work.
-		header := encoder.WriteElement{Nonce: testNoncePrng.Uint32()}
+		header := chain.NewHeader()
+		header.SetNonce(testNoncePrng.Uint32())
 		if tip != nil {
-			header.PrevBlock = tip.hash
+			header.PrevBlock() = tip.hash
 		}
 		nodes[i] = newBlockNode(&header, tip)
 		tip = nodes[i]

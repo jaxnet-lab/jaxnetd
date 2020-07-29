@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"math/big"
 	"sync"
@@ -286,7 +288,7 @@ func newBlockManager(cfg *blockManagerCfg) (*blockManager, error) {
 	}
 	bm.nextCheckpoint = bm.findNextHeaderCheckpoint(int32(height))
 	bm.headerList.ResetHeaderState(headerlist.Node{
-		Header: *header,
+		Header: header,
 		Height: int32(height),
 	})
 	bm.headerTip = height
@@ -468,7 +470,7 @@ func (b *blockManager) handleDonePeerMsg(peers *list.List, sp *ServerPeer) {
 			return
 		}
 		b.headerList.ResetHeaderState(headerlist.Node{
-			Header: *header,
+			Header: header,
 			Height: int32(height),
 		})
 		b.startSync(peers)
@@ -1281,7 +1283,7 @@ func (b *blockManager) writeCFHeadersMsg(msg *wire.MsgCFHeaders,
 
 		headerHeight := startHeight + uint32(i)
 		b.fltrHeaderProgessLogger.LogBlockHeight(
-			header.Timestamp, int32(headerHeight),
+			header.Timestamp(), int32(headerHeight),
 		)
 
 		b.onBlockConnected(header, headerHeight)
@@ -1313,11 +1315,11 @@ func (b *blockManager) rollBackToHeight(height uint32) (*headerfs.BlockStamp, er
 			return nil, err
 		}
 
-		newTip := &header.PrevBlock
+		newTip := header.PrevBlock()
 
 		// Only roll back filter headers if they've caught up this far.
 		if uint32(bs.Height) <= regHeight {
-			newFilterTip, err := b.cfg.RegFilterHeaders.RollbackLastBlock(newTip)
+			newFilterTip, err := b.cfg.RegFilterHeaders.RollbackLastBlock(&newTip)
 			if err != nil {
 				return nil, err
 			}
@@ -1333,14 +1335,14 @@ func (b *blockManager) rollBackToHeight(height uint32) (*headerfs.BlockStamp, er
 		// header in the disconnected notification in case we're rolling
 		// back farther and the notification subscriber needs it but
 		// can't read it before it's deleted from the store.
-		prevHeader, _, err := b.cfg.BlockHeaders.FetchHeader(newTip)
+		prevHeader, _, err := b.cfg.BlockHeaders.FetchHeader(&newTip)
 		if err != nil {
 			return nil, err
 		}
 
 		// Now we send the block disconnected notifications.
 		b.onBlockDisconnected(
-			*header, headerHeight, *prevHeader,
+			header, headerHeight, prevHeader,
 		)
 	}
 	return bs, nil
@@ -2320,7 +2322,7 @@ func (b *blockManager) BlockHeadersSynced() bool {
 	// If our time source (median times of all the connected peers) is at
 	// least 24 hours ahead of our best known block, we aren't current.
 	minus24Hours := b.cfg.TimeSource.AdjustedTime().Add(-24 * time.Hour)
-	if header.Timestamp.Before(minus24Hours) {
+	if header.Timestamp().Before(minus24Hours) {
 		return false
 	}
 
@@ -2359,7 +2361,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 	lastBlock := -1
 	invVects := imsg.inv.InvList
 	for i := len(invVects) - 1; i >= 0; i-- {
-		if invVects[i].Type == wire.InvTypeBlock {
+		if invVects[i].Type == types.InvTypeBlock {
 			lastBlock = i
 			break
 		}
@@ -2391,7 +2393,7 @@ func (b *blockManager) handleInvMsg(imsg *invMsg) {
 
 	// Add blocks to the cache of known inventory for the peer.
 	for _, iv := range invVects {
-		if iv.Type == wire.InvTypeBlock {
+		if iv.Type == types.InvTypeBlock {
 			imsg.peer.AddKnownInventory(iv)
 		}
 	}
@@ -2494,10 +2496,11 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 		// that the proof of work is good, and that the header's
 		// timestamp isn't too far in the future, and add it to the
 		// list of headers.
-		node := headerlist.Node{Header: *blockHeader}
+		node := headerlist.Node{Header: blockHeader}
 		prevNode := prevNodeEl
 		prevHash := prevNode.Header.BlockHash()
-		if prevHash.IsEqual(&blockHeader.PrevBlock) {
+		h := blockHeader.PrevBlock()
+		if prevHash.IsEqual(&h) {
 			err := b.checkHeaderSanity(blockHeader, maxTimestamp,
 				false)
 			if err != nil {
@@ -2520,7 +2523,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			hmsg.peer.UpdateLastBlockHeight(node.Height)
 
 			b.blkHeaderProgressLogger.LogBlockHeight(
-				blockHeader.Timestamp, node.Height,
+				blockHeader.Timestamp(), node.Height,
 			)
 
 			// Finally initialize the header ->
@@ -2568,8 +2571,9 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			// these headers. Otherwise, the headers don't connect
 			// to anything we know and we should disconnect the
 			// peer.
+			h := blockHeader.PrevBlock()
 			backHead, backHeight, err := b.cfg.BlockHeaders.FetchHeader(
-				&blockHeader.PrevBlock,
+				&h,
 			)
 			if err != nil {
 				log.Warnf("Received block header that does not"+
@@ -2602,7 +2606,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			// these headers so we can compare it to the work in
 			// the known good chain.
 			b.reorgList.ResetHeaderState(headerlist.Node{
-				Header: *backHead,
+				Header: backHead,
 				Height: int32(backHeight),
 			})
 			totalWork := big.NewInt(0)
@@ -2617,9 +2621,9 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 					return
 				}
 				totalWork.Add(totalWork,
-					blockchain.CalcWork(reorgHeader.Bits))
+					blockchain.CalcWork(reorgHeader.Bits()))
 				b.reorgList.PushBack(headerlist.Node{
-					Header: *reorgHeader,
+					Header: reorgHeader,
 					Height: int32(backHeight+1) + int32(j),
 				})
 			}
@@ -2636,11 +2640,12 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			var knownHead chain.BlockHeader
 			for j := uint32(prevNode.Height); j > backHeight; j-- {
 				if knownEl != nil {
-					knownHead = &knownEl.Header
+					knownHead = knownEl.Header
 					knownEl = knownEl.Prev()
 				} else {
+					h := knownHead.PrevBlock()
 					knownHead, _, err = b.cfg.BlockHeaders.FetchHeader(
-						&knownHead.PrevBlock)
+						&h)
 					if err != nil {
 						log.Criticalf("Can't get block"+
 							"header for hash %s: "+
@@ -2651,7 +2656,7 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 					}
 				}
 				knownWork.Add(knownWork,
-					blockchain.CalcWork(knownHead.Bits))
+					blockchain.CalcWork(knownHead.Bits()))
 			}
 
 			log.Tracef("Total work from known chain: %v", knownWork)
@@ -2698,11 +2703,11 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 			}
 
 			b.headerList.ResetHeaderState(headerlist.Node{
-				Header: *backHead,
+				Header: backHead,
 				Height: int32(backHeight),
 			})
 			b.headerList.PushBack(headerlist.Node{
-				Header: *blockHeader,
+				Header: blockHeader,
 				Height: int32(backHeight + 1),
 			})
 		}
@@ -2797,12 +2802,12 @@ func (b *blockManager) handleHeadersMsg(hmsg *headersMsg) {
 func (b *blockManager) checkHeaderSanity(blockHeader chain.BlockHeader,
 	maxTimestamp time.Time, reorgAttempt bool) error {
 	diff, err := b.calcNextRequiredDifficulty(
-		blockHeader.Timestamp, reorgAttempt)
+		blockHeader.Timestamp(), reorgAttempt)
 	if err != nil {
 		return err
 	}
 	stubBlock := btcutil.NewBlock(&wire.MsgBlock{
-		Header: *blockHeader,
+		Header: blockHeader,
 	})
 	err = blockchain.CheckProofOfWork(stubBlock,
 		blockchain.CompactToBig(diff))
@@ -2810,9 +2815,9 @@ func (b *blockManager) checkHeaderSanity(blockHeader chain.BlockHeader,
 		return err
 	}
 	// Ensure the block time is not too far in the future.
-	if blockHeader.Timestamp.After(maxTimestamp) {
+	if blockHeader.Timestamp().After(maxTimestamp) {
 		return fmt.Errorf("block timestamp of %v is too far in the "+
-			"future", blockHeader.Timestamp)
+			"future", blockHeader.Timestamp())
 	}
 	return nil
 }
@@ -2846,7 +2851,7 @@ func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
 			reductionTime := int64(
 				b.cfg.ChainParams.MinDiffReductionTime /
 					time.Second)
-			allowMinTime := lastNode.Header.Timestamp.Unix() +
+			allowMinTime := lastNode.Header.Timestamp().Unix() +
 				reductionTime
 			if newBlockTime.Unix() > allowMinTime {
 				return b.cfg.ChainParams.PowLimitBits, nil
@@ -2864,7 +2869,7 @@ func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
 
 		// For the main network (or any unrecognized networks), simply
 		// return the previous block's difficulty requirements.
-		return lastNode.Header.Bits, nil
+		return lastNode.Header.Bits(), nil
 	}
 
 	// Get the block node at the previous retarget (targetTimespan days
@@ -2878,8 +2883,8 @@ func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
 
 	// Limit the amount of adjustment that can occur to the previous
 	// difficulty.
-	actualTimespan := lastNode.Header.Timestamp.Unix() -
-		firstNode.Timestamp.Unix()
+	actualTimespan := lastNode.Header.Timestamp().Unix() -
+		firstNode.Timestamp().Unix()
 	adjustedTimespan := actualTimespan
 	if actualTimespan < b.minRetargetTimespan {
 		adjustedTimespan = b.minRetargetTimespan
@@ -2892,7 +2897,7 @@ func (b *blockManager) calcNextRequiredDifficulty(newBlockTime time.Time,
 	// The result uses integer division which means it will be slightly
 	// rounded down.  Bitcoind also uses integer division to calculate this
 	// result.
-	oldTarget := blockchain.CompactToBig(lastNode.Header.Bits)
+	oldTarget := blockchain.CompactToBig(lastNode.Header.Bits())
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(adjustedTimespan))
 	targetTimeSpan := int64(b.cfg.ChainParams.TargetTimespan /
 		time.Second)
@@ -2933,10 +2938,10 @@ func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32
 	// Search backwards through the chain for the last block without
 	// the special rule applied.
 	iterEl := startNode
-	iterNode := &startNode.Header
+	iterNode := startNode.Header
 	iterHeight := startNode.Height
 	for iterNode != nil && iterHeight%b.blocksPerRetarget != 0 &&
-		iterNode.Bits == b.cfg.ChainParams.PowLimitBits {
+		iterNode.Bits() == b.cfg.ChainParams.PowLimitBits {
 
 		// Get the previous block node.  This function is used over
 		// simply accessing iterNode.parent directly as it will
@@ -2946,7 +2951,7 @@ func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32
 		iterHeight--
 		el := iterEl.Prev()
 		if el != nil {
-			iterNode = &el.Header
+			iterNode = el.Header
 		} else {
 			node, err := b.cfg.BlockHeaders.FetchHeaderByHeight(
 				uint32(iterHeight),
@@ -2963,13 +2968,13 @@ func (b *blockManager) findPrevTestNetDifficulty(hList headerlist.Chain) (uint32
 	// appropriate block was found.
 	lastBits := b.cfg.ChainParams.PowLimitBits
 	if iterNode != nil {
-		lastBits = iterNode.Bits
+		lastBits = iterNode.Bits()
 	}
 	return lastBits, nil
 }
 
 // onBlockConnected queues a block notification that extends the current chain.
-func (b *blockManager) onBlockConnected(header shard.Header, height uint32) {
+func (b *blockManager) onBlockConnected(header chain.BlockHeader, height uint32) {
 	select {
 	case b.blockNtfnChan <- blockntfns.NewBlockConnected(header, height):
 	case <-b.quit:
@@ -2978,8 +2983,8 @@ func (b *blockManager) onBlockConnected(header shard.Header, height uint32) {
 
 // onBlockDisconnected queues a block notification that reorgs the current
 // chain.
-func (b *blockManager) onBlockDisconnected(headerDisconnected shard.Header,
-	heightDisconnected uint32, newChainTip shard.Header) {
+func (b *blockManager) onBlockDisconnected(headerDisconnected chain.BlockHeader,
+	heightDisconnected uint32, newChainTip chain.BlockHeader) {
 
 	select {
 	case b.blockNtfnChan <- blockntfns.NewBlockDisconnected(
@@ -3034,7 +3039,7 @@ func (b *blockManager) NotificationsSinceHeight(
 			return nil, 0, err
 		}
 
-		blocks = append(blocks, blockntfns.NewBlockConnected(*header, i))
+		blocks = append(blocks, blockntfns.NewBlockConnected(header, i))
 	}
 
 	return blocks, bestHeight, nil

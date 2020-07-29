@@ -2,6 +2,7 @@ package cache_test
 
 import (
 	"crypto/rand"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -67,7 +68,7 @@ func TestBlockFilterCaches(t *testing.T) {
 		// Add the block to the block caches, using the block INV
 		// vector as key.
 		blockKey := wire.NewInvVect(
-			wire.InvTypeWitnessBlock, &blockHash,
+			types.InvTypeWitnessBlock, &blockHash,
 		)
 		for _, c := range blockCaches {
 			c.Put(*blockKey, &cache.CacheableBlock{block})
@@ -95,7 +96,7 @@ func TestBlockFilterCaches(t *testing.T) {
 
 		// Check block caches.
 		blockKey := wire.NewInvVect(
-			wire.InvTypeWitnessBlock, &blockHash,
+			types.InvTypeWitnessBlock, &blockHash,
 		)
 		for _, c := range blockCaches {
 			b, err := c.Get(*blockKey)

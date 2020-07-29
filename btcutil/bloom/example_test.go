@@ -6,9 +6,11 @@ package bloom_test
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math/rand"
 	"time"
-
 )
 
 // This example demonstrates how to create a new bloom filter, add a transaction
@@ -20,7 +22,7 @@ func ExampleNewFilter() {
 	// Create a new bloom filter intended to hold 10 elements with a 0.01%
 	// false positive rate and does not include any automatic update
 	// functionality when transactions are matched.
-	filter := bloom.NewFilter(10, tweak, 0.0001, wire.BloomUpdateNone)
+	filter := bloom.NewFilter(10, tweak, 0.0001, types.BloomUpdateNone)
 
 	// Create a transaction hash and add it to the filter.  This particular
 	// trasaction is the first transaction in block 310,000 of the main

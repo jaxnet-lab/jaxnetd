@@ -12,18 +12,18 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // solveBlock attempts to find a nonce which makes the passed block header hash
 // to a value less than the target difficulty. When a successful solution is
 // found true is returned and the nonce field of the passed header is updated
 // with the solution. False is returned if no solution exists.
-func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
+func solveBlock(header chain.BlockHeader, targetDifficulty *big.Int) bool {
 	// sbResult is used by the solver goroutines to send results.
 	type sbResult struct {
 		found bool
@@ -34,7 +34,7 @@ func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
 	// intended to be run as a goroutine.
 	quit := make(chan bool)
 	results := make(chan sbResult)
-	solver := func(hdr wire.BlockHeader, startNonce, stopNonce uint32) {
+	solver := func(hdr chain.BlockHeader, startNonce, stopNonce uint32) {
 		// We need to modify the nonce field of the header, so make sure
 		// we work with a copy of the original header.
 		for i := startNonce; i >= startNonce && i <= stopNonce; i++ {
@@ -183,7 +183,7 @@ func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	}
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var block wire.MsgBlock
-	block.Header = wire.BlockHeader{
+	block.Header = chain.BlockHeader{
 		Version:    blockVersion,
 		PrevBlock:  *prevHash,
 		MerkleRoot: *merkles[len(merkles)-1],

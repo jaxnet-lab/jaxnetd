@@ -777,7 +777,7 @@ func TestBlockManagerDetectBadPeers(t *testing.T) {
 		fType           = wire.GCSFilterRegular
 		filterBytes, _  = correctFilter.NBytes()
 		filterHash, _   = builder.GetFilterHash(correctFilter)
-		blockHeader     = shard.Header{}
+		blockHeader     = chain.BlockHeader{}
 		targetBlockHash = block.BlockHash()
 
 		peers  = []string{"good1:1", "good2:1", "bad:1", "good3:1"}

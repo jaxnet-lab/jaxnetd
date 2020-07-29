@@ -17,6 +17,8 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -34,7 +36,7 @@ import (
 
 var (
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = wire.MainNet
+	blockDataNet = types.MainNet
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.
@@ -1262,7 +1264,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 
 		// Ensure the block header fetched from the database matches the
 		// expected bytes.
-		wantHeaderBytes := blockBytes[0:wire.MaxBlockHeaderPayload]
+		wantHeaderBytes := blockBytes[0:chain.MaxBlockHeaderPayload()]
 		gotHeaderBytes, err := tx.FetchBlockHeader(blockHash)
 		if err != nil {
 			tc.t.Errorf("FetchBlockHeader(%s): unexpected error: %v",
@@ -1404,7 +1406,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	}
 	for i := 0; i < len(blockHeaderData); i++ {
 		blockHash := allBlockHashes[i]
-		wantHeaderBytes := allBlockBytes[i][0:wire.MaxBlockHeaderPayload]
+		wantHeaderBytes := allBlockBytes[i][0:chain.MaxBlockHeaderPayload()]
 		gotHeaderBytes := blockHeaderData[i]
 		if !bytes.Equal(gotHeaderBytes, wantHeaderBytes) {
 			tc.t.Errorf("FetchBlockHeaders(%s): bytes mismatch: "+

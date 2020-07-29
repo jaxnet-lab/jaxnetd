@@ -128,11 +128,11 @@ func (msg *MsgAddr) Command() string {
 func (msg *MsgAddr) MaxPayloadLength(pver uint32) uint32 {
 	if pver < MultipleAddressVersion {
 		// Num addresses (varInt) + a single net addresses.
-		return MaxVarIntPayload + maxNetAddressPayload(pver)
+		return encoder.MaxVarIntPayload + maxNetAddressPayload(pver)
 	}
 
 	// Num addresses (varInt) + max allowed addresses.
-	return MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload(pver))
+	return encoder.MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload(pver))
 }
 
 // NewMsgAddr returns a new bitcoin addr message that conforms to the

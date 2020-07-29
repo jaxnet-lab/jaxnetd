@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"time"
@@ -24,10 +25,6 @@ const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
 	MinHighPriority = btcutil.SatoshiPerBitcoin * 144.0 / 250
-
-	// blockHeaderOverhead is the max number of bytes it takes to serialize
-	// a block header and max possible transaction count.
-	blockHeaderOverhead = shard.MaxBlockHeaderPayload + wire.MaxVarIntPayload
 
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
@@ -602,8 +599,8 @@ mempoolLoop:
 	// The starting block size is the size of the block header plus the max
 	// possible transaction count size, plus the size of the coinbase
 	// transaction.
-	blockWeight := uint32((blockHeaderOverhead * blockchain.WitnessScaleFactor) +
-		blockchain.GetTransactionWeight(coinbaseTx))
+	blockWeight := uint32((chain.BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
+		int(blockchain.GetTransactionWeight(coinbaseTx)))
 	blockSigOpCost := coinbaseSigOpCost
 	totalFees := int64(0)
 
@@ -797,7 +794,7 @@ mempoolLoop:
 	// Now that the actual transactions have been selected, update the
 	// block weight for the real transaction count and coinbase value with
 	// the total fees accordingly.
-	blockWeight -= wire.MaxVarIntPayload -
+	blockWeight -= encoder.MaxVarIntPayload -
 		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) *
 			blockchain.WitnessScaleFactor)
 	coinbaseTx.MsgTx().TxOut[0].Value += totalFees

@@ -6,6 +6,8 @@ package fullblocktests
 
 import (
 	"encoding/hex"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math/big"
 	"time"
 
@@ -50,14 +52,21 @@ var (
 	// regTestGenesisBlock defines the genesis block of the block chain which serves
 	// as the public transaction ledger for the regression test network.
 	regTestGenesisBlock = wire.MsgBlock{
-		Header: shard.Header{
-			Version:    1,
-			PrevBlock:  *newHashFromStr("0000000000000000000000000000000000000000000000000000000000000000"),
-			MerkleRoot: *newHashFromStr("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"),
-			Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-			Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
-			Nonce:      2,
-		},
+		Header: shard.NewBlockHeader(1, *newHashFromStr("0000000000000000000000000000000000000000000000000000000000000000"),
+			*newHashFromStr("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"),
+			chainhash.Hash{},
+			time.Unix(1296688602, 0),
+			0x207fffff,
+			2,
+		),
+		//{
+		//	Version:    1,
+		//	PrevBlock:  *newHashFromStr("0000000000000000000000000000000000000000000000000000000000000000"),
+		//	MerkleRoot: *,
+		//	Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
+		//	Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+		//	Nonce:      2,
+		//},
 		Transactions: []*wire.MsgTx{{
 			Version: 1,
 			TxIn: []*wire.TxIn{{
@@ -94,7 +103,7 @@ var (
 // allow them to change out from under the tests potentially invalidating them.
 var regressionNetParams = &chaincfg.Params{
 	Name:        "regtest",
-	Net:         wire.TestNet,
+	Net:         types.TestNet,
 	DefaultPort: "18444",
 
 	// Chain parameters
