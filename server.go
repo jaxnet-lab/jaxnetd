@@ -36,7 +36,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -217,7 +216,6 @@ type server struct {
 	syncManager          *netsync.SyncManager
 	chain                *blockchain.BlockChain
 	txMemPool            *mempool.TxPool
-	cpuMiner             *cpuminer.CPUMiner
 	modifyRebroadcastInv chan interface{}
 	newPeers             chan *serverPeer
 	donePeers            chan *serverPeer
@@ -2343,12 +2341,6 @@ func (s *server) Start() {
 	}
 
 	//fmt.Println("Attemp to Start miner")
-
-	// Start the CPU miner if generation is enabled.
-	if cfg.Generate {
-		fmt.Println("Start miner")
-		s.cpuMiner.Start()
-	}
 }
 
 // Stop gracefully shuts down the server by stopping and disconnecting all
@@ -2361,9 +2353,6 @@ func (s *server) Stop() error {
 	}
 
 	srvrLog.Warnf("Server shutting down")
-
-	// Stop the CPU miner if needed
-	s.cpuMiner.Stop()
 
 	// Shutdown the RPC server if it's not disabled.
 	if !cfg.DisableRPC {
@@ -2781,14 +2770,6 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
 		s.chainParams, s.txMemPool, s.chain, s.timeSource,
 		s.sigCache, s.hashCache)
-	s.cpuMiner = cpuminer.New(&cpuminer.Config{
-		ChainParams:            chainParams,
-		BlockTemplateGenerator: blockTemplateGenerator,
-		MiningAddrs:            cfg.miningAddrs,
-		ProcessBlock:           s.syncManager.ProcessBlock,
-		ConnectedCount:         s.ConnectedCount,
-		IsCurrent:              s.syncManager.IsCurrent,
-	})
 
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
@@ -2899,7 +2880,6 @@ func newServer(listenAddrs, agentBlacklist, agentWhitelist []string,
 			DB:           db,
 			TxMemPool:    s.txMemPool,
 			Generator:    blockTemplateGenerator,
-			CPUMiner:     s.cpuMiner,
 			TxIndex:      s.txIndex,
 			AddrIndex:    s.addrIndex,
 			CfIndex:      s.cfIndex,

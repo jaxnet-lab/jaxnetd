@@ -17,7 +17,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -79,7 +78,6 @@ func init() {
 	blockchain.UseLogger(chanLog)
 	indexers.UseLogger(indxLog)
 	mining.UseLogger(minrLog)
-	cpuminer.UseLogger(minrLog)
 	peer.UseLogger(peerLog)
 	txscript.UseLogger(scrpLog)
 	netsync.UseLogger(syncLog)
