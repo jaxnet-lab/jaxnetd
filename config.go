@@ -67,7 +67,7 @@ const (
 )
 
 var (
-	defaultHomeDir     = btcutil.AppDataDir("btcd3", false)
+	defaultHomeDir     = btcutil.AppDataDir("btcd", false)
 	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
 	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	knownDbTypes       = database.SupportedDrivers()

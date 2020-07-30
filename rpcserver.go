@@ -41,7 +41,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
@@ -154,12 +153,12 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getconnectioncount":    handleGetConnectionCount,
 	"getcurrentnet":         handleGetCurrentNet,
 	"getdifficulty":         handleGetDifficulty,
-	"getgenerate":           handleGetGenerate,
-	"gethashespersec":       handleGetHashesPerSec,
+	//"getgenerate":           handleGetGenerate,
+	//"gethashespersec":       handleGetHashesPerSec,
 	"getheaders":            handleGetHeaders,
 	"getinfo":               handleGetInfo,
 	"getmempoolinfo":        handleGetMempoolInfo,
-	"getmininginfo":         handleGetMiningInfo,
+	//"getmininginfo":         handleGetMiningInfo,
 	"getnettotals":          handleGetNetTotals,
 	"getnetworkhashps":      handleGetNetworkHashPS,
 	"getpeerinfo":           handleGetPeerInfo,
@@ -171,7 +170,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"ping":                  handlePing,
 	"searchrawtransactions": handleSearchRawTransactions,
 	"sendrawtransaction":    handleSendRawTransaction,
-	"setgenerate":           handleSetGenerate,
+	//"setgenerate":           handleSetGenerate,
 	"stop":                  handleStop,
 	"submitblock":           handleSubmitBlock,
 	"uptime":                handleUptime,
@@ -959,19 +958,19 @@ func handleGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	// Create a reply
 	reply := make([]string, c.NumBlocks)
 
-	blockHashes, err := s.cfg.CPUMiner.GenerateNBlocks(c.NumBlocks)
-	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
-			Message: err.Error(),
-		}
-	}
+	//blockHashes, err := s.cfg.CPUMiner.GenerateNBlocks(c.NumBlocks)
+	//if err != nil {
+	//	return nil, &btcjson.RPCError{
+	//		Code:    btcjson.ErrRPCInternal.Code,
+	//		Message: err.Error(),
+	//	}
+	//}
 
-	// Mine the correct number of blocks, assigning the hex representation of the
-	// hash of each one to its place in the reply.
-	for i, hash := range blockHashes {
-		reply[i] = hash.String()
-	}
+	//// Mine the correct number of blocks, assigning the hex representation of the
+	//// hash of each one to its place in the reply.
+	//for i, hash := range blockHashes {
+	//	reply[i] = hash.String()
+	//}
 
 	return reply, nil
 }
@@ -2301,14 +2300,14 @@ func handleGetDifficulty(s *rpcServer, cmd interface{}, closeChan <-chan struct{
 }
 
 // handleGetGenerate implements the getgenerate command.
-func handleGetGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return s.cfg.CPUMiner.IsMining(), nil
-}
-
-// handleGetHashesPerSec implements the gethashespersec command.
-func handleGetHashesPerSec(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return int64(s.cfg.CPUMiner.HashesPerSecond()), nil
-}
+//func handleGetGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+//	return s.cfg.CPUMiner.IsMining(), nil
+//}
+//
+//// handleGetHashesPerSec implements the gethashespersec command.
+//func handleGetHashesPerSec(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+//	return int64(s.cfg.CPUMiner.HashesPerSecond()), nil
+//}
 
 // handleGetHeaders implements the getheaders command.
 //
@@ -2385,42 +2384,6 @@ func handleGetMempoolInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct
 	}
 
 	return ret, nil
-}
-
-// handleGetMiningInfo implements the getmininginfo command. We only return the
-// fields that are not related to wallet functionality.
-func handleGetMiningInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// Create a default getnetworkhashps command to use defaults and make
-	// use of the existing getnetworkhashps handler.
-	gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
-	networkHashesPerSecIface, err := handleGetNetworkHashPS(s, gnhpsCmd,
-		closeChan)
-	if err != nil {
-		return nil, err
-	}
-	networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
-	if !ok {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
-			Message: "networkHashesPerSec is not an int64",
-		}
-	}
-
-	best := s.cfg.Chain.BestSnapshot()
-	result := btcjson.GetMiningInfoResult{
-		Blocks:             int64(best.Height),
-		CurrentBlockSize:   best.BlockSize,
-		CurrentBlockWeight: best.BlockWeight,
-		CurrentBlockTx:     best.NumTxns,
-		Difficulty:         getDifficultyRatio(best.Bits, s.cfg.ChainParams),
-		Generate:           s.cfg.CPUMiner.IsMining(),
-		GenProcLimit:       s.cfg.CPUMiner.NumWorkers(),
-		HashesPerSec:       int64(s.cfg.CPUMiner.HashesPerSecond()),
-		NetworkHashPS:      networkHashesPerSec,
-		PooledTx:           uint64(s.cfg.TxMemPool.Count()),
-		TestNet:            cfg.TestNet3,
-	}
-	return &result, nil
 }
 
 // handleGetNetTotals implements the getnettotals command.
@@ -3452,40 +3415,40 @@ func handleSendRawTransaction(s *rpcServer, cmd interface{}, closeChan <-chan st
 }
 
 // handleSetGenerate implements the setgenerate command.
-func handleSetGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.SetGenerateCmd)
+//func handleSetGenerate(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	//c := cmd.(*btcjson.SetGenerateCmd)
 
 	// Disable generation regardless of the provided generate flag if the
 	// maximum number of threads (goroutines for our purposes) is 0.
 	// Otherwise enable or disable it depending on the provided flag.
-	generate := c.Generate
-	genProcLimit := -1
-	if c.GenProcLimit != nil {
-		genProcLimit = *c.GenProcLimit
-	}
-	if genProcLimit == 0 {
-		generate = false
-	}
+	//generate := c.Generate
+	//genProcLimit := -1
+	//if c.GenProcLimit != nil {
+	//	genProcLimit = *c.GenProcLimit
+	//}
+	//if genProcLimit == 0 {
+	//	generate = false
+	//}
 
-	if !generate {
-		s.cfg.CPUMiner.Stop()
-	} else {
-		// Respond with an error if there are no addresses to pay the
-		// created blocks to.
-		if len(cfg.miningAddrs) == 0 {
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInternal.Code,
-				Message: "No payment addresses specified " +
-					"via --miningaddr",
-			}
-		}
-
-		// It's safe to call start even if it's already started.
-		s.cfg.CPUMiner.SetNumWorkers(int32(genProcLimit))
-		s.cfg.CPUMiner.Start()
-	}
-	return nil, nil
-}
+	//if !generate {
+	//	s.cfg.CPUMiner.Stop()
+	//} else {
+	//	// Respond with an error if there are no addresses to pay the
+	//	// created blocks to.
+	//	if len(cfg.miningAddrs) == 0 {
+	//		return nil, &btcjson.RPCError{
+	//			Code: btcjson.ErrRPCInternal.Code,
+	//			Message: "No payment addresses specified " +
+	//				"via --miningaddr",
+	//		}
+	//	}
+	//
+	//	// It's safe to call start even if it's already started.
+	//	s.cfg.CPUMiner.SetNumWorkers(int32(genProcLimit))
+	//	s.cfg.CPUMiner.Start()
+	//}
+	//return nil, nil
+//}
 
 // handleStop implements the stop command.
 func handleStop(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
@@ -4357,7 +4320,6 @@ type rpcserverConfig struct {
 	// the CPU.  CPU mining is typically only useful for test purposes when
 	// doing regression or simulation testing.
 	Generator *mining.BlkTmplGenerator
-	CPUMiner  *cpuminer.CPUMiner
 
 	// These fields define any optional indexes the RPC server can make use
 	// of to provide additional data when queried.
