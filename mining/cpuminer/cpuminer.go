@@ -48,7 +48,7 @@ var (
 	// defaultNumWorkers is the default number of workers to use for mining
 	// and is based on the number of processor cores.  This helps ensure the
 	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = uint32(runtime.NumCPU())
+	defaultNumWorkers = 1//uint32(runtime.NumCPU())
 )
 
 // Config is a descriptor containing the cpu miner configuration.
