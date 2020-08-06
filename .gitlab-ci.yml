@@ -43,7 +43,7 @@ build:
   script:
     - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh ${REMOTE} "(docker stop ${CORE_NAME} || true) && (docker rm ${CORE_NAME} || true)"
-    - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:8444 -p ${CORE_PORT_2}:8334 --restart=always --name ${CORE_NAME} $IMAGE"
+    - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:${CORE_PORT_1} -p ${CORE_PORT_2}:${CORE_PORT_2} --restart=always --name ${CORE_NAME} $IMAGE"
 
 
 dev-shard-core-1:
