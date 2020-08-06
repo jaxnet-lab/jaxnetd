@@ -12,7 +12,6 @@ import (
 	"github.com/minio/sha256-simd"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"math/rand"
-	"runtime"
 	"sync"
 	"time"
 
@@ -48,7 +47,7 @@ var (
 	// defaultNumWorkers is the default number of workers to use for mining
 	// and is based on the number of processor cores.  This helps ensure the
 	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = 1//uint32(runtime.NumCPU())
+	defaultNumWorkers = uint32(1) //uint32(runtime.NumCPU())
 )
 
 // Config is a descriptor containing the cpu miner configuration.
