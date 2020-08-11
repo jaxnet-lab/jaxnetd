@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -69,4 +72,48 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if !rpcpassRegexp.Match(content) {
 		t.Error("Could not find rpcpass in generated default config file.")
 	}
+}
+
+func TestYAMLOverwrite(t *testing.T) {
+	var testYAMLCfg = `
+listeners:
+  - "0.0.0.0:8333"
+
+rpc_listeners:
+  - ":18334"
+
+rpc_pass: "rpc_pass"
+rpc_user: "rpc_user"
+
+simnet: true
+`
+
+	var cfg = config{
+		AddPeers: []string{
+			"127.0.0.0:18444",
+			"127.0.0.0:28444",
+			"127.0.0.0:38444",
+		},
+		DataDir:         defaultDataDirname,
+		DbType:          defaultDbType,
+		RPCPass:         "password",
+		RPCUser:         "user",
+		SigCacheMaxSize: 0,
+		SimNet:          false,
+	}
+
+	err := yaml.Unmarshal([]byte(testYAMLCfg), &cfg)
+	assert.NoError(t, err)
+	assert.Equal(t, defaultDataDirname, cfg.DataDir)
+	assert.Equal(t, defaultDbType, cfg.DbType)
+	assert.Equal(t, "rpc_user", cfg.RPCUser)
+	assert.Equal(t, "rpc_pass", cfg.RPCPass)
+	assert.Equal(t, true, cfg.SimNet)
+	assert.Equal(t, []string{"0.0.0.0:8333"}, cfg.Listeners)
+	assert.Equal(t, []string{":18334"}, cfg.RPCListeners)
+	assert.Equal(t, []string{
+		"127.0.0.0:18444",
+		"127.0.0.0:28444",
+		"127.0.0.0:38444",
+	}, cfg.AddPeers)
 }

@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"io"
 	"net"
 	"os"
@@ -22,8 +21,9 @@ import (
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
@@ -31,10 +31,11 @@ import (
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	defaultConfigFilename        = "shard.conf"
+	defaultConfigFilename        = "shard.yaml"
 	defaultDataDirname           = "data"
 	defaultLogLevel              = "info"
 	defaultLogDirname            = "logs"
@@ -61,7 +62,7 @@ const (
 	defaultMaxOrphanTransactions = 100
 	defaultMaxOrphanTxSize       = 100000
 	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-btcd.conf"
+	sampleConfigFilename         = "sample-btcd.yaml"
 	defaultTxIndex               = false
 	defaultAddrIndex             = false
 )
@@ -93,79 +94,79 @@ func minUint32(a, b uint32) uint32 {
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	AddCheckpoints       []string      `long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	AddPeers             []string      `short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
-	AddrIndex            bool          `long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
-	AgentBlacklist       []string      `long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
-	AgentWhitelist       []string      `long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
-	BanDuration          time.Duration `long:"banduration" description:"How long to ban misbehaving peers.  Valid time units are {s, m, h}.  Minimum 1 second"`
-	BanThreshold         uint32        `long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
-	BlockMaxSize         uint32        `long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
-	BlockMinSize         uint32        `long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
-	BlockMaxWeight       uint32        `long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
-	BlockMinWeight       uint32        `long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
-	BlockPrioritySize    uint32        `long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
-	BlocksOnly           bool          `long:"blocksonly" description:"Do not accept transactions from remote peers."`
-	ConfigFile           string        `short:"C" long:"configfile" description:"Path to configuration file"`
-	ConnectPeers         []string      `long:"connect" description:"Connect only to the specified peers at startup"`
-	CPUProfile           string        `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	DataDir              string        `short:"b" long:"datadir" description:"Directory to store data"`
-	DbType               string        `long:"dbtype" description:"Database backend to use for the Block Chain"`
-	DebugLevel           string        `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	DropAddrIndex        bool          `long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropCfIndex          bool          `long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
-	DropTxIndex          bool          `long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
-	ExternalIPs          []string      `long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
-	Generate             bool          `long:"generate" description:"Generate (mine) bitcoins using the CPU"`
-	FreeTxRelayLimit     float64       `long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
-	Listeners            []string      `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
-	LogDir               string        `long:"logdir" description:"Directory to log output."`
-	MaxOrphanTxs         int           `long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	MaxPeers             int           `long:"maxpeers" description:"Max number of inbound and outbound peers"`
-	MiningAddrs          []string      `long:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
-	MinRelayTxFee        float64       `long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
-	DisableBanning       bool          `long:"nobanning" description:"Disable banning of misbehaving peers"`
-	NoCFilters           bool          `long:"nocfilters" description:"Disable committed filtering (CF) support"`
-	DisableCheckpoints   bool          `long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
-	DisableDNSSeed       bool          `long:"nodnsseed" description:"Disable DNS seeding for peers"`
-	DisableListen        bool          `long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
-	NoOnion              bool          `long:"noonion" description:"Disable connecting to tor hidden services"`
-	NoPeerBloomFilters   bool          `long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
-	NoRelayPriority      bool          `long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
-	DisableRPC           bool          `long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
-	DisableTLS           bool          `long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
-	OnionProxy           string        `long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	OnionProxyPass       string        `long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
-	OnionProxyUser       string        `long:"onionuser" description:"Username for onion proxy server"`
-	Profile              string        `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	Proxy                string        `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass            string        `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	ProxyUser            string        `long:"proxyuser" description:"Username for proxy server"`
-	RegressionTest       bool          `long:"regtest" description:"Use the regression test network"`
-	RejectNonStd         bool          `long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
-	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
-	RelayNonStd          bool          `long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
-	RPCCert              string        `long:"rpccert" description:"File containing the certificate file"`
-	RPCKey               string        `long:"rpckey" description:"File containing the certificate key"`
-	RPCLimitPass         string        `long:"rpclimitpass" default-mask:"-" description:"Password for limited RPC connections"`
-	RPCLimitUser         string        `long:"rpclimituser" description:"Username for limited RPC connections"`
-	RPCListeners         []string      `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 8334, testnet: 18334)"`
-	RPCMaxClients        int           `long:"rpcmaxclients" description:"Max number of RPC clients for standard connections"`
-	RPCMaxConcurrentReqs int           `long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
-	RPCMaxWebsockets     int           `long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
-	RPCQuirks            bool          `long:"rpcquirks" description:"Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE: Discouraged unless interoperability issues need to be worked around"`
-	RPCPass              string        `short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
-	RPCUser              string        `short:"u" long:"rpcuser" description:"Username for RPC connections"`
-	SigCacheMaxSize      uint          `long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
-	SimNet               bool          `long:"simnet" description:"Use the simulation test network"`
-	TestNet3             bool          `long:"testnet" description:"Use the test network"`
-	TorIsolation         bool          `long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
-	TrickleInterval      time.Duration `long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected peer"`
-	TxIndex              bool          `long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
-	UserAgentComments    []string      `long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
-	Upnp                 bool          `long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
-	ShowVersion          bool          `short:"V" long:"version" description:"Display version information and exit"`
-	Whitelists           []string      `long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
+	AddCheckpoints       []string      `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+	AddPeers             []string      `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
+	AddrIndex            bool          `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+	AgentBlacklist       []string      `yaml:"agent_blacklist" long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
+	AgentWhitelist       []string      `yaml:"agent_whitelist" long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
+	BanDuration          time.Duration `yaml:"ban_duration" long:"banduration" description:"How long to ban misbehaving peers.  Valid time units are {s, m, h}.  Minimum 1 second"`
+	BanThreshold         uint32        `yaml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
+	BlockMaxSize         uint32        `yaml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
+	BlockMinSize         uint32        `yaml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
+	BlockMaxWeight       uint32        `yaml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
+	BlockMinWeight       uint32        `yaml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
+	BlockPrioritySize    uint32        `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
+	BlocksOnly           bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
+	ConfigFile           string        `yaml:"config_file" short:"C" long:"configfile" description:"Path to configuration file"`
+	ConnectPeers         []string      `yaml:"connect_peers" long:"connect" description:"Connect only to the specified peers at startup"`
+	CPUProfile           string        `yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	DataDir              string        `yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
+	DbType               string        `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+	DebugLevel           string        `yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	DropAddrIndex        bool          `yaml:"drop_addr_index" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropCfIndex          bool          `yaml:"drop_cf_index" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
+	DropTxIndex          bool          `yaml:"drop_tx_index" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+	ExternalIPs          []string      `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
+	Generate             bool          `yaml:"generate" long:"generate" description:"Generate (mine) bitcoins using the CPU"`
+	FreeTxRelayLimit     float64       `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
+	Listeners            []string      `yaml:"listeners" long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
+	LogDir               string        `yaml:"log_dir" long:"logdir" description:"Directory to log output."`
+	MaxOrphanTxs         int           `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
+	MaxPeers             int           `yaml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
+	MiningAddrs          []string      `yaml:"mining_addrs" long:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
+	MinRelayTxFee        float64       `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
+	DisableBanning       bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
+	NoCFilters           bool          `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
+	DisableCheckpoints   bool          `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
+	DisableDNSSeed       bool          `yaml:"disable_dns_seed" long:"nodnsseed" description:"Disable DNS seeding for peers"`
+	DisableListen        bool          `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
+	NoOnion              bool          `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
+	NoPeerBloomFilters   bool          `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
+	NoRelayPriority      bool          `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
+	DisableRPC           bool          `yaml:"disable_rpc" long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
+	DisableTLS           bool          `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+	OnionProxy           string        `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	OnionProxyPass       string        `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
+	OnionProxyUser       string        `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy server"`
+	Profile              string        `yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	Proxy                string        `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyPass            string        `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+	ProxyUser            string        `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
+	RegressionTest       bool          `yaml:"regression_test" long:"regtest" description:"Use the regression test network"`
+	RejectNonStd         bool          `yaml:"reject_non_std" long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
+	RejectReplacement    bool          `yaml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+	RelayNonStd          bool          `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
+	RPCCert              string        `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
+	RPCKey               string        `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
+	RPCLimitPass         string        `yaml:"rpc_limit_pass" long:"rpclimitpass" default-mask:"-" description:"Password for limited RPC connections"`
+	RPCLimitUser         string        `yaml:"rpc_limit_user" long:"rpclimituser" description:"Username for limited RPC connections"`
+	RPCListeners         []string      `yaml:"rpc_listeners" long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 8334, testnet: 18334)"`
+	RPCMaxClients        int           `yaml:"rpc_max_clients" long:"rpcmaxclients" description:"Max number of RPC clients for standard connections"`
+	RPCMaxConcurrentReqs int           `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
+	RPCMaxWebsockets     int           `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+	RPCQuirks            bool          `yaml:"rpc_quirks" long:"rpcquirks" description:"Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE: Discouraged unless interoperability issues need to be worked around"`
+	RPCPass              string        `yaml:"rpc_pass" short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
+	RPCUser              string        `yaml:"rpc_user" short:"u" long:"rpcuser" description:"Username for RPC connections"`
+	SigCacheMaxSize      uint          `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
+	SimNet               bool          `yaml:"simnet" long:"simnet" description:"Use the simulation test network"`
+	TestNet3             bool          `yaml:"testnet" long:"testnet" description:"Use the test network"`
+	TorIsolation         bool          `yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
+	TrickleInterval      time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected peer"`
+	TxIndex              bool          `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
+	UserAgentComments    []string      `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
+	Upnp                 bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
+	ShowVersion          bool          `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
+	Whitelists           []string      `yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 	lookup               func(string) ([]net.IP, error)
 	oniondial            func(string, string, time.Duration) (net.Conn, error)
 	dial                 func(string, string, time.Duration) (net.Conn, error)
@@ -481,24 +482,38 @@ func loadConfig() (*config, []string, error) {
 	if !(preCfg.RegressionTest || preCfg.SimNet) || preCfg.ConfigFile !=
 		defaultConfigFile {
 
-		if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
+		stats, err := os.Stat(preCfg.ConfigFile)
+		if os.IsNotExist(err) {
 			err := createDefaultConfigFile(preCfg.ConfigFile)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating a "+
 					"default config file: %v\n", err)
 			}
 		}
-
-		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
+		cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
 		if err != nil {
-			if _, ok := err.(*os.PathError); !ok {
-				fmt.Fprintf(os.Stderr, "Error parsing config "+
-					"file: %v\n", err)
-				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
-			}
-			configFileError = err
+			_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
+			_, _ = fmt.Fprintln(os.Stderr, usageMessage)
+			return nil, nil, err
 		}
+
+		ext := filepath.Ext(stats.Name())
+		switch ext {
+		case ".conf":
+			err = flags.NewIniParser(parser).Parse(cfgFile)
+			if err != nil {
+				configFileError = err
+			}
+		case ".yaml":
+			err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+			if err != nil {
+				configFileError = err
+			}
+		default:
+			_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
+			return nil, nil, errors.New("Invalid file extension: " + ext)
+		}
+
 	}
 
 	// Don't add peers from the config file when in regression test mode.
@@ -919,7 +934,7 @@ func loadConfig() (*config, []string, error) {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},
-			"0.0.0.0":   {}, //TODO: setup tls
+			"0.0.0.0":   {}, // TODO: setup tls
 			"::1":       {},
 		}
 		for _, addr := range cfg.RPCListeners {
