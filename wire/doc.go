@@ -70,7 +70,7 @@ these parameters so the next sections can build on them.
 
 Protocol Version
 
-The protocol version should be negotiated with the remote peer at a higher
+The protocol version should be negotiated with the remote server at a higher
 level than this package via the version (MsgVersion) message exchange, however,
 this package provides the wire.ProtocolVersion constant which indicates the
 latest protocol version this package supports and is typically the value to use
@@ -110,7 +110,7 @@ Reading Messages
 
 In order to unmarshall bitcoin messages from the wire, use the ReadMessage
 function.  It accepts any io.Reader, but typically this will be a net.Conn to
-a remote node running a bitcoin peer.  Example syntax is:
+a remote node running a bitcoin server.  Example syntax is:
 
 	// Reads and validates the next bitcoin message from conn using the
 	// protocol version pver and the bitcoin network btcnet.  The returns
@@ -125,8 +125,8 @@ Writing Messages
 
 In order to marshall bitcoin messages to the wire, use the WriteMessage
 function.  It accepts any io.Writer, but typically this will be a net.Conn to
-a remote node running a bitcoin peer.  Example syntax to request addresses
-from a remote peer is:
+a remote node running a bitcoin server.  Example syntax to request addresses
+from a remote server is:
 
 	// Create a new getaddr bitcoin message.
 	msg := wire.NewMsgGetAddr()

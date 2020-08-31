@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-// MsgVerAck defines a bitcoin verack message which is used for a peer to
+// MsgVerAck defines a bitcoin verack message which is used for a server to
 // acknowledge a version message (MsgVersion) after it has used the information
 // to negotiate parameters.  It implements the Message interface.
 //

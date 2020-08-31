@@ -57,8 +57,8 @@ func (invtype InvType) String() string {
 }
 
 // InvVect defines a bitcoin inventory vector which is used to describe data,
-// as specified by the Type field, that a peer wants, has, or does not have to
-// another peer.
+// as specified by the Type field, that a server wants, has, or does not have to
+// another server.
 type InvVect struct {
 	Type InvType        // Type of data
 	Hash chainhash.Hash // Hash of the data

@@ -14,7 +14,7 @@ import (
 //
 // For versions BIP0031Version and earlier, it is used primarily to confirm
 // that a connection is still valid.  A transmission error is typically
-// interpreted as a closed connection and that the peer should be removed.
+// interpreted as a closed connection and that the server should be removed.
 // For versions AFTER BIP0031Version it contains an identifier which can be
 // returned in the pong message to determine network timing.
 //

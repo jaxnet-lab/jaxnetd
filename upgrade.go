@@ -5,6 +5,7 @@
 package main
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/shards"
 	"io"
 	"os"
 	"path/filepath"
@@ -51,7 +52,7 @@ func oldBtcdHomeDir() string {
 // upgradeDBPathNet moves the database for a specific network from its
 // location prior to btcd version 0.2.0 and uses heuristics to ascertain the old
 // database type to rename to the new format.
-func upgradeDBPathNet(oldDbPath, netName string) error {
+func upgradeDBPathNet(cfg *shards.Config, oldDbPath, netName string) error {
 	// Prior to version 0.2.0, the database was named the same thing for
 	// both sqlite and leveldb.  Use heuristics to figure out the type
 	// of the database and move it to the new path and name introduced with
@@ -90,15 +91,15 @@ func upgradeDBPathNet(oldDbPath, netName string) error {
 
 // upgradeDBPaths moves the databases from their locations prior to btcd
 // version 0.2.0 to their new locations.
-func upgradeDBPaths() error {
+func upgradeDBPaths(cfg *shards.Config) error {
 	// Prior to version 0.2.0, the databases were in the "db" directory and
 	// their names were suffixed by "testnet" and "regtest" for their
 	// respective networks.  Check for the old database and update it to the
 	// new path introduced with version 0.2.0 accordingly.
 	oldDbRoot := filepath.Join(oldBtcdHomeDir(), "db")
-	upgradeDBPathNet(filepath.Join(oldDbRoot, "btcd.db"), "mainnet")
-	upgradeDBPathNet(filepath.Join(oldDbRoot, "btcd_testnet.db"), "testnet")
-	upgradeDBPathNet(filepath.Join(oldDbRoot, "btcd_regtest.db"), "regtest")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd.db"), "mainnet")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd_testnet.db"), "testnet")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd_regtest.db"), "regtest")
 
 	// Remove the old db directory.
 	return os.RemoveAll(oldDbRoot)
@@ -166,8 +167,8 @@ func upgradeDataPaths() error {
 }
 
 // doUpgrades performs upgrades to btcd as new versions require it.
-func doUpgrades() error {
-	err := upgradeDBPaths()
+func doUpgrades(cfg *shards.Config) error {
+	err := upgradeDBPaths(cfg)
 	if err != nil {
 		return err
 	}

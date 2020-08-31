@@ -1075,7 +1075,7 @@ func (b *BlockChain) createChainState() error {
 		}
 
 		// Save the genesis block to the block index database.
-		err = dbStoreBlockNode(dbTx, node)
+		err = dbStoreBlockNode(b.chain, dbTx, node)
 		if err != nil {
 			return err
 		}
@@ -1154,7 +1154,7 @@ func (b *BlockChain) initChainState() error {
 		var lastNode *blockNode
 		cursor := blockIndexBucket.Cursor()
 		for ok := cursor.First(); ok; ok = cursor.Next() {
-			header, status, err := deserializeBlockRow(cursor.Value())
+			header, status, err := deserializeBlockRow(b.chain, cursor.Value())
 			if err != nil {
 				return err
 			}
@@ -1208,7 +1208,9 @@ func (b *BlockChain) initChainState() error {
 		if err != nil {
 			return err
 		}
-		var block wire.MsgBlock
+		block := wire.MsgBlock{
+			Header: b.chain.NewHeader(),
+		}
 		err = block.Deserialize(bytes.NewReader(blockBytes))
 		if err != nil {
 			return err
@@ -1254,7 +1256,7 @@ func (b *BlockChain) initChainState() error {
 
 // deserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func deserializeBlockRow(blockRow []byte) (chain.BlockHeader, blockStatus, error) {
+func deserializeBlockRow(chain chain.IChain, blockRow []byte) (chain.BlockHeader, blockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	header := chain.NewHeader()
@@ -1273,7 +1275,7 @@ func deserializeBlockRow(blockRow []byte) (chain.BlockHeader, blockStatus, error
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (chain.BlockHeader, error) {
+func dbFetchHeaderByHash(chain chain.IChain, dbTx database.Tx, hash *chainhash.Hash) (chain.BlockHeader, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
@@ -1290,19 +1292,19 @@ func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (chain.BlockHea
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
 // block header for the provided height.
-func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (chain.BlockHeader, error) {
+func dbFetchHeaderByHeight(chain chain.IChain, dbTx database.Tx, height int32) (chain.BlockHeader, error) {
 	hash, err := dbFetchHashByHeight(dbTx, height)
 	if err != nil {
 		return nil, err
 	}
 
-	return dbFetchHeaderByHash(dbTx, hash)
+	return dbFetchHeaderByHash(chain, dbTx, hash)
 }
 
 // dbFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a btcutil.Block
 // with the height set.
-func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, error) {
+func dbFetchBlockByNode(chain chain.IChain, dbTx database.Tx, node *blockNode) (*btcutil.Block, error) {
 	// Load the raw block bytes from the database.
 	blockBytes, err := dbTx.FetchBlock(&node.hash)
 	if err != nil {
@@ -1310,7 +1312,7 @@ func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, erro
 	}
 
 	// Create the encapsulated block and set the height appropriately.
-	block, err := btcutil.NewBlockFromBytes(blockBytes)
+	block, err := btcutil.NewBlockFromBytes(chain, blockBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1321,7 +1323,7 @@ func dbFetchBlockByNode(dbTx database.Tx, node *blockNode) (*btcutil.Block, erro
 
 // dbStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func dbStoreBlockNode(dbTx database.Tx, node *blockNode) error {
+func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node *blockNode) error {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
 	header := node.Header()
@@ -1379,7 +1381,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
 	var block *btcutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = dbFetchBlockByNode(dbTx, node)
+		block, err = dbFetchBlockByNode(b.chain, dbTx, node)
 		return err
 	})
 	return block, err
@@ -1402,7 +1404,7 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, error) {
 	var block *btcutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = dbFetchBlockByNode(dbTx, node)
+		block, err = dbFetchBlockByNode(b.chain, dbTx, node)
 		return err
 	})
 	return block, err

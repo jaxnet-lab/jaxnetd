@@ -21,9 +21,9 @@ const MaxUserAgentLen = 256
 const DefaultUserAgent = "/btcwire:0.5.0/"
 
 // MsgVersion implements the Message interface and represents a bitcoin version
-// message.  It is used for a peer to advertise itself as soon as an outbound
-// connection is made.  The remote peer then uses this information along with
-// its own to negotiate.  The remote peer must then respond with a version
+// message.  It is used for a server to advertise itself as soon as an outbound
+// connection is made.  The remote server then uses this information along with
+// its own to negotiate.  The remote server must then respond with a version
 // message of its own containing the negotiated values followed by a verack
 // message (MsgVerAck).  This exchange must take place before any further
 // communication is allowed to proceed.
@@ -37,10 +37,10 @@ type MsgVersion struct {
 	// Time the message was generated.  This is encoded as an int64 on the wire.
 	Timestamp time.Time
 
-	// Address of the remote peer.
+	// Address of the remote server.
 	AddrYou NetAddress
 
-	// Address of the local peer.
+	// Address of the local server.
 	AddrMe NetAddress
 
 	// Unique value associated with message that is used to detect self
@@ -54,17 +54,17 @@ type MsgVersion struct {
 	// Last block seen by the generator of the version message.
 	LastBlock int32
 
-	// Don't announce transactions to peer.
+	// Don't announce transactions to server.
 	DisableRelayTx bool
 }
 
-// HasService returns whether the specified service is supported by the peer
+// HasService returns whether the specified service is supported by the server
 // that generated the message.
 func (msg *MsgVersion) HasService(service ServiceFlag) bool {
 	return msg.Services&service == service
 }
 
-// AddService adds service as a supported service by the peer generating the
+// AddService adds service as a supported service by the server generating the
 // message.
 func (msg *MsgVersion) AddService(service ServiceFlag) {
 	msg.Services |= service

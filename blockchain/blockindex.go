@@ -325,7 +325,7 @@ func (bi *blockIndex) flushToDB() error {
 
 	err := bi.db.Update(func(dbTx database.Tx) error {
 		for node := range bi.dirty {
-			err := dbStoreBlockNode(dbTx, node)
+			err := dbStoreBlockNode(bi.db.Chain(), dbTx, node)
 			if err != nil {
 				return err
 			}

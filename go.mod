@@ -23,6 +23,7 @@ require (
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/stretchr/testify v1.6.1
 	go.etcd.io/bbolt v1.3.3
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect

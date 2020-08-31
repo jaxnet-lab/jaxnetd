@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"io"
 )
 
@@ -230,9 +231,9 @@ func NewBlock(msgBlock *wire.MsgBlock) *Block {
 
 // NewBlockFromBytes returns a new instance of a bitcoin block given the
 // serialized bytes.  See Block.
-func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
+func NewBlockFromBytes(chain chain.IChain, serializedBlock []byte) (*Block, error) {
 	br := bytes.NewReader(serializedBlock)
-	b, err := NewBlockFromReader(br)
+	b, err := NewBlockFromReader(chain, br)
 	if err != nil {
 		return nil, err
 	}
@@ -242,9 +243,11 @@ func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
 
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
-func NewBlockFromReader(r io.Reader) (*Block, error) {
+func NewBlockFromReader(chain chain.IChain, r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
-	var msgBlock wire.MsgBlock
+	msgBlock := wire.MsgBlock{
+		Header: chain.NewHeader(),
+	}
 	err := msgBlock.Deserialize(r)
 	if err != nil {
 		return nil, err

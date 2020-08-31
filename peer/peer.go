@@ -10,6 +10,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
@@ -429,6 +430,8 @@ type Peer struct {
 	lastSend      int64
 	connected     int32
 	disconnect    int32
+
+	chain chain.IChain
 
 	conn net.Conn
 
@@ -1008,7 +1011,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 
 // readMessage reads the next bitcoin message from the peer with logging.
 func (p *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, []byte, error) {
-	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.conn,
+	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.chain, p.conn,
 		p.ProtocolVersion(), p.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&p.bytesReceived, uint64(n))
 	if p.cfg.Listeners.OnRead != nil {

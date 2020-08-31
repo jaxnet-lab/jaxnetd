@@ -52,37 +52,37 @@ const (
 	FeeFilterVersion uint32 = 70013
 )
 
-// ServiceFlag identifies services supported by a bitcoin peer.
+// ServiceFlag identifies services supported by a bitcoin server.
 type ServiceFlag uint64
 
 const (
-	// SFNodeNetwork is a flag used to indicate a peer is a full node.
+	// SFNodeNetwork is a flag used to indicate a server is a full node.
 	SFNodeNetwork ServiceFlag = 1 << iota
 
-	// SFNodeGetUTXO is a flag used to indicate a peer supports the
+	// SFNodeGetUTXO is a flag used to indicate a server supports the
 	// getutxos and utxos commands (BIP0064).
 	SFNodeGetUTXO
 
-	// SFNodeBloom is a flag used to indicate a peer supports bloom
+	// SFNodeBloom is a flag used to indicate a server supports bloom
 	// filtering.
 	SFNodeBloom
 
-	// SFNodeWitness is a flag used to indicate a peer supports blocks
+	// SFNodeWitness is a flag used to indicate a server supports blocks
 	// and transactions including witness data (BIP0144).
 	SFNodeWitness
 
-	// SFNodeXthin is a flag used to indicate a peer supports xthin blocks.
+	// SFNodeXthin is a flag used to indicate a server supports xthin blocks.
 	SFNodeXthin
 
-	// SFNodeBit5 is a flag used to indicate a peer supports a service
+	// SFNodeBit5 is a flag used to indicate a server supports a service
 	// defined by bit 5.
 	SFNodeBit5
 
-	// SFNodeCF is a flag used to indicate a peer supports committed
+	// SFNodeCF is a flag used to indicate a server supports committed
 	// filters (CFs).
 	SFNodeCF
 
-	// SFNode2X is a flag used to indicate a peer is running the Segwit2X
+	// SFNode2X is a flag used to indicate a server is running the Segwit2X
 	// software.
 	SFNode2X
 )

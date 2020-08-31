@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"time"
@@ -599,7 +598,7 @@ mempoolLoop:
 	// The starting block size is the size of the block header plus the max
 	// possible transaction count size, plus the size of the coinbase
 	// transaction.
-	blockWeight := uint32((chain.BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
+	blockWeight := uint32((g.chain.Chain().BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
 		int(blockchain.GetTransactionWeight(coinbaseTx)))
 	blockSigOpCost := coinbaseSigOpCost
 	totalFees := int64(0)

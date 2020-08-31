@@ -10,6 +10,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"io"
 	"net"
 	"os"
@@ -90,91 +92,115 @@ func minUint32(a, b uint32) uint32 {
 	return b
 }
 
-// config defines the configuration options for btcd.
 //
-// See loadConfig for details on the configuration load process.
-type config struct {
-	AddCheckpoints       []string      `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	AddPeers             []string      `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a peer to connect with at startup"`
-	AddrIndex            bool          `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
-	AgentBlacklist       []string      `yaml:"agent_blacklist" long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
-	AgentWhitelist       []string      `yaml:"agent_whitelist" long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
-	BanDuration          time.Duration `yaml:"ban_duration" long:"banduration" description:"How long to ban misbehaving peers.  Valid time units are {s, m, h}.  Minimum 1 second"`
-	BanThreshold         uint32        `yaml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
-	BlockMaxSize         uint32        `yaml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
-	BlockMinSize         uint32        `yaml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
-	BlockMaxWeight       uint32        `yaml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
-	BlockMinWeight       uint32        `yaml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
-	BlockPrioritySize    uint32        `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
-	BlocksOnly           bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
-	ConfigFile           string        `yaml:"config_file" short:"C" long:"configfile" description:"Path to configuration file"`
-	ConnectPeers         []string      `yaml:"connect_peers" long:"connect" description:"Connect only to the specified peers at startup"`
-	CPUProfile           string        `yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	DataDir              string        `yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
-	DbType               string        `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
-	DebugLevel           string        `yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	DropAddrIndex        bool          `yaml:"drop_addr_index" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropCfIndex          bool          `yaml:"drop_cf_index" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
-	DropTxIndex          bool          `yaml:"drop_tx_index" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
-	ExternalIPs          []string      `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
-	Generate             bool          `yaml:"generate" long:"generate" description:"Generate (mine) bitcoins using the CPU"`
-	FreeTxRelayLimit     float64       `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
-	Listeners            []string      `yaml:"listeners" long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
-	LogDir               string        `yaml:"log_dir" long:"logdir" description:"Directory to log output."`
-	MaxOrphanTxs         int           `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	MaxPeers             int           `yaml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
-	MiningAddrs          []string      `yaml:"mining_addrs" long:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
-	MinRelayTxFee        float64       `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
-	DisableBanning       bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
-	NoCFilters           bool          `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
-	DisableCheckpoints   bool          `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
-	DisableDNSSeed       bool          `yaml:"disable_dns_seed" long:"nodnsseed" description:"Disable DNS seeding for peers"`
-	DisableListen        bool          `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
-	NoOnion              bool          `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
-	NoPeerBloomFilters   bool          `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
-	NoRelayPriority      bool          `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
-	DisableRPC           bool          `yaml:"disable_rpc" long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
-	DisableTLS           bool          `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
-	OnionProxy           string        `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	OnionProxyPass       string        `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
-	OnionProxyUser       string        `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy server"`
-	Profile              string        `yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	Proxy                string        `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass            string        `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	ProxyUser            string        `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
-	RegressionTest       bool          `yaml:"regression_test" long:"regtest" description:"Use the regression test network"`
-	RejectNonStd         bool          `yaml:"reject_non_std" long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
-	RejectReplacement    bool          `yaml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
-	RelayNonStd          bool          `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
-	RPCCert              string        `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
-	RPCKey               string        `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
-	RPCLimitPass         string        `yaml:"rpc_limit_pass" long:"rpclimitpass" default-mask:"-" description:"Password for limited RPC connections"`
-	RPCLimitUser         string        `yaml:"rpc_limit_user" long:"rpclimituser" description:"Username for limited RPC connections"`
-	RPCListeners         []string      `yaml:"rpc_listeners" long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 8334, testnet: 18334)"`
-	RPCMaxClients        int           `yaml:"rpc_max_clients" long:"rpcmaxclients" description:"Max number of RPC clients for standard connections"`
-	RPCMaxConcurrentReqs int           `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
-	RPCMaxWebsockets     int           `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
-	RPCQuirks            bool          `yaml:"rpc_quirks" long:"rpcquirks" description:"Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE: Discouraged unless interoperability issues need to be worked around"`
-	RPCPass              string        `yaml:"rpc_pass" short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
-	RPCUser              string        `yaml:"rpc_user" short:"u" long:"rpcuser" description:"Username for RPC connections"`
-	SigCacheMaxSize      uint          `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
-	SimNet               bool          `yaml:"simnet" long:"simnet" description:"Use the simulation test network"`
-	TestNet3             bool          `yaml:"testnet" long:"testnet" description:"Use the test network"`
-	TorIsolation         bool          `yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
-	TrickleInterval      time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected peer"`
-	TxIndex              bool          `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
-	UserAgentComments    []string      `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
-	Upnp                 bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
-	ShowVersion          bool          `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
-	Whitelists           []string      `yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
-	lookup               func(string) ([]net.IP, error)
-	oniondial            func(string, string, time.Duration) (net.Conn, error)
-	dial                 func(string, string, time.Duration) (net.Conn, error)
-	addCheckpoints       []chaincfg.Checkpoint
-	miningAddrs          []btcutil.Address
-	minRelayTxFee        btcutil.Amount
-	whitelists           []*net.IPNet
-}
+//// config defines the configuration options for btcd.
+////
+//// See loadConfig for details on the configuration load process.
+//
+//type rpcConfig struct {
+//	Listeners  []string `yaml:"listeners"`
+//	MaxClients int      `yaml:"maxclients"`
+//	User       string   `yaml:"user"`
+//	Password   string   `yaml:"password"`
+//}
+//
+//type chainConfig struct {
+//	DbType         string   `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+//	Peers          []string `yaml:"peers" description:"Add a server to connect with at startup"`
+//	Listeners      []string `yaml:"listeners" long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
+//	AgentBlacklist []string `yaml:"agent_blacklist" long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
+//	AgentWhitelist []string `yaml:"agent_whitelist" long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
+//}
+//
+//type shardConfig struct {
+//}
+//
+//type minerConfig struct {
+//	Generate    bool     `yaml:"generate" description:"Generate no blocks"`
+//	MiningAddrs []string `yaml:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
+//}
+//
+//type config struct {
+//	Beacon            chainConfig   `yaml:"beacon" long:"beacon" description:"Beacon chain"`
+//	Miner             minerConfig   `yaml:"miner" long:"miner" description:"Miner config"`
+//	Rpc               rpcConfig     `yaml:"rpc"`
+//	AddCheckpoints    []string      `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+//	AddPeers          []string      `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a server to connect with at startup"`
+//	AddrIndex         bool          `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+//	BanDuration       time.Duration `yaml:"ban_duration" long:"banduration" description:"How long to ban misbehaving peers.  Valid time units are {s, m, h}.  Minimum 1 second"`
+//	BanThreshold      uint32        `yaml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
+//	BlockMaxSize      uint32        `yaml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
+//	BlockMinSize      uint32        `yaml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
+//	BlockMaxWeight    uint32        `yaml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
+//	BlockMinWeight    uint32        `yaml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
+//	BlockPrioritySize uint32        `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
+//	BlocksOnly        bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
+//	ConfigFile        string        `yaml:"config_file" short:"C" long:"configfile" description:"Path to configuration file"`
+//	ConnectPeers      []string      `yaml:"connect_peers" long:"connect" description:"Connect only to the specified peers at startup"`
+//	CPUProfile        string        `yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
+//	DataDir           string        `yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
+//
+//	DebugLevel    string   `yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+//	DropAddrIndex bool     `yaml:"drop_addr_index" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+//	DropCfIndex   bool     `yaml:"drop_cf_index" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
+//	DropTxIndex   bool     `yaml:"drop_tx_index" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+//	ExternalIPs   []string `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
+//	//Generate             bool          `yaml:"generate" long:"generate" description:"Generate (mine) bitcoins using the CPU"`
+//	FreeTxRelayLimit   float64 `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
+//	LogDir             string  `yaml:"log_dir" long:"logdir" description:"Directory to log output."`
+//	MaxOrphanTxs       int     `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
+//	MaxPeers           int     `yaml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
+//	MinRelayTxFee      float64 `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
+//	DisableBanning     bool    `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
+//	NoCFilters         bool    `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
+//	DisableCheckpoints bool    `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
+//	DisableDNSSeed     bool    `yaml:"disable_dns_seed" long:"nodnsseed" description:"Disable DNS seeding for peers"`
+//	DisableListen      bool    `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
+//	NoOnion            bool    `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
+//	NoPeerBloomFilters bool    `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
+//	NoRelayPriority    bool    `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
+//	DisableRPC         bool    `yaml:"disable_rpc" long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
+//	DisableTLS         bool    `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+//	OnionProxy         string  `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+//	OnionProxyPass     string  `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
+//	OnionProxyUser     string  `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy server"`
+//	Profile            string  `yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+//	Proxy              string  `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+//	ProxyPass          string  `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+//	ProxyUser          string  `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
+//	RegressionTest     bool    `yaml:"regression_test" long:"regtest" description:"Use the regression test network"`
+//	RejectNonStd       bool    `yaml:"reject_non_std" long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
+//	RejectReplacement  bool    `yaml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+//	RelayNonStd        bool    `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
+//	RPCCert            string  `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
+//	RPCKey             string  `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
+//	RPCLimitPass       string  `yaml:"rpc_limit_pass" long:"rpclimitpass" default-mask:"-" description:"Password for limited RPC connections"`
+//	RPCLimitUser       string  `yaml:"rpc_limit_user" long:"rpclimituser" description:"Username for limited RPC connections"`
+//	//RPCListeners         []string      `yaml:"rpc_listeners" long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 8334, testnet: 18334)"`
+//	//RPCMaxClients        int  `yaml:"rpc_max_clients" long:"rpcmaxclients" description:"Max number of RPC clients for standard connections"`
+//	RPCMaxConcurrentReqs int  `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
+//	RPCMaxWebsockets     int  `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+//	RPCQuirks            bool `yaml:"rpc_quirks" long:"rpcquirks" description:"Mirror some JSON-RPC quirks of Bitcoin Core -- NOTE: Discouraged unless interoperability issues need to be worked around"`
+//	//RPCPass              string        `yaml:"rpc_pass" short:"P" long:"rpcpass" default-mask:"-" description:"Password for RPC connections"`
+//	//RPCUser              string        `yaml:"rpc_user" short:"u" long:"rpcuser" description:"Username for RPC connections"`
+//	SigCacheMaxSize   uint          `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
+//	SimNet            bool          `yaml:"simnet" long:"simnet" description:"Use the simulation test network"`
+//	TestNet3          bool          `yaml:"testnet" long:"testnet" description:"Use the test network"`
+//	TorIsolation      bool          `yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
+//	TrickleInterval   time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected server"`
+//	TxIndex           bool          `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
+//	UserAgentComments []string      `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
+//	Upnp              bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
+//	ShowVersion       bool          `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
+//	Whitelists        []string      `yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
+//	lookup            func(string) ([]net.IP, error)
+//	oniondial         func(string, string, time.Duration) (net.Conn, error)
+//	dial              func(string, string, time.Duration) (net.Conn, error)
+//	addCheckpoints    []chaincfg.Checkpoint
+//	miningAddrs       []btcutil.Address
+//	minRelayTxFee     btcutil.Amount
+//	whitelists        []*net.IPNet
+//}
 
 // serviceOptions defines the configuration options for the daemon as a service on
 // Windows.
@@ -315,7 +341,7 @@ func normalizeAddress(addr, defaultPort string) string {
 	return addr
 }
 
-// normalizeAddresses returns a new slice with all the passed peer addresses
+// normalizeAddresses returns a new slice with all the passed server addresses
 // normalized with the given default port, and all duplicates removed.
 func normalizeAddresses(addrs []string, defaultPort string) []string {
 	for i, addr := range addrs {
@@ -384,7 +410,7 @@ func fileExists(name string) bool {
 }
 
 // newConfigParser returns a new command line flags parser.
-func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *flags.Parser {
+func newConfigParser(cfg *shards.Config, so *serviceOptions, options flags.Options) *flags.Parser {
 	parser := flags.NewParser(cfg, options)
 	if runtime.GOOS == "windows" {
 		parser.AddGroup("Service Options", "Service Options", so)
@@ -404,40 +430,45 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 // The above results in btcd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
-func loadConfig() (*config, []string, error) {
+func loadConfig() (*shards.Config, []string, error) {
 	// Default config.
 	fileName := os.Getenv("configName")
 	if fileName != "" {
 		defaultConfigFile = filepath.Join(defaultHomeDir, fileName)
 	}
 
-	cfg := config{
-		ConfigFile:           defaultConfigFile,
-		DebugLevel:           defaultLogLevel,
-		MaxPeers:             defaultMaxPeers,
-		BanDuration:          defaultBanDuration,
-		BanThreshold:         defaultBanThreshold,
-		RPCMaxClients:        defaultMaxRPCClients,
-		RPCMaxWebsockets:     defaultMaxRPCWebsockets,
-		RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
-		DataDir:              defaultDataDir,
-		LogDir:               defaultLogDir,
-		DbType:               defaultDbType,
-		RPCKey:               defaultRPCKeyFile,
-		RPCCert:              defaultRPCCertFile,
-		MinRelayTxFee:        mempool.DefaultMinRelayTxFee.ToBTC(),
-		FreeTxRelayLimit:     defaultFreeTxRelayLimit,
-		TrickleInterval:      defaultTrickleInterval,
-		BlockMinSize:         defaultBlockMinSize,
-		BlockMaxSize:         defaultBlockMaxSize,
-		BlockMinWeight:       defaultBlockMinWeight,
-		BlockMaxWeight:       defaultBlockMaxWeight,
-		BlockPrioritySize:    mempool.DefaultBlockPrioritySize,
-		MaxOrphanTxs:         defaultMaxOrphanTransactions,
-		SigCacheMaxSize:      defaultSigCacheMaxSize,
-		Generate:             defaultGenerate,
-		TxIndex:              defaultTxIndex,
-		AddrIndex:            defaultAddrIndex,
+	cfg := shards.Config{
+		Node: shards.NodeConfig{
+			DbType: defaultDbType,
+			P2P: server.P2pConfig{
+				BlockMinSize:      defaultBlockMinSize,
+				BlockMaxSize:      defaultBlockMaxSize,
+				BlockMinWeight:    defaultBlockMinWeight,
+				BlockMaxWeight:    defaultBlockMaxWeight,
+				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
+				MaxPeers:          defaultMaxPeers,
+				MinRelayTxFee:     mempool.DefaultMinRelayTxFee.ToBTC(),
+				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
+				TrickleInterval:   defaultTrickleInterval,
+				TxIndex:           defaultTxIndex,
+				AddrIndex:         defaultAddrIndex,
+				MaxOrphanTxs:      defaultMaxOrphanTransactions,
+				SigCacheMaxSize:   defaultSigCacheMaxSize,
+			},
+			Rpc: server.Config{
+				MaxClients: defaultMaxRPCClients,
+				//RPCMaxWebsockets:     defaultMaxRPCWebsockets,
+				//RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+			},
+		},
+
+		ConfigFile: defaultConfigFile,
+		DebugLevel: defaultLogLevel,
+		DataDir:    defaultDataDir,
+		LogDir:     defaultLogDir,
+		//RPCKey:               defaultRPCKeyFile,
+		//RPCCert:              defaultRPCCertFile,
+		//Generate:             defaultGenerate,
 	}
 
 	// Service options which are only added on Windows.
@@ -479,9 +510,7 @@ func loadConfig() (*config, []string, error) {
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if !(preCfg.RegressionTest || preCfg.SimNet) || preCfg.ConfigFile !=
-		defaultConfigFile {
-
+	if preCfg.ConfigFile != defaultConfigFile {
 		stats, err := os.Stat(preCfg.ConfigFile)
 		if os.IsNotExist(err) {
 			err := createDefaultConfigFile(preCfg.ConfigFile)
@@ -490,6 +519,7 @@ func loadConfig() (*config, []string, error) {
 					"default config file: %v\n", err)
 			}
 		}
+
 		cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
@@ -506,6 +536,7 @@ func loadConfig() (*config, []string, error) {
 			}
 		case ".yaml":
 			err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+			fmt.Println("err ", cfg.Node)
 			if err != nil {
 				configFileError = err
 			}
@@ -516,14 +547,10 @@ func loadConfig() (*config, []string, error) {
 
 	}
 
-	// Don't add peers from the config file when in regression test mode.
-	if preCfg.RegressionTest && len(cfg.AddPeers) > 0 {
-		cfg.AddPeers = nil
-	}
-
 	// Parse command line options again to ensure they take precedence.
 	remainingArgs, err := parser.Parse()
 	if err != nil {
+		fmt.Println(err)
 		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			fmt.Fprintln(os.Stderr, usageMessage)
 		}
@@ -554,20 +581,6 @@ func loadConfig() (*config, []string, error) {
 	numNets := 0
 	// Count number of network flags passed; assign active network params
 	// while we're at it
-	if cfg.TestNet3 {
-		numNets++
-		activeNetParams = &testNet3Params
-	}
-	if cfg.RegressionTest {
-		numNets++
-		activeNetParams = &regressionNetParams
-	}
-	if cfg.SimNet {
-		numNets++
-		// Also disable dns seeding on the simulation test network.
-		activeNetParams = &simNetParams
-		cfg.DisableDNSSeed = true
-	}
 	if numNets > 1 {
 		str := "%s: The testnet, regtest, segnet, and simnet params " +
 			"can't be used together -- choose one of the four"
@@ -582,20 +595,7 @@ func loadConfig() (*config, []string, error) {
 	// configuration value takes precedence over the default value for the
 	// selected network.
 	relayNonStd := activeNetParams.RelayNonStdTxs
-	switch {
-	case cfg.RelayNonStd && cfg.RejectNonStd:
-		str := "%s: rejectnonstd and relaynonstd cannot be used " +
-			"together -- choose only one"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	case cfg.RejectNonStd:
-		relayNonStd = false
-	case cfg.RelayNonStd:
-		relayNonStd = true
-	}
-	cfg.RelayNonStd = relayNonStd
+	cfg.Node.P2P.RelayNonStd = relayNonStd
 
 	// Append the network type to the data directory so it is "namespaced"
 	// per network.  In addition to the block database, there are other
@@ -630,10 +630,10 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Validate database type.
-	if !validDbType(cfg.DbType) {
+	if !validDbType(cfg.Node.DbType) {
 		str := "%s: The specified database type [%v] is invalid -- " +
 			"supported types %v"
-		err := fmt.Errorf(str, funcName, cfg.DbType, knownDbTypes)
+		err := fmt.Errorf(str, funcName, cfg.Node.DbType, knownDbTypes)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
@@ -652,48 +652,48 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Don't allow ban durations that are too short.
-	if cfg.BanDuration < time.Second {
+	if cfg.Node.P2P.BanDuration < time.Second {
 		str := "%s: The banduration option may not be less than 1s -- parsed [%v]"
-		err := fmt.Errorf(str, funcName, cfg.BanDuration)
+		err := fmt.Errorf(str, funcName, cfg.Node.P2P.BanDuration)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Validate any given whitelisted IP addresses and networks.
-	if len(cfg.Whitelists) > 0 {
-		var ip net.IP
-		cfg.whitelists = make([]*net.IPNet, 0, len(cfg.Whitelists))
-
-		for _, addr := range cfg.Whitelists {
-			_, ipnet, err := net.ParseCIDR(addr)
-			if err != nil {
-				ip = net.ParseIP(addr)
-				if ip == nil {
-					str := "%s: The whitelist value of '%s' is invalid"
-					err = fmt.Errorf(str, funcName, addr)
-					fmt.Fprintln(os.Stderr, err)
-					fmt.Fprintln(os.Stderr, usageMessage)
-					return nil, nil, err
-				}
-				var bits int
-				if ip.To4() == nil {
-					// IPv6
-					bits = 128
-				} else {
-					bits = 32
-				}
-				ipnet = &net.IPNet{
-					IP:   ip,
-					Mask: net.CIDRMask(bits, bits),
-				}
-			}
-			cfg.whitelists = append(cfg.whitelists, ipnet)
-		}
-	}
+	//if len(cfg.Whitelists) > 0 {
+	//	var ip net.IP
+	//	cfg.whitelists = make([]*net.IPNet, 0, len(cfg.Whitelists))
+	//
+	//	for _, addr := range cfg.Whitelists {
+	//		_, ipnet, err := net.ParseCIDR(addr)
+	//		if err != nil {
+	//			ip = net.ParseIP(addr)
+	//			if ip == nil {
+	//				str := "%s: The whitelist value of '%s' is invalid"
+	//				err = fmt.Errorf(str, funcName, addr)
+	//				fmt.Fprintln(os.Stderr, err)
+	//				fmt.Fprintln(os.Stderr, usageMessage)
+	//				return nil, nil, err
+	//			}
+	//			var bits int
+	//			if ip.To4() == nil {
+	//				// IPv6
+	//				bits = 128
+	//			} else {
+	//				bits = 32
+	//			}
+	//			ipnet = &net.IPNet{
+	//				IP:   ip,
+	//				Mask: net.CIDRMask(bits, bits),
+	//			}
+	//		}
+	//		cfg.whitelists = append(cfg.whitelists, ipnet)
+	//	}
+	//}
 
 	// --addPeer and --connect do not mix.
-	if len(cfg.AddPeers) > 0 && len(cfg.ConnectPeers) > 0 {
+	if len(cfg.Node.P2P.AddPeers) > 0 && len(cfg.Node.P2P.ConnectPeers) > 0 {
 		str := "%s: the --addpeer and --connect options can not be " +
 			"mixed"
 		err := fmt.Errorf(str, funcName)
@@ -703,27 +703,27 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// --proxy or --connect without --listen disables listening.
-	if (cfg.Proxy != "" || len(cfg.ConnectPeers) > 0) &&
-		len(cfg.Listeners) == 0 {
-		cfg.DisableListen = true
+	if (cfg.Node.P2P.Proxy != "" || len(cfg.Node.P2P.ConnectPeers) > 0) &&
+		len(cfg.Node.P2P.Listeners) == 0 {
+		cfg.Node.P2P.DisableListen = true
 	}
 
 	// Connect means no DNS seeding.
-	if len(cfg.ConnectPeers) > 0 {
-		cfg.DisableDNSSeed = true
+	if len(cfg.Node.P2P.ConnectPeers) > 0 {
+		cfg.Node.P2P.DisableDNSSeed = true
 	}
 
 	// Add the default listener if none were specified. The default
 	// listener is all addresses on the listen port for the network
 	// we are to connect to.
-	if len(cfg.Listeners) == 0 {
-		cfg.Listeners = []string{
+	if len(cfg.Node.P2P.Listeners) == 0 {
+		cfg.Node.P2P.Listeners = []string{
 			net.JoinHostPort("", activeNetParams.DefaultPort),
 		}
 	}
 
 	// Check to make sure limited and admin users don't have the same username
-	if cfg.RPCUser == cfg.RPCLimitUser && cfg.RPCUser != "" {
+	if cfg.Node.Rpc.User == cfg.Node.Rpc.LimitUser && cfg.Node.Rpc.User != "" {
 		str := "%s: --rpcuser and --rpclimituser must not specify the " +
 			"same username"
 		err := fmt.Errorf(str, funcName)
@@ -733,7 +733,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Check to make sure limited and admin users don't have the same password
-	if cfg.RPCPass == cfg.RPCLimitPass && cfg.RPCPass != "" {
+	if cfg.Node.Rpc.Password == cfg.Node.Rpc.LimitPass && cfg.Node.Rpc.Password != "" {
 		str := "%s: --rpcpass and --rpclimitpass must not specify the " +
 			"same password"
 		err := fmt.Errorf(str, funcName)
@@ -743,39 +743,39 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// The RPC server is disabled if no username or password is provided.
-	if (cfg.RPCUser == "" || cfg.RPCPass == "") &&
-		(cfg.RPCLimitUser == "" || cfg.RPCLimitPass == "") {
-		cfg.DisableRPC = true
+	if (cfg.Node.Rpc.User == "" || cfg.Node.Rpc.Password == "") &&
+		(cfg.Node.Rpc.LimitUser == "" || cfg.Node.Rpc.LimitPass == "") {
+		cfg.Node.Rpc.Disable = true
 	}
 
-	if cfg.DisableRPC {
+	if cfg.Node.Rpc.Disable {
 		btcdLog.Infof("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
-	if !cfg.DisableRPC && len(cfg.RPCListeners) == 0 {
+	if !cfg.Node.Rpc.Disable && len(cfg.Node.Rpc.Listeners) == 0 {
 		addrs, err := net.LookupHost("localhost")
 		if err != nil {
 			return nil, nil, err
 		}
-		cfg.RPCListeners = make([]string, 0, len(addrs))
+		cfg.Node.Rpc.ListenerAddresses = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
 			addr = net.JoinHostPort(addr, activeNetParams.rpcPort)
-			cfg.RPCListeners = append(cfg.RPCListeners, addr)
+			cfg.Node.Rpc.ListenerAddresses = append(cfg.Node.Rpc.ListenerAddresses, addr)
 		}
 	}
 
-	if cfg.RPCMaxConcurrentReqs < 0 {
+	if cfg.Node.Rpc.MaxConcurrentReqs < 0 {
 		str := "%s: The rpcmaxwebsocketconcurrentrequests option may " +
 			"not be less than 0 -- parsed [%d]"
-		err := fmt.Errorf(str, funcName, cfg.RPCMaxConcurrentReqs)
+		err := fmt.Errorf(str, funcName, cfg.Node.Rpc.MaxConcurrentReqs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Validate the the minrelaytxfee.
-	cfg.minRelayTxFee, err = btcutil.NewAmount(cfg.MinRelayTxFee)
+	cfg.Node.P2P.MinRelayTxFeeValues, err = btcutil.NewAmount(cfg.Node.P2P.MinRelayTxFee)
 	if err != nil {
 		str := "%s: invalid minrelaytxfee: %v"
 		err := fmt.Errorf(str, funcName, err)
@@ -785,77 +785,77 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Limit the max block size to a sane value.
-	if cfg.BlockMaxSize < blockMaxSizeMin || cfg.BlockMaxSize >
+	if cfg.Node.P2P.BlockMaxSize < blockMaxSizeMin || cfg.Node.P2P.BlockMaxSize >
 		blockMaxSizeMax {
 
 		str := "%s: The blockmaxsize option must be in between %d " +
 			"and %d -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, blockMaxSizeMin,
-			blockMaxSizeMax, cfg.BlockMaxSize)
+			blockMaxSizeMax, cfg.Node.P2P.BlockMaxSize)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the max block weight to a sane value.
-	if cfg.BlockMaxWeight < blockMaxWeightMin ||
-		cfg.BlockMaxWeight > blockMaxWeightMax {
+	if cfg.Node.P2P.BlockMaxWeight < blockMaxWeightMin ||
+		cfg.Node.P2P.BlockMaxWeight > blockMaxWeightMax {
 
 		str := "%s: The blockmaxweight option must be in between %d " +
 			"and %d -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, blockMaxWeightMin,
-			blockMaxWeightMax, cfg.BlockMaxWeight)
+			blockMaxWeightMax, cfg.Node.P2P.BlockMaxWeight)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the max orphan count to a sane vlue.
-	if cfg.MaxOrphanTxs < 0 {
+	if cfg.Node.P2P.MaxOrphanTxs < 0 {
 		str := "%s: The maxorphantx option may not be less than 0 " +
 			"-- parsed [%d]"
-		err := fmt.Errorf(str, funcName, cfg.MaxOrphanTxs)
+		err := fmt.Errorf(str, funcName, cfg.Node.P2P.MaxOrphanTxs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the block priority and minimum block sizes to max block size.
-	cfg.BlockPrioritySize = minUint32(cfg.BlockPrioritySize, cfg.BlockMaxSize)
-	cfg.BlockMinSize = minUint32(cfg.BlockMinSize, cfg.BlockMaxSize)
-	cfg.BlockMinWeight = minUint32(cfg.BlockMinWeight, cfg.BlockMaxWeight)
+	cfg.Node.P2P.BlockPrioritySize = minUint32(cfg.Node.P2P.BlockPrioritySize, cfg.Node.P2P.BlockMaxSize)
+	cfg.Node.P2P.BlockMinSize = minUint32(cfg.Node.P2P.BlockMinSize, cfg.Node.P2P.BlockMaxSize)
+	cfg.Node.P2P.BlockMinWeight = minUint32(cfg.Node.P2P.BlockMinWeight, cfg.Node.P2P.BlockMaxWeight)
 
 	switch {
 	// If the max block size isn't set, but the max weight is, then we'll
 	// set the limit for the max block size to a safe limit so weight takes
 	// precedence.
-	case cfg.BlockMaxSize == defaultBlockMaxSize &&
-		cfg.BlockMaxWeight != defaultBlockMaxWeight:
+	case cfg.Node.P2P.BlockMaxSize == defaultBlockMaxSize &&
+		cfg.Node.P2P.BlockMaxWeight != defaultBlockMaxWeight:
 
-		cfg.BlockMaxSize = blockchain.MaxBlockBaseSize - 1000
+		cfg.Node.P2P.BlockMaxSize = blockchain.MaxBlockBaseSize - 1000
 
 	// If the max block weight isn't set, but the block size is, then we'll
 	// scale the set weight accordingly based on the max block size value.
-	case cfg.BlockMaxSize != defaultBlockMaxSize &&
-		cfg.BlockMaxWeight == defaultBlockMaxWeight:
+	case cfg.Node.P2P.BlockMaxSize != defaultBlockMaxSize &&
+		cfg.Node.P2P.BlockMaxWeight == defaultBlockMaxWeight:
 
-		cfg.BlockMaxWeight = cfg.BlockMaxSize * blockchain.WitnessScaleFactor
+		cfg.Node.P2P.BlockMaxWeight = cfg.Node.P2P.BlockMaxSize * blockchain.WitnessScaleFactor
 	}
 
-	// Look for illegal characters in the user agent comments.
-	for _, uaComment := range cfg.UserAgentComments {
-		if strings.ContainsAny(uaComment, "/:()") {
-			err := fmt.Errorf("%s: The following characters must not "+
-				"appear in user agent comments: '/', ':', '(', ')'",
-				funcName)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-	}
+	//// Look for illegal characters in the user agent comments.
+	//for _, uaComment := range cfg.Node.P2P.UserAgentComments {
+	//	if strings.ContainsAny(uaComment, "/:()") {
+	//		err := fmt.Errorf("%s: The following characters must not "+
+	//			"appear in user agent comments: '/', ':', '(', ')'",
+	//			funcName)
+	//		fmt.Fprintln(os.Stderr, err)
+	//		fmt.Fprintln(os.Stderr, usageMessage)
+	//		return nil, nil, err
+	//	}
+	//}
 
 	// --txindex and --droptxindex do not mix.
-	if cfg.TxIndex && cfg.DropTxIndex {
+	if cfg.Node.P2P.TxIndex && cfg.DropTxIndex {
 		err := fmt.Errorf("%s: the --txindex and --droptxindex "+
 			"options may  not be activated at the same time",
 			funcName)
@@ -865,7 +865,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// --addrindex and --dropaddrindex do not mix.
-	if cfg.AddrIndex && cfg.DropAddrIndex {
+	if cfg.Node.P2P.AddrIndex && cfg.DropAddrIndex {
 		err := fmt.Errorf("%s: the --addrindex and --dropaddrindex "+
 			"options may not be activated at the same time",
 			funcName)
@@ -875,7 +875,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// --addrindex and --droptxindex do not mix.
-	if cfg.AddrIndex && cfg.DropTxIndex {
+	if cfg.Node.P2P.AddrIndex && cfg.DropTxIndex {
 		err := fmt.Errorf("%s: the --addrindex and --droptxindex "+
 			"options may not be activated at the same time "+
 			"because the address index relies on the transaction "+
@@ -886,58 +886,26 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Check mining addresses are valid and saved parsed versions.
-	cfg.miningAddrs = make([]btcutil.Address, 0, len(cfg.MiningAddrs))
-	for _, strAddr := range cfg.MiningAddrs {
-		addr, err := btcutil.DecodeAddress(strAddr, activeNetParams.Params)
-		if err != nil {
-			str := "%s: mining address '%s' failed to decode: %v"
-			err := fmt.Errorf(str, funcName, strAddr, err)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-		if !addr.IsForNet(activeNetParams.Params) {
-			str := "%s: mining address '%s' is on the wrong network"
-			err := fmt.Errorf(str, funcName, strAddr)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-		cfg.miningAddrs = append(cfg.miningAddrs, addr)
-	}
-
-	// Ensure there is at least one mining address when the generate flag is
-	// set.
-	if cfg.Generate && len(cfg.MiningAddrs) == 0 {
-		str := "%s: the generate flag is set, but there are no mining " +
-			"addresses specified "
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
-
 	// Add default port to all listener addresses if needed and remove
 	// duplicate addresses.
-	cfg.Listeners = normalizeAddresses(cfg.Listeners,
+	cfg.Node.P2P.Listeners = normalizeAddresses(cfg.Node.P2P.Listeners,
 		activeNetParams.DefaultPort)
 
 	// Add default port to all rpc listener addresses if needed and remove
 	// duplicate addresses.
-	cfg.RPCListeners = normalizeAddresses(cfg.RPCListeners,
+	cfg.Node.Rpc.ListenerAddresses = normalizeAddresses(cfg.Node.Rpc.ListenerAddresses,
 		activeNetParams.rpcPort)
 
 	// Only allow TLS to be disabled if the RPC is bound to localhost
 	// addresses.
-	if !cfg.DisableRPC && cfg.DisableTLS {
+	if !cfg.Node.Rpc.Disable && cfg.Node.P2P.DisableTLS {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},
 			"0.0.0.0":   {}, // TODO: setup tls
 			"::1":       {},
 		}
-		for _, addr := range cfg.RPCListeners {
+		for _, addr := range cfg.Node.Rpc.ListenerAddresses {
 			host, _, err := net.SplitHostPort(addr)
 			if err != nil {
 				str := "%s: RPC listen interface '%s' is " +
@@ -959,15 +927,15 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	// Add default port to all added peer addresses if needed and remove
+	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.AddPeers = normalizeAddresses(cfg.AddPeers,
+	cfg.Node.P2P.AddPeers = normalizeAddresses(cfg.Node.P2P.AddPeers,
 		activeNetParams.DefaultPort)
-	cfg.ConnectPeers = normalizeAddresses(cfg.ConnectPeers,
+	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
 		activeNetParams.DefaultPort)
 
 	// --noonion and --onion do not mix.
-	if cfg.NoOnion && cfg.OnionProxy != "" {
+	if cfg.Node.P2P.NoOnion && cfg.Node.P2P.OnionProxy != "" {
 		err := fmt.Errorf("%s: the --noonion and --onion options may "+
 			"not be activated at the same time", funcName)
 		fmt.Fprintln(os.Stderr, err)
@@ -976,17 +944,17 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Check the checkpoints for syntax errors.
-	cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
-	if err != nil {
-		str := "%s: Error parsing checkpoints: %v"
-		err := fmt.Errorf(str, funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
+	//cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
+	//if err != nil {
+	//	str := "%s: Error parsing checkpoints: %v"
+	//	err := fmt.Errorf(str, funcName, err)
+	//	fmt.Fprintln(os.Stderr, err)
+	//	fmt.Fprintln(os.Stderr, usageMessage)
+	//	return nil, nil, err
+	//}
 
 	// Tor stream isolation requires either proxy or onion proxy to be set.
-	if cfg.TorIsolation && cfg.Proxy == "" && cfg.OnionProxy == "" {
+	if cfg.TorIsolation && cfg.Node.P2P.Proxy == "" && cfg.Node.P2P.OnionProxy == "" {
 		str := "%s: Tor stream isolation requires either proxy or " +
 			"onionproxy to be set"
 		err := fmt.Errorf(str, funcName)
@@ -1001,13 +969,13 @@ func loadConfig() (*config, []string, error) {
 	// proxy is specified, the dial function is set to the proxy specific
 	// dial function and the lookup is set to use tor (unless --noonion is
 	// specified in which case the system DNS resolver is used).
-	cfg.dial = net.DialTimeout
-	cfg.lookup = net.LookupIP
-	if cfg.Proxy != "" {
-		_, _, err := net.SplitHostPort(cfg.Proxy)
+	cfg.Node.P2P.Dial = net.DialTimeout
+	cfg.Node.P2P.Lookup = net.LookupIP
+	if cfg.Node.P2P.Proxy != "" {
+		_, _, err := net.SplitHostPort(cfg.Node.P2P.Proxy)
 		if err != nil {
 			str := "%s: Proxy address '%s' is invalid: %v"
-			err := fmt.Errorf(str, funcName, cfg.Proxy, err)
+			err := fmt.Errorf(str, funcName, cfg.Node.P2P.Proxy, err)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, nil, err
@@ -1017,8 +985,8 @@ func loadConfig() (*config, []string, error) {
 		// unless there is also an onion proxy configured in which case
 		// that one will be overridden.
 		torIsolation := false
-		if cfg.TorIsolation && cfg.OnionProxy == "" &&
-			(cfg.ProxyUser != "" || cfg.ProxyPass != "") {
+		if cfg.TorIsolation && cfg.Node.P2P.OnionProxy == "" &&
+			(cfg.Node.P2P.ProxyUser != "" || cfg.Node.P2P.ProxyPass != "") {
 
 			torIsolation = true
 			fmt.Fprintln(os.Stderr, "Tor isolation set -- "+
@@ -1026,19 +994,19 @@ func loadConfig() (*config, []string, error) {
 		}
 
 		proxy := &socks.Proxy{
-			Addr:         cfg.Proxy,
-			Username:     cfg.ProxyUser,
-			Password:     cfg.ProxyPass,
+			Addr:         cfg.Node.P2P.Proxy,
+			Username:     cfg.Node.P2P.ProxyUser,
+			Password:     cfg.Node.P2P.ProxyPass,
 			TorIsolation: torIsolation,
 		}
-		cfg.dial = proxy.DialTimeout
+		cfg.Node.P2P.Dial = proxy.DialTimeout
 
 		// Treat the proxy as tor and perform DNS resolution through it
 		// unless the --noonion flag is set or there is an
 		// onion-specific proxy configured.
-		if !cfg.NoOnion && cfg.OnionProxy == "" {
-			cfg.lookup = func(host string) ([]net.IP, error) {
-				return connmgr.TorLookupIP(host, cfg.Proxy)
+		if !cfg.Node.P2P.NoOnion && cfg.Node.P2P.OnionProxy == "" {
+			cfg.Node.P2P.Lookup = func(host string) ([]net.IP, error) {
+				return connmgr.TorLookupIP(host, cfg.Node.P2P.Proxy)
 			}
 		}
 	}
@@ -1049,11 +1017,11 @@ func loadConfig() (*config, []string, error) {
 	// function is set to use the onion-specific proxy while leaving the
 	// normal dial function as selected above.  This allows .onion address
 	// traffic to be routed through a different proxy than normal traffic.
-	if cfg.OnionProxy != "" {
-		_, _, err := net.SplitHostPort(cfg.OnionProxy)
+	if cfg.Node.P2P.OnionProxy != "" {
+		_, _, err := net.SplitHostPort(cfg.Node.P2P.OnionProxy)
 		if err != nil {
 			str := "%s: Onion proxy address '%s' is invalid: %v"
-			err := fmt.Errorf(str, funcName, cfg.OnionProxy, err)
+			err := fmt.Errorf(str, funcName, cfg.Node.P2P.OnionProxy, err)
 			fmt.Fprintln(os.Stderr, err)
 			fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, nil, err
@@ -1062,17 +1030,17 @@ func loadConfig() (*config, []string, error) {
 		// Tor isolation flag means onion proxy credentials will be
 		// overridden.
 		if cfg.TorIsolation &&
-			(cfg.OnionProxyUser != "" || cfg.OnionProxyPass != "") {
+			(cfg.Node.P2P.OnionProxyUser != "" || cfg.Node.P2P.OnionProxyPass != "") {
 			fmt.Fprintln(os.Stderr, "Tor isolation set -- "+
 				"overriding specified onionproxy user "+
 				"credentials ")
 		}
 
-		cfg.oniondial = func(network, addr string, timeout time.Duration) (net.Conn, error) {
+		cfg.Node.P2P.Oniondial = func(network, addr string, timeout time.Duration) (net.Conn, error) {
 			proxy := &socks.Proxy{
-				Addr:         cfg.OnionProxy,
-				Username:     cfg.OnionProxyUser,
-				Password:     cfg.OnionProxyPass,
+				Addr:         cfg.Node.P2P.OnionProxy,
+				Username:     cfg.Node.P2P.OnionProxyUser,
+				Password:     cfg.Node.P2P.OnionProxyPass,
 				TorIsolation: cfg.TorIsolation,
 			}
 			return proxy.DialTimeout(network, addr, timeout)
@@ -1082,19 +1050,19 @@ func loadConfig() (*config, []string, error) {
 		// configured), it means that the proxy configured by --proxy is
 		// not a tor proxy, so override the DNS resolution to use the
 		// onion-specific proxy.
-		if cfg.Proxy != "" {
-			cfg.lookup = func(host string) ([]net.IP, error) {
-				return connmgr.TorLookupIP(host, cfg.OnionProxy)
+		if cfg.Node.P2P.Proxy != "" {
+			cfg.Node.P2P.Lookup = func(host string) ([]net.IP, error) {
+				return connmgr.TorLookupIP(host, cfg.Node.P2P.OnionProxy)
 			}
 		}
 	} else {
-		cfg.oniondial = cfg.dial
+		cfg.Node.P2P.Oniondial = cfg.Node.P2P.Dial
 	}
 
 	// Specifying --noonion means the onion address dial function results in
 	// an error.
-	if cfg.NoOnion {
-		cfg.oniondial = func(a, b string, t time.Duration) (net.Conn, error) {
+	if cfg.Node.P2P.NoOnion {
+		cfg.Node.P2P.Oniondial = func(a, b string, t time.Duration) (net.Conn, error) {
 			return nil, errors.New("tor has been disabled")
 		}
 	}
@@ -1174,32 +1142,4 @@ func createDefaultConfigFile(destinationPath string) error {
 	}
 
 	return nil
-}
-
-// btcdDial connects to the address on the named network using the appropriate
-// dial function depending on the address and configuration options.  For
-// example, .onion addresses will be dialed using the onion specific proxy if
-// one was specified, but will otherwise use the normal dial function (which
-// could itself use a proxy or not).
-func btcdDial(addr net.Addr) (net.Conn, error) {
-	if strings.Contains(addr.String(), ".onion:") {
-		return cfg.oniondial(addr.Network(), addr.String(),
-			defaultConnectTimeout)
-	}
-	return cfg.dial(addr.Network(), addr.String(), defaultConnectTimeout)
-}
-
-// btcdLookup resolves the IP of the given host using the correct DNS lookup
-// function depending on the configuration options.  For example, addresses will
-// be resolved using tor when the --proxy flag was specified unless --noonion
-// was also specified in which case the normal system DNS resolver will be used.
-//
-// Any attempt to resolve a tor address (.onion) will return an error since they
-// are not intended to be resolved outside of the tor proxy.
-func btcdLookup(host string) ([]net.IP, error) {
-	if strings.HasSuffix(host, ".onion") {
-		return nil, fmt.Errorf("attempt to resolve tor address %s", host)
-	}
-
-	return cfg.lookup(host)
 }

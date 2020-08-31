@@ -102,6 +102,7 @@ type BlockChain struct {
 	sigCache            *txscript.SigCache
 	indexManager        IndexManager
 	hashCache           *txscript.HashCache
+	chain               chain.IChain
 
 	// The following fields are calculated based upon the provided chain
 	// parameters.  They are also set when the instance is created and
@@ -280,6 +281,10 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	if len(b.prevOrphans[prevHash]) == 0 {
 		delete(b.prevOrphans, prevHash)
 	}
+}
+
+func (b *BlockChain) Chain() chain.IChain {
+	return b.chain
 }
 
 // addOrphanBlock adds the passed block (which is already determined to be
@@ -697,7 +702,7 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	var prevBlock *btcutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		prevBlock, err = dbFetchBlockByNode(dbTx, prevNode)
+		prevBlock, err = dbFetchBlockByNode(b.chain, dbTx, prevNode)
 		return err
 	})
 	if err != nil {
@@ -874,7 +879,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *btcutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = dbFetchBlockByNode(dbTx, n)
+			block, err = dbFetchBlockByNode(b.chain, dbTx, n)
 			return err
 		})
 		if err != nil {
@@ -941,7 +946,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *btcutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = dbFetchBlockByNode(dbTx, n)
+			block, err = dbFetchBlockByNode(b.chain, dbTx, n)
 			return err
 		})
 		if err != nil {
@@ -1274,7 +1279,7 @@ func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (chain.BlockHeader, erro
 	node := b.index.LookupNode(hash)
 	if node == nil {
 		err := fmt.Errorf("block %s is not known", hash)
-		return chain.NewHeader(), err
+		return b.chain.NewHeader(), err
 	}
 
 	return node.Header(), nil
@@ -1601,7 +1606,7 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	// Populate and return the found headers.
 	headers := make([]chain.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, chain.NewHeader())
+		headers = append(headers, b.chain.NewHeader())
 		node = b.bestChain.Next(node)
 	}
 	return headers
@@ -1713,6 +1718,8 @@ type Config struct {
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
 	HashCache *txscript.HashCache
+
+	Chain chain.IChain
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -1754,6 +1761,7 @@ func New(config *Config) (*BlockChain, error) {
 		checkpoints:         config.Checkpoints,
 		checkpointsByHeight: checkpointsByHeight,
 		db:                  config.DB,
+		chain:               config.Chain,
 		chainParams:         params,
 		timeSource:          config.TimeSource,
 		sigCache:            config.SigCache,

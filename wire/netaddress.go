@@ -27,7 +27,7 @@ func maxNetAddressPayload(pver uint32) uint32 {
 	return plen
 }
 
-// NetAddress defines information about a peer on the network including the time
+// NetAddress defines information about a server on the network including the time
 // it was last seen, the services it supports, its IP address, and port.
 type NetAddress struct {
 	// Last time the address was seen.  This is, unfortunately, encoded as a
@@ -39,10 +39,10 @@ type NetAddress struct {
 	// Bitfield which identifies the services supported by the address.
 	Services ServiceFlag
 
-	// IP address of the peer.
+	// IP address of the server.
 	IP net.IP
 
-	// Port the peer is using.  This is encoded in big endian on the wire
+	// Port the server is using.  This is encoded in big endian on the wire
 	// which differs from most everything else.
 	Port uint16
 }
@@ -52,7 +52,7 @@ func (na *NetAddress) HasService(service ServiceFlag) bool {
 	return na.Services&service == service
 }
 
-// AddService adds service as a supported service by the peer generating the
+// AddService adds service as a supported service by the server generating the
 // message.
 func (na *NetAddress) AddService(service ServiceFlag) {
 	na.Services |= service

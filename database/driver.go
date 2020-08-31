@@ -6,6 +6,7 @@ package database
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 
 	"github.com/btcsuite/btclog"
 )
@@ -20,12 +21,12 @@ type Driver struct {
 	// Create is the function that will be invoked with all user-specified
 	// arguments to create the database.  This function must return
 	// ErrDbExists if the database already exists.
-	Create func(args ...interface{}) (DB, error)
+	Create func(chain chain.IChain, args ...interface{}) (DB, error)
 
 	// Open is the function that will be invoked with all user-specified
 	// arguments to open the database.  This function must return
 	// ErrDbDoesNotExist if the database has not already been created.
-	Open func(args ...interface{}) (DB, error)
+	Open func(chain chain.IChain, args ...interface{}) (DB, error)
 
 	// UseLogger uses a specified Logger to output package logging info.
 	UseLogger func(logger btclog.Logger)
@@ -63,14 +64,14 @@ func SupportedDrivers() []string {
 // for the database driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Create(dbType string, args ...interface{}) (DB, error) {
+func Create(dbType string, chain chain.IChain, args ...interface{}) (DB, error) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		str := fmt.Sprintf("driver %q is not registered", dbType)
 		return nil, makeError(ErrDbUnknownType, str, nil)
 	}
 
-	return drv.Create(args...)
+	return drv.Create(chain, args...)
 }
 
 // Open opens an existing database for the specified type.  The arguments are
@@ -78,12 +79,12 @@ func Create(dbType string, args ...interface{}) (DB, error) {
 // driver for further details.
 //
 // ErrDbUnknownType will be returned if the the database type is not registered.
-func Open(dbType string, args ...interface{}) (DB, error) {
+func Open(dbType string, chain chain.IChain, args ...interface{}) (DB, error) {
 	drv, exists := drivers[dbType]
 	if !exists {
 		str := fmt.Sprintf("driver %q is not registered", dbType)
 		return nil, makeError(ErrDbUnknownType, str, nil)
 	}
 
-	return drv.Open(args...)
+	return drv.Open(chain, args...)
 }

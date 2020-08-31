@@ -799,10 +799,10 @@ func (g *testGenerator) assertTipBlockTxOutOpReturn(txIndex, txOutIndex uint32) 
 // Generate returns a slice of tests that can be used to exercise the consensus
 // validation rules.  The tests are intended to be flexible enough to allow both
 // unit-style tests directly against the blockchain code as well as integration
-// style tests over the peer-to-peer network.  To achieve that goal, each test
+// style tests over the server-to-server network.  To achieve that goal, each test
 // contains additional information about the expected result, however that
 // information can be ignored when doing comparison tests between two
-// independent versions over the peer-to-peer network.
+// independent versions over the server-to-server network.
 func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	// In order to simplify the generation code which really should never
 	// fail unless the test code itself is broken, panics are used

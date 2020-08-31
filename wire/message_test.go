@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
@@ -37,6 +38,8 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
+	chain := beacon.Chain()
+
 	pver := ProtocolVersion
 
 	// Create the various types of messages to test.
@@ -133,7 +136,7 @@ func TestMessage(t *testing.T) {
 
 		// Decode from wire format.
 		rbuf := bytes.NewReader(buf.Bytes())
-		nr, msg, _, err := ReadMessageN(rbuf, test.pver, test.btcnet)
+		nr, msg, _, err := ReadMessageN(chain, rbuf, test.pver, test.btcnet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %v", i, err,
 				spew.Sdump(msg))
@@ -166,7 +169,7 @@ func TestMessage(t *testing.T) {
 
 		// Decode from wire format.
 		rbuf := bytes.NewReader(buf.Bytes())
-		msg, _, err := ReadMessage(rbuf, test.pver, test.btcnet)
+		msg, _, err := ReadMessage(chain, rbuf, test.pver, test.btcnet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %v", i, err,
 				spew.Sdump(msg))
@@ -185,6 +188,8 @@ func TestMessage(t *testing.T) {
 func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
+
+	chain := beacon.Chain()
 
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"
@@ -356,7 +361,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	for i, test := range tests {
 		// Decode from wire format.
 		r := newFixedReader(test.max, test.buf)
-		nr, _, _, err := ReadMessageN(r, test.pver, test.btcnet)
+		nr, _, _, err := ReadMessageN(chain, r, test.pver, test.btcnet)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
 			t.Errorf("ReadMessage #%d wrong error got: %v <%T>, "+
 				"want: %T", i, err, err, test.readErr)

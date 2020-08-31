@@ -21,6 +21,7 @@ const MaxBlockHeadersPerMsg = 2000
 // per message is currently 2000.  See MsgGetHeaders for details on requesting
 // the headers.
 type MsgHeaders struct {
+	Chain   chain.IChain
 	Headers []chain.BlockHeader
 }
 
@@ -56,10 +57,11 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 	headers := make([]chain.BlockHeader, count)
 	msg.Headers = make([]chain.BlockHeader, 0, count)
 	for i := uint64(0); i < count; i++ {
-		bh, err := chain.ReadBlockHeader(r)
-		if err != nil {
+		bh := msg.Chain.NewHeader()
+		if err := bh.Read(r); err != nil {
 			return err
 		}
+
 		headers[i] = bh
 		txCount, err := encoder.ReadVarInt(r, pver)
 		if err != nil {
@@ -95,8 +97,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 	}
 
 	for _, bh := range msg.Headers {
-		err := chain.WriteBlockHeader(w, bh)
-		if err != nil {
+		if err := bh.Write(w); err != nil {
 			return err
 		}
 
@@ -124,7 +125,8 @@ func (msg *MsgHeaders) Command() string {
 func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Num headers (varInt) + max allowed headers (header length + 1 byte
 	// for the number of transactions which is always 0).
-	return uint32(encoder.MaxVarIntPayload + ((chain.MaxBlockHeaderPayload() + 1) * MaxBlockHeadersPerMsg))
+
+	return uint32(encoder.MaxVarIntPayload + ((msg.Chain.MaxBlockHeaderPayload() + 1) * MaxBlockHeadersPerMsg))
 }
 
 // NewMsgHeaders returns a new bitcoin headers message that conforms to the

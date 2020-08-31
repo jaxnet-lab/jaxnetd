@@ -15,7 +15,7 @@ package wire
 //	// Version of the block.  This is not the same as the protocol version.
 //	Version int32
 //
-//	// Hash of the previous block header in the block chain.
+//	// Hash of the previous block header in the block Chain.
 //	PrevBlock chainhash.Hash
 //
 //	// Merkle tree reference to hash of all transactions for the block.
@@ -38,7 +38,7 @@ package wire
 //// header.
 //const blockHeaderLen = 80
 //
-//func (h chain.BlockHeader) BlockData() []byte {
+//func (h Chain.BlockHeader) BlockData() []byte {
 //	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 //	_ = writeBlockHeader(buf, 0, h)
 //	return buf.Bytes()

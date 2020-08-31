@@ -7,6 +7,7 @@ package wire
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
@@ -89,7 +90,7 @@ type Message interface {
 
 // makeEmptyMessage creates a message of the appropriate concrete type based
 // on the command.
-func makeEmptyMessage(command string) (Message, error) {
+func makeEmptyMessage(chain chain.IChain, command string) (Message, error) {
 	var msg Message
 	switch command {
 	case CmdVersion:
@@ -108,8 +109,9 @@ func makeEmptyMessage(command string) (Message, error) {
 		msg = &MsgGetBlocks{}
 
 	case CmdBlock:
-		msg = &MsgBlock{}
-
+		msg = &MsgBlock{
+			Header: chain.NewHeader(),
+		}
 	case CmdInv:
 		msg = &MsgInv{}
 
@@ -336,7 +338,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // comprise the message.  This function is the same as ReadMessageN except it
 // allows the caller to specify which message encoding is to to consult when
 // decoding wire messages.
-func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet types.BitcoinNet,
+func ReadMessageWithEncodingN(chain chain.IChain, r io.Reader, pver uint32, btcnet types.BitcoinNet,
 	enc encoder.MessageEncoding) (int, Message, []byte, error) {
 
 	totalBytes := 0
@@ -371,7 +373,7 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet types.BitcoinNet,
 	}
 
 	// Create struct of appropriate message type based on the command.
-	msg, err := makeEmptyMessage(command)
+	msg, err := makeEmptyMessage(chain, command)
 	if err != nil {
 		discardInput(r, hdr.length)
 		return totalBytes, nil, nil, messageError("ReadMessage",
@@ -423,8 +425,8 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet types.BitcoinNet,
 // bytes read in addition to the parsed Message and raw bytes which comprise the
 // message.  This function is the same as ReadMessage except it also returns the
 // number of bytes read.
-func ReadMessageN(r io.Reader, pver uint32, btcnet types.BitcoinNet) (int, Message, []byte, error) {
-	return ReadMessageWithEncodingN(r, pver, btcnet, BaseEncoding)
+func ReadMessageN(chain chain.IChain, r io.Reader, pver uint32, btcnet types.BitcoinNet) (int, Message, []byte, error) {
+	return ReadMessageWithEncodingN(chain, r, pver, btcnet, BaseEncoding)
 }
 
 // ReadMessage reads, validates, and parses the next bitcoin Message from r for
@@ -433,7 +435,7 @@ func ReadMessageN(r io.Reader, pver uint32, btcnet types.BitcoinNet) (int, Messa
 // from ReadMessageN in that it doesn't return the number of bytes read.  This
 // function is mainly provided for backwards compatibility with the original
 // API, but it's also useful for callers that don't care about byte counts.
-func ReadMessage(r io.Reader, pver uint32, btcnet types.BitcoinNet) (Message, []byte, error) {
-	_, msg, buf, err := ReadMessageN(r, pver, btcnet)
+func ReadMessage(chain chain.IChain, r io.Reader, pver uint32, btcnet types.BitcoinNet) (Message, []byte, error) {
+	_, msg, buf, err := ReadMessageN(chain, r, pver, btcnet)
 	return msg, buf, err
 }

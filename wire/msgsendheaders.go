@@ -11,7 +11,7 @@ import (
 )
 
 // MsgSendHeaders implements the Message interface and represents a bitcoin
-// sendheaders message.  It is used to request the peer send block headers
+// sendheaders message.  It is used to request the server send block headers
 // rather than inventory vectors.
 //
 // This message has no payload and was not added until protocol versions

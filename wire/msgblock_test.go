@@ -470,7 +470,7 @@ func TestBlockSerializeSize(t *testing.T) {
 		// Block with no transactions.
 		{noTxBlock, 81},
 
-		// First block in the mainnet block chain.
+		// First block in the mainnet block Chain.
 		{&blockOne, len(blockOneBytes)},
 	}
 
@@ -485,7 +485,7 @@ func TestBlockSerializeSize(t *testing.T) {
 	}
 }
 
-// blockOne is the first block in the mainnet block chain.
+// blockOne is the first block in the mainnet block Chain.
 var blockOne = MsgBlock{
 	Header: shard.NewBlockHeader(1,
 		[chainhash.HashSize]byte{ // Make go vet happy.

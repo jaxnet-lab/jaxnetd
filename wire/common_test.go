@@ -18,7 +18,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
-// mainNetGenesisHash is the hash of the first block in the block chain for the
+// mainNetGenesisHash is the hash of the first block in the block Chain for the
 // main network (genesis block).
 var mainNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,

@@ -51,10 +51,14 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.Messa
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	msg.Header, err = chain.ReadBlockHeader(r)
-	if err != nil {
+	if err := msg.Header.Read(r); err != nil {
 		return err
 	}
+
+	//, err = chain.ReadBlockHeader(r)
+	//if err != nil {
+	//	return err
+	//}
 
 	err = encoder.ReadElement(r, &msg.Transactions)
 	if err != nil {
@@ -113,23 +117,19 @@ func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.Messa
 		return messageError("MsgMerkleBlock.BtcDecode", str)
 	}
 
-	err := chain.WriteBlockHeader(w, msg.Header)
-	if err != nil {
+	if err := msg.Header.Write(w); err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.Transactions)
-	if err != nil {
+	if err := encoder.WriteElement(w, msg.Transactions); err != nil {
 		return err
 	}
 
-	err = encoder.WriteVarInt(w, uint64(numHashes))
-	if err != nil {
+	if err := encoder.WriteVarInt(w, uint64(numHashes)); err != nil {
 		return err
 	}
 	for _, hash := range msg.Hashes {
-		err = encoder.WriteElement(w, hash)
-		if err != nil {
+		if err := encoder.WriteElement(w, hash); err != nil {
 			return err
 		}
 	}

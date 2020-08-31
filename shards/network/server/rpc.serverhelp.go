@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+package server
 
 import (
 	"errors"
@@ -753,6 +753,7 @@ var rpcResultTypes = map[string][]interface{}{
 // the RPC server commands and caches the results for future calls.
 type helpCacher struct {
 	sync.Mutex
+	server     *rpcServer
 	usage      string
 	methodHelp map[string]string
 }
@@ -798,8 +799,8 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 	}
 
 	// Generate a list of one-line usage for every command.
-	usageTexts := make([]string, 0, len(rpcHandlers))
-	for k := range rpcHandlers {
+	usageTexts := make([]string, 0, len(c.server.handlers))
+	for k := range c.server.handlers {
 		usage, err := btcjson.MethodUsageText(k)
 		if err != nil {
 			return "", err
@@ -808,15 +809,15 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 	}
 
 	// Include websockets commands if requested.
-	if includeWebsockets {
-		for k := range wsHandlers {
-			usage, err := btcjson.MethodUsageText(k)
-			if err != nil {
-				return "", err
-			}
-			usageTexts = append(usageTexts, usage)
-		}
-	}
+	//if includeWebsockets {
+	//for k := range wsHandlers {
+	//	usage, err := btcjson.MethodUsageText(k)
+	//	if err != nil {
+	//		return "", err
+	//	}
+	//	usageTexts = append(usageTexts, usage)
+	//}
+	//}
 
 	sort.Strings(usageTexts)
 	c.usage = strings.Join(usageTexts, "\n")
@@ -825,8 +826,9 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 
 // newHelpCacher returns a new instance of a help cacher which provides help and
 // usage for the RPC server commands and caches the results for future calls.
-func newHelpCacher() *helpCacher {
+func newHelpCacher(s *rpcServer) *helpCacher {
 	return &helpCacher{
+		server:     s,
 		methodHelp: make(map[string]string),
 	}
 }

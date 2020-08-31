@@ -12,7 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
-// RejectCode represents a numeric value by which a remote peer indicates
+// RejectCode represents a numeric value by which a remote server indicates
 // why a message was rejected.
 type RejectCode uint8
 

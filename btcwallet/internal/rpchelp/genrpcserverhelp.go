@@ -17,7 +17,7 @@ import (
 )
 
 var outputFile = func() *os.File {
-	fi, err := os.Create("rpcserverhelp.go")
+	fi, err := os.Create("rpc.serverhelp.go")
 	if err != nil {
 		log.Fatal(err)
 	}

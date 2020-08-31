@@ -87,7 +87,7 @@ func migrateBlockIndex(db database.DB) error {
 
 		// Scan the old block index bucket and construct a mapping of each block
 		// to parent block and all child blocks.
-		blocksMap, err := readBlockTree(v1BlockIdxBucket)
+		blocksMap, err := readBlockTree(db.Chain(), v1BlockIdxBucket)
 		if err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func migrateBlockIndex(db database.DB) error {
 
 		// Find blocks on the main chain with the block graph and current tip.
 		determineMainChainBlocks(blocksMap, tip)
-		blockHdrSize := uint32(chain.MaxBlockHeaderPayload())
+		blockHdrSize := uint32(db.Chain().MaxBlockHeaderPayload())
 		// Now that we have heights for all blocks, scan the old block index
 		// bucket and insert all rows into the new one.
 		return v1BlockIdxBucket.ForEach(func(hashBytes, blockRow []byte) error {
@@ -150,7 +150,7 @@ func migrateBlockIndex(db database.DB) error {
 // each block to its parent block and all child blocks. This mapping represents
 // the full tree of blocks. This function does not populate the height or
 // mainChain fields of the returned blockChainContext values.
-func readBlockTree(v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
+func readBlockTree(chain chain.IChain, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
 		header := chain.NewHeader()
