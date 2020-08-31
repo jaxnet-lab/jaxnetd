@@ -8,19 +8,15 @@ import (
 )
 
 type P2pConfig struct {
-	DbType         string   `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
-	Peers          []string `yaml:"peers" description:"Add a server to connect with at startup"`
-	Listeners      []string `yaml:"listeners" long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
-	AgentBlacklist []string `yaml:"agent_blacklist" long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
-	AgentWhitelist []string `yaml:"agent_whitelist" long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
-
-	DisableListen bool `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
-
-	SigCacheMaxSize uint `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
-
-	AddCheckpoints []string `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	AddPeers       []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a server to connect with at startup"`
-	AddrIndex      bool     `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+	Peers           []string `yaml:"peers" `
+	Listeners       []string `yaml:"listeners"`
+	AgentBlacklist  []string `yaml:"agent_blacklist"`
+	AgentWhitelist  []string `yaml:"agent_whitelist"`
+	DisableListen   bool     `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
+	SigCacheMaxSize uint     `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
+	AddCheckpoints  []string `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+	AddPeers        []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a server to connect with at startup"`
+	AddrIndex       bool     `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
 
 	ExternalIPs       []string      `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
 	ConnectPeers      []string      `yaml:"connect_peers" long:"connect" description:"Connect only to the specified peers at startup"`

@@ -1243,6 +1243,7 @@ func Server(cfg *P2pConfig, amgr *addrmgr.AddrManager, chain chain.IChain, liste
 		SigCache:     s.sigCache,
 		IndexManager: indexManager,
 		HashCache:    s.hashCache,
+		Chain:        chain,
 	})
 	if err != nil {
 		return nil, err

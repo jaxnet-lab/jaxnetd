@@ -445,6 +445,8 @@ func loadConfig() (*shards.Config, []string, error) {
 				BlockMaxSize:      defaultBlockMaxSize,
 				BlockMinWeight:    defaultBlockMinWeight,
 				BlockMaxWeight:    defaultBlockMaxWeight,
+				BanDuration:       defaultBanDuration,
+				BanThreshold:      defaultBanThreshold,
 				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
 				MaxPeers:          defaultMaxPeers,
 				MinRelayTxFee:     mempool.DefaultMinRelayTxFee.ToBTC(),

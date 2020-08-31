@@ -54,7 +54,7 @@ func btcdMain() error {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	cfg, _, err := loadConfig()
-
+	fmt.Println(cfg, err)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func btcdMain() error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
+	fmt.Println("Run Beacon")
 	go runBeaconChain(ctx, cfg)
 	//go runShardChain(1, cfg)
 	//go runShardChain(2, cfg)
