@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestFilterCLearLatest tests the MsgFilterClear API against the latest
@@ -64,11 +65,11 @@ func TestFilterClearWire(t *testing.T) {
 	msgFilterClearEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgFilterClear // Message to encode
-		out  *MsgFilterClear // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgFilterClear         // Message to encode
+		out  *MsgFilterClear         // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -139,13 +140,13 @@ func TestFilterClearWireErrors(t *testing.T) {
 	baseFilterClearEncoded := []byte{}
 
 	tests := []struct {
-		in       *MsgFilterClear // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgFilterClear         // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Force error due to unsupported protocol version.
 		{

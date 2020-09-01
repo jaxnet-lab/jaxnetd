@@ -3,10 +3,11 @@ package headerfs
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"os"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 )
 
 // ErrHeaderNotFound is returned when a target header on disk (flat file) can't
@@ -80,7 +81,7 @@ func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
 	numHeaders := endHeight - startHeight + 1
 	headers := make([]chain.BlockHeader, 0, numHeaders)
 	for headerReader.Len() != 0 {
-		var nextHeader chain.BlockHeader
+		var nextHeader = shard.NewEmptyHeader()
 		if err := nextHeader.Read(headerReader); err != nil {
 			return nil, err
 		}
@@ -94,7 +95,7 @@ func (h *blockHeaderStore) readHeaderRange(startHeight uint32,
 // readHeader reads a full block header from the flat-file. The header read is
 // determined by the hight value.
 func (h *blockHeaderStore) readHeader(height uint32) (chain.BlockHeader, error) {
-	var header chain.BlockHeader
+	var header = shard.NewEmptyHeader()
 
 	// Each header is 80 bytes, so using this information, we'll seek a
 	// distance to cover that height based on the size of block headers.

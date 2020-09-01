@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"log"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"log"
 )
 
 const (
@@ -28,13 +29,13 @@ type utxo struct {
 }
 
 func main() {
-	//params := &chaincfg.MainNetParams
-	//params.Name = "jaxnet"
-	//params.Net = types.BitcoinNet(0x0B110907)
-	//params.PubKeyHashAddrID = byte(0x6F)
-	//params.PrivateKeyID = byte(0x80)
+	// params := &chaincfg.MainNetParams
+	// params.Name = "jaxnet"
+	// params.Net = types.BitcoinNet(0x0B110907)
+	// params.PubKeyHashAddrID = byte(0x6F)
+	// params.PrivateKeyID = byte(0x80)
 
-	toAddress, err := btcutil.DecodeAddress(toAddress, &chaincfg.JaxNetParams)
+	toAddress, err := btcutil.DecodeAddress(toAddress, &chaincfg.MainNetParams)
 	if err != nil {
 		log.Fatalf("invalid address: %v", err)
 	}
@@ -65,7 +66,7 @@ func main() {
 	}
 
 	oldTxOut := wire.NewTxOut(unspentTx.Satoshis, script)
-	//oldTxOut := txOut
+	// oldTxOut := txOut
 
 	// Pay the minimum network fee so that nodes will broadcast the tx.
 	outCoin := oldTxOut.Value - txFee

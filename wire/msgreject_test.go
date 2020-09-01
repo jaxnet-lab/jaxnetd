@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestRejectCodeStringer tests the stringized output for the reject code type.
@@ -227,10 +228,10 @@ func TestRejectCrossProtocol(t *testing.T) {
 // protocol versions.
 func TestRejectWire(t *testing.T) {
 	tests := []struct {
-		msg  MsgReject       // Message to encode
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		msg  MsgReject               // Message to encode
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version rejected command version (no hash).
 		{
@@ -324,13 +325,13 @@ func TestRejectWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgReject      // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgReject              // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in reject command.

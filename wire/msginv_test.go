@@ -10,8 +10,10 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 )
 
 // TestInv tests the MsgInv API.
@@ -38,7 +40,7 @@ func TestInv(t *testing.T) {
 
 	// Ensure inventory vectors are added properly.
 	hash := chainhash.Hash{}
-	iv := NewInvVect(InvTypeBlock, &hash)
+	iv := types.NewInvVect(types.InvTypeBlock, &hash)
 	err := msg.AddInvVect(iv)
 	if err != nil {
 		t.Errorf("AddInvVect: %v", err)
@@ -50,7 +52,7 @@ func TestInv(t *testing.T) {
 
 	// Ensure adding more than the max allowed inventory vectors per
 	// message returns an error.
-	for i := 0; i < MaxInvPerMsg; i++ {
+	for i := 0; i < types.MaxInvPerMsg; i++ {
 		err = msg.AddInvVect(iv)
 	}
 	if err == nil {
@@ -60,8 +62,8 @@ func TestInv(t *testing.T) {
 
 	// Ensure creating the message with a size hint larger than the max
 	// works as expected.
-	msg = NewMsgInvSizeHint(MaxInvPerMsg + 1)
-	wantCap := MaxInvPerMsg
+	msg = NewMsgInvSizeHint(types.MaxInvPerMsg + 1)
+	wantCap := types.MaxInvPerMsg
 	if cap(msg.InvList) != wantCap {
 		t.Errorf("NewMsgInvSizeHint: wrong cap for size hint - "+
 			"got %v, want %v", cap(msg.InvList), wantCap)
@@ -85,8 +87,8 @@ func TestInvWire(t *testing.T) {
 		t.Errorf("NewHashFromStr: %v", err)
 	}
 
-	iv := NewInvVect(InvTypeBlock, blockHash)
-	iv2 := NewInvVect(InvTypeTx, txHash)
+	iv := types.NewInvVect(types.InvTypeBlock, blockHash)
+	iv2 := types.NewInvVect(types.InvTypeTx, txHash)
 
 	// Empty inv message.
 	NoInv := NewMsgInv()
@@ -113,11 +115,11 @@ func TestInvWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgInv         // Message to encode
-		out  *MsgInv         // Expected decoded message
-		buf  []byte          // Wire encoding pver uint32
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encodinf format
+		in   *MsgInv                 // Message to encode
+		out  *MsgInv                 // Expected decoded message
+		buf  []byte                  // Wire encoding pver uint32
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encodinf format
 	}{
 		// Latest protocol version with no inv vectors.
 		{
@@ -254,7 +256,7 @@ func TestInvWireErrors(t *testing.T) {
 		t.Errorf("NewHashFromStr: %v", err)
 	}
 
-	iv := NewInvVect(InvTypeBlock, blockHash)
+	iv := types.NewInvVect(types.InvTypeBlock, blockHash)
 
 	// Base inv message used to induce errors.
 	baseInv := NewMsgInv()
@@ -271,7 +273,7 @@ func TestInvWireErrors(t *testing.T) {
 	// Inv message that forces an error by having more than the max allowed
 	// inv vectors.
 	maxInv := NewMsgInv()
-	for i := 0; i < MaxInvPerMsg; i++ {
+	for i := 0; i < types.MaxInvPerMsg; i++ {
 		maxInv.AddInvVect(iv)
 	}
 	maxInv.InvList = append(maxInv.InvList, iv)
@@ -280,13 +282,13 @@ func TestInvWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgInv         // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgInv                 // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in inventory vector count

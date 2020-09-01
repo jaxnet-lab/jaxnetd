@@ -229,7 +229,7 @@ func getServiceURL(rootURL string) (url string, err error) {
 	}
 	defer r.Body.Close()
 	if r.StatusCode >= 400 {
-		err = errors.New(string(r.StatusCode))
+		err = errors.New(r.Status)
 		return
 	}
 	var root root

@@ -7,10 +7,11 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"unicode/utf8"
+
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
@@ -212,7 +213,7 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, error) {
 	encoder.ReadElements(hr, &hdr.magic, &command, &hdr.length, &hdr.checksum)
 
 	// Strip trailing zeros from command string.
-	hdr.command = string(bytes.TrimRight(command[:], string(0)))
+	hdr.command = string(bytes.TrimRight(command[:], string(rune(0))))
 
 	return n, &hdr, nil
 }

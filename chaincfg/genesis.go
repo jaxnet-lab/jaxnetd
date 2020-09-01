@@ -5,142 +5,121 @@
 package chaincfg
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
-	"time"
+	"errors"
+	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 )
 
-// genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
-// the main network, regression test network, and test network (version 3).
-var genesisCoinbaseTx = wire.MsgTx{
-	Version: 1,
-	TxIn: []*wire.TxIn{
-		{
-			PreviousOutPoint: wire.OutPoint{
-				Hash:  chainhash.Hash{},
-				Index: 0xffffffff,
-			},
-			SignatureScript: []byte{
-				0x04, 0xff, 0xff, 0x00, 0x1d, 0x01, 0x04, 0x45, /* |.......E| */
-				0x54, 0x68, 0x65, 0x20, 0x54, 0x69, 0x6d, 0x65, /* |The Time| */
-				0x73, 0x20, 0x30, 0x33, 0x2f, 0x4a, 0x61, 0x6e, /* |s 03/Jan| */
-				0x2f, 0x32, 0x30, 0x30, 0x39, 0x20, 0x43, 0x68, /* |/2009 Ch| */
-				0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x6f, 0x72, /* |ancellor| */
-				0x20, 0x6f, 0x6e, 0x20, 0x62, 0x72, 0x69, 0x6e, /* | on brin| */
-				0x6b, 0x20, 0x6f, 0x66, 0x20, 0x73, 0x65, 0x63, /* |k of sec|*/
-				0x6f, 0x6e, 0x64, 0x20, 0x62, 0x61, 0x69, 0x6c, /* |ond bail| */
-				0x6f, 0x75, 0x74, 0x20, 0x66, 0x6f, 0x72, 0x20, /* |out for |*/
-				0x62, 0x61, 0x6e, 0x6b, 0x73, /* |banks| */
-			},
-			Sequence: 0xffffffff,
-		},
-	},
-	TxOut: []*wire.TxOut{
-		{
-			Value: 0x12a05f200,
-			PkScript: []byte{
-				0x41, 0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, /* |A.g....U| */
-				0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, /* |H'.g..q0| */
-				0xb7, 0x10, 0x5c, 0xd6, 0xa8, 0x28, 0xe0, 0x39, /* |..\..(.9| */
-				0x09, 0xa6, 0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, /* |..yb...a| */
-				0xde, 0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, /* |..I..?L.| */
-				0x38, 0xc4, 0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1, /* |8..U....| */
-				0x12, 0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, /* |..\8M...| */
-				0x8d, 0x57, 0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, /* |.W.Lp+k.| */
-				0x1d, 0x5f, 0xac, /* |._.| */
-			},
-		},
-	},
-	LockTime: 0,
+var (
+	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
+	// network could not be set due to the network already being a standard
+	// network or previously-registered into this package.
+	ErrDuplicateNet = errors.New("duplicate Bitcoin network")
+
+	// ErrUnknownHDKeyID describes an error where the provided id which
+	// is intended to identify the network for a hierarchical deterministic
+	// private extended key is not registered.
+	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
+)
+
+var (
+	registeredNets       = make(map[types.BitcoinNet]struct{})
+	pubKeyHashAddrIDs    = make(map[byte]struct{})
+	scriptHashAddrIDs    = make(map[byte]struct{})
+	bech32SegwitPrefixes = make(map[string]struct{})
+	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
+)
+
+func init() {
+	// Register all default networks when the package is initialized.
+	mustRegister(&MainNetParams)
+	mustRegister(&TestNet3Params)
+	mustRegister(&RegressionNetParams)
+	mustRegister(&SimNetParams)
+
+	chain.SetChain(shard.Chain())
 }
 
-// genesisHash is the hash of the first block in the block chain for the main
-// network (genesis block).
-var genesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
-	0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,
-	0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c,
-	0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
-})
+// Register registers the network parameters for a Bitcoin network.  This may
+// error with ErrDuplicateNet if the network is already registered (either
+// due to a previous Register call, or the network being one of the default
+// networks).
+//
+// Network parameters should be registered into this package by a main package
+// as early as possible.  Then, library packages may lookup networks or network
+// parameters based on inputs and work regardless of the network being standard
+// or not.
+func Register(params *Params) error {
+	if _, ok := registeredNets[params.Net]; ok {
+		return ErrDuplicateNet
+	}
+	registeredNets[params.Net] = struct{}{}
+	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
+	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
+	hdPrivToPubKeyIDs[params.HDPrivateKeyID] = params.HDPublicKeyID[:]
 
-// genesisMerkleRoot is the hash of the first transaction in the genesis block
-// for the main network.
-var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0x3b, 0xa3, 0xed, 0xfd, 0x7a, 0x7b, 0x12, 0xb2,
-	0x7a, 0xc7, 0x2c, 0x3e, 0x67, 0x76, 0x8f, 0x61,
-	0x7f, 0xc8, 0x1b, 0xc3, 0x88, 0x8a, 0x51, 0x32,
-	0x3a, 0x9f, 0xb8, 0xaa, 0x4b, 0x1e, 0x5e, 0x4a,
-})
-
-// genesisBlock defines the genesis block of the block chain which serves as the
-// public transaction ledger for the main network.
-
-var genesisBlock = wire.MsgBlock{
-	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
-	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+	// A valid Bech32 encoded segwit address always has as prefix the
+	// human-readable part for the given net followed by '1'.
+	bech32SegwitPrefixes[params.Bech32HRPSegwit+"1"] = struct{}{}
+	return nil
 }
 
-// regTestGenesisHash is the hash of the first block in the block chain for the
-// regression test network (genesis block).
-var regTestGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0x06, 0x22, 0x6e, 0x46, 0x11, 0x1a, 0x0b, 0x59,
-	0xca, 0xaf, 0x12, 0x60, 0x43, 0xeb, 0x5b, 0xbf,
-	0x28, 0xc3, 0x4f, 0x3a, 0x5e, 0x33, 0x2a, 0x1f,
-	0xc7, 0xb2, 0xb7, 0x3c, 0xf1, 0x88, 0x91, 0x0f,
-})
-
-// regTestGenesisMerkleRoot is the hash of the first transaction in the genesis
-// block for the regression test network.  It is the same as the merkle root for
-// the main network.
-var regTestGenesisMerkleRoot = genesisMerkleRoot
-
-// regTestGenesisBlock defines the genesis block of the block chain which serves
-// as the public transaction ledger for the regression test network.
-var regTestGenesisBlock = wire.MsgBlock{
-	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, regTestGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x207fffff, 2),
-	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+// mustRegister performs the same function as Register except it panics if there
+// is an error.  This should only be called from package init functions.
+func mustRegister(params *Params) {
+	if err := Register(params); err != nil {
+		panic("failed to register network: " + err.Error())
+	}
 }
 
-// testNet3GenesisHash is the hash of the first block in the block chain for the
-// test network (version 3).
-var testNet3GenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0x43, 0x49, 0x7f, 0xd7, 0xf8, 0x26, 0x95, 0x71,
-	0x08, 0xf4, 0xa3, 0x0f, 0xd9, 0xce, 0xc3, 0xae,
-	0xba, 0x79, 0x97, 0x20, 0x84, 0xe9, 0x0e, 0xad,
-	0x01, 0xea, 0x33, 0x09, 0x00, 0x00, 0x00, 0x00,
-})
-
-// testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
-// block for the test network (version 3).  It is the same as the merkle root
-// for the main network.
-var testNet3GenesisMerkleRoot = genesisMerkleRoot
-
-// testNet3GenesisBlock defines the genesis block of the block chain which
-// serves as the public transaction ledger for the test network (version 3).
-var testNet3GenesisBlock = wire.MsgBlock{
-	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, testNet3GenesisMerkleRoot, chainhash.Hash{}, time.Unix(1296688602, 0), 0x1d00ffff, 0x18aea41a),
-	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+// IsPubKeyHashAddrID returns whether the id is an identifier known to prefix a
+// pay-to-pubkey-hash address on any default or registered network.  This is
+// used when decoding an address string into a specific address type.  It is up
+// to the caller to check both this and IsScriptHashAddrID and decide whether an
+// address is a pubkey hash address, script hash address, neither, or
+// undeterminable (if both return true).
+func IsPubKeyHashAddrID(id byte) bool {
+	_, ok := pubKeyHashAddrIDs[id]
+	return ok
 }
 
-// simNetGenesisHash is the hash of the first block in the block chain for the
-// simulation test network.
-var simNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0xf6, 0x7a, 0xd7, 0x69, 0x5d, 0x9b, 0x66, 0x2a,
-	0x72, 0xff, 0x3d, 0x8e, 0xdb, 0xbb, 0x2d, 0xe0,
-	0xbf, 0xa6, 0x7b, 0x13, 0x97, 0x4b, 0xb9, 0x91,
-	0x0d, 0x11, 0x6d, 0x5c, 0xbd, 0x86, 0x3e, 0x68,
-})
+// IsScriptHashAddrID returns whether the id is an identifier known to prefix a
+// pay-to-script-hash address on any default or registered network.  This is
+// used when decoding an address string into a specific address type.  It is up
+// to the caller to check both this and IsPubKeyHashAddrID and decide whether an
+// address is a pubkey hash address, script hash address, neither, or
+// undeterminable (if both return true).
+func IsScriptHashAddrID(id byte) bool {
+	_, ok := scriptHashAddrIDs[id]
+	return ok
+}
 
-// simNetGenesisMerkleRoot is the hash of the first transaction in the genesis
-// block for the simulation test network.  It is the same as the merkle root for
-// the main network.
-var simNetGenesisMerkleRoot = genesisMerkleRoot
+// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
+// addresses on any default or registered network.  This is used when decoding
+// an address string into a specific address type.
+func IsBech32SegwitPrefix(prefix string) bool {
+	prefix = strings.ToLower(prefix)
+	_, ok := bech32SegwitPrefixes[prefix]
+	return ok
+}
 
-// simNetGenesisBlock defines the genesis block of the block chain which serves
-// as the public transaction ledger for the simulation test network.
-var simNetGenesisBlock = wire.MsgBlock{
-	Header:       shard.NewBlockHeader(1, chainhash.Hash{}, simNetGenesisMerkleRoot, chainhash.Hash{}, time.Unix(1401292357, 0), 0x207fffff, 2),
-	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+// HDPrivateKeyToPublicKeyID accepts a private hierarchical deterministic
+// extended key id and returns the associated public key id.  When the provided
+// id is not registered, the ErrUnknownHDKeyID error will be returned.
+func HDPrivateKeyToPublicKeyID(id []byte) ([]byte, error) {
+	if len(id) != 4 {
+		return nil, ErrUnknownHDKeyID
+	}
+
+	var key [4]byte
+	copy(key[:], id)
+	pubBytes, ok := hdPrivToPubKeyIDs[key]
+	if !ok {
+		return nil, ErrUnknownHDKeyID
+	}
+
+	return pubBytes, nil
 }

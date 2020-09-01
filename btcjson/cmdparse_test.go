@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"math"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
@@ -201,7 +202,7 @@ func TestAssignFieldErrors(t *testing.T) {
 	}{
 		{
 			name: "general incompatible int -> string",
-			dest: string(0),
+			dest: strconv.Itoa(0),
 			src:  int(0),
 			err:  btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
 		},

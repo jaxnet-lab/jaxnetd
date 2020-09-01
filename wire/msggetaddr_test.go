@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestGetAddr tests the MsgGetAddr API.
@@ -42,11 +43,11 @@ func TestGetAddrWire(t *testing.T) {
 	msgGetAddrEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgGetAddr     // Message to encode
-		out  *MsgGetAddr     // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding variant.
+		in   *MsgGetAddr             // Message to encode
+		out  *MsgGetAddr             // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding variant.
 	}{
 		// Latest protocol version.
 		{

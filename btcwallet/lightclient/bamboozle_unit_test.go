@@ -2,11 +2,13 @@ package neutrino
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 	"io/ioutil"
 	"os"
 	"sort"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs/builder"
@@ -119,6 +121,7 @@ var (
 	// For the purpose of the cfheader mismatch test, we actually only need
 	// to have the scripts of each transaction present.
 	block = &wire.MsgBlock{
+		Header: shard.NewEmptyHeader(),
 		Transactions: []*wire.MsgTx{
 			{
 				TxOut: []*wire.TxOut{
@@ -157,6 +160,7 @@ var (
 	// a filter missing the first output of the block.
 	missingElementFilter, _ = builder.BuildBasicFilter(
 		&wire.MsgBlock{
+			Header:       shard.NewEmptyHeader(),
 			Transactions: block.Transactions[1:],
 		}, nil,
 	)
@@ -164,6 +168,7 @@ var (
 	// a filter with one extra output script.
 	extraElementFilter, _ = builder.BuildBasicFilter(
 		&wire.MsgBlock{
+			Header: shard.NewEmptyHeader(),
 			Transactions: append(block.Transactions,
 				&wire.MsgTx{
 					TxOut: []*wire.TxOut{

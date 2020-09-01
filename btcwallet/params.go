@@ -14,7 +14,7 @@ var activeNet = &JaxNetParams
 // MainNetParams contains parameters specific running btcwallet and
 // btcd on the main network (types.TestNet3).
 var JaxNetParams = netparams.Params{
-	Params:        &chaincfg.JaxNetParams,
+	Params:        &chaincfg.MainNetParams,
 	RPCClientPort: "8334",
 	RPCServerPort: "8332",
 }

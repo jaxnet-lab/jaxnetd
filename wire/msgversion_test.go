@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestVersion tests the MsgVersion API.
@@ -26,7 +27,7 @@ func TestVersion(t *testing.T) {
 	me := NewNetAddress(tcpAddrMe, SFNodeNetwork)
 	tcpAddrYou := &net.TCPAddr{IP: net.ParseIP("192.168.0.1"), Port: 8333}
 	you := NewNetAddress(tcpAddrYou, SFNodeNetwork)
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: error generating nonce: %v", err)
 	}
@@ -139,11 +140,11 @@ func TestVersionWire(t *testing.T) {
 	verRelayTxFalseEncoded[len(verRelayTxFalseEncoded)-1] = 0
 
 	tests := []struct {
-		in   *MsgVersion     // Message to encode
-		out  *MsgVersion     // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgVersion             // Message to encode
+		out  *MsgVersion             // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -268,7 +269,7 @@ func TestVersionWireErrors(t *testing.T) {
 
 	// Encode the new UA length as a varint.
 	var newUAVarIntBuf bytes.Buffer
-	err := WriteVarInt(&newUAVarIntBuf, pver, uint64(len(newUA)))
+	err := encoder.WriteVarInt(&newUAVarIntBuf, uint64(len(newUA)))
 	if err != nil {
 		t.Errorf("WriteVarInt: error %v", err)
 	}
@@ -285,13 +286,13 @@ func TestVersionWireErrors(t *testing.T) {
 	copy(exceedUAVerEncoded[83+len(newUA):], baseVersionEncoded[97:100])
 
 	tests := []struct {
-		in       *MsgVersion     // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgVersion             // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Force error in protocol version.
 		{baseVersion, baseVersionEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -417,10 +418,10 @@ func TestVersionOptionalFields(t *testing.T) {
 	copy(lastBlockVersionEncoded, baseVersionEncoded)
 
 	tests := []struct {
-		msg  *MsgVersion     // Expected message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		msg  *MsgVersion             // Expected message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		{
 			&onlyRequiredVersion,

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestSendHeaders tests the MsgSendHeaders API against the latest protocol
@@ -127,11 +128,11 @@ func TestSendHeadersWire(t *testing.T) {
 	msgSendHeadersEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgSendHeaders // Message to encode
-		out  *MsgSendHeaders // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgSendHeaders         // Message to encode
+		out  *MsgSendHeaders         // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{

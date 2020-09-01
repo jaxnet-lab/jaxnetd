@@ -66,5 +66,11 @@ data
 .idea
 keys
 /app
-/go.sum
+
 shardcore
+jax-core
+jaxcore
+/jaxctl
+jaxcore.conf
+jaxcore.yaml
+/tmp

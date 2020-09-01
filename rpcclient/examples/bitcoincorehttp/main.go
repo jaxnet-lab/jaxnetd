@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
@@ -16,7 +18,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"log"
 )
 
 type Transaction struct {
@@ -37,13 +38,13 @@ func CreateTransaction(destination string, amount int64, txHash string) (*wire.M
 	}
 	privKey, pb := btcec.PrivKeyFromBytes(btcec.S256(), pkBytes)
 
-	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), &chaincfg.JaxNetParams)
+	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), &chaincfg.MainNetParams)
 
 	sourceUtxoHash, _ := chainhash.NewHashFromStr(txHash)
 
 	fmt.Println("sourceUtxoHash", sourceUtxoHash.String())
-	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.JaxNetParams)
-	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), &chaincfg.JaxNetParams)
+	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.MainNetParams)
+	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), &chaincfg.MainNetParams)
 	if err != nil {
 		return nil, Transaction{}, err
 	}

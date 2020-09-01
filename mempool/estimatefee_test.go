@@ -9,10 +9,11 @@ import (
 	"math/rand"
 	"testing"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 )
 
 // newTestFeeEstimator creates a feeEstimator with some different parameters
@@ -71,6 +72,7 @@ func (eft *estimateFeeTester) newBlock(txs []*wire.MsgTx) {
 	eft.height++
 
 	block := btcutil.NewBlock(&wire.MsgBlock{
+		Header:       shard.NewEmptyHeader(),
 		Transactions: txs,
 	})
 	block.SetHeight(eft.height)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
@@ -21,7 +22,7 @@ func GenerateKeyAddress() ([]byte, string) {
 	pk := (*btcec.PublicKey)(&key.PublicKey).
 		SerializeUncompressed()
 	address, err := btcutil.NewAddressPubKeyHash(
-		btcutil.Hash160(pk), &chaincfg.JaxNetParams)
+		btcutil.Hash160(pk), &chaincfg.MainNetParams)
 	keyBytes := key.Serialize()
 	//keyHex := hex.EncodeToString(keyBytes)
 
