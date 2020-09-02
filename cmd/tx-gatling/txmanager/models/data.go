@@ -1,16 +1,19 @@
-package storage
+package models
 
 import (
+	"encoding/hex"
+	"errors"
 	"sort"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
-// UTXOIndex is a storage for UTXO data
+// UTXOIndex is a storage for UTXO data.
 type UTXOIndex struct {
 	// map[ tx_id => block_height ]
 	blocks map[string]int64
-	// map[ tx_id => map[ out_n => UTXO ] ]
+	// map[ tx_id => map[ out_n => UTXO index ] ]
 	txs map[string]map[uint32]uint
 
 	utxo   []UTXO
@@ -68,6 +71,7 @@ func (index *UTXOIndex) AddUTXO(utxo UTXO) {
 
 }
 
+// DEPRECATED
 func (index *UTXOIndex) AddTxs(txs []*btcjson.SearchRawTransactionsResult) {
 	for _, tx := range txs {
 		subIndex := map[uint32]uint{}
@@ -102,12 +106,22 @@ func (index *UTXOIndex) Rows() UTXORows {
 }
 
 type UTXO struct {
-	Address  string `json:"address" csv:"address"`
-	Height   int64  `json:"height" csv:"height"`
-	TxHash   string `json:"tx_hash" csv:"tx_hash"`
-	OutIndex uint32 `json:"out_index" csv:"out_index"`
-	Value    int64  `json:"value" csv:"value"`
-	Used     bool   `json:"used" csv:"used"`
+	Address    string `json:"address" csv:"address"`
+	Height     int64  `json:"height" csv:"height"`
+	TxHash     string `json:"tx_hash" csv:"tx_hash"`
+	OutIndex   uint32 `json:"out_index" csv:"out_index"`
+	Value      int64  `json:"value" csv:"value"`
+	Used       bool   `json:"used" csv:"used"`
+	PKScript   string `json:"pk_script" csv:"pk_script"`
+	ScriptType string `json:"script_type" csv:"script_type"`
+}
+
+func (utxo *UTXO) GetScript(address btcutil.Address) ([]byte, error) {
+	if utxo.Address != address.EncodeAddress() {
+		return nil, errors.New("nope")
+	}
+
+	return hex.DecodeString(utxo.PKScript)
 }
 
 type UTXORows []UTXO

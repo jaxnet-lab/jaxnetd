@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/gocarina/gocsv"
+	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmanager/models"
 )
 
 type CSVStorage struct {
@@ -11,58 +12,47 @@ type CSVStorage struct {
 	file *os.File
 }
 
-func NewCSVStorage(path string, append bool) *CSVStorage {
+func NewCSVStorage(path string) *CSVStorage {
+	return &CSVStorage{path: path}
+}
+
+func (storage *CSVStorage) open(readOnly bool) error {
 	mode := os.O_RDWR | os.O_CREATE
-	if append {
-		// mode |= os.O_APPEND
-	} else {
-		// mode |= os.O_TRUNC
+	if readOnly {
+		mode = os.O_RDONLY
 	}
 
-	file, err := os.OpenFile(path, mode, 0644)
+	file, err := os.OpenFile(storage.path, mode, 0644)
 	if os.IsPermission(err) {
-		file, err = os.Create(path)
+		file, err = os.Create(storage.path)
 	}
 
-	storage := &CSVStorage{
-		path: path,
-		file: file,
-	}
-
-	if !append {
-		_ = storage.WriteHeader()
-	}
-
-	return storage
+	storage.file = file
+	return err
 }
 
-func (storage *CSVStorage) Shutdown() {
-	_ = storage.file.Close()
+func (storage *CSVStorage) Close() {
+	if storage.file != nil {
+		_ = storage.file.Close()
+	}
 }
 
-func (storage *CSVStorage) FetchData() (UTXORows, error) {
-	rows := make([]UTXO, 0)
+func (storage *CSVStorage) FetchData() (models.UTXORows, error) {
+	if err := storage.open(true); err != nil {
+		return nil, err
+	}
+	defer storage.Close()
+
+	rows := make([]models.UTXO, 0)
 	err := gocsv.UnmarshalFile(storage.file, &rows)
 	return rows, err
 }
 
-func (storage *CSVStorage) SaveRows(rows []UTXO) error {
-	return gocsv.MarshalFile(rows, storage.file)
-}
-
-func (storage *CSVStorage) WriteHeader() error {
-	writer := gocsv.DefaultCSVWriter(storage.file)
-	err := writer.Write([]string{
-		"address",
-		"height",
-		"tx_hash",
-		"out_index",
-		"value",
-	})
-	if err != nil {
+func (storage *CSVStorage) SaveRows(rows []models.UTXO) error {
+	if err := storage.open(false); err != nil {
 		return err
 	}
+	defer storage.Close()
 
-	writer.Flush()
-	return nil
+	return gocsv.MarshalFile(rows, storage.file)
 }
