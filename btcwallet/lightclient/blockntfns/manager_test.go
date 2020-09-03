@@ -2,7 +2,7 @@ package blockntfns_test
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"testing"
 	"time"
 

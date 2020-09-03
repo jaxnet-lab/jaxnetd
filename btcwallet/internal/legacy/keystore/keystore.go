@@ -15,7 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/jaxnet"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"io"
 	"io/ioutil"
 	"math/big"

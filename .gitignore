@@ -68,3 +68,5 @@ keys
 /app
 /go.sum
 shardcore
+
+data/

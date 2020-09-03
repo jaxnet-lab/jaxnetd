@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/txsort"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestSort ensures the transaction sorting works according to the BIP.

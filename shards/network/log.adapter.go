@@ -29,23 +29,45 @@ func LogAdapter(logger *zap.Logger) ILogger {
 }
 
 func (l *logAdapter) Tracef(format string, params ...interface{}) {
-	l.logger.Debug(fmt.Sprintf(format, params...))
+	if params != nil {
+		l.logger.Debug(fmt.Sprintf(format, params...))
+	} else {
+		l.logger.Debug(format)
+	}
 }
 
 func (l *logAdapter) Debugf(format string, params ...interface{}) {
-	l.logger.Debug(fmt.Sprintf(format, params...))
+	if params != nil {
+		l.logger.Debug(fmt.Sprintf(format, params...))
+	} else {
+		l.logger.Debug(format)
+	}
+
 }
 
 func (l *logAdapter) Infof(format string, params ...interface{}) {
-	l.logger.Info(fmt.Sprintf(format, params...))
+	if params != nil {
+		l.logger.Info(fmt.Sprintf(format, params...))
+	} else {
+		l.logger.Info(format)
+	}
 }
 
 func (l *logAdapter) Warnf(format string, params ...interface{}) {
-	l.logger.Warn(fmt.Sprintf(format, params...))
+	if params != nil {
+		l.logger.Warn(fmt.Sprintf(format, params...))
+	} else {
+		fmt.Println("warn format...", format, l.logger)
+		l.logger.Warn(format)
+	}
 }
 
 func (l *logAdapter) Errorf(format string, params ...interface{}) {
-	l.logger.Error(fmt.Sprintf(format, params...))
+	if params != nil {
+		l.logger.Error(fmt.Sprintf(format, params...))
+	} else {
+		l.logger.Error(format)
+	}
 }
 
 func (l *logAdapter) Trace(format string) {

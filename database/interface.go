@@ -10,7 +10,7 @@ package database
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a

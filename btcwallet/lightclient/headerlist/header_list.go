@@ -1,7 +1,7 @@
 package headerlist
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 )
 
 // Chain is an interface that stores a list of Nodes. Each node represents a

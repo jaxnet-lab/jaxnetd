@@ -6,8 +6,8 @@ package neutrino
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"net"
 	"strconv"
 	"sync"
@@ -29,7 +29,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // These are exported variables so they can be changed by users.

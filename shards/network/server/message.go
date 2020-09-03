@@ -3,7 +3,7 @@ package server
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // relayMsg packages an inventory vector along with the newly discovered

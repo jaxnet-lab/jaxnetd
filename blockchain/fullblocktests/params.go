@@ -6,14 +6,14 @@ package fullblocktests
 
 import (
 	"encoding/hex"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a

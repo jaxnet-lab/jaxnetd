@@ -1,14 +1,14 @@
 package wallet
 
 import (
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/waddrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 type mockChainClient struct {

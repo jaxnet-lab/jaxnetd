@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestIPTypes ensures the various functions which determine the type of an IP

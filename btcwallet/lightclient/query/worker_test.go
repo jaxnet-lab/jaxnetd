@@ -2,11 +2,11 @@ package query
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/encoder"
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 var (

@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"io"
 	"math/rand"
 	"net"
@@ -24,7 +25,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // AddrManager provides a concurrency safe address manager for caching potential

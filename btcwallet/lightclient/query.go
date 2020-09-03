@@ -4,8 +4,8 @@ package neutrino
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"sync"
 	"time"
 
@@ -17,7 +17,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/filterdb"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/pushtx"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 var (

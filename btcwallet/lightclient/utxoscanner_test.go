@@ -2,7 +2,7 @@ package neutrino
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
 	"reflect"
 	"sync"
 	"testing"
@@ -12,7 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/headerfs"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 type MockChainClient struct {

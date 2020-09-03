@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/minio/sha256-simd"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"math/rand"
 	"sync"
 	"time"
@@ -20,7 +20,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 const (

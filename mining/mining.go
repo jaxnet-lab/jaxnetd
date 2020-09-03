@@ -8,8 +8,9 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -17,7 +18,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (

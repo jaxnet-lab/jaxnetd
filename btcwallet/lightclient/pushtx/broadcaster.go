@@ -9,7 +9,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/blockntfns"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wtxmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 var (

@@ -3,7 +3,7 @@ package headerfs
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"os"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"

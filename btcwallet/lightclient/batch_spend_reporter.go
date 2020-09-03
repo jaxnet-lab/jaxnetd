@@ -2,7 +2,7 @@ package neutrino
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // batchSpendReporter orchestrates the delivery of spend reports to

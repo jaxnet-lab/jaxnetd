@@ -2,7 +2,7 @@ package cache_test
 
 import (
 	"crypto/rand"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -11,7 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/cache/lru"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/filterdb"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestBlockFilterCaches tests that we can put and retrieve elements from all

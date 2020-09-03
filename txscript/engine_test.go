@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestBadPC sets the pc to a deliberately bad result then confirms that Step()

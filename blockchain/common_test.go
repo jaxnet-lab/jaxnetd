@@ -8,8 +8,9 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,8 +22,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -107,7 +108,7 @@ func loadBlocks(filename string) (blocks []*btcutil.Block, err error) {
 		// read block
 		dr.Read(rbytes)
 
-		block, err = btcutil.NewBlockFromBytes(rbytes)
+		block, err = btcutil.NewBlockFromBytes(beacon.Chain(), rbytes)
 		if err != nil {
 			return
 		}
@@ -125,12 +126,13 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
 	}
 
+	ch := beacon.Chain()
 	// Handle memory database specially since it doesn't need the disk
 	// specific handling.
 	var db database.DB
 	var teardown func()
 	if testDbType == "memdb" {
-		ndb, err := database.Create(testDbType)
+		ndb, err := database.Create(testDbType, ch)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating db: %v", err)
 		}
@@ -154,7 +156,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 		// Create a new database to store the accepted blocks into.
 		dbPath := filepath.Join(testDbRoot, dbName)
 		_ = os.RemoveAll(dbPath)
-		ndb, err := database.Create(testDbType, dbPath, blockDataNet)
+		ndb, err := database.Create(testDbType, ch, dbPath, blockDataNet)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating db: %v", err)
 		}

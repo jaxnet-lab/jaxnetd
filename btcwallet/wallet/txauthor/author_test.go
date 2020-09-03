@@ -10,7 +10,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txrules"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txsizes"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 func p2pkhOutputs(amounts ...btcutil.Amount) []*wire.TxOut {

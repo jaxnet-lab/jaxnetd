@@ -25,7 +25,7 @@ type shardConfig struct {
 
 type NodeConfig struct {
 	Rpc    server.Config    `yaml:"rpc"`
-	P2P    server.P2pConfig `yaml:"server"`
+	P2P    server.P2pConfig `yaml:"p2p"`
 	Shards shardConfig      `yaml:"shards"`
 	DbType string           `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
 }

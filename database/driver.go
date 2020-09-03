@@ -6,7 +6,7 @@ package database
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"github.com/btcsuite/btclog"
 )

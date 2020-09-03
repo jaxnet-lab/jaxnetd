@@ -11,7 +11,7 @@ import (
 	"container/list"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"hash/crc32"
 	"io"
 	"os"

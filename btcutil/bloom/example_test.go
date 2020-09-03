@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
 	"math/rand"
 	"time"
 )

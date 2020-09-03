@@ -12,7 +12,7 @@ import (
 	"sort"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // InPlaceSort modifies the passed transaction inputs and outputs to be sorted

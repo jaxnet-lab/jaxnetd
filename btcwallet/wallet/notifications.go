@@ -13,8 +13,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wtxmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // TODO: It would be good to send errors during notification creation to the rpc

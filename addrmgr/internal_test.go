@@ -7,7 +7,7 @@ package addrmgr
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 func TstKnownAddressIsBad(ka *KnownAddress) bool {

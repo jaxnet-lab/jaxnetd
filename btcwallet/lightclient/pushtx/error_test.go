@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/pushtx"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestParseBroadcastErrorCode ensures that we properly construct a

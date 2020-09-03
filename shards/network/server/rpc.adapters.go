@@ -6,7 +6,7 @@ package server
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"sync/atomic"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"

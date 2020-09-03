@@ -13,10 +13,10 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"go.uber.org/zap"
 	"math"
 	"net"
@@ -38,8 +38,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -633,7 +633,7 @@ func (s *server) newPeerConfig(sp *serverPeer) *peer.Config {
 func (s *server) inboundPeerConnected(conn net.Conn) {
 	sp := newServerPeer(s, false)
 	sp.isWhitelisted = s.isWhitelisted(conn.RemoteAddr())
-	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp))
+	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp), s.chain.Chain())
 	sp.AssociateConnection(conn)
 	go s.peerDoneHandler(sp)
 }
@@ -645,7 +645,7 @@ func (s *server) inboundPeerConnected(conn net.Conn) {
 // manager of the attempt.
 func (s *server) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 	sp := newServerPeer(s, c.Permanent)
-	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String())
+	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String(), s.chain.Chain())
 	if err != nil {
 		s.logger.Debugf("Cannot create outbound peer %s: %v", c.Addr, err)
 		if c.Permanent {
@@ -956,8 +956,6 @@ func (s *server) Stop() error {
 		return nil
 	}
 
-	s.logger.Warnf("Server shutting down")
-
 	// Stop the CPU miner if needed
 	//s.cpuMiner.Stop()
 
@@ -1129,6 +1127,7 @@ func Server(cfg *P2pConfig, amgr *addrmgr.AddrManager, chain chain.IChain, liste
 	db database.DB, chainParams *chaincfg.Params,
 	interrupt <-chan struct{}, logger *zap.Logger) (*server, error) {
 
+	logger.Info("Starting server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	//if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
@@ -1407,7 +1406,7 @@ func Server(cfg *P2pConfig, amgr *addrmgr.AddrManager, chain chain.IChain, liste
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
 	if len(permanentPeers) == 0 {
-		permanentPeers = cfg.AddPeers
+		permanentPeers = cfg.Peers
 	}
 	for _, addr := range permanentPeers {
 		netAddr, err := s.addrStringToNetAddr(addr)

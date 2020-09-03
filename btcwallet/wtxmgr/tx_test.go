@@ -19,7 +19,7 @@ import (
 	_ "gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb/bdb"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // Received transaction output for mainnet outpoint

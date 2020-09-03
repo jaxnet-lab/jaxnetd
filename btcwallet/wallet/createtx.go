@@ -15,8 +15,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txauthor"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/walletdb"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wtxmgr"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // byAmount defines the methods needed to satisify sort.Interface to

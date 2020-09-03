@@ -6,8 +6,8 @@ package ffldb
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"github.com/btcsuite/btclog"
 	"gitlab.com/jaxnet/core/shard.core.git/database"

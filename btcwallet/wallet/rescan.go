@@ -9,8 +9,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/waddrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wtxmgr"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // RescanProgressMsg reports the current progress made by a rescan for a

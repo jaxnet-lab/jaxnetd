@@ -1,7 +1,7 @@
 package chain_test
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"reflect"
 	"testing"
 	"time"
@@ -10,7 +10,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 var Block100000 = wire.MsgBlock{

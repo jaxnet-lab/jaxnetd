@@ -2,7 +2,7 @@ package blockntfns
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 )
 
 // BlockNtfn is an interface that coalesces all the different types of block

@@ -7,7 +7,7 @@ package wallet
 import (
 	"bytes"
 	"fmt"
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/chain"

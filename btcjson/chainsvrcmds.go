@@ -10,8 +10,7 @@ package btcjson
 import (
 	"encoding/json"
 	"fmt"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // AddNodeSubCmd defines the type used in the addnode JSON-RPC command for the

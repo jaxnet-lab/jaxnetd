@@ -13,8 +13,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txrules"
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/wallet/txsizes"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // SumOutputValues sums up the list of TxOuts and returns an Amount.

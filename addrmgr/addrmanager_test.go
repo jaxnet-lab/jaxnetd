@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // naTest is used to describe a test to be performed against the NetAddressKey

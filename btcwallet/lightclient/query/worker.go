@@ -2,7 +2,7 @@ package query
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/encoder"
 	"time"
 )
 

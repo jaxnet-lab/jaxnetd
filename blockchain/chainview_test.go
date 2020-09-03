@@ -6,7 +6,7 @@ package blockchain
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"math/rand"
 	"reflect"
 	"testing"

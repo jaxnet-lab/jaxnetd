@@ -1,12 +1,12 @@
 package pushtx
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
 	"math/rand"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcwallet/lightclient/blockntfns"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // createTx is a helper method to create random transactions that spend

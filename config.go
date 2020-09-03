@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -70,13 +71,13 @@ const (
 )
 
 var (
-	defaultHomeDir     = btcutil.AppDataDir("btcd", false)
-	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
-	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
-	knownDbTypes       = database.SupportedDrivers()
-	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
+	defaultHomeDir = btcutil.AppDataDir("btcd", false)
+	//defaultConfigFile  =  defaultConfigFilename
+	//defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
+	knownDbTypes = database.SupportedDrivers()
+	//defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
+	//defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
+	//defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -431,10 +432,17 @@ func newConfigParser(cfg *shards.Config, so *serviceOptions, options flags.Optio
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
 func loadConfig() (*shards.Config, []string, error) {
+
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = defaultHomeDir
+	}
+
+	configFile := path.Join(dataDir, defaultConfigFilename)
 	// Default config.
 	fileName := os.Getenv("configName")
 	if fileName != "" {
-		defaultConfigFile = filepath.Join(defaultHomeDir, fileName)
+		configFile = filepath.Join(dataDir, fileName)
 	}
 
 	cfg := shards.Config{
@@ -464,10 +472,10 @@ func loadConfig() (*shards.Config, []string, error) {
 			},
 		},
 
-		ConfigFile: defaultConfigFile,
+		ConfigFile: configFile,
 		DebugLevel: defaultLogLevel,
-		DataDir:    defaultDataDir,
-		LogDir:     defaultLogDir,
+		DataDir:    dataDir,
+		LogDir:     path.Join(dataDir, "logs"),
 		//RPCKey:               defaultRPCKeyFile,
 		//RPCCert:              defaultRPCCertFile,
 		//Generate:             defaultGenerate,
@@ -512,41 +520,40 @@ func loadConfig() (*shards.Config, []string, error) {
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if preCfg.ConfigFile != defaultConfigFile {
-		stats, err := os.Stat(preCfg.ConfigFile)
-		if os.IsNotExist(err) {
-			err := createDefaultConfigFile(preCfg.ConfigFile)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating a "+
-					"default config file: %v\n", err)
-			}
-		}
 
-		cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
+	stats, err := os.Stat(preCfg.ConfigFile)
+	if os.IsNotExist(err) {
+		err := createDefaultConfigFile(preCfg.ConfigFile)
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
-			_, _ = fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
+			fmt.Fprintf(os.Stderr, "Error creating a "+
+				"default config file: %v\n", err)
 		}
+	}
 
-		ext := filepath.Ext(stats.Name())
-		switch ext {
-		case ".conf":
-			err = flags.NewIniParser(parser).Parse(cfgFile)
-			if err != nil {
-				configFileError = err
-			}
-		case ".yaml":
-			err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-			fmt.Println("err ", cfg.Node)
-			if err != nil {
-				configFileError = err
-			}
-		default:
-			_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
-			return nil, nil, errors.New("Invalid file extension: " + ext)
+	fmt.Println("preCfg.ConfigFile", preCfg.ConfigFile)
+	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
+		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
+		return nil, nil, err
+	}
+
+	ext := filepath.Ext(stats.Name())
+	switch ext {
+	case ".conf":
+		err = flags.NewIniParser(parser).Parse(cfgFile)
+		if err != nil {
+			configFileError = err
 		}
-
+	case ".yaml":
+		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+		fmt.Println("err ", cfg.Node)
+		if err != nil {
+			configFileError = err
+		}
+	default:
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
+		return nil, nil, errors.New("Invalid file extension: " + ext)
 	}
 
 	// Parse command line options again to ensure they take precedence.
@@ -561,7 +568,7 @@ func loadConfig() (*shards.Config, []string, error) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	err = os.MkdirAll(defaultHomeDir, 0700)
+	err = os.MkdirAll(dataDir, 0700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -618,6 +625,9 @@ func loadConfig() (*shards.Config, []string, error) {
 		fmt.Println("Supported subsystems", supportedSubsystems())
 		os.Exit(0)
 	}
+
+	fmt.Println("P2P.Listeners", cfg.Node.P2P.Listeners)
+	fmt.Println("Rpc.Listeners", cfg.Node.Rpc.Listeners)
 
 	// Initialize log rotation.  After log rotation has been initialized, the
 	// logger variables may be used.
@@ -695,7 +705,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	//}
 
 	// --addPeer and --connect do not mix.
-	if len(cfg.Node.P2P.AddPeers) > 0 && len(cfg.Node.P2P.ConnectPeers) > 0 {
+	if len(cfg.Node.P2P.Peers) > 0 && len(cfg.Node.P2P.ConnectPeers) > 0 {
 		str := "%s: the --addpeer and --connect options can not be " +
 			"mixed"
 		err := fmt.Errorf(str, funcName)
@@ -931,7 +941,7 @@ func loadConfig() (*shards.Config, []string, error) {
 
 	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.AddPeers = normalizeAddresses(cfg.Node.P2P.AddPeers,
+	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers,
 		activeNetParams.DefaultPort)
 	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
 		activeNetParams.DefaultPort)
