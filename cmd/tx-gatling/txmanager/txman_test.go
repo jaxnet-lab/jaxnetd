@@ -114,7 +114,7 @@ func Example() {
 			log.Fatal("can not to SetPayToAddress:", err)
 		}
 
-		txManager.SetKeys(bobKP)
+		txManager.SetKey(bobKP)
 		txSignerByBob, err := txManager.DraftToSignedTx(draft)
 		if err != nil {
 			log.Fatal("can not to DraftToSignedTx:", err)
@@ -122,7 +122,7 @@ func Example() {
 		bobSignature := txSignerByBob.TxIn[0].SignatureScript
 		// txSignerByBob and bobSignature new to pass to Alice for signing and submitting
 
-		txManager.SetKeys(aliceKP)
+		txManager.SetKey(aliceKP)
 		aliceAndBobSignature, err := txManager.SignUTXOForTx(txSignerByBob, newUtxo, 0, bobSignature, false)
 		if err != nil {
 			log.Fatal("can not to SignUTXOForTx:", err)

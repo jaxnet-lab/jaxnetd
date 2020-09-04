@@ -39,15 +39,17 @@ func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPub
 		return err
 	}
 
-	scriptAddr, err := btcutil.NewAddressScriptHash(pkScript, params)
-	if err != nil {
-		return err
-	}
+	// scriptAddr, err := btcutil.NewAddressScriptHash(pkScript, params)
+	// if err != nil {
+	// 	return err
+	// }
 
-	tx.ReceiverScript, err = txscript.PayToAddrScript(scriptAddr)
-	if err != nil {
-		return err
-	}
+	// tx.ReceiverScript, err = txscript.PayToAddrScript(scriptAddr)
+	// if err != nil {
+	// 	return err
+	// }
+
+	tx.ReceiverScript = pkScript
 	return nil
 }
 
@@ -56,11 +58,11 @@ func (tx DraftTx) Destination() string {
 }
 
 type Transaction struct {
-	TxHash      string      `json:"tx_hash" csv:"tx_hash"`
-	Source      string      `json:"source" csv:"source"`
-	Destination string      `json:"destination" csv:"destination"`
-	Amount      int64       `json:"amount" csv:"amount"`
-	UnsignedTx  string      `json:"unsigned_tx" csv:"unsigned_tx"`
-	SignedTx    string      `json:"signed_tx" csv:"signed_tx"`
-	RawTX       *wire.MsgTx `json:"-" csv:"-"`
+	TxHash      string `json:"tx_hash" csv:"tx_hash"`
+	Source      string `json:"source" csv:"source"`
+	Destination string `json:"destination" csv:"destination"`
+	Amount      int64  `json:"amount" csv:"amount"`
+	SignedTx    string `json:"signed_tx" csv:"signed_tx"`
+
+	RawTX *wire.MsgTx `json:"-" csv:"-"`
 }
