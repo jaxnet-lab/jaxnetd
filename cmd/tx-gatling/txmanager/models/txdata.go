@@ -17,14 +17,14 @@ type DraftTx struct {
 }
 
 // SetPayToAddress creates regular pay-to-address script.
-// 	address is hex-encoded btcutil.Address
-func (tx *DraftTx) SetPayToAddress(address string, params *chaincfg.Params) error {
-	destinationAddress, err := btcutil.DecodeAddress(address, params)
+// 	destAddress is hex-encoded btcutil.Address
+func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincfg.Params) error {
+	decodedDestAddr, err := btcutil.DecodeAddress(destAddress, params)
 	if err != nil {
 		return err
 	}
 
-	tx.ReceiverScript, err = txscript.PayToAddrScript(destinationAddress)
+	tx.ReceiverScript, err = txscript.PayToAddrScript(decodedDestAddr)
 	if err != nil {
 		return err
 	}

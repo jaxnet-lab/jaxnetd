@@ -16,8 +16,12 @@ func NewCSVStorage(path string) *CSVStorage {
 	return &CSVStorage{path: path}
 }
 
-func (storage *CSVStorage) open(readOnly bool) error {
+func (storage *CSVStorage) open(readOnly, truncate bool) error {
 	mode := os.O_RDWR | os.O_CREATE
+	if truncate {
+		mode |= os.O_TRUNC
+	}
+
 	if readOnly {
 		mode = os.O_RDONLY
 	}
@@ -38,7 +42,7 @@ func (storage *CSVStorage) Close() {
 }
 
 func (storage *CSVStorage) FetchData() (models.UTXORows, error) {
-	if err := storage.open(true); err != nil {
+	if err := storage.open(true, false); err != nil {
 		return nil, err
 	}
 	defer storage.Close()
@@ -49,7 +53,7 @@ func (storage *CSVStorage) FetchData() (models.UTXORows, error) {
 }
 
 func (storage *CSVStorage) SaveRows(rows []models.UTXO) error {
-	if err := storage.open(false); err != nil {
+	if err := storage.open(false, true); err != nil {
 		return err
 	}
 	defer storage.Close()

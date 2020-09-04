@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/hex"
 	"errors"
-	"sort"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -62,9 +61,9 @@ func (index *UTXOIndex) AddUTXO(utxo UTXO) {
 		txInd = map[uint32]uint{}
 	}
 
-	index.lastID++
 	index.utxo = append(index.utxo, utxo)
 	txInd[utxo.OutIndex] = index.lastID
+	index.lastID++
 
 	index.txs[utxo.TxHash] = txInd
 	index.blocks[utxo.TxHash] = utxo.Height
@@ -117,7 +116,7 @@ type UTXO struct {
 }
 
 func (utxo *UTXO) GetScript(address btcutil.Address) ([]byte, error) {
-	if utxo.Address != address.EncodeAddress() {
+	if utxo.PKScript != address.String() {
 		return nil, errors.New("nope")
 	}
 
@@ -128,7 +127,7 @@ type UTXORows []UTXO
 
 func (rows UTXORows) Len() int { return len(rows) }
 func (rows UTXORows) Less(i, j int) bool {
-	return rows[i].Height < rows[i].Height || rows[i].Value < rows[j].Value || rows[i].Used
+	return rows[i].Value < rows[j].Value
 }
 func (rows UTXORows) Swap(i, j int) { rows[i], rows[j] = rows[j], rows[i] }
 
@@ -141,8 +140,6 @@ func (rows UTXORows) GetSum() int64 {
 }
 
 func (rows UTXORows) CollectForAmount(amount int64) UTXORows {
-	sort.Sort(sort.Reverse(rows))
-
 	var res UTXORows
 	change := amount
 

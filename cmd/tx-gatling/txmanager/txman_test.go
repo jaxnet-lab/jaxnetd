@@ -32,7 +32,7 @@ func Example() {
 		log.Fatal("unable to init txManager:", err)
 	}
 
-	utxo, err := txManager.CollectUTXO(address)
+	utxo, err := txManager.CollectUTXO(address, 0)
 	if err != nil {
 		log.Fatal("unable to collect utxo:", err)
 	}
@@ -51,7 +51,7 @@ func Example() {
 		bobKP.AddressPubKey,
 		aliceKP.AddressPubKey,
 		100*OneCoin,
-		CollectorFromRows(utxo))
+		UTXOFromRows(utxo))
 	if err != nil {
 		log.Fatal("unable to collect utxo:", err)
 	}

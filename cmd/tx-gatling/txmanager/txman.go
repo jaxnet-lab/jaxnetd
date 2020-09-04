@@ -2,6 +2,7 @@ package txmanager
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
@@ -57,11 +58,12 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 
 	return client, nil
 }
+
 func (client *TxMan) SetKeys(key *KeyData) {
 	client.key = key
 }
 
-func (client *TxMan) CollectUTXO(address string) (models.UTXORows, error) {
+func (client *TxMan) CollectUTXO(address string, offset int64) (models.UTXORows, error) {
 	maxHeight, err := client.RPC.GetBlockCount()
 	if err != nil {
 		return nil, err
@@ -69,7 +71,12 @@ func (client *TxMan) CollectUTXO(address string) (models.UTXORows, error) {
 
 	index := models.NewUTXOIndex()
 
-	for height := int64(1); height <= maxHeight; height++ {
+	if offset == 0 {
+		offset = 1
+	}
+
+	fmt.Printf("Start processing...")
+	for height := offset; height <= maxHeight; height++ {
 		hash, err := client.RPC.GetBlockHash(height)
 		if err != nil {
 			return nil, err
@@ -79,6 +86,8 @@ func (client *TxMan) CollectUTXO(address string) (models.UTXORows, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		fmt.Printf("\rProcess block #%d", height)
 
 		for _, msgTx := range block.Transactions {
 			for _, in := range msgTx.TxIn {
@@ -95,8 +104,8 @@ func (client *TxMan) CollectUTXO(address string) (models.UTXORows, error) {
 					return nil, err
 				}
 
-				for _, s := range decodedScript.Addresses {
-					if address == s {
+				for _, skAddress := range decodedScript.Addresses {
+					if address == skAddress {
 						index.AddUTXO(models.UTXO{
 							Address:    address,
 							Height:     height,
@@ -114,11 +123,12 @@ func (client *TxMan) CollectUTXO(address string) (models.UTXORows, error) {
 		}
 	}
 
+	fmt.Printf("\nFound %d UTXOs for %s in blocks[%d, %d]\n", len(index.Rows()), address, offset, maxHeight)
 	return index.Rows(), nil
 }
 
-func (client *TxMan) NewTx(destination string, amount int64, getUTXO UTXOCollector) (models.Transaction, error) {
-	utxo, err := getUTXO(amount)
+func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider) (models.Transaction, error) {
+	utxo, err := utxoPrv.SelectForAmount(amount)
 	if err != nil {
 		return models.Transaction{}, errors.Wrap(err, "unable to get UTXO for amount")
 	}
@@ -143,21 +153,17 @@ func (client *TxMan) NewTx(destination string, amount int64, getUTXO UTXOCollect
 		return models.Transaction{}, errors.Wrap(err, "tx not signed")
 	}
 
-	// hashRes, err := client.RPC.SendRawTransaction(wireTx, true)
-	// if err != nil {
-	// 	return models.Transaction{}, errors.Wrap(err, "tx not sent")
-	// }
-
 	return models.Transaction{
 		TxHash:      wireTx.TxHash().String(),
 		Source:      client.key.Address.String(),
 		Destination: draft.Destination(),
 		Amount:      amount,
+		RawTX:       wireTx,
 	}, nil
 }
 
-func (client *TxMan) NewMultiSig2of2Tx(fistSigner, secondSigner *btcutil.AddressPubKey, amount int64, getUTXO UTXOCollector) (models.Transaction, error) {
-	utxo, err := getUTXO(amount)
+func (client *TxMan) NewMultiSig2of2Tx(fistSigner, secondSigner *btcutil.AddressPubKey, amount int64, utxoPrv UTXOProvider) (models.Transaction, error) {
+	utxo, err := utxoPrv.SelectForAmount(amount)
 	if err != nil {
 		return models.Transaction{}, errors.Wrap(err, "unable to get UTXO for amount")
 	}
@@ -182,11 +188,6 @@ func (client *TxMan) NewMultiSig2of2Tx(fistSigner, secondSigner *btcutil.Address
 		return models.Transaction{}, errors.Wrap(err, "tx not signed")
 	}
 
-	// hashRes, err := client.RPC.SendRawTransaction(wireTx, true)
-	// if err != nil {
-	// 	return models.Transaction{}, errors.Wrap(err, "tx not sent")
-	// }
-
 	return models.Transaction{
 		TxHash:      wireTx.TxHash().String(),
 		Destination: draft.Destination(),
@@ -203,7 +204,7 @@ func (client *TxMan) DraftToSignedTx(data models.DraftTx) (*wire.MsgTx, error) {
 	sum := data.UTXO.GetSum()
 	change := sum - data.Amount - data.NetworkFee
 	if change != 0 {
-		changeRcvScript, err := txscript.PayToAddrScript(client.key.Address)
+		changeRcvScript, err := txscript.PayToAddrScript(client.key.AddressPubKey.AddressPubKeyHash())
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to create P2A script for change")
 		}
@@ -212,27 +213,32 @@ func (client *TxMan) DraftToSignedTx(data models.DraftTx) (*wire.MsgTx, error) {
 	}
 
 	tempSum := data.Amount + change
-	for i, utxo := range data.UTXO {
-		hash, err := chainhash.NewHashFromStr(utxo.TxHash)
+	for i := range data.UTXO {
+		txInIndex := i
+		utxo := data.UTXO[txInIndex]
+		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not decode TxHash")
 		}
 
-		outPoint := wire.NewOutPoint(hash, utxo.OutIndex)
+		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 		redeemTx.AddTxIn(txIn)
+	}
+
+	for i := range data.UTXO {
+		txInIndex := i
+		utxo := data.UTXO[txInIndex]
 
 		inputAmount := utxo.Value
 		if tempSum < inputAmount {
 			inputAmount = tempSum
-			// tempSum = 0
 		}
 
-		_, err = client.SignUTXOForTx(redeemTx, utxo, i, nil, true)
+		_, err := client.SignUTXOForTx(redeemTx, utxo, txInIndex, nil, true)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
-		// redeemTx.TxIn[i].SignatureScript = signature
 
 		tempSum -= inputAmount
 	}
@@ -247,29 +253,20 @@ func (client *TxMan) DraftToSignedTx(data models.DraftTx) (*wire.MsgTx, error) {
 // 	- inIndex is an index, where placed this UTXO
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
-func (client *TxMan) SignUTXOForTx(redeemTx *wire.MsgTx, utxo models.UTXO,
-	inIndex int, prevScript []byte, postVerify bool) ([]byte, error) {
-	address, err := btcutil.DecodeAddress(utxo.Address, client.networkCfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode UTXO address")
-	}
-
-	var pkScript []byte
-	pkScript, err = txscript.PayToAddrScript(address)
-	// pkScript, err := hex.DecodeString(utxo.PKScript)
+func (client *TxMan) SignUTXOForTx(redeemTx *wire.MsgTx, utxo models.UTXO, inIndex int, prevScript []byte, postVerify bool) ([]byte, error) {
+	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create P2A script")
 	}
-	var sig []byte
 
-	// sig, err = txscript.SignatureScript(redeemTx, inIndex, pkScript, txscript.SigHashAll, client.key.PrivateKey, false)
+	var sig []byte
 	sig, err = txscript.SignTxOutput(client.networkCfg, redeemTx, inIndex, pkScript,
-		txscript.SigHashAll, client.key, &utxo, prevScript)
+		txscript.SigHashSingle, client.key, &utxo, prevScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign tx output")
 	}
-
 	redeemTx.TxIn[inIndex].SignatureScript = sig
+
 	if postVerify {
 		vm, err := txscript.NewEngine(pkScript, redeemTx, inIndex,
 			txscript.StandardVerifyFlags, nil, nil, utxo.Value)
@@ -288,14 +285,14 @@ func (client *TxMan) SignUTXOForTx(redeemTx *wire.MsgTx, utxo models.UTXO,
 func (client *TxMan) DecodeScript(script []byte) (*btcjson.DecodeScriptResult, error) {
 	// The disassembled string will contain [error] inline if the script
 	// doesn't fully parse, so ignore the error here.
-	disbuf, _ := txscript.DisasmString(script)
+	asm, _ := txscript.DisasmString(script)
 
 	// Get information about the script.
 	// Ignore the error here since an error means the script couldn't parse
-	// and there is no additinal information about it anyways.
-	scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(script, client.networkCfg)
-	addresses := make([]string, len(addrs))
-	for i, addr := range addrs {
+	// and there is no additional information about it anyways.
+	scriptClass, address, reqSigns, _ := txscript.ExtractPkScriptAddrs(script, client.networkCfg)
+	addresses := make([]string, len(address))
+	for i, addr := range address {
 		addresses[i] = addr.EncodeAddress()
 	}
 
@@ -307,8 +304,8 @@ func (client *TxMan) DecodeScript(script []byte) (*btcjson.DecodeScriptResult, e
 
 	// Generate and return the reply.
 	reply := &btcjson.DecodeScriptResult{
-		Asm:       disbuf,
-		ReqSigs:   int32(reqSigs),
+		Asm:       asm,
+		ReqSigs:   int32(reqSigns),
 		Type:      scriptClass.String(),
 		Addresses: addresses,
 	}

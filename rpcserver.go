@@ -14,10 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -30,6 +26,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -862,7 +863,7 @@ func handleDecodeScript(s *rpcServer, cmd interface{}, closeChan <-chan struct{}
 }
 
 func handleGetBlockStats(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	//c := cmd.(*btcjson.GetBlockStatsCmd)
+	// c := cmd.(*btcjson.GetBlockStatsCmd)
 	res := btcjson.GetBlockStatsResult{}
 	return res, nil
 }
@@ -874,27 +875,27 @@ func handleGetChaintxStats(s *rpcServer, cmd interface{}, closeChan <-chan struc
 	return res, nil
 }
 
-//estimatesmartfee
+// estimatesmartfee
 func handleEstimateSmartFee(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 
-	//c := cmd.(*btcjson.EstimateSmartFeeResult)
+	// c := cmd.(*btcjson.EstimateSmartFeeResult)
 	rate := 1.0
 	res := btcjson.EstimateSmartFeeResult{
 		FeeRate: &rate,
 	}
-	//if s.cfg.FeeEstimator == nil {
+	// if s.cfg.FeeEstimator == nil {
 	//	return nil, errors.New("Fee estimation disabled")
-	//}
+	// }
 
-	//if c.NumBlocks <= 0 {
+	// if c.NumBlocks <= 0 {
 	//	return -1.0, errors.New("Parameter NumBlocks must be positive")
-	//}
+	// }
 	//
-	//feeRate, err := s.cfg.FeeEstimator.EstimateFee(uint32(c.NumBlocks))
+	// feeRate, err := s.cfg.FeeEstimator.EstimateFee(uint32(c.NumBlocks))
 
-	//if err != nil {
+	// if err != nil {
 	//	return -1.0, err
-	//}
+	// }
 
 	// Convert to satoshis per kb.
 	return res, nil
@@ -3928,7 +3929,6 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 	parsedCmd.method = request.Method
 	cmd, err := btcjson.UnmarshalCmd(request)
 	if err != nil {
-		fmt.Println("Parse error", err)
 		// When the error is because the method is not registered,
 		// produce a method not found RPC error.
 		if jerr, ok := err.(btcjson.Error); ok &&
@@ -3972,7 +3972,6 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 
 	// Read and close the JSON-RPC request body from the caller.
 	body, err := ioutil.ReadAll(r.Body)
-	fmt.Println("Read RPC", string(body))
 	r.Body.Close()
 	if err != nil {
 		errCode := http.StatusBadRequest
@@ -4011,7 +4010,7 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 	var jsonErr error
 	var result interface{}
 	var request btcjson.Request
-	//data := strings.Replace(string(body), "-0\",\"method\"", "\",\"method\"", 1)
+	// data := strings.Replace(string(body), "-0\",\"method\"", "\",\"method\"", 1)
 	data := string(body)
 	if strings.HasPrefix(data, "[") {
 		data = data[1 : len(data)-1]
@@ -4086,7 +4085,6 @@ func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 
 	// Marshal the response.
 	msg, err := createMarshalledReply(responseID, result, jsonErr)
-	fmt.Println("Reply ", string(msg), err)
 	if err != nil {
 		rpcsLog.Errorf("Failed to marshal reply: %v", err)
 		return

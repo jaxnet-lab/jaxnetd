@@ -10,9 +10,8 @@ import (
 )
 
 type KeyData struct {
-	PrivateKey *btcec.PrivateKey
-	Address    btcutil.Address
-
+	PrivateKey    *btcec.PrivateKey
+	Address       btcutil.Address
 	AddressPubKey *btcutil.AddressPubKey
 }
 
@@ -28,11 +27,6 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params) (*KeyData,
 		return nil, errors.Wrap(err, "unable to parse address pub key")
 	}
 
-	// sourceAddress, err := btcutil.DecodeAddress(senderAddressPubKey.EncodeAddress(), networkCfg)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "unable to decode address")
-	// }
-
 	return &KeyData{
 		PrivateKey:    privateKey,
 		AddressPubKey: senderAddressPubKey,
@@ -41,8 +35,9 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params) (*KeyData,
 }
 
 func (kd *KeyData) GetKey(address btcutil.Address) (*btcec.PrivateKey, bool, error) {
-	if address == kd.Address {
+	if address.String() == kd.Address.EncodeAddress() {
 		return kd.PrivateKey, false, nil
 	}
+
 	return nil, false, errors.New("nope")
 }
