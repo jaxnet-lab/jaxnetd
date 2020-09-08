@@ -7,11 +7,11 @@ package txscript
 import (
 	"bytes"
 	"encoding/hex"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"reflect"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 

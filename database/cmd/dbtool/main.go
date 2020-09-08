@@ -5,7 +5,7 @@
 package main
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -27,12 +27,11 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB() (database.DB, error) {
+func loadBlockDB(chain chain.IChain) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 
-	chain := beacon.Chain()
 	log.Infof("Loading block data0base from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
 	if err != nil {

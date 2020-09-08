@@ -2,6 +2,7 @@ package shard
 
 import (
 	"bytes"
+	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
@@ -131,6 +132,7 @@ func readBlockHeader(r io.Reader, bh *header) error {
 func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
+	fmt.Println("shard writeBlockHeader")
 	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot,
 		sec, bh.bits, bh.nonce)
 }

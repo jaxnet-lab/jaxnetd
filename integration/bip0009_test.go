@@ -9,12 +9,12 @@ package integration
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"runtime"
 	"testing"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/integration/rpctest"
 )

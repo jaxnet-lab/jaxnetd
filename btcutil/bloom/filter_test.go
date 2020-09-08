@@ -7,7 +7,8 @@ package bloom_test
 import (
 	"bytes"
 	"encoding/hex"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -586,7 +587,7 @@ func TestFilterInsertP2PubKeyOnly(t *testing.T) {
 		t.Errorf("TestFilterInsertP2PubKeyOnly DecodeString failed: %v", err)
 		return
 	}
-	block, err := btcutil.NewBlockFromBytes(blockBytes)
+	block, err := btcutil.NewBlockFromBytes(chain.DefaultChain, blockBytes)
 	if err != nil {
 		t.Errorf("TestFilterInsertP2PubKeyOnly NewBlockFromBytes failed: %v", err)
 		return

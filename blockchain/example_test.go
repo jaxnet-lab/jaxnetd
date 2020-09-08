@@ -6,15 +6,16 @@ package blockchain_test
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"math/big"
 	"os"
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -30,7 +31,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", dbPath, chaincfg.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return

@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"bytes"
+	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
@@ -32,6 +33,8 @@ type header struct {
 
 	// Nonce used to generate the block.
 	nonce uint32
+
+	treeEncoding []uint8
 }
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
@@ -121,8 +124,11 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBlockHeader(r io.Reader, bh *header) error {
-	return encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot,
+	fmt.Println("readBlockHeader", bh)
+	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.merkleMountainRange,
 		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce)
+	fmt.Println(err)
+	return err
 }
 
 // WriteBlockHeader writes a bitcoin block header to w.  See Serialize for
@@ -131,7 +137,8 @@ func readBlockHeader(r io.Reader, bh *header) error {
 func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
-	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot,
+	fmt.Println("beacon writeBlockHeader", bh)
+	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.merkleMountainRange,
 		sec, bh.bits, bh.nonce)
 }
 

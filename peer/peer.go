@@ -10,6 +10,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -25,7 +26,6 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 

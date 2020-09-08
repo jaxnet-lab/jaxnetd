@@ -6,7 +6,7 @@ package chaincfg
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	//"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"math"
 	"math/big"
@@ -122,7 +122,7 @@ type Params struct {
 	DNSSeeds []DNSSeed
 
 	// GenesisBlock defines the first block of the chain.
-	GenesisBlock *wire.MsgBlock
+	//GenesisBlock *wire.MsgBlock
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
@@ -237,8 +237,8 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
-	GenesisBlock:             &genesisBlock,
-	GenesisHash:              &genesisHash,
+	//GenesisBlock:             &GenesisBlock,
+	//GenesisHash:              &GenesisHash,
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            227931, // 000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8
@@ -336,8 +336,8 @@ var JaxNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	GenesisBlock:             &genesisBlock,
-	GenesisHash:              &genesisHash,
+	//GenesisBlock:             &GenesisBlock,
+	//GenesisHash:              &GenesisHash,
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            227931, // 000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8
@@ -417,8 +417,8 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	GenesisBlock:             &regTestGenesisBlock,
-	GenesisHash:              &regTestGenesisHash,
+	//GenesisBlock:             &RegTestGenesisBlock,
+	//GenesisHash:              &RegTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,
 	CoinbaseMaturity:         100,
@@ -496,8 +496,8 @@ var TestNet3Params = Params{
 	},
 
 	// Chain parameters
-	GenesisBlock:             &testNet3GenesisBlock,
-	GenesisHash:              &testNet3GenesisHash,
+	//GenesisBlock:             &TestNet3GenesisBlock,
+	//GenesisHash:              &TestNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            21111,  // 0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8
@@ -591,8 +591,8 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-	GenesisBlock:             &simNetGenesisBlock,
-	GenesisHash:              &simNetGenesisHash,
+	//GenesisBlock:             &SimNetGenesisBlock,
+	//GenesisHash:              &SimNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,
 	BIP0034Height:            0, // Always active on simnet

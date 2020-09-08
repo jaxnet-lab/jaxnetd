@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"reflect"
 	"testing"
@@ -18,7 +19,7 @@ func TestPongLatest(t *testing.T) {
 	enc := BaseEncoding
 	pver := ProtocolVersion
 
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: error generating nonce: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestPongBIP0031(t *testing.T) {
 	pver := BIP0031Version
 	enc := BaseEncoding
 
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("Error generating nonce: %v", err)
 	}
@@ -113,7 +114,7 @@ func TestPongBIP0031(t *testing.T) {
 // TestPongCrossProtocol tests the MsgPong API when encoding with the latest
 // protocol version and decoding with BIP0031Version.
 func TestPongCrossProtocol(t *testing.T) {
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("Error generating nonce: %v", err)
 	}
@@ -152,7 +153,7 @@ func TestPongWire(t *testing.T) {
 		out  MsgPong         // Expected decoded message
 		buf  []byte          // Wire encoding
 		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -220,7 +221,7 @@ func TestPongWireErrors(t *testing.T) {
 		in       *MsgPong        // Value to encode
 		buf      []byte          // Wire encoding
 		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
+		enc      encoder.MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
 		writeErr error           // Expected write error
 		readErr  error           // Expected read error

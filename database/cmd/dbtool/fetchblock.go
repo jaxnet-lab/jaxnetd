@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -37,7 +38,7 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB()
+	db, err := loadBlockDB(chain.DefaultChain)
 	if err != nil {
 		return err
 	}

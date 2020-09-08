@@ -7,7 +7,6 @@ package txscript_test
 import (
 	"encoding/hex"
 	"fmt"
-
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"

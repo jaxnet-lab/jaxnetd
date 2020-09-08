@@ -8,9 +8,10 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,7 +19,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
@@ -354,7 +354,7 @@ func (b *BlockChain) TstSetCoinbaseMaturity(maturity uint16) {
 func newFakeChain(params *chaincfg.Params) *BlockChain {
 	// Create a genesis block node and block index index populated with it
 	// for use when creating the fake chain below.
-	node := newBlockNode(params.GenesisBlock.Header, nil)
+	node := chain.DefaultChain.NewNode(params.GenesisBlock.Header, nil)
 	index := newBlockIndex(nil, params)
 	index.AddNode(node)
 
@@ -370,14 +370,15 @@ func newFakeChain(params *chaincfg.Params) *BlockChain {
 		index:               index,
 		bestChain:           newChainView(node),
 		warningCaches:       newThresholdCaches(vbNumBits),
-		deploymentCaches:    newThresholdCaches(chaincfg.DefinedDeployments),
+		deploymentCaches:    newThresholdCaches(params.DefinedDeployments),
 	}
 }
 
 // newFakeNode creates a block node connected to the passed parent with the
 // provided fields populated and fake values for the other fields.
-func newFakeNode(parent *blockNode, blockVersion int32, bits uint32, timestamp time.Time) *blockNode {
+func newFakeNode(parent chain.IBlockNode, blockVersion int32, bits uint32, timestamp time.Time) chain.IBlockNode {
 	// Make up a header and create a block node from it.
-	header := shard.NewBlockHeader(blockVersion, parent.hash, chainhash.Hash{}, chainhash.Hash{}, timestamp, bits, 0)
-	return newBlockNode(header, parent)
+	header := chain.DefaultChain.NewBlockHeader(blockVersion, parent.GetHash(), chainhash.Hash{}, chainhash.Hash{}, timestamp, bits, 0)
+	return chain.DefaultChain.NewNode(header, parent)
 }
+

@@ -1005,11 +1005,11 @@ func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := btcutil.NewBlock(b.chainParams.GenesisBlock)
+	genesisBlock := btcutil.NewBlock(b.chain.GenesisBlock().(*wire.MsgBlock))
 	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
-	node := newBlockNode(header, nil)
-	node.status = statusDataStored | statusValid
+	node := b.chain.NewNode(header, nil)
+	node.SetStatus(chain.StatusDataStored | chain.StatusValid)
 	b.bestChain.SetTip(node)
 
 	// Add the new node to the index which is used for faster lookups.
@@ -1021,7 +1021,7 @@ func (b *BlockChain) createChainState() error {
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(GetBlockWeight(genesisBlock))
 	b.stateSnapshot = newBestState(node, blockSize, blockWeight, numTxns,
-		numTxns, time.Unix(node.timestamp, 0))
+		numTxns, time.Unix(node.Timestamp(), 0))
 
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -1080,15 +1080,16 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
+		h := node.GetHash()
 		// Add the genesis block hash to height and height to hash
 		// mappings to the index.
-		err = dbPutBlockIndex(dbTx, &node.hash, node.height)
+		err = dbPutBlockIndex(dbTx, &h, node.Height())
 		if err != nil {
 			return err
 		}
 
 		// Store the current best chain state into the database.
-		err = dbPutBestState(dbTx, b.stateSnapshot, node.workSum)
+		err = dbPutBestState(dbTx, b.stateSnapshot, node.WorkSum())
 		if err != nil {
 			return err
 		}
@@ -1151,7 +1152,7 @@ func (b *BlockChain) initChainState() error {
 		blockIndexBucket := dbTx.Metadata().Bucket(blockIndexBucketName)
 
 		var i int32
-		var lastNode *blockNode
+		var lastNode chain.IBlockNode
 		cursor := blockIndexBucket.Cursor()
 		for ok := cursor.First(); ok; ok = cursor.Next() {
 			header, status, err := deserializeBlockRow(b.chain, cursor.Value())
@@ -1162,7 +1163,7 @@ func (b *BlockChain) initChainState() error {
 			// Determine the parent block node. Since we iterate block headers
 			// in order of height, if the blocks are mostly linear there is a
 			// very good chance the previous header processed is the parent.
-			var parent *blockNode
+			var parent chain.IBlockNode
 			if lastNode == nil {
 				blockHash := header.BlockHash()
 				if !blockHash.IsEqual(b.chainParams.GenesisHash) {
@@ -1170,7 +1171,7 @@ func (b *BlockChain) initChainState() error {
 						"first entry in block index to be genesis block, "+
 						"found %s", blockHash))
 				}
-			} else if header.PrevBlock() == lastNode.hash {
+			} else if header.PrevBlock() == lastNode.GetHash() {
 				// Since we iterate block headers in order of height, if the
 				// blocks are mostly linear there is a very good chance the
 				// previous header processed is the parent.
@@ -1186,9 +1187,9 @@ func (b *BlockChain) initChainState() error {
 
 			// Initialize the block node for the block, connect it,
 			// and add it to the block index.
-			node := new(blockNode)
-			initBlockNode(node, header, parent)
-			node.status = status
+			node := b.chain.NewNode(header, parent)
+			node.SetStatus(status)
+
 			b.index.addNode(node)
 
 			lastNode = node
@@ -1221,17 +1222,17 @@ func (b *BlockChain) initChainState() error {
 		// them as valid if they aren't already marked as such.  This
 		// is a safe assumption as all the block before the current tip
 		// are valid by definition.
-		for iterNode := tip; iterNode != nil; iterNode = iterNode.parent {
+		for iterNode := tip; iterNode != nil; iterNode = iterNode.Parent() {
 			// If this isn't already marked as valid in the index, then
 			// we'll mark it as valid now to ensure consistency once
 			// we're up and running.
-			if !iterNode.status.KnownValid() {
+			if !iterNode.Status().KnownValid() {
 				log.Infof("Block %v (height=%v) ancestor of "+
 					"chain tip not marked as valid, "+
 					"upgrading to valid for consistency",
-					iterNode.hash, iterNode.height)
+					iterNode.GetHash(), iterNode.Height())
 
-				b.index.SetStatusFlags(iterNode, statusValid)
+				b.index.SetStatusFlags(iterNode, chain.StatusValid)
 			}
 		}
 
@@ -1256,21 +1257,21 @@ func (b *BlockChain) initChainState() error {
 
 // deserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func deserializeBlockRow(chain chain.IChain, blockRow []byte) (chain.BlockHeader, blockStatus, error) {
+func deserializeBlockRow(ch chain.IChain, blockRow []byte) (chain.BlockHeader, chain.BlockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
-	header := chain.NewHeader()
+	header := ch.NewHeader()
 	err := header.Read(buffer)
 	if err != nil {
-		return nil, statusNone, err
+		return nil, chain.StatusNone, err
 	}
 
 	statusByte, err := buffer.ReadByte()
 	if err != nil {
-		return nil, statusNone, err
+		return nil, chain.StatusNone, err
 	}
 
-	return header, blockStatus(statusByte), nil
+	return header, chain.BlockStatus(statusByte), nil
 }
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
@@ -1304,9 +1305,10 @@ func dbFetchHeaderByHeight(chain chain.IChain, dbTx database.Tx, height int32) (
 // dbFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a btcutil.Block
 // with the height set.
-func dbFetchBlockByNode(chain chain.IChain, dbTx database.Tx, node *blockNode) (*btcutil.Block, error) {
+func dbFetchBlockByNode(chain chain.IChain, dbTx database.Tx, node chain.IBlockNode) (*btcutil.Block, error) {
 	// Load the raw block bytes from the database.
-	blockBytes, err := dbTx.FetchBlock(&node.hash)
+	h := node.GetHash()
+	blockBytes, err := dbTx.FetchBlock(&h)
 	if err != nil {
 		return nil, err
 	}
@@ -1316,14 +1318,14 @@ func dbFetchBlockByNode(chain chain.IChain, dbTx database.Tx, node *blockNode) (
 	if err != nil {
 		return nil, err
 	}
-	block.SetHeight(node.height)
+	block.SetHeight(node.Height())
 
 	return block, nil
 }
 
 // dbStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node *blockNode) error {
+func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node chain.IBlockNode) error {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
 	header := node.Header()
@@ -1331,7 +1333,7 @@ func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node *blockNode) err
 	if err != nil {
 		return err
 	}
-	err = w.WriteByte(byte(node.status))
+	err = w.WriteByte(byte(node.Status()))
 	if err != nil {
 		return err
 	}
@@ -1339,7 +1341,8 @@ func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node *blockNode) err
 
 	// Write block header data to block index bucket.
 	blockIndexBucket := dbTx.Metadata().Bucket(blockIndexBucketName)
-	key := blockIndexKey(&node.hash, uint32(node.height))
+	h:=node.GetHash()
+	key := blockIndexKey(&h, uint32(node.Height()))
 	return blockIndexBucket.Put(key, value)
 }
 

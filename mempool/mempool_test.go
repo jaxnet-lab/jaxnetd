@@ -7,6 +7,7 @@ package mempool
 import (
 	"encoding/hex"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,7 +16,6 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"

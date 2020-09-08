@@ -17,8 +17,9 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,7 +29,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -104,7 +104,7 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 		}
 
 		// Deserialize and store the block.
-		block, err := btcutil.NewBlockFromBytes(blockBytes)
+		block, err := btcutil.NewBlockFromBytes(chain.DefaultChain, blockBytes)
 		if err != nil {
 			t.Errorf("Failed to parse block %v: %v", height, err)
 			return nil, err
@@ -1264,7 +1264,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 
 		// Ensure the block header fetched from the database matches the
 		// expected bytes.
-		wantHeaderBytes := blockBytes[0:chain.MaxBlockHeaderPayload()]
+		wantHeaderBytes := blockBytes[0:chain.DefaultChain.MaxBlockHeaderPayload()]
 		gotHeaderBytes, err := tx.FetchBlockHeader(blockHash)
 		if err != nil {
 			tc.t.Errorf("FetchBlockHeader(%s): unexpected error: %v",
@@ -1406,7 +1406,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	}
 	for i := 0; i < len(blockHeaderData); i++ {
 		blockHash := allBlockHashes[i]
-		wantHeaderBytes := allBlockBytes[i][0:chain.MaxBlockHeaderPayload()]
+		wantHeaderBytes := allBlockBytes[i][0:chain.DefaultChain.MaxBlockHeaderPayload()]
 		gotHeaderBytes := blockHeaderData[i]
 		if !bytes.Equal(gotHeaderBytes, wantHeaderBytes) {
 			tc.t.Errorf("FetchBlockHeaders(%s): bytes mismatch: "+

@@ -7,9 +7,9 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"net"
 	"reflect"

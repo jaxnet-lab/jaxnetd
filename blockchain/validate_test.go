@@ -6,13 +6,13 @@ package blockchain
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"math"
 	"reflect"
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )

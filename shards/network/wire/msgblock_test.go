@@ -6,8 +6,8 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"reflect"
 	"testing"
@@ -27,7 +27,7 @@ func TestBlock(t *testing.T) {
 	mmrHash := blockOne.Header.MerkleMountainRange()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
+	bh := chain.DefaultChain.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "block"
@@ -487,7 +487,7 @@ func TestBlockSerializeSize(t *testing.T) {
 
 // blockOne is the first block in the mainnet block Chain.
 var blockOne = MsgBlock{
-	Header: shard.NewBlockHeader(1,
+	Header: chain.DefaultChain.NewBlockHeader(1,
 		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 			0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,

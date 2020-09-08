@@ -6,12 +6,12 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"os"
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )

@@ -10,11 +10,11 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"os"
 	"runtime/debug"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/integration/rpctest"
 )
 

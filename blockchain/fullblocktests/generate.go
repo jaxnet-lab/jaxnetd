@@ -14,9 +14,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"math"
 	"runtime"
 	"time"
@@ -24,7 +24,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -194,18 +193,19 @@ type testGenerator struct {
 	spendableOuts     []spendableOut
 	prevCollectedHash chainhash.Hash
 
+	chain chain.IChain
 	// Common key for any tests which require signed transactions.
 	privKey *btcec.PrivateKey
 }
 
 // makeTestGenerator returns a test generator instance initialized with the
 // genesis block as the tip.
-func makeTestGenerator(params *chaincfg.Params) (testGenerator, error) {
+func makeTestGenerator(chain chain.IChain) (testGenerator, error) {
 	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), []byte{0x01})
-	genesis := params.GenesisBlock
+	genesis := chain.GenesisBlock().(*wire.MsgBlock)
 	genesisHash := genesis.BlockHash()
 	return testGenerator{
-		params:       params,
+		params:       chain.Params(),
 		blocks:       map[chainhash.Hash]*wire.MsgBlock{genesisHash: genesis},
 		blocksByName: map[string]*wire.MsgBlock{"genesis": genesis},
 		blockHeights: map[string]int32{"genesis": 0},
@@ -213,6 +213,7 @@ func makeTestGenerator(params *chaincfg.Params) (testGenerator, error) {
 		tipName:      "genesis",
 		tipHeight:    0,
 		privKey:      privKey,
+		chain: chain,
 	}, nil
 }
 
@@ -526,7 +527,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	}
 
 	block := wire.MsgBlock{
-		Header:       shard.NewBlockHeader(1, g.tip.BlockHash(), calcMerkleRoot(txns), chainhash.Hash{}, ts, g.params.PowLimitBits, 0),
+		Header:       g.chain.NewBlockHeader(1, g.tip.BlockHash(), calcMerkleRoot(txns), chainhash.Hash{}, ts, g.params.PowLimitBits, 0),
 		Transactions: txns,
 	}
 
@@ -824,9 +825,10 @@ func Generate(includeLargeReorg bool) (tests [][]TestInstance, err error) {
 		}
 	}()
 
+
 	// Create a test generator instance initialized with the genesis block
 	// as the tip.
-	g, err := makeTestGenerator(regressionNetParams)
+	g, err := makeTestGenerator(chain.DefaultChain)
 	if err != nil {
 		return nil, err
 	}

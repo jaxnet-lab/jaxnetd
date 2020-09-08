@@ -4,7 +4,10 @@
 
 package wire
 
-import "testing"
+import (
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"testing"
+)
 
 // TestServiceFlagStringer tests the stringized output for service flag types.
 func TestServiceFlagStringer(t *testing.T) {
@@ -38,13 +41,13 @@ func TestServiceFlagStringer(t *testing.T) {
 // TestBitcoinNetStringer tests the stringized output for bitcoin net types.
 func TestBitcoinNetStringer(t *testing.T) {
 	tests := []struct {
-		in   BitcoinNet
+		in   types.BitcoinNet
 		want string
 	}{
-		{MainNet, "MainNet"},
-		{TestNet, "TestNet"},
-		{TestNet3, "TestNet3"},
-		{SimNet, "SimNet"},
+		{types.MainNet, "MainNet"},
+		{types.TestNet, "TestNet"},
+		{types.TestNet3, "TestNet3"},
+		{types.SimNet, "SimNet"},
 		{0xffffffff, "Unknown BitcoinNet (4294967295)"},
 	}
 

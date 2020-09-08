@@ -112,14 +112,13 @@ func migrateBlockIndex(db database.DB) error {
 			chainContext := blocksMap[hash]
 
 			if chainContext.height == -1 {
-				return fmt.Errorf("Unable to calculate chain height for "+
-					"stored block %s", hash)
+				return fmt.Errorf("unable to calculate chain height for stored block %s", hash)
 			}
 
 			// Mark blocks as valid if they are part of the main chain.
-			status := statusDataStored
+			status := chain.StatusDataStored
 			if chainContext.mainChain {
-				status |= statusValid
+				status |= chain.StatusValid
 			}
 
 			// Write header to v2 bucket

@@ -5,9 +5,9 @@
 package blockchain
 
 import (
-	"math"
-
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"math"
 )
 
 const (
@@ -103,9 +103,9 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint32 {
 // This function MUST be called with the chain state lock held (for writes).
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c bitConditionChecker) Condition(node *blockNode) (bool, error) {
+func (c bitConditionChecker) Condition(node chain.IBlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.bit
-	version := uint32(node.version)
+	version := uint32(node.Version())
 	if version&vbTopMask != vbTopBits {
 		return false, nil
 	}
@@ -113,7 +113,7 @@ func (c bitConditionChecker) Condition(node *blockNode) (bool, error) {
 		return false, nil
 	}
 
-	expectedVersion, err := c.chain.calcNextBlockVersion(node.parent)
+	expectedVersion, err := c.chain.calcNextBlockVersion(node.Parent())
 	if err != nil {
 		return false, err
 	}
@@ -181,9 +181,9 @@ func (c deploymentChecker) MinerConfirmationWindow() uint32 {
 // associated with the checker is set.
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c deploymentChecker) Condition(node *blockNode) (bool, error) {
+func (c deploymentChecker) Condition(node chain.IBlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.deployment.BitNumber
-	version := uint32(node.version)
+	version := uint32(node.Version())
 	return (version&vbTopMask == vbTopBits) && (version&conditionMask != 0),
 		nil
 }
@@ -197,7 +197,7 @@ func (c deploymentChecker) Condition(node *blockNode) (bool, error) {
 // while this function accepts any block node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcNextBlockVersion(prevNode *blockNode) (int32, error) {
+func (b *BlockChain) calcNextBlockVersion(prevNode chain.IBlockNode) (int32, error) {
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
@@ -235,13 +235,13 @@ func (b *BlockChain) CalcNextBlockVersion() (int32, error) {
 // activated.
 //
 // This function MUST be called with the chain state lock held (for writes)
-func (b *BlockChain) warnUnknownRuleActivations(node *blockNode) error {
+func (b *BlockChain) warnUnknownRuleActivations(node chain.IBlockNode) error {
 	// Warn if any unknown new rules are either about to activate or have
 	// already been activated.
 	for bit := uint32(0); bit < vbNumBits; bit++ {
 		checker := bitConditionChecker{bit: bit, chain: b}
 		cache := &b.warningCaches[bit]
-		state, err := b.thresholdState(node.parent, checker, cache)
+		state, err := b.thresholdState(node.Parent(), checker, cache)
 		if err != nil {
 			return err
 		}
@@ -256,7 +256,7 @@ func (b *BlockChain) warnUnknownRuleActivations(node *blockNode) error {
 
 		case ThresholdLockedIn:
 			window := int32(checker.MinerConfirmationWindow())
-			activationHeight := window - (node.height % window)
+			activationHeight := window - (node.Height() % window)
 			log.Warnf("Unknown new rules are about to activate in "+
 				"%d blocks (bit %d)", activationHeight, bit)
 		}
@@ -269,7 +269,7 @@ func (b *BlockChain) warnUnknownRuleActivations(node *blockNode) error {
 // blocks have unexpected versions.
 //
 // This function MUST be called with the chain state lock held (for writes)
-func (b *BlockChain) warnUnknownVersions(node *blockNode) error {
+func (b *BlockChain) warnUnknownVersions(node chain.IBlockNode) error {
 	// Nothing to do if already warned.
 	if b.unknownVersionsWarned {
 		return nil
@@ -278,17 +278,17 @@ func (b *BlockChain) warnUnknownVersions(node *blockNode) error {
 	// Warn if enough previous blocks have unexpected versions.
 	numUpgraded := uint32(0)
 	for i := uint32(0); i < unknownVerNumToCheck && node != nil; i++ {
-		expectedVersion, err := b.calcNextBlockVersion(node.parent)
+		expectedVersion, err := b.calcNextBlockVersion(node.Parent())
 		if err != nil {
 			return err
 		}
 		if expectedVersion > vbLegacyBlockVersion &&
-			(node.version & ^expectedVersion) != 0 {
+			(node.Version() & ^expectedVersion) != 0 {
 
 			numUpgraded++
 		}
 
-		node = node.parent
+		node = node.Parent()
 	}
 	if numUpgraded > unknownVerWarnNum {
 		log.Warn("Unknown block versions are being mined, so new " +

@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"io/ioutil"
 	"net"
 	"os"
@@ -13,10 +14,9 @@ import (
 	"regexp"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	flags "github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 const (

@@ -7,12 +7,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"os"
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 )

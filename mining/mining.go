@@ -8,14 +8,14 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -859,7 +859,7 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = shard.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
+	msgBlock.Header = beacon.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err

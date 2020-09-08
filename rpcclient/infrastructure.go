@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"io"
 	"io/ioutil"
 	"math"
@@ -28,7 +29,6 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 var (

@@ -6,8 +6,9 @@ package rpctest
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io/ioutil"
 	"net"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -79,7 +79,7 @@ type Harness struct {
 	// ActiveNet is the parameters of the blockchain the Harness belongs
 	// to.
 	ActiveNet *chaincfg.Params
-
+	chain chain.IChain
 	Node     *rpcclient.Client
 	node     *node
 	handlers *rpcclient.NotificationHandlers
@@ -99,15 +99,15 @@ type Harness struct {
 // used.
 //
 // NOTE: This function is safe for concurrent access.
-func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
+func New(chainNet chain.IChain, handlers *rpcclient.NotificationHandlers,
 	extraArgs []string) (*Harness, error) {
 
 	harnessStateMtx.Lock()
 	defer harnessStateMtx.Unlock()
 
 	// Add a flag for the appropriate network type based on the provided
-	// chain params.
-	switch activeNet.Net {
+	// chainNet params.
+	switch chainNet.Params().Net {
 	case types.TestNet3:
 		extraArgs = append(extraArgs, "--testnet")
 	case types.TestNet:
@@ -116,7 +116,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 		extraArgs = append(extraArgs, "--simnet")
 	default:
 		return nil, fmt.Errorf("rpctest.New must be called with one " +
-			"of the supported chain networks")
+			"of the supported chainNet networks")
 	}
 
 	testDir, err := baseDir()
@@ -136,7 +136,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 		return nil, err
 	}
 
-	wallet, err := newMemWallet(activeNet, uint32(numTestInstances))
+	wallet, err := newMemWallet(chainNet.Params(), uint32(numTestInstances))
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 		node:           node,
 		maxConnRetries: 20,
 		testNodeDir:    nodeTestData,
-		ActiveNet:      activeNet,
+		ActiveNet:      chainNet.Params(),
 		nodeNum:        nodeNum,
 		wallet:         wallet,
 	}
@@ -459,7 +459,7 @@ func (h *Harness) GenerateAndSubmitBlockWithCustomCoinbaseOutputs(
 	prevBlock.SetHeight(prevBlockHeight)
 
 	// Create a new block including the specified transactions
-	newBlock, err := CreateBlock(prevBlock, txns, blockVersion,
+	newBlock, err := CreateBlock(h.chain, prevBlock, txns, blockVersion,
 		blockTime, h.wallet.coinbaseAddr, mineTo, h.ActiveNet)
 	if err != nil {
 		return nil, err

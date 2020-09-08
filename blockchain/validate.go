@@ -8,13 +8,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math"
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -170,12 +170,13 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 // isBIP0030Node returns whether or not the passed node represents one of the
 // two blocks that violate the BIP0030 rule which prevents transactions from
 // overwriting old ones.
-func isBIP0030Node(node *blockNode) bool {
-	if node.height == 91842 && node.hash.IsEqual(block91842Hash) {
+func isBIP0030Node(node chain.IBlockNode) bool {
+	h := node.GetHash()
+	if node.Height() == 91842 && h.IsEqual(block91842Hash) {
 		return true
 	}
 
-	if node.height == 91880 && node.hash.IsEqual(block91880Hash) {
+	if node.Height() == 91880 && h.IsEqual(block91880Hash) {
 		return true
 	}
 
@@ -643,7 +644,7 @@ func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 //    the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode *blockNode, flags BehaviorFlags) error {
+func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode chain.IBlockNode, flags BehaviorFlags) error {
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches
@@ -673,7 +674,7 @@ func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode 
 
 	// The height of this block is one more than the referenced previous
 	// block.
-	blockHeight := prevNode.height + 1
+	blockHeight := prevNode.Height() + 1
 
 	// Ensure chain matches up to predetermined checkpoints.
 	blockHash := header.BlockHash()
@@ -691,10 +692,10 @@ func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode 
 	if err != nil {
 		return err
 	}
-	if checkpointNode != nil && blockHeight < checkpointNode.height {
+	if checkpointNode != nil && blockHeight < checkpointNode.Height() {
 		str := fmt.Sprintf("block at height %d forks the main chain "+
 			"before the previous checkpoint at height %d",
-			blockHeight, checkpointNode.height)
+			blockHeight, checkpointNode.Height())
 		return ruleError(ErrForkTooOld, str)
 	}
 
@@ -725,7 +726,7 @@ func (b *BlockChain) checkBlockHeaderContext(header chain.BlockHeader, prevNode 
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode, flags BehaviorFlags) error {
+func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode chain.IBlockNode, flags BehaviorFlags) error {
 	// Perform all block header related validation checks.
 	header := block.MsgBlock().Header
 	err := b.checkBlockHeaderContext(header, prevNode, flags)
@@ -753,7 +754,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode
 
 		// The height of this block is one more than the referenced
 		// previous block.
-		blockHeight := prevNode.height + 1
+		blockHeight := prevNode.Height() + 1
 
 		// Ensure all transactions in the block are finalized.
 		for _, tx := range block.Transactions() {
@@ -831,7 +832,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode
 // http://r6.ca/blog/20120206T005236Z.html.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) checkBIP0030(node *blockNode, block *btcutil.Block, view *UtxoViewpoint) error {
+func (b *BlockChain) checkBIP0030(node chain.IBlockNode, block *btcutil.Block, view *UtxoViewpoint) error {
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.OutPoint]struct{})
@@ -988,7 +989,7 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 // with that node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, view *UtxoViewpoint, stxos *[]SpentTxOut) error {
+func (b *BlockChain) checkConnectBlock(node chain.IBlockNode, block *btcutil.Block, view *UtxoViewpoint, stxos *[]SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -997,7 +998,8 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 
 	// The coinbase for the Genesis block is not spendable, so just return
 	// an error now.
-	if node.hash.IsEqual(b.chainParams.GenesisHash) {
+	h := node.GetHash()
+	if h.IsEqual(b.chainParams.GenesisHash) {
 		str := "the coinbase for the genesis block is not spendable"
 		return ruleError(ErrMissingTxOut, str)
 	}
@@ -1026,7 +1028,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// BIP0034 is not yet active.  This is a useful optimization because the
 	// BIP0030 check is expensive since it involves a ton of cache misses in
 	// the utxoset.
-	if !isBIP0030Node(node) && (node.height < b.chainParams.BIP0034Height) {
+	if !isBIP0030Node(node) && (node.Height() < b.chainParams.BIP0034Height) {
 		err := b.checkBIP0030(node, block, view)
 		if err != nil {
 			return err
@@ -1047,12 +1049,12 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// "standard" type.  The rules for this BIP only apply to transactions
 	// after the timestamp defined by txscript.Bip16Activation.  See
 	// https://en.bitcoin.it/wiki/BIP_0016 for more details.
-	enforceBIP0016 := node.timestamp >= txscript.Bip16Activation.Unix()
+	enforceBIP0016 := node.Timestamp() >= txscript.Bip16Activation.Unix()
 
 	// Query for the Version Bits state for the segwit soft-fork
 	// deployment. If segwit is active, we'll switch over to enforcing all
 	// the new rules.
-	segwitState, err := b.deploymentState(node.parent, chaincfg.DeploymentSegwit)
+	segwitState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentSegwit)
 	if err != nil {
 		return err
 	}
@@ -1100,7 +1102,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// bounds.
 	var totalFees int64
 	for _, tx := range transactions {
-		txFee, err := CheckTransactionInputs(tx, node.height, view,
+		txFee, err := CheckTransactionInputs(tx, node.Height(), view,
 			b.chainParams)
 		if err != nil {
 			return err
@@ -1119,7 +1121,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 		// provably unspendable as available utxos.  Also, the passed
 		// spent txos slice is updated to contain an entry for each
 		// spent txout in the order each transaction spends them.
-		err = view.connectTransaction(tx, node.height, stxos)
+		err = view.connectTransaction(tx, node.Height(), stxos)
 		if err != nil {
 			return err
 		}
@@ -1134,7 +1136,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	for _, txOut := range transactions[0].MsgTx().TxOut {
 		totalSatoshiOut += txOut.Value
 	}
-	expectedSatoshiOut := CalcBlockSubsidy(node.height, b.chainParams) +
+	expectedSatoshiOut := CalcBlockSubsidy(node.Height(), b.chainParams) +
 		totalFees
 	if totalSatoshiOut > expectedSatoshiOut {
 		str := fmt.Sprintf("coinbase transaction for block pays %v "+
@@ -1151,7 +1153,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// portion of block handling.
 	checkpoint := b.LatestCheckpoint()
 	runScripts := true
-	if checkpoint != nil && node.height <= checkpoint.Height {
+	if checkpoint != nil && node.Height() <= checkpoint.Height {
 		runScripts = false
 	}
 
@@ -1165,19 +1167,19 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// Enforce DER signatures for block versions 3+ once the historical
 	// activation threshold has been reached.  This is part of BIP0066.
 	blockHeader := block.MsgBlock().Header
-	if blockHeader.Version() >= 3 && node.height >= b.chainParams.BIP0066Height {
+	if blockHeader.Version() >= 3 && node.Height() >= b.chainParams.BIP0066Height {
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}
 
 	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the historical
 	// activation threshold has been reached.  This is part of BIP0065.
-	if blockHeader.Version() >= 4 && node.height >= b.chainParams.BIP0065Height {
+	if blockHeader.Version() >= 4 && node.Height() >= b.chainParams.BIP0065Height {
 		scriptFlags |= txscript.ScriptVerifyCheckLockTimeVerify
 	}
 
 	// Enforce CHECKSEQUENCEVERIFY during all block validation checks once
 	// the soft-fork deployment is fully active.
-	csvState, err := b.deploymentState(node.parent, chaincfg.DeploymentCSV)
+	csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
 	if err != nil {
 		return err
 	}
@@ -1189,7 +1191,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 
 		// We obtain the MTP of the *previous* block in order to
 		// determine if transactions in the current block are final.
-		medianTime := node.parent.CalcPastMedianTime()
+		medianTime := node.Parent().CalcPastMedianTime()
 
 		// Additionally, if the CSV soft-fork package is now active,
 		// then we also enforce the relative sequence number based
@@ -1204,7 +1206,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 			if err != nil {
 				return err
 			}
-			if !SequenceLockActive(sequenceLock, node.height,
+			if !SequenceLockActive(sequenceLock, node.Height(),
 				medianTime) {
 				str := fmt.Sprintf("block contains " +
 					"transaction whose input sequence " +
@@ -1235,7 +1237,8 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 
 	// Update the best hash for view to include this block since all of its
 	// transactions have been connected.
-	view.SetBestHash(&node.hash)
+	h = node.GetHash()
+	view.SetBestHash(&h)
 
 	return nil
 }
@@ -1256,9 +1259,9 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	// current chain.
 	tip := b.bestChain.Tip()
 	header := block.MsgBlock().Header
-	if tip.hash != header.PrevBlock() {
+	if tip.GetHash() != header.PrevBlock() {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
-			"instead got %v", tip.hash, header.PrevBlock())
+			"instead got %v", tip.GetHash(), header.PrevBlock())
 		return ruleError(ErrPrevBlockNotBest, str)
 	}
 
@@ -1275,7 +1278,8 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	// Leave the spent txouts entry nil in the state since the information
 	// is not needed and thus extra work can be avoided.
 	view := NewUtxoViewpoint()
-	view.SetBestHash(&tip.hash)
-	newNode := newBlockNode(header, tip)
+	h := tip.GetHash()
+	view.SetBestHash(&h)
+	newNode := b.chain.NewNode(header, tip)
 	return b.checkConnectBlock(newNode, block, view, nil)
 }

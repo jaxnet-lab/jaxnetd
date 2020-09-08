@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/limits"
 	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"go.uber.org/zap"
 	"log"
 	"net"
@@ -28,6 +30,8 @@ const (
 	// database name.
 	blockDbNamePrefix = "blocks"
 )
+
+var _ = initChain()
 
 //var (
 //	cfg *config
@@ -463,4 +467,10 @@ func main() {
 	if err := btcdMain(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func initChain() bool {
+	fmt.Println("Init chain.DefaultChain")
+	chain.DefaultChain = beacon.Chain()
+	return true
 }

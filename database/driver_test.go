@@ -6,6 +6,7 @@ package database_test
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
@@ -53,7 +54,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// driver function and intentionally returns a failure that can be
 	// detected if the interface allows a duplicate driver to overwrite an
 	// existing one.
-	bogusCreateDB := func(args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chain.IChain, args ...interface{}) (database.DB, error) {
 		return nil, fmt.Errorf("duplicate driver allowed for database "+
 			"type [%v]", dbType)
 	}
@@ -82,7 +83,7 @@ func TestCreateOpenFail(t *testing.T) {
 	dbType := "createopenfail"
 	openError := fmt.Errorf("failed to create or open database for "+
 		"database type [%v]", dbType)
-	bogusCreateDB := func(args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chain.IChain, args ...interface{}) (database.DB, error) {
 		return nil, openError
 	}
 
@@ -94,10 +95,10 @@ func TestCreateOpenFail(t *testing.T) {
 		Open:   bogusCreateDB,
 	}
 	database.RegisterDriver(driver)
-
+	ch := chain.DefaultChain
 	// Ensure creating a database with the new type fails with the expected
 	// error.
-	_, err := database.Create(dbType)
+	_, err := database.Create(dbType, ch)
 	if err != openError {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
@@ -106,7 +107,7 @@ func TestCreateOpenFail(t *testing.T) {
 
 	// Ensure opening a database with the new type fails with the expected
 	// error.
-	_, err = database.Open(dbType)
+	_, err = database.Open(dbType, ch)
 	if err != openError {
 		t.Errorf("expected error not received - got: %v, want %v", err,
 			openError)
@@ -117,11 +118,12 @@ func TestCreateOpenFail(t *testing.T) {
 // TestCreateOpenUnsupported ensures that attempting to create or open an
 // unsupported database type is handled properly.
 func TestCreateOpenUnsupported(t *testing.T) {
+	ch := chain.DefaultChain
 	// Ensure creating a database with an unsupported type fails with the
 	// expected error.
 	testName := "create with unsupported database type"
 	dbType := "unsupported"
-	_, err := database.Create(dbType)
+	_, err := database.Create(dbType, ch)
 	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}
@@ -129,7 +131,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// Ensure opening a database with the an unsupported type fails with the
 	// expected error.
 	testName = "open with unsupported database type"
-	_, err = database.Open(dbType)
+	_, err = database.Open(dbType, ch)
 	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
 		return
 	}

@@ -7,10 +7,10 @@ package peer_test
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )

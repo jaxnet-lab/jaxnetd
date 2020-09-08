@@ -7,6 +7,7 @@ package blockchain
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
@@ -34,7 +35,7 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 		return false, ruleError(ErrInvalidAncestorBlock, str)
 	}
 
-	blockHeight := prevNode.height + 1
+	blockHeight := prevNode.Height() + 1
 	block.SetHeight(blockHeight)
 
 	// The block must pass all of the validation rules which depend on the
@@ -64,8 +65,9 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// if the block ultimately gets connected to the main chain, it starts out
 	// on a side chain.
 	blockHeader := block.MsgBlock().Header
-	newNode := newBlockNode(blockHeader, prevNode)
-	newNode.status = statusDataStored
+
+	newNode := b.chain.NewNode(blockHeader, prevNode)
+	newNode.SetStatus(chain.StatusDataStored)
 
 	b.index.AddNode(newNode)
 	err = b.index.flushToDB()

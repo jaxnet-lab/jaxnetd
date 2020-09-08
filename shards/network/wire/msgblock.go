@@ -65,11 +65,14 @@ func (msg *MsgBlock) ClearTransactions() {
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
 
+	fmt.Println("Read header...")
 	if err := msg.Header.Read(r); err != nil {
 		return err
 	}
 
+	fmt.Println("Read Trx ")
 	txCount, err := encoder.ReadVarInt(r, pver)
+	fmt.Println("trx ", txCount, err)
 	if err != nil {
 		return err
 	}
@@ -176,10 +179,13 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+
+	fmt.Println("Write header")
 	if err := msg.Header.Write(w); err != nil {
 		return err
 	}
 
+	fmt.Println("Write trx", len(msg.Transactions))
 	err := encoder.WriteVarInt(w, uint64(len(msg.Transactions)))
 	if err != nil {
 		return err

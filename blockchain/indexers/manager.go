@@ -304,13 +304,17 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			// loaded directly since it is no longer in the main
 			// chain and thus the chain.BlockByHash function would
 			// error.
+			fmt.Println("Read block")
 			var block *btcutil.Block
 			err := m.db.View(func(dbTx database.Tx) error {
 				blockBytes, err := dbTx.FetchBlock(hash)
+
+				fmt.Printf("Block bytes %x\n", blockBytes)
 				if err != nil {
 					return err
 				}
 				block, err = btcutil.NewBlockFromBytes(chain.Chain(), blockBytes)
+				fmt.Println(block, err)
 				if err != nil {
 					return err
 				}

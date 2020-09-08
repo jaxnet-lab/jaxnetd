@@ -6,6 +6,7 @@ package blockchain
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
@@ -87,7 +88,7 @@ type thresholdConditionChecker interface {
 	// has been met.  This typically involves checking whether or not the
 	// bit associated with the condition is set, but can be more complex as
 	// needed.
-	Condition(*blockNode) (bool, error)
+	Condition(chain.IBlockNode) (bool, error)
 }
 
 // thresholdStateCache provides a type to cache the threshold states of each
@@ -126,27 +127,28 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 // threshold states for previous windows are only calculated once.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+func (b *BlockChain) thresholdState(prevNode chain.IBlockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := int32(checker.MinerConfirmationWindow())
-	if prevNode == nil || (prevNode.height+1) < confirmationWindow {
+	if prevNode == nil || (prevNode.Height()+1) < confirmationWindow {
 		return ThresholdDefined, nil
 	}
 
 	// Get the ancestor that is the last block of the previous confirmation
 	// window in order to get its threshold state.  This can be done because
 	// the state is the same for all blocks within a given window.
-	prevNode = prevNode.Ancestor(prevNode.height -
-		(prevNode.height+1)%confirmationWindow)
+	prevNode = prevNode.Ancestor(prevNode.Height() -
+		(prevNode.Height()+1)%confirmationWindow)
 
 	// Iterate backwards through each of the previous confirmation windows
 	// to find the most recently cached threshold state.
-	var neededStates []*blockNode
+	var neededStates []chain.IBlockNode
 	for prevNode != nil {
+		h := prevNode.GetHash()
 		// Nothing more to do if the state of the block is already
 		// cached.
-		if _, ok := cache.Lookup(&prevNode.hash); ok {
+		if _, ok := cache.Lookup(&h); ok {
 			break
 		}
 
@@ -154,10 +156,11 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		// time, so calculate it now.
 		medianTime := prevNode.CalcPastMedianTime()
 
+		//h := prevNode.GetHash()
 		// The state is simply defined if the start time hasn't been
 		// been reached yet.
 		if uint64(medianTime.Unix()) < checker.BeginTime() {
-			cache.Update(&prevNode.hash, ThresholdDefined)
+			cache.Update(&h, ThresholdDefined)
 			break
 		}
 
@@ -175,11 +178,12 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 	state := ThresholdDefined
 	if prevNode != nil {
 		var ok bool
-		state, ok = cache.Lookup(&prevNode.hash)
+		h := prevNode.GetHash()
+		state, ok = cache.Lookup(&h)
 		if !ok {
 			return ThresholdFailed, AssertError(fmt.Sprintf(
 				"thresholdState: cache lookup failed for %v",
-				prevNode.hash))
+				h))
 		}
 	}
 
@@ -230,7 +234,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 				}
 
 				// Get the previous block node.
-				countNode = countNode.parent
+				countNode = countNode.Parent()
 			}
 
 			// The state is locked in if the number of blocks in the
@@ -251,9 +255,11 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		case ThresholdFailed:
 		}
 
+		h := prevNode.GetHash()
+
 		// Update the cache to avoid recalculating the state in the
 		// future.
-		cache.Update(&prevNode.hash, state)
+		cache.Update(&h, state)
 	}
 
 	return state, nil
@@ -296,7 +302,7 @@ func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
 // AFTER the passed node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) deploymentState(prevNode *blockNode, deploymentID uint32) (ThresholdState, error) {
+func (b *BlockChain) deploymentState(prevNode chain.IBlockNode, deploymentID uint32) (ThresholdState, error) {
 	if deploymentID > uint32(len(b.chainParams.Deployments)) {
 		return ThresholdFailed, DeploymentError(deploymentID)
 	}
@@ -316,7 +322,7 @@ func (b *BlockChain) initThresholdCaches() error {
 	// threshold state for each of them.  This will ensure the caches are
 	// populated and any states that needed to be recalculated due to
 	// definition changes is done now.
-	prevNode := b.bestChain.Tip().parent
+	prevNode := b.bestChain.Tip().Parent()
 	for bit := uint32(0); bit < vbNumBits; bit++ {
 		checker := bitConditionChecker{bit: bit, chain: b}
 		cache := &b.warningCaches[bit]

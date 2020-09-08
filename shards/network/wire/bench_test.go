@@ -9,9 +9,9 @@ import (
 	"compress/bzip2"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io/ioutil"
 	"net"
 	"os"
@@ -367,7 +367,7 @@ func BenchmarkReadBlockHeader(b *testing.B) {
 		0x00, // TxnCount Varint
 	}
 	r := bytes.NewReader(buf)
-	header := chain.NewHeader()
+	header := chain.DefaultChain.NewHeader()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
 		header.Read(r)

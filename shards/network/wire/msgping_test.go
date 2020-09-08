@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"reflect"
 	"testing"
@@ -18,7 +19,7 @@ func TestPing(t *testing.T) {
 	pver := ProtocolVersion
 
 	// Ensure we get the same nonce back out.
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -52,7 +53,7 @@ func TestPingBIP0031(t *testing.T) {
 	pver := BIP0031Version
 	enc := BaseEncoding
 
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -95,7 +96,7 @@ func TestPingBIP0031(t *testing.T) {
 // TestPingCrossProtocol tests the MsgPing API when encoding with the latest
 // protocol version and decoding with BIP0031Version.
 func TestPingCrossProtocol(t *testing.T) {
-	nonce, err := RandomUint64()
+	nonce, err := encoder.RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -134,7 +135,7 @@ func TestPingWire(t *testing.T) {
 		out  MsgPing         // Expected decoded message
 		buf  []byte          // Wire encoding
 		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -204,7 +205,7 @@ func TestPingWireErrors(t *testing.T) {
 		in       *MsgPing        // Value to encode
 		buf      []byte          // Wire encoding
 		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
+		enc      encoder.MessageEncoding // Message encoding format
 		max      int             // Max size of fixed buffer to induce errors
 		writeErr error           // Expected write error
 		readErr  error           // Expected read error

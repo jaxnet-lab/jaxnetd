@@ -5,13 +5,14 @@
 package ffldb
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
 
 // BenchmarkBlockHeader benchmarks how long it takes to load the mainnet genesis
@@ -21,7 +22,7 @@ func BenchmarkBlockHeader(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblkhdr")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, blockDataNet)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -62,7 +63,7 @@ func BenchmarkBlock(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblk")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, blockDataNet)
 	if err != nil {
 		b.Fatal(err)
 	}

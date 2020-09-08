@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"io"
 	"reflect"
 	"testing"

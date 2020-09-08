@@ -5,7 +5,7 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 )
 

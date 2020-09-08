@@ -6,13 +6,12 @@ package connmgr
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	mrand "math/rand"
 	"net"
 	"strconv"
 	"time"
-
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 const (

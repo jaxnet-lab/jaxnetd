@@ -1,11 +1,11 @@
-package main
+package utils
 
 import (
 	"bytes"
 	"encoding/hex"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"log"
@@ -34,7 +34,7 @@ func main() {
 	//params.PubKeyHashAddrID = byte(0x6F)
 	//params.PrivateKeyID = byte(0x80)
 
-	toAddress, err := btcutil.DecodeAddress(toAddress, &chaincfg.JaxNetParams)
+	toAddress, err := btcutil.DecodeAddress(toAddress, chain.DefaultChain.Params())
 	if err != nil {
 		log.Fatalf("invalid address: %v", err)
 	}

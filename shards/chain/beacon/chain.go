@@ -1,9 +1,12 @@
 package beacon
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"time"
 )
 
 const (
@@ -11,34 +14,68 @@ const (
 	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 	// PrevBlock and MerkleRoot hashes.
-	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
+	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 3)
 )
 
 //
-type shardChain struct {
+type beaconChain struct {
 }
 
 //
 func Chain() chain.IChain {
-	return &shardChain{}
+	return &beaconChain{}
 }
 
-func (c *shardChain) IsBeacon() bool {
+func (c *beaconChain)GenesisBlock() interface{}{
+	return &wire.MsgBlock{
+			Header:       chain.DefaultChain.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+			Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+		}
+	//return &GenesisBlock
+}
+
+func (c *beaconChain) IsBeacon() bool {
 	return true
 }
 
-func (c *shardChain) ShardID() int32 {
+func (c *beaconChain) Params() (res *chaincfg.Params) {
+	return
+}
+
+func (c *beaconChain) ShardID() int32 {
 	return 0
 }
 
-func (c *shardChain) NewHeader() chain.BlockHeader {
+func (c *beaconChain) NewHeader() chain.BlockHeader {
 	return &header{}
 }
 
-func (c *shardChain) MaxBlockHeaderPayload() int {
+func (c *beaconChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
+	mmr chainhash.Hash,
+	timestamp time.Time,
+	bits uint32, nonce uint32) chain.BlockHeader {
+
+	// Limit the timestamp to one second precision since the protocol
+	// doesn't support better.
+	return &header{
+		version:             version,
+		prevBlock:           prevHash,
+		merkleRoot:          merkleRootHash,
+		merkleMountainRange: mmr,
+		timestamp:           timestamp, //time.Unix(time.Now().Unix(), 0),
+		bits:                bits,
+		nonce:               nonce,
+	}
+}
+
+func (c *beaconChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
+	return BlockNode(blockHeader, parent)
+}
+
+func (c *beaconChain) MaxBlockHeaderPayload() int {
 	return maxBlockHeaderPayload
 }
 
-func (c *shardChain) BlockHeaderOverhead() int {
+func (c *beaconChain) BlockHeaderOverhead() int {
 	return maxBlockHeaderPayload + encoder.MaxVarIntPayload
 }

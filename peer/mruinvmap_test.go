@@ -7,7 +7,7 @@ package peer
 import (
 	"crypto/rand"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"

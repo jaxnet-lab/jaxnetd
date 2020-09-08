@@ -6,8 +6,8 @@ package rpctest
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"math"
 	"math/big"
 	"runtime"
@@ -15,7 +15,6 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -134,7 +133,7 @@ func createCoinbaseTx(coinbaseScript []byte, nextBlockHeight int32,
 // initialized), then the timestamp of the previous block will be used plus 1
 // second is used. Passing nil for the previous block results in a block that
 // builds off of the genesis block for the specified chain.
-func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
+func CreateBlock(chain chain.IChain, prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	blockVersion int32, blockTime time.Time, miningAddr btcutil.Address,
 	mineTo []wire.TxOut, net *chaincfg.Params) (*btcutil.Block, error) {
 
@@ -185,7 +184,7 @@ func CreateBlock(prevBlock *btcutil.Block, inclusionTxs []*btcutil.Tx,
 	}
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var block wire.MsgBlock
-	block.Header = shard.NewBlockHeader(blockVersion, *prevHash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, net.PowLimitBits, 0)
+	block.Header = chain.NewBlockHeader(blockVersion, *prevHash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, net.PowLimitBits, 0)
 	for _, tx := range blockTxns {
 		if err := block.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err

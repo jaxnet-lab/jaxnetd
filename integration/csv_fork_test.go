@@ -9,6 +9,7 @@ package integration
 
 import (
 	"bytes"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"runtime"
 	"strings"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/integration/rpctest"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"

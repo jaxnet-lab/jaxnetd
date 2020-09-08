@@ -7,8 +7,9 @@ package peer_test
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"net"
 	"strconv"
@@ -16,7 +17,6 @@ import (
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"

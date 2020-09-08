@@ -7,12 +7,12 @@ package blockchain
 import (
 	"bytes"
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math/big"
 	"reflect"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // TestErrNotInMainChain ensures the functions related to errNotInMainChain work

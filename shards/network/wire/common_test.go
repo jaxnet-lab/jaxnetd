@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"reflect"
 	"strings"

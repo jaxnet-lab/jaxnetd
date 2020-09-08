@@ -1,10 +1,12 @@
 package shard
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
+	"time"
 )
 
 const (
@@ -17,6 +19,18 @@ const (
 
 //
 type shardChain struct {
+}
+
+func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash, mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
+	panic("implement me")
+}
+
+func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
+	panic("implement me")
+}
+
+func (c *shardChain) Params() *chaincfg.Params {
+	panic("implement me")
 }
 
 //

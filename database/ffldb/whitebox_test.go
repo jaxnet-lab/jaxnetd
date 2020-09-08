@@ -11,7 +11,8 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"hash/crc32"
 	"io"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/btcsuite/goleveldb/leveldb"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
 

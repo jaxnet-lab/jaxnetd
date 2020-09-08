@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -500,7 +500,7 @@ func (r FutureGetBlockHeaderResult) Receive() (chain.BlockHeader, error) {
 	}
 
 	// Deserialize the blockheader and return it.
-	bh := chain.NewHeader()
+	bh := chain.DefaultChain.NewHeader()
 	err = bh.Read(bytes.NewReader(serializedBH))
 	if err != nil {
 		return nil, err

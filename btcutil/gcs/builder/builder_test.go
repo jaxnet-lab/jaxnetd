@@ -7,12 +7,12 @@ package builder_test
 
 import (
 	"encoding/hex"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs/builder"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
