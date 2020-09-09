@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -79,7 +80,6 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 	for i, pubKey := range keys {
 		// try to parse as pubkey address
 		rawPK, err := hex.DecodeString(pubKey)
-		// address, err := btcutil.DecodeAddress(pubKey, net)
 		if err != nil {
 			return nil, err
 		}
@@ -107,4 +107,38 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 		RedeemScript:    hex.EncodeToString(script),
 		RawRedeemScript: script,
 	}, nil
+}
+
+func DecodeScript(script []byte, net *chaincfg.Params) (*btcjson.DecodeScriptResult, error) {
+	// The disassembled string will contain [error] inline if the script
+	// doesn't fully parse, so ignore the error here.
+	asm, _ := txscript.DisasmString(script)
+
+	// Get information about the script.
+	// Ignore the error here since an error means the script couldn't parse
+	// and there is no additional information about it anyways.
+	scriptClass, address, reqSigns, _ := txscript.ExtractPkScriptAddrs(script, net)
+	addresses := make([]string, len(address))
+	for i, addr := range address {
+		addresses[i] = addr.EncodeAddress()
+	}
+
+	// Convert the script itself to a pay-to-script-hash address.
+	p2sh, err := btcutil.NewAddressScriptHash(script, net)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert script to pay-to-script-hash")
+	}
+
+	// Generate and return the reply.
+	reply := &btcjson.DecodeScriptResult{
+		Asm:       asm,
+		ReqSigs:   int32(reqSigns),
+		Type:      scriptClass.String(),
+		Addresses: addresses,
+	}
+	if scriptClass != txscript.ScriptHashTy {
+		reply.P2sh = p2sh.EncodeAddress()
+	}
+
+	return reply, nil
 }

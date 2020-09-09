@@ -165,7 +165,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		return txmodels.Transaction{}, errors.Wrap(err, "pay to address not set")
 	}
 
-	msgTx, err := client.DraftToSignedTx(draft, true)
+	msgTx, err := client.DraftToSignedTx(draft, false)
 	if err != nil {
 		return txmodels.Transaction{}, errors.Wrap(err, "tx not signed")
 	}
@@ -180,7 +180,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}, nil
 }
 
-func (client *TxMan) NewMultiSig2of2Tx(fistSigner, secondSigner *btcutil.AddressPubKey,
+func (client *TxMan) _NewMultiSig2of2Tx(fistSigner, secondSigner *btcutil.AddressPubKey,
 	amount int64, utxoPrv UTXOProvider) (txmodels.Transaction, error) {
 	if client.key == nil {
 		return txmodels.Transaction{}, errors.New("keys not set")
@@ -274,9 +274,33 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 	return msgTx, nil
 }
 
-func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx) (*wire.MsgTx, error) {
+func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
+	}
+	type scriptData struct {
+		Type string
+		P2sh string
+		Hex  string
+	}
+
+	scripts := make(map[string]scriptData, len(redeemScripts))
+	for _, redeemScript := range redeemScripts {
+		rawScript, err := hex.DecodeString(redeemScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to decode hex script")
+		}
+
+		script, err := client.DecodeScript(rawScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to parse script")
+		}
+
+		scripts[script.P2sh] = scriptData{
+			Type: script.Type,
+			P2sh: script.P2sh,
+			Hex:  redeemScript,
+		}
 	}
 
 	for i := range msgTx.TxIn {
@@ -298,6 +322,14 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx) (*wire.MsgTx, error) {
 			Value:      int64(value),
 			PKScript:   out.ScriptPubKey.Hex,
 			ScriptType: out.ScriptPubKey.Type,
+		}
+
+		for _, address := range out.ScriptPubKey.Addresses {
+			if script, ok := scripts[address]; ok {
+				utxo.ScriptType = script.Type
+				utxo.PKScript = script.Hex
+				break
+			}
 		}
 
 		_, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
@@ -360,35 +392,5 @@ func (client *TxMan) NewMultiSig2of2Address(firstPubKey, second string) (*MultiS
 }
 
 func (client *TxMan) DecodeScript(script []byte) (*btcjson.DecodeScriptResult, error) {
-	// The disassembled string will contain [error] inline if the script
-	// doesn't fully parse, so ignore the error here.
-	asm, _ := txscript.DisasmString(script)
-
-	// Get information about the script.
-	// Ignore the error here since an error means the script couldn't parse
-	// and there is no additional information about it anyways.
-	scriptClass, address, reqSigns, _ := txscript.ExtractPkScriptAddrs(script, client.NetParams)
-	addresses := make([]string, len(address))
-	for i, addr := range address {
-		addresses[i] = addr.EncodeAddress()
-	}
-
-	// Convert the script itself to a pay-to-script-hash address.
-	p2sh, err := btcutil.NewAddressScriptHash(script, client.NetParams)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert script to pay-to-script-hash")
-	}
-
-	// Generate and return the reply.
-	reply := &btcjson.DecodeScriptResult{
-		Asm:       asm,
-		ReqSigs:   int32(reqSigns),
-		Type:      scriptClass.String(),
-		Addresses: addresses,
-	}
-	if scriptClass != txscript.ScriptHashTy {
-		reply.P2sh = p2sh.EncodeAddress()
-	}
-
-	return reply, nil
+	return DecodeScript(script, client.NetParams)
 }

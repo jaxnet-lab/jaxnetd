@@ -4,10 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
 )
 
@@ -25,53 +22,14 @@ func NewOperator(config ManagerCfg) (Operator, error) {
 	return op, nil
 }
 
-func (app *Operator) NewMultiSigTx(signer KeyData,
-	dataFile, firstPubKey, secondPubKey string, amount int64) (*txmodels.Transaction, error) {
-	repo := storage.NewCSVStorage(dataFile)
-	utxo, err := repo.FetchData()
-	if err != nil {
-		return nil, cli.NewExitError(errors.Wrap(err, "unable to fetch UTXO"), 1)
-	}
-
-	rawFirstRecipient, err := hex.DecodeString(firstPubKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode first PubKey")
-	}
-	firstPK, err := btcutil.NewAddressPubKey(rawFirstRecipient, app.TxMan.NetParams)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode first PubKey")
-	}
-
-	rawSecondRecipient, err := hex.DecodeString(secondPubKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode second PubKey")
-	}
-	secondPK, err := btcutil.NewAddressPubKey(rawSecondRecipient, app.TxMan.NetParams)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode second PubKey")
-	}
-
-	app.TxMan.SetKey(&signer)
-	tx, err := app.TxMan.NewMultiSig2of2Tx(
-		firstPK,
-		secondPK,
-		amount,
-		UTXOFromRows(utxo))
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to create new multi sig tx")
-	}
-
-	return &tx, nil
-}
-
-func (app *Operator) AddSignatureToTx(signer KeyData, txBody string) (*txmodels.Transaction, error) {
+func (app *Operator) AddSignatureToTx(signer KeyData, txBody, redeemScript string) (*txmodels.Transaction, error) {
 	msgTx, err := DecodeTx(txBody)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode tx")
 	}
 
 	app.TxMan.SetKey(&signer)
-	msgTx, err = app.TxMan.AddSignatureToTx(msgTx)
+	msgTx, err = app.TxMan.AddSignatureToTx(msgTx, redeemScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable add signature")
 	}
@@ -83,8 +41,41 @@ func (app *Operator) AddSignatureToTx(signer KeyData, txBody string) (*txmodels.
 	}, nil
 }
 
+func (app *Operator) NewMultiSigSpendTx(signer KeyData,
+	txHash, redeemScript string, outIndex uint32, destination string, amount int64) (*txmodels.Transaction, error) {
+	utxo, err := app.UTXOByHash(txHash, outIndex, redeemScript)
+	if err != nil {
+		return nil, err
+	}
+
+	app.TxMan.SetKey(&signer)
+	tx, err := app.TxMan.NewTx(destination, amount, SingleUTXO(*utxo))
+	if err != nil {
+		return nil, errors.Wrap(err, "new tx error")
+	}
+
+	return &tx, nil
+}
+
+// SpendUTXO creates new transaction that spends UTXO with 'outIndex' from transaction with 'txHash'.
+// Into new transactions will be added one Input and one or two Outputs, if 'amount' less than UTXO value.
 func (app *Operator) SpendUTXO(signer KeyData,
-	txHash string, outIndex uint32, destination string) (*txmodels.Transaction, error) {
+	txHash string, outIndex uint32, destination string, amount int64) (*txmodels.Transaction, error) {
+	utxo, err := app.UTXOByHash(txHash, outIndex, "")
+	if err != nil {
+		return nil, err
+	}
+
+	app.TxMan.SetKey(&signer)
+	tx, err := app.TxMan.NewTx(destination, amount, SingleUTXO(*utxo))
+	if err != nil {
+		return nil, errors.Wrap(err, "new tx error")
+	}
+
+	return &tx, nil
+}
+
+func (app *Operator) UTXOByHash(txHash string, outIndex uint32, redeemScript string) (*txmodels.UTXO, error) {
 	hash, err := chainhash.NewHashFromStr(txHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode tx hash")
@@ -103,7 +94,7 @@ func (app *Operator) SpendUTXO(signer KeyData,
 		return nil, errors.Wrap(err, "unable to decode script")
 	}
 
-	utxo := txmodels.UTXO{
+	utxo := &txmodels.UTXO{
 		TxHash:     msgTx.TxHash().String(),
 		OutIndex:   outIndex,
 		Value:      outValue,
@@ -112,18 +103,20 @@ func (app *Operator) SpendUTXO(signer KeyData,
 		ScriptType: decodedScript.Type,
 	}
 
-	fee, err := app.TxMan.NetworkFee()
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to get network fee")
+	if redeemScript != "" {
+		rawScript, err := hex.DecodeString(redeemScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to decode hex script")
+		}
+
+		script, err := app.TxMan.DecodeScript(rawScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to parse script")
+		}
+
+		utxo.PKScript = redeemScript
+		utxo.ScriptType = script.Type
 	}
 
-	amountToSend := outValue - fee
-
-	app.TxMan.SetKey(&signer)
-	tx, err := app.TxMan.NewTx(destination, amountToSend, SingleUTXO(utxo))
-	if err != nil {
-		return nil, errors.Wrap(err, "new tx error")
-	}
-
-	return &tx, nil
+	return utxo, nil
 }

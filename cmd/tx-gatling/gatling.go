@@ -33,12 +33,12 @@ func main() {
 				Usage:  "send transactions with values from config file",
 				Action: app.SendTxCmd,
 			},
-			{
-				Name:   "multisig-tx",
-				Usage:  "creates new 2of2 multi sig transaction",
-				Flags:  app.NewMultiSigTxFlags(),
-				Action: app.NewMultiSigTxCmd,
-			},
+			// {
+			// 	Name:   "multisig-tx",
+			// 	Usage:  "creates new 2of2 multi sig transaction",
+			// 	Flags:  app.NewMultiSigTxFlags(),
+			// 	Action: app.NewMultiSigTxCmd,
+			// },
 			{
 				Name:   "multisig-address",
 				Usage:  "creates new 2of2 multi sig address and redeem script",
@@ -241,33 +241,33 @@ func (app *App) NewMultiSigTxFlags() []cli.Flag {
 	}
 }
 
-func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
-	firstRecipient := c.String("first-pk")
-	secondRecipient := c.String("second-pk")
-	amount := c.Int64("amount")
-	send := c.Bool("send-tx")
-	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
-	if err != nil {
-		return cli.NewExitError(err, 1)
-	}
-
-	tx, err := app.NewMultiSigTx(*signer, app.config.DataFile, firstRecipient, secondRecipient, amount)
-	if err != nil {
-		return cli.NewExitError(err, 1)
-	}
-
-	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
-
-	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
-		if err != nil {
-			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
-		}
-		fmt.Printf("Tx Sent: %s\n", tx.TxHash)
-	}
-
-	return nil
-}
+// func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
+// 	firstRecipient := c.String("first-pk")
+// 	secondRecipient := c.String("second-pk")
+// 	amount := c.Int64("amount")
+// 	send := c.Bool("send-tx")
+// 	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+// 	if err != nil {
+// 		return cli.NewExitError(err, 1)
+// 	}
+//
+// 	tx, err := app.NewMultiSigTx(*signer, app.config.DataFile, firstRecipient, secondRecipient, amount)
+// 	if err != nil {
+// 		return cli.NewExitError(err, 1)
+// 	}
+//
+// 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
+//
+// 	if send {
+// 		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+// 		if err != nil {
+// 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
+// 		}
+// 		fmt.Printf("Tx Sent: %s\n", tx.TxHash)
+// 	}
+//
+// 	return nil
+// }
 
 func (app *App) NewMultiSigAddressCmd(c *cli.Context) error {
 	firstRecipient := c.String("first-pk")
@@ -289,6 +289,12 @@ func (app *App) AddSignatureToTxFlags() []cli.Flag {
 			Usage:    "hex-encoded body of transaction",
 			Required: true,
 		},
+		&cli.StringFlag{
+			Name:     "redeem-script",
+			Aliases:  []string{"s"},
+			Usage:    "hex-encoded redeem script of tx input",
+			Required: true,
+		},
 		&cli.BoolFlag{
 			Name:    "send-tx",
 			Aliases: []string{"t"},
@@ -298,6 +304,7 @@ func (app *App) AddSignatureToTxFlags() []cli.Flag {
 }
 func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 	txBody := c.String("tx-body")
+	script := c.String("redeem-script")
 	send := c.Bool("send-tx")
 
 	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
@@ -305,7 +312,7 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	tx, err := app.AddSignatureToTx(*signer, txBody)
+	tx, err := app.AddSignatureToTx(*signer, txBody, script)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}
@@ -345,6 +352,13 @@ func (app *App) SpendUTXOFlags() []cli.Flag {
 			Usage:    "destination address of new tx",
 			Required: true,
 		},
+		&cli.Int64Flag{
+			Name:     "amount",
+			Aliases:  []string{"a"},
+			Value:    0,
+			Usage:    "amount of new tx",
+			Required: true,
+		},
 		&cli.BoolFlag{
 			Name:    "send-tx",
 			Aliases: []string{"t"},
@@ -357,6 +371,8 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	txHash := c.String("tx-hash")
 	destination := c.String("address")
 	outIndex := c.Uint64("out-index")
+	amount := c.Int64("amount")
+
 	send := c.Bool("send-tx")
 
 	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
@@ -364,7 +380,7 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	tx, err := app.SpendUTXO(*signer, txHash, uint32(outIndex), destination)
+	tx, err := app.SpendUTXO(*signer, txHash, uint32(outIndex), destination, amount)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}

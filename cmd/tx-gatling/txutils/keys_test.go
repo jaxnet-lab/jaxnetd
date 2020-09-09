@@ -31,12 +31,12 @@ func TestNewKeyData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, keyData.Address.EncodeAddress(), simNetAddress.EncodeAddress())
 
-	MINER_SK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
-	ALICE_SK := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
-	BOB_SK := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
-	EVA_SK := "bdfb934f403bd6c3f74730f9690f6fc22863388f473860eb001a1e7f02261b79"
+	MinerSk := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	AliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	BobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	EvaSk := "bdfb934f403bd6c3f74730f9690f6fc22863388f473860eb001a1e7f02261b79"
 
-	for _, sk := range []string{MINER_SK, ALICE_SK, BOB_SK, EVA_SK} {
+	for _, sk := range []string{MinerSk, AliceSk, BobSk, EvaSk} {
 		kd, _ := NewKeyData(sk, &chaincfg.TestNet3Params)
 		println(kd.AddressPubKey.String())
 	}
