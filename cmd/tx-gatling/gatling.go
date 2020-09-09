@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -11,8 +9,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/storage"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmanager"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmanager/models"
+	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txutils"
 )
 
 func main() {
@@ -26,17 +24,42 @@ func main() {
 			{
 				Name:   "sync",
 				Usage:  "fetch UTXO data to CSV file",
-				Action: app.SyncUTXO,
+				Action: app.SyncUTXOCmd,
 				Flags:  app.SyncUTXOFlags(),
 			},
 
 			{
 				Name:   "send-tx",
 				Usage:  "send transactions with values from config file",
-				Action: app.SendTx,
+				Action: app.SendTxCmd,
+			},
+			{
+				Name:   "multisig-tx",
+				Usage:  "creates new 2of2 multi sig transaction",
+				Flags:  app.NewMultiSigTxFlags(),
+				Action: app.NewMultiSigTxCmd,
+			},
+			{
+				Name:   "multisig-address",
+				Usage:  "creates new 2of2 multi sig address and redeem script",
+				Flags:  app.NewMultiSigTxFlags(),
+				Action: app.NewMultiSigAddressCmd,
+			},
+			{
+				Name:   "add-signature",
+				Usage:  "adds signature to transaction with the multiSig inputs",
+				Flags:  app.AddSignatureToTxFlags(),
+				Action: app.AddSignatureToTxCmd,
+			},
+
+			{
+				Name:   "spend-utxo",
+				Usage:  "create new transaction with single UTXO as input",
+				Flags:  app.SpendUTXOFlags(),
+				Action: app.SpendUTXOCmd,
 			},
 		},
-		Action: app.DefaultAction,
+		// Action: app.DefaultAction,
 	}
 
 	err := cliApp.Run(os.Args)
@@ -48,7 +71,7 @@ func main() {
 
 type App struct {
 	config Config
-	client *txmanager.TxMan
+	txutils.Operator
 }
 
 func (app *App) InitFlags() []cli.Flag {
@@ -56,12 +79,25 @@ func (app *App) InitFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "config",
 			Aliases: []string{"c"},
-			Usage:   "path to configuration",
 			Value:   "./config.yaml",
+			Usage:   "path to configuration",
+		},
+		&cli.StringFlag{
+			Name:    "data-file",
+			Aliases: []string{"f"},
+			Value:   "",
+			EnvVars: []string{"TX_DATA_FILE"},
+			Usage:   "path to CSV input/output, will override value from config file",
+		},
+		&cli.StringFlag{
+			Name:    "secret-key",
+			Aliases: []string{"k"},
+			Value:   "",
+			EnvVars: []string{"TX_SECRET_KEY"},
+			Usage:   "secret key for signing actions, will override value from config file",
 		},
 	}
 }
-
 func (app *App) InitCfg(c *cli.Context) error {
 	var err error
 	app.config, err = parseConfig(c.String("config"))
@@ -69,13 +105,23 @@ func (app *App) InitCfg(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	app.client, err = txmanager.NewTxMan(txmanager.ManagerCfg{
+	dataFile := c.String("data-file")
+	if dataFile != "" {
+		app.config.DataFile = dataFile
+	}
+
+	secret := c.String("secret-key")
+	if dataFile != "" {
+		app.config.SenderSecret = secret
+	}
+
+	app.Operator, err = txutils.NewOperator(txutils.ManagerCfg{
 		Net:        app.config.Net,
 		RPC:        app.config.NodeRPC,
 		PrivateKey: app.config.SenderSecret,
 	})
 	if err != nil {
-		return cli.NewExitError(errors.Wrap(err, "unable to init client"), 1)
+		return cli.NewExitError(errors.Wrap(err, "unable to init TxMan"), 1)
 	}
 	return nil
 }
@@ -85,31 +131,31 @@ func (app *App) SyncUTXOFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "address",
 			Aliases: []string{"a"},
+			Value:   "",
+			EnvVars: []string{"TX_ADDRESS"},
 			Usage:   "filter UTXO by address",
 		},
 		&cli.Int64Flag{
 			Name:    "offset",
 			Aliases: []string{"o"},
+			EnvVars: []string{"TX_BLOCK_OFFSET"},
 			Usage:   "offset for starting block height",
-		},
-		&cli.StringFlag{
-			Name:    "data-file",
-			Aliases: []string{"f"},
-			Value:   "./utxo.csv",
-			Usage:   "path for CSV output with results, will override value from config file",
 		},
 	}
 }
-
-func (app *App) SyncUTXO(c *cli.Context) error {
+func (app *App) SyncUTXOCmd(c *cli.Context) error {
 	offset := c.Int64("offset")
 	address := c.String("address")
 	dataFile := c.String("data-file")
 
-	rows, err := app.client.CollectUTXO(address, offset)
+	fmt.Printf("Start collecting...")
+
+	rows, lastBlock, err := app.TxMan.CollectUTXO(address, offset)
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to collect UTXO"), 1)
 	}
+
+	fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(rows), address, offset, lastBlock)
 
 	err = storage.NewCSVStorage(dataFile).SaveRows(rows)
 	if err != nil {
@@ -119,25 +165,25 @@ func (app *App) SyncUTXO(c *cli.Context) error {
 	return nil
 }
 
-func (app *App) SendTx(*cli.Context) error {
+func (app *App) SendTxCmd(*cli.Context) error {
 	repo := storage.NewCSVStorage(app.config.DataFile)
 	utxo, err := repo.FetchData()
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to fetch UTXO"), 1)
 	}
 
-	provider := txmanager.UTXOFromRows(utxo)
-	var sentTxs []models.Transaction
+	provider := txutils.UTXOFromRows(utxo)
+	var sentTxs []txmodels.Transaction
 	for _, dest := range app.config.Destinations {
 		fmt.Printf("Try to send %d satoshi to %s ", dest.Amount, dest.Address)
-		tx, err := app.client.NewTx(dest.Address, dest.Amount, provider)
+		tx, err := app.TxMan.NewTx(dest.Address, dest.Amount, provider)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to send tx"), 1)
 		}
 
 		fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
-		_, err = app.client.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -149,7 +195,7 @@ func (app *App) SendTx(*cli.Context) error {
 
 	for _, tx := range sentTxs {
 		hash, _ := chainhash.NewHashFromStr(tx.TxHash)
-		txResult, err := app.client.RPC.GetRawTransaction(hash)
+		txResult, err := app.TxMan.RPC.GetRawTransaction(hash)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to get tx"), 1)
 		}
@@ -164,100 +210,174 @@ func (app *App) SendTx(*cli.Context) error {
 	return nil
 }
 
-func (app *App) DefaultAction(c *cli.Context) error {
-	sendTX := false
-
-	cfg := txmanager.ManagerCfg{
-		Net: app.config.Net,
-		RPC: app.config.NodeRPC,
+func (app *App) NewMultiSigTxFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     "first-pk",
+			Aliases:  []string{"f"},
+			Usage:    "hex-encoded public key of first recipient",
+			EnvVars:  []string{"TX_FIRST_PK"},
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:     "second-pk",
+			Aliases:  []string{"s"},
+			EnvVars:  []string{"TX_SECOND_PK"},
+			Usage:    "hex-encoded public key of second recipient",
+			Required: true,
+		},
+		&cli.Int64Flag{
+			Name:     "amount",
+			Aliases:  []string{"a"},
+			Value:    0,
+			Usage:    "amount of new tx",
+			Required: true,
+		},
+		&cli.BoolFlag{
+			Name:    "send-tx",
+			Aliases: []string{"t"},
+			Usage:   "craft and send transaction if set",
+		},
 	}
+}
 
-	// create new instance of tx manager,
-
-	manager, err := txmanager.NewTxMan(cfg)
+func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
+	firstRecipient := c.String("first-pk")
+	secondRecipient := c.String("second-pk")
+	amount := c.Int64("amount")
+	send := c.Bool("send-tx")
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
 	if err != nil {
-		log.Fatal("unable to init manager:", err)
+		return cli.NewExitError(err, 1)
 	}
 
-	// aliceSecret is hex-encoded private key
-	aliceSecret := "330c18e1c5548ec726fd6286f11ea29e7f15a13e9d4c62205ea6230dcb064769"
-	aliceKP, err := txmanager.NewKeyData(aliceSecret, cfg.NetParams())
+	tx, err := app.NewMultiSigTx(*signer, app.config.DataFile, firstRecipient, secondRecipient, amount)
 	if err != nil {
-		log.Fatal("unable to create aliceKP:", err)
+		return cli.NewExitError(err, 1)
 	}
 
-	// bobSecret is hex-encoded private key
-	bobSecret := "6e38943e714b5b3ead017ab003939366e798b07dff5f9e12de913d7388aa572c"
+	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
-	bobKP, err := txmanager.NewKeyData(bobSecret, cfg.NetParams())
-	if err != nil {
-		log.Fatal("unable to create bobKP:", err)
-	}
-
-	if sendTX {
-		utxo, err := manager.CollectUTXO(aliceKP.AddressPubKey.EncodeAddress(), 0)
+	if send {
+		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
 		if err != nil {
-			log.Fatal("unable to collect utxo:", err)
+			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
-
-		manager.SetKey(aliceKP)
-		sentTx, err := manager.NewMultiSig2of2Tx(
-			aliceKP.AddressPubKey,
-			bobKP.AddressPubKey,
-			360*txmanager.OneCoin,
-			txmanager.UTXOFromRows(utxo))
-		if err != nil {
-			log.Fatal("unable to collect utxo:", err)
-		}
-
-		_, err = manager.RPC.SendRawTransaction(sentTx.RawTX, true)
-		if err != nil {
-			log.Fatal("tx not sent:", err)
-		}
-		fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", sentTx.TxHash, sentTx.SignedTx)
-	}
-	for _, testTx := range []string{tx2} {
-		txWitMultisig, _ := txmanager.DecodeTx(testTx)
-		manager.SetKey(aliceKP)
-		utxo := models.UTXO{
-			TxHash:   txWitMultisig.TxHash().String(),
-			OutIndex: 0,
-			Value:    txWitMultisig.TxOut[0].Value,
-			Used:     false,
-			PKScript: hex.EncodeToString(txWitMultisig.TxOut[0].PkScript),
-		}
-
-		tx, err := manager.NewTx(bobKP.AddressPubKey.EncodeAddress(), 360*txmanager.OneCoin, txmanager.SingleUTXO(utxo))
-		if err != nil {
-			log.Println("new tx error:", err.Error())
-			continue
-		}
-
-		updTx1, err := decodeAndSignTx(manager, tx.SignedTx)
-		if err != nil {
-			log.Println("decodeAndSignTx error:", err.Error())
-			continue
-		}
-		fmt.Printf("Sign Tx\nBody: %s\n", updTx1)
+		fmt.Printf("Tx Sent: %s\n", tx.TxHash)
 	}
 
 	return nil
 }
 
-func decodeAndSignTx(manager *txmanager.TxMan, tx string) (string, error) {
-	msgTx, err := txmanager.DecodeTx(tx)
+func (app *App) NewMultiSigAddressCmd(c *cli.Context) error {
+	firstRecipient := c.String("first-pk")
+	secondRecipient := c.String("second-pk")
+	mAddr, err := app.TxMan.NewMultiSig2of2Address(firstRecipient, secondRecipient)
 	if err != nil {
-		return "", errors.Wrap(err, "unable to decode tx")
+		return cli.NewExitError(err, 1)
 	}
 
-	msgTx, err = manager.AddSignatureToTx(msgTx)
-	if err != nil {
-		return "", errors.Wrap(err, "unable add signature")
-	}
-
-	return txmanager.EncodeTx(msgTx), nil
+	fmt.Printf("Craft new mustisig Address\nAddress: %s\nRedeemScript: %s\n", mAddr.Address, mAddr.RedeemScript)
+	return nil
 }
 
-// txs with multisig UTXO
-var tx1 = `01000000071325fc88251c797445305e6005dd0bb20e250ecc7475a37979eddfa833ed1939000000008a473044022018f8a4018bbbb1e8496f6d348e769c40a5cc5d613718e83520c96d874656b69902205760f41d48574d21ab697910f517dca06d0cef8da97f882d9e6156249261cab3034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff1234cc8ad94400689f37dd89495449cb830bb85463335b810136ca975e0c96d6000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff13eb922a1c76ea93ab3dbaf9e6ba68f36f0e932e3ecd06da8f4c08bcc218af12000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff0ca4bb31d3aa8f421f4b3c003f2f972a446126fbae5eccc2ec5f7ea89f28e270000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff477c3ad847fa690fe9530eb68e5cb908e3d8050074c3c797c0ff57bf647afc5e000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffffe9d54571091599d3f2b7de031b3df7f5036ba2466fae074897bb9ad109a2aa50000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff8d23047ba41d246a86124cd40e7890943475e31d191d31d02c9825f5585d21ed000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff01000c58380900000017a914e9f73dbb5384ad037915ea47cac0847d67964ca28700000000`
-var tx2 = `0100000004933d6f5be1549747539463946e0913c9acf857a4f066ae945bc374376fa4cbb2000000008a47304402203f46a7f2d83a6b14ecbae1445c19eb9e86502c24ee3548088ade6b35d3080aff0220134869b46b9d0873bc3943df4c80a3e8193130d56450eba45370ed7574cb0ba9034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffffc82f8bcde99c7bcd648f99c18362634ae0022cd381d4986f7945d508155e8b31000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffffa6c8dcee0172af9aa5bb2e679fb536ed4835bb9fa296743019d755a291b0d09e000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3fffffffffb6a6c9317fcd1b024486020867eeb3fcaf12eca4834ef251ccc3929a2a4de1c000000008a4730440220659f68c84c6f9e3812102bd64e1421eac2d617b81989da95868df3778b5f18180220748b4be5d3948e6b172c62618de8b26b54d35171065db99c86af4e30f092e45a034104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea3ffffffff010068c4610800000087524104a39fbfe1d05b006a70b40a39c22832d0c339ed8aeaad0ce4f8fda44acf08e22e7316b5b7fd13765e1e2e8188e322a6d818a5362734a8a82d308577fa7396dea341042f9babd2e8d634eda7036cb766391fd41850527e10cf6c4d085454fe983e3fd7608b69630f2c4ef51ae1e3db5f8ee9e0ced483161e6974ccce0293087c0a61a552ae00000000`
+func (app *App) AddSignatureToTxFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     "tx-body",
+			Aliases:  []string{"b"},
+			Usage:    "hex-encoded body of transaction",
+			Required: true,
+		},
+		&cli.BoolFlag{
+			Name:    "send-tx",
+			Aliases: []string{"t"},
+			Usage:   "craft and send transaction if set",
+		},
+	}
+}
+func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
+	txBody := c.String("tx-body")
+	send := c.Bool("send-tx")
+
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	tx, err := app.AddSignatureToTx(*signer, txBody)
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	fmt.Printf("Add signature to Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
+
+	if send {
+		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		if err != nil {
+			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
+		}
+		fmt.Printf("Tx Sent: %s\n", tx.TxHash)
+
+	}
+
+	return nil
+}
+
+func (app *App) SpendUTXOFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     "tx-hash",
+			Aliases:  []string{"x"},
+			Usage:    "hash of transaction with source UTXO",
+			Required: true,
+		},
+		&cli.Uint64Flag{
+			Name:     "out-index",
+			Aliases:  []string{"i"},
+			Usage:    "index of source UTXO",
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:     "address",
+			Aliases:  []string{"a"},
+			Value:    "",
+			Usage:    "destination address of new tx",
+			Required: true,
+		},
+		&cli.BoolFlag{
+			Name:    "send-tx",
+			Aliases: []string{"t"},
+			Usage:   "craft and send transaction if set",
+		},
+	}
+}
+
+func (app *App) SpendUTXOCmd(c *cli.Context) error {
+	txHash := c.String("tx-hash")
+	destination := c.String("address")
+	outIndex := c.Uint64("out-index")
+	send := c.Bool("send-tx")
+
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	tx, err := app.SpendUTXO(*signer, txHash, uint32(outIndex), destination)
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
+
+	if send {
+		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		if err != nil {
+			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
+		}
+		fmt.Printf("Tx Sent: %s\n", tx.TxHash)
+	}
+
+	return nil
+}

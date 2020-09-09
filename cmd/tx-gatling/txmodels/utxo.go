@@ -1,10 +1,9 @@
-package models
+package txmodels
 
 import (
 	"encoding/hex"
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
@@ -70,36 +69,6 @@ func (index *UTXOIndex) AddUTXO(utxo UTXO) {
 
 }
 
-// DEPRECATED
-func (index *UTXOIndex) AddTxs(txs []*btcjson.SearchRawTransactionsResult) {
-	for _, tx := range txs {
-		subIndex := map[uint32]uint{}
-		for _, out := range tx.Vout {
-			// fixme
-			subIndex[out.N] = uint(int64(out.Value * 100_000_000))
-		}
-
-		index.txs[tx.Txid] = subIndex
-
-		for _, vin := range tx.Vin {
-			subIndex, ok := index.txs[vin.Txid]
-			if !ok {
-				continue
-			}
-
-			if _, ok := subIndex[vin.Vout]; ok {
-				delete(subIndex, vin.Vout)
-			}
-
-			if len(subIndex) == 0 {
-				delete(index.txs, vin.Txid)
-			}
-		}
-
-	}
-
-}
-
 func (index *UTXOIndex) Rows() UTXORows {
 	return index.utxo
 }
@@ -111,6 +80,20 @@ type UTXO struct {
 	OutIndex   uint32 `json:"out_index" csv:"out_index"`
 	Value      int64  `json:"value" csv:"value"`
 	Used       bool   `json:"used" csv:"used"`
+	PKScript   string `json:"pk_script" csv:"pk_script"`
+	ScriptType string `json:"script_type" csv:"script_type"`
+}
+
+func (utxo UTXO) ToShort() ShortUTXO {
+	return ShortUTXO{
+		Value:      utxo.Value,
+		PKScript:   utxo.PKScript,
+		ScriptType: utxo.ScriptType,
+	}
+}
+
+type ShortUTXO struct {
+	Value      int64  `json:"value" csv:"value"`
 	PKScript   string `json:"pk_script" csv:"pk_script"`
 	ScriptType string `json:"script_type" csv:"script_type"`
 }

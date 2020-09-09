@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/gocarina/gocsv"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmanager/models"
+	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
 )
 
 type CSVStorage struct {
@@ -41,18 +41,18 @@ func (storage *CSVStorage) Close() {
 	}
 }
 
-func (storage *CSVStorage) FetchData() (models.UTXORows, error) {
+func (storage *CSVStorage) FetchData() (txmodels.UTXORows, error) {
 	if err := storage.open(true, false); err != nil {
 		return nil, err
 	}
 	defer storage.Close()
 
-	rows := make([]models.UTXO, 0)
+	rows := make([]txmodels.UTXO, 0)
 	err := gocsv.UnmarshalFile(storage.file, &rows)
 	return rows, err
 }
 
-func (storage *CSVStorage) SaveRows(rows []models.UTXO) error {
+func (storage *CSVStorage) SaveRows(rows []txmodels.UTXO) error {
 	if err := storage.open(false, true); err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package txmanager
+package txutils
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"

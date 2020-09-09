@@ -1,11 +1,11 @@
-package txmanager
+package txutils
 
 import (
 	"encoding/hex"
 	"log"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmanager/models"
+	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -32,7 +32,7 @@ func Example() {
 		log.Fatal("unable to init txManager:", err)
 	}
 
-	utxo, err := txManager.CollectUTXO(address, 0)
+	utxo, _, err := txManager.CollectUTXO(address, 0)
 	if err != nil {
 		log.Fatal("unable to collect utxo:", err)
 	}
@@ -91,7 +91,7 @@ func Example() {
 		}
 	}
 
-	newUtxo := models.UTXO{
+	newUtxo := txmodels.UTXO{
 		Address:    "",
 		TxHash:     sentTx.RawTX.TxHash().String(),
 		OutIndex:   0,
@@ -104,10 +104,10 @@ func Example() {
 		// sing tx by one key
 		newUtxo.Address = aliceKP.Address.String()
 
-		draft := models.DraftTx{
+		draft := txmodels.DraftTx{
 			Amount:     100 * OneCoin,
 			NetworkFee: 0,
-			UTXO:       []models.UTXO{newUtxo},
+			UTXO:       []txmodels.UTXO{newUtxo},
 		}
 		err = draft.SetPayToAddress(aliceKP.Address.String(), &chaincfg.TestNet3Params)
 		if err != nil {
@@ -115,15 +115,16 @@ func Example() {
 		}
 
 		txManager.SetKey(bobKP)
-		txSignerByBob, err := txManager.DraftToSignedTx(draft)
+		txSignerByBob, err := txManager.DraftToSignedTx(draft, false)
 		if err != nil {
 			log.Fatal("can not to DraftToSignedTx:", err)
 		}
-		bobSignature := txSignerByBob.TxIn[0].SignatureScript
+
+		// bobSignature := txSignerByBob.TxIn[0].SignatureScript
 		// txSignerByBob and bobSignature new to pass to Alice for signing and submitting
 
 		txManager.SetKey(aliceKP)
-		aliceAndBobSignature, err := txManager.SignUTXOForTx(txSignerByBob, newUtxo, 0, bobSignature, false)
+		aliceAndBobSignature, err := txManager.SignUTXOForTx(txSignerByBob, newUtxo.ToShort(), 0, false)
 		if err != nil {
 			log.Fatal("can not to SignUTXOForTx:", err)
 		}

@@ -1,4 +1,4 @@
-package models
+package txmodels
 
 import (
 	"encoding/hex"
@@ -14,6 +14,7 @@ type DraftTx struct {
 	NetworkFee     int64
 	UTXO           UTXORows
 	ReceiverScript []byte
+	Address        string
 }
 
 // SetPayToAddress creates regular pay-to-address script.
@@ -24,6 +25,7 @@ func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincfg.Params) 
 		return err
 	}
 
+	tx.Address = destAddress
 	tx.ReceiverScript, err = txscript.PayToAddrScript(decodedDestAddr)
 	if err != nil {
 		return err
@@ -39,16 +41,12 @@ func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPub
 		return err
 	}
 
-	// scriptAddr, err := btcutil.NewAddressScriptHash(pkScript, params)
-	// if err != nil {
-	// 	return err
-	// }
+	scriptAddr, err := btcutil.NewAddressScriptHash(pkScript, params)
+	if err != nil {
+		return err
+	}
 
-	// tx.ReceiverScript, err = txscript.PayToAddrScript(scriptAddr)
-	// if err != nil {
-	// 	return err
-	// }
-
+	tx.Address = scriptAddr.EncodeAddress()
 	tx.ReceiverScript = pkScript
 	return nil
 }
