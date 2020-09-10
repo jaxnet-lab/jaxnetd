@@ -6,11 +6,6 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/limits"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -19,6 +14,12 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/limits"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
 )
 
 const (
@@ -343,7 +344,8 @@ func loadBlockDB() (database.DB, error) {
 
 func main() {
 	// Use all processor cores.
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	// runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(1)
 
 	// Block and transaction processing can cause bursty allocations.  This
 	// limits the garbage collector from excessively overallocating during
