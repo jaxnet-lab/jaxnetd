@@ -13,8 +13,8 @@ import (
 // BlockHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
 type header struct {
-	// Version of the block.  This is not the same as the protocol version.
-	version int32
+	//// Version of the block.  This is not the same as the protocol version.
+	//version int32
 
 	// Hash of the previous block header in the block chain.
 	prevBlock chainhash.Hash
@@ -28,11 +28,11 @@ type header struct {
 	// uint32 on the wire and therefore is limited to 2106.
 	timestamp time.Time
 
-	// Difficulty target for the block.
-	bits uint32
+	//// Difficulty target for the block.
+	//bits uint32
 
-	// Nonce used to generate the block.
-	nonce uint32
+	//// Nonce used to generate the block.
+	//nonce uint32
 }
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
@@ -108,13 +108,13 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
-		version:             version,
+		//version:             version,
 		prevBlock:           prevHash,
 		merkleRoot:          merkleRootHash,
 		merkleMountainRange: mmr,
 		timestamp:           timestamp, //time.Unix(time.Now().Unix(), 0),
-		bits:                bits,
-		nonce:               nonce,
+		//bits:                bits,
+		//nonce:               nonce,
 	}
 }
 
@@ -122,8 +122,8 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBlockHeader(r io.Reader, bh *header) error {
-	return encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot,
-		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce)
+	return encoder.ReadElements(r, &bh.prevBlock, &bh.merkleRoot,
+		(*encoder.Uint32Time)(&bh.timestamp))
 }
 
 // WriteBlockHeader writes a bitcoin block header to w.  See Serialize for
@@ -133,8 +133,7 @@ func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
 	fmt.Println("shard writeBlockHeader")
-	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot,
-		sec, bh.bits, bh.nonce)
+	return encoder.WriteElements(w, &bh.prevBlock, &bh.merkleRoot, sec)
 }
 
 //// BlockHeader defines information about a block and is used in the bitcoin
@@ -235,7 +234,7 @@ func (h *header) SetMerkleRoot(hash chainhash.Hash) {
 	h.merkleRoot = hash
 }
 
-func (h *header) MerkleMountainRange() chainhash.Hash {
+func (h *header) MergeMiningRoot() chainhash.Hash {
 	return h.merkleMountainRange
 }
 
@@ -245,23 +244,21 @@ func (h *header) SetTimestamp(t time.Time) {
 }
 
 func (h *header) Nonce() uint32 {
-	return h.nonce
+	return 0
 }
 
 func (h *header) SetNonce(n uint32) {
-	h.nonce = n
 }
 
 func (h *header) Bits() uint32 {
-	return h.bits
+	return 0
 }
 
 func (h *header) SetBits(bits uint32) {
-	h.bits = bits
 }
 
 func (h *header) Version() int32 {
-	return h.version
+	return 0
 }
 
 //

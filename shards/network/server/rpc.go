@@ -20,6 +20,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -921,7 +922,7 @@ func (s *rpcServer) verifyChain(level, depth int32) error {
 type rpcServer struct {
 	started      int32
 	shutdown     int32
-	cfg          Config
+	cfg          *Config
 	authsha      [sha256.Size]byte
 	limitauthsha [sha256.Size]byte
 	//ntfnMgr                *wsNotificationManager
@@ -1667,11 +1668,11 @@ type Config struct {
 }
 
 // newRPCServer returns a new instance of the rpcServer struct.
-func RpcServer(config *Config) (*rpcServer, error) {
+func RpcServer(config *Config, logger *zap.Logger) (*rpcServer, error) {
 	rpc := &rpcServer{
-		cfg:         *config,
-		statusLines: make(map[int]string),
-
+		cfg:                    config,
+		statusLines:            make(map[int]string),
+		logger:                 network.LogAdapter(logger),
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
 	}

@@ -6,25 +6,25 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/params"
 	"go.uber.org/zap"
 	"net"
 	"strings"
 )
 
-func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
+func (c *chainController) runShard(ctx context.Context, cfg *Config, shardId uint32) error {
 	interrupt := interruptListener()
 	// Return now if an interrupt signal was triggered.
 	if interruptRequested(interrupt) {
 		return errors.New("can't create interrupt request")
 	}
 
-	chain := beacon.Chain()
+	chain := shard.Chain(shardId)
+	c.shards[shardId] = chain
 	//chain.SetChain(shard.Chain())
 	// Load the block database.
-	db, err := c.loadBlockDB(cfg.DataDir, "beacon", chain, cfg.Node)
+	db, err := c.loadBlockDB(cfg.DataDir, fmt.Sprintf("shard_%d", shardId), chain, cfg.Node)
 	if err != nil {
 		c.logger.Error("Can't load Block db", zap.Error(err))
 		return err
@@ -74,8 +74,8 @@ func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 
 	c.logger.Info("P2P Listener ", zap.Any("Listeners", cfg.Node.P2P.Listeners))
 	// Create server and start it.
-	server, err := server2.Server(&cfg.Node.P2P, amgr, chain, cfg.Node.P2P.Listeners, cfg.Node.P2P.AgentBlacklist,
-		cfg.Node.P2P.AgentWhitelist, db, params.JaxNetParams.Params, interrupt, c.logger.With(zap.String("server", "Beacon P2P")))
+	server, err := server2.ShardServer(&cfg.Node.P2P, amgr, chain, db, chain.Params(), interrupt,
+		c.logger.With(zap.String("server", "Shard P2P")))
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
 		c.logger.Error(fmt.Sprintf("Unable to start server on %v: %v",
@@ -93,8 +93,6 @@ func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 		l.Info("Server shutdown complete")
 	}()
 	server.Start()
-	cfg.Node.Rpc.Chain = server.BlockChain()
-	go c.runRpc(ctx, cfg)
 
 	<-interrupt
 

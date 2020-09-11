@@ -21,7 +21,7 @@ package wire
 //	// Merkle tree reference to hash of all transactions for the block.
 //	MerkleRoot chainhash.Hash
 //
-//	MerkleMountainRange chainhash.Hash
+//	MergeMiningRoot chainhash.Hash
 //
 //	// Time the block was created.  This is, unfortunately, encoded as a
 //	// uint32 on the wire and therefore is limited to 2106.
@@ -106,7 +106,7 @@ package wire
 //		Version:             version,
 //		PrevBlock:           *prevHash,
 //		MerkleRoot:          *merkleRootHash,
-//		MerkleMountainRange: *mmr,
+//		MergeMiningRoot: *mmr,
 //		Timestamp:           time.Unix(time.Now().Unix(), 0),
 //		Bits:                bits,
 //		Nonce:               nonce,

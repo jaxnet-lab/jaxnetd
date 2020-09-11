@@ -5,6 +5,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"io"
 	"time"
 )
@@ -19,23 +20,32 @@ const (
 
 //
 type shardChain struct {
+	shardId uint32
 }
 
 func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash, mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
-	panic("implement me")
+	// Limit the timestamp to one second precision since the protocol
+	// doesn't support better.
+	return &header{
+		prevBlock:       prevHash,
+		merkleRoot:      merkleRootHash,
+		timestamp:       timestamp, //time.Unix(time.Now().Unix(), 0),
+	}
 }
 
 func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
-	panic("implement me")
+	return BlockNode(blockHeader, parent)
 }
 
 func (c *shardChain) Params() *chaincfg.Params {
-	panic("implement me")
+	return &chaincfg.JaxNetParams
 }
 
 //
-func Chain() chain.IChain {
-	return &shardChain{}
+func Chain(shardId uint32) chain.IChain {
+	return &shardChain{
+		shardId: shardId,
+	}
 }
 
 func (c *shardChain) NewHeader() chain.BlockHeader {
@@ -47,17 +57,15 @@ func (c *shardChain) IsBeacon() bool {
 }
 
 func (c *shardChain) ShardID() int32 {
-	return 0
+	return int32(c.shardId)
 }
 
-//
-//func (c *shardChain) BlockOne() {
-//
-//}
-//
-//func (c *shardChain) GenesisHash() chainhash.Hash {
-//	return [32]byte{}
-//}
+func (c *shardChain) GenesisBlock() interface{} {
+	return &wire.MsgBlock{
+		Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+	}
+}
 
 func (c *shardChain) Read(r io.Reader) (chain.BlockHeader, error) {
 	h := &header{}

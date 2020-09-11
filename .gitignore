@@ -62,7 +62,6 @@ vendor/*
 !vendor/vendor.json
 key
 
-data
 .idea
 keys
 /app
@@ -70,3 +69,5 @@ keys
 shardcore
 
 data/
+!/data/chain2/shard.yaml
+!/data/chain2/shard.yaml

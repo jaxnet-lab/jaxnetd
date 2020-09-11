@@ -26,7 +26,7 @@ type BlockHeader interface {
 	SetTimestamp(time.Time)
 	MerkleRoot() chainhash.Hash
 	SetMerkleRoot(chainhash.Hash)
-	MerkleMountainRange() chainhash.Hash
+	MergeMiningRoot() chainhash.Hash
 	Bits() uint32
 	SetBits(uint32)
 	Nonce() uint32

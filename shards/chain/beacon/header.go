@@ -22,7 +22,7 @@ type header struct {
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
 
-	merkleMountainRange chainhash.Hash
+	mergeMiningRoot chainhash.Hash
 
 	// Time the block was created.  This is, unfortunately, encoded as a
 	// uint32 on the wire and therefore is limited to 2106.
@@ -35,6 +35,8 @@ type header struct {
 	nonce uint32
 
 	treeEncoding []uint8
+
+	shards uint32
 }
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
@@ -103,20 +105,20 @@ func (h *header) Serialize(w io.Writer) error {
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
 func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
-	mmr chainhash.Hash,
+	mergeMiningRoot chainhash.Hash,
 	timestamp time.Time,
 	bits uint32, nonce uint32) *header {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
-		version:             version,
-		prevBlock:           prevHash,
-		merkleRoot:          merkleRootHash,
-		merkleMountainRange: mmr,
-		timestamp:           timestamp, //time.Unix(time.Now().Unix(), 0),
-		bits:                bits,
-		nonce:               nonce,
+		version:         version,
+		prevBlock:       prevHash,
+		merkleRoot:      merkleRootHash,
+		mergeMiningRoot: mergeMiningRoot,
+		timestamp:       timestamp, //time.Unix(time.Now().Unix(), 0),
+		bits:            bits,
+		nonce:           nonce,
 	}
 }
 
@@ -125,8 +127,8 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 // decoding from the wire.
 func readBlockHeader(r io.Reader, bh *header) error {
 	fmt.Println("readBlockHeader", bh)
-	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.merkleMountainRange,
-		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce)
+	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
+		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce, &bh.treeEncoding, &bh.shards)
 	fmt.Println(err)
 	return err
 }
@@ -138,8 +140,8 @@ func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
 	fmt.Println("beacon writeBlockHeader", bh)
-	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.merkleMountainRange,
-		sec, bh.bits, bh.nonce)
+	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
+		sec, bh.bits, bh.nonce, &bh.treeEncoding, &bh.shards)
 }
 
 //// BlockHeader defines information about a block and is used in the bitcoin
@@ -154,7 +156,7 @@ func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 //	// Merkle tree reference to hash of all transactions for the block.
 //	merkleRoot chainhash.Hash
 //
-//	merkleMountainRange chainhash.Hash
+//	mergeMiningRoot chainhash.Hash
 //
 //	// Time the block was created.  This is, unfortunately, encoded as a
 //	// uint32 on the wire and therefore is limited to 2106.
@@ -240,8 +242,8 @@ func (h *header) SetMerkleRoot(hash chainhash.Hash) {
 	h.merkleRoot = hash
 }
 
-func (h *header) MerkleMountainRange() chainhash.Hash {
-	return h.merkleMountainRange
+func (h *header) MergeMiningRoot() chainhash.Hash {
+	return h.mergeMiningRoot
 }
 
 //
@@ -312,7 +314,7 @@ func (h *header) Write(w io.Writer) error {
 //		version:             version,
 //		prevBlock:           *prevHash,
 //		merkleRoot:          *merkleRootHash,
-//		merkleMountainRange: *mmr,
+//		mergeMiningRoot: *mmr,
 //		timestamp:           time.Unix(time.Now().Unix(), 0),
 //		bits:                bits,
 //		nonce:               nonce,

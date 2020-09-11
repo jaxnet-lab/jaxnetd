@@ -28,10 +28,9 @@ func Chain() chain.IChain {
 
 func (c *beaconChain)GenesisBlock() interface{}{
 	return &wire.MsgBlock{
-			Header:       chain.DefaultChain.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+			Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
 			Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 		}
-	//return &GenesisBlock
 }
 
 func (c *beaconChain) IsBeacon() bool {
@@ -39,7 +38,7 @@ func (c *beaconChain) IsBeacon() bool {
 }
 
 func (c *beaconChain) Params() (res *chaincfg.Params) {
-	return
+	return &chaincfg.JaxNetParams
 }
 
 func (c *beaconChain) ShardID() int32 {
@@ -51,20 +50,20 @@ func (c *beaconChain) NewHeader() chain.BlockHeader {
 }
 
 func (c *beaconChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
-	mmr chainhash.Hash,
+	mergeMiningRoot chainhash.Hash,
 	timestamp time.Time,
 	bits uint32, nonce uint32) chain.BlockHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
-		version:             version,
-		prevBlock:           prevHash,
-		merkleRoot:          merkleRootHash,
-		merkleMountainRange: mmr,
-		timestamp:           timestamp, //time.Unix(time.Now().Unix(), 0),
-		bits:                bits,
-		nonce:               nonce,
+		version:         version,
+		prevBlock:       prevHash,
+		merkleRoot:      merkleRootHash,
+		mergeMiningRoot: mergeMiningRoot,
+		timestamp:       timestamp, //time.Unix(time.Now().Unix(), 0),
+		bits:            bits,
+		nonce:           nonce,
 	}
 }
 

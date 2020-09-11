@@ -228,7 +228,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 	//	main.rpcsLog.Debugf("Generated block template (timestamp %v, "+
 	//		"target %s, merkle root %s, mmr %s)",
 	//		msgBlock.Header.Timestamp, targetDifficulty,
-	//		msgBlock.Header.MerkleRoot, msgBlock.Header.MerkleMountainRange().String())
+	//		msgBlock.Header.MerkleRoot, msgBlock.Header.MergeMiningRoot().String())
 	//
 	//	// Notify any clients that are long polling about the new
 	//	// template.

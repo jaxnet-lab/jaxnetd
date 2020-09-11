@@ -231,7 +231,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot
-	mmrHash := blockOne.Header.MerkleMountainRange
+	mmrHash := blockOne.Header.MergeMiningRoot
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)

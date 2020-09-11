@@ -1,0 +1,24 @@
+node:
+  p2p:
+    listeners:
+      - 0.0.0.0:9333
+    peers:
+      - 0.0.0.0:8333
+  rpc:
+    disable: false
+    user: somerpc
+    password: somerpc
+    maxclients: 10
+    listeners:
+      - 0.0.0.0:8444
+    peers:
+      - 116.202.107.209:18444
+      - 116.202.107.209:28444
+  shards:
+
+debuglevel: info
+nodnsseed: 1
+notls: 1
+
+# txindex=1
+# addrindex=1

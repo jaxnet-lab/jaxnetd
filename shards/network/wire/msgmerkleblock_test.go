@@ -26,7 +26,7 @@ func TestMerkleBlock(t *testing.T) {
 	// Block 1 header.
 	prevHash := blockOne.Header.PrevBlock()
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MerkleMountainRange()
+	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
 	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
@@ -119,7 +119,7 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
 	prevHash := blockOne.Header.PrevBlock()
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MerkleMountainRange()
+	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
 	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
