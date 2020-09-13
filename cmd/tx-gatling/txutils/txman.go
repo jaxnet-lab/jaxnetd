@@ -137,12 +137,12 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 }
 
 func (client *TxMan) NetworkFee() (int64, error) {
-	fee, err := client.RPC.EstimateFee(6)
+	fee, err := client.RPC.EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
 	if err != nil {
 		return 0, errors.Wrap(err, "unable to get fee")
 	}
 
-	amount, _ := btcutil.NewAmount(fee)
+	amount, _ := btcutil.NewAmount(*fee.FeeRate)
 	return int64(amount), nil
 
 }
@@ -333,8 +333,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 
 		for _, address := range out.ScriptPubKey.Addresses {
 			if script, ok := scripts[address]; ok {
-				utxo.ScriptType = script.Type
-				utxo.PKScript = script.Hex
+				utxo.RedeemScript = script.Hex
 				break
 			}
 		}
@@ -372,7 +371,7 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, i
 
 	var sig []byte
 	sig, err = txscript.SignTxOutput(client.NetParams, msgTx, inIndex, pkScript,
-		txscript.SigHashAll, client.key, nil, prevScript)
+		txscript.SigHashAll, client.key, &utxo, prevScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign tx output")
 	}

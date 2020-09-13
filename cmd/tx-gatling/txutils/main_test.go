@@ -1,15 +1,19 @@
-// +build integration_test
+// + build integration_test
 
 package txutils
 
 import (
-	"encoding/hex"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
+
+type T testing.T
+
+func (t *T) Errorf(format string, args ...interface{}) { t.Fatalf(format, args...) }
 
 // func TestMain(m *testing.M) {
 //
@@ -38,69 +42,39 @@ func TestOperator_SpendUTXO(t *testing.T) {
 	assert.NotNil(t, tx)
 }
 
-func TestSmth(t *testing.T) {
-	//
-	// -----------------------------------------------------------------------------------------
-	// ---/---- PREPARE ----\----
-	cfg := ManagerCfg{
-		Net: "testnet",
-		RPC: NodeRPC{
-			Host: "127.0.0.1:28334",
-			User: "somerpc",
-			Pass: "somerpc",
-		},
-		PrivateKey: "",
-	}
-	//
-	// aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
-	// aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
-	// assert.NoError(t, err)
-	//
-	// bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
-	// bobKP, err := NewKeyData(bobSk, cfg.NetParams())
-	// assert.NoError(t, err)
-
-	op, err := NewOperator(cfg)
-	assert.NoError(t, err)
-	// -----------------------------------------------------------------------------------------
-	// -----------------------------------------------------------------------------------------
-	hash, _ := chainhash.NewHashFromStr("635fae29812181833974796ddf368e4027012750f5c7cc4cc1e4c525dac236e6")
-
-	out, err := op.TxMan.RPC.GetTxOut(hash, 0, false)
-	assert.NoError(t, err)
-
-	println(out)
-
-}
-
-func TestMakeMultiSigScript(t *testing.T) {
-	//
-	// -----------------------------------------------------------------------------------------
-	// ---/---- PREPARE ----\----
-	cfg := ManagerCfg{
-		Net: "testnet",
-		RPC: NodeRPC{
-			Host: "127.0.0.1:28334",
-			User: "somerpc",
-			Pass: "somerpc",
-		},
-		PrivateKey: "",
-	}
+func TestMakeMultiSigScript(ot *testing.T) {
+	t := (*T)(ot)
 
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	evaAddress := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
+	utxoSearchOffset := 0
+	amount := int64(1000000000) - OneCoin
+	// -----------------------------------------------------------------------------------------
+	// ---/---- PREPARE ----\----
+	cfg := ManagerCfg{
+		Net: "testnet",
+		RPC: NodeRPC{
+			Host: "127.0.0.1:28334",
+			User: "somerpc",
+			Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
 	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
 	assert.NoError(t, err)
 
-	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
 	assert.NoError(t, err)
 
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
-	// -----------------------------------------------------------------------------------------
+
+	aliceUTXO, _, err := op.TxMan.CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
+	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
-	//
 	// -----------------------------------------------------------------------------------------
 	// ---/---- CREATE MULTISIG ADDRESS ----\----
 	signers := []string{
@@ -112,22 +86,14 @@ func TestMakeMultiSigScript(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(multiSigScript.Address)
 	// -----------------------------------------------------------------------------------------
-	// -----------------------------------------------------------------------------------------
 
-	//
 	// -----------------------------------------------------------------------------------------
 	// ---/---- SEND COINS TO MULTISIG ADDRESS  ----\----
-	// this is tx with alice UTXO
-	utxoTxHash := "635fae29812181833974796ddf368e4027012750f5c7cc4cc1e4c525dac236e6"
-	utxoIndex := uint32(0)
-	amount := int64(1000000000) - OneCoin
-
-	// cratft new transaction that spend UTXO with index from transaction with hash
-	msgTx, err := op.SpendUTXO(*aliceKP, utxoTxHash, utxoIndex, multiSigScript.Address, amount)
+	toMultiSigAddrTx, err := op.TxMan.WithKeys(aliceKP).NewTx(multiSigScript.Address, amount, UTXOFromRows(aliceUTXO))
 	assert.NoError(t, err)
 
 	// publish created transaction
-	txHash, err := op.TxMan.RPC.SendRawTransaction(msgTx.RawTX, true)
+	txHash, err := op.TxMan.RPC.SendRawTransaction(toMultiSigAddrTx.RawTX, true)
 	assert.NoError(t, err)
 
 waitLoop:
@@ -135,46 +101,51 @@ waitLoop:
 		// wait for the transaction to be added to the block
 		out, err := op.TxMan.RPC.GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
-		if out != nil && out.Confirmations > 2 {
-			println("tx mined into block")
+		if out != nil && out.Confirmations > 1 {
+			fmt.Println("tx mined into block")
 			break waitLoop
 		}
 
 		time.Sleep(time.Second)
 	}
 	// -----------------------------------------------------------------------------------------
-	// -----------------------------------------------------------------------------------------
 
-	//
 	// -----------------------------------------------------------------------------------------
 	// ---/---- CREATE TX TO SPEND MULTISIG UTXO  ----\----
-	evaAddress := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
-
-	multiSigOutTxHash := txHash.String()
+	multiSigOutTxHash := toMultiSigAddrTx.TxHash
 	multiSigOutIndex := uint32(0)
-	for i, out := range msgTx.RawTX.TxOut {
-		// out.Value == amount ||
-		if hex.EncodeToString(out.PkScript) == multiSigScript.Address {
-			multiSigOutIndex = uint32(i)
+	for i, out := range toMultiSigAddrTx.RawTX.TxOut {
+		decoded, _ := DecodeScript(out.PkScript, cfg.NetParams())
+		for _, address := range decoded.Addresses {
+			if address == multiSigScript.Address {
+				multiSigOutIndex = uint32(i)
+			}
 		}
 	}
-
+	amount = amount - OneCoin
 	multiSigSpendTx, err := op.NewMultiSigSpendTx(*aliceKP, multiSigOutTxHash,
 		multiSigScript.RedeemScript, multiSigOutIndex, evaAddress, amount)
 	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
-	// -----------------------------------------------------------------------------------------
 
-	//
 	// -----------------------------------------------------------------------------------------
 	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
+	multiSigSpendTx, err = op.AddSignatureToTx(*aliceKP, multiSigSpendTx.SignedTx, multiSigScript.RedeemScript)
+	assert.NoError(t, err)
+
 	multiSigSpendTx, err = op.AddSignatureToTx(*bobKP, multiSigSpendTx.SignedTx, multiSigScript.RedeemScript)
 	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
+
+	fmt.Println(EncodeTx(multiSigSpendTx.RawTX))
+	vm, err := txscript.NewEngine(multiSigScript.RawRedeemScript, multiSigSpendTx.RawTX, 0,
+		txscript.StandardVerifyFlags, nil, nil, amount)
+	assert.NoError(t, err)
+
+	err = vm.Execute()
+	// assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
-	//
-	// -----------------------------------------------------------------------------------------
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
 	txHash, err = op.TxMan.RPC.SendRawTransaction(multiSigSpendTx.RawTX, true)
@@ -191,6 +162,5 @@ waitLoop:
 
 		time.Sleep(time.Second)
 	}
-	// -----------------------------------------------------------------------------------------
 	// -----------------------------------------------------------------------------------------
 }

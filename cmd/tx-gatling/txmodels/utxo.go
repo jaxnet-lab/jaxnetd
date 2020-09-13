@@ -2,7 +2,6 @@ package txmodels
 
 import (
 	"encoding/hex"
-	"errors"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
@@ -93,17 +92,18 @@ func (utxo UTXO) ToShort() ShortUTXO {
 }
 
 type ShortUTXO struct {
-	Value      int64  `json:"value" csv:"value"`
-	PKScript   string `json:"pk_script" csv:"pk_script"`
-	ScriptType string `json:"script_type" csv:"script_type"`
+	Value        int64  `json:"value" csv:"value"`
+	PKScript     string `json:"pk_script" csv:"pk_script"`
+	ScriptType   string `json:"script_type" csv:"script_type"`
+	RedeemScript string
 }
 
-func (utxo *UTXO) GetScript(address btcutil.Address) ([]byte, error) {
-	if utxo.PKScript != address.String() {
-		return nil, errors.New("nope")
-	}
+func (utxo *ShortUTXO) GetScript(btcutil.Address) ([]byte, error) {
+	// if utxo.PKScript != address.String() {
+	// 	return nil, errors.New("nope")
+	// }
 
-	return hex.DecodeString(utxo.PKScript)
+	return hex.DecodeString(utxo.RedeemScript)
 }
 
 type UTXORows []UTXO
