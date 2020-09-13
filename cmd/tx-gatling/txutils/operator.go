@@ -28,8 +28,7 @@ func (app *Operator) AddSignatureToTx(signer KeyData, txBody, redeemScript strin
 		return nil, errors.Wrap(err, "unable to decode tx")
 	}
 
-	app.TxMan.SetKey(&signer)
-	msgTx, err = app.TxMan.AddSignatureToTx(msgTx, redeemScript)
+	msgTx, err = app.TxMan.WithKeys(&signer).AddSignatureToTx(msgTx, redeemScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable add signature")
 	}
@@ -48,13 +47,12 @@ func (app *Operator) NewMultiSigSpendTx(signer KeyData,
 		return nil, err
 	}
 
-	app.TxMan.SetKey(&signer)
-	tx, err := app.TxMan.NewTx(destination, amount, SingleUTXO(*utxo))
+	tx, err := app.TxMan.WithKeys(&signer).NewTx(destination, amount, SingleUTXO(*utxo))
 	if err != nil {
 		return nil, errors.Wrap(err, "new tx error")
 	}
 
-	return &tx, nil
+	return tx, nil
 }
 
 // SpendUTXO creates new transaction that spends UTXO with 'outIndex' from transaction with 'txHash'.
@@ -66,13 +64,12 @@ func (app *Operator) SpendUTXO(signer KeyData,
 		return nil, err
 	}
 
-	app.TxMan.SetKey(&signer)
-	tx, err := app.TxMan.NewTx(destination, amount, SingleUTXO(*utxo))
+	tx, err := app.TxMan.WithKeys(&signer).NewTx(destination, amount, SingleUTXO(*utxo))
 	if err != nil {
 		return nil, errors.Wrap(err, "new tx error")
 	}
 
-	return &tx, nil
+	return tx, nil
 }
 
 func (app *Operator) UTXOByHash(txHash string, outIndex uint32, redeemScript string) (*txmodels.UTXO, error) {

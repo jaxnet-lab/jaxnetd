@@ -66,6 +66,13 @@ func (client *TxMan) SetKey(key *KeyData) {
 	client.key = key
 }
 
+func (client *TxMan) WithKeys(key *KeyData) *TxMan {
+	clone := new(TxMan)
+	*clone = *client
+	clone.key = key
+	return clone
+}
+
 func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORows, int64, error) {
 	maxHeight, err := client.RPC.GetBlockCount()
 	if err != nil {
@@ -140,14 +147,14 @@ func (client *TxMan) NetworkFee() (int64, error) {
 
 }
 
-func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider) (txmodels.Transaction, error) {
+func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider) (*txmodels.Transaction, error) {
 	if client.key == nil {
-		return txmodels.Transaction{}, errors.New("keys not set")
+		return nil, errors.New("keys not set")
 	}
 
 	fee, err := client.NetworkFee()
 	if err != nil {
-		return txmodels.Transaction{}, errors.Wrap(err, "unable to get fee")
+		return nil, errors.Wrap(err, "unable to get fee")
 	}
 
 	draft := txmodels.DraftTx{
@@ -157,20 +164,20 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 
 	draft.UTXO, err = utxoPrv.SelectForAmount(amount + draft.NetworkFee)
 	if err != nil {
-		return txmodels.Transaction{}, errors.Wrap(err, "unable to get UTXO for amount")
+		return nil, errors.Wrap(err, "unable to get UTXO for amount")
 	}
 
 	err = draft.SetPayToAddress(destination, client.NetParams)
 	if err != nil {
-		return txmodels.Transaction{}, errors.Wrap(err, "pay to address not set")
+		return nil, errors.Wrap(err, "pay to address not set")
 	}
 
 	msgTx, err := client.DraftToSignedTx(draft, false)
 	if err != nil {
-		return txmodels.Transaction{}, errors.Wrap(err, "tx not signed")
+		return nil, errors.Wrap(err, "tx not signed")
 	}
 
-	return txmodels.Transaction{
+	return &txmodels.Transaction{
 		TxHash:      msgTx.TxHash().String(),
 		Source:      client.key.Address.String(),
 		Destination: draft.Destination(),
@@ -365,7 +372,7 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, i
 
 	var sig []byte
 	sig, err = txscript.SignTxOutput(client.NetParams, msgTx, inIndex, pkScript,
-		txscript.SigHashSingle, client.key, nil, prevScript)
+		txscript.SigHashAll, client.key, nil, prevScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign tx output")
 	}

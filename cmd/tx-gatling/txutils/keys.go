@@ -58,7 +58,7 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params) (*KeyData,
 }
 
 func (kd *KeyData) GetKey(address btcutil.Address) (*btcec.PrivateKey, bool, error) {
-	if address.String() == kd.Address.EncodeAddress() {
+	if address.EncodeAddress() == kd.Address.EncodeAddress() {
 		return kd.PrivateKey, false, nil
 	}
 
