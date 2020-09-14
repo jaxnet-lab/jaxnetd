@@ -11,7 +11,8 @@ type NetParams struct {
 	rpcPort string
 }
 
+// DEPRECATED todo(mike)
 var JaxNetParams = NetParams{
-	Params:  &chaincfg.JaxNetParams,
+	Params:  &chaincfg.MainNetParams,
 	rpcPort: "8334",
 }

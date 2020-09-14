@@ -9,9 +9,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
@@ -31,7 +33,7 @@ func (e UnsupportedWitnessVerError) Error() string {
 type UnsupportedWitnessProgLenError int
 
 func (e UnsupportedWitnessProgLenError) Error() string {
-	return "unsupported witness program length: " + string(e)
+	return "unsupported witness program length: " + strconv.Itoa(int(e))
 }
 
 var (

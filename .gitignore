@@ -65,8 +65,15 @@ key
 .idea
 keys
 /app
-/go.sum
+
 shardcore
+jax-core
+jaxcore
+/jaxctl
+jaxcore.conf
+jaxcore.yaml
+/tmp
+shard.core.git
 
 data/
 !/data/chain2/shard.yaml

@@ -702,5 +702,6 @@ func ExtractAtomicSwapDataPushes(version uint16, pkScript []byte) (*AtomicSwapDa
 	} else {
 		return nil, nil
 	}
+
 	return pushes, nil
 }

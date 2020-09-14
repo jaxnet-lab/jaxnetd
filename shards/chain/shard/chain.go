@@ -1,13 +1,14 @@
 package shard
 
 import (
+	"io"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"io"
-	"time"
 )
 
 const (
@@ -27,9 +28,9 @@ func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chai
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
-		prevBlock:       prevHash,
-		merkleRoot:      merkleRootHash,
-		timestamp:       timestamp, //time.Unix(time.Now().Unix(), 0),
+		prevBlock:  prevHash,
+		merkleRoot: merkleRootHash,
+		timestamp:  timestamp, //time.Unix(time.Now().Unix(), 0),
 	}
 }
 
@@ -38,7 +39,7 @@ func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockN
 }
 
 func (c *shardChain) Params() *chaincfg.Params {
-	return &chaincfg.JaxNetParams
+	return &chaincfg.MainNetParams
 }
 
 //

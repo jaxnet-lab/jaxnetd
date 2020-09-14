@@ -115,7 +115,6 @@ type EstimateFeeCmd struct {
 // NewEstimateFeeCmd returns a new instance which can be used to issue a
 // estimatefee JSON-RPC command.
 func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
-	fmt.Println("NewEstimateFeeCmd ", numBlocks)
 	return &EstimateFeeCmd{
 		NumBlocks: numBlocks,
 	}

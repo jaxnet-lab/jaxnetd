@@ -1,12 +1,13 @@
 package beacon
 
 import (
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"time"
 )
 
 const (
@@ -26,11 +27,11 @@ func Chain() chain.IChain {
 	return &beaconChain{}
 }
 
-func (c *beaconChain)GenesisBlock() interface{}{
+func (c *beaconChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-			Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
-			Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-		}
+		Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+	}
 }
 
 func (c *beaconChain) IsBeacon() bool {
@@ -38,7 +39,7 @@ func (c *beaconChain) IsBeacon() bool {
 }
 
 func (c *beaconChain) Params() (res *chaincfg.Params) {
-	return &chaincfg.JaxNetParams
+	return &chaincfg.MainNetParams
 }
 
 func (c *beaconChain) ShardID() int32 {

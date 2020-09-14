@@ -37,11 +37,11 @@ func TestBlockHeader(t *testing.T) {
 	}
 	if bh.Bits() != bits {
 		t.Errorf("NewBlockHeader: wrong bits - got %v, want %v",
-			bh.Bits, bits)
+			bh.Bits(), bits)
 	}
 	if bh.Nonce() != nonce {
 		t.Errorf("NewBlockHeader: wrong nonce - got %v, want %v",
-			bh.Nonce, nonce)
+			bh.Nonce(), nonce)
 	}
 }
 

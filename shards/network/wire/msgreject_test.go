@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
 // TestRejectCodeStringer tests the stringized output for the reject code type.
