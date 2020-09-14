@@ -1,6 +1,8 @@
 package txmodels
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/hex"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -63,4 +65,62 @@ type Transaction struct {
 	SignedTx    string `json:"signed_tx" csv:"signed_tx"`
 
 	RawTX *wire.MsgTx `json:"-" csv:"-"`
+}
+
+func (t *Transaction) UnmarshalBinary(data []byte) error {
+	var dest = new(gobTx)
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
+	if err != nil {
+		return err
+	}
+
+	t.TxHash = hex.EncodeToString(dest.TxHash)
+	t.SignedTx = hex.EncodeToString(dest.SignedTx)
+
+	t.Amount = dest.Amount
+	t.Destination = string(dest.Destination)
+	t.Source = string(dest.Source)
+
+	t.RawTX = &wire.MsgTx{}
+	err = t.RawTX.Deserialize(bytes.NewBuffer(dest.SignedTx))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Transaction) MarshalBinary() ([]byte, error) {
+	var err error
+	var dest = new(gobTx)
+
+	dest.Amount = t.Amount
+	dest.Source = []byte(t.Source)
+	dest.Destination = []byte(t.Destination)
+
+	dest.TxHash, err = hex.DecodeString(t.TxHash)
+	if err != nil {
+		return nil, err
+	}
+
+	dest.SignedTx, err = hex.DecodeString(t.SignedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = gob.NewEncoder(buf).Encode(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+type gobTx struct {
+	TxHash      []byte
+	Source      []byte
+	Destination []byte
+	Amount      int64
+	SignedTx    []byte
 }
