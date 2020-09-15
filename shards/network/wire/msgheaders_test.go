@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // TestHeaders tests the MsgHeaders API.
@@ -37,7 +39,7 @@ func TestHeaders(t *testing.T) {
 	}
 
 	// Ensure headers are added properly.
-	bh := &blockOne.Header
+	bh := blockOne.Header
 	msg.AddBlockHeader(bh)
 	if !reflect.DeepEqual(msg.Headers[0], bh) {
 		t.Errorf("AddHeader: wrong header - got %v, want %v",
@@ -61,13 +63,11 @@ func TestHeaders(t *testing.T) {
 // numbers of headers and protocol versions.
 func TestHeadersWire(t *testing.T) {
 	hash := mainNetGenesisHash
-	merkleHash := blockOne.Header.MerkleRoot
-	mmrHash := &blockOne.Header.MerkleMountainRange
+	merkleHash := blockOne.Header.MerkleRoot()
+	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBlockHeader(1, &hash, &merkleHash, mmrHash, bits, nonce)
-	bh.Version = blockOne.Header.Version
-	bh.Timestamp = blockOne.Header.Timestamp
+	bh := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	// Empty headers message.
 	noHeaders := NewMsgHeaders()
@@ -96,11 +96,11 @@ func TestHeadersWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgHeaders     // Message to encode
-		out  *MsgHeaders     // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
-		enc  MessageEncoding // Message encoding format
+		in   *MsgHeaders             // Message to encode
+		out  *MsgHeaders             // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
+		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no headers.
 		{
@@ -230,14 +230,12 @@ func TestHeadersWireErrors(t *testing.T) {
 	wireErr := &MessageError{}
 
 	hash := mainNetGenesisHash
-	merkleHash := blockOne.Header.MerkleRoot
-	mmrHash := blockOne.Header.MergeMiningRoot
+	merkleHash := blockOne.Header.MerkleRoot()
+	mmrHash := blockOne.Header.MergeMiningRoot()
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBlockHeader(1, &hash, &merkleHash, &mmrHash, bits, nonce)
-	bh.Version = blockOne.Header.Version
-	bh.Timestamp = blockOne.Header.Timestamp
+	bh := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	// Headers message with one header.
 	oneHeader := NewMsgHeaders()
@@ -272,9 +270,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	// Intentionally invalid block header that has a transaction count used
 	// to force errors.
-	bhTrans := NewBlockHeader(1, &hash, &merkleHash, &mmrHash, bits, nonce)
-	bhTrans.Version = blockOne.Header.Version
-	bhTrans.Timestamp = blockOne.Header.Timestamp
+	bhTrans := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	transHeader := NewMsgHeaders()
 	transHeader.AddBlockHeader(bhTrans)
@@ -296,13 +292,13 @@ func TestHeadersWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgHeaders     // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
-		enc      MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		in       *MsgHeaders             // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
+		enc      encoder.MessageEncoding // Message encoding format
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in header count.

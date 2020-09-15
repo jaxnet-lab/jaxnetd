@@ -7,6 +7,7 @@ package chaincfg
 import (
 	"errors"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +21,26 @@ var (
 	// bigOne is 1 represented as a big.Int.  It is defined here to avoid
 	// the overhead of creating it multiple times.
 	bigOne = big.NewInt(1)
+)
+
+var (
+	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
+	// network could not be set due to the network already being a standard
+	// network or previously-registered into this package.
+	ErrDuplicateNet = errors.New("duplicate Bitcoin network")
+
+	// ErrUnknownHDKeyID describes an error where the provided id which
+	// is intended to identify the network for a hierarchical deterministic
+	// private extended key is not registered.
+	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
+)
+
+var (
+	registeredNets       = make(map[types.BitcoinNet]struct{})
+	pubKeyHashAddrIDs    = make(map[byte]struct{})
+	scriptHashAddrIDs    = make(map[byte]struct{})
+	bech32SegwitPrefixes = make(map[string]struct{})
+	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
 )
 
 // Checkpoint identifies a known good point in the block chain.  Using
@@ -42,6 +63,11 @@ type DNSSeed struct {
 	// HasFiltering defines whether the seed supports filtering
 	// by service flags (wire.ServiceFlag).
 	HasFiltering bool
+}
+
+// String returns the hostname of the DNS seed in human-readable form.
+func (d DNSSeed) String() string {
+	return d.Host
 }
 
 // ConsensusDeployment defines details related to a specific consensus rule
@@ -203,29 +229,31 @@ type Params struct {
 	HDCoinType uint32
 }
 
-var (
-	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
-	// network could not be set due to the network already being a standard
-	// network or previously-registered into this package.
-	ErrDuplicateNet = errors.New("duplicate Bitcoin network")
+// ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
+func (cfg Params) ShardGenesis(shard, height uint32,
+	// block *wire.MsgBlock, // fixme
+	hash *chainhash.Hash) *Params {
+	// shard's exclusive info
+	// cfg.ShardID = shard
+	// cfg.StartHeight = height
+	cfg.Name = cfg.Name + "_shard_" + strconv.FormatUint(uint64(shard), 10)
+	// cfg.GenesisBlock = block
+	cfg.GenesisHash = hash
+	// -------
 
-	// ErrUnknownHDKeyID describes an error where the provided id which
-	// is intended to identify the network for a hierarchical deterministic
-	// private extended key is not registered.
-	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
-)
+	cfg.TargetTimespan = time.Second * 60 * 60 * 24
+	cfg.TargetTimePerBlock = time.Second * 15
 
-var (
-	registeredNets       = make(map[types.BitcoinNet]struct{})
-	pubKeyHashAddrIDs    = make(map[byte]struct{})
-	scriptHashAddrIDs    = make(map[byte]struct{})
-	bech32SegwitPrefixes = make(map[string]struct{})
-	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
-)
+	// todo(mike): here is difficulty changing
+	// cfg.PowLimit = cfg.PowLimit
+	// cfg.PowLimitBits = cfg.PowLimitBits
+	// cfg.SubsidyReductionInterval = cfg.SubsidyReductionInterval
+	//
+	// cfg.RetargetAdjustmentFactor = cfg.RetargetAdjustmentFactor
+	// cfg.ReduceMinDifficulty = cfg.ReduceMinDifficulty
+	// cfg.MinDiffReductionTime = cfg.MinDiffReductionTime
 
-// String returns the hostname of the DNS seed in human-readable form.
-func (d DNSSeed) String() string {
-	return d.Host
+	return &cfg
 }
 
 // Register registers the network parameters for a Bitcoin network.  This may
@@ -326,6 +354,22 @@ func newHashFromStr(hexStr string) *chainhash.Hash {
 		panic(err)
 	}
 	return hash
+}
+
+type NetName string
+
+func (net NetName) Params() *Params {
+	switch string(net) {
+	case SimNetParams.Name:
+		return &SimNetParams
+	case RegressionNetParams.Name:
+		return &RegressionNetParams
+	case TestNet3Params.Name:
+		return &TestNet3Params
+	case MainNetParams.Name:
+		return &MainNetParams
+	}
+	return nil
 }
 
 func init() {

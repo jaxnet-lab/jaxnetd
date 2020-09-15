@@ -2,6 +2,7 @@ package shards
 
 import (
 	"context"
+
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"go.uber.org/zap"
 )
@@ -33,10 +34,17 @@ func (c *chainController) Run(ctx context.Context, cfg *Config) error {
 		}
 	}()
 
-	//go c.runShard(ctx, cfg, 1)
-	//go c.runShard(ctx, cfg, 2)
-	//c.runShard(ctx, cfg, 2)
-	//c.runShard(ctx, cfg, 3)
-	//
+	if !cfg.Node.Shards.Enable {
+		return nil
+	}
+
+	for shardID := range cfg.Node.Shards.IDs {
+		go func(shardID uint32) {
+			if err := c.runShard(ctx, cfg, shardID); err != nil {
+				c.logger.Error("error", zap.Error(err))
+			}
+		}(shardID)
+	}
+
 	return nil
 }

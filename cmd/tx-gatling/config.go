@@ -23,16 +23,7 @@ type Config struct {
 }
 
 func (cfg *Config) NetParams() *chaincfg.Params {
-	switch cfg.Net {
-	case "simnet":
-		return &chaincfg.SimNetParams
-	case "testnet":
-		return &chaincfg.TestNet3Params
-	case "mainnet":
-		return &chaincfg.MainNetParams
-	}
-
-	return &chaincfg.Params{}
+	return chaincfg.NetName(cfg.Net).Params()
 }
 
 func parseConfig(path string) (Config, error) {

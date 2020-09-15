@@ -49,7 +49,7 @@ var testNet3GenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 // (version 3).  Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
-	Name:        "testnet3",
+	Name:        "testnet",
 	Net:         types.TestNet3,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},

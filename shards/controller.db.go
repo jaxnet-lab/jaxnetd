@@ -2,11 +2,11 @@ package shards
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/params"
 	"os"
 	"path/filepath"
+
+	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // loadBlockDB loads (or creates when needed) the block database taking into
@@ -14,7 +14,7 @@ import (
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (c *chainController) loadBlockDB(dataDir string, chainName string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
+func (c *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
@@ -26,6 +26,7 @@ func (c *chainController) loadBlockDB(dataDir string, chainName string, chain ch
 		}
 		return db, nil
 	}
+	chainName := chain.Params().Name
 
 	c.warnMultipleDBs(dataDir, chainName, cfg)
 
@@ -34,10 +35,10 @@ func (c *chainController) loadBlockDB(dataDir string, chainName string, chain ch
 	fmt.Println("dbPath", dbPath)
 	// The regression test is special in that it needs a clean database for
 	// each run, so remove it now if it already exists.
-	//removeRegressionDB(cfg, dbPath)
+	// removeRegressionDB(cfg, dbPath)
 
 	c.logger.Info(fmt.Sprintf("Loading block database from '%s'", dbPath))
-	db, err := database.Open(cfg.DbType, chain, dbPath, params.JaxNetParams.Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
@@ -52,7 +53,8 @@ func (c *chainController) loadBlockDB(dataDir string, chainName string, chain ch
 		if err != nil {
 			return nil, err
 		}
-		db, err = database.Create(cfg.DbType, chain, dbPath, params.JaxNetParams.Net)
+
+		db, err = database.Create(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
 		if err != nil {
 			return nil, err
 		}

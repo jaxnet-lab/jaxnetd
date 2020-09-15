@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
+
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/params"
 	"go.uber.org/zap"
-	"net"
-	"strings"
 )
 
 func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
@@ -21,10 +21,9 @@ func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 		return errors.New("can't create interrupt request")
 	}
 
-	chain := beacon.Chain()
-	//chain.SetChain(shard.Chain())
+	chain := beacon.Chain(cfg.Node.ChainParams())
 	// Load the block database.
-	db, err := c.loadBlockDB(cfg.DataDir, "beacon", chain, cfg.Node)
+	db, err := c.loadBlockDB(cfg.DataDir, chain, cfg.Node)
 	if err != nil {
 		c.logger.Error("Can't load Block db", zap.Error(err))
 		return err
@@ -75,7 +74,7 @@ func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 	c.logger.Info("P2P Listener ", zap.Any("Listeners", cfg.Node.P2P.Listeners))
 	// Create server and start it.
 	server, err := server2.Server(&cfg.Node.P2P, amgr, chain, cfg.Node.P2P.Listeners, cfg.Node.P2P.AgentBlacklist,
-		cfg.Node.P2P.AgentWhitelist, db, params.JaxNetParams.Params, interrupt, c.logger.With(zap.String("server", "Beacon P2P")))
+		cfg.Node.P2P.AgentWhitelist, db, cfg.Node.ChainParams(), interrupt, c.logger.With(zap.String("server", "Beacon P2P")))
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
 		c.logger.Error(fmt.Sprintf("Unable to start server on %v: %v",
@@ -93,7 +92,7 @@ func (c *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 		l.Info("Server shutdown complete")
 	}()
 	server.Start()
-	cfg.Node.Rpc.Chain = server.BlockChain()
+	cfg.Node.RPC.Chain = server.BlockChain()
 	go c.runRpc(ctx, cfg)
 
 	<-interrupt

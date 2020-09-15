@@ -11,20 +11,20 @@ import (
 )
 
 const (
-
 	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 	// PrevBlock and MerkleRoot hashes.
 	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 3)
 )
 
-//
 type beaconChain struct {
+	chainParams *chaincfg.Params
 }
 
-//
-func Chain() chain.IChain {
-	return &beaconChain{}
+func Chain(params *chaincfg.Params) chain.IChain {
+	clone := *params
+	clone.Name = params.Name + "_beacon"
+	return &beaconChain{chainParams: &clone}
 }
 
 func (c *beaconChain) GenesisBlock() interface{} {
@@ -38,8 +38,8 @@ func (c *beaconChain) IsBeacon() bool {
 	return true
 }
 
-func (c *beaconChain) Params() (res *chaincfg.Params) {
-	return &chaincfg.MainNetParams
+func (c *beaconChain) Params() *chaincfg.Params {
+	return c.chainParams
 }
 
 func (c *beaconChain) ShardID() int32 {
@@ -62,7 +62,7 @@ func (c *beaconChain) NewBlockHeader(version int32, prevHash, merkleRootHash cha
 		prevBlock:       prevHash,
 		merkleRoot:      merkleRootHash,
 		mergeMiningRoot: mergeMiningRoot,
-		timestamp:       timestamp, //time.Unix(time.Now().Unix(), 0),
+		timestamp:       timestamp, // time.Unix(time.Now().Unix(), 0),
 		bits:            bits,
 		nonce:           nonce,
 	}

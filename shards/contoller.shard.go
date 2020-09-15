@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
+
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
-	"net"
-	"strings"
 )
 
 func (c *chainController) runShard(ctx context.Context, cfg *Config, shardId uint32) error {
@@ -20,11 +21,11 @@ func (c *chainController) runShard(ctx context.Context, cfg *Config, shardId uin
 		return errors.New("can't create interrupt request")
 	}
 
-	chain := shard.Chain(shardId)
+	chain := shard.Chain(shardId, cfg.Node.ChainParams())
 	c.shards[shardId] = chain
-	//chain.SetChain(shard.Chain())
+
 	// Load the block database.
-	db, err := c.loadBlockDB(cfg.DataDir, fmt.Sprintf("shard_%d", shardId), chain, cfg.Node)
+	db, err := c.loadBlockDB(cfg.DataDir, chain, cfg.Node)
 	if err != nil {
 		c.logger.Error("Can't load Block db", zap.Error(err))
 		return err

@@ -7,14 +7,16 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -38,7 +40,7 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	chain := beacon.Chain()
+	chain := beacon.Chain(&chaincfg.TestNet3Params)
 
 	pver := ProtocolVersion
 
@@ -189,7 +191,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
 
-	chain := beacon.Chain()
+	chain := beacon.Chain(&chaincfg.MainNetParams)
 
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"
@@ -207,7 +209,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 			testErr.Error(), wantErr)
 	}
 
-	// Wire encoded bytes for main and testnet3 networks magic identifiers.
+	// Wire encoded bytes for main and "testnet networks magic identifiers.
 	testNet3Bytes := makeHeader(types.TestNet3, "", 0, 0)
 
 	// Wire encoded bytes for a message that exceeds max overall message

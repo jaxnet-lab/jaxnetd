@@ -74,7 +74,7 @@ func TestAddSignatureToTx(ot *testing.T) {
 	assert.NoError(t, err)
 	msgTx.TxIn[inIndex].SignatureScript = sig
 
-	// class, addresses, count, err := txscript.ExtractPkScriptAddrs(sig, cfg.NetParams())
+	// class, addresses, count, err := txscript.ExtractPkScriptAddrs(sig, cfg.ChainParams())
 	// assert.NoError(t, err)
 	// assert.Equal(t, count, 2)
 	// assert.Equal(t, len(addresses), 2)

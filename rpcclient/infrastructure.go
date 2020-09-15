@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"io"
 	"io/ioutil"
 	"math"
@@ -25,6 +24,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
@@ -1358,18 +1359,8 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 
 	// Default network is mainnet, no parameters are necessary but if mainnet
 	// is specified it will be the param
-	switch config.Params {
-	case "":
-		fallthrough
-	case chaincfg.MainNetParams.Name:
-		client.chainParams = &chaincfg.MainNetParams
-	case chaincfg.TestNet3Params.Name:
-		client.chainParams = &chaincfg.TestNet3Params
-	case chaincfg.RegressionNetParams.Name:
-		client.chainParams = &chaincfg.RegressionNetParams
-	case chaincfg.SimNetParams.Name:
-		client.chainParams = &chaincfg.SimNetParams
-	default:
+	client.chainParams = chaincfg.NetName(config.Params).Params()
+	if client.chainParams == nil {
 		return nil, fmt.Errorf("rpcclient.New: Unknown chain %s", config.Params)
 	}
 

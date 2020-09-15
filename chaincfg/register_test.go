@@ -63,7 +63,7 @@ func TestRegister(t *testing.T) {
 					err:    chaincfg.ErrDuplicateNet,
 				},
 				{
-					name:   "duplicate testnet3",
+					name:   "duplicate testnet",
 					params: &chaincfg.TestNet3Params,
 					err:    chaincfg.ErrDuplicateNet,
 				},
@@ -319,7 +319,7 @@ func TestRegister(t *testing.T) {
 					err:    chaincfg.ErrDuplicateNet,
 				},
 				{
-					name:   "duplicate testnet3",
+					name:   "duplicate testnet",
 					params: &chaincfg.TestNet3Params,
 					err:    chaincfg.ErrDuplicateNet,
 				},

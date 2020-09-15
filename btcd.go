@@ -7,11 +7,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/limits"
-	"gitlab.com/jaxnet/core/shard.core.git/shards"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"go.uber.org/zap"
 	"log"
 	"net"
 	"net/http"
@@ -22,6 +17,12 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
+
+	"gitlab.com/jaxnet/core/shard.core.git/limits"
+	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"go.uber.org/zap"
 )
 
 const (
@@ -33,9 +34,9 @@ const (
 
 var _ = initChain()
 
-//var (
+// var (
 //	cfg *config
-//)
+// )
 //
 // winServiceMain is only invoked on Windows.  It detects when btcd is running
 // as a service and reacts accordingly.
@@ -102,9 +103,9 @@ func btcdMain() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Run Beacon")
-	//go runBeaconChain(ctx, cfg)
-	//go runShardChain(1, cfg)
-	//go runShardChain(2, cfg)
+	// go runBeaconChain(ctx, cfg)
+	// go runShardChain(1, cfg)
+	// go runShardChain(2, cfg)
 
 	l, err := zap.NewDevelopment()
 	if err != nil {
@@ -134,9 +135,9 @@ func btcdMain() error {
 	return nil
 }
 
-//// removeRegressionDB removes the existing regression test database if running
-//// in regression test mode and it already exists.
-//func removeRegressionDB(dbPath string) error {
+// // removeRegressionDB removes the existing regression test database if running
+// // in regression test mode and it already exists.
+// func removeRegressionDB(dbPath string) error {
 //	// Don't do anything if not in regression test mode.
 //	if !cfg.RegressionTest {
 //		return nil
@@ -160,9 +161,9 @@ func btcdMain() error {
 //	}
 //
 //	return nil
-//}
+// }
 
-//func runRpc(ctx context.Context, rpcConfig *server2.Config) (error){
+// func runRpc(ctx context.Context, rpcConfig *server2.Config) (error){
 //	if !rpcConfig.Disable {
 //		// Setup listeners for the configured RPC listen addresses and
 //		// TLS settings.
@@ -201,12 +202,12 @@ func btcdMain() error {
 //			shutdownRequestChannel <- struct{}{}
 //		}()
 //	}
-//}
+// }
 
 // setupRPCListeners returns a slice of listeners that are configured for use
 // with the RPC server depending on the configuration settings for listen
 // addresses and TLS.
-//func setupRPCListeners() ([]net.Listener, error) {
+// func setupRPCListeners() ([]net.Listener, error) {
 //	// Setup TLS if not disabled.
 //	listenFunc := net.Listen
 //	//if !s.cfg.DisableTLS {
@@ -250,9 +251,9 @@ func btcdMain() error {
 //	}
 //
 //	return listeners, nil
-//}
+// }
 //
-//func runBeaconChain(ctx context.Context, cfg *shards.Config) {
+// func runBeaconChain(ctx context.Context, cfg *shards.Config) {
 //	fmt.Println("Run Beacon")
 //	interrupt := interruptListener()
 //	// Return now if an interrupt signal was triggered.
@@ -342,9 +343,9 @@ func btcdMain() error {
 //	// server.
 //	//<-interrupt
 //	return
-//}
+// }
 
-//func runShardChain(shardId int, cfg *shards.Config) {
+// func runShardChain(shardId int, cfg *shards.Config) {
 //	fmt.Println("runShardChain: ", shardId)
 //	interrupt := interruptListener()
 //	// Return now if an interrupt signal was triggered.
@@ -431,7 +432,7 @@ func btcdMain() error {
 //	// server.
 //	<-interrupt
 //	return
-//}
+// }
 
 func main() {
 	// Use all processor cores.
@@ -471,6 +472,6 @@ func main() {
 
 func initChain() bool {
 	fmt.Println("Init chain.DefaultChain")
-	chain.DefaultChain = beacon.Chain()
+	chain.DefaultChain = beacon.Chain(activeNetParams.Params)
 	return true
 }

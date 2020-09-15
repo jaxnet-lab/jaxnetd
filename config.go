@@ -10,9 +10,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"io"
 	"net"
 	"os"
@@ -23,6 +20,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
@@ -72,12 +73,12 @@ const (
 
 var (
 	defaultHomeDir = btcutil.AppDataDir("btcd", false)
-	//defaultConfigFile  =  defaultConfigFilename
-	//defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
+	// defaultConfigFile  =  defaultConfigFilename
+	// defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	knownDbTypes = database.SupportedDrivers()
-	//defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	//defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	//defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
+	// defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
+	// defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
+	// defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -94,37 +95,37 @@ func minUint32(a, b uint32) uint32 {
 }
 
 //
-//// config defines the configuration options for btcd.
-////
-//// See loadConfig for details on the configuration load process.
+// // config defines the configuration options for btcd.
+// //
+// // See loadConfig for details on the configuration load process.
 //
-//type rpcConfig struct {
+// type rpcConfig struct {
 //	Listeners  []string `yaml:"listeners"`
 //	MaxClients int      `yaml:"maxclients"`
 //	User       string   `yaml:"user"`
 //	Password   string   `yaml:"password"`
-//}
+// }
 //
-//type chainConfig struct {
+// type chainConfig struct {
 //	DbType         string   `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
 //	Peers          []string `yaml:"peers" description:"Add a server to connect with at startup"`
 //	Listeners      []string `yaml:"listeners" long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 8333, testnet: 18333)"`
 //	AgentBlacklist []string `yaml:"agent_blacklist" long:"agentblacklist" description:"A comma separated list of user-agent substrings which will cause btcd to reject any peers whose user-agent contains any of the blacklisted substrings."`
 //	AgentWhitelist []string `yaml:"agent_whitelist" long:"agentwhitelist" description:"A comma separated list of user-agent substrings which will cause btcd to require all peers' user-agents to contain one of the whitelisted substrings. The blacklist is applied before the blacklist, and an empty whitelist will allow all agents that do not fail the blacklist."`
-//}
+// }
 //
-//type shardConfig struct {
-//}
+// type shardConfig struct {
+// }
 //
-//type minerConfig struct {
+// type minerConfig struct {
 //	Generate    bool     `yaml:"generate" description:"Generate no blocks"`
 //	MiningAddrs []string `yaml:"miningaddr" description:"Add the specified payment address to the list of addresses to use for generated blocks -- At least one address is required if the generate option is set"`
-//}
+// }
 //
-//type config struct {
+// type config struct {
 //	Beacon            chainConfig   `yaml:"beacon" long:"beacon" description:"Beacon chain"`
 //	Miner             minerConfig   `yaml:"miner" long:"miner" description:"Miner config"`
-//	Rpc               rpcConfig     `yaml:"rpc"`
+//	RPC               rpcConfig     `yaml:"rpc"`
 //	AddCheckpoints    []string      `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
 //	AddPeers          []string      `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a server to connect with at startup"`
 //	AddrIndex         bool          `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
@@ -201,7 +202,7 @@ func minUint32(a, b uint32) uint32 {
 //	miningAddrs       []btcutil.Address
 //	minRelayTxFee     btcutil.Amount
 //	whitelists        []*net.IPNet
-//}
+// }
 
 // serviceOptions defines the configuration options for the daemon as a service on
 // Windows.
@@ -447,6 +448,7 @@ func loadConfig() (*shards.Config, []string, error) {
 
 	cfg := shards.Config{
 		Node: shards.NodeConfig{
+			Net:    activeNetParams.Name,
 			DbType: defaultDbType,
 			P2P: server.P2pConfig{
 				BlockMinSize:      defaultBlockMinSize,
@@ -465,10 +467,10 @@ func loadConfig() (*shards.Config, []string, error) {
 				MaxOrphanTxs:      defaultMaxOrphanTransactions,
 				SigCacheMaxSize:   defaultSigCacheMaxSize,
 			},
-			Rpc: server.Config{
+			RPC: server.Config{
 				MaxClients: defaultMaxRPCClients,
-				//RPCMaxWebsockets:     defaultMaxRPCWebsockets,
-				//RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+				// RPCMaxWebsockets:     defaultMaxRPCWebsockets,
+				// RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
 			},
 		},
 
@@ -476,9 +478,9 @@ func loadConfig() (*shards.Config, []string, error) {
 		DebugLevel: defaultLogLevel,
 		DataDir:    dataDir,
 		LogDir:     path.Join(dataDir, "logs"),
-		//RPCKey:               defaultRPCKeyFile,
-		//RPCCert:              defaultRPCCertFile,
-		//Generate:             defaultGenerate,
+		// RPCKey:               defaultRPCKeyFile,
+		// RPCCert:              defaultRPCCertFile,
+		// Generate:             defaultGenerate,
 	}
 
 	// Service options which are only added on Windows.
@@ -586,18 +588,7 @@ func loadConfig() (*shards.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Multiple networks can't be selected simultaneously.
-	numNets := 0
-	// Count number of network flags passed; assign active network params
-	// while we're at it
-	if numNets > 1 {
-		str := "%s: The testnet, regtest, segnet, and simnet params " +
-			"can't be used together -- choose one of the four"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
+	activeNetParams.Params = cfg.Node.ChainParams()
 
 	// Set the default policy for relaying non-standard transactions
 	// according to the default of the active network. The set
@@ -627,7 +618,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	fmt.Println("P2P.Listeners", cfg.Node.P2P.Listeners)
-	fmt.Println("Rpc.Listeners", cfg.Node.Rpc.Listeners)
+	fmt.Println("RPC.Listeners", cfg.Node.RPC.Listeners)
 
 	// Initialize log rotation.  After log rotation has been initialized, the
 	// logger variables may be used.
@@ -638,6 +629,13 @@ func loadConfig() (*shards.Config, []string, error) {
 		err := fmt.Errorf("%s: %v", funcName, err.Error())
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
+		return nil, nil, err
+	}
+
+	if cfg.Node.ChainParams() == nil {
+		str := "%s: The specified net name [%v] is invalid"
+		err := fmt.Errorf(str, funcName, cfg.Node.Net)
+		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
@@ -673,7 +671,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Validate any given whitelisted IP addresses and networks.
-	//if len(cfg.Whitelists) > 0 {
+	// if len(cfg.Whitelists) > 0 {
 	//	var ip net.IP
 	//	cfg.whitelists = make([]*net.IPNet, 0, len(cfg.Whitelists))
 	//
@@ -702,7 +700,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	//		}
 	//		cfg.whitelists = append(cfg.whitelists, ipnet)
 	//	}
-	//}
+	// }
 
 	// --addPeer and --connect do not mix.
 	if len(cfg.Node.P2P.Peers) > 0 && len(cfg.Node.P2P.ConnectPeers) > 0 {
@@ -735,7 +733,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Check to make sure limited and admin users don't have the same username
-	if cfg.Node.Rpc.User == cfg.Node.Rpc.LimitUser && cfg.Node.Rpc.User != "" {
+	if cfg.Node.RPC.User == cfg.Node.RPC.LimitUser && cfg.Node.RPC.User != "" {
 		str := "%s: --rpcuser and --rpclimituser must not specify the " +
 			"same username"
 		err := fmt.Errorf(str, funcName)
@@ -745,7 +743,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Check to make sure limited and admin users don't have the same password
-	if cfg.Node.Rpc.Password == cfg.Node.Rpc.LimitPass && cfg.Node.Rpc.Password != "" {
+	if cfg.Node.RPC.Password == cfg.Node.RPC.LimitPass && cfg.Node.RPC.Password != "" {
 		str := "%s: --rpcpass and --rpclimitpass must not specify the " +
 			"same password"
 		err := fmt.Errorf(str, funcName)
@@ -755,32 +753,32 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// The RPC server is disabled if no username or password is provided.
-	if (cfg.Node.Rpc.User == "" || cfg.Node.Rpc.Password == "") &&
-		(cfg.Node.Rpc.LimitUser == "" || cfg.Node.Rpc.LimitPass == "") {
-		cfg.Node.Rpc.Disable = true
+	if (cfg.Node.RPC.User == "" || cfg.Node.RPC.Password == "") &&
+		(cfg.Node.RPC.LimitUser == "" || cfg.Node.RPC.LimitPass == "") {
+		cfg.Node.RPC.Disable = true
 	}
 
-	if cfg.Node.Rpc.Disable {
+	if cfg.Node.RPC.Disable {
 		btcdLog.Infof("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
-	if !cfg.Node.Rpc.Disable && len(cfg.Node.Rpc.Listeners) == 0 {
+	if !cfg.Node.RPC.Disable && len(cfg.Node.RPC.Listeners) == 0 {
 		addrs, err := net.LookupHost("localhost")
 		if err != nil {
 			return nil, nil, err
 		}
-		cfg.Node.Rpc.ListenerAddresses = make([]string, 0, len(addrs))
+		cfg.Node.RPC.ListenerAddresses = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
 			addr = net.JoinHostPort(addr, activeNetParams.rpcPort)
-			cfg.Node.Rpc.ListenerAddresses = append(cfg.Node.Rpc.ListenerAddresses, addr)
+			cfg.Node.RPC.ListenerAddresses = append(cfg.Node.RPC.ListenerAddresses, addr)
 		}
 	}
 
-	if cfg.Node.Rpc.MaxConcurrentReqs < 0 {
+	if cfg.Node.RPC.MaxConcurrentReqs < 0 {
 		str := "%s: The rpcmaxwebsocketconcurrentrequests option may " +
 			"not be less than 0 -- parsed [%d]"
-		err := fmt.Errorf(str, funcName, cfg.Node.Rpc.MaxConcurrentReqs)
+		err := fmt.Errorf(str, funcName, cfg.Node.RPC.MaxConcurrentReqs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
@@ -854,8 +852,8 @@ func loadConfig() (*shards.Config, []string, error) {
 		cfg.Node.P2P.BlockMaxWeight = cfg.Node.P2P.BlockMaxSize * blockchain.WitnessScaleFactor
 	}
 
-	//// Look for illegal characters in the user agent comments.
-	//for _, uaComment := range cfg.Node.P2P.UserAgentComments {
+	// // Look for illegal characters in the user agent comments.
+	// for _, uaComment := range cfg.Node.P2P.UserAgentComments {
 	//	if strings.ContainsAny(uaComment, "/:()") {
 	//		err := fmt.Errorf("%s: The following characters must not "+
 	//			"appear in user agent comments: '/', ':', '(', ')'",
@@ -864,7 +862,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	//		fmt.Fprintln(os.Stderr, usageMessage)
 	//		return nil, nil, err
 	//	}
-	//}
+	// }
 
 	// --txindex and --droptxindex do not mix.
 	if cfg.Node.P2P.TxIndex && cfg.DropTxIndex {
@@ -905,19 +903,19 @@ func loadConfig() (*shards.Config, []string, error) {
 
 	// Add default port to all rpc listener addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.Rpc.ListenerAddresses = normalizeAddresses(cfg.Node.Rpc.ListenerAddresses,
+	cfg.Node.RPC.ListenerAddresses = normalizeAddresses(cfg.Node.RPC.ListenerAddresses,
 		activeNetParams.rpcPort)
 
 	// Only allow TLS to be disabled if the RPC is bound to localhost
 	// addresses.
-	if !cfg.Node.Rpc.Disable && cfg.Node.P2P.DisableTLS {
+	if !cfg.Node.RPC.Disable && cfg.Node.P2P.DisableTLS {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},
 			"0.0.0.0":   {}, // TODO: setup tls
 			"::1":       {},
 		}
-		for _, addr := range cfg.Node.Rpc.ListenerAddresses {
+		for _, addr := range cfg.Node.RPC.ListenerAddresses {
 			host, _, err := net.SplitHostPort(addr)
 			if err != nil {
 				str := "%s: RPC listen interface '%s' is " +
@@ -956,14 +954,14 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Check the checkpoints for syntax errors.
-	//cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
-	//if err != nil {
+	// cfg.addCheckpoints, err = parseCheckpoints(cfg.AddCheckpoints)
+	// if err != nil {
 	//	str := "%s: Error parsing checkpoints: %v"
 	//	err := fmt.Errorf(str, funcName, err)
 	//	fmt.Fprintln(os.Stderr, err)
 	//	fmt.Fprintln(os.Stderr, usageMessage)
 	//	return nil, nil, err
-	//}
+	// }
 
 	// Tor stream isolation requires either proxy or onion proxy to be set.
 	if cfg.TorIsolation && cfg.Node.P2P.Proxy == "" && cfg.Node.P2P.OnionProxy == "" {

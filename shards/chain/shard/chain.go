@@ -12,25 +12,37 @@ import (
 )
 
 const (
-
 	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 	// PrevBlock and MerkleRoot hashes.
 	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
 )
 
-//
-type shardChain struct {
-	shardId uint32
+func Chain(shardID uint32, params *chaincfg.Params) chain.IChain {
+	// var block *wire.MsgBlock
+	var height uint32
+	var hash *chainhash.Hash
+
+	// todo(mike)
+	return &shardChain{
+		shardID:     shardID,
+		chainParams: params.ShardGenesis(shardID, height, hash),
+	}
 }
 
-func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash, mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
+type shardChain struct {
+	shardID     uint32
+	chainParams *chaincfg.Params
+}
+
+func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
+	mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
 		prevBlock:  prevHash,
 		merkleRoot: merkleRootHash,
-		timestamp:  timestamp, //time.Unix(time.Now().Unix(), 0),
+		timestamp:  timestamp, // time.Unix(time.Now().Unix(), 0),
 	}
 }
 
@@ -39,14 +51,8 @@ func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockN
 }
 
 func (c *shardChain) Params() *chaincfg.Params {
-	return &chaincfg.MainNetParams
-}
-
-//
-func Chain(shardId uint32) chain.IChain {
-	return &shardChain{
-		shardId: shardId,
-	}
+	// todo(mike) [chaincfg] change me
+	return c.chainParams
 }
 
 func (c *shardChain) NewHeader() chain.BlockHeader {
@@ -58,12 +64,13 @@ func (c *shardChain) IsBeacon() bool {
 }
 
 func (c *shardChain) ShardID() int32 {
-	return int32(c.shardId)
+	return int32(c.shardID)
 }
 
 func (c *shardChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-		Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+		Header: NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot,
+			chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
 }

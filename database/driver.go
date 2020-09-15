@@ -6,9 +6,9 @@ package database
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"github.com/btcsuite/btclog"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // Driver defines a structure for backend drivers to use when they registered

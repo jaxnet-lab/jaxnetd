@@ -17,14 +17,5 @@ type ManagerCfg struct {
 }
 
 func (cfg *ManagerCfg) NetParams() *chaincfg.Params {
-	switch cfg.Net {
-	case "simnet":
-		return &chaincfg.SimNetParams
-	case "testnet":
-		return &chaincfg.TestNet3Params
-	case "mainnet":
-		return &chaincfg.MainNetParams
-	}
-
-	return &chaincfg.Params{}
+	return chaincfg.NetName(cfg.Net).Params()
 }
