@@ -54,6 +54,7 @@ func (status BlockStatus) KnownInvalid() bool {
 type IBlockNode interface {
 	NewNode() IBlockNode
 	GetHash() chainhash.Hash
+	GetHeight() int32
 	Height() int32
 	Version() int32
 	Bits() uint32
