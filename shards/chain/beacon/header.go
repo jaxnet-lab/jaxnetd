@@ -242,6 +242,10 @@ func (h *header) SetMerkleRoot(hash chainhash.Hash) {
 	h.merkleRoot = hash
 }
 
+func (h *header) SetMergeMiningRoot(value chainhash.Hash)  {
+	 h.mergeMiningRoot = value
+}
+
 func (h *header) MergeMiningRoot() chainhash.Hash {
 	return h.mergeMiningRoot
 }
