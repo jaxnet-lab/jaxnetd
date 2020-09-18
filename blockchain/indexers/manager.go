@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 var (
@@ -307,10 +307,11 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			var block *btcutil.Block
 			err := m.db.View(func(dbTx database.Tx) error {
 				blockBytes, err := dbTx.FetchBlock(hash)
+
 				if err != nil {
 					return err
 				}
-				block, err = btcutil.NewBlockFromBytes(blockBytes)
+				block, err = btcutil.NewBlockFromBytes(chain.Chain(), blockBytes)
 				if err != nil {
 					return err
 				}

@@ -12,10 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // importCmd defines the configuration options for the insecureimport command.
@@ -108,7 +111,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // NOTE: This is not a safe import as it does not verify chain rules.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := btcutil.NewBlockFromBytes(serializedBlock)
+	block, err := btcutil.NewBlockFromBytes(bi.db.Chain(), serializedBlock)
 	if err != nil {
 		return false, err
 	}
@@ -314,8 +317,9 @@ func (bi *blockImporter) Import() chan *importResults {
 // and database.
 func newBlockImporter(db database.DB, r io.ReadSeeker) *blockImporter {
 	return &blockImporter{
-		db:           db,
-		r:            r,
+		db: db,
+		r:  r,
+
 		processQueue: make(chan []byte, 2),
 		doneChan:     make(chan bool),
 		errChan:      make(chan error),
@@ -338,7 +342,7 @@ func (cmd *importCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB()
+	db, err := loadBlockDB(beacon.Chain(&chaincfg.TestNet3Params))
 	if err != nil {
 		return err
 	}

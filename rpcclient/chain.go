@@ -9,12 +9,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // FutureGetBestBlockHashResult is a future promise to deliver the result of a
@@ -393,7 +392,6 @@ func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *btcjson.GetBlockChainI
 // Receive waits for the response promised by the future and returns chain info
 // result provided by the server.
 func (r FutureGetBlockChainInfoResult) Receive() (*btcjson.GetBlockChainInfoResult, error) {
-	fmt.Println("FutureGetBlockChainInfoResult Receive")
 	res, err := receiveFuture(r.Response)
 	if err != nil {
 		return nil, err
@@ -500,7 +498,7 @@ func (r FutureGetBlockHeaderResult) Receive() (chain.BlockHeader, error) {
 	}
 
 	// Deserialize the blockheader and return it.
-	bh := chain.NewHeader()
+	bh := chain.DefaultChain.NewHeader()
 	err = bh.Read(bytes.NewReader(serializedBH))
 	if err != nil {
 		return nil, err
@@ -1153,4 +1151,51 @@ func (c *Client) GetBlockStatsAsync(hashOrHeight interface{}, stats *[]string) F
 // Second argument allows to select certain stats to return.
 func (c *Client) GetBlockStats(hashOrHeight interface{}, stats *[]string) (*btcjson.GetBlockStatsResult, error) {
 	return c.GetBlockStatsAsync(hashOrHeight, stats).Receive()
+}
+
+// FutureListShards is a future promise to deliver the result of a
+// ListShardsAsync RPC invocation (or an applicable error).
+type FutureListShards chan *response
+
+// Receive waits for the response promised by the future and returns statistics
+// of a block at a certain height.
+func (r FutureListShards) Receive() (*btcjson.ShardListResult, error) {
+	res, err := receiveFuture(r)
+	var list btcjson.ShardListResult
+	err = json.Unmarshal(res, &list)
+	if err != nil {
+		return nil, err
+	}
+
+	return &list, nil
+}
+
+// todo(mike)
+func (c *Client) ListShardsAsync() FutureListShards {
+	cmd := &btcjson.ListShardsCmd{}
+	return c.sendCmd(cmd)
+}
+func (c *Client) ListShards() (*btcjson.ShardListResult, error) {
+	return c.ListShardsAsync().Receive()
+}
+
+// FutureManageShards is a future promise to deliver the result of a
+// ManageShardsAsync RPC invocation (or an applicable error).
+type FutureManageShards chan *response
+
+// Receive waits for the response promised by the future and returns statistics
+// of a block at a certain height.
+func (r FutureManageShards) Receive() error {
+	_, err := receiveFuture(r)
+
+	return err
+}
+
+// todo(mike)
+func (c *Client) ManageShardsAsync(action string, shardID uint32) FutureManageShards {
+	cmd := btcjson.NewManageShardsCmd(shardID, action, nil)
+	return c.sendCmd(cmd)
+}
+func (c *Client) ManageShards(action string, shardID uint32) error {
+	return c.ManageShardsAsync(action, shardID).Receive()
 }

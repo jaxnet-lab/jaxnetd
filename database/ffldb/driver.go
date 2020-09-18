@@ -6,7 +6,8 @@ package ffldb
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"github.com/btcsuite/btclog"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
@@ -43,24 +44,24 @@ func parseArgs(funcName string, args ...interface{}) (string, types.BitcoinNet, 
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(args ...interface{}) (database.DB, error) {
+func openDBDriver(chain chain.IChain, args ...interface{}) (database.DB, error) {
 	dbPath, network, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return openDB(dbPath, network, false)
+	return openDB(dbPath, chain, network, false)
 }
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(args ...interface{}) (database.DB, error) {
+func createDBDriver(chain chain.IChain, args ...interface{}) (database.DB, error) {
 	dbPath, network, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return openDB(dbPath, network, true)
+	return openDB(dbPath, chain, network, true)
 }
 
 // useLogger is the callback provided during driver registration that sets the

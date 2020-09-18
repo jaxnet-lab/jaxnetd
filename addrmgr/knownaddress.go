@@ -5,9 +5,8 @@
 package addrmgr
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"time"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // KnownAddress tracks information about a known network address that is used

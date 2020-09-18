@@ -8,7 +8,9 @@ import (
 	"container/list"
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -17,11 +19,9 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (

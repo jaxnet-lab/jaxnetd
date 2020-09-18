@@ -12,11 +12,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"math"
 	"reflect"
 	"testing"
-
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 // TestBIP0032Vectors tests the vectors provided by [BIP32] to ensure the

@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // AddNodeSubCmd defines the type used in the addnode JSON-RPC command for the
@@ -452,14 +452,14 @@ func NewGetMiningInfoCmd() *GetMiningInfoCmd {
 
 // GetNetworkInfoCmd defines the getnetworkinfo JSON-RPC command.
 type GetNetworkInfoCmd struct {
-	//Subversion string `json:"subversion"`
+	// Subversion string `json:"subversion"`
 }
 
 // NewGetNetworkInfoCmd returns a new instance which can be used to issue a
 // getnetworkinfo JSON-RPC command.
 func NewGetNetworkInfoCmd() *GetNetworkInfoCmd {
 	return &GetNetworkInfoCmd{
-		//Subversion: "1.3.0",
+		// Subversion: "1.3.0",
 	}
 }
 
@@ -842,6 +842,22 @@ func NewVerifyTxOutProofCmd(proof string) *VerifyTxOutProofCmd {
 	}
 }
 
+type ManageShardsCmd struct {
+	ShardID       uint32
+	Action        string
+	InitialHeight *int64
+}
+
+func NewManageShardsCmd(shardID uint32, action string, initialHeight *int64) *ManageShardsCmd {
+	return &ManageShardsCmd{
+		ShardID:       shardID,
+		Action:        action,
+		InitialHeight: initialHeight,
+	}
+}
+
+type ListShardsCmd struct{}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -896,4 +912,7 @@ func init() {
 	MustRegisterCmd("verifychain", (*VerifyChainCmd)(nil), flags)
 	MustRegisterCmd("verifymessage", (*VerifyMessageCmd)(nil), flags)
 	MustRegisterCmd("verifytxoutproof", (*VerifyTxOutProofCmd)(nil), flags)
+
+	MustRegisterCmd("manageshards", (*ManageShardsCmd)(nil), flags)
+	MustRegisterCmd("listshards", (*ListShardsCmd)(nil), flags)
 }

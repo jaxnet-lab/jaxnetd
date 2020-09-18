@@ -6,9 +6,8 @@ package hdkeychain_test
 
 import (
 	"fmt"
-
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 )
 
 // This example demonstrates how to generate a cryptographically random seed

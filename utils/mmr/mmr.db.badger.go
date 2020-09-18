@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	badger "github.com/dgraph-io/badger"
 	"log"
+
+	badger "github.com/dgraph-io/badger"
 )
 
 type badgerDB struct {

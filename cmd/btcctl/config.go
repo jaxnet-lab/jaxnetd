@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -13,10 +14,11 @@ import (
 	"regexp"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	flags "github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -95,20 +97,20 @@ func listCommands() {
 type config struct {
 	ConfigFile     string `short:"C" long:"configfile" description:"Path to configuration file"`
 	ListCommands   bool   `short:"l" long:"listcommands" description:"List all of the supported commands and exit"`
-	NoTLS          bool   `long:"notls" description:"Disable TLS"`
-	Proxy          string `long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass      string `long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	ProxyUser      string `long:"proxyuser" description:"Username for proxy server"`
-	RegressionTest bool   `long:"regtest" description:"Connect to the regression test network"`
-	RPCCert        string `short:"c" long:"rpccert" description:"RPC server certificate chain for validation"`
-	RPCPassword    string `short:"P" long:"rpcpass" default-mask:"-" description:"RPC password"`
-	RPCServer      string `short:"s" long:"rpcserver" description:"RPC server to connect to"`
-	RPCUser        string `short:"u" long:"rpcuser" description:"RPC username"`
-	SimNet         bool   `long:"simnet" description:"Connect to the simulation test network"`
-	TLSSkipVerify  bool   `long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
-	TestNet3       bool   `long:"testnet" description:"Connect to testnet"`
-	ShowVersion    bool   `short:"V" long:"version" description:"Display version information and exit"`
-	Wallet         bool   `long:"wallet" description:"Connect to wallet"`
+	NoTLS          bool   `yaml:"no_tls" long:"notls" description:"Disable TLS"`
+	Proxy          string `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyPass      string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+	ProxyUser      string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
+	RegressionTest bool   `yaml:"regression_test" long:"regtest" description:"Connect to the regression test network"`
+	RPCCert        string `yaml:"rpc_cert" short:"c" long:"rpccert" description:"RPC server certificate chain for validation"`
+	RPCPassword    string `yaml:"rpc_password" short:"P" long:"rpcpass" default-mask:"-" description:"RPC password"`
+	RPCServer      string `yaml:"rpc_server" short:"s" long:"rpcserver" description:"RPC server to connect to"`
+	RPCUser        string `yaml:"rpc_user" short:"u" long:"rpcuser" description:"RPC username"`
+	SimNet         bool   `yaml:"sim_net" long:"simnet" description:"Connect to the simulation test network"`
+	TLSSkipVerify  bool   `yaml:"tls_skip_verify" long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
+	TestNet3       bool   `yaml:"test_net_3" long:"testnet" description:"Connect to testnet"`
+	ShowVersion    bool   `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
+	Wallet         bool   `yaml:"wallet" long:"wallet" description:"Connect to wallet"`
 }
 
 // normalizeAddress returns addr with the passed default port appended if
@@ -220,8 +222,9 @@ func loadConfig() (*config, []string, error) {
 		os.Exit(0)
 	}
 
-	if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-		// Use config file for RPC server to create default btcctl config
+	stats, err := os.Stat(preCfg.ConfigFile)
+	if os.IsNotExist(err) {
+		// Use config file for RPC server to create default jaxctl config
 		var serverConfigPath string
 		if preCfg.Wallet {
 			serverConfigPath = filepath.Join(btcwalletHomeDir, "btcwallet.conf")
@@ -237,14 +240,28 @@ func loadConfig() (*config, []string, error) {
 
 	// Load additional config from file.
 	parser := flags.NewParser(&cfg, flags.Default)
-	err = flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
+	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
 	if err != nil {
-		if _, ok := err.(*os.PathError); !ok {
-			fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n",
-				err)
-			fmt.Fprintln(os.Stderr, usageMessage)
+		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
+		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
+		return nil, nil, err
+	}
+
+	ext := filepath.Ext(stats.Name())
+	switch ext {
+	case ".conf":
+		err = flags.NewIniParser(parser).Parse(cfgFile)
+		if err != nil {
 			return nil, nil, err
 		}
+	case ".yaml":
+		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			return nil, nil, err
+		}
+	default:
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
+		return nil, nil, errors.New("Invalid file extension: " + ext)
 	}
 
 	// Parse command line options again to ensure they take precedence.

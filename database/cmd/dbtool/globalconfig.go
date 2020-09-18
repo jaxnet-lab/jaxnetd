@@ -7,12 +7,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"os"
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 )
@@ -66,7 +66,7 @@ func validDbType(dbType string) bool {
 // as "testnet" when the passed active network matches types.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
-// "testnet3" is planned for the future, at which point this function can be
+//"testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {

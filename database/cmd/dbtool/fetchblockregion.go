@@ -9,6 +9,7 @@ import (
 	"errors"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"strconv"
 	"time"
 )
@@ -57,7 +58,7 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB()
+	db, err := loadBlockDB(chain.DefaultChain)
 	if err != nil {
 		return err
 	}

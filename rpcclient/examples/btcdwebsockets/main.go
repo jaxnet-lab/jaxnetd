@@ -6,7 +6,7 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"log"
 	"time"
 

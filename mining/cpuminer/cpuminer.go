@@ -10,17 +10,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/minio/sha256-simd"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"math/rand"
 	"sync"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 const (
@@ -301,8 +301,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			if bytes.Equal(hash[prefixSize:], prefixBytes) {
 				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-					fmt.Printf("%x %x\n", hash[:], prefixBytes)
-					fmt.Println("m.updateHashes: ", hashesCompleted)
 					header.SetNonce(i)
 					m.updateHashes <- hashesCompleted
 					return true

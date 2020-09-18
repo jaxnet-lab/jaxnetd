@@ -7,9 +7,10 @@ package blockchain
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -84,7 +85,7 @@ func (b *BlockChain) verifyCheckpoint(height int32, hash *chainhash.Hash) bool {
 // should really only happen for blocks before the first checkpoint).
 //
 // This function MUST be called with the chain lock held (for reads).
-func (b *BlockChain) findPreviousCheckpoint() (*blockNode, error) {
+func (b *BlockChain) findPreviousCheckpoint() (chain.IBlockNode, error) {
 	if !b.HasCheckpoints() {
 		return nil, nil
 	}
@@ -130,7 +131,7 @@ func (b *BlockChain) findPreviousCheckpoint() (*blockNode, error) {
 	// When there is a next checkpoint and the height of the current best
 	// chain does not exceed it, the current checkpoint lockin is still
 	// the latest known checkpoint.
-	if b.bestChain.Tip().height < b.nextCheckpoint.Height {
+	if b.bestChain.Tip().Height() < b.nextCheckpoint.Height {
 		return b.checkpointNode, nil
 	}
 
@@ -210,16 +211,16 @@ func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, error) {
 	// Ensure the height of the passed block and the entry for the block in
 	// the main chain match.  This should always be the case unless the
 	// caller provided an invalid block.
-	if node.height != block.Height() {
+	if node.Height() != block.Height() {
 		return false, fmt.Errorf("passed block height of %d does not "+
 			"match the main chain height of %d", block.Height(),
-			node.height)
+			node.Height())
 	}
 
 	// A checkpoint must be at least CheckpointConfirmations blocks
 	// before the end of the main chain.
-	mainChainHeight := b.bestChain.Tip().height
-	if node.height > (mainChainHeight - CheckpointConfirmations) {
+	mainChainHeight := b.bestChain.Tip().Height()
+	if node.Height() > (mainChainHeight - CheckpointConfirmations) {
 		return false, nil
 	}
 
@@ -234,16 +235,16 @@ func (b *BlockChain) IsCheckpointCandidate(block *btcutil.Block) (bool, error) {
 	}
 
 	// A checkpoint must be have at least one block before it.
-	if node.parent == nil {
+	if node.Parent() == nil {
 		return false, nil
 	}
 
 	// A checkpoint must have timestamps for the block and the blocks on
 	// either side of it in order (due to the median time allowance this is
 	// not always the case).
-	prevTime := time.Unix(node.parent.timestamp, 0)
+	prevTime := time.Unix(node.Parent().Timestamp(), 0)
 	curTime := block.MsgBlock().Header.Timestamp()
-	nextTime := time.Unix(nextNode.timestamp, 0)
+	nextTime := time.Unix(nextNode.Timestamp(), 0)
 	if prevTime.After(curTime) || nextTime.Before(curTime) {
 		return false, nil
 	}

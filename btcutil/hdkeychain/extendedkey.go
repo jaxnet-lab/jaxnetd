@@ -16,13 +16,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"math/big"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 const (

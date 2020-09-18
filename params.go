@@ -6,12 +6,12 @@ package main
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // activeNetParams is a pointer to the parameters specific to the
 // currently active bitcoin network.
-var activeNetParams = &JaxNetParams
+var activeNetParams = &mainNetParams
 
 // params is used to group parameters for various networks such as the main
 // network and test networks.
@@ -28,17 +28,6 @@ type params struct {
 // to emulate the full reference implementation RPC API.
 var mainNetParams = params{
 	Params:  &chaincfg.MainNetParams,
-	rpcPort: "8334",
-}
-
-// mainNetParams contains parameters specific to the main network
-// (types.TestNet3).  NOTE: The RPC port is intentionally different than the
-// reference implementation because btcd does not handle wallet requests.  The
-// separate wallet process listens on the well-known port and forwards requests
-// it does not handle on to btcd.  This approach allows the wallet process
-// to emulate the full reference implementation RPC API.
-var JaxNetParams = params{
-	Params:  &chaincfg.JaxNetParams,
 	rpcPort: "8334",
 }
 
@@ -73,7 +62,7 @@ var simNetParams = params{
 // name as "testnet" when the passed active network matches types.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
-// "testnet3" is planned for the future, at which point this function can be
+//"testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {

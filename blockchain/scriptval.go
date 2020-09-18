@@ -7,12 +7,12 @@ package blockchain
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math"
 	"runtime"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // txValidateItem holds a transaction along with which input to validate.

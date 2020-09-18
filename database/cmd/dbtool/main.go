@@ -5,14 +5,15 @@
 package main
 
 import (
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"github.com/btcsuite/btclog"
 	flags "github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
 
 const (
@@ -26,13 +27,13 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB() (database.DB, error) {
+func loadBlockDB(chain chain.IChain) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 
-	log.Infof("Loading block database from '%s'", dbPath)
-	db, err := database.Open(cfg.DbType, dbPath, activeNetParams.Net)
+	log.Infof("Loading block data0base from '%s'", dbPath)
+	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
@@ -47,7 +48,7 @@ func loadBlockDB() (database.DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		db, err = database.Create(cfg.DbType, dbPath, activeNetParams.Net)
+		db, err = database.Create(cfg.DbType, chain, dbPath, activeNetParams.Net)
 		if err != nil {
 			return nil, err
 		}

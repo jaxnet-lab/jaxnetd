@@ -1,0 +1,34 @@
+#data_dir: ./chain1
+
+node:
+  net: mainnet
+  #  net: testnet
+  p2p:
+    listeners:
+      - 0.0.0.0:8333
+    peers:
+      - 0.0.0.0:9333
+  rpc:
+    disable: false
+    user: somerpc
+    password: somerpc
+    maxclients: 10
+    listeners:
+      - 0.0.0.0:8444
+    peers:
+      - 116.202.107.209:18444
+      - 116.202.107.209:28444
+  shards:
+    enable: true
+    ids:
+      1: { }
+      2: { }
+      3: { }
+      42: { }
+
+debuglevel: info
+nodnsseed: 1
+notls: 1
+
+# txindex=1
+# addrindex=1

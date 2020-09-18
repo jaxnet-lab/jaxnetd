@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a

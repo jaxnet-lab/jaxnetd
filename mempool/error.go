@@ -6,7 +6,7 @@ package mempool
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // RuleError identifies a rule violation.  It is used to indicate that

@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestChainSvrCmds tests all of the chain server commands marshal and unmarshal

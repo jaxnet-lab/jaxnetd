@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // randAddr generates a *wire.NetAddress backed by a random IPv4/IPv6 address.

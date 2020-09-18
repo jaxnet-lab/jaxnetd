@@ -587,9 +587,6 @@ type GetMiningInfoResult struct {
 	CurrentBlockTx     uint64  `json:"currentblocktx"`
 	Difficulty         float64 `json:"difficulty"`
 	Errors             string  `json:"errors"`
-	Generate           bool    `json:"generate"`
-	GenProcLimit       int32   `json:"genproclimit"`
-	HashesPerSec       int64   `json:"hashespersec"`
 	NetworkHashPS      int64   `json:"networkhashps"`
 	PooledTx           uint64  `json:"pooledtx"`
 	TestNet            bool    `json:"testnet"`
@@ -676,4 +673,9 @@ type EstimateSmartFeeResult struct {
 	FeeRate *float64 `json:"feerate,omitempty"`
 	Errors  []string `json:"errors,omitempty"`
 	Blocks  int64    `json:"blocks"`
+}
+
+// todo(mike)
+type ShardListResult struct {
+	Shards map[uint32]string
 }

@@ -7,13 +7,13 @@ package txscript
 import (
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 type addressToKey struct {

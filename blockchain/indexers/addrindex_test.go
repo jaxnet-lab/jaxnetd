@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // addrIndexBucket provides a mock address index database bucket by implementing

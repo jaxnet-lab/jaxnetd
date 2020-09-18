@@ -8,17 +8,16 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -599,7 +598,7 @@ mempoolLoop:
 	// The starting block size is the size of the block header plus the max
 	// possible transaction count size, plus the size of the coinbase
 	// transaction.
-	blockWeight := uint32((chain.BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
+	blockWeight := uint32((g.chain.Chain().BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
 		int(blockchain.GetTransactionWeight(coinbaseTx)))
 	blockSigOpCost := coinbaseSigOpCost
 	totalFees := int64(0)
@@ -860,7 +859,7 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = shard.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
+	msgBlock.Header = beacon.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err

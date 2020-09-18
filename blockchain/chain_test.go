@@ -5,15 +5,15 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"reflect"
 	"testing"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.
@@ -148,7 +148,8 @@ func TestCalcSequenceLock(t *testing.T) {
 	})
 	utxoView := NewUtxoViewpoint()
 	utxoView.AddTxOuts(targetTx, int32(numBlocksToActivate)-4)
-	utxoView.SetBestHash(&node.hash)
+	h := node.GetHash()
+	utxoView.SetBestHash(&h)
 
 	// Create a utxo that spends the fake utxo created above for use in the
 	// transactions created in the tests.  It has an age of 4 blocks.  Note
@@ -443,10 +444,10 @@ func TestCalcSequenceLock(t *testing.T) {
 // nodeHashes is a convenience function that returns the hashes for all of the
 // passed indexes of the provided nodes.  It is used to construct expected hash
 // slices in the tests.
-func nodeHashes(nodes []*blockNode, indexes ...int) []chainhash.Hash {
+func nodeHashes(nodes []chain.IBlockNode, indexes ...int) []chainhash.Hash {
 	hashes := make([]chainhash.Hash, 0, len(indexes))
 	for _, idx := range indexes {
-		hashes = append(hashes, nodes[idx].hash)
+		hashes = append(hashes, nodes[idx].GetHash())
 	}
 	return hashes
 }
@@ -454,7 +455,7 @@ func nodeHashes(nodes []*blockNode, indexes ...int) []chainhash.Hash {
 // nodeHeaders is a convenience function that returns the headers for all of
 // the passed indexes of the provided nodes.  It is used to construct expected
 // located headers in the tests.
-func nodeHeaders(nodes []*blockNode, indexes ...int) []chain.BlockHeader {
+func nodeHeaders(nodes []chain.IBlockNode, indexes ...int) []chain.BlockHeader {
 	headers := make([]chain.BlockHeader, 0, len(indexes))
 	for _, idx := range indexes {
 		headers = append(headers, nodes[idx].Header())
@@ -513,7 +514,7 @@ func TestLocateInventory(t *testing.T) {
 			// The expected result is the requested block.
 			name:     "no locators, stop in side",
 			locator:  nil,
-			hashStop: tip(branch1Nodes).hash,
+			hashStop: tip(branch1Nodes).GetHash(),
 			headers:  nodeHeaders(branch1Nodes, 1),
 			hashes:   nodeHashes(branch1Nodes, 1),
 		},
@@ -522,7 +523,7 @@ func TestLocateInventory(t *testing.T) {
 			// The expected result is the requested block.
 			name:     "no locators, stop in main",
 			locator:  nil,
-			hashStop: branch0Nodes[12].hash,
+			hashStop: branch0Nodes[12].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 12),
 			hashes:   nodeHashes(branch0Nodes, 12),
 		},
@@ -544,7 +545,7 @@ func TestLocateInventory(t *testing.T) {
 			// stop hash has no effect.
 			name:     "remote side chain, stop in side",
 			locator:  remoteView.BlockLocator(nil),
-			hashStop: tip(branch1Nodes).hash,
+			hashStop: tip(branch1Nodes).GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 15, 16, 17),
 		},
@@ -555,7 +556,7 @@ func TestLocateInventory(t *testing.T) {
 			// the main chain and the stop hash has no effect.
 			name:     "remote side chain, stop in main before",
 			locator:  remoteView.BlockLocator(nil),
-			hashStop: branch0Nodes[13].hash,
+			hashStop: branch0Nodes[13].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 15, 16, 17),
 		},
@@ -567,7 +568,7 @@ func TestLocateInventory(t *testing.T) {
 			// effect.
 			name:     "remote side chain, stop in main exact",
 			locator:  remoteView.BlockLocator(nil),
-			hashStop: branch0Nodes[14].hash,
+			hashStop: branch0Nodes[14].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 15, 16, 17),
 		},
@@ -579,7 +580,7 @@ func TestLocateInventory(t *testing.T) {
 			// hash.
 			name:     "remote side chain, stop in main after",
 			locator:  remoteView.BlockLocator(nil),
-			hashStop: branch0Nodes[15].hash,
+			hashStop: branch0Nodes[15].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 15),
 			hashes:   nodeHashes(branch0Nodes, 15),
 		},
@@ -591,7 +592,7 @@ func TestLocateInventory(t *testing.T) {
 			// stop hash.
 			name:     "remote side chain, stop in main after more",
 			locator:  remoteView.BlockLocator(nil),
-			hashStop: branch0Nodes[16].hash,
+			hashStop: branch0Nodes[16].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 15, 16),
 			hashes:   nodeHashes(branch0Nodes, 15, 16),
 		},
@@ -614,7 +615,7 @@ func TestLocateInventory(t *testing.T) {
 			// main chain and the stop hash has no effect.
 			name:     "remote main chain past, stop in side",
 			locator:  localView.BlockLocator(branch0Nodes[12]),
-			hashStop: tip(branch1Nodes).hash,
+			hashStop: tip(branch1Nodes).GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 13, 14, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 13, 14, 15, 16, 17),
 		},
@@ -626,7 +627,7 @@ func TestLocateInventory(t *testing.T) {
 			// no effect.
 			name:     "remote main chain past, stop in main before",
 			locator:  localView.BlockLocator(branch0Nodes[12]),
-			hashStop: branch0Nodes[11].hash,
+			hashStop: branch0Nodes[11].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 13, 14, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 13, 14, 15, 16, 17),
 		},
@@ -638,7 +639,7 @@ func TestLocateInventory(t *testing.T) {
 			// no effect.
 			name:     "remote main chain past, stop in main exact",
 			locator:  localView.BlockLocator(branch0Nodes[12]),
-			hashStop: branch0Nodes[12].hash,
+			hashStop: branch0Nodes[12].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 13, 14, 15, 16, 17),
 			hashes:   nodeHashes(branch0Nodes, 13, 14, 15, 16, 17),
 		},
@@ -650,7 +651,7 @@ func TestLocateInventory(t *testing.T) {
 			// has no effect.
 			name:     "remote main chain past, stop in main after",
 			locator:  localView.BlockLocator(branch0Nodes[12]),
-			hashStop: branch0Nodes[13].hash,
+			hashStop: branch0Nodes[13].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 13),
 			hashes:   nodeHashes(branch0Nodes, 13),
 		},
@@ -662,7 +663,7 @@ func TestLocateInventory(t *testing.T) {
 			// hash has no effect.
 			name:     "remote main chain past, stop in main after more",
 			locator:  localView.BlockLocator(branch0Nodes[12]),
-			hashStop: branch0Nodes[15].hash,
+			hashStop: branch0Nodes[15].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 13, 14, 15),
 			hashes:   nodeHashes(branch0Nodes, 13, 14, 15),
 		},
@@ -684,7 +685,7 @@ func TestLocateInventory(t *testing.T) {
 			// inventory.
 			name:     "remote main chain same, stop same point",
 			locator:  localView.BlockLocator(nil),
-			hashStop: tip(branch0Nodes).hash,
+			hashStop: tip(branch0Nodes).GetHash(),
 			headers:  nil,
 			hashes:   nil,
 		},
@@ -762,7 +763,7 @@ func TestLocateInventory(t *testing.T) {
 			// fork point.
 			name:     "weak locator, multiple known side blocks, stop in main",
 			locator:  locatorHashes(branch1Nodes, 1),
-			hashStop: branch0Nodes[5].hash,
+			hashStop: branch0Nodes[5].GetHash(),
 			headers:  nodeHeaders(branch0Nodes, 0, 1, 2, 3, 4, 5),
 			hashes:   nodeHashes(branch0Nodes, 0, 1, 2, 3, 4, 5),
 		},
@@ -810,20 +811,20 @@ func TestHeightToHashRange(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	chain := newFakeChain(&chaincfg.MainNetParams)
-	branch0Nodes := chainedNodes(chain.bestChain.Genesis(), 18)
+	ch := newFakeChain(&chaincfg.MainNetParams)
+	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		chain.index.SetStatusFlags(node, statusValid)
-		chain.index.AddNode(node)
+		ch.index.SetStatusFlags(node, chain.StatusValid)
+		ch.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
-		if node.height < 18 {
-			chain.index.SetStatusFlags(node, statusValid)
+		if node.Height() < 18 {
+			ch.index.SetStatusFlags(node, chain.StatusValid)
 		}
-		chain.index.AddNode(node)
+		ch.index.AddNode(node)
 	}
-	chain.bestChain.SetTip(tip(branch0Nodes))
+	ch.bestChain.SetTip(tip(branch0Nodes))
 
 	tests := []struct {
 		name        string
@@ -836,21 +837,21 @@ func TestHeightToHashRange(t *testing.T) {
 		{
 			name:        "blocks below tip",
 			startHeight: 11,
-			endHash:     branch0Nodes[14].hash,
+			endHash:     branch0Nodes[14].GetHash(),
 			maxResults:  10,
 			hashes:      nodeHashes(branch0Nodes, 10, 11, 12, 13, 14),
 		},
 		{
 			name:        "blocks on main chain",
 			startHeight: 15,
-			endHash:     branch0Nodes[17].hash,
+			endHash:     branch0Nodes[17].GetHash(),
 			maxResults:  10,
 			hashes:      nodeHashes(branch0Nodes, 14, 15, 16, 17),
 		},
 		{
 			name:        "blocks on stale chain",
 			startHeight: 15,
-			endHash:     branch1Nodes[1].hash,
+			endHash:     branch1Nodes[1].GetHash(),
 			maxResults:  10,
 			hashes: append(nodeHashes(branch0Nodes, 14),
 				nodeHashes(branch1Nodes, 0, 1)...),
@@ -858,27 +859,27 @@ func TestHeightToHashRange(t *testing.T) {
 		{
 			name:        "invalid start height",
 			startHeight: 19,
-			endHash:     branch0Nodes[17].hash,
+			endHash:     branch0Nodes[17].GetHash(),
 			maxResults:  10,
 			expectError: true,
 		},
 		{
 			name:        "too many results",
 			startHeight: 1,
-			endHash:     branch0Nodes[17].hash,
+			endHash:     branch0Nodes[17].GetHash(),
 			maxResults:  10,
 			expectError: true,
 		},
 		{
 			name:        "unvalidated block",
 			startHeight: 15,
-			endHash:     branch1Nodes[2].hash,
+			endHash:     branch1Nodes[2].GetHash(),
 			maxResults:  10,
 			expectError: true,
 		},
 	}
 	for _, test := range tests {
-		hashes, err := chain.HeightToHashRange(test.startHeight, &test.endHash,
+		hashes, err := ch.HeightToHashRange(test.startHeight, &test.endHash,
 			test.maxResults)
 		if err != nil {
 			if !test.expectError {
@@ -902,20 +903,20 @@ func TestIntervalBlockHashes(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	chain := newFakeChain(&chaincfg.MainNetParams)
-	branch0Nodes := chainedNodes(chain.bestChain.Genesis(), 18)
+	ch := newFakeChain(&chaincfg.MainNetParams)
+	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		chain.index.SetStatusFlags(node, statusValid)
-		chain.index.AddNode(node)
+		ch.index.SetStatusFlags(node, chain.StatusValid)
+		ch.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
-		if node.height < 18 {
-			chain.index.SetStatusFlags(node, statusValid)
+		if node.Height() < 18 {
+			ch.index.SetStatusFlags(node, chain.StatusValid)
 		}
-		chain.index.AddNode(node)
+		ch.index.AddNode(node)
 	}
-	chain.bestChain.SetTip(tip(branch0Nodes))
+	ch.bestChain.SetTip(tip(branch0Nodes))
 
 	tests := []struct {
 		name        string
@@ -926,32 +927,32 @@ func TestIntervalBlockHashes(t *testing.T) {
 	}{
 		{
 			name:     "blocks on main chain",
-			endHash:  branch0Nodes[17].hash,
+			endHash:  branch0Nodes[17].GetHash(),
 			interval: 8,
 			hashes:   nodeHashes(branch0Nodes, 7, 15),
 		},
 		{
 			name:     "blocks on stale chain",
-			endHash:  branch1Nodes[1].hash,
+			endHash:  branch1Nodes[1].GetHash(),
 			interval: 8,
 			hashes: append(nodeHashes(branch0Nodes, 7),
 				nodeHashes(branch1Nodes, 0)...),
 		},
 		{
 			name:     "no results",
-			endHash:  branch0Nodes[17].hash,
+			endHash:  branch0Nodes[17].GetHash(),
 			interval: 20,
 			hashes:   []chainhash.Hash{},
 		},
 		{
 			name:        "unvalidated block",
-			endHash:     branch1Nodes[2].hash,
+			endHash:     branch1Nodes[2].GetHash(),
 			interval:    8,
 			expectError: true,
 		},
 	}
 	for _, test := range tests {
-		hashes, err := chain.IntervalBlockHashes(&test.endHash, test.interval)
+		hashes, err := ch.IntervalBlockHashes(&test.endHash, test.interval)
 		if err != nil {
 			if !test.expectError {
 				t.Errorf("%s: unexpected error: %v", test.name, err)

@@ -7,12 +7,13 @@ package database_test
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"os"
 	"path/filepath"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 )
@@ -31,7 +32,7 @@ func ExampleCreate() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "examplecreate")
-	db, err := database.Create("ffldb", dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -57,7 +58,7 @@ func Example_basicUsage() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleusage")
-	db, err := database.Create("ffldb", dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -123,7 +124,7 @@ func Example_blockStorageAndRetrieval() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleblkstorage")
-	db, err := database.Create("ffldb", dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return

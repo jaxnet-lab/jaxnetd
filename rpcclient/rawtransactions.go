@@ -8,12 +8,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 const (
@@ -313,7 +312,6 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 	// backends, we'll need to inspect our version and construct the
 	// appropriate request.
 	version, err := c.BackendVersion()
-	fmt.Println("SendRawTransactionAsync BackendVersion")
 	if err != nil {
 		return newFutureError(err)
 	}

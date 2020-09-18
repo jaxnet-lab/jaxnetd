@@ -7,9 +7,9 @@ package blockchain
 import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (

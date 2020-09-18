@@ -10,8 +10,8 @@ import (
 	"net"
 	"net/http"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"github.com/btcsuite/go-socks/socks"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the

@@ -9,14 +9,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"log"
 )
 
 type Transaction struct {
@@ -28,7 +30,7 @@ type Transaction struct {
 	SignedTx           string `json:"signedtx"`
 }
 
-func CreateTransaction(destination string, amount int64, txHash string) (*wire.MsgTx, Transaction, error) {
+func CreateTransaction(destination string, amount int64, txHash string, netParams *chaincfg.Params) (*wire.MsgTx, Transaction, error) {
 	var transaction Transaction
 
 	pkBytes, err := hex.DecodeString("679887f4c91a1f509fd0ddd8365d3377675027982c16b5605fd2e9c198981ad1")
@@ -37,13 +39,13 @@ func CreateTransaction(destination string, amount int64, txHash string) (*wire.M
 	}
 	privKey, pb := btcec.PrivKeyFromBytes(btcec.S256(), pkBytes)
 
-	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), &chaincfg.JaxNetParams)
+	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), netParams)
 
 	sourceUtxoHash, _ := chainhash.NewHashFromStr(txHash)
 
 	fmt.Println("sourceUtxoHash", sourceUtxoHash.String())
-	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.JaxNetParams)
-	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), &chaincfg.JaxNetParams)
+	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.MainNetParams)
+	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
 	if err != nil {
 		return nil, Transaction{}, err
 	}
@@ -81,7 +83,8 @@ func CreateTransaction(destination string, amount int64, txHash string) (*wire.M
 }
 
 func main() {
-	trx, transaction, err := CreateTransaction("1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", 1000, "ca0b8007c6a5751f6fdabc0c9341b75940914c14172c57a91338bbbba1e95f3d")
+	ch := chain.DefaultChain
+	trx, transaction, err := CreateTransaction("1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", 1000, "ca0b8007c6a5751f6fdabc0c9341b75940914c14172c57a91338bbbba1e95f3d", ch.Params())
 	if err != nil {
 		fmt.Println("transaction error", err)
 		return

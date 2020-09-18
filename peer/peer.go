@@ -10,8 +10,11 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"math/rand"
 	"net"
@@ -23,9 +26,7 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 const (
@@ -430,6 +431,8 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
+	chain chain.IChain
+
 	conn net.Conn
 
 	// These fields are set at creation time and never modified, so they are
@@ -830,6 +833,8 @@ func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er
 	msg.AddrList = make([]*wire.NetAddress, addressCount)
 	copy(msg.AddrList, addresses)
 
+	fmt.Println("Push addresses", msg.AddrList)
+
 	// Randomize the addresses sent if there are more than the maximum allowed.
 	if addressCount > wire.MaxAddrPerMsg {
 		// Shuffle the address list.
@@ -1008,7 +1013,7 @@ func (p *Peer) handlePongMsg(msg *wire.MsgPong) {
 
 // readMessage reads the next bitcoin message from the peer with logging.
 func (p *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, []byte, error) {
-	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.conn,
+	n, msg, buf, err := wire.ReadMessageWithEncodingN(p.chain, p.conn,
 		p.ProtocolVersion(), p.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&p.bytesReceived, uint64(n))
 	if p.cfg.Listeners.OnRead != nil {
@@ -1897,6 +1902,15 @@ func (p *Peer) readRemoteVersionMsg() error {
 		return errors.New("disconnecting peer connected to self")
 	}
 
+	fmt.Println("Compare chain ", p.chain, msg.IsBeacon)
+	if !(p.chain.IsBeacon() == msg.IsBeacon) {
+		return errors.New("peer type not supported")
+	}
+
+	if !(p.chain.ShardID() == msg.Shard) {
+		return errors.New("peer IS not supported")
+	}
+
 	// Negotiate the protocol version and set the services to what the remote
 	// peer advertised.
 	p.flagsMtx.Lock()
@@ -2205,7 +2219,7 @@ func (p *Peer) WaitForDisconnect() {
 // newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
 // is used by the NewInboundPeer and NewOutboundPeer functions to perform base
 // setup needed by both types of peers.
-func newPeerBase(origCfg *Config, inbound bool) *Peer {
+func newPeerBase(origCfg *Config, inbound bool, chain chain.IChain) *Peer {
 	// Default to the max supported protocol version if not specified by the
 	// caller.
 	cfg := *origCfg // Copy to avoid mutating caller.
@@ -2225,6 +2239,7 @@ func newPeerBase(origCfg *Config, inbound bool) *Peer {
 
 	p := Peer{
 		inbound:         inbound,
+		chain:           chain,
 		wireEncoding:    wire.BaseEncoding,
 		knownInventory:  newMruInventoryMap(maxKnownInventory),
 		stallControl:    make(chan stallControlMsg, 1), // nonblocking sync
@@ -2245,13 +2260,13 @@ func newPeerBase(origCfg *Config, inbound bool) *Peer {
 
 // NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
 // processing incoming and outgoing messages.
-func NewInboundPeer(cfg *Config) *Peer {
-	return newPeerBase(cfg, true)
+func NewInboundPeer(cfg *Config, chain chain.IChain) *Peer {
+	return newPeerBase(cfg, true, chain)
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string) (*Peer, error) {
-	p := newPeerBase(cfg, false)
+func NewOutboundPeer(cfg *Config, addr string, chain chain.IChain) (*Peer, error) {
+	p := newPeerBase(cfg, false, chain)
 	p.addr = addr
 
 	host, portStr, err := net.SplitHostPort(addr)

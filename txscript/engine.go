@@ -9,10 +9,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math/big"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 // ScriptFlags is a bitmask defining additional operations or tests that will be

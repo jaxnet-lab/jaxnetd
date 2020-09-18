@@ -6,9 +6,8 @@ package addrmgr
 
 import (
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"net"
-
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 )
 
 var (

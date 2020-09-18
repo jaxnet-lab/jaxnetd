@@ -7,8 +7,6 @@
 
 package btcjson
 
-import "fmt"
-
 // AddMultisigAddressCmd defines the addmutisigaddress JSON-RPC command.
 type AddMultisigAddressCmd struct {
 	NRequired int
@@ -115,7 +113,6 @@ type EstimateFeeCmd struct {
 // NewEstimateFeeCmd returns a new instance which can be used to issue a
 // estimatefee JSON-RPC command.
 func NewEstimateFeeCmd(numBlocks int64) *EstimateFeeCmd {
-	fmt.Println("NewEstimateFeeCmd ", numBlocks)
 	return &EstimateFeeCmd{
 		NumBlocks: numBlocks,
 	}
@@ -129,7 +126,6 @@ type EstimatePriorityCmd struct {
 // NewEstimatePriorityCmd returns a new instance which can be used to issue a
 // estimatepriority JSON-RPC command.
 func NewEstimatePriorityCmd(numBlocks int64) *EstimatePriorityCmd {
-	fmt.Println("NewEstimatePriorityCmd ", numBlocks)
 	return &EstimatePriorityCmd{
 		NumBlocks: numBlocks,
 	}
@@ -143,7 +139,6 @@ type GetAccountCmd struct {
 // NewGetAccountCmd returns a new instance which can be used to issue a
 // getaccount JSON-RPC command.
 func NewGetAccountCmd(address string) *GetAccountCmd {
-	fmt.Println("NewGetAccountCmd ", address)
 	return &GetAccountCmd{
 		Address: address,
 	}

@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
@@ -23,11 +25,13 @@ var (
 
 // loadBlockDB opens the block database and returns a handle to it.
 func loadBlockDB() (database.DB, error) {
+
+	chain := beacon.Chain(&chaincfg.TestNet3Params)
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	fmt.Printf("Loading block database from '%s'\n", dbPath)
-	db, err := database.Open(cfg.DbType, dbPath, activeNetParams.Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
 	if err != nil {
 		return nil, err
 	}

@@ -5,9 +5,8 @@
 package blockchain
 
 import (
-	"testing"
-
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"testing"
 )
 
 // TestNotifications ensures that notification callbacks are fired on events.

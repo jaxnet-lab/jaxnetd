@@ -11,13 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 var (
@@ -552,7 +552,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.NewHeader()
+	blockHeader := chain.DefaultChain.NewHeader()
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, nil, err
@@ -607,7 +607,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.NewHeader()
+	blockHeader := chain.DefaultChain.NewHeader()
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, err
