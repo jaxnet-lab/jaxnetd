@@ -10,8 +10,8 @@ import (
 	"errors"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 // FutureGenerateResult is a future promise to deliver the result of a
@@ -461,4 +461,39 @@ func (c *Client) SubmitBlock(block *btcutil.Block, options *btcjson.SubmitBlockO
 	return c.SubmitBlockAsync(block, options).Receive()
 }
 
-// TODO(davec): Implement GetBlockTemplate
+// FutureGetWork is a future promise to deliver the result of a
+// GetWorkAsync RPC invocation (or an applicable error).
+type FutureGetBlockTemplateAsync chan *response
+
+// Receive waits for the response promised by the future and returns the hash
+// data to work on.
+func (r FutureGetBlockTemplateAsync) Receive() (*btcjson.GetBlockTemplateResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a getwork result object.
+	var result btcjson.GetBlockTemplateResult
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetBlockTemplateAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetWork for the blocking version and more details.
+func (c *Client) GetBlockTemplateAsync(reqData *btcjson.TemplateRequest) FutureGetBlockTemplateAsync {
+	cmd := btcjson.NewGetBlockTemplateCmd(reqData)
+	return c.sendCmd(cmd)
+}
+
+// GetBlockTemplate deals with generating and returning block templates to the caller.
+func (c *Client) GetBlockTemplate(reqData *btcjson.TemplateRequest) (*btcjson.GetBlockTemplateResult, error) {
+	return c.GetBlockTemplateAsync(reqData).Receive()
+}
