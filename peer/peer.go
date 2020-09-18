@@ -833,8 +833,6 @@ func (p *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress, er
 	msg.AddrList = make([]*wire.NetAddress, addressCount)
 	copy(msg.AddrList, addresses)
 
-	fmt.Println("Push addresses", msg.AddrList)
-
 	// Randomize the addresses sent if there are more than the maximum allowed.
 	if addressCount > wire.MaxAddrPerMsg {
 		// Shuffle the address list.
@@ -1902,7 +1900,6 @@ func (p *Peer) readRemoteVersionMsg() error {
 		return errors.New("disconnecting peer connected to self")
 	}
 
-	fmt.Println("Compare chain ", p.chain, msg.IsBeacon)
 	if !(p.chain.IsBeacon() == msg.IsBeacon) {
 		return errors.New("peer type not supported")
 	}

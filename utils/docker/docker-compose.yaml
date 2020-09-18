@@ -8,8 +8,8 @@ services:
       - 18444:18444
     volumes:
       - ./core_1/core:/core
-      - ./core_1/jaxcore.conf:/jaxcore.conf
-    command: /shard.core -C /jaxcore.conf
+      - ./core_1/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
 
   core-2:
     image: shard-core
@@ -18,8 +18,8 @@ services:
       - 28444:28444
     volumes:
       - ./core_2/core:/core
-      - ./core_2/jaxcore.conf:/jaxcore.conf
-    command: /shard.core -C /jaxcore.conf
+      - ./core_2/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
 
   core-3:
     image: shard-core
@@ -28,8 +28,8 @@ services:
       - 38444:38444
     volumes:
       - ./core_3/core:/core
-      - ./core_3/jaxcore.conf:/jaxcore.conf
-    command: /shard.core -C /jaxcore.conf
+      - ./core_3/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
 
 #networks:
 #  luxtrade:

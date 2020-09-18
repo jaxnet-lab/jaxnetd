@@ -9,12 +9,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/minio/sha256-simd"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/minio/sha256-simd"
+	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -136,8 +137,6 @@ out:
 			hashesPerSec = (hashesPerSec + curHashesPerSec) / 2
 			totalHashes = 0
 			if hashesPerSec != 0 {
-				fmt.Printf("Hash speed: %6.0f kilohashes/s\n",
-					hashesPerSec/1000)
 				log.Debugf("Hash speed: %6.0f kilohashes/s",
 					hashesPerSec/1000)
 			}
@@ -228,8 +227,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	prefixSize := len(targetDifficulty.Bytes())
 	prefixBytes := make([]byte, 32-len(targetDifficulty.Bytes()))
-
-	fmt.Printf("Difficulty %x %x %d\n", targetDifficulty.Bytes(), prefixBytes, prefixSize)
 
 	// Initial state.
 	lastGenerated := time.Now()
@@ -421,7 +418,6 @@ func (m *CPUMiner) miningWorkerController() {
 	}
 
 	// Launch the current number of workers by default.
-	fmt.Println("Mining workers ", m.numWorkers)
 	runningWorkers = make([]chan struct{}, 0, m.numWorkers)
 	launchWorkers(m.numWorkers)
 
@@ -559,7 +555,6 @@ func (m *CPUMiner) SetNumWorkers(numWorkers int32) {
 	} else {
 		m.numWorkers = uint32(numWorkers)
 	}
-	fmt.Println("Start miner with workers: ", numWorkers)
 
 	// When the miner is already running, notify the controller about the
 	// the change.
@@ -584,7 +579,6 @@ func (m *CPUMiner) NumWorkers() int32 {
 // generating a new block template.  When a block is solved, it is submitted.
 // The function returns a list of the hashes of generated blocks.
 func (m *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
-	fmt.Println("GenerateNBlocks")
 	m.Lock()
 
 	// Respond with an error if server is already mining.

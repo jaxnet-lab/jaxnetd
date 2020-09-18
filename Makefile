@@ -16,3 +16,9 @@ clean:
 	rm -fr vendor
 
 .PHONY: all dep build clean install
+
+build_docker_local:
+	docker build --no-cache -t shard-core .
+
+up_local: build_docker_local
+	cd utils/docker && docker-compose up -d

@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -50,7 +49,6 @@ func btcdMain() error {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	cfg, _, err := loadConfig()
-	fmt.Println(cfg, err)
 	if err != nil {
 		return err
 	}
@@ -101,8 +99,6 @@ func btcdMain() error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	fmt.Println("Run Beacon")
-
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		logger.Error("Can't init logger", zap.Error(err))
@@ -113,7 +109,7 @@ func btcdMain() error {
 	go func() {
 		select {
 		case <-sigChan:
-			log.Println("propagate stop signal")
+			logger.Info("propagate stop signal")
 			cancel()
 		}
 	}()
@@ -462,7 +458,6 @@ func main() {
 }
 
 func initChain() bool {
-	fmt.Println("Init chain.DefaultChain")
 	chain.DefaultChain = beacon.Chain(activeNetParams.Params)
 	return true
 }

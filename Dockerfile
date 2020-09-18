@@ -1,29 +1,26 @@
-FROM golang:1.14-alpine
+# Compile stage
+FROM golang:alpine AS build-env
+RUN apk add --no-cache git bash
 
-ARG CI_JOB_TOKEN
+#ENV GOPROXY=direct
+ENV GO111MODULE=on
+#ENV GOPRIVATE=gitlab.com
 
-RUN apk add --no-cache git musl-dev gcc g++ make ca-certificates
 
-RUN echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
+WORKDIR /shard-core
+ADD . .
+RUN go build -o /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core.git/cmd/btcctl
 
-RUN go get -u github.com/goware/modvendor
-WORKDIR /go/src/gitlab.com/jaxnet/core/shard.core
+# Final stage
+FROM alpine:3.7
 
-COPY . .
+# Allow delve to run on Alpine based containers.
+RUN apk add --no-cache ca-certificates bash
 
-RUN GOARCH=amd64 GOOS=linux GO111MODULE=on make
+WORKDIR /
 
-FROM alpine:latest
+COPY --from=build-env /shard.core /
+COPY --from=build-env /jaxctl /
 
-RUN apk --no-cache add openssl ca-certificates
-
-WORKDIR /root/
-
-COPY --from=0 /go/src/gitlab.com/jaxnet/core/shard.core .
-
-RUN chmod +x ./shardcore
-
-EXPOSE 8444
-EXPOSE 8334
-
-CMD ./shardcore
+# Run app
+CMD ./shard.core

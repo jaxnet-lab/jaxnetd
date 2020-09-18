@@ -532,7 +532,6 @@ func loadConfig() (*shards.Config, []string, error) {
 		}
 	}
 
-	fmt.Println("preCfg.ConfigFile", preCfg.ConfigFile)
 	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
@@ -549,7 +548,6 @@ func loadConfig() (*shards.Config, []string, error) {
 		}
 	case ".yaml":
 		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-		fmt.Println("err ", cfg.Node)
 		if err != nil {
 			configFileError = err
 		}
@@ -616,9 +614,6 @@ func loadConfig() (*shards.Config, []string, error) {
 		fmt.Println("Supported subsystems", supportedSubsystems())
 		os.Exit(0)
 	}
-
-	fmt.Println("P2P.Listeners", cfg.Node.P2P.Listeners)
-	fmt.Println("RPC.Listeners", cfg.Node.RPC.Listeners)
 
 	// Initialize log rotation.  After log rotation has been initialized, the
 	// logger variables may be used.
