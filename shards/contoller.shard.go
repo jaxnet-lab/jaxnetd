@@ -8,94 +8,115 @@ import (
 	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
 )
 
-func (c *chainController) runShard(ctx context.Context, cfg *Config, shardId uint32) error {
-	interrupt := interruptListener()
-	// Return now if an interrupt signal was triggered.
-	if interruptRequested(interrupt) {
+func (ctrl *chainController) EnableShard(shardID uint32) error {
+	ctrl.wg.Add(1)
+
+	go ctrl.runShardRoutine(shardID)
+
+	return nil
+}
+
+func (ctrl *chainController) ListShards() map[uint32]string {
+	ctrl.shardsMutex.RLock()
+	list := map[uint32]string{}
+
+	for id, iChain := range ctrl.shards {
+		list[id] = iChain.Params().Name
+	}
+
+	return list
+}
+
+func (ctrl *chainController) DisableShard(shardID uint32) error {
+	return nil
+}
+
+func (ctrl *chainController) NewShard(shardID uint32, height int64) error {
+	ctrl.wg.Add(1)
+
+	go ctrl.runShardRoutine(shardID)
+
+	return nil
+}
+
+func (ctrl *chainController) runShardRoutine(shardID uint32) {
+	defer func() {
+		ctrl.wg.Done()
+		ctrl.shardsMutex.Lock()
+		delete(ctrl.shards, shardID)
+		ctrl.shardsMutex.Unlock()
+	}()
+
+	err := ctrl.runShard(ctrl.ctx, ctrl.cfg, shardID)
+	if err != nil {
+		ctrl.logger.Error("shard run interrupted",
+			zap.Uint32("shard_id", shardID), zap.Error(err))
+	}
+}
+
+func (ctrl *chainController) runShard(ctx context.Context, cfg *Config, shardID uint32) error {
+	if interruptRequested(ctx) {
 		return errors.New("can't create interrupt request")
 	}
 
-	chain := shard.Chain(shardId, cfg.Node.ChainParams())
-	c.shards[shardId] = chain
+	ctrl.shardsMutex.Lock()
+	chain := shard.Chain(shardID, cfg.Node.ChainParams())
+	ctrl.shards[shardID] = chain
+	ctrl.shardsMutex.Unlock()
 
 	// Load the block database.
-	db, err := c.loadBlockDB(cfg.DataDir, chain, cfg.Node)
+	db, err := ctrl.loadBlockDB(cfg.DataDir, chain, cfg.Node)
 	if err != nil {
-		c.logger.Error("Can't load Block db", zap.Error(err))
+		ctrl.logger.Error("Can't load Block db", zap.Error(err))
 		return err
 	}
 
 	defer func() {
 		// Ensure the database is sync'd and closed on shutdown.
-		c.logger.Info("Gracefully shutting down the database...")
+		ctrl.logger.Info("Gracefully shutting down the database...")
 		if err := db.Close(); err != nil {
-			c.logger.Error("Can't close db", zap.Error(err))
+			ctrl.logger.Error("Can't close db", zap.Error(err))
 		}
 	}()
 
-	// Drop indexes and exit if requested.
-	//
-	// NOTE: The order is important here because dropping the tx index also
-	// drops the address index since it relies on it.
-	if cfg.DropAddrIndex {
-		if err := indexers.DropAddrIndex(db, interrupt); err != nil {
-			c.logger.Error(fmt.Sprintf("%v", err))
-			return err
-		}
-		return nil
-	}
-	if cfg.DropTxIndex {
-		if err := indexers.DropTxIndex(db, interrupt); err != nil {
-			c.logger.Error(fmt.Sprintf("%v", err))
-		}
-
-		return nil
-	}
-	if cfg.DropCfIndex {
-		if err := indexers.DropCfIndex(db, interrupt); err != nil {
-			c.logger.Error(fmt.Sprintf("%v", err))
-		}
-
-		return nil
+	cleanSmth, err := ctrl.cleanIndexes(ctx, cfg, db)
+	if cleanSmth || err != nil {
+		return err
 	}
 
 	amgr := addrmgr.New(cfg.DataDir, func(host string) ([]net.IP, error) {
 		if strings.HasSuffix(host, ".onion") {
 			return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 		}
-
 		return cfg.Node.P2P.Lookup(host)
 	})
 
-	c.logger.Info("P2P Listener ", zap.Any("Listeners", cfg.Node.P2P.Listeners))
+	ctrl.logger.Info("Run P2P Listener ", zap.Any("Listeners", cfg.Node.P2P.Listeners))
+
 	// Create server and start it.
-	server, err := server2.ShardServer(&cfg.Node.P2P, amgr, chain, db, chain.Params(), interrupt,
-		c.logger.With(zap.String("server", "Shard P2P")))
+	server, err := server2.ShardServer(ctx, &cfg.Node.P2P, amgr, chain, db,
+		ctrl.logger.With(zap.String("server", "Shard P2P")))
 	if err != nil {
-		// TODO: this logging could do with some beautifying.
-		c.logger.Error(fmt.Sprintf("Unable to start server on %v: %v",
-			cfg.Node.P2P.Listeners, err))
+		ctrl.logger.Error("Unable to start server",
+			zap.Any("address", cfg.Node.P2P.Listeners), zap.Error(err))
 		return err
 	}
-	l := c.logger
-	defer func() {
-		fmt.Println("Closing... ", l, c.logger)
-		l.Info("Gracefully shutting down the server...")
-		if err := server.Stop(); err != nil {
-			l.Error("Can't stop server ", zap.Error(err))
-		}
-		server.WaitForShutdown()
-		l.Info("Server shutdown complete")
-	}()
 	server.Start()
 
-	<-interrupt
+	<-ctx.Done()
+
+	ctrl.logger.Info("Gracefully shutting down the server...")
+	if err := server.Stop(); err != nil {
+		ctrl.logger.Error("Can't stop server ", zap.Error(err))
+	}
+
+	server.WaitForShutdown()
+	ctrl.logger.Info("Server shutdown complete")
 
 	return nil
 }

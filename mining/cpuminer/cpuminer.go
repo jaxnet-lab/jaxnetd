@@ -301,8 +301,6 @@ func (m *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			if bytes.Equal(hash[prefixSize:], prefixBytes) {
 				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-					fmt.Printf("%x %x\n", hash[:], prefixBytes)
-					fmt.Println("m.updateHashes: ", hashesCompleted)
 					header.SetNonce(i)
 					m.updateHashes <- hashesCompleted
 					return true

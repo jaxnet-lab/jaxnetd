@@ -12,11 +12,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
-	"syscall"
 
 	"gitlab.com/jaxnet/core/shard.core.git/limits"
 	"gitlab.com/jaxnet/core/shard.core.git/shards"
@@ -56,6 +54,7 @@ func btcdMain() error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		if logRotator != nil {
 			logRotator.Close()
@@ -103,34 +102,26 @@ func btcdMain() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	fmt.Println("Run Beacon")
-	// go runBeaconChain(ctx, cfg)
-	// go runShardChain(1, cfg)
-	// go runShardChain(2, cfg)
 
-	l, err := zap.NewDevelopment()
+	logger, err := zap.NewDevelopment()
 	if err != nil {
-		l.Error("Can't init logger", zap.Error(err))
+		logger.Error("Can't init logger", zap.Error(err))
 		os.Exit(1)
 	}
 
-	sc := shards.Controller(l)
-	if err := sc.Run(ctx, cfg); err != nil {
-		l.Error("Can't run Chains", zap.Error(err))
-		os.Exit(2)
-	}
-
-	done := make(chan bool)
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	sigChan := interruptListener(logger)
 	go func() {
 		select {
 		case <-sigChan:
-			log.Println("exiting")
+			log.Println("propagate stop signal")
 			cancel()
-			done <- true
 		}
 	}()
-	<-done
+
+	if err := shards.Controller(logger).Run(ctx, cfg); err != nil {
+		logger.Error("Can't run Chains", zap.Error(err))
+		os.Exit(2)
+	}
 
 	return nil
 }

@@ -236,7 +236,7 @@ func (cfg Params) ShardGenesis(shard, height uint32,
 	// shard's exclusive info
 	// cfg.ShardID = shard
 	// cfg.StartHeight = height
-	cfg.Name = cfg.Name + "_shard_" + strconv.FormatUint(uint64(shard), 10)
+	cfg.Name = "shard_" + strconv.FormatUint(uint64(shard), 10)
 	// cfg.GenesisBlock = block
 	cfg.GenesisHash = hash
 	// -------

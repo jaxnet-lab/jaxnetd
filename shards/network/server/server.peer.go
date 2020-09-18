@@ -2,6 +2,11 @@ package server
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
@@ -13,10 +18,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // serverPeer extends the peer to maintain state shared by the server and

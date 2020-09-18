@@ -2,14 +2,16 @@ package shards
 
 import (
 	"context"
+
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
-func (c *chainController) runRpc(ctx context.Context, cfg *Config) error {
-	srv, err := server.RpcServer(&cfg.Node.RPC, c.logger)
+func (ctrl *chainController) runRpc(ctx context.Context, cfg *Config, nodeActor *server.NodeActor) error {
+	srv, err := server.RpcServer(&cfg.Node.RPC, nodeActor, ctrl.logger)
 	if err != nil {
 		return err
 	}
-	go srv.Start()
+
+	srv.Start(ctx)
 	return nil
 }

@@ -17,9 +17,6 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -27,6 +24,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -65,8 +65,9 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 
 	// Set the first block as the genesis block.
 	blocks := make([]*btcutil.Block, 0, 256)
-	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-	blocks = append(blocks, genesis)
+	// fixme
+	// genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	// blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.
 	for height := 1; ; height++ {

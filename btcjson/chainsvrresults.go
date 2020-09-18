@@ -674,3 +674,8 @@ type EstimateSmartFeeResult struct {
 	Errors  []string `json:"errors,omitempty"`
 	Blocks  int64    `json:"blocks"`
 }
+
+// todo(mike)
+type ShardListResult struct {
+	Shards map[uint32]string
+}

@@ -5,12 +5,3 @@
 // +build darwin dragonfly freebsd linux netbsd openbsd solaris
 
 package shards
-
-import (
-	"os"
-	"syscall"
-)
-
-func init() {
-	interruptSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
-}

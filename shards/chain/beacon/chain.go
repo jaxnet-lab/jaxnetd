@@ -23,8 +23,13 @@ type beaconChain struct {
 
 func Chain(params *chaincfg.Params) chain.IChain {
 	clone := *params
-	clone.Name = params.Name + "_beacon"
-	return &beaconChain{chainParams: &clone}
+	clone.Name = "beacon"
+	beacon := &beaconChain{}
+	gb := beacon.GenesisBlock().(*wire.MsgBlock)
+	hash := gb.BlockHash()
+	clone.GenesisHash = &hash
+	beacon.chainParams = &clone
+	return beacon
 }
 
 func (c *beaconChain) GenesisBlock() interface{} {

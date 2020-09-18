@@ -223,7 +223,6 @@ func (b *Block) SetHeight(height int32) {
 // NewBlock returns a new instance of a bitcoin block given an underlying
 // wire.MsgBlock.  See Block.
 func NewBlock(msgBlock *wire.MsgBlock) *Block {
-	fmt.Println("New block")
 	return &Block{
 		msgBlock:    msgBlock,
 		blockHeight: BlockHeightUnknown,
@@ -245,31 +244,25 @@ func NewBlockFromBytes(chain chain.IChain, serializedBlock []byte) (*Block, erro
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
 func NewBlockFromReader(chain chain.IChain, r io.Reader) (*Block, error) {
-	fmt.Println("NewBlockFromReader")
 	// Deserialize the bytes into a MsgBlock.
 	msgBlock := wire.MsgBlock{
 		Header: chain.NewHeader(),
 	}
-	fmt.Println("deserialize")
 	err := msgBlock.Deserialize(r)
-	fmt.Println("Des error", err)
 	if err != nil {
 		return nil, err
 	}
-
 
 	b := Block{
 		msgBlock:    &msgBlock,
 		blockHeight: BlockHeightUnknown,
 	}
-	fmt.Println("msgBlock.Transactions.", len(msgBlock.Transactions))
 	return &b, nil
 }
 
 // NewBlockFromBlockAndBytes returns a new instance of a bitcoin block given
 // an underlying wire.MsgBlock and the serialized bytes for it.  See Block.
 func NewBlockFromBlockAndBytes(msgBlock *wire.MsgBlock, serializedBlock []byte) *Block {
-	fmt.Println("NewBlockFromBlockAndBytes")
 	return &Block{
 		msgBlock:        msgBlock,
 		serializedBlock: serializedBlock,

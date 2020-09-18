@@ -2,12 +2,12 @@ package shard
 
 import (
 	"bytes"
-	"fmt"
+	"io"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"io"
-	"time"
 )
 
 // BlockHeader defines information about a block and is used in the bitcoin
@@ -132,7 +132,6 @@ func readBlockHeader(r io.Reader, bh *header) error {
 func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
-	fmt.Println("shard writeBlockHeader")
 	return encoder.WriteElements(w, &bh.prevBlock, &bh.merkleRoot, sec)
 }
 

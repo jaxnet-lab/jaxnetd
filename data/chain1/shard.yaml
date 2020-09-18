@@ -1,6 +1,8 @@
-data_dir: ./chain1
+#data_dir: ./chain1
 
 node:
+  net: mainnet
+  #  net: testnet
   p2p:
     listeners:
       - 0.0.0.0:8333
@@ -17,6 +19,12 @@ node:
       - 116.202.107.209:18444
       - 116.202.107.209:28444
   shards:
+    enable: true
+    ids:
+      1: { }
+      2: { }
+      3: { }
+      42: { }
 
 debuglevel: info
 nodnsseed: 1

@@ -1,12 +1,15 @@
 package shards
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"go.uber.org/zap"
 )
 
 // loadBlockDB loads (or creates when needed) the block database taking into
@@ -14,12 +17,12 @@ import (
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (c *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
+func (ctrl *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
 	if cfg.DbType == "memdb" {
-		c.logger.Info("Creating block database in memory.")
+		ctrl.logger.Info("Creating block database in memory.")
 		db, err := database.Create(cfg.DbType, chain)
 		if err != nil {
 			return nil, err
@@ -28,16 +31,17 @@ func (c *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg No
 	}
 	chainName := chain.Params().Name
 
-	c.warnMultipleDBs(dataDir, chainName, cfg)
+	ctrl.warnMultipleDBs(dataDir, chainName, cfg)
 
 	// The database name is based on the database type.
-	dbPath := c.blockDbPath(dataDir, chainName, cfg.DbType)
-	fmt.Println("dbPath", dbPath)
+	dbPath := ctrl.blockDbPath(dataDir, chainName, cfg.DbType)
+	ctrl.logger.Debug("dbPath", zap.String("path", dbPath))
+
 	// The regression test is special in that it needs a clean database for
 	// each run, so remove it now if it already exists.
 	// removeRegressionDB(cfg, dbPath)
 
-	c.logger.Info(fmt.Sprintf("Loading block database from '%s'", dbPath))
+	ctrl.logger.Info(fmt.Sprintf("Loading block database from '%s'", dbPath))
 	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
@@ -60,12 +64,39 @@ func (c *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg No
 		}
 	}
 
-	c.logger.Info("Block database loaded")
+	ctrl.logger.Info("Block database loaded")
 	return db, nil
 }
 
+// cleanIndexes drops indexes and exit if requested.
+//
+// NOTE: The order is important here because dropping the tx index also
+// drops the address index since it relies on it.
+func (ctrl *chainController) cleanIndexes(ctx context.Context, cfg *Config, db database.DB) (bool, error) {
+	cleanPerformed := cfg.DropAddrIndex || cfg.DropTxIndex || cfg.DropCfIndex
+	if cfg.DropAddrIndex {
+		if err := indexers.DropAddrIndex(db, ctx.Done()); err != nil {
+			return cleanPerformed, err
+		}
+	}
+
+	if cfg.DropTxIndex {
+		if err := indexers.DropTxIndex(db, ctx.Done()); err != nil {
+			return cleanPerformed, err
+		}
+	}
+
+	if cfg.DropCfIndex {
+		if err := indexers.DropCfIndex(db, ctx.Done()); err != nil {
+			return cleanPerformed, err
+		}
+	}
+
+	return cleanPerformed, nil
+}
+
 // dbPath returns the path to the block database given a database type.
-func (c *chainController) blockDbPath(dataDir string, chain string, dbType string) string {
+func (ctrl *chainController) blockDbPath(dataDir string, chain string, dbType string) string {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + dbType
 	if dbType == "sqlite" {
@@ -78,7 +109,7 @@ func (c *chainController) blockDbPath(dataDir string, chain string, dbType strin
 // warnMultipleDBs shows a warning if multiple block database types are detected.
 // This is not a situation most users want.  It is handy for development however
 // to support multiple side-by-side databases.
-func (c *chainController) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
+func (ctrl *chainController) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
 	// This is intentionally not using the known db types which depend
 	// on the database types compiled into the binary since we want to
 	// detect legacy db types as well.
@@ -90,7 +121,7 @@ func (c *chainController) warnMultipleDBs(dataDir string, chain string, cfg Node
 		}
 
 		// Store db path as a duplicate db if it exists.
-		dbPath := c.blockDbPath(dataDir, chain, dbType)
+		dbPath := ctrl.blockDbPath(dataDir, chain, dbType)
 		if fileExists(dbPath) {
 			duplicateDbPaths = append(duplicateDbPaths, dbPath)
 		}
@@ -98,8 +129,8 @@ func (c *chainController) warnMultipleDBs(dataDir string, chain string, cfg Node
 
 	// Warn if there are extra databases.
 	if len(duplicateDbPaths) > 0 {
-		selectedDbPath := c.blockDbPath(dataDir, chain, cfg.DbType)
-		c.logger.Info(fmt.Sprintf("WARNING: There are multiple block chain databases "+
+		selectedDbPath := ctrl.blockDbPath(dataDir, chain, cfg.DbType)
+		ctrl.logger.Info(fmt.Sprintf("WARNING: There are multiple block chain databases "+
 			"using different database types.\nYou probably don't "+
 			"want to waste disk space by having more than one.\n"+
 			"Your current database is located at [%v].\nThe "+

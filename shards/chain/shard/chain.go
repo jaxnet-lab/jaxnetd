@@ -21,13 +21,17 @@ const (
 func Chain(shardID uint32, params *chaincfg.Params) chain.IChain {
 	// var block *wire.MsgBlock
 	var height uint32
-	var hash *chainhash.Hash
+	shard := &shardChain{
+		shardID: shardID,
+	}
+	gb := shard.GenesisBlock().(*wire.MsgBlock)
+	hash := gb.BlockHash()
+	clone := params.ShardGenesis(shardID, height, &hash)
+	clone.GenesisHash = &hash
+	shard.chainParams = clone
 
 	// todo(mike)
-	return &shardChain{
-		shardID:     shardID,
-		chainParams: params.ShardGenesis(shardID, height, hash),
-	}
+	return shard
 }
 
 type shardChain struct {

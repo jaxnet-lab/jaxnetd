@@ -2,12 +2,12 @@ package beacon
 
 import (
 	"bytes"
-	"fmt"
+	"io"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"io"
-	"time"
 )
 
 // BlockHeader defines information about a block and is used in the bitcoin
@@ -126,10 +126,8 @@ func NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBlockHeader(r io.Reader, bh *header) error {
-	fmt.Println("readBlockHeader", bh)
 	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
 		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce, &bh.treeEncoding, &bh.shards)
-	fmt.Println(err)
 	return err
 }
 
@@ -139,7 +137,6 @@ func readBlockHeader(r io.Reader, bh *header) error {
 func writeBlockHeader(w io.Writer, h chain.BlockHeader) error {
 	bh := h.(*header)
 	sec := uint32(bh.timestamp.Unix())
-	fmt.Println("beacon writeBlockHeader", bh)
 	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
 		sec, bh.bits, bh.nonce, &bh.treeEncoding, &bh.shards)
 }

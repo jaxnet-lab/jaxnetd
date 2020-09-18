@@ -88,7 +88,6 @@ type Int64Time time.Time
 // depending on the concrete type of element pointed to.
 func ReadElement(r io.Reader, element interface{}) error {
 
-	fmt.Println("Read element", element, reflect.TypeOf(element))
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -226,7 +225,6 @@ func ReadElements(r io.Reader, elements ...interface{}) error {
 	for _, element := range elements {
 
 		err := ReadElement(r, element)
-		fmt.Println("Err ", err)
 		if err != nil {
 			return err
 		}
@@ -237,7 +235,6 @@ func ReadElements(r io.Reader, elements ...interface{}) error {
 // writeElement writes the little endian representation of element to w.
 func WriteElement(w io.Writer, element interface{}) error {
 
-	fmt.Println("Write element ", reflect.TypeOf(element), element)
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -328,7 +325,6 @@ func WriteElement(w io.Writer, element interface{}) error {
 
 	t := reflect.TypeOf(element)
 	v := reflect.ValueOf(element)
-	fmt.Println(t.Kind(), v)
 	if t.Kind() == reflect.Array {
 		bytes := make([]byte, v.Len())
 		reflect.Copy(reflect.ValueOf(bytes), v)
@@ -344,14 +340,12 @@ func WriteElement(w io.Writer, element interface{}) error {
 // writeElements writes multiple items to w.  It is equivalent to multiple
 // calls to writeElement.
 func WriteElements(w io.Writer, elements ...interface{}) error {
-	fmt.Println("WriteElements", len(elements))
 	for _, element := range elements {
 		err := WriteElement(w, element)
 		if err != nil {
 			return err
 		}
 	}
-	fmt.Println("Write OK")
 	return nil
 }
 

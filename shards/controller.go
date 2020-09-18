@@ -2,6 +2,7 @@ package shards
 
 import (
 	"context"
+	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"go.uber.org/zap"
@@ -16,7 +17,18 @@ const (
 
 type chainController struct {
 	logger *zap.Logger
-	shards map[uint32]chain.IChain
+	cfg    *Config
+
+	// controller runtime
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
+	beacon      chain.IChain
+	shards      map[uint32]chain.IChain
+	shardsMutex sync.RWMutex
+
+	// -------------------------------
 }
 
 func Controller(logger *zap.Logger) *chainController {
@@ -27,10 +39,15 @@ func Controller(logger *zap.Logger) *chainController {
 	return res
 }
 
-func (c *chainController) Run(ctx context.Context, cfg *Config) error {
+func (ctrl *chainController) Run(ctx context.Context, cfg *Config) error {
+	ctrl.cfg = cfg
+	ctrl.ctx, ctrl.cancel = context.WithCancel(ctx)
+
+	ctrl.wg.Add(1)
 	go func() {
-		if err := c.runBeacon(ctx, cfg); err != nil {
-			c.logger.Error("Beacon error", zap.Error(err))
+		defer ctrl.wg.Done()
+		if err := ctrl.runBeacon(ctrl.ctx, cfg); err != nil {
+			ctrl.logger.Error("Beacon error", zap.Error(err))
 		}
 	}()
 
@@ -39,12 +56,17 @@ func (c *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	for shardID := range cfg.Node.Shards.IDs {
-		go func(shardID uint32) {
-			if err := c.runShard(ctx, cfg, shardID); err != nil {
-				c.logger.Error("error", zap.Error(err))
-			}
-		}(shardID)
+		ctrl.wg.Add(1)
+		go ctrl.runShardRoutine(shardID)
 	}
 
+	// if len(ctrl.shards) != len(cfg.Node.Shards.IDs) {
+	// 	ctrl.cancel()
+	// 	ctrl.wg.Wait()
+	// 	return errors.New("some shards not started")
+	// }
+
+	<-ctx.Done()
+	ctrl.wg.Wait()
 	return nil
 }
