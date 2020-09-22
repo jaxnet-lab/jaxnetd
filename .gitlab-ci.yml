@@ -30,7 +30,7 @@ build:
     - master
     - dev
   tags:
-    - docker
+    - shell
   script:
     - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
     - docker push $IMAGE
