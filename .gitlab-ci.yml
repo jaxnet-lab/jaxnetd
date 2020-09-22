@@ -39,14 +39,14 @@ build:
   stage: deploy
   when: manual
   tags:
-    - docker
+    - shell
   script:
     - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh ${REMOTE} "(docker stop ${CORE_NAME} || true) && (docker rm ${CORE_NAME} || true)"
     - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:${CORE_PORT_1} -p ${CORE_PORT_2}:${CORE_PORT_2} --restart=always --name ${CORE_NAME} $IMAGE"
 
 
-dev-shard-core-1:
+dev-shard-cores:
   stage: deploy
   <<: *shard_core_deploy
   variables:
@@ -59,7 +59,7 @@ dev-shard-core-1:
     - master
     - dev
 
-dev-shard-core-2:
+.dev-shard-core-2:
   <<: *shard_core_deploy
   variables:
     REMOTE: $DEV_REMOTE
