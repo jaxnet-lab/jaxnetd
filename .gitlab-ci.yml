@@ -8,7 +8,8 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+  #IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+  IMAGE: registry.gitlab.com/jaxnet/core/shard.core:latest
 
 #before_script:
 #  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
@@ -42,8 +43,9 @@ build:
     - docker
   script:
     - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-    - ssh ${REMOTE} "(docker stop ${CORE_NAME} || true) && (docker rm ${CORE_NAME} || true)"
-    - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:${CORE_PORT_1} -p ${CORE_PORT_2}:${CORE_PORT_2} --restart=always --name ${CORE_NAME} $IMAGE"
+    - ssh ${REMOTE} "cd /opt/shard-core && docker-compose down && docker-compose up -d"
+#    - ssh ${REMOTE} "(docker stop ${CORE_NAME} || true) && (docker rm ${CORE_NAME} || true)"
+#    - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:${CORE_PORT_1} -p ${CORE_PORT_2}:${CORE_PORT_2} --restart=always --name ${CORE_NAME} $IMAGE"
 
 
 dev-shard-core-1:
