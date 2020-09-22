@@ -50,7 +50,7 @@ dev-shard-core-1:
   stage: deploy
   <<: *shard_core_deploy
   variables:
-    REMOTE: jax@116.202.107.209
+    REMOTE: $DEV_REMOTE
     CORE_HOME: /opt/shard-core/node_1
     CORE_PORT_1: 18444
     CORE_PORT_2: 18334
@@ -62,7 +62,7 @@ dev-shard-core-1:
 dev-shard-core-2:
   <<: *shard_core_deploy
   variables:
-    REMOTE: jax@116.202.107.209
+    REMOTE: $DEV_REMOTE
     CORE_HOME: /opt/shard-core/node_2
     CORE_PORT_1: 28444
     CORE_PORT_2: 28334
@@ -75,35 +75,35 @@ dev-shard-core-2:
 stage-shard-core-1:
   <<: *shard_core_deploy
   variables:
-    REMOTE: jax@116.203.250.136
+    REMOTE: $STAGE_REMOTE
     CORE_HOME: /opt/shard-core/node_1
     CORE_PORT_1: 18444
     CORE_PORT_2: 18334
     CORE_NAME: shard-core-1
   only:
-    - jax-stage
+    - stage
 
 stage-shard-core-2:
   <<: *shard_core_deploy
   variables:
-    REMOTE: jax@116.203.250.136
+    REMOTE: $STAGE_REMOTE
     CORE_HOME: /opt/shard-core/node_2
     CORE_PORT_1: 28444
     CORE_PORT_2: 28334
     CORE_NAME: shard-core-2
   only:
-    - jax-stage
+    - stage
 
 
 stage-shard-core-3:
   <<: *shard_core_deploy
   variables:
-    REMOTE: jax@116.203.250.136
+    REMOTE: $STAGE_REMOTE
     CORE_HOME: /opt/shard-core/node_3
     CORE_PORT_1: 38444
     CORE_PORT_2: 38334
     CORE_NAME: shard-core-3
   only:
-    - jax-stage
+    - stage
 
 
