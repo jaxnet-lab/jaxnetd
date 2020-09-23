@@ -7,7 +7,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -17,7 +17,7 @@ type KeyData struct {
 	AddressPubKey *btcutil.AddressPubKey
 }
 
-func GenerateKey(networkCfg *chaincfg.Params) (*KeyData, error) {
+func GenerateKey(networkCfg *chain.Params) (*KeyData, error) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make privKey")
@@ -25,7 +25,7 @@ func GenerateKey(networkCfg *chaincfg.Params) (*KeyData, error) {
 
 	// pk := (*btcec.PublicKey)(&key.PublicKey).SerializeCompressed()
 	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
-	addressPubKey, err := btcutil.NewAddressPubKey(pk, &chaincfg.SimNetParams)
+	addressPubKey, err := btcutil.NewAddressPubKey(pk, &chain.SimNetParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create address pub key")
 	}
@@ -37,7 +37,7 @@ func GenerateKey(networkCfg *chaincfg.Params) (*KeyData, error) {
 	}, nil
 }
 
-func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params) (*KeyData, error) {
+func NewKeyData(privateKeyString string, networkCfg *chain.Params) (*KeyData, error) {
 	privateKeyBytes, err := hex.DecodeString(privateKeyString)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode private key from hex")
@@ -71,7 +71,7 @@ type MultiSigAddress struct {
 	RawRedeemScript []byte `json:"-"`
 }
 
-func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*MultiSigAddress, error) {
+func MakeMultiSigScript(keys []string, nRequired int, net *chain.Params) (*MultiSigAddress, error) {
 	keysesPrecious := make([]*btcutil.AddressPubKey, len(keys))
 
 	// The address list will made up either of addreseses (pubkey hash), for
@@ -109,7 +109,7 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 	}, nil
 }
 
-func DecodeScript(script []byte, net *chaincfg.Params) (*btcjson.DecodeScriptResult, error) {
+func DecodeScript(script []byte, net *chain.Params) (*btcjson.DecodeScriptResult, error) {
 	// The disassembled string will contain [error] inline if the script
 	// doesn't fully parse, so ignore the error here.
 	asm, _ := txscript.DisasmString(script)

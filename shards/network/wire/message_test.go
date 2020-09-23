@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
@@ -40,7 +40,7 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	chain := beacon.Chain(&chaincfg.TestNet3Params)
+	chain := beacon.Chain(&chain2.TestNet3Params)
 
 	pver := ProtocolVersion
 
@@ -191,7 +191,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
 
-	chain := beacon.Chain(&chaincfg.MainNetParams)
+	chain := beacon.Chain(&chain2.MainNetParams)
 
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"

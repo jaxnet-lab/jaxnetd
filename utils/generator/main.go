@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("res", data, " err: ", key)
 }
 
-func GenerateKeyAddress(params *chaincfg.Params) ([]byte, string) {
+func GenerateKeyAddress(params *chain.Params) ([]byte, string) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		fmt.Printf("failed to make privKey for  %v", err)

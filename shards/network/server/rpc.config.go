@@ -6,7 +6,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
@@ -53,13 +52,13 @@ type NodeActor struct {
 	SyncMgr rpcserverSyncManager
 
 	// ShardsMgr provides ability to manipulate running shards.
-	ShardsMgr shardManager
+	ShardsMgr ShardManager
 
 	// These fields allow the RPC server to interface with the local block
 	// chain data and state.
 	TimeSource  blockchain.MedianTimeSource
 	Chain       *blockchain.BlockChain
-	ChainParams *chaincfg.Params
+	ChainParams *chain.Params
 	DB          database.DB
 
 	// TxMemPool defines the transaction memory pool to interact with.
@@ -193,12 +192,12 @@ type rpcserverSyncManager interface {
 	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader
 }
 
-type shardManager interface {
+type ShardManager interface {
 	ListShards() map[uint32]string
 
 	EnableShard(shardID uint32) error
 
 	DisableShard(shardID uint32) error
 
-	NewShard(shardID uint32, height int64) error
+	NewShard(shardID uint32, height int32) error
 }

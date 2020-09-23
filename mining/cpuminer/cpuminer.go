@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/minio/sha256-simd"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -55,7 +55,7 @@ var (
 type Config struct {
 	// ChainParams identifies which chain parameters the cpu miner is
 	// associated with.
-	ChainParams *chaincfg.Params
+	ChainParams *chain.Params
 
 	// BlockTemplateGenerator identifies the instance to use in order to
 	// generate block templates that the miner will attempt to solve.

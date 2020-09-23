@@ -5,7 +5,8 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func TestNotifications(t *testing.T) {
 
 	// Create a new database and chain instance to run tests against.
 	chain, teardownFunc, err := chainSetup("notifications",
-		&chaincfg.MainNetParams)
+		&chain2.MainNetParams)
 	if err != nil {
 		t.Fatalf("Failed to setup chain instance: %v", err)
 	}

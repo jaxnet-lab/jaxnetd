@@ -3,7 +3,7 @@ package shards
 import (
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
@@ -19,7 +19,7 @@ import (
 // }
 
 // type ChainConfig struct {
-//	server.P2pConfig
+//	p2pServer.P2pConfig
 // }
 
 type ShardConfig struct {
@@ -35,8 +35,8 @@ type NodeConfig struct {
 	Net    string           `yaml:"net"`
 }
 
-func (cfg *NodeConfig) ChainParams() *chaincfg.Params {
-	return chaincfg.NetName(cfg.Net).Params()
+func (cfg *NodeConfig) ChainParams() *chain.Params {
+	return chain.NetName(cfg.Net).Params()
 }
 
 type Config struct {
@@ -59,7 +59,7 @@ type Config struct {
 	ShowVersion bool     `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
 	Whitelists  []string `yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 	// addCheckpoints    []chaincfg.Checkpoint
-	// MiningAddrs         []btcutil.Address
+	// MiningAddrs       []btcutil.Address
 	// whitelists        []*net.IPNet
 }
 

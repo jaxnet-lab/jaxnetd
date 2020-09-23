@@ -7,8 +7,9 @@ package builder_test
 
 import (
 	"encoding/hex"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
@@ -80,7 +81,7 @@ func TestUseBlockHash(t *testing.T) {
 	}
 
 	// btcutil.Address
-	addr, err := btcutil.DecodeAddress(testAddr, &chaincfg.MainNetParams)
+	addr, err := btcutil.DecodeAddress(testAddr, &chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("Address decode failed: %s", err.Error())
 	}

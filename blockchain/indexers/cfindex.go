@@ -6,10 +6,11 @@ package indexers
 
 import (
 	"errors"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs/builder"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
@@ -77,7 +78,7 @@ func dbDeleteFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) err
 // CfIndex implements a committed filter (cf) by hash index.
 type CfIndex struct {
 	db          database.DB
-	chainParams *chaincfg.Params
+	chainParams *chain.Params
 }
 
 // Ensure the CfIndex type implements the Indexer interface.
@@ -347,7 +348,7 @@ func (idx *CfIndex) FilterHashesByBlockHashes(blockHashes []*chainhash.Hash,
 // It implements the Indexer interface which plugs into the IndexManager that
 // in turn is used by the blockchain package. This allows the index to be
 // seamlessly maintained along with the chain.
-func NewCfIndex(db database.DB, chainParams *chaincfg.Params) *CfIndex {
+func NewCfIndex(db database.DB, chainParams *chain.Params) *CfIndex {
 	return &CfIndex{db: db, chainParams: chainParams}
 }
 

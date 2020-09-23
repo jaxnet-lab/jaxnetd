@@ -1,13 +1,14 @@
 package beacon
 
 import (
+	"math/big"
+	"sort"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/utils"
-	"math/big"
-	"sort"
-	"time"
 )
 
 var zeroHash chainhash.Hash
@@ -66,7 +67,7 @@ func initBlockNode(node *blockNode, blockHeader chain.BlockHeader, parent chain.
 	*node = blockNode{
 		hash:       blockHeader.BlockHash(),
 		workSum:    blockchain.CalcWork(blockHeader.Bits()),
-		version:    blockHeader.Version(),
+		version:    int32(blockHeader.Version()),
 		bits:       blockHeader.Bits(),
 		nonce:      blockHeader.Nonce(),
 		timestamp:  blockHeader.Timestamp().Unix(),
@@ -124,9 +125,9 @@ func (node *blockNode) Timestamp() int64 {
 	return node.timestamp
 }
 
-//func (node *blockNode) Header() chain.BlockHeader {
+// func (node *blockNode) Header() chain.BlockHeader {
 //	return node.
-//}
+// }
 
 func (node *blockNode) Status() chain.BlockStatus {
 	return node.status
@@ -136,9 +137,9 @@ func (node *blockNode) SetStatus(status chain.BlockStatus) {
 	node.status = status
 }
 
-//func (node *blockNode) NewHeader() chain.BlockHeader{
+// func (node *blockNode) NewHeader() chain.BlockHeader{
 //	return NewBlockHeader()
-//}
+// }
 
 func (node *blockNode) NewHeader() chain.BlockHeader {
 	res := new(header)
@@ -156,7 +157,8 @@ func (node *blockNode) Header() chain.BlockHeader {
 		prevHash = &h
 	}
 
-	return NewBlockHeader(node.version, *prevHash, node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
+	return NewBlockHeader(chain.BVersion(node.version), *prevHash,
+		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
 }
 
 // Ancestor returns the ancestor block node at the provided height by following

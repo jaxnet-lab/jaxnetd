@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math/big"
 	"sync"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
@@ -1341,7 +1342,7 @@ func dbStoreBlockNode(chain chain.IChain, dbTx database.Tx, node chain.IBlockNod
 
 	// Write block header data to block index bucket.
 	blockIndexBucket := dbTx.Metadata().Bucket(blockIndexBucketName)
-	h:=node.GetHash()
+	h := node.GetHash()
 	key := blockIndexKey(&h, uint32(node.Height()))
 	return blockIndexBucket.Put(key, value)
 }

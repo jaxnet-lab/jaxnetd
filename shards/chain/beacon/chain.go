@@ -3,7 +3,6 @@ package beacon
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
@@ -18,10 +17,10 @@ const (
 )
 
 type beaconChain struct {
-	chainParams *chaincfg.Params
+	chainParams *chain.Params
 }
 
-func Chain(params *chaincfg.Params) chain.IChain {
+func Chain(params *chain.Params) chain.IChain {
 	clone := *params
 	clone.Name = "beacon"
 	beacon := &beaconChain{}
@@ -34,7 +33,15 @@ func Chain(params *chaincfg.Params) chain.IChain {
 
 func (c *beaconChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-		Header:       NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+		Header: NewBlockHeader(
+			chain.NewBVersion(1),
+			chainhash.Hash{},
+			genesisMerkleRoot,
+			chainhash.Hash{},
+			time.Unix(0x495fab29, 0),
+			0x1d00ffff,
+			0x7c2bac1d,
+		),
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
 }
@@ -43,7 +50,7 @@ func (c *beaconChain) IsBeacon() bool {
 	return true
 }
 
-func (c *beaconChain) Params() *chaincfg.Params {
+func (c *beaconChain) Params() *chain.Params {
 	return c.chainParams
 }
 
@@ -55,7 +62,7 @@ func (c *beaconChain) NewHeader() chain.BlockHeader {
 	return &header{}
 }
 
-func (c *beaconChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
+func (c *beaconChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	mergeMiningRoot chainhash.Hash,
 	timestamp time.Time,
 	bits uint32, nonce uint32) chain.BlockHeader {

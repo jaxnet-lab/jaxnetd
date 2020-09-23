@@ -10,7 +10,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
@@ -29,7 +28,7 @@ type serverPeer struct {
 	*peer.Peer
 
 	connReq        *connmgr.ConnReq
-	server         *server
+	server         *P2PServer
 	persistent     bool
 	continueHash   *chainhash.Hash
 	relayMtx       sync.Mutex
@@ -51,7 +50,7 @@ type serverPeer struct {
 
 // newServerPeer returns a new serverPeer instance. The peer needs to be set by
 // the caller.
-func newServerPeer(s *server, isPersistent bool) *serverPeer {
+func newServerPeer(s *P2PServer, isPersistent bool) *serverPeer {
 	return &serverPeer{
 		server:         s,
 		persistent:     isPersistent,
@@ -208,8 +207,8 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// After soft-fork activation, only make outbound
 		// connection to peers if they flag that they're segwit
 		// enabled.
-		chain := sp.server.chain
-		segwitActive, err := chain.IsDeploymentActive(chaincfg.DeploymentSegwit)
+		blockChain := sp.server.chain
+		segwitActive, err := blockChain.IsDeploymentActive(chain.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
 				err)

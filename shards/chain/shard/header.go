@@ -28,11 +28,11 @@ type header struct {
 	// uint32 on the wire and therefore is limited to 2106.
 	timestamp time.Time
 
-	//// Difficulty target for the block.
-	//bits uint32
+	// Difficulty target for the block.
+	bits uint32
 
-	//// Nonce used to generate the block.
-	//nonce uint32
+	// Nonce used to generate the block.
+	nonce uint32
 }
 
 // blockHeaderLen is a constant that represents the number of bytes for a block
@@ -256,8 +256,8 @@ func (h *header) Bits() uint32 {
 func (h *header) SetBits(bits uint32) {
 }
 
-func (h *header) Version() int32 {
-	return 0
+func (h *header) Version() chain.BVersion {
+	return chain.BVersion(0).SetShard()
 }
 
 //

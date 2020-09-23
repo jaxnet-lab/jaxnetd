@@ -7,7 +7,7 @@ import (
 )
 
 // handleAddNode handles addnode commands.
-func (s *rpcServer) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (s *RPCServer) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.ManageShardsCmd)
 
 	var err error
@@ -37,7 +37,7 @@ func (s *rpcServer) handleManageShards(cmd interface{}, closeChan <-chan struct{
 	return nil, nil
 }
 
-func (s *rpcServer) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (s *RPCServer) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	shards := s.node.ShardsMgr.ListShards()
 	// no data returned unless an error.
 	return shards, nil

@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 
 	"github.com/btcsuite/go-socks/socks"
@@ -354,31 +354,31 @@ func normalizeAddresses(addrs []string, defaultPort string) []string {
 }
 
 // newCheckpointFromStr parses checkpoints in the '<height>:<hash>' format.
-func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
+func newCheckpointFromStr(checkpoint string) (chain.Checkpoint, error) {
 	parts := strings.Split(checkpoint, ":")
 	if len(parts) != 2 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chain.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q -- use the syntax <height>:<hash>",
 			checkpoint)
 	}
 
 	height, err := strconv.ParseInt(parts[0], 10, 32)
 	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chain.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to malformed height", checkpoint)
 	}
 
 	if len(parts[1]) == 0 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chain.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to missing hash", checkpoint)
 	}
 	hash, err := chainhash.NewHashFromStr(parts[1])
 	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chain.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to malformed hash", checkpoint)
 	}
 
-	return chaincfg.Checkpoint{
+	return chain.Checkpoint{
 		Height: int32(height),
 		Hash:   hash,
 	}, nil
@@ -386,11 +386,11 @@ func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
 
 // parseCheckpoints checks the checkpoint strings for valid syntax
 // ('<height>:<hash>') and parses them to chaincfg.Checkpoint instances.
-func parseCheckpoints(checkpointStrings []string) ([]chaincfg.Checkpoint, error) {
+func parseCheckpoints(checkpointStrings []string) ([]chain.Checkpoint, error) {
 	if len(checkpointStrings) == 0 {
 		return nil, nil
 	}
-	checkpoints := make([]chaincfg.Checkpoint, len(checkpointStrings))
+	checkpoints := make([]chain.Checkpoint, len(checkpointStrings))
 	for i, cpString := range checkpointStrings {
 		checkpoint, err := newCheckpointFromStr(cpString)
 		if err != nil {

@@ -1,4 +1,4 @@
-package chaincfg
+package chain
 
 import (
 	"math"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package chaincfg
+package chain
 
 import (
 	"errors"
@@ -230,7 +230,7 @@ type Params struct {
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardGenesis(shard, height uint32,
+func (cfg Params) ShardGenesis(shard uint32, height int32,
 	// block *wire.MsgBlock, // fixme
 	hash *chainhash.Hash) *Params {
 	// shard's exclusive info

@@ -31,7 +31,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
@@ -300,7 +299,7 @@ func builderScript(builder *txscript.ScriptBuilder) []byte {
 // RPC server subsystem since internal errors really should not occur.  The
 // context parameter is only used in the log message and may be empty if it's
 // not needed.
-func (s *rpcServer) internalRPCError(errStr, context string) *btcjson.RPCError {
+func (s *RPCServer) internalRPCError(errStr, context string) *btcjson.RPCError {
 	logStr := errStr
 	if context != "" {
 		logStr = context + ": " + errStr
@@ -340,7 +339,7 @@ func peerExists(connMgr rpcserverConnManager, addr string, nodeID int32) bool {
 
 // messageToHex serializes a message to the wire protocol encoding using the
 // latest protocol version and returns a hex-encoded string of the result.
-func (s *rpcServer) messageToHex(msg wire.Message) (string, error) {
+func (s *RPCServer) messageToHex(msg wire.Message) (string, error) {
 	var buf bytes.Buffer
 	if err := msg.BtcEncode(&buf, maxProtocolVersion, wire.WitnessEncoding); err != nil {
 		context := fmt.Sprintf("Failed to encode msg of type %T", msg)
@@ -352,7 +351,7 @@ func (s *rpcServer) messageToHex(msg wire.Message) (string, error) {
 
 // witnessToHex formats the passed witness stack as a slice of hex-encoded
 // strings to be used in a JSON response.
-func (s *rpcServer) witnessToHex(witness wire.TxWitness) []string {
+func (s *RPCServer) witnessToHex(witness wire.TxWitness) []string {
 	// Ensure nil is returned when there are no entries versus an empty
 	// slice so it can properly be omitted as necessary.
 	if len(witness) == 0 {
@@ -369,7 +368,7 @@ func (s *rpcServer) witnessToHex(witness wire.TxWitness) []string {
 
 // createVinList returns a slice of JSON objects for the inputs of the passed
 // transaction.
-func (s *rpcServer) createVinList(mtx *wire.MsgTx) []btcjson.Vin {
+func (s *RPCServer) createVinList(mtx *wire.MsgTx) []btcjson.Vin {
 	// Coinbase transactions only have a single txin by definition.
 	vinList := make([]btcjson.Vin, len(mtx.TxIn))
 	if blockchain.IsCoinBaseTx(mtx) {
@@ -405,7 +404,7 @@ func (s *rpcServer) createVinList(mtx *wire.MsgTx) []btcjson.Vin {
 
 // createVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
+func createVoutList(mtx *wire.MsgTx, chainParams *chain.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
 	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the
@@ -457,7 +456,7 @@ func createVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap
 
 // createTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
-func (s *rpcServer) createTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
+func (s *RPCServer) createTxRawResult(chainParams *chain.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader chain.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
 
@@ -492,7 +491,7 @@ func (s *rpcServer) createTxRawResult(chainParams *chaincfg.Params, mtx *wire.Ms
 
 // getDifficultyRatio returns the proof-of-work difficulty as a multiple of the
 // minimum difficulty using the passed bits field from the header of a block.
-func getDifficultyRatio(bits uint32, params *chaincfg.Params) (float64, error) {
+func getDifficultyRatio(bits uint32, params *chain.Params) (float64, error) {
 	// The minimum difficulty is the max possible proof-of-work limit bits
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block
@@ -676,7 +675,7 @@ func chainErrToGBTErrString(err error) string {
 // fetchInputTxos fetches the outpoints from all transactions referenced by the
 // inputs to the passed transaction by checking the transaction mempool first
 // then the transaction index for those already mined into blocks.
-func (s *rpcServer) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]wire.TxOut, error) {
+func (s *RPCServer) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]wire.TxOut, error) {
 	mp := s.node.TxMemPool
 	originOutputs := make(map[wire.OutPoint]wire.TxOut)
 	for txInIndex, txIn := range tx.TxIn {
@@ -741,7 +740,7 @@ func (s *rpcServer) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]wire.TxOut
 
 // createVinListPrevOut returns a slice of JSON objects for the inputs of the
 // passed transaction.
-func createVinListPrevOut(s *rpcServer, mtx *wire.MsgTx, chainParams *chaincfg.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
+func createVinListPrevOut(s *RPCServer, mtx *wire.MsgTx, chainParams *chain.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
 	// Coinbase transactions only have a single txin by definition.
 	if blockchain.IsCoinBaseTx(mtx) {
 		// Only include the transaction if the filter map is empty
@@ -863,7 +862,7 @@ func createVinListPrevOut(s *rpcServer, mtx *wire.MsgTx, chainParams *chaincfg.P
 // fetchMempoolTxnsForAddress queries the address index for all unconfirmed
 // transactions that involve the provided address.  The results will be limited
 // by the number to skip and the number requested.
-func fetchMempoolTxnsForAddress(s *rpcServer, addr btcutil.Address, numToSkip, numRequested uint32) ([]*btcutil.Tx, uint32) {
+func fetchMempoolTxnsForAddress(s *RPCServer, addr btcutil.Address, numToSkip, numRequested uint32) ([]*btcutil.Tx, uint32) {
 	// There are no entries to return when there are less available than the
 	// number being skipped.
 	mpTxns := s.node.AddrIndex.UnconfirmedTxnsForAddress(addr)
@@ -881,7 +880,7 @@ func fetchMempoolTxnsForAddress(s *rpcServer, addr btcutil.Address, numToSkip, n
 	return mpTxns[numToSkip:rangeEnd], numToSkip
 }
 
-func (s *rpcServer) verifyChain(level, depth int32) error {
+func (s *RPCServer) verifyChain(level, depth int32) error {
 	best := s.node.Chain.BestSnapshot()
 	finishHeight := best.Height - depth
 	if finishHeight < 0 {
@@ -916,8 +915,8 @@ func (s *rpcServer) verifyChain(level, depth int32) error {
 	return nil
 }
 
-// rpcServer provides a concurrent safe RPC server to a chain server.
-type rpcServer struct {
+// RPCServer provides a concurrent safe RPC server to a chain server.
+type RPCServer struct {
 	started  int32
 	shutdown int32
 	cfg      *Config
@@ -938,7 +937,7 @@ type rpcServer struct {
 	handlers               map[string]commandHandler
 }
 
-func (s *rpcServer) init() {
+func (s *RPCServer) init() {
 	s.handlers = map[string]commandHandler{
 		"addnode":              s.handleAddNode,
 		"createrawtransaction": s.handleCreateRawTransaction,
@@ -997,7 +996,7 @@ func (s *rpcServer) init() {
 // httpStatusLine returns a response Status-Line (RFC 2616 Section 6.1)
 // for the given request and response status code.  This function was lifted and
 // adapted from the standard library HTTP server code since it's not exported.
-func (s *rpcServer) httpStatusLine(req *http.Request, code int) string {
+func (s *RPCServer) httpStatusLine(req *http.Request, code int) string {
 	// Fast path:
 	key := code
 	proto11 := req.ProtoAtLeast(1, 1)
@@ -1034,7 +1033,7 @@ func (s *rpcServer) httpStatusLine(req *http.Request, code int) string {
 // writeHTTPResponseHeaders writes the necessary response headers prior to
 // writing an HTTP body given a request to use for protocol negotiation, headers
 // to write, a status code, and a writer.
-func (s *rpcServer) writeHTTPResponseHeaders(req *http.Request, headers http.Header, code int, w io.Writer) error {
+func (s *RPCServer) writeHTTPResponseHeaders(req *http.Request, headers http.Header, code int, w io.Writer) error {
 	_, err := io.WriteString(w, s.httpStatusLine(req, code))
 	if err != nil {
 		return err
@@ -1050,7 +1049,7 @@ func (s *rpcServer) writeHTTPResponseHeaders(req *http.Request, headers http.Hea
 }
 
 // Stop is used by rpc.go to stop the rpc listener.
-func (s *rpcServer) Stop() error {
+func (s *RPCServer) Stop() error {
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		s.logger.Infof("RPC server is already in the process of shutting down")
 		return nil
@@ -1074,14 +1073,14 @@ func (s *rpcServer) Stop() error {
 // RequestedProcessShutdown returns a channel that is sent to when an authorized
 // RPC client requests the process to shutdown.  If the request can not be read
 // immediately, it is dropped.
-func (s *rpcServer) RequestedProcessShutdown() <-chan struct{} {
+func (s *RPCServer) RequestedProcessShutdown() <-chan struct{} {
 	return s.requestProcessShutdown
 }
 
 // NotifyNewTransactions notifies both websocket and getblocktemplate long
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
-func (s *rpcServer) NotifyNewTransactions(txns []*mempool.TxDesc) {
+func (s *RPCServer) NotifyNewTransactions(txns []*mempool.TxDesc) {
 	// for _, txD := range txns {
 	//	// Notify websocket clients about mempool transactions.
 	//	//s.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
@@ -1096,7 +1095,7 @@ func (s *rpcServer) NotifyNewTransactions(txns []*mempool.TxDesc) {
 // adding another client would exceed the maximum allow RPC clients.
 //
 // This function is safe for concurrent access.
-func (s *rpcServer) limitConnections(w http.ResponseWriter, remoteAddr string) bool {
+func (s *RPCServer) limitConnections(w http.ResponseWriter, remoteAddr string) bool {
 	if int(atomic.LoadInt32(&s.numClients)+1) > s.cfg.MaxClients {
 		s.logger.Infof("Max RPC clients exceeded [%d] - "+
 			"disconnecting client %s", s.cfg.MaxClients,
@@ -1113,7 +1112,7 @@ func (s *rpcServer) limitConnections(w http.ResponseWriter, remoteAddr string) b
 // limits and are tracked separately.
 //
 // This function is safe for concurrent access.
-func (s *rpcServer) incrementClients() {
+func (s *RPCServer) incrementClients() {
 	atomic.AddInt32(&s.numClients, 1)
 }
 
@@ -1122,7 +1121,7 @@ func (s *rpcServer) incrementClients() {
 // limits and are tracked separately.
 //
 // This function is safe for concurrent access.
-func (s *rpcServer) decrementClients() {
+func (s *RPCServer) decrementClients() {
 	atomic.AddInt32(&s.numClients, -1)
 }
 
@@ -1137,7 +1136,7 @@ func (s *rpcServer) decrementClients() {
 // the second bool return value specifies whether the user can change the state
 // of the server (true) or whether the user is limited (false). The second is
 // always false if the first is.
-func (s *rpcServer) checkAuth(r *http.Request, require bool) (bool, bool, error) {
+func (s *RPCServer) checkAuth(r *http.Request, require bool) (bool, bool, error) {
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) <= 0 {
 		if require {
@@ -1183,7 +1182,7 @@ type parsedRPCCmd struct {
 // command and runs the appropriate handler to reply to the command.  Any
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
-func (s *rpcServer) standardCmdResult(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
+func (s *RPCServer) standardCmdResult(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	handler, ok := s.handlers[cmd.method]
 	if ok {
 		goto handled
@@ -1236,7 +1235,7 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 // createMarshalledReply returns a new marshalled JSON-RPC response given the
 // passed parameters.  It will automatically convert errors that are not of
 // the type *btcjson.RPCError to the appropriate type as needed.
-func (s *rpcServer) createMarshalledReply(id, result interface{}, replyErr error) ([]byte, error) {
+func (s *RPCServer) createMarshalledReply(id, result interface{}, replyErr error) ([]byte, error) {
 	var jsonErr *btcjson.RPCError
 	if replyErr != nil {
 		if jErr, ok := replyErr.(*btcjson.RPCError); ok {
@@ -1252,7 +1251,7 @@ func (s *rpcServer) createMarshalledReply(id, result interface{}, replyErr error
 var timeZeroVal time.Time
 
 // jsonRPCRead handles reading and responding to RPC messages.
-func (s *rpcServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin bool) {
+func (s *RPCServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 	if atomic.LoadInt32(&s.shutdown) != 0 {
 		return
 	}
@@ -1398,7 +1397,7 @@ func jsonAuthFail(w http.ResponseWriter) {
 }
 
 // Start is used by rpc.go to start the rpc listener.
-func (s *rpcServer) Start(ctx context.Context) {
+func (s *RPCServer) Start(ctx context.Context) {
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return
 	}
@@ -1481,7 +1480,7 @@ func (s *rpcServer) Start(ctx context.Context) {
 }
 
 // genCertPair generates a key/cert pair to the paths provided.
-func (s *rpcServer) genCertPair(certFile, keyFile string) error {
+func (s *RPCServer) genCertPair(certFile, keyFile string) error {
 	s.logger.Infof("Generating TLS certificates...")
 
 	org := "btcd autogenerated cert"
@@ -1504,9 +1503,9 @@ func (s *rpcServer) genCertPair(certFile, keyFile string) error {
 	return nil
 }
 
-// newRPCServer returns a new instance of the rpcServer struct.
-func RpcServer(config *Config, node *NodeActor, logger *zap.Logger) (*rpcServer, error) {
-	rpc := &rpcServer{
+// newRPCServer returns a new instance of the RPCServer struct.
+func RpcServer(config *Config, node *NodeActor, logger *zap.Logger) (*RPCServer, error) {
+	rpc := &RPCServer{
 		cfg:                    config,
 		node:                   node,
 		statusLines:            make(map[int]string),
@@ -1536,7 +1535,7 @@ func RpcServer(config *Config, node *NodeActor, logger *zap.Logger) (*rpcServer,
 
 // Callback for notifications from blockchain.  It notifies clients that are
 // long polling for changes or subscribed to websockets notifications.
-func (s *rpcServer) handleBlockchainNotification(notification *blockchain.Notification) {
+func (s *RPCServer) handleBlockchainNotification(notification *blockchain.Notification) {
 	switch notification.Type {
 	case blockchain.NTBlockAccepted:
 		block, ok := notification.Data.(*btcutil.Block)

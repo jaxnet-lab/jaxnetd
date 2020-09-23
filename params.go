@@ -5,7 +5,7 @@
 package main
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -16,7 +16,7 @@ var activeNetParams = &mainNetParams
 // params is used to group parameters for various networks such as the main
 // network and test networks.
 type params struct {
-	*chaincfg.Params
+	*chain.Params
 	rpcPort string
 }
 
@@ -27,7 +27,7 @@ type params struct {
 // it does not handle on to btcd.  This approach allows the wallet process
 // to emulate the full reference implementation RPC API.
 var mainNetParams = params{
-	Params:  &chaincfg.MainNetParams,
+	Params:  &chain.MainNetParams,
 	rpcPort: "8334",
 }
 
@@ -36,7 +36,7 @@ var mainNetParams = params{
 // than the reference implementation - see the mainNetParams comment for
 // details.
 var regressionNetParams = params{
-	Params:  &chaincfg.RegressionNetParams,
+	Params:  &chain.RegressionNetParams,
 	rpcPort: "18334",
 }
 
@@ -44,14 +44,14 @@ var regressionNetParams = params{
 // (types.TestNet3).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
 var testNet3Params = params{
-	Params:  &chaincfg.TestNet3Params,
+	Params:  &chain.TestNet3Params,
 	rpcPort: "18334",
 }
 
 // simNetParams contains parameters specific to the simulation test network
 // (wire.SimNet).
 var simNetParams = params{
-	Params:  &chaincfg.SimNetParams,
+	Params:  &chain.SimNetParams,
 	rpcPort: "18556",
 }
 

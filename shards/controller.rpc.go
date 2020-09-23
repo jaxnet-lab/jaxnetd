@@ -6,8 +6,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
-func (ctrl *chainController) runRpc(ctx context.Context, cfg *Config, nodeActor *server.NodeActor) error {
-	srv, err := server.RpcServer(&cfg.Node.RPC, nodeActor, ctrl.logger)
+func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config, nodeActor *server.NodeActor) error {
+	srv, err := server.RpcServer(&cfg.Node.RPC, nodeActor, chainCtl.logger)
 	if err != nil {
 		return err
 	}

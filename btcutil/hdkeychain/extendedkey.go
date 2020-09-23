@@ -16,8 +16,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"math/big"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -344,7 +345,7 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 	}
 
 	// Get the associated public extended key version bytes.
-	version, err := chaincfg.HDPrivateKeyToPublicKeyID(k.version)
+	version, err := chain.HDPrivateKeyToPublicKeyID(k.version)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +378,7 @@ func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, error) {
 
 // Address converts the extended key to a standard bitcoin pay-to-pubkey-hash
 // address for the passed network.
-func (k *ExtendedKey) Address(net *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
+func (k *ExtendedKey) Address(net *chain.Params) (*btcutil.AddressPubKeyHash, error) {
 	pkHash := btcutil.Hash160(k.pubKeyBytes())
 	return btcutil.NewAddressPubKeyHash(pkHash, net)
 }
@@ -424,14 +425,14 @@ func (k *ExtendedKey) String() string {
 
 // IsForNet returns whether or not the extended key is associated with the
 // passed bitcoin network.
-func (k *ExtendedKey) IsForNet(net *chaincfg.Params) bool {
+func (k *ExtendedKey) IsForNet(net *chain.Params) bool {
 	return bytes.Equal(k.version, net.HDPrivateKeyID[:]) ||
 		bytes.Equal(k.version, net.HDPublicKeyID[:])
 }
 
 // SetNet associates the extended key, and any child keys yet to be derived from
 // it, with the passed network.
-func (k *ExtendedKey) SetNet(net *chaincfg.Params) {
+func (k *ExtendedKey) SetNet(net *chain.Params) {
 	if k.isPrivate {
 		k.version = net.HDPrivateKeyID[:]
 	} else {
@@ -472,7 +473,7 @@ func (k *ExtendedKey) Zero() {
 // will derive to an unusable secret key.  The ErrUnusable error will be
 // returned if this should occur, so the caller must check for it and generate a
 // new seed accordingly.
-func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
+func NewMaster(seed []byte, net *chain.Params) (*ExtendedKey, error) {
 	// Per [BIP32], the seed must be in range [MinSeedBytes, MaxSeedBytes].
 	if len(seed) < MinSeedBytes || len(seed) > MaxSeedBytes {
 		return nil, ErrInvalidSeedLen

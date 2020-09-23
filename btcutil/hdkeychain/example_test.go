@@ -6,8 +6,9 @@ package hdkeychain_test
 
 import (
 	"fmt"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // This example demonstrates how to generate a cryptographically random seed
@@ -21,7 +22,7 @@ func ExampleNewMaster() {
 	}
 
 	// Generate a new master node using the seed.
-	key, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	key, err := hdkeychain.NewMaster(seed, &chain.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -117,12 +118,12 @@ func Example_defaultWalletLayout() {
 
 	// Get and show the address associated with the extended keys for the
 	// main bitcoin	network.
-	acct0ExtAddr, err := acct0Ext10.Address(&chaincfg.MainNetParams)
+	acct0ExtAddr, err := acct0Ext10.Address(&chain.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	acct0IntAddr, err := acct0Int0.Address(&chaincfg.MainNetParams)
+	acct0IntAddr, err := acct0Int0.Address(&chain.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return

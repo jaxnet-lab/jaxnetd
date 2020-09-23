@@ -1,19 +1,20 @@
 package server
 
 import (
+	"net"
+	"sync/atomic"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-	"net"
-	"sync/atomic"
-	"time"
 )
 
 // handleUpdatePeerHeight updates the heights of all peers who were known to
 // announce a block we recently accepted.
-func (s *server) handleUpdatePeerHeights(state *peerState, umsg updatePeerHeightsMsg) {
+func (s *P2PServer) handleUpdatePeerHeights(state *peerState, umsg updatePeerHeightsMsg) {
 	state.forAllPeers(func(sp *serverPeer) {
 		// The origin peer should already have the updated height.
 		if sp.Peer == umsg.originPeer {
@@ -41,7 +42,7 @@ func (s *server) handleUpdatePeerHeights(state *peerState, umsg updatePeerHeight
 
 // handleAddPeerMsg deals with adding new peers.  It is invoked from the
 // peerHandler goroutine.
-func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
+func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	if sp == nil || !sp.Connected() {
 		return false
 	}
@@ -147,7 +148,7 @@ func (s *server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 
 // handleDonePeerMsg deals with peers that have signalled they are done.  It is
 // invoked from the peerHandler goroutine.
-func (s *server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
+func (s *P2PServer) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	var list map[int32]*serverPeer
 	if sp.persistent {
 		list = state.persistentPeers
@@ -181,7 +182,7 @@ func (s *server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 
 // handleBanPeerMsg deals with banning peers.  It is invoked from the
 // peerHandler goroutine.
-func (s *server) handleBanPeerMsg(state *peerState, sp *serverPeer) {
+func (s *P2PServer) handleBanPeerMsg(state *peerState, sp *serverPeer) {
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
 		s.logger.Debugf("can't split ban peer %s %v", sp.Addr(), err)
@@ -204,7 +205,7 @@ func directionString(inbound bool) string {
 
 // handleRelayInvMsg deals with relaying inventory to peers that are not already
 // known to have it.  It is invoked from the peerHandler goroutine.
-func (s *server) handleRelayInvMsg(state *peerState, msg relayMsg) {
+func (s *P2PServer) handleRelayInvMsg(state *peerState, msg relayMsg) {
 	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return
@@ -270,7 +271,7 @@ func (s *server) handleRelayInvMsg(state *peerState, msg relayMsg) {
 
 // handleBroadcastMsg deals with broadcasting messages to peers.  It is invoked
 // from the peerHandler goroutine.
-func (s *server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
+func (s *P2PServer) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
 	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return

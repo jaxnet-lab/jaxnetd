@@ -9,7 +9,7 @@ import (
 // rpcConnManager provides a connection manager for use with the RPC server and
 // implements the rpcserverConnManager interface.
 type rpcConnManager struct {
-	server *server
+	server *P2PServer
 }
 
 // Ensure rpcConnManager implements the rpcserverConnManager interface.

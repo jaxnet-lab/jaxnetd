@@ -753,7 +753,7 @@ var rpcResultTypes = map[string][]interface{}{
 // the RPC server commands and caches the results for future calls.
 type helpCacher struct {
 	sync.Mutex
-	server     *rpcServer
+	server     *RPCServer
 	usage      string
 	methodHelp map[string]string
 }
@@ -826,7 +826,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 
 // newHelpCacher returns a new instance of a help cacher which provides help and
 // usage for the RPC server commands and caches the results for future calls.
-func newHelpCacher(s *rpcServer) *helpCacher {
+func newHelpCacher(s *RPCServer) *helpCacher {
 	return &helpCacher{
 		server:     s,
 		methodHelp: make(map[string]string),

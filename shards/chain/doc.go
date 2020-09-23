@@ -1,4 +1,4 @@
-// Package chaincfg defines chain configuration parameters.
+// Package chain defines chain configuration parameters.
 //
 // In addition to the main Bitcoin network, which is intended for the transfer
 // of monetary value, there also exists two currently active standard networks:
@@ -58,4 +58,4 @@
 // non-standard network.  As a general rule of thumb, all network parameters
 // should be unique to the network, but parameter collisions can still occur
 // (unfortunately, this is the case with regtest and "testnet sharing magics).
-package chaincfg
+package chain

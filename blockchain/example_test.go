@@ -6,11 +6,11 @@ package blockchain_test
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"math/big"
 	"os"
 	"path/filepath"
+
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -31,7 +31,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincfg.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chain2.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return
@@ -48,7 +48,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// adjusted to be in agreement with other peers.
 	chain, err := blockchain.New(&blockchain.Config{
 		DB:          db,
-		ChainParams: &chaincfg.MainNetParams,
+		ChainParams: &chain2.MainNetParams,
 		TimeSource:  blockchain.NewMedianTime(),
 	})
 	if err != nil {
@@ -59,7 +59,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// Process a block.  For this example, we are going to intentionally
 	// cause an error by trying to process the genesis block which already
 	// exists.
-	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesisBlock := btcutil.NewBlock(chain2.MainNetParams.GenesisBlock)
 	isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
 		blockchain.BFNone)
 	if err != nil {

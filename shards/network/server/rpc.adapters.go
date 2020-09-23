@@ -5,9 +5,10 @@
 package server
 
 import (
+	"sync/atomic"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"sync/atomic"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
@@ -63,7 +64,7 @@ func (p *rpcPeer) FeeFilter() int64 {
 // rpcSyncMgr provides a block manager for use with the RPC server and
 // implements the rpcserverSyncManager interface.
 type rpcSyncMgr struct {
-	server  *server
+	server  *P2PServer
 	syncMgr *netsync.SyncManager
 }
 

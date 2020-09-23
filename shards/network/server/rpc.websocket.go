@@ -89,7 +89,7 @@ import "errors"
 //// must be run in a separate goroutine.  It should be invoked from the websocket
 //// server handler which runs each new connection in a new goroutine thereby
 //// satisfying the requirement.
-//func (s *rpcServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
+//func (s *RPCServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
 //	authenticated bool, isAdmin bool) {
 //
 //	// Clear the read deadline that was set before the websocket hijacked
@@ -132,7 +132,7 @@ import "errors"
 //// track of all connected websocket clients.
 //type wsNotificationManager struct {
 //	// server is the RPC server the notification manager is associated with.
-//	server *rpcServer
+//	server *RPCServer
 //
 //	// queueNotification queues a notification for handling.
 //	queueNotification chan interface{}
@@ -1218,7 +1218,7 @@ import "errors"
 //
 //// newWsNotificationManager returns a new notification manager ready for use.
 //// See wsNotificationManager for more details.
-//func newWsNotificationManager(server *rpcServer) *wsNotificationManager {
+//func newWsNotificationManager(server *RPCServer) *wsNotificationManager {
 //	return &wsNotificationManager{
 //		server:            server,
 //		queueNotification: make(chan interface{}),
@@ -1254,7 +1254,7 @@ import "errors"
 //	sync.Mutex
 //
 //	// server is the RPC server that is servicing the client.
-//	server *rpcServer
+//	server *RPCServer
 //
 //	// conn is the underlying websocket connection.
 //	conn *websocket.Conn
@@ -1716,7 +1716,7 @@ var ErrClientQuit = errors.New("client quit")
 //// returned client is ready to start.  Once started, the client will process
 //// incoming and outgoing messages in separate goroutines complete with queuing
 //// and asynchrous handling for long-running operations.
-//func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
+//func newWebsocketClient(server *RPCServer, conn *websocket.Conn,
 //	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 //
 //	sessionID, err := encoder.RandomUint64()

@@ -845,10 +845,10 @@ func NewVerifyTxOutProofCmd(proof string) *VerifyTxOutProofCmd {
 type ManageShardsCmd struct {
 	ShardID       uint32
 	Action        string
-	InitialHeight *int64
+	InitialHeight *int32
 }
 
-func NewManageShardsCmd(shardID uint32, action string, initialHeight *int64) *ManageShardsCmd {
+func NewManageShardsCmd(shardID uint32, action string, initialHeight *int32) *ManageShardsCmd {
 	return &ManageShardsCmd{
 		ShardID:       shardID,
 		Action:        action,

@@ -7,11 +7,11 @@ package database_test
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"os"
 	"path/filepath"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
@@ -136,7 +136,7 @@ func Example_blockStorageAndRetrieval() {
 	// read-write transaction and store a genesis block in the database as
 	// and example.
 	err = db.Update(func(tx database.Tx) error {
-		genesisBlock := chaincfg.MainNetParams.GenesisBlock
+		genesisBlock := chain.MainNetParams.GenesisBlock
 		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
 	})
 	if err != nil {
@@ -148,7 +148,7 @@ func Example_blockStorageAndRetrieval() {
 	// transaction and fetch the block stored above.
 	var loadedBlockBytes []byte
 	err = db.Update(func(tx database.Tx) error {
-		genesisHash := chaincfg.MainNetParams.GenesisHash
+		genesisHash := chain.MainNetParams.GenesisHash
 		blockBytes, err := tx.FetchBlock(genesisHash)
 		if err != nil {
 			return err

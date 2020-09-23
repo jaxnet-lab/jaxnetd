@@ -5,9 +5,9 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"sync"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
@@ -23,7 +23,7 @@ type blockIndex struct {
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
 	db          database.DB
-	chainParams *chaincfg.Params
+	chainParams *chain.Params
 
 	sync.RWMutex
 	index map[chainhash.Hash]chain.IBlockNode
@@ -33,7 +33,7 @@ type blockIndex struct {
 // newBlockIndex returns a new empty instance of a block index.  The index will
 // be dynamically populated as block nodes are loaded from the database and
 // manually added.
-func newBlockIndex(db database.DB, chainParams *chaincfg.Params) *blockIndex {
+func newBlockIndex(db database.DB, chainParams *chain.Params) *blockIndex {
 	return &blockIndex{
 		db:          db,
 		chainParams: chainParams,
@@ -85,7 +85,7 @@ func (bi *blockIndex) addNode(node chain.IBlockNode) {
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) NodeStatus(node chain.IBlockNode) chain.BlockStatus{
+func (bi *blockIndex) NodeStatus(node chain.IBlockNode) chain.BlockStatus {
 	bi.RLock()
 	status := node.Status()
 	bi.RUnlock()

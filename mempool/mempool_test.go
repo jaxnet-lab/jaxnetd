@@ -6,13 +6,14 @@ package mempool
 
 import (
 	"encoding/hex"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
@@ -135,7 +136,7 @@ type poolHarness struct {
 	signKey     *btcec.PrivateKey
 	payAddr     btcutil.Address
 	payScript   []byte
-	chainParams *chaincfg.Params
+	chainParams *chain.Params
 
 	chain  *fakeChain
 	txPool *TxPool
@@ -284,7 +285,7 @@ func (p *poolHarness) CreateTxChain(firstOutput spendableOutput, numTxns uint32)
 // for testing.  Also, the fake chain is populated with the returned spendable
 // outputs so the caller can easily create new valid transactions which build
 // off of it.
-func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutput, error) {
+func newPoolHarness(chainParams *chain.Params) (*poolHarness, []spendableOutput, error) {
 	// Use a hard coded key pair for deterministic results.
 	keyBytes, err := hex.DecodeString("700868df1838811ffbdf918fb482c1f7e" +
 		"ad62db4b97bd7012c23e726485e577d")
@@ -458,7 +459,7 @@ func testPoolMembership(tc *testContext, tx *btcutil.Tx, inOrphanPool, inTxPool 
 func TestSimpleOrphanChain(t *testing.T) {
 	t.Parallel()
 
-	harness, spendableOuts, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, spendableOuts, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -521,7 +522,7 @@ func TestSimpleOrphanChain(t *testing.T) {
 func TestOrphanReject(t *testing.T) {
 	t.Parallel()
 
-	harness, outputs, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, outputs, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -576,7 +577,7 @@ func TestOrphanReject(t *testing.T) {
 func TestOrphanEviction(t *testing.T) {
 	t.Parallel()
 
-	harness, outputs, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, outputs, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -641,7 +642,7 @@ func TestBasicOrphanRemoval(t *testing.T) {
 	t.Parallel()
 
 	const maxOrphans = 4
-	harness, spendableOuts, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, spendableOuts, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -716,7 +717,7 @@ func TestOrphanChainRemoval(t *testing.T) {
 	t.Parallel()
 
 	const maxOrphans = 10
-	harness, spendableOuts, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, spendableOuts, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -779,7 +780,7 @@ func TestMultiInputOrphanDoubleSpend(t *testing.T) {
 	t.Parallel()
 
 	const maxOrphans = 4
-	harness, outputs, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, outputs, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -867,7 +868,7 @@ func TestMultiInputOrphanDoubleSpend(t *testing.T) {
 func TestCheckSpend(t *testing.T) {
 	t.Parallel()
 
-	harness, outputs, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, outputs, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -1017,7 +1018,7 @@ func TestSignalsReplacement(t *testing.T) {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			// We'll start each test by creating our mempool
 			// harness.
-			harness, _, err := newPoolHarness(&chaincfg.MainNetParams)
+			harness, _, err := newPoolHarness(&chain.MainNetParams)
 			if err != nil {
 				t.Fatalf("unable to create test pool: %v", err)
 			}
@@ -1192,7 +1193,7 @@ func TestCheckPoolDoubleSpend(t *testing.T) {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			// We'll start each test by creating our mempool
 			// harness.
-			harness, _, err := newPoolHarness(&chaincfg.MainNetParams)
+			harness, _, err := newPoolHarness(&chain.MainNetParams)
 			if err != nil {
 				t.Fatalf("unable to create test pool: %v", err)
 			}
@@ -1343,7 +1344,7 @@ func TestConflicts(t *testing.T) {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			// We'll start each test by creating our mempool
 			// harness.
-			harness, _, err := newPoolHarness(&chaincfg.MainNetParams)
+			harness, _, err := newPoolHarness(&chain.MainNetParams)
 			if err != nil {
 				t.Fatalf("unable to create test pool: %v", err)
 			}
@@ -1381,7 +1382,7 @@ func TestAncestorsDescendants(t *testing.T) {
 	t.Parallel()
 
 	// We'll start the test by initializing our mempool harness.
-	harness, outputs, err := newPoolHarness(&chaincfg.MainNetParams)
+	harness, outputs, err := newPoolHarness(&chain.MainNetParams)
 	if err != nil {
 		t.Fatalf("unable to create test pool: %v", err)
 	}
@@ -1755,7 +1756,7 @@ func TestRBF(t *testing.T) {
 		success := t.Run(testCase.name, func(t *testing.T) {
 			// We'll start each test by creating our mempool
 			// harness.
-			harness, _, err := newPoolHarness(&chaincfg.MainNetParams)
+			harness, _, err := newPoolHarness(&chain.MainNetParams)
 			if err != nil {
 				t.Fatalf("unable to create test pool: %v", err)
 			}

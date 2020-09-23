@@ -4,8 +4,9 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
@@ -77,7 +78,7 @@ type PkScript struct {
 func ParsePkScript(pkScript []byte) (PkScript, error) {
 	var outputScript PkScript
 	scriptClass, _, _, err := ExtractPkScriptAddrs(
-		pkScript, &chaincfg.MainNetParams,
+		pkScript, &chain.MainNetParams,
 	)
 	if err != nil {
 		return outputScript, fmt.Errorf("unable to parse script type: "+
@@ -141,7 +142,7 @@ func (s PkScript) Script() []byte {
 }
 
 // Address encodes the script into an address for the given chain.
-func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, error) {
+func (s PkScript) Address(chainParams *chain.Params) (btcutil.Address, error) {
 	_, addrs, _, err := ExtractPkScriptAddrs(s.Script(), chainParams)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse address: %v", err)

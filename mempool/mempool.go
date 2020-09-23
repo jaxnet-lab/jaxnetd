@@ -7,14 +7,15 @@ package mempool
 import (
 	"container/list"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
@@ -64,7 +65,7 @@ type Config struct {
 
 	// ChainParams identifies which chain parameters the txpool is
 	// associated with.
-	ChainParams *chaincfg.Params
+	ChainParams *chain.Params
 
 	// FetchUtxoView defines the function to use to fetch unspent
 	// transaction output information.
@@ -932,7 +933,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// segwit isn't active yet, then we won't accept it into the mempool as
 	// it can't be mined yet.
 	if tx.MsgTx().HasWitness() {
-		segwitActive, err := mp.cfg.IsDeploymentActive(chaincfg.DeploymentSegwit)
+		segwitActive, err := mp.cfg.IsDeploymentActive(chain.DeploymentSegwit)
 		if err != nil {
 			return nil, nil, err
 		}

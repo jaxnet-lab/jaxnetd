@@ -4,22 +4,23 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"strconv"
-	"sync"
-	"time"
 )
 
 // gbtWorkState houses state that is used in between multiple RPC invocations to
 // getblocktemplate.
 type gbtWorkState struct {
 	sync.Mutex
-	server        *rpcServer
+	server        *RPCServer
 	lastTxUpdate  time.Time
 	lastGenerated time.Time
 	prevHash      *chainhash.Hash
@@ -31,7 +32,7 @@ type gbtWorkState struct {
 
 // newGbtWorkState returns a new instance of a gbtWorkState with all internal
 // fields initialized and ready to use.
-func newGbtWorkState(server *rpcServer, timeSource blockchain.MedianTimeSource) *gbtWorkState {
+func newGbtWorkState(server *RPCServer, timeSource blockchain.MedianTimeSource) *gbtWorkState {
 	return &gbtWorkState{
 		server:     server,
 		notifyMap:  make(map[chainhash.Hash]map[int64]chan struct{}),
@@ -162,7 +163,7 @@ func (state *gbtWorkState) templateUpdateChan(prevHash *chainhash.Hash, lastGene
 // addresses.
 //
 // This function MUST be called with the state locked.
-func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bool) error {
+func (state *gbtWorkState) updateBlockTemplate(s *RPCServer, useCoinbaseValue bool) error {
 	//generator := s.cfg.Generator
 	//lastTxUpdate := generator.TxSource().LastUpdated()
 	//if lastTxUpdate.IsZero() {
@@ -376,7 +377,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		SigOpLimit:   blockchain.MaxBlockSigOpsCost,
 		SizeLimit:    wire.MaxBlockPayload,
 		Transactions: transactions,
-		Version:      header.Version(),
+		Version:      int32(header.Version()),
 		LongPollID:   templateID,
 		SubmitOld:    submitOld,
 		Target:       targetDifficulty,
