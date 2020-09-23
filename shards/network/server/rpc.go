@@ -1051,11 +1051,11 @@ func (s *RPCServer) writeHTTPResponseHeaders(req *http.Request, headers http.Hea
 // Stop is used by rpc.go to stop the rpc listener.
 func (s *RPCServer) Stop() error {
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
-		s.logger.Infof("RPC server is already in the process of shutting down")
+		s.logger.Infof("RPC Server is already in the process of shutting down")
 		return nil
 	}
-	s.logger.Warnf("RPC server shutting down")
-	for _, listener := range s.cfg.Listeners {
+	s.logger.Warnf("RPC Server shutting down")
+	for _, listener := range s.node.Listeners {
 		err := listener.Close()
 		if err != nil {
 			s.logger.Errorf("Problem shutting down rpc: %v", err)
@@ -1066,7 +1066,7 @@ func (s *RPCServer) Stop() error {
 	// s.ntfnMgr.WaitForShutdown()
 	close(s.quit)
 	s.wg.Wait()
-	s.logger.Infof("RPC server shutdown complete")
+	s.logger.Infof("RPC Server shutdown complete")
 	return nil
 }
 
@@ -1266,11 +1266,11 @@ func (s *RPCServer) jsonRPCRead(w http.ResponseWriter, r *http.Request, isAdmin 
 		return
 	}
 
-	// Unfortunately, the http server doesn't provide the ability to
+	// Unfortunately, the http Server doesn't provide the ability to
 	// change the read deadline for the new connection and having one breaks
 	// long polling.  However, not having a read deadline on the initial
 	// connection would mean clients can connect and idle forever.  Thus,
-	// hijack the connecton from the HTTP server, clear the read deadline,
+	// hijack the connecton from the HTTP Server, clear the read deadline,
 	// and handle writing the response manually.
 	hj, ok := w.(http.Hijacker)
 	if !ok {
@@ -1402,7 +1402,7 @@ func (s *RPCServer) Start(ctx context.Context) {
 		return
 	}
 
-	s.logger.Trace("Starting RPC server")
+	s.logger.Debug("Starting RPC Server")
 	rpcServeMux := http.NewServeMux()
 	httpServer := &http.Server{
 		Handler: rpcServeMux,
@@ -1456,10 +1456,10 @@ func (s *RPCServer) Start(ctx context.Context) {
 	//	s.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
 	// })
 
-	for _, listener := range s.cfg.Listeners {
+	for _, listener := range s.node.Listeners {
 		s.wg.Add(1)
 		go func(listener net.Listener) {
-			s.logger.Infof("RPC server listening on %s", listener.Addr())
+			s.logger.Infof("RPC Server listening on %s", listener.Addr())
 			httpServer.Serve(listener)
 			s.logger.Tracef("RPC listener done for %s", listener.Addr())
 			s.wg.Done()

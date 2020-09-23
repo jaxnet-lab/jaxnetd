@@ -144,17 +144,17 @@ type P2PServer struct {
 	started              int32
 	shutdown             int32
 	shutdownSched        int32
-	startupTime          int64
+	StartupTime          int64
 	cfg                  *P2pConfig
 	chainParams          *chain.Params
 	addrManager          *addrmgr.AddrManager
-	connManager          *connmgr.ConnManager
-	sigCache             *txscript.SigCache
-	hashCache            *txscript.HashCache
+	ConnManager          *connmgr.ConnManager
+	SigCache             *txscript.SigCache
+	HashCache            *txscript.HashCache
 	nodeServer           INodeServer
-	syncManager          *netsync.SyncManager
+	SyncManager          *netsync.SyncManager
 	chain                *blockchain.BlockChain
-	txMemPool            *mempool.TxPool
+	TxMemPool            *mempool.TxPool
 	modifyRebroadcastInv chan interface{}
 	newPeers             chan *serverPeer
 	donePeers            chan *serverPeer
@@ -167,20 +167,20 @@ type P2PServer struct {
 	quit                 chan struct{}
 	nat                  NAT
 	db                   database.DB
-	timeSource           blockchain.MedianTimeSource
+	TimeSource           blockchain.MedianTimeSource
 	services             wire.ServiceFlag
 
 	// The following fields are used for optional indexes.  They will be nil
 	// if the associated index is not enabled.  These fields are set during
-	// initial creation of the server and never changed afterwards, so they
+	// initial creation of the Server and never changed afterwards, so they
 	// do not need to be protected for concurrent access.
-	txIndex   *indexers.TxIndex
-	addrIndex *indexers.AddrIndex
-	cfIndex   *indexers.CfIndex
+	TxIndex   *indexers.TxIndex
+	AddrIndex *indexers.AddrIndex
+	CfIndex   *indexers.CfIndex
 
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
-	feeEstimator *mempool.FeeEstimator
+	FeeEstimator *mempool.FeeEstimator
 
 	// cfCheckptCaches stores a cached slice of filter headers for cfcheckpt
 	// messages for each filter type.
@@ -296,7 +296,7 @@ func (s *P2PServer) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 	// Attempt to fetch the requested transaction from the pool.  A
 	// call could be made to check for existence first, but simply trying
 	// to fetch a missing transaction results in the same behavior.
-	tx, err := s.txMemPool.FetchTransaction(hash)
+	tx, err := s.TxMemPool.FetchTransaction(hash)
 	if err != nil {
 		s.logger.Tracef("Unable to fetch tx %v from transaction "+
 			"pool: %v", hash, err)
@@ -492,7 +492,7 @@ func (s *P2PServer) handleQuery(state *peerState, querymsg interface{}) {
 		}
 
 		// TODO: if too many, nuke a non-perm peer.
-		go s.connManager.Connect(&connmgr.ConnReq{
+		go s.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: msg.permanent,
@@ -650,10 +650,10 @@ func (s *P2PServer) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 	if err != nil {
 		s.logger.Debugf("Cannot create outbound peer %s: %v", c.Addr, err)
 		if c.Permanent {
-			s.connManager.Disconnect(c.ID())
+			s.ConnManager.Disconnect(c.ID())
 		} else {
-			s.connManager.Remove(c.ID())
-			go s.connManager.NewConnReq()
+			s.ConnManager.Remove(c.ID())
+			go s.ConnManager.NewConnReq()
 		}
 		return
 	}
@@ -672,10 +672,10 @@ func (s *P2PServer) peerDoneHandler(sp *serverPeer) {
 
 	// Only tell sync manager we are gone if we ever told it we existed.
 	if sp.VerAckReceived() {
-		s.syncManager.DonePeer(sp.Peer)
+		s.SyncManager.DonePeer(sp.Peer)
 
 		// Evict any remaining orphans that were sent by the peer.
-		numEvicted := s.txMemPool.RemoveOrphansByTag(mempool.Tag(sp.ID()))
+		numEvicted := s.TxMemPool.RemoveOrphansByTag(mempool.Tag(sp.ID()))
 		if numEvicted > 0 {
 			s.logger.Debugf("Evicted %d %s from peer %v (id %d)",
 				numEvicted, pickNoun(numEvicted, "orphan",
@@ -695,7 +695,7 @@ func (s *P2PServer) peerHandler() {
 	// things, it's easier and slightly faster to simply start and stop them
 	// in this handler.
 	s.addrManager.Start()
-	s.syncManager.Start()
+	s.SyncManager.Start()
 
 	s.logger.Tracef("Starting peer handler")
 
@@ -719,12 +719,12 @@ func (s *P2PServer) peerHandler() {
 				s.addrManager.AddAddresses(addrs, addrs[0])
 			})
 	}
-	go s.connManager.Start()
+	go s.ConnManager.Start()
 
 out:
 	for {
 		select {
-		// New peers connected to the server.
+		// New peers connected to the Server.
 		case p := <-s.newPeers:
 			s.handleAddPeerMsg(state, p)
 
@@ -753,7 +753,7 @@ out:
 			s.handleQuery(state, qmsg)
 
 		case <-s.quit:
-			// Disconnect all peers on server shutdown.
+			// Disconnect all peers on Server shutdown.
 			state.forAllPeers(func(sp *serverPeer) {
 				s.logger.Tracef("Shutdown peer %s", sp)
 				sp.Disconnect()
@@ -762,8 +762,8 @@ out:
 		}
 	}
 
-	s.connManager.Stop()
-	s.syncManager.Stop()
+	s.ConnManager.Stop()
+	s.SyncManager.Stop()
 	s.addrManager.Stop()
 
 	// Drain channels before exiting so nothing is left waiting around
@@ -801,7 +801,7 @@ func (s *P2PServer) RelayInventory(invVect *types.InvVect, data interface{}) {
 	s.relayInv <- relayMsg{invVect: invVect, data: data}
 }
 
-// BroadcastMessage sends msg to all peers currently connected to the server
+// BroadcastMessage sends msg to all peers currently connected to the Server
 // except those in the passed peers to exclude.
 func (s *P2PServer) BroadcastMessage(msg wire.Message, exclPeers ...*serverPeer) {
 	// XXX: Need to determine if this is an alert that has already been
@@ -923,7 +923,7 @@ func (s *P2PServer) Run(ctx context.Context) {
 	s.logger.Trace("Starting server")
 
 	// Server startup time. Used for the uptime command for uptime calculation.
-	s.startupTime = time.Now().Unix()
+	s.StartupTime = time.Now().Unix()
 
 	// Start the peer handler which in turn starts the address and block
 	// managers.
@@ -939,7 +939,7 @@ func (s *P2PServer) Run(ctx context.Context) {
 	// Save fee estimator state in the database.
 	s.db.Update(func(tx database.Tx) error {
 		metadata := tx.Metadata()
-		metadata.Put(mempool.EstimateFeeDatabaseKey, s.feeEstimator.Save())
+		metadata.Put(mempool.EstimateFeeDatabaseKey, s.FeeEstimator.Save())
 
 		return nil
 	})
@@ -959,10 +959,10 @@ func (s *P2PServer) Start() {
 		return
 	}
 
-	s.logger.Trace("Starting server")
+	s.logger.Trace("Starting Server")
 
 	// Server startup time. Used for the uptime command for uptime calculation.
-	s.startupTime = time.Now().Unix()
+	s.StartupTime = time.Now().Unix()
 
 	// Start the peer handler which in turn starts the address and block
 	// managers.
@@ -978,7 +978,7 @@ func (s *P2PServer) Start() {
 	//	s.wg.Add(1)
 	//
 	//	// Start the rebroadcastHandler, which ensures user tx received by
-	//	// the RPC server are rebroadcast until being included in a block.
+	//	// the RPC Server are rebroadcast until being included in a block.
 	//	go s.rebroadcastHandler()
 	//
 	//	s.RPCServer.Start()
@@ -986,7 +986,7 @@ func (s *P2PServer) Start() {
 
 }
 
-// Stop gracefully shuts down the server by stopping and disconnecting all
+// Stop gracefully shuts down the Server by stopping and disconnecting all
 // peers and the main listener.
 func (s *P2PServer) Stop() error {
 	// Make sure this only happens once.
@@ -998,7 +998,7 @@ func (s *P2PServer) Stop() error {
 	// Stop the CPU miner if needed
 	// s.cpuMiner.Stop()
 
-	// Shutdown the RPC server if it's not disabled.
+	// Shutdown the RPC Server if it's not disabled.
 	// if !s.rpcCfg.Disable {
 	//	s.RPCServer.Stop()
 	// }
@@ -1006,7 +1006,7 @@ func (s *P2PServer) Stop() error {
 	// Save fee estimator state in the database.
 	s.db.Update(func(tx database.Tx) error {
 		metadata := tx.Metadata()
-		metadata.Put(mempool.EstimateFeeDatabaseKey, s.feeEstimator.Save())
+		metadata.Put(mempool.EstimateFeeDatabaseKey, s.FeeEstimator.Save())
 
 		return nil
 	})
@@ -1021,8 +1021,8 @@ func (s *P2PServer) WaitForShutdown() {
 	s.wg.Wait()
 }
 
-// ScheduleShutdown schedules a server shutdown after the specified duration.
-// It also dynamically adjusts how often to warn the server is going down based
+// ScheduleShutdown schedules a Server shutdown after the specified duration.
+// It also dynamically adjusts how often to warn the Server is going down based
 // on remaining duration.
 func (s *P2PServer) ScheduleShutdown(duration time.Duration) {
 	// Don't schedule shutdown more than once.
@@ -1061,11 +1061,11 @@ func (s *P2PServer) ScheduleShutdown(duration time.Duration) {
 	}()
 }
 
-// parseListeners determines whether each listen address is IPv4 and IPv6 and
+// ParseListeners determines whether each listen address is IPv4 and IPv6 and
 // returns a slice of appropriate net.Addrs to listen on with TCP. It also
 // properly detects addresses which apply to "all interfaces" and adds the
 // address as both IPv4 and IPv6.
-func parseListeners(addrs []string) ([]net.Addr, error) {
+func ParseListeners(addrs []string) ([]net.Addr, error) {
 	netAddrs := make([]net.Addr, 0, len(addrs)*2)
 	for _, addr := range addrs {
 		host, _, err := net.SplitHostPort(addr)
@@ -1163,14 +1163,14 @@ func (s *P2PServer) BlockChain() *blockchain.BlockChain {
 	return s.chain
 }
 
-// newServer returns a new btcd server configured to listen on addr for the
+// newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by chainParams.  Use start to begin accepting
 // connections from peers.
 func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	iChain chain.IChain, listenAddrs, agentBlacklist, agentWhitelist []string,
 	db database.DB, logger *zap.Logger) (*P2PServer, error) {
 
-	logger.Info("Starting server", zap.Any("Peers", cfg.Peers))
+	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
@@ -1190,6 +1190,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		if len(listeners) == 0 {
 			return nil, errors.New("no valid listen address")
 		}
+		cfg.Listeners = listenAddrs
 	}
 
 	if len(agentBlacklist) > 0 {
@@ -1215,15 +1216,15 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
 		db:                   db,
-		timeSource:           blockchain.NewMedianTime(),
+		TimeSource:           blockchain.NewMedianTime(),
 		services:             services,
-		sigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
-		hashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
+		SigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
+		HashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
 		cfCheckptCaches:      make(map[wire.FilterType][]cfHeaderKV),
 		agentBlacklist:       agentBlacklist,
 		agentWhitelist:       agentWhitelist,
 		indexLogger:          network.LogAdapter(logger.With(zap.String("scope", "index"))),
-		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "server"))),
+		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "Server"))),
 		logger:               network.LogAdapter(logger),
 		zapLogger:            logger,
 	}
@@ -1246,18 +1247,18 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 			s.indexLogger.Info("Transaction index is enabled")
 		}
 
-		s.txIndex = indexers.NewTxIndex(db)
-		indexes = append(indexes, s.txIndex)
+		s.TxIndex = indexers.NewTxIndex(db)
+		indexes = append(indexes, s.TxIndex)
 	}
 	if cfg.AddrIndex {
 		s.indexLogger.Info("Address index is enabled")
-		s.addrIndex = indexers.NewAddrIndex(db, iChain.Params())
-		indexes = append(indexes, s.addrIndex)
+		s.AddrIndex = indexers.NewAddrIndex(db, iChain.Params())
+		indexes = append(indexes, s.AddrIndex)
 	}
 	if !cfg.NoCFilters {
 		s.indexLogger.Info("Committed filter index is enabled")
-		s.cfIndex = indexers.NewCfIndex(db, iChain.Params())
-		indexes = append(indexes, s.cfIndex)
+		s.CfIndex = indexers.NewCfIndex(db, iChain.Params())
+		indexes = append(indexes, s.CfIndex)
 	}
 
 	// Create an index manager if any of the optional indexes are enabled.
@@ -1279,10 +1280,10 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		Interrupt:    ctx.Done(),
 		ChainParams:  s.chainParams,
 		Checkpoints:  checkpoints,
-		TimeSource:   s.timeSource,
-		SigCache:     s.sigCache,
+		TimeSource:   s.TimeSource,
+		SigCache:     s.SigCache,
 		IndexManager: indexManager,
-		HashCache:    s.hashCache,
+		HashCache:    s.HashCache,
 		Chain:        iChain,
 	})
 	if err != nil {
@@ -1301,7 +1302,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 			// If there is an error, log it and make a new fee estimator.
 			var err error
-			s.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
+			s.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
 			if err != nil {
 				s.logger.Errorf("Failed to restore fee estimator %v", err)
@@ -1311,10 +1312,10 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		return nil
 	})
 
-	// If no feeEstimator has been found, or if the one that has been found
+	// If no FeeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
-	if s.feeEstimator == nil || s.feeEstimator.LastKnownHeight() != s.chain.BestSnapshot().Height {
-		s.feeEstimator = mempool.NewFeeEstimator(
+	if s.FeeEstimator == nil || s.FeeEstimator.LastKnownHeight() != s.chain.BestSnapshot().Height {
+		s.FeeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
 	}
@@ -1339,21 +1340,21 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 			return s.chain.CalcSequenceLock(tx, view, true)
 		},
 		IsDeploymentActive: s.chain.IsDeploymentActive,
-		SigCache:           s.sigCache,
-		HashCache:          s.hashCache,
-		AddrIndex:          s.addrIndex,
-		FeeEstimator:       s.feeEstimator,
+		SigCache:           s.SigCache,
+		HashCache:          s.HashCache,
+		AddrIndex:          s.AddrIndex,
+		FeeEstimator:       s.FeeEstimator,
 	}
-	s.txMemPool = mempool.New(&txC)
+	s.TxMemPool = mempool.New(&txC)
 
-	s.syncManager, err = netsync.New(&netsync.Config{
+	s.SyncManager, err = netsync.New(&netsync.Config{
 		PeerNotifier:       &s,
 		Chain:              s.chain,
-		TxMemPool:          s.txMemPool,
+		TxMemPool:          s.TxMemPool,
 		ChainParams:        s.chainParams,
 		DisableCheckpoints: cfg.DisableCheckpoints,
 		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       s.feeEstimator,
+		FeeEstimator:       s.FeeEstimator,
 	})
 	if err != nil {
 		return nil, err
@@ -1373,8 +1374,8 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	//	TxMinFreeFee:      cfg.MinRelayTxFeeValues,
 	// }
 	// blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-	//	s.chainParams, s.txMemPool, s.iChain, s.timeSource,
-	//	s.sigCache, s.hashCache)
+	//	s.chainParams, s.TxMemPool, s.chain, s.TimeSource,
+	//	s.SigCache, s.HashCache)
 
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
@@ -1442,7 +1443,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	if err != nil {
 		return nil, err
 	}
-	s.connManager = cmgr
+	s.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1455,7 +1456,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 			return nil, err
 		}
 
-		go s.connManager.Connect(&connmgr.ConnReq{
+		go s.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
@@ -1465,13 +1466,13 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	return &s, nil
 }
 
-// newServer returns a new btcd server configured to listen on addr for the
+// newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by chainParams.  Use start to begin accepting
 // connections from peers.
 func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager, iChain chain.IChain,
 	db database.DB, logger *zap.Logger) (*P2PServer, error) {
 
-	logger.Info("Starting server", zap.Any("Peers", cfg.Peers))
+	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
@@ -1509,13 +1510,13 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
 		db:                   db,
-		timeSource:           blockchain.NewMedianTime(),
+		TimeSource:           blockchain.NewMedianTime(),
 		services:             services,
-		sigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
-		hashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
+		SigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
+		HashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
 		cfCheckptCaches:      make(map[wire.FilterType][]cfHeaderKV),
 		indexLogger:          network.LogAdapter(logger.With(zap.String("scope", "index"))),
-		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "server"))),
+		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "Server"))),
 		logger:               network.LogAdapter(logger),
 		zapLogger:            logger,
 	}
@@ -1540,9 +1541,9 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		Interrupt:   ctx.Done(),
 		ChainParams: srv.chainParams,
 		Checkpoints: checkpoints,
-		TimeSource:  srv.timeSource,
-		SigCache:    srv.sigCache,
-		HashCache:   srv.hashCache,
+		TimeSource:  srv.TimeSource,
+		SigCache:    srv.SigCache,
+		HashCache:   srv.HashCache,
 		Chain:       iChain,
 	})
 	if err != nil {
@@ -1561,7 +1562,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 			// If there is an error, log it and make a new fee estimator.
 			var err error
-			srv.feeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
+			srv.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
 			if err != nil {
 				srv.logger.Errorf("Failed to restore fee estimator %v", err)
@@ -1571,10 +1572,10 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		return nil
 	})
 
-	// If no feeEstimator has been found, or if the one that has been found
+	// If no FeeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
-	if srv.feeEstimator == nil || srv.feeEstimator.LastKnownHeight() != srv.chain.BestSnapshot().Height {
-		srv.feeEstimator = mempool.NewFeeEstimator(
+	if srv.FeeEstimator == nil || srv.FeeEstimator.LastKnownHeight() != srv.chain.BestSnapshot().Height {
+		srv.FeeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
 	}
@@ -1599,21 +1600,21 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 			return srv.chain.CalcSequenceLock(tx, view, true)
 		},
 		IsDeploymentActive: srv.chain.IsDeploymentActive,
-		SigCache:           srv.sigCache,
-		HashCache:          srv.hashCache,
-		AddrIndex:          srv.addrIndex,
-		FeeEstimator:       srv.feeEstimator,
+		SigCache:           srv.SigCache,
+		HashCache:          srv.HashCache,
+		AddrIndex:          srv.AddrIndex,
+		FeeEstimator:       srv.FeeEstimator,
 	}
-	srv.txMemPool = mempool.New(&txC)
+	srv.TxMemPool = mempool.New(&txC)
 
-	srv.syncManager, err = netsync.New(&netsync.Config{
+	srv.SyncManager, err = netsync.New(&netsync.Config{
 		PeerNotifier:       &srv,
 		Chain:              srv.chain,
-		TxMemPool:          srv.txMemPool,
+		TxMemPool:          srv.TxMemPool,
 		ChainParams:        srv.chainParams,
 		DisableCheckpoints: cfg.DisableCheckpoints,
 		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       srv.feeEstimator,
+		FeeEstimator:       srv.FeeEstimator,
 	})
 	if err != nil {
 		return nil, err
@@ -1633,8 +1634,8 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	//	TxMinFreeFee:      cfg.MinRelayTxFeeValues,
 	// }
 	// blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-	//	srv.chainParams, srv.txMemPool, srv.iChain, srv.timeSource,
-	//	srv.sigCache, srv.hashCache)
+	//	srv.chainParams, srv.TxMemPool, srv.iChain, srv.TimeSource,
+	//	srv.SigCache, srv.HashCache)
 
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
@@ -1702,7 +1703,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	if err != nil {
 		return nil, err
 	}
-	srv.connManager = cmgr
+	srv.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1716,7 +1717,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 			return nil, err
 		}
 
-		go srv.connManager.Connect(&connmgr.ConnReq{
+		go srv.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
@@ -1731,7 +1732,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 // which is non-nil if UPnP is in use.
 func initListeners(cfg *P2pConfig, defaultPort string, amgr *addrmgr.AddrManager, listenAddrs []string, services wire.ServiceFlag, logger *zap.Logger) ([]net.Listener, NAT, error) {
 	// Listen for TCP connections at the configured addresses
-	netAddrs, err := parseListeners(listenAddrs)
+	netAddrs, err := ParseListeners(listenAddrs)
 	if err != nil {
 		return nil, nil, err
 	}

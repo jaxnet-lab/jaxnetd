@@ -16,45 +16,45 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
-// rpcserverConfig is a descriptor containing the RPC server configuration.
+// rpcserverConfig is a descriptor containing the RPC Server configuration.
 type Config struct {
 	ListenerAddresses []string `yaml:"listeners"`
 	MaxClients        int      `yaml:"maxclients"`
 	User              string   `yaml:"user"`
 	Password          string   `yaml:"password"`
-	Disable           bool     `yaml:"disable" long:"norpc" description:"Disable built-in RPC server -- NOTE: The RPC server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
+	Disable           bool     `yaml:"disable" long:"norpc" description:"Disable built-in RPC Server -- NOTE: The RPC Server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
 	// RPCCert            string  `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
 	// RPCKey             string  `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
 	LimitPass         string `yaml:"limit_pass"`
 	LimitUser         string `yaml:"limit_user"`
 	MaxConcurrentReqs int    `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	MaxWebsockets     int    `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
-
-	// Listeners defines a slice of listeners for which the RPC server will
-	// take ownership of and accept connections.  Since the RPC server takes
-	// ownership of these listeners, they will be closed when the RPC server
-	// is stopped.
-	Listeners []net.Listener `yaml:"-"`
-
-	// StartupTime is the unix timestamp for when the server that is hosting
-	// the RPC server started.
-	StartupTime int64
 }
 
 type NodeActor struct {
-	// ConnMgr defines the connection manager for the RPC server to use.  It
-	// provides the RPC server with a means to do things such as add,
+	// Listeners defines a slice of listeners for which the RPC Server will
+	// take ownership of and accept connections.  Since the RPC Server takes
+	// ownership of these listeners, they will be closed when the RPC Server
+	// is stopped.
+	Listeners []net.Listener `yaml:"-"`
+
+	// StartupTime is the unix timestamp for when the Server that is hosting
+	// the RPC Server started.
+	StartupTime int64
+
+	// ConnMgr defines the connection manager for the RPC Server to use.  It
+	// provides the RPC Server with a means to do things such as add,
 	// remove, connect, disconnect, and query peers as well as other
 	// connection-related data and tasks.
 	ConnMgr rpcserverConnManager
 
-	// SyncMgr defines the sync manager for the RPC server to use.
+	// SyncMgr defines the sync manager for the RPC Server to use.
 	SyncMgr rpcserverSyncManager
 
 	// ShardsMgr provides ability to manipulate running shards.
 	ShardsMgr ShardManager
 
-	// These fields allow the RPC server to interface with the local block
+	// These fields allow the RPC Server to interface with the local block
 	// chain data and state.
 	TimeSource  blockchain.MedianTimeSource
 	Chain       *blockchain.BlockChain
@@ -64,7 +64,7 @@ type NodeActor struct {
 	// TxMemPool defines the transaction memory pool to interact with.
 	TxMemPool *mempool.TxPool
 
-	// These fields allow the RPC server to interface with mining.
+	// These fields allow the RPC Server to interface with mining.
 	//
 	// Generator produces block templates and the CPUMiner solves them using
 	// the CPU.  CPU mining is typically only useful for test purposes when
@@ -72,7 +72,7 @@ type NodeActor struct {
 	Generator *mining.BlkTmplGenerator
 	// CPUMiner  *cpuminer.CPUMiner
 
-	// These fields define any optional indexes the RPC server can make use
+	// These fields define any optional indexes the RPC Server can make use
 	// of to provide additional data when queried.
 	TxIndex   *indexers.TxIndex
 	AddrIndex *indexers.AddrIndex

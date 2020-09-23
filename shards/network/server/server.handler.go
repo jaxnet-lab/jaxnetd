@@ -55,7 +55,7 @@ func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 
 	// Ignore new peers if we're shutting down.
 	if atomic.LoadInt32(&s.shutdown) != 0 {
-		s.logger.Infof("New peer %s ignored - server is shutting down", sp)
+		s.logger.Infof("New peer %s ignored - Server is shutting down", sp)
 		sp.Disconnect()
 		return false
 	}
@@ -110,7 +110,7 @@ func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	}
 
 	// Signal the sync manager this peer is a new sync candidate.
-	s.syncManager.NewPeer(sp.Peer)
+	s.SyncManager.NewPeer(sp.Peer)
 
 	// Update the address manager and request known addresses from the
 	// remote peer for outbound connections. This is skipped when running on
@@ -118,10 +118,10 @@ func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	// specified peers and actively avoids advertising and connecting to
 	// discovered peers.
 	if !sp.Inbound() {
-		// Advertise the local address when the server accepts incoming
+		// Advertise the local address when the Server accepts incoming
 		// connections and it believes itself to be close to the best
 		// known tip.
-		if !s.cfg.DisableListen && s.syncManager.IsCurrent() {
+		if !s.cfg.DisableListen && s.SyncManager.IsCurrent() {
 			// Get address that best matches.
 			lna := s.addrManager.GetBestLocalAddress(sp.NA())
 			if addrmgr.IsRoutable(lna) {
@@ -131,7 +131,7 @@ func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 			}
 		}
 
-		// Request known addresses if the server address manager needs
+		// Request known addresses if the Server address manager needs
 		// more and the peer has a protocol version new enough to
 		// include a timestamp with addresses.
 		hasTimestamp := sp.ProtocolVersion() >= wire.NetAddressTimeVersion
@@ -163,10 +163,10 @@ func (s *P2PServer) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	// process a peer's `done` message before its `add`.
 	if !sp.Inbound() {
 		if sp.persistent {
-			s.connManager.Disconnect(sp.connReq.ID())
+			s.ConnManager.Disconnect(sp.connReq.ID())
 		} else {
-			s.connManager.Remove(sp.connReq.ID())
-			go s.connManager.NewConnReq()
+			s.ConnManager.Remove(sp.connReq.ID())
+			go s.ConnManager.NewConnReq()
 		}
 	}
 

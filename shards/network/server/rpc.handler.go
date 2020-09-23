@@ -206,7 +206,7 @@ func (s *RPCServer) handleNode(cmd interface{}, closeChan <-chan struct{}) (inte
 
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCMisc,
-				Message: "can't disconnect a permanent server, use remove",
+				Message: "can't disconnect a permanent Server, use remove",
 			}
 		}
 
@@ -230,7 +230,7 @@ func (s *RPCServer) handleNode(cmd interface{}, closeChan <-chan struct{}) (inte
 		if err != nil && peerExists(s.node.ConnMgr, addr, int32(nodeID)) {
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCMisc,
-				Message: "can't remove a temporary server, use disconnect",
+				Message: "can't remove a temporary Server, use disconnect",
 			}
 		}
 
@@ -323,7 +323,7 @@ func (s *RPCServer) handleCreateRawTransaction(cmd interface{}, closeChan <-chan
 
 		// Ensure the address is one of the supported types and that
 		// the network encoded with the address matches the network the
-		// server is currently on.
+		// Server is currently on.
 		switch addr.(type) {
 		case *btcutil.AddressPubKeyHash:
 		case *btcutil.AddressScriptHash:
@@ -595,7 +595,7 @@ func (s *RPCServer) handleEstimateFee(cmd interface{}, closeChan <-chan struct{}
 func (s *RPCServer) handleGetAddedNodeInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetAddedNodeInfoCmd)
 
-	// Retrieve a list of persistent (added) peers from the server and
+	// Retrieve a list of persistent (added) peers from the Server and
 	// filter the list of peers per the specified address (if any).
 	peers := s.node.ConnMgr.PersistentPeers()
 	if c.Node != nil {
@@ -626,10 +626,10 @@ func (s *RPCServer) handleGetAddedNodeInfo(cmd interface{}, closeChan <-chan str
 	}
 
 	// With the dns flag, the result is an array of JSON objects which
-	// include the result of DNS lookups for each server.
+	// include the result of DNS lookups for each Server.
 	results := make([]*btcjson.GetAddedNodeInfoResult, 0, len(peers))
 	for _, rpcPeer := range peers {
-		// Set the "address" of the server which could be an ip address
+		// Set the "address" of the Server which could be an ip address
 		// or a domain name.
 		peer := rpcPeer.ToPeer()
 		var result btcjson.GetAddedNodeInfoResult
@@ -1038,7 +1038,7 @@ func (s *RPCServer) handleGetBlockTemplateRequest(request *btcjson.TemplateReque
 	//	return nil, &btcjson.RPCError{
 	//		Code: btcjson.ErrRPCInternal.Code,
 	//		Message: "A coinbase transaction has been requested, " +
-	//			"but the server has not been configured with " +
+	//			"but the Server has not been configured with " +
 	//			"any payment addresses via --miningaddr",
 	//	}
 	//}
@@ -2402,7 +2402,7 @@ func (s *RPCServer) handleSubmitBlock(cmd interface{}, closeChan <-chan struct{}
 
 // handleUptime implements the uptime command.
 func (s *RPCServer) handleUptime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return time.Now().Unix() - s.cfg.StartupTime, nil
+	return time.Now().Unix() - s.node.StartupTime, nil
 }
 
 // handleValidateAddress implements the validateaddress command.
