@@ -402,7 +402,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCInternal.Code,
 				Message: "A coinbase transaction has been " +
-					"requested, but the server has not " +
+					"requested, but the Server has not " +
 					"been configured with any payment " +
 					"addresses via --miningaddr",
 			}

@@ -294,7 +294,7 @@ var helpDescsEnUS = map[string]string{
 	"templaterequest-maxversion":   "Highest supported block version number (this parameter is ignored)",
 	"templaterequest-target":       "The desired target for the block template (this parameter is ignored)",
 	"templaterequest-data":         "Hex-encoded block data (only for mode=proposal)",
-	"templaterequest-workid":       "The server provided workid if provided in block template (not applicable)",
+	"templaterequest-workid":       "The Server provided workid if provided in block template (not applicable)",
 
 	// GetBlockTemplateResultTx help.
 	"getblocktemplateresulttx-data":    "Hex-encoded transaction data (byte-for-byte)",
@@ -309,7 +309,7 @@ var helpDescsEnUS = map[string]string{
 
 	// GetBlockTemplateResult help.
 	"getblocktemplateresult-bits":                       "Hex-encoded compressed difficulty",
-	"getblocktemplateresult-curtime":                    "Current time as seen by the server (recommended for block time); must fall within mintime/maxtime rules",
+	"getblocktemplateresult-curtime":                    "Current time as seen by the Server (recommended for block time); must fall within mintime/maxtime rules",
 	"getblocktemplateresult-height":                     "Height of the block to be solved",
 	"getblocktemplateresult-previousblockhash":          "Hex-encoded big-endian hash of the previous block",
 	"getblocktemplateresult-sigoplimit":                 "Number of sigops allowed in blocks ",
@@ -324,12 +324,12 @@ var helpDescsEnUS = map[string]string{
 	"getblocktemplateresult-longpolluri":                "An alternate URI to use for long poll requests if provided (not provided)",
 	"getblocktemplateresult-submitold":                  "Not applicable",
 	"getblocktemplateresult-target":                     "Hex-encoded big-endian number which valid results must be less than",
-	"getblocktemplateresult-expires":                    "Maximum number of seconds (starting from when the server sent the response) this work is valid for",
+	"getblocktemplateresult-expires":                    "Maximum number of seconds (starting from when the Server sent the response) this work is valid for",
 	"getblocktemplateresult-maxtime":                    "Maximum allowed time",
 	"getblocktemplateresult-mintime":                    "Minimum allowed time",
-	"getblocktemplateresult-mutable":                    "List of mutations the server explicitly allows",
+	"getblocktemplateresult-mutable":                    "List of mutations the Server explicitly allows",
 	"getblocktemplateresult-noncerange":                 "Two concatenated hex-encoded big-endian 32-bit integers which represent the valid ranges of nonces the miner may scan",
-	"getblocktemplateresult-capabilities":               "List of server capabilities including 'proposal' to indicate support for block proposals",
+	"getblocktemplateresult-capabilities":               "List of Server capabilities including 'proposal' to indicate support for block proposals",
 	"getblocktemplateresult-reject-reason":              "Reason the proposal was invalid as-is (only applies to proposal responses)",
 	"getblocktemplateresult-default_witness_commitment": "The witness commitment itself. Will be populated if the block has witness data",
 	"getblocktemplateresult-weightlimit":                "The current limit on the max allowed weight of a block",
@@ -360,7 +360,7 @@ var helpDescsEnUS = map[string]string{
 	"getconnectioncount--result0":  "The number of connections",
 
 	// GetCurrentNetCmd help.
-	"getcurrentnet--synopsis": "Get bitcoin network the server is running on.",
+	"getcurrentnet--synopsis": "Get bitcoin network the Server is running on.",
 	"getcurrentnet--result0":  "The network identifer",
 
 	// GetDifficultyCmd help.
@@ -368,7 +368,7 @@ var helpDescsEnUS = map[string]string{
 	"getdifficulty--result0":  "The difficulty",
 
 	// GetGenerateCmd help.
-	"getgenerate--synopsis": "Returns if the server is set to generate coins (mine) or not.",
+	"getgenerate--synopsis": "Returns if the Server is set to generate coins (mine) or not.",
 	"getgenerate--result0":  "True if mining, false if not",
 
 	// GetHashesPerSecCmd help.
@@ -376,28 +376,28 @@ var helpDescsEnUS = map[string]string{
 	"gethashespersec--result0":  "The number of hashes per second",
 
 	// InfoChainResult help.
-	"infochainresult-version":         "The version of the server",
+	"infochainresult-version":         "The version of the Server",
 	"infochainresult-protocolversion": "The latest supported protocol version",
 	"infochainresult-blocks":          "The number of blocks processed",
 	"infochainresult-timeoffset":      "The time offset",
 	"infochainresult-connections":     "The number of connected peers",
-	"infochainresult-proxy":           "The proxy used by the server",
+	"infochainresult-proxy":           "The proxy used by the Server",
 	"infochainresult-difficulty":      "The current target difficulty",
-	"infochainresult-testnet":         "Whether or not server is using testnet",
+	"infochainresult-testnet":         "Whether or not Server is using testnet",
 	"infochainresult-relayfee":        "The minimum relay fee for non-free transactions in BTC/KB",
 	"infochainresult-errors":          "Any current errors",
 
 	// InfoWalletResult help.
-	"infowalletresult-version":         "The version of the server",
+	"infowalletresult-version":         "The version of the Server",
 	"infowalletresult-protocolversion": "The latest supported protocol version",
-	"infowalletresult-walletversion":   "The version of the wallet server",
+	"infowalletresult-walletversion":   "The version of the wallet Server",
 	"infowalletresult-balance":         "The total bitcoin balance of the wallet",
 	"infowalletresult-blocks":          "The number of blocks processed",
 	"infowalletresult-timeoffset":      "The time offset",
 	"infowalletresult-connections":     "The number of connected peers",
-	"infowalletresult-proxy":           "The proxy used by the server",
+	"infowalletresult-proxy":           "The proxy used by the Server",
 	"infowalletresult-difficulty":      "The current target difficulty",
-	"infowalletresult-testnet":         "Whether or not server is using testnet",
+	"infowalletresult-testnet":         "Whether or not Server is using testnet",
 	"infowalletresult-keypoololdest":   "Seconds since 1 Jan 1970 GMT of the oldest pre-generated key in the key pool",
 	"infowalletresult-keypoolsize":     "The number of new keys that are pre-generated",
 	"infowalletresult-unlocked_until":  "The timestamp in seconds since 1 Jan 1970 GMT that the wallet is unlocked for transfers, or 0 if the wallet is locked",
@@ -428,12 +428,12 @@ var helpDescsEnUS = map[string]string{
 	"getmininginforesult-currentblocktx":     "Number of transactions in the latest best block",
 	"getmininginforesult-difficulty":         "Current target difficulty",
 	"getmininginforesult-errors":             "Any current errors",
-	"getmininginforesult-generate":           "Whether or not server is set to generate coins",
+	"getmininginforesult-generate":           "Whether or not Server is set to generate coins",
 	"getmininginforesult-genproclimit":       "Number of processors to use for coin generation (-1 when disabled)",
 	"getmininginforesult-hashespersec":       "Recent hashes per second performance measurement while generating coins",
 	"getmininginforesult-networkhashps":      "Estimated network hashes per second for the most recent blocks",
 	"getmininginforesult-pooledtx":           "Number of transactions in the memory pool",
-	"getmininginforesult-testnet":            "Whether or not server is using testnet",
+	"getmininginforesult-testnet":            "Whether or not Server is using testnet",
 
 	// GetMiningInfoCmd help.
 	"getmininginfo--synopsis": "Returns a JSON object containing mining-related information.",
@@ -555,7 +555,7 @@ var helpDescsEnUS = map[string]string{
 	"sendrawtransaction--result0":      "The hash of the transaction",
 
 	// SetGenerateCmd help.
-	"setgenerate--synopsis":    "Set the server to generate coins (mine) or not.",
+	"setgenerate--synopsis":    "Set the Server to generate coins (mine) or not.",
 	"setgenerate-generate":     "Use true to enable generation, false to disable it",
 	"setgenerate-genproclimit": "The number of processors (cores) to limit generation to or -1 for default",
 
@@ -665,8 +665,8 @@ var helpDescsEnUS = map[string]string{
 	"rescannedblock-transactions": "List of matching transactions, serialized and hex-encoded.",
 
 	// Uptime help.
-	"uptime--synopsis": "Returns the total uptime of the server.",
-	"uptime--result0":  "The number of seconds that the server has been running",
+	"uptime--synopsis": "Returns the total uptime of the Server.",
+	"uptime--result0":  "The number of seconds that the Server has been running",
 
 	// Version help.
 	"version--synopsis":       "Returns the JSON-RPC API version (semver)",

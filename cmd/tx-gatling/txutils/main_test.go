@@ -55,7 +55,7 @@ func TestMakeMultiSigScript(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "testnet",
 		RPC: NodeRPC{
-			Host: "127.0.0.1:28334",
+			Host: "116.202.107.209:18334",
 			User: "somerpc",
 			Pass: "somerpc",
 		},

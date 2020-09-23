@@ -87,7 +87,7 @@ import "errors"
 //// WebsocketHandler handles a new websocket client by creating a new wsClient,
 //// starting it, and blocking until the connection closes.  Since it blocks, it
 //// must be run in a separate goroutine.  It should be invoked from the websocket
-//// server handler which runs each new connection in a new goroutine thereby
+//// Server handler which runs each new connection in a new goroutine thereby
 //// satisfying the requirement.
 //func (s *rpcServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
 //	authenticated bool, isAdmin bool) {
@@ -131,8 +131,8 @@ import "errors"
 //// have registered for and notifies them accordingly.  It is also used to keep
 //// track of all connected websocket clients.
 //type wsNotificationManager struct {
-//	// server is the RPC server the notification manager is associated with.
-//	server *rpcServer
+//	// Server is the RPC Server the notification manager is associated with.
+//	Server *rpcServer
 //
 //	// queueNotification queues a notification for handling.
 //	queueNotification chan interface{}
@@ -210,9 +210,9 @@ import "errors"
 //// processing.
 //func (m *wsNotificationManager) NotifyBlockConnected(block *btcutil.Block) {
 //	// As NotifyBlockConnected will be called by the block manager
-//	// and the RPC server may no longer be running, use a select
+//	// and the RPC Server may no longer be running, use a select
 //	// statement to unblock enqueuing the notification once the RPC
-//	// server has begun shutting down.
+//	// Server has begun shutting down.
 //	select {
 //	case m.queueNotification <- (*notificationBlockConnected)(block):
 //	case <-m.quit:
@@ -223,9 +223,9 @@ import "errors"
 //// to the notification manager for block notification processing.
 //func (m *wsNotificationManager) NotifyBlockDisconnected(block *btcutil.Block) {
 //	// As NotifyBlockDisconnected will be called by the block manager
-//	// and the RPC server may no longer be running, use a select
+//	// and the RPC Server may no longer be running, use a select
 //	// statement to unblock enqueuing the notification once the RPC
-//	// server has begun shutting down.
+//	// Server has begun shutting down.
 //	select {
 //	case m.queueNotification <- (*notificationBlockDisconnected)(block):
 //	case <-m.quit:
@@ -242,9 +242,9 @@ import "errors"
 //		tx:    tx,
 //	}
 //
-//	// As NotifyMempoolTx will be called by mempool and the RPC server
+//	// As NotifyMempoolTx will be called by mempool and the RPC Server
 //	// may no longer be running, use a select statement to unblock
-//	// enqueuing the notification once the RPC server has begun
+//	// enqueuing the notification once the RPC Server has begun
 //	// shutting down.
 //	select {
 //	case m.queueNotification <- n:
@@ -599,7 +599,7 @@ import "errors"
 //		case m.numClients <- len(clients):
 //
 //		case <-m.quit:
-//			// RPC server shutting down.
+//			// RPC Server shutting down.
 //			break out
 //		}
 //	}
@@ -614,7 +614,7 @@ import "errors"
 //func (m *wsNotificationManager) NumClients() (n int) {
 //	select {
 //	case n = <-m.numClients:
-//	case <-m.quit: // Use default n (0) if server has shut down.
+//	case <-m.quit: // Use default n (0) if Server has shut down.
 //	}
 //	return
 //}
@@ -662,7 +662,7 @@ import "errors"
 //
 //	for i, output := range msgTx.TxOut {
 //		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
-//			output.PkScript, m.server.cfg.ChainParams)
+//			output.PkScript, m.Server.cfg.ChainParams)
 //		if err != nil {
 //			// Clients are not able to subscribe to
 //			// nonstandard or non-address outputs.
@@ -852,7 +852,7 @@ import "errors"
 //				continue
 //			}
 //
-//			net := m.server.cfg.ChainParams
+//			net := m.Server.cfg.ChainParams
 //			rawTx, err := createTxRawResult(net, mtx, txHashStr, nil,
 //				"", 0, 0)
 //			if err != nil {
@@ -910,7 +910,7 @@ import "errors"
 //	// the mempool, if so send the notification immediately.
 //	spends := make(map[chainhash.Hash]*btcutil.Tx)
 //	for _, op := range ops {
-//		spend := m.server.cfg.TxMemPool.CheckSpend(*op)
+//		spend := m.Server.cfg.TxMemPool.CheckSpend(*op)
 //		if spend != nil {
 //			s.logger.Debugf("Found existing mempool spend for "+
 //				"outpoint<%v>: %v", op, spend.Hash())
@@ -969,14 +969,14 @@ import "errors"
 //
 //// blockDetails creates a BlockDetails struct to include in btcws notifications
 //// from a block and a transaction's block index.
-//func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
+//func blockDetails(block *btcutil.Block, TxIndex int) *btcjson.BlockDetails {
 //	if block == nil {
 //		return nil
 //	}
 //	return &btcjson.BlockDetails{
 //		Height: block.Height(),
 //		Hash:   block.Hash().String(),
-//		Index:  txIndex,
+//		Index:  TxIndex,
 //		Time:   block.MsgBlock().Header.Timestamp().Unix(),
 //	}
 //}
@@ -1005,7 +1005,7 @@ import "errors"
 //	wscNotified := make(map[chan struct{}]struct{})
 //	for i, txOut := range tx.MsgTx().TxOut {
 //		_, txAddrs, _, err := txscript.ExtractPkScriptAddrs(
-//			txOut.PkScript, m.server.cfg.ChainParams)
+//			txOut.PkScript, m.Server.cfg.ChainParams)
 //		if err != nil {
 //			continue
 //		}
@@ -1218,9 +1218,9 @@ import "errors"
 //
 //// newWsNotificationManager returns a new notification manager ready for use.
 //// See wsNotificationManager for more details.
-//func newWsNotificationManager(server *rpcServer) *wsNotificationManager {
+//func newWsNotificationManager(Server *rpcServer) *wsNotificationManager {
 //	return &wsNotificationManager{
-//		server:            server,
+//		Server:            Server,
 //		queueNotification: make(chan interface{}),
 //		notificationMsgs:  make(chan interface{}),
 //		numClients:        make(chan int),
@@ -1253,8 +1253,8 @@ import "errors"
 //type wsClient struct {
 //	sync.Mutex
 //
-//	// server is the RPC server that is servicing the client.
-//	server *rpcServer
+//	// Server is the RPC Server that is servicing the client.
+//	Server *rpcServer
 //
 //	// conn is the underlying websocket connection.
 //	conn *websocket.Conn
@@ -1270,7 +1270,7 @@ import "errors"
 //	// and therefore is allowed to communicated over the websocket.
 //	authenticated bool
 //
-//	// isAdmin specifies whether a client may change the state of the server;
+//	// isAdmin specifies whether a client may change the state of the Server;
 //	// false means its access is only to the limited set of RPC calls.
 //	isAdmin bool
 //
@@ -1412,8 +1412,8 @@ import "errors"
 //			login := authCmd.Username + ":" + authCmd.Passphrase
 //			auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(login))
 //			authSha := sha256.Sum256([]byte(auth))
-//			cmp := subtle.ConstantTimeCompare(authSha[:], c.server.authsha[:])
-//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.server.limitauthsha[:])
+//			cmp := subtle.ConstantTimeCompare(authSha[:], c.Server.authsha[:])
+//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.Server.limitauthsha[:])
 //			if cmp != 1 && limitcmp != 1 {
 //				s.logger.Warnf("Auth failure.")
 //				break out
@@ -1500,7 +1500,7 @@ import "errors"
 //	if ok {
 //		result, err = wsHandler(c, r.cmd)
 //	} else {
-//		result, err = c.server.standardCmdResult(r, nil)
+//		result, err = c.Server.standardCmdResult(r, nil)
 //	}
 //	reply, err := createMarshalledReply(r.id, result, err)
 //	if err != nil {
@@ -1716,7 +1716,7 @@ var ErrClientQuit = errors.New("client quit")
 //// returned client is ready to start.  Once started, the client will process
 //// incoming and outgoing messages in separate goroutines complete with queuing
 //// and asynchrous handling for long-running operations.
-//func newWebsocketClient(server *rpcServer, conn *websocket.Conn,
+//func newWebsocketClient(Server *rpcServer, conn *websocket.Conn,
 //	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 //
 //	sessionID, err := encoder.RandomUint64()
@@ -1730,7 +1730,7 @@ var ErrClientQuit = errors.New("client quit")
 //		authenticated:     authenticated,
 //		isAdmin:           isAdmin,
 //		sessionID:         sessionID,
-//		server:            server,
+//		Server:            Server,
 //		addrRequests:      make(map[string]struct{}),
 //		spentRequests:     make(map[wire.OutPoint]struct{}),
 //		serviceRequestSem: makeSemaphore(main.cfg.RPCMaxConcurrentReqs),
@@ -1756,7 +1756,7 @@ var ErrClientQuit = errors.New("client quit")
 //		command = *cmd.Command
 //	}
 //	if command == "" {
-//		usage, err := wsc.server.helpCacher.rpcUsage(true)
+//		usage, err := wsc.Server.helpCacher.rpcUsage(true)
 //		if err != nil {
 //			context := "Failed to generate RPC usage"
 //			return nil, internalRPCError(err.Error(), context)
@@ -1781,7 +1781,7 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	// Get the help for the command.
-//	help, err := wsc.server.helpCacher.rpcMethodHelp(command)
+//	help, err := wsc.Server.helpCacher.rpcMethodHelp(command)
 //	if err != nil {
 //		context := "Failed to generate help"
 //		return nil, internalRPCError(err.Error(), context)
@@ -1811,7 +1811,7 @@ var ErrClientQuit = errors.New("client quit")
 //		}
 //	}
 //
-//	params := wsc.server.cfg.ChainParams
+//	params := wsc.Server.cfg.ChainParams
 //
 //	wsc.Lock()
 //	if cmd.Reload || wsc.filterData == nil {
@@ -1837,7 +1837,7 @@ var ErrClientQuit = errors.New("client quit")
 //// handleNotifyBlocks implements the notifyblocks command extension for
 //// websocket connections.
 //func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.server.ntfnMgr.RegisterBlockUpdates(wsc)
+//	wsc.Server.ntfnMgr.RegisterBlockUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1850,7 +1850,7 @@ var ErrClientQuit = errors.New("client quit")
 //// handleStopNotifyBlocks implements the stopnotifyblocks command extension for
 //// websocket connections.
 //func handleStopNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.server.ntfnMgr.UnregisterBlockUpdates(wsc)
+//	wsc.Server.ntfnMgr.UnregisterBlockUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1867,7 +1867,7 @@ var ErrClientQuit = errors.New("client quit")
 //		return nil, err
 //	}
 //
-//	wsc.server.ntfnMgr.RegisterSpentRequests(wsc, outpoints)
+//	wsc.Server.ntfnMgr.RegisterSpentRequests(wsc, outpoints)
 //	return nil, nil
 //}
 //
@@ -1880,14 +1880,14 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	wsc.verboseTxUpdates = cmd.Verbose != nil && *cmd.Verbose
-//	wsc.server.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
+//	wsc.Server.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
 //	return nil, nil
 //}
 //
 //// handleStopNotifyNewTransations implements the stopnotifynewtransactions
 //// command extension for websocket connections.
 //func handleStopNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
+//	wsc.Server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1901,12 +1901,12 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Decode addresses to validate input, but the strings slice is used
 //	// directly if these are all ok.
-//	err := checkAddressValidity(cmd.Addresses, wsc.server.cfg.ChainParams)
+//	err := checkAddressValidity(cmd.Addresses, wsc.Server.cfg.ChainParams)
 //	if err != nil {
 //		return nil, err
 //	}
 //
-//	wsc.server.ntfnMgr.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
+//	wsc.Server.ntfnMgr.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
 //	return nil, nil
 //}
 //
@@ -1924,7 +1924,7 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	for _, outpoint := range outpoints {
-//		wsc.server.ntfnMgr.UnregisterSpentRequest(wsc, outpoint)
+//		wsc.Server.ntfnMgr.UnregisterSpentRequest(wsc, outpoint)
 //	}
 //
 //	return nil, nil
@@ -1940,13 +1940,13 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Decode addresses to validate input, but the strings slice is used
 //	// directly if these are all ok.
-//	err := checkAddressValidity(cmd.Addresses, wsc.server.cfg.ChainParams)
+//	err := checkAddressValidity(cmd.Addresses, wsc.Server.cfg.ChainParams)
 //	if err != nil {
 //		return nil, err
 //	}
 //
 //	for _, addr := range cmd.Addresses {
-//		wsc.server.ntfnMgr.UnregisterTxOutAddressRequest(wsc, addr)
+//		wsc.Server.ntfnMgr.UnregisterTxOutAddressRequest(wsc, addr)
 //	}
 //
 //	return nil, nil
@@ -2079,7 +2079,7 @@ var ErrClientQuit = errors.New("client quit")
 //			if err != nil {
 //				continue
 //			}
-//			addr, err := pkScript.Address(wsc.server.cfg.ChainParams)
+//			addr, err := pkScript.Address(wsc.Server.cfg.ChainParams)
 //			if err != nil {
 //				continue
 //			}
@@ -2111,7 +2111,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //		for txOutIdx, txout := range tx.MsgTx().TxOut {
 //			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(
-//				txout.PkScript, wsc.server.cfg.ChainParams)
+//				txout.PkScript, wsc.Server.cfg.ChainParams)
 //
 //			for _, addr := range addrs {
 //				if _, ok := lookups.addrs[addr.String()]; !ok {
@@ -2250,8 +2250,8 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Iterate over each block in the request and rescan.  When a block
 //	// contains relevant transactions, add it to the response.
-//	bc := wsc.server.cfg.Chain
-//	params := wsc.server.cfg.ChainParams
+//	bc := wsc.Server.cfg.Chain
+//	params := wsc.Server.cfg.ChainParams
 //	var lastBlockHash *chainhash.Hash
 //	for i := range blockHashes {
 //		block, err := bc.BlockByHash(blockHashes[i])
@@ -2391,13 +2391,13 @@ var ErrClientQuit = errors.New("client quit")
 //			// continuous notifications if necessary.  Otherwise,
 //			// continue the fetch loop again to rescan the new
 //			// blocks (or error due to an irrecoverable reorganize).
-//			pauseGuard := wsc.server.cfg.SyncMgr.Pause()
-//			best := wsc.server.cfg.Chain.BestSnapshot()
+//			pauseGuard := wsc.Server.cfg.SyncMgr.Pause()
+//			best := wsc.Server.cfg.Chain.BestSnapshot()
 //			curHash := &best.Hash
 //			again := true
 //			if lastBlockHash == nil || *lastBlockHash == *curHash {
 //				again = false
-//				n := wsc.server.ntfnMgr
+//				n := wsc.Server.ntfnMgr
 //				n.RegisterSpentRequests(wsc, lookups.unspentSlice())
 //				n.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
 //			}
@@ -2568,7 +2568,7 @@ var ErrClientQuit = errors.New("client quit")
 //		lookups.unspent[*outpoint] = struct{}{}
 //	}
 //
-//	chain := wsc.server.cfg.Chain
+//	chain := wsc.Server.cfg.Chain
 //
 //	minBlockHash, err := chainhash.NewHashFromStr(cmd.BeginBlock)
 //	if err != nil {

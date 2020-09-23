@@ -32,6 +32,7 @@ type TxMan struct {
 func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
+		Params:       cfg.Net,
 		Host:         cfg.RPC.Host,
 		User:         cfg.RPC.User,
 		Pass:         cfg.RPC.Pass,

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
+	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
@@ -80,23 +81,44 @@ func (ctrl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 	server.Start()
 
 	// todo(mike)
+	policy := mining.Policy{
+		BlockMinWeight:    cfg.Node.P2P.BlockMinWeight,
+		BlockMaxWeight:    cfg.Node.P2P.BlockMaxWeight,
+		BlockMinSize:      cfg.Node.P2P.BlockMinSize,
+		BlockMaxSize:      cfg.Node.P2P.BlockMaxSize,
+		BlockPrioritySize: cfg.Node.P2P.BlockPrioritySize,
+		TxMinFreeFee:      cfg.Node.P2P.MinRelayTxFeeValues,
+	}
+	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
+		chain.Params(), server.TxMemPool, server.BlockChain(), server.TimeSource,
+		server.SigCache, server.HashCache)
+
+	listeners, err := setupRPCListeners(cfg.Node.RPC.ListenerAddresses)
+	if err != nil {
+		return err
+	}
 	actor := &server2.NodeActor{
-		ShardsMgr:    ctrl,
-		Chain:        server.BlockChain(),
-		ConnMgr:      nil,
-		SyncMgr:      nil,
-		TimeSource:   nil,
-		ChainParams:  nil,
-		DB:           nil,
-		TxMemPool:    nil,
-		Generator:    nil,
-		TxIndex:      nil,
-		AddrIndex:    nil,
-		CfIndex:      nil,
-		FeeEstimator: nil,
+		StartupTime:  server.StartupTime,
+		Listeners:    listeners,
+		ConnMgr:      &server2.RPCConnManager{Server: server},
+		SyncMgr:      &server2.RPCSyncMgr{Server: server, SyncMgr: server.SyncManager},
+		TimeSource:   server.TimeSource,
+		DB:           db,
+		Generator:    blockTemplateGenerator,
+		TxIndex:      server.TxIndex,
+		AddrIndex:    server.AddrIndex,
+		CfIndex:      server.CfIndex,
+		FeeEstimator: server.FeeEstimator,
+
+		ShardsMgr:   ctrl,
+		Chain:       server.BlockChain(),
+		ChainParams: chain.Params(),
+		TxMemPool:   server.TxMemPool,
 	}
 
-	go ctrl.runRpc(ctx, cfg, actor)
+	go func() {
+		ctrl.runRpc(ctx, cfg, actor)
+	}()
 
 	<-ctx.Done()
 

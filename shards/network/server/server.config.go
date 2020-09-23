@@ -15,7 +15,7 @@ type P2pConfig struct {
 	DisableListen   bool     `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
 	SigCacheMaxSize uint     `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
 	AddCheckpoints  []string `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	//AddPeers        []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a server to connect with at startup"`
+	//AddPeers        []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a Server to connect with at startup"`
 	AddrIndex bool `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
 
 	ExternalIPs       []string      `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`
@@ -31,13 +31,13 @@ type P2pConfig struct {
 	BlockPrioritySize uint32        `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	BlocksOnly        bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
 
-	DisableTLS     bool   `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC server -- NOTE: This is only allowed if the RPC server is bound to localhost"`
+	DisableTLS     bool   `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
 	OnionProxy     string `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	OnionProxyPass string `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy server"`
-	OnionProxyUser string `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy server"`
+	OnionProxyPass string `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy Server"`
+	OnionProxyUser string `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy Server"`
 	Proxy          string `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass      string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	ProxyUser      string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
+	ProxyPass      string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy Server"`
+	ProxyUser      string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy Server"`
 	TxIndex        bool   `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
 
 	NoRelayPriority     bool          `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
@@ -47,7 +47,7 @@ type P2pConfig struct {
 	FreeTxRelayLimit    float64       `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
 	MaxOrphanTxs        int           `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
 	MinRelayTxFee       float64       `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
-	TrickleInterval     time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected server"`
+	TrickleInterval     time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
 	MinRelayTxFeeValues btcutil.Amount
 	NoCFilters          bool `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
 

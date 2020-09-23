@@ -60,23 +60,23 @@ func (p *rpcPeer) FeeFilter() int64 {
 	return atomic.LoadInt64(&(*serverPeer)(p).feeFilter)
 }
 
-// rpcSyncMgr provides a block manager for use with the RPC server and
+// RPCSyncMgr provides a block manager for use with the RPC Server and
 // implements the rpcserverSyncManager interface.
-type rpcSyncMgr struct {
-	server  *server
-	syncMgr *netsync.SyncManager
+type RPCSyncMgr struct {
+	Server  *server
+	SyncMgr *netsync.SyncManager
 }
 
-// Ensure rpcSyncMgr implements the rpcserverSyncManager interface.
-var _ rpcserverSyncManager = (*rpcSyncMgr)(nil)
+// Ensure RPCSyncMgr implements the rpcserverSyncManager interface.
+var _ rpcserverSyncManager = (*RPCSyncMgr)(nil)
 
 // IsCurrent returns whether or not the sync manager believes the chain is
 // current as compared to the rest of the network.
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) IsCurrent() bool {
-	return b.syncMgr.IsCurrent()
+func (b *RPCSyncMgr) IsCurrent() bool {
+	return b.SyncMgr.IsCurrent()
 }
 
 // SubmitBlock submits the provided block to the network after processing it
@@ -84,16 +84,16 @@ func (b *rpcSyncMgr) IsCurrent() bool {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
-	return b.syncMgr.ProcessBlock(block, flags)
+func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
+	return b.SyncMgr.ProcessBlock(block, flags)
 }
 
 // Pause pauses the sync manager until the returned channel is closed.
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) Pause() chan<- struct{} {
-	return b.syncMgr.Pause()
+func (b *RPCSyncMgr) Pause() chan<- struct{} {
+	return b.SyncMgr.Pause()
 }
 
 // SyncPeerID returns the peer that is currently the peer being used to sync
@@ -101,8 +101,8 @@ func (b *rpcSyncMgr) Pause() chan<- struct{} {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) SyncPeerID() int32 {
-	return b.syncMgr.SyncPeerID()
+func (b *RPCSyncMgr) SyncPeerID() int32 {
+	return b.SyncMgr.SyncPeerID()
 }
 
 // LocateBlocks returns the hashes of the blocks after the first known block in
@@ -111,6 +111,6 @@ func (b *rpcSyncMgr) SyncPeerID() int32 {
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
-func (b *rpcSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader {
-	return b.server.chain.LocateHeaders(locators, hashStop)
+func (b *RPCSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader {
+	return b.Server.chain.LocateHeaders(locators, hashStop)
 }

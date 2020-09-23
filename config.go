@@ -758,7 +758,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Default RPC to listen on localhost only.
-	if !cfg.Node.RPC.Disable && len(cfg.Node.RPC.Listeners) == 0 {
+	if !cfg.Node.RPC.Disable && len(cfg.Node.RPC.ListenerAddresses) == 0 {
 		addrs, err := net.LookupHost("localhost")
 		if err != nil {
 			return nil, nil, err
