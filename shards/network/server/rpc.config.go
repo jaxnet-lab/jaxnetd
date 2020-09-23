@@ -82,6 +82,7 @@ type NodeActor struct {
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
+	MiningAddrs  []btcutil.Address
 }
 
 // rpcserverPeer represents a peer for use with the RPC server.

@@ -28,11 +28,12 @@ type ShardConfig struct {
 }
 
 type NodeConfig struct {
-	RPC    server.Config    `yaml:"rpc"`
-	P2P    server.P2pConfig `yaml:"p2p"`
-	Shards ShardConfig      `yaml:"shards"`
-	DbType string           `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
-	Net    string           `yaml:"net"`
+	RPC             server.Config    `yaml:"rpc"`
+	P2P             server.P2pConfig `yaml:"p2p"`
+	Shards          ShardConfig      `yaml:"shards"`
+	DbType          string           `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+	Net             string           `yaml:"net"`
+	MiningAddresses []string         `yaml:"mining_addresses"`
 }
 
 func (cfg *NodeConfig) ChainParams() *chaincfg.Params {
