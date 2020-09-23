@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
@@ -88,38 +88,38 @@ func (beaconCtl *BeaconCtl) Init() error {
 
 	// todo(mike)
 	policy := mining.Policy{
-		BlockMinWeight:    cfg.Node.P2P.BlockMinWeight,
-		BlockMaxWeight:    cfg.Node.P2P.BlockMaxWeight,
-		BlockMinSize:      cfg.Node.P2P.BlockMinSize,
-		BlockMaxSize:      cfg.Node.P2P.BlockMaxSize,
-		BlockPrioritySize: cfg.Node.P2P.BlockPrioritySize,
-		TxMinFreeFee:      cfg.Node.P2P.MinRelayTxFeeValues,
+		BlockMinWeight:    beaconCtl.cfg.Node.P2P.BlockMinWeight,
+		BlockMaxWeight:    beaconCtl.cfg.Node.P2P.BlockMaxWeight,
+		BlockMinSize:      beaconCtl.cfg.Node.P2P.BlockMinSize,
+		BlockMaxSize:      beaconCtl.cfg.Node.P2P.BlockMaxSize,
+		BlockPrioritySize: beaconCtl.cfg.Node.P2P.BlockPrioritySize,
+		TxMinFreeFee:      beaconCtl.cfg.Node.P2P.MinRelayTxFeeValues,
 	}
 	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-		chain.Params(), server.TxMemPool, server.BlockChain(), server.TimeSource,
-		server.SigCache, server.HashCache)
+		beaconCtl.chain.Params(), beaconCtl.p2pServer.TxMemPool, beaconCtl.p2pServer.BlockChain(), beaconCtl.p2pServer.TimeSource,
+		beaconCtl.p2pServer.SigCache, beaconCtl.p2pServer.HashCache)
 
-	listeners, err := setupRPCListeners(cfg.Node.RPC.ListenerAddresses)
+	listeners, err := setupRPCListeners(beaconCtl.cfg.Node.RPC.ListenerAddresses)
 	if err != nil {
 		return err
 	}
 	beaconCtl.actor = &server.NodeActor{
-		StartupTime:  server.StartupTime,
+		StartupTime:  beaconCtl.p2pServer.StartupTime,
 		Listeners:    listeners,
-		ConnMgr:      &server2.RPCConnManager{Server: server},
-		SyncMgr:      &server2.RPCSyncMgr{Server: server, SyncMgr: server.SyncManager},
-		TimeSource:   server.TimeSource,
-		DB:           db,
+		ConnMgr:      &server.RPCConnManager{Server: beaconCtl.p2pServer},
+		SyncMgr:      &server.RPCSyncMgr{Server: beaconCtl.p2pServer, SyncMgr: beaconCtl.p2pServer.SyncManager},
+		TimeSource:   beaconCtl.p2pServer.TimeSource,
+		DB:           beaconCtl.db,
 		Generator:    blockTemplateGenerator,
-		TxIndex:      server.TxIndex,
-		AddrIndex:    server.AddrIndex,
-		CfIndex:      server.CfIndex,
-		FeeEstimator: server.FeeEstimator,
+		TxIndex:      beaconCtl.p2pServer.TxIndex,
+		AddrIndex:    beaconCtl.p2pServer.AddrIndex,
+		CfIndex:      beaconCtl.p2pServer.CfIndex,
+		FeeEstimator: beaconCtl.p2pServer.FeeEstimator,
 
-		ShardsMgr:   ctrl,
-		Chain:       server.BlockChain(),
-		ChainParams: chain.Params(),
-		TxMemPool:   server.TxMemPool,
+		ShardsMgr:   beaconCtl.shardsMgr,
+		Chain:       beaconCtl.p2pServer.BlockChain(),
+		ChainParams: beaconCtl.chain.Params(),
+		TxMemPool:   beaconCtl.p2pServer.TxMemPool,
 	}
 
 	beaconCtl.rpcServer, err = server.RpcServer(&beaconCtl.cfg.Node.RPC, beaconCtl.actor, beaconCtl.log)
