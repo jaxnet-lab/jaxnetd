@@ -94,6 +94,10 @@ func (node *blockNode) NewNode() chain.IBlockNode {
 	return &res
 }
 
+func (node *blockNode) GetHeight() int32 {
+	return node.height
+}
+
 func (node *blockNode) GetHash() chainhash.Hash {
 	return node.hash
 }

@@ -103,6 +103,10 @@ func (node *blockNode) GetHash() chainhash.Hash {
 	return node.hash
 }
 
+func (node *blockNode) GetHeight() int32 {
+	return node.height
+}
+
 func (node *blockNode) Version() int32 {
 	return node.version
 }

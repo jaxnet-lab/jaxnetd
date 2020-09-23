@@ -68,6 +68,7 @@ type BlockHeader interface {
 	SetTimestamp(time.Time)
 	MerkleRoot() chainhash.Hash
 	SetMerkleRoot(chainhash.Hash)
+	SetMergeMiningRoot(value chainhash.Hash)
 	MergeMiningRoot() chainhash.Hash
 	Bits() uint32
 	SetBits(uint32)
@@ -77,8 +78,8 @@ type BlockHeader interface {
 	Version() BVersion
 	Read(r io.Reader) error
 	Write(r io.Writer) error
-	BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error
-	// Size() int
+	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
+	//Size() int
 }
 
 type Block interface {

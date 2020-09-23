@@ -11,6 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
@@ -103,6 +104,16 @@ func (beaconCtl *BeaconCtl) Init() error {
 	if err != nil {
 		return err
 	}
+	miningAddrs := make([]btcutil.Address, 0, len(beaconCtl.cfg.Node.MiningAddresses))
+	for _, address := range beaconCtl.cfg.Node.MiningAddresses {
+		addr, err := btcutil.DecodeAddress(address, beaconCtl.chain.Params())
+		if err != nil {
+			return err
+		}
+
+		miningAddrs = append(miningAddrs, addr)
+	}
+
 	beaconCtl.actor = &server.NodeActor{
 		StartupTime:  beaconCtl.p2pServer.StartupTime,
 		Listeners:    listeners,
@@ -115,6 +126,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 		AddrIndex:    beaconCtl.p2pServer.AddrIndex,
 		CfIndex:      beaconCtl.p2pServer.CfIndex,
 		FeeEstimator: beaconCtl.p2pServer.FeeEstimator,
+		MiningAddrs:  miningAddrs,
 
 		ShardsMgr:   beaconCtl.shardsMgr,
 		Chain:       beaconCtl.p2pServer.BlockChain(),
