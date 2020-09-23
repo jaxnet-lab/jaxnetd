@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
@@ -97,6 +98,17 @@ func (ctrl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return err
 	}
+
+	miningAddrs := make([]btcutil.Address, 0, len(cfg.Node.MiningAddresses))
+	for _, address := range cfg.Node.MiningAddresses {
+		addr, err := btcutil.DecodeAddress(address, chain.Params())
+		if err != nil {
+			return err
+		}
+
+		miningAddrs = append(miningAddrs, addr)
+	}
+
 	actor := &server2.NodeActor{
 		StartupTime:  server.StartupTime,
 		Listeners:    listeners,
@@ -109,6 +121,7 @@ func (ctrl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
 		AddrIndex:    server.AddrIndex,
 		CfIndex:      server.CfIndex,
 		FeeEstimator: server.FeeEstimator,
+		MiningAddrs:  miningAddrs,
 
 		ShardsMgr:   ctrl,
 		Chain:       server.BlockChain(),

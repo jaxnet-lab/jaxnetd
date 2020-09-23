@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
+	"strconv"
+	"sync"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"strconv"
-	"sync"
-	"time"
+	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
 // gbtWorkState houses state that is used in between multiple RPC invocations to
@@ -163,124 +166,125 @@ func (state *gbtWorkState) templateUpdateChan(prevHash *chainhash.Hash, lastGene
 //
 // This function MUST be called with the state locked.
 func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bool) error {
-	//generator := s.cfg.Generator
-	//lastTxUpdate := generator.TxSource().LastUpdated()
-	//if lastTxUpdate.IsZero() {
-	//	lastTxUpdate = time.Now()
-	//}
-	//
-	//// Generate a new block template when the current best block has
-	//// changed or the transactions in the memory pool have been updated and
-	//// it has been at least gbtRegenerateSecond since the last template was
-	//// generated.
-	//var msgBlock *wire.MsgBlock
-	//var targetDifficulty string
-	//latestHash := &s.cfg.Chain.BestSnapshot().Hash
-	//template := state.template
-	//if template == nil || state.prevHash == nil ||
-	//	!state.prevHash.IsEqual(latestHash) ||
-	//	(state.lastTxUpdate != lastTxUpdate &&
-	//		time.Now().After(state.lastGenerated.Add(time.Second*
-	//			gbtRegenerateSeconds))) {
-	//
-	//	// Reset the previous best hash the block template was generated
-	//	// against so any errors below cause the next invocation to try
-	//	// again.
-	//	state.prevHash = nil
-	//
-	//	// Choose a payment address at random if the caller requests a
-	//	// full coinbase as opposed to only the pertinent details needed
-	//	// to create their own coinbase.
-	//	//var payAddr btcutil.Address
-	//	//if !useCoinbaseValue {
-	//	//	payAddr = s.cfg.miningAddrs[rand.Intn(len(main.cfg.miningAddrs))]
-	//	//}
-	//
-	//	// Create a new block template that has a coinbase which anyone
-	//	// can redeem.  This is only acceptable because the returned
-	//	// block template doesn't include the coinbase, so the caller
-	//	// will ultimately create their own coinbase which pays to the
-	//	// appropriate address(es).
-	//	//blkTemplate, err := generator.NewBlockTemplate(payAddr)
-	//	//if err != nil {
-	//	//	return internalRPCError("Failed to create new block "+
-	//	//		"template: "+err.Error(), "")
-	//	//}
-	//	//template = blkTemplate
-	//	msgBlock = template.Block
-	//	targetDifficulty = fmt.Sprintf("%064x",
-	//		blockchain.CompactToBig(msgBlock.Header.Bits()))
-	//
-	//	// Get the minimum allowed timestamp for the block based on the
-	//	// median timestamp of the last several blocks per the chain
-	//	// consensus rules.
-	//	best := s.cfg.Chain.BestSnapshot()
-	//	minTimestamp := mining.MinimumMedianTime(best)
-	//
-	//	// Update work state to ensure another block template isn't
-	//	// generated until needed.
-	//	state.template = template
-	//	state.lastGenerated = time.Now()
-	//	state.lastTxUpdate = lastTxUpdate
-	//	state.prevHash = latestHash
-	//	state.minTimestamp = minTimestamp
-	//
-	//	main.rpcsLog.Debugf("Generated block template (timestamp %v, "+
-	//		"target %s, merkle root %s, mmr %s)",
-	//		msgBlock.Header.Timestamp, targetDifficulty,
-	//		msgBlock.Header.MerkleRoot, msgBlock.Header.MergeMiningRoot().String())
-	//
-	//	// Notify any clients that are long polling about the new
-	//	// template.
-	//	state.notifyLongPollers(latestHash, lastTxUpdate)
-	//} else {
-	//	// At this point, there is a saved block template and another
-	//	// request for a template was made, but either the available
-	//	// transactions haven't change or it hasn't been long enough to
-	//	// trigger a new block template to be generated.  So, update the
-	//	// existing block template.
-	//
-	//	// When the caller requires a full coinbase as opposed to only
-	//	// the pertinent details needed to create their own coinbase,
-	//	// add a payment address to the output of the coinbase of the
-	//	// template if it doesn't already have one.  Since this requires
-	//	// mining addresses to be specified via the config, an error is
-	//	// returned if none have been specified.
-	//	if !useCoinbaseValue && !template.ValidPayAddress {
-	//		// Choose a payment address at random.
-	//		payToAddr := main.cfg.miningAddrs[rand.Intn(len(main.cfg.miningAddrs))]
-	//
-	//		// Update the block coinbase output of the template to
-	//		// pay to the randomly selected payment address.
-	//		pkScript, err := txscript.PayToAddrScript(payToAddr)
-	//		if err != nil {
-	//			context := "Failed to create pay-to-addr script"
-	//			return internalRPCError(err.Error(), context)
-	//		}
-	//		template.Block.Transactions[0].TxOut[0].PkScript = pkScript
-	//		template.ValidPayAddress = true
-	//
-	//		// Update the merkle root.
-	//		block := btcutil.NewBlock(template.Block)
-	//		merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-	//		template.Block.Header.SetMerkleRoot(*merkles[len(merkles)-1])
-	//	}
-	//
-	//	// Set locals for convenience.
-	//	msgBlock = template.Block
-	//	targetDifficulty = fmt.Sprintf("%064x",
-	//		blockchain.CompactToBig(msgBlock.Header.Bits()))
-	//
-	//	// Update the time of the block template to the current time
-	//	// while accounting for the median time of the past several
-	//	// blocks per the chain consensus rules.
-	//	generator.UpdateBlockTime(msgBlock)
-	//	msgBlock.Header.SetNonce(0)
-	//
-	//	main.rpcsLog.Debugf("Updated block template (timestamp %v, "+
-	//		"target %s)", msgBlock.Header.Timestamp,
-	//		targetDifficulty)
-	//}
+	generator := s.node.Generator
+	lastTxUpdate := generator.TxSource().LastUpdated()
+	if lastTxUpdate.IsZero() {
+		lastTxUpdate = time.Now()
+	}
+
+	// Generate a new block template when the current best block has
+	// changed or the transactions in the memory pool have been updated and
+	// it has been at least gbtRegenerateSecond since the last template was
+	// generated.
+	var msgBlock *wire.MsgBlock
+	var targetDifficulty string
+	latestHash := &s.node.Chain.BestSnapshot().Hash
+	template := state.template
+	if template == nil || state.prevHash == nil ||
+		!state.prevHash.IsEqual(latestHash) ||
+		(state.lastTxUpdate != lastTxUpdate &&
+			time.Now().After(state.lastGenerated.Add(time.Second*
+				gbtRegenerateSeconds))) {
+
+		// Reset the previous best hash the block template was generated
+		// against so any errors below cause the next invocation to try
+		// again.
+		state.prevHash = nil
+
+		// Choose a payment address at random if the caller requests a
+		// full coinbase as opposed to only the pertinent details needed
+		// to create their own coinbase.
+		var payAddr btcutil.Address
+		if !useCoinbaseValue && len(s.node.MiningAddrs) > 0 {
+			payAddr = s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+		}
+
+		// Create a new block template that has a coinbase which anyone
+		// can redeem.  This is only acceptable because the returned
+		// block template doesn't include the coinbase, so the caller
+		// will ultimately create their own coinbase which pays to the
+		// appropriate address(es).
+		blkTemplate, err := generator.NewBlockTemplate(payAddr)
+		if err != nil {
+			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+				"ailed to create new block template:"+err.Error())
+		}
+
+		template = blkTemplate
+		msgBlock = template.Block
+		targetDifficulty = fmt.Sprintf("%064x",
+			blockchain.CompactToBig(msgBlock.Header.Bits()))
+
+		// Get the minimum allowed timestamp for the block based on the
+		// median timestamp of the last several blocks per the chain
+		// consensus rules.
+		best := s.node.Chain.BestSnapshot()
+		minTimestamp := mining.MinimumMedianTime(best)
+
+		// Update work state to ensure another block template isn't
+		// generated until needed.
+		state.template = template
+		state.lastGenerated = time.Now()
+		state.lastTxUpdate = lastTxUpdate
+		state.prevHash = latestHash
+		state.minTimestamp = minTimestamp
+
+		s.logger.Debugf("Generated block template (timestamp %v, "+
+			"target %s, merkle root %s, mmr %s)",
+			msgBlock.Header.Timestamp, targetDifficulty,
+			msgBlock.Header.MerkleRoot, msgBlock.Header.MergeMiningRoot().String())
+
+		// Notify any clients that are long polling about the new
+		// template.
+		state.notifyLongPollers(latestHash, lastTxUpdate)
+	} else {
+		// At this point, there is a saved block template and another
+		// request for a template was made, but either the available
+		// transactions haven't change or it hasn't been long enough to
+		// trigger a new block template to be generated.  So, update the
+		// existing block template.
+
+		// When the caller requires a full coinbase as opposed to only
+		// the pertinent details needed to create their own coinbase,
+		// add a payment address to the output of the coinbase of the
+		// template if it doesn't already have one.  Since this requires
+		// mining addresses to be specified via the config, an error is
+		// returned if none have been specified.
+		if !useCoinbaseValue && !template.ValidPayAddress {
+			// Choose a payment address at random.
+			payToAddr := s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+
+			// Update the block coinbase output of the template to
+			// pay to the randomly selected payment address.
+			pkScript, err := txscript.PayToAddrScript(payToAddr)
+			if err != nil {
+				return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+					"Failed to create pay-to-addr script:"+err.Error())
+			}
+			template.Block.Transactions[0].TxOut[0].PkScript = pkScript
+			template.ValidPayAddress = true
+
+			// Update the merkle root.
+			block := btcutil.NewBlock(template.Block)
+			merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
+			template.Block.Header.SetMerkleRoot(*merkles[len(merkles)-1])
+		}
+
+		// Set locals for convenience.
+		msgBlock = template.Block
+		targetDifficulty = fmt.Sprintf("%064x",
+			blockchain.CompactToBig(msgBlock.Header.Bits()))
+
+		// Update the time of the block template to the current time
+		// while accounting for the median time of the past several
+		// blocks per the chain consensus rules.
+		generator.UpdateBlockTime(msgBlock)
+		msgBlock.Header.SetNonce(0)
+
+		s.logger.Debugf("Updated block template (timestamp %v, "+
+			"target %s)", msgBlock.Header.Timestamp,
+			targetDifficulty)
+	}
 
 	return nil
 }

@@ -25,6 +25,8 @@ node:
       2: { }
       3: { }
       42: { }
+  mining_addresses:
+    - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
 debuglevel: info
 nodnsseed: 1
