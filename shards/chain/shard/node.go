@@ -92,6 +92,7 @@ func (node *blockNode) NewNode() chain.IBlockNode {
 	var res blockNode
 	return &res
 }
+
 //func (node *blockNode) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
 //	var res blockNode
 //	return &res
@@ -99,6 +100,10 @@ func (node *blockNode) NewNode() chain.IBlockNode {
 
 func (node *blockNode) GetHash() chainhash.Hash {
 	return node.hash
+}
+
+func (node *blockNode) GetHeight() int32 {
+	return node.height
 }
 
 func (node *blockNode) Version() int32 {
