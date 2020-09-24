@@ -144,6 +144,8 @@ type Client struct {
 	// chainParams holds the params for the chain that this client is using,
 	// and is used for many wallet methods.
 	chainParams *chain.Params
+	shardID     uint32
+	beacon      bool
 
 	// wsConn is the underlying websocket connection when not in HTTP POST
 	// mode.
@@ -842,9 +844,16 @@ func (c *Client) sendPost(jReq *jsonRequest) {
 	if !c.config.DisableTLS {
 		protocol = "https"
 	}
-	url := protocol + "://" + c.config.Host
+
+	path := protocol + "://" + c.config.Host
+	if c.beacon {
+		path += "/beacon/"
+	} else {
+		path += fmt.Sprintf("/shard/%d", c.shardID)
+	}
+
 	bodyReader := bytes.NewReader(jReq.marshalledJSON)
-	httpReq, err := http.NewRequest("POST", url, bodyReader)
+	httpReq, err := http.NewRequest("POST", path, bodyReader)
 	if err != nil {
 		jReq.responseChan <- &response{result: nil, err: err}
 		return
@@ -1119,6 +1128,10 @@ type ConnConfig struct {
 	// mainnet will be used by default.
 	Params string
 
+	// ShardID specifies with what chain client will interact if 0,
+	// it's mean Beacon Chain.
+	ShardID uint32
+
 	// DisableTLS specifies whether transport layer security should be
 	// disabled.  It is recommended to always use TLS if the RPC server
 	// supports it as otherwise your username and password is sent across
@@ -1363,6 +1376,8 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 	if client.chainParams == nil {
 		return nil, fmt.Errorf("rpcclient.New: Unknown chain %s", config.Params)
 	}
+	client.beacon = config.ShardID == 0
+	client.shardID = config.ShardID
 
 	if start {
 		log.Infof("Established connection to RPC server %s",

@@ -31,13 +31,13 @@ func NewMultiChainRPC(config *Config, logger *zap.Logger, beaconActor *ChainActo
 }
 
 func (server *MultiChainRPC) Run(ctx context.Context) {
-	// todo(mike)
 	rpcServeMux := http.NewServeMux()
+	rpcServeMux.HandleFunc("/beacon/", server.HandleFunc(server.beaconActor.CommandsMux))
+	rpcServeMux.HandleFunc("/beacon/ws", server.WSHandleFunc())
 
 	for shardID, chainRPC := range server.shardActors {
 		path := fmt.Sprintf("/shard/%d", shardID)
 		rpcServeMux.HandleFunc(path+"/", server.HandleFunc(chainRPC.CommandsMux))
-		// Websocket endpoint.
 		rpcServeMux.HandleFunc(path+"/ws", server.WSHandleFunc())
 	}
 
