@@ -368,6 +368,8 @@ func (net NetName) Params() *Params {
 		return &TestNet3Params
 	case MainNetParams.Name:
 		return &MainNetParams
+	case FTestNetParams.Name:
+		return &FTestNetParams
 	}
 	return nil
 }
@@ -378,4 +380,5 @@ func init() {
 	mustRegister(&TestNet3Params)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
+	mustRegister(&FTestNetParams)
 }
