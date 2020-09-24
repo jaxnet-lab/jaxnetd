@@ -3,6 +3,7 @@ package shards
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -10,7 +11,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"go.uber.org/zap"
 )
 
@@ -42,6 +42,11 @@ func Controller(logger *zap.Logger) *chainController {
 	res := &chainController{
 		logger:    logger,
 		shardsCtl: make(map[uint32]shardRO),
+		shardsIndex: &Index{
+			LastShardID:      0,
+			LastBeaconHeight: 0,
+			Shards:           map[uint32]ShardInfo{},
+		},
 	}
 	return res
 }
@@ -50,21 +55,18 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	chainCtl.cfg = cfg
 	chainCtl.ctx, chainCtl.cancel = context.WithCancel(ctx)
 
-	chainCtl.wg.Add(1)
-	go func() {
-		defer chainCtl.wg.Done()
-		if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
-			chainCtl.logger.Error("Beacon error", zap.Error(err))
-		}
-	}()
+	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
+		chainCtl.logger.Error("Beacon error", zap.Error(err))
+	}
 
 	if !cfg.Node.Shards.Enable {
 		return nil
 	}
-	if err := chainCtl.syncShardsIndex(); err != nil {
 
+	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err
 	}
+
 	defer chainCtl.updateShardsIndex()
 
 	chainCtl.beacon.blockchain.Subscribe(func(not *blockchain.Notification) {
@@ -89,41 +91,19 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 
 	})
 
-	for shardID := range cfg.Node.Shards.IDs {
-		chainCtl.wg.Add(1)
-		var block *wire.MsgBlock
-		var height int32
-		// todo(mike)
-		chainCtl.runShardRoutine(shardID, block, height)
+	for shardID, info := range chainCtl.shardsIndex.Shards {
+		err := chainCtl.NewShard(shardID, info.GenesisHeight)
+		if err != nil {
+			return err
+		}
 	}
-
-	// if len(chainCtl.shardsCtl) != len(cfg.Node.Shards.IDs) {
-	// 	chainCtl.cancel()
-	// 	chainCtl.wg.Wait()
-	// 	return errors.New("some shardsCtl not started")
-	// }
 
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
 }
 
-func (chainCtl *chainController) updateShardsIndex() {
-	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
-	file, err := os.OpenFile(shardsFile, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	err = json.NewEncoder(file).Encode(chainCtl.shardsIndex)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (chainCtl *chainController) syncShardsIndex() error {
+func (chainCtl *chainController) updateShardsIndex() error {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	file, err := os.OpenFile(shardsFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -131,10 +111,30 @@ func (chainCtl *chainController) syncShardsIndex() error {
 	}
 	defer file.Close()
 
+	err = json.NewEncoder(file).Encode(chainCtl.shardsIndex)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (chainCtl *chainController) syncShardsIndex() error {
+	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
+	_, err := os.Stat(shardsFile)
+	if os.IsNotExist(err) {
+		if err = chainCtl.updateShardsIndex(); err != nil {
+			return err
+		}
+	}
+
+	file, err := ioutil.ReadFile(shardsFile)
+	if err != nil {
+		return err
+	}
 	sIndex := &Index{
 		Shards: map[uint32]ShardInfo{},
 	}
-	err = json.NewDecoder(file).Decode(sIndex)
+	err = json.Unmarshal(file, sIndex)
 	if err != nil {
 		return err
 	}
@@ -143,6 +143,10 @@ func (chainCtl *chainController) syncShardsIndex() error {
 	snapshot := chainCtl.beacon.blockchain.BestSnapshot()
 	if snapshot != nil {
 		maxHeight = snapshot.Height
+	}
+	if maxHeight == -1 {
+		// nothing to index
+		return nil
 	}
 
 	for height := sIndex.LastBeaconHeight; height < maxHeight; height++ {
@@ -161,12 +165,13 @@ func (chainCtl *chainController) syncShardsIndex() error {
 	}
 
 	chainCtl.shardsIndex = sIndex
-	err = json.NewEncoder(file).Encode(sIndex)
+
+	content, err := json.Marshal(sIndex)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return ioutil.WriteFile(shardsFile, content, 0644)
 }
 
 type ShardInfo struct {

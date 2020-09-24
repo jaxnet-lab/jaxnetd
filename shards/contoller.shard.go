@@ -60,6 +60,7 @@ func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
 		return errors.New("invalid start genesis block, expansion not made at this height")
 	}
 	// fixme
+
 	chainCtl.runShardRoutine(shardID, msgBlock, height)
 
 	return nil

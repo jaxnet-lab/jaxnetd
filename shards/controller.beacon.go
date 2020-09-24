@@ -10,8 +10,8 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
@@ -201,9 +201,11 @@ func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) err
 		return err
 	}
 
-	go chainCtl.beacon.Run(ctx)
-
-	<-ctx.Done()
+	chainCtl.wg.Add(1)
+	go func() {
+		chainCtl.beacon.Run(ctx)
+		chainCtl.wg.Done()
+	}()
 
 	return nil
 }
