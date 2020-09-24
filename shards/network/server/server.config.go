@@ -1,10 +1,11 @@
 package server
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"net"
 	"os"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 type P2pConfig struct {
@@ -15,7 +16,7 @@ type P2pConfig struct {
 	DisableListen   bool     `yaml:"disable_listen" long:"nolisten" description:"Disable listening for incoming connections -- NOTE: Listening is automatically disabled if the --connect or --proxy options are used without also specifying listen interfaces via --listen"`
 	SigCacheMaxSize uint     `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
 	AddCheckpoints  []string `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	//AddPeers        []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a Server to connect with at startup"`
+	// AddPeers        []string `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a Server to connect with at startup"`
 	AddrIndex bool `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
 
 	ExternalIPs       []string      `yaml:"external_ips" long:"externalip" description:"Add an ip to the list of local addresses we claim to listen on to peers"`

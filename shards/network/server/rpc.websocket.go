@@ -853,7 +853,7 @@ import "errors"
 //			}
 //
 //			net := m.server.cfg.ChainParams
-//			rawTx, err := createTxRawResult(net, mtx, txHashStr, nil,
+//			rawTx, err := CreateTxRawResult(net, mtx, txHashStr, nil,
 //				"", 0, 0)
 //			if err != nil {
 //				return
@@ -1412,8 +1412,8 @@ import "errors"
 //			login := authCmd.Username + ":" + authCmd.Passphrase
 //			auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(login))
 //			authSha := sha256.Sum256([]byte(auth))
-//			cmp := subtle.ConstantTimeCompare(authSha[:], c.server.authsha[:])
-//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.server.limitauthsha[:])
+//			cmp := subtle.ConstantTimeCompare(authSha[:], c.server.authSHA[:])
+//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.server.limitAuthSHA[:])
 //			if cmp != 1 && limitcmp != 1 {
 //				s.logger.Warnf("Auth failure.")
 //				break out
@@ -1500,7 +1500,7 @@ import "errors"
 //	if ok {
 //		result, err = wsHandler(c, r.cmd)
 //	} else {
-//		result, err = c.server.standardCmdResult(r, nil)
+//		result, err = c.server.CommandsMux(r, nil)
 //	}
 //	reply, err := createMarshalledReply(r.id, result, err)
 //	if err != nil {

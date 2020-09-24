@@ -10,8 +10,10 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"go.uber.org/zap"
@@ -164,6 +166,49 @@ func (shardCtl ShardCtl) Init() error {
 		return err
 	}
 	return nil
+}
+
+func (shardCtl *ShardCtl) ChainActor() (*server.ChainActor, error) {
+	policy := mining.Policy{
+		BlockMinWeight:    shardCtl.cfg.Node.P2P.BlockMinWeight,
+		BlockMaxWeight:    shardCtl.cfg.Node.P2P.BlockMaxWeight,
+		BlockMinSize:      shardCtl.cfg.Node.P2P.BlockMinSize,
+		BlockMaxSize:      shardCtl.cfg.Node.P2P.BlockMaxSize,
+		BlockPrioritySize: shardCtl.cfg.Node.P2P.BlockPrioritySize,
+		TxMinFreeFee:      shardCtl.cfg.Node.P2P.MinRelayTxFeeValues,
+	}
+	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
+		shardCtl.chain.Params(), shardCtl.p2pServer.TxMemPool, shardCtl.p2pServer.BlockChain(), shardCtl.p2pServer.TimeSource,
+		shardCtl.p2pServer.SigCache, shardCtl.p2pServer.HashCache)
+
+	_, err := shardCtl.cfg.Node.RPC.SetupRPCListeners()
+	if err != nil {
+		return nil, err
+	}
+
+	miningAddrs, err := shardCtl.cfg.Node.ParseMiningAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	return &server.ChainActor{
+		StartupTime:  shardCtl.p2pServer.StartupTime,
+		ConnMgr:      &server.RPCConnManager{Server: shardCtl.p2pServer},
+		SyncMgr:      &server.RPCSyncMgr{Server: shardCtl.p2pServer, SyncMgr: shardCtl.p2pServer.SyncManager},
+		TimeSource:   shardCtl.p2pServer.TimeSource,
+		DB:           shardCtl.db,
+		Generator:    blockTemplateGenerator,
+		TxIndex:      shardCtl.p2pServer.TxIndex,
+		AddrIndex:    shardCtl.p2pServer.AddrIndex,
+		CfIndex:      shardCtl.p2pServer.CfIndex,
+		FeeEstimator: shardCtl.p2pServer.FeeEstimator,
+		MiningAddrs:  miningAddrs,
+
+		// ShardsMgr:   shardCtl.shardsMgr,
+		Chain:       shardCtl.p2pServer.BlockChain(),
+		ChainParams: shardCtl.chain.Params(),
+		TxMemPool:   shardCtl.p2pServer.TxMemPool,
+	}, nil
 }
 
 func (shardCtl *ShardCtl) Run(ctx context.Context) {

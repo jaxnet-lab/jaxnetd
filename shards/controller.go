@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"go.uber.org/zap"
@@ -57,45 +56,19 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 
 	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error("Beacon error", zap.Error(err))
-	}
-
-	if !cfg.Node.Shards.Enable {
-		return nil
-	}
-
-	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err
 	}
 
-	defer chainCtl.updateShardsIndex()
-
-	chainCtl.beacon.blockchain.Subscribe(func(not *blockchain.Notification) {
-		if not.Type != blockchain.NTBlockConnected {
-			return
-		}
-		block, ok := not.Data.(*btcutil.Block)
-		if !ok {
-			chainCtl.logger.Warn("block notification data is not a *btcutil.Block")
-			return
-		}
-
-		msgBlock := block.MsgBlock()
-		version := msgBlock.Header.Version()
-
-		if !version.ExpansionMade() {
-			return
-		}
-
-		chainCtl.shardsIndex.AddShard(block)
-		chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock, block.Height())
-
-	})
-
-	for shardID, info := range chainCtl.shardsIndex.Shards {
-		err := chainCtl.NewShard(shardID, info.GenesisHeight)
-		if err != nil {
+	if cfg.Node.Shards.Enable {
+		if err := chainCtl.runShards(); err != nil {
+			chainCtl.logger.Error("Shards error", zap.Error(err))
 			return err
 		}
+	}
+
+	if err := chainCtl.runRpc(ctx, cfg); err != nil {
+		chainCtl.logger.Error("RPC Init error", zap.Error(err))
+		return err
 	}
 
 	<-ctx.Done()

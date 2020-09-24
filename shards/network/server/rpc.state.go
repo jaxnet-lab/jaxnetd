@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
@@ -22,7 +23,6 @@ import (
 // getblocktemplate.
 type gbtWorkState struct {
 	sync.Mutex
-	server        *RPCServer
 	lastTxUpdate  time.Time
 	lastGenerated time.Time
 	prevHash      *chainhash.Hash
@@ -34,9 +34,8 @@ type gbtWorkState struct {
 
 // newGbtWorkState returns a new instance of a gbtWorkState with all internal
 // fields initialized and ready to use.
-func newGbtWorkState(server *RPCServer, timeSource blockchain.MedianTimeSource) *gbtWorkState {
+func newGbtWorkState(timeSource blockchain.MedianTimeSource) *gbtWorkState {
 	return &gbtWorkState{
-		server:     server,
 		notifyMap:  make(map[chainhash.Hash]map[int64]chan struct{}),
 		timeSource: timeSource,
 	}
@@ -165,7 +164,7 @@ func (state *gbtWorkState) templateUpdateChan(prevHash *chainhash.Hash, lastGene
 // addresses.
 //
 // This function MUST be called with the state locked.
-func (state *gbtWorkState) updateBlockTemplate(s *RPCServer, useCoinbaseValue bool) error {
+func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue bool) error {
 	generator := s.node.Generator
 	lastTxUpdate := generator.TxSource().LastUpdated()
 	if lastTxUpdate.IsZero() {
@@ -349,8 +348,8 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		// Serialize the transaction for later conversion to hex.
 		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(txBuf); err != nil {
-			context := "Failed to serialize transaction"
-			return nil, state.server.internalRPCError(err.Error(), context)
+			context := errors.Wrap(err, "Failed to serialize transaction").Error()
+			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, context)
 		}
 
 		bTx := btcutil.NewTx(tx)
@@ -370,7 +369,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	//  Including MinTime -> time/decrement
 	//  Omitting CoinbaseTxn -> coinbase, generation
 	targetDifficulty := fmt.Sprintf("%064x", blockchain.CompactToBig(header.Bits()))
-	templateID := encodeTemplateID(state.prevHash, state.lastGenerated)
+	templateID := ToolsXt{}.EncodeTemplateID(state.prevHash, state.lastGenerated)
 	reply := btcjson.GetBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
@@ -416,8 +415,8 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		tx := msgBlock.Transactions[0]
 		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(txBuf); err != nil {
-			context := "Failed to serialize transaction"
-			return nil, state.server.internalRPCError(err.Error(), context)
+			err := errors.Wrap(err, "Failed to serialize transaction")
+			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, err.Error())
 		}
 
 		resultTx := btcjson.GetBlockTemplateResultTx{

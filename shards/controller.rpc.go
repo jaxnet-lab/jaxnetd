@@ -2,65 +2,73 @@ package shards
 
 import (
 	"context"
-	"net"
 
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
-func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config, nodeActor *server.NodeActor) error {
-	srv, err := server.RpcServer(&cfg.Node.RPC, nodeActor, chainCtl.logger)
+func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
+	beaconActor, err := chainCtl.beacon.ChainActor()
 	if err != nil {
 		return err
 	}
 
-	srv.Start(ctx)
+	var shardsActors = map[uint32]*server.ChainActor{}
+	for id, ro := range chainCtl.shardsCtl {
+		actor, err := ro.ctl.ChainActor()
+		if err != nil {
+			return err
+		}
+		shardsActors[id] = actor
+	}
+
+	srv := server.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger, beaconActor, shardsActors)
+	chainCtl.wg.Add(1)
+
+	go func() {
+		srv.Run(ctx)
+		chainCtl.wg.Done()
+
+	}()
+
 	return nil
 }
 
-// setupRPCListeners returns a slice of listeners that are configured for use
-// with the RPC server depending on the configuration settings for listen
-// addresses and TLS.
-func setupRPCListeners(listenerAddr []string) ([]net.Listener, error) {
-	// Setup TLS if not disabled.
-	listenFunc := net.Listen
-	// if !s.cfg.DisableTLS {
-	//	// Generate the TLS cert and key file if both don't already
-	//	// exist.
-	//	if !fileExists(cfg.RPCKey) && !fileExists(cfg.RPCCert) {
-	//		err := genCertPair(cfg.RPCCert, cfg.RPCKey)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//	}
-	//	keypair, err := tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	tlsConfig := tls.Config{
-	//		Certificates: []tls.Certificate{keypair},
-	//		MinVersion:   tls.VersionTLS12,
-	//	}
-	//
-	//	// Change the standard net.Listen function to the tls one.
-	//	listenFunc = func(net string, laddr string) (net.Listener, error) {
-	//		return tls.Listen(net, laddr, &tlsConfig)
-	//	}
-	// }
-
-	netAddrs, err := server.ParseListeners(listenerAddr)
-	if err != nil {
-		return nil, err
+func (chainCtl *chainController) runShards() error {
+	if err := chainCtl.syncShardsIndex(); err != nil {
+		return err
 	}
 
-	listeners := make([]net.Listener, 0, len(netAddrs))
-	for _, addr := range netAddrs {
-		listener, err := listenFunc(addr.Network(), addr.String())
-		if err != nil {
-			continue
+	defer chainCtl.updateShardsIndex()
+
+	chainCtl.beacon.blockchain.Subscribe(func(not *blockchain.Notification) {
+		if not.Type != blockchain.NTBlockConnected {
+			return
 		}
-		listeners = append(listeners, listener)
-	}
+		block, ok := not.Data.(*btcutil.Block)
+		if !ok {
+			chainCtl.logger.Warn("block notification data is not a *btcutil.Block")
+			return
+		}
 
-	return listeners, nil
+		msgBlock := block.MsgBlock()
+		version := msgBlock.Header.Version()
+
+		if !version.ExpansionMade() {
+			return
+		}
+
+		chainCtl.shardsIndex.AddShard(block)
+		chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock, block.Height())
+
+	})
+
+	for shardID, info := range chainCtl.shardsIndex.Shards {
+		err := chainCtl.NewShard(shardID, info.GenesisHeight)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

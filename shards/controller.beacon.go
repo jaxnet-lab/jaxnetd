@@ -10,7 +10,6 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
@@ -29,9 +28,8 @@ type BeaconCtl struct {
 	chain     chain.IChain
 	shardsMgr server.ShardManager
 
-	actor      *server.NodeActor
+	actor      *server.ChainActor
 	p2pServer  *server.P2PServer
-	rpcServer  *server.RPCServer
 	blockchain *blockchain.BlockChain
 }
 
@@ -86,8 +84,10 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 	beaconCtl.blockchain = beaconCtl.p2pServer.BlockChain()
+	return nil
+}
 
-	// todo(mike)
+func (beaconCtl *BeaconCtl) ChainActor() (*server.ChainActor, error) {
 	policy := mining.Policy{
 		BlockMinWeight:    beaconCtl.cfg.Node.P2P.BlockMinWeight,
 		BlockMaxWeight:    beaconCtl.cfg.Node.P2P.BlockMaxWeight,
@@ -100,23 +100,18 @@ func (beaconCtl *BeaconCtl) Init() error {
 		beaconCtl.chain.Params(), beaconCtl.p2pServer.TxMemPool, beaconCtl.p2pServer.BlockChain(), beaconCtl.p2pServer.TimeSource,
 		beaconCtl.p2pServer.SigCache, beaconCtl.p2pServer.HashCache)
 
-	listeners, err := setupRPCListeners(beaconCtl.cfg.Node.RPC.ListenerAddresses)
+	_, err := beaconCtl.cfg.Node.RPC.SetupRPCListeners()
 	if err != nil {
-		return err
-	}
-	miningAddrs := make([]btcutil.Address, 0, len(beaconCtl.cfg.Node.MiningAddresses))
-	for _, address := range beaconCtl.cfg.Node.MiningAddresses {
-		addr, err := btcutil.DecodeAddress(address, beaconCtl.chain.Params())
-		if err != nil {
-			return err
-		}
-
-		miningAddrs = append(miningAddrs, addr)
+		return nil, err
 	}
 
-	beaconCtl.actor = &server.NodeActor{
+	miningAddrs, err := beaconCtl.cfg.Node.ParseMiningAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	return &server.ChainActor{
 		StartupTime:  beaconCtl.p2pServer.StartupTime,
-		Listeners:    listeners,
 		ConnMgr:      &server.RPCConnManager{Server: beaconCtl.p2pServer},
 		SyncMgr:      &server.RPCSyncMgr{Server: beaconCtl.p2pServer, SyncMgr: beaconCtl.p2pServer.SyncManager},
 		TimeSource:   beaconCtl.p2pServer.TimeSource,
@@ -132,13 +127,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 		Chain:       beaconCtl.p2pServer.BlockChain(),
 		ChainParams: beaconCtl.chain.Params(),
 		TxMemPool:   beaconCtl.p2pServer.TxMemPool,
-	}
-
-	beaconCtl.rpcServer, err = server.RpcServer(&beaconCtl.cfg.Node.RPC, beaconCtl.actor, beaconCtl.log)
-	if err != nil {
-		return err
-	}
-	return nil
+	}, nil
 }
 
 func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
@@ -154,15 +143,10 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		beaconCtl.p2pServer.Run(ctx)
-	}()
-
-	go func() {
-		defer wg.Done()
-		beaconCtl.rpcServer.Start(ctx)
 	}()
 
 	<-ctx.Done()

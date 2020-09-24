@@ -7,7 +7,7 @@ import (
 )
 
 // handleAddNode handles addnode commands.
-func (s *RPCServer) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *ChainRPC) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.ManageShardsCmd)
 
 	var err error
@@ -17,11 +17,11 @@ func (s *RPCServer) handleManageShards(cmd interface{}, closeChan <-chan struct{
 			err = errors.New("initialHeight must be provided")
 			break
 		}
-		err = s.node.ShardsMgr.NewShard(c.ShardID, *c.InitialHeight)
+		err = server.node.ShardsMgr.NewShard(c.ShardID, *c.InitialHeight)
 	case "stop":
-		err = s.node.ShardsMgr.DisableShard(c.ShardID)
+		err = server.node.ShardsMgr.DisableShard(c.ShardID)
 	case "run":
-		err = s.node.ShardsMgr.EnableShard(c.ShardID)
+		err = server.node.ShardsMgr.EnableShard(c.ShardID)
 	default:
 		err = errors.New("invalid actions for manageshards")
 	}
@@ -37,8 +37,8 @@ func (s *RPCServer) handleManageShards(cmd interface{}, closeChan <-chan struct{
 	return nil, nil
 }
 
-func (s *RPCServer) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	shards := s.node.ShardsMgr.ListShards()
+func (server *ChainRPC) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	shards := server.node.ShardsMgr.ListShards()
 	// no data returned unless an error.
 	return shards, nil
 }

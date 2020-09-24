@@ -3,6 +3,7 @@ package shards
 import (
 	"os"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
@@ -38,6 +39,20 @@ type NodeConfig struct {
 
 func (cfg *NodeConfig) ChainParams() *chain.Params {
 	return chain.NetName(cfg.Net).Params()
+}
+
+func (cfg *NodeConfig) ParseMiningAddresses() ([]btcutil.Address, error) {
+	params := cfg.ChainParams()
+	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
+	for _, address := range cfg.MiningAddresses {
+		addr, err := btcutil.DecodeAddress(address, params)
+		if err != nil {
+			return nil, err
+		}
+
+		miningAddrs = append(miningAddrs, addr)
+	}
+	return miningAddrs, nil
 }
 
 type Config struct {
