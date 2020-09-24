@@ -205,7 +205,7 @@ import "errors"
 //	m.wg.Done()
 //}
 //
-//// NotifyBlockConnected passes a block newly-connected to the best chain
+//// NotifyBlockConnected passes a block newly-connected to the best BlockChain
 //// to the notification manager for block and transaction notification
 //// processing.
 //func (m *wsNotificationManager) NotifyBlockConnected(block *btcutil.Block) {
@@ -219,7 +219,7 @@ import "errors"
 //	}
 //}
 //
-//// NotifyBlockDisconnected passes a block disconnected from the best chain
+//// NotifyBlockDisconnected passes a block disconnected from the best BlockChain
 //// to the notification manager for block notification processing.
 //func (m *wsNotificationManager) NotifyBlockDisconnected(block *btcutil.Block) {
 //	// As NotifyBlockDisconnected will be called by the block manager
@@ -694,7 +694,7 @@ import "errors"
 //}
 //
 //// notifyBlockConnected notifies websocket clients that have registered for
-//// block updates when a block is connected to the main chain.
+//// block updates when a block is connected to the main BlockChain.
 //func (*wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
 //
@@ -713,7 +713,7 @@ import "errors"
 //}
 //
 //// notifyBlockDisconnected notifies websocket clients that have registered for
-//// block updates when a block is disconnected from the main chain (due to a
+//// block updates when a block is disconnected from the main BlockChain (due to a
 //// reorganize).
 //func (*wsNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*wsClient, block *btcutil.Block) {
 //	// Skip notification creation if no clients have requested block
@@ -737,7 +737,7 @@ import "errors"
 //}
 //
 //// notifyFilteredBlockConnected notifies websocket clients that have registered for
-//// block updates when a block is connected to the main chain.
+//// block updates when a block is connected to the main BlockChain.
 //func (m *wsNotificationManager) notifyFilteredBlockConnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
 //
@@ -782,7 +782,7 @@ import "errors"
 //}
 //
 //// notifyFilteredBlockDisconnected notifies websocket clients that have registered for
-//// block updates when a block is disconnected from the main chain (due to a
+//// block updates when a block is disconnected from the main BlockChain (due to a
 //// reorganize).
 //func (*wsNotificationManager) notifyFilteredBlockDisconnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
@@ -876,7 +876,7 @@ import "errors"
 //
 //// RegisterSpentRequests requests a notification when each of the passed
 //// outpoints is confirmed spent (contained in a block connected to the main
-//// chain) for the passed websocket client.  The request is automatically
+//// BlockChain) for the passed websocket client.  The request is automatically
 //// removed once the notification has been sent.
 //func (m *wsNotificationManager) RegisterSpentRequests(wsc *wsClient, ops []*wire.OutPoint) {
 //	m.queueNotification <- &notificationRegisterSpent{
@@ -925,7 +925,7 @@ import "errors"
 //
 //// UnregisterSpentRequest removes a request from the passed websocket client
 //// to be notified when the passed outpoint is confirmed spent (contained in a
-//// block connected to the main chain).
+//// block connected to the main BlockChain).
 //func (m *wsNotificationManager) UnregisterSpentRequest(wsc *wsClient, op *wire.OutPoint) {
 //	m.queueNotification <- &notificationUnregisterSpent{
 //		wsc: wsc,
@@ -2287,10 +2287,10 @@ var ErrClientQuit = errors.New("client quit")
 //// verifies that the new range of blocks is on the same fork as a previous
 //// range of blocks.  If this condition does not hold true, the JSON-RPC error
 //// for an unrecoverable reorganize is returned.
-//func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock int32,
+//func recoverFromReorg(BlockChain *blockchain.GetBlockChain, minBlock, maxBlock int32,
 //	lastBlock *chainhash.Hash) ([]chainhash.Hash, error) {
 //
-//	hashList, err := chain.HeightRange(minBlock, maxBlock)
+//	hashList, err := BlockChain.HeightRange(minBlock, maxBlock)
 //	if err != nil {
 //		s.logger.Errorf("Error looking up block range: %v", err)
 //		return nil, &btcjson.RPCError{
@@ -2302,7 +2302,7 @@ var ErrClientQuit = errors.New("client quit")
 //		return hashList, nil
 //	}
 //
-//	blk, err := chain.BlockByHash(&hashList[0])
+//	blk, err := BlockChain.BlockByHash(&hashList[0])
 //	if err != nil {
 //		s.logger.Errorf("Error looking up possibly reorged block: %v",
 //			err)
@@ -2335,7 +2335,7 @@ var ErrClientQuit = errors.New("client quit")
 //// we'll send back a rescan progress notification to the websockets client. The
 //// final block and block hash that we've scanned will be returned.
 //func scanBlockChunks(wsc *wsClient, cmd *btcjson.RescanCmd, lookups *rescanKeys, minBlock,
-//	maxBlock int32, chain *blockchain.BlockChain) (
+//	maxBlock int32, BlockChain *blockchain.GetBlockChain) (
 //	*btcutil.Block, *chainhash.Hash, error) {
 //
 //	// lastBlock and lastBlockHash track the previously-rescanned block.
@@ -2363,7 +2363,7 @@ var ErrClientQuit = errors.New("client quit")
 //		if maxLoopBlock-minBlock > types.MaxInvPerMsg {
 //			maxLoopBlock = minBlock + types.MaxInvPerMsg
 //		}
-//		hashList, err := chain.HeightRange(minBlock, maxLoopBlock)
+//		hashList, err := BlockChain.HeightRange(minBlock, maxLoopBlock)
 //		if err != nil {
 //			s.logger.Errorf("Error looking up block range: %v", err)
 //			return nil, nil, &btcjson.RPCError{
@@ -2419,7 +2419,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	loopHashList:
 //		for i := range hashList {
-//			blk, err := chain.BlockByHash(&hashList[i])
+//			blk, err := BlockChain.BlockByHash(&hashList[i])
 //			if err != nil {
 //				// Only handle reorgs if a block could not be
 //				// found for the hash.
@@ -2456,7 +2456,7 @@ var ErrClientQuit = errors.New("client quit")
 //				// reevaluated for the new hashList.
 //				minBlock += int32(i)
 //				hashList, err = recoverFromReorg(
-//					chain, minBlock, maxBlock, lastBlockHash,
+//					BlockChain, minBlock, maxBlock, lastBlockHash,
 //				)
 //				if err != nil {
 //					return nil, nil, err
@@ -2527,10 +2527,10 @@ var ErrClientQuit = errors.New("client quit")
 ////
 //// NOTE: This does not smartly handle reorgs, and fixing requires database
 //// changes (for safe, concurrent access to full block ranges, and support
-//// for other chains than the best chain).  It will, however, detect whether
+//// for other chains than the best BlockChain).  It will, however, detect whether
 //// a reorg removed a block that was previously processed, and result in the
 //// handler erroring.  Clients must handle this by finding a block still in
-//// the chain (perhaps from a rescanprogress notification) to resume their
+//// the BlockChain (perhaps from a rescanprogress notification) to resume their
 //// rescan.
 //func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 //	cmd, ok := icmd.(*btcjson.RescanCmd)
@@ -2568,13 +2568,13 @@ var ErrClientQuit = errors.New("client quit")
 //		lookups.unspent[*outpoint] = struct{}{}
 //	}
 //
-//	chain := wsc.server.cfg.Chain
+//	BlockChain := wsc.server.cfg.Chain
 //
 //	minBlockHash, err := chainhash.NewHashFromStr(cmd.BeginBlock)
 //	if err != nil {
 //		return nil, rpcDecodeHexError(cmd.BeginBlock)
 //	}
-//	minBlock, err := chain.BlockHeightByHash(minBlockHash)
+//	minBlock, err := BlockChain.BlockHeightByHash(minBlockHash)
 //	if err != nil {
 //		return nil, &btcjson.RPCError{
 //			Code:    btcjson.ErrRPCBlockNotFound,
@@ -2588,7 +2588,7 @@ var ErrClientQuit = errors.New("client quit")
 //		if err != nil {
 //			return nil, rpcDecodeHexError(*cmd.EndBlock)
 //		}
-//		maxBlock, err = chain.BlockHeightByHash(maxBlockHash)
+//		maxBlock, err = BlockChain.BlockHeightByHash(maxBlockHash)
 //		if err != nil {
 //			return nil, &btcjson.RPCError{
 //				Code:    btcjson.ErrRPCBlockNotFound,
@@ -2606,7 +2606,7 @@ var ErrClientQuit = errors.New("client quit")
 //		// which will notify the clients of any address deposits or output
 //		// spends.
 //		lastBlock, lastBlockHash, err = scanBlockChunks(
-//			wsc, cmd, &lookups, minBlock, maxBlock, chain,
+//			wsc, cmd, &lookups, minBlock, maxBlock, BlockChain,
 //		)
 //		if err != nil {
 //			return nil, err
@@ -2624,9 +2624,9 @@ var ErrClientQuit = errors.New("client quit")
 //		// If we didn't actually do a rescan, then we'll give the
 //		// client our best known block within the final rescan finished
 //		// notification.
-//		chainTip := chain.BestSnapshot()
+//		chainTip := BlockChain.BestSnapshot()
 //		lastBlockHash = &chainTip.Hash
-//		lastBlock, err = chain.BlockByHash(lastBlockHash)
+//		lastBlock, err = BlockChain.BlockByHash(lastBlockHash)
 //		if err != nil {
 //			return nil, &btcjson.RPCError{
 //				Code:    btcjson.ErrRPCBlockNotFound,

@@ -178,7 +178,7 @@ func (shardCtl *ShardCtl) ChainActor() (*server.ChainActor, error) {
 		TxMinFreeFee:      shardCtl.cfg.Node.P2P.MinRelayTxFeeValues,
 	}
 	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-		shardCtl.chain.Params(), shardCtl.p2pServer.TxMemPool, shardCtl.p2pServer.BlockChain(), shardCtl.p2pServer.TimeSource,
+		shardCtl.chain.Params(), shardCtl.p2pServer.TxMemPool, shardCtl.p2pServer.GetBlockChain(), shardCtl.p2pServer.TimeSource,
 		shardCtl.p2pServer.SigCache, shardCtl.p2pServer.HashCache)
 
 	_, err := shardCtl.cfg.Node.RPC.SetupRPCListeners()
@@ -205,7 +205,7 @@ func (shardCtl *ShardCtl) ChainActor() (*server.ChainActor, error) {
 		MiningAddrs:  miningAddrs,
 
 		// ShardsMgr:   shardCtl.shardsMgr,
-		Chain:       shardCtl.p2pServer.BlockChain(),
+		Chain:       shardCtl.p2pServer.GetBlockChain(),
 		ChainParams: shardCtl.chain.Params(),
 		TxMemPool:   shardCtl.p2pServer.TxMemPool,
 	}, nil

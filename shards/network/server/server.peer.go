@@ -65,7 +65,7 @@ func newServerPeer(s *P2PServer, isPersistent bool) *serverPeer {
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
 func (sp *serverPeer) newestBlock() (*chainhash.Hash, int32, error) {
-	best := sp.server.chain.BestSnapshot()
+	best := sp.server.BlockChain.BestSnapshot()
 	return &best.Hash, best.Height, nil
 }
 
@@ -207,7 +207,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// After soft-fork activation, only make outbound
 		// connection to peers if they flag that they're segwit
 		// enabled.
-		blockChain := sp.server.chain
+		blockChain := sp.server.BlockChain
 		segwitActive, err := blockChain.IsDeploymentActive(chain.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
@@ -467,7 +467,7 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 // OnGetBlocks is invoked when a peer receives a getblocks bitcoin
 // message.
 func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
-	// Find the most recent known block in the best chain based on the block
+	// Find the most recent known block in the best BlockChain based on the block
 	// locator and fetch all of the block hashes after it until either
 	// wire.MaxBlocksPerMsg have been fetched or the provided stop hash is
 	// encountered.
@@ -477,7 +477,7 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	chain := sp.server.chain
+	chain := sp.server.BlockChain
 	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop,
 		wire.MaxBlocksPerMsg)
 
@@ -511,7 +511,7 @@ func (sp *serverPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 		return
 	}
 
-	// Find the most recent known block in the best chain based on the block
+	// Find the most recent known block in the best BlockChain based on the block
 	// locator and fetch all of the headers after it until either
 	// wire.MaxBlockHeadersPerMsg have been fetched or the provided stop
 	// hash is encountered.
@@ -521,7 +521,7 @@ func (sp *serverPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	ch := sp.server.chain
+	ch := sp.server.BlockChain
 	headers := ch.LocateHeaders(msg.BlockLocatorHashes, &msg.HashStop)
 
 	// Send found headers to the requesting peer.
@@ -550,7 +550,7 @@ func (sp *serverPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		return
 	}
 
-	hashes, err := sp.server.chain.HeightToHashRange(
+	hashes, err := sp.server.BlockChain.HeightToHashRange(
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
@@ -616,7 +616,7 @@ func (sp *serverPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 	}
 
 	// Fetch the hashes from the block index.
-	hashList, err := sp.server.chain.HeightToHashRange(
+	hashList, err := sp.server.BlockChain.HeightToHashRange(
 		startHeight, &msg.StopHash, maxResults,
 	)
 	if err != nil {
@@ -724,7 +724,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	// Now that we know the client is fetching a filter that we know of,
 	// we'll fetch the block hashes et each check point interval so we can
 	// compare against our cache, and create new check points if necessary.
-	blockHashes, err := sp.server.chain.IntervalBlockHashes(
+	blockHashes, err := sp.server.BlockChain.IntervalBlockHashes(
 		&msg.StopHash, wire.CFCheckptInterval,
 	)
 	if err != nil {
@@ -786,7 +786,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 
 	// Now that we know the cache is of an appropriate size, we'll iterate
 	// backwards until the find the block hash. We do this as it's possible
-	// a re-org has occurred so items in the db are now in the main china
+	// a re-org has occurred so items in the DB are now in the main china
 	// while the cache has been partially invalidated.
 	var forkIdx int
 	for forkIdx = len(blockHashes); forkIdx > 0; forkIdx-- {
@@ -834,7 +834,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 
 		checkptMsg.AddCFHeader(filterHeader)
 
-		// If the new main chain is longer than what's in the cache,
+		// If the new main BlockChain is longer than what's in the cache,
 		// then we'll override it beyond the fork point.
 		if updateCache {
 			checkptCache[forkIdx+i] = cfHeaderKV{

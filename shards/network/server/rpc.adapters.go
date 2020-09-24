@@ -71,7 +71,7 @@ type RPCSyncMgr struct {
 // Ensure RPCSyncMgr implements the rpcserverSyncManager interface.
 var _ rpcserverSyncManager = (*RPCSyncMgr)(nil)
 
-// IsCurrent returns whether or not the sync manager believes the chain is
+// IsCurrent returns whether or not the sync manager believes the BlockChain is
 // current as compared to the rest of the network.
 //
 // This function is safe for concurrent access and is part of the
@@ -113,5 +113,5 @@ func (b *RPCSyncMgr) SyncPeerID() int32 {
 // This function is safe for concurrent access and is part of the
 // rpcserverSyncManager interface implementation.
 func (b *RPCSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader {
-	return b.Server.chain.LocateHeaders(locators, hashStop)
+	return b.Server.BlockChain.LocateHeaders(locators, hashStop)
 }

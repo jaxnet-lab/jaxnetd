@@ -143,10 +143,9 @@ type Client struct {
 
 	// chainParams holds the params for the chain that this client is using,
 	// and is used for many wallet methods.
-	chainParams *chain.Params
-	shardID     uint32
-	beacon      bool
-
+	chainParams    *chain.Params
+	shardID        uint32
+	oneTimeShardID *uint32
 	// wsConn is the underlying websocket connection when not in HTTP POST
 	// mode.
 	wsConn *websocket.Conn
@@ -187,6 +186,15 @@ type Client struct {
 	disconnect      chan struct{}
 	shutdown        chan struct{}
 	wg              sync.WaitGroup
+}
+
+func (c *Client) ForBeacon() *Client {
+	return c.ForShard(0)
+}
+
+func (c *Client) ForShard(shardID uint32) *Client {
+	c.oneTimeShardID = &shardID
+	return c
 }
 
 // NextID returns the next id to be used when sending a JSON-RPC message.  This
@@ -846,10 +854,17 @@ func (c *Client) sendPost(jReq *jsonRequest) {
 	}
 
 	path := protocol + "://" + c.config.Host
-	if c.beacon {
+
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+		c.oneTimeShardID = nil
+	}
+
+	if shardID == 0 {
 		path += "/beacon/"
 	} else {
-		path += fmt.Sprintf("/shard/%d", c.shardID)
+		path += fmt.Sprintf("/shard/%d", shardID)
 	}
 
 	bodyReader := bytes.NewReader(jReq.marshalledJSON)
@@ -1376,7 +1391,6 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 	if client.chainParams == nil {
 		return nil, fmt.Errorf("rpcclient.New: Unknown chain %s", config.Params)
 	}
-	client.beacon = config.ShardID == 0
 	client.shardID = config.ShardID
 
 	if start {

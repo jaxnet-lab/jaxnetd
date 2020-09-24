@@ -83,16 +83,16 @@ handled:
 
 func (server *ChainRPC) init() {
 	server.handlers = map[string]commandHandler{
-		"addnode":              server.handleAddNode,
-		"createrawtransaction": server.handleCreateRawTransaction,
-		"debuglevel":           server.handleDebugLevel,
-		"decoderawtransaction": server.handleDecodeRawTransaction,
-		"decodescript":         server.handleDecodeScript,
-		"estimatesmartfee":     server.handleEstimateSmartFee,
-		"getblockstats":        server.handleGetBlockStats,
-		"getchaintxstats":      server.handleGetChaintxStats,
-		"estimatefee":          server.handleEstimateFee,
-		// "generate":              server.handleGenerate,
+		"addnode":               server.handleAddNode,
+		"createrawtransaction":  server.handleCreateRawTransaction,
+		"debuglevel":            server.handleDebugLevel,
+		"decoderawtransaction":  server.handleDecodeRawTransaction,
+		"decodescript":          server.handleDecodeScript,
+		"estimatesmartfee":      server.handleEstimateSmartFee,
+		"getblockstats":         server.handleGetBlockStats,
+		"getchaintxstats":       server.handleGetChaintxStats,
+		"estimatefee":           server.handleEstimateFee,
+		"generate":              server.handleGenerate,
 		"getaddednodeinfo":      server.handleGetAddedNodeInfo,
 		"getbestblock":          server.handleGetBestBlock,
 		"getbestblockhash":      server.handleGetBestBlockHash,
@@ -261,7 +261,7 @@ func (server *ChainRPC) verifyChain(level, depth int32) error {
 	if finishHeight < 0 {
 		finishHeight = 0
 	}
-	server.logger.Infof("Verifying chain for %d blocks at level %d",
+	server.logger.Infof("Verifying BlockChain for %d blocks at level %d",
 		best.Height-finishHeight, level)
 
 	for height := best.Height; height > finishHeight; height-- {
@@ -273,7 +273,7 @@ func (server *ChainRPC) verifyChain(level, depth int32) error {
 			return err
 		}
 
-		// Level 1 does basic chain sanity checks.
+		// Level 1 does basic BlockChain sanity checks.
 		if level > 0 {
 			err := blockchain.CheckBlockSanity(block,
 				server.node.ChainParams.PowLimit, server.node.TimeSource)
@@ -324,7 +324,7 @@ func (server *ChainRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		return nil, server.internalRPCError(err.Error(), context)
 	}
 
-	// Get the block height from chain.
+	// Get the block height from BlockChain.
 	blockHeight, err := server.node.Chain.BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
@@ -802,58 +802,58 @@ func (server *ChainRPC) handleEstimateFee(cmd interface{}, closeChan <-chan stru
 }
 
 // handleGenerate handles generate commands.
-// func (s *ChainRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-//	// Respond with an error if there are no addresses to pay the
-//	// created blocks to.
-//	//if len(s.cfg.MiningAddrs) == 0 {
-//	//	return nil, &btcjson.RPCError{
-//	//		Code: btcjson.ErrRPCInternal.Code,
-//	//		Message: "No payment addresses specified " +
-//	//			"via --miningaddr",
-//	//	}
-//	//}
-//
-//	// Respond with an error if there's virtually 0 chance of mining a block
-//	// with the CPU.
-//	if !s.cfg.ChainParams.GenerateSupported {
-//		return nil, &btcjson.RPCError{
-//			Code: btcjson.ErrRPCDifficulty,
-//			Message: fmt.Sprintf("No support for `generate` on "+
-//				"the current network, %s, as it's unlikely to "+
-//				"be possible to mine a block with the CPU.",
-//				s.cfg.ChainParams.Net),
-//		}
-//	}
-//
-//	c := cmd.(*btcjson.GenerateCmd)
-//
-//	// Respond with an error if the client is requesting 0 blocks to be generated.
-//	if c.NumBlocks == 0 {
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCInternal.Code,
-//			Message: "Please request a nonzero number of blocks to generate.",
-//		}
-//	}
-//
-//	// Create a reply
-//	reply := make([]string, c.NumBlocks)
-//
-//	blockHashes, err := s.cfg.CPUMiner.GenerateNBlocks(c.NumBlocks)
-//	if err != nil {
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCInternal.Code,
-//			Message: err.Error(),
-//		}
-//	}
-//
-//	// Mine the correct number of blocks, assigning the hex representation of the
-//	// hash of each one to its place in the reply.
-//	for i, hash := range blockHashes {
-//		reply[i] = hash.String()
-//	}
-//
-//	return reply, nil
-// }
+func (s *ChainRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	// Respond with an error if there are no addresses to pay the
+	// created blocks to.
+	if len(s.node.MiningAddrs) == 0 {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCInternal.Code,
+			Message: "No payment addresses specified " +
+				"via --miningaddr",
+		}
+	}
+
+	// Respond with an error if there's virtually 0 chance of mining a block
+	// with the CPU.
+	// if !s.cfg.ChainParams.GenerateSupported {
+	// 	return nil, &btcjson.RPCError{
+	// 		Code: btcjson.ErrRPCDifficulty,
+	// 		Message: fmt.Sprintf("No support for `generate` on "+
+	// 			"the current network, %s, as it's unlikely to "+
+	// 			"be possible to mine a block with the CPU.",
+	// 			s.cfg.ChainParams.Net),
+	// 	}
+	// }
+
+	c := cmd.(*btcjson.GenerateCmd)
+
+	// Respond with an error if the client is requesting 0 blocks to be generated.
+	if c.NumBlocks == 0 {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCInternal.Code,
+			Message: "Please request a nonzero number of blocks to generate.",
+		}
+	}
+
+	// Create a reply
+	reply := make([]string, c.NumBlocks)
+
+	blockHashes, err := s.node.CPUMiner.GenerateNBlocks(c.NumBlocks)
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCInternal.Code,
+			Message: err.Error(),
+		}
+	}
+
+	// Mine the correct number of blocks, assigning the hex representation of the
+	// hash of each one to its place in the reply.
+	for i, hash := range blockHashes {
+		reply[i] = hash.String()
+	}
+
+	return reply, nil
+}
 
 // handleGetAddedNodeInfo handles getaddednodeinfo commands.
 func (server *ChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
@@ -1046,7 +1046,7 @@ func (server *ChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan <-cha
 			}
 		}
 
-		// Query the blockChain for the current status of the deployment as
+		// Query the BlockChain for the current status of the deployment as
 		// identified by its deployment ID.
 		deploymentStatus, err := blockChain.ThresholdState(uint32(deployment))
 		if err != nil {
@@ -1103,7 +1103,7 @@ func (server *ChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan str
 func (server *ChainRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetBlockHeaderCmd)
 
-	// Fetch the header from chain.
+	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
@@ -1130,7 +1130,7 @@ func (server *ChainRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 
 	// The verbose flag is set, so generate the JSON object and return it.
 
-	// Get the block height from chain.
+	// Get the block height from BlockChain.
 	blockHeight, err := server.node.Chain.BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
@@ -1178,7 +1178,7 @@ func (server *ChainRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 // is not sent until the caller should stop working on the previous block
 // template in favor of the new one.  In particular, this is the case when the
 // old block template is no longer valid due to a solution already being found
-// and added to the block chain, or new transactions have shown up and some time
+// and added to the block BlockChain, or new transactions have shown up and some time
 // has passed without finding a solution.
 //
 // See https://en.bitcoin.it/wiki/BIP_0022 for more details.
@@ -1217,7 +1217,7 @@ func (server *ChainRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 
 		// Include whether or not it is valid to submit work against the
 		// old block template depending on whether or not a solution has
-		// already been found and added to the block chain.
+		// already been found and added to the block BlockChain.
 		submitOld := prevHash.IsEqual(&prevTemplateHash)
 		result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
 		if err != nil {
@@ -1257,7 +1257,7 @@ func (server *ChainRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
-	// been found and added to the block chain.
+	// been found and added to the block BlockChain.
 	h := state.template.Block.Header.PrevBlock()
 	submitOld := prevHash.IsEqual(&h)
 	result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
@@ -1320,7 +1320,7 @@ func (server *ChainRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	//	}
 	// }
 
-	// No point in generating or accepting work before the chain is synced.
+	// No point in generating or accepting work before the BlockChain is synced.
 	currentHeight := server.node.Chain.BestSnapshot().Height
 	if currentHeight != 0 && !server.node.SyncMgr.IsCurrent() {
 		return nil, &btcjson.RPCError{
@@ -1521,7 +1521,7 @@ func (server *ChainRPC) handleGetDifficulty(cmd interface{}, closeChan <-chan st
 func (server *ChainRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetHeadersCmd)
 
-	// Fetch the requested headers from chain while respecting the provided
+	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
 	blockLocators := make([]*chainhash.Hash, len(c.BlockLocators))
 	for i := range c.BlockLocators {
@@ -1663,14 +1663,14 @@ func (server *ChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan
 	}
 
 	// Calculate the number of blocks per retarget interval based on the
-	// chain parameters.
+	// BlockChain parameters.
 	blocksPerRetarget := int32(server.node.ChainParams.TargetTimespan /
 		server.node.ChainParams.TargetTimePerBlock)
 
 	// Calculate the starting block height based on the passed number of
 	// blocks.  When the passed value is negative, use the last block the
 	// difficulty changed as the starting height.  Also make sure the
-	// starting height is not before the beginning of the chain.
+	// starting height is not before the beginning of the BlockChain.
 	numBlocks := int32(120)
 	if c.Blocks != nil {
 		numBlocks = int32(*c.Blocks)
@@ -1697,7 +1697,7 @@ func (server *ChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan
 			return nil, server.internalRPCError(err.Error(), context)
 		}
 
-		// Fetch the header from chain.
+		// Fetch the header from BlockChain.
 		header, err := server.node.Chain.HeaderByHash(hash)
 		if err != nil {
 			context := "Failed to fetch block header"
@@ -1889,7 +1889,7 @@ func (server *ChainRPC) handleGetRawTransaction(cmd interface{}, closeChan <-cha
 	var blkHashStr string
 	var chainHeight int32
 	if blkHash != nil {
-		// Fetch the header from chain.
+		// Fetch the header from BlockChain.
 		header, err := server.node.Chain.HeaderByHash(blkHash)
 		if err != nil {
 			context := "Failed to fetch block header"
@@ -1969,7 +1969,7 @@ func (server *ChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan struct{
 
 		// To match the behavior of the reference client, return nil
 		// (JSON null) if the transaction output is spent by another
-		// transaction already in the main chain.  Mined transactions
+		// transaction already in the main BlockChain.  Mined transactions
 		// that are spent by a mempool transaction are not affected by
 		// this.
 		if entry == nil || entry.IsSpent() {
@@ -2450,7 +2450,7 @@ func (server *ChainRPC) handleSearchRawTransactions(cmd interface{}, closeChan <
 		var blkHashStr string
 		var blkHeight int32
 		if blkHash := rtx.blkHash; blkHash != nil {
-			// Fetch the header from chain.
+			// Fetch the header from BlockChain.
 			header, err := server.node.Chain.HeaderByHash(blkHash)
 			if err != nil {
 				return nil, &btcjson.RPCError{
@@ -2459,7 +2459,7 @@ func (server *ChainRPC) handleSearchRawTransactions(cmd interface{}, closeChan <
 				}
 			}
 
-			// Get the block height from chain.
+			// Get the block height from BlockChain.
 			height, err := server.node.Chain.BlockHeightByHash(blkHash)
 			if err != nil {
 				context := "Failed to obtain block height"

@@ -4,12 +4,9 @@ import (
 	"net"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
-	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -85,54 +82,6 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 	}
 
 	return cfg.Listeners, nil
-}
-
-type ChainActor struct {
-
-	// StartupTime is the unix timestamp for when the Server that is hosting
-	// the RPC Server started.
-	StartupTime int64
-
-	// ConnMgr defines the connection manager for the RPC Server to use.  It
-	// provides the RPC Server with a means to do things such as add,
-	// remove, connect, disconnect, and query peers as well as other
-	// connection-related data and tasks.
-	ConnMgr rpcserverConnManager
-
-	// SyncMgr defines the sync manager for the RPC Server to use.
-	SyncMgr rpcserverSyncManager
-
-	// ShardsMgr provides ability to manipulate running shards.
-	ShardsMgr ShardManager
-
-	// These fields allow the RPC Server to interface with the local block
-	// chain data and state.
-	TimeSource  blockchain.MedianTimeSource
-	Chain       *blockchain.BlockChain
-	ChainParams *chain.Params
-	DB          database.DB
-
-	// TxMemPool defines the transaction memory pool to interact with.
-	TxMemPool *mempool.TxPool
-
-	// These fields allow the RPC Server to interface with mining.
-	//
-	// Generator produces block templates and the CPUMiner solves them using
-	// the CPU.  CPU mining is typically only useful for test purposes when
-	// doing regression or simulation testing.
-	Generator *mining.BlkTmplGenerator
-	// CPUMiner  *cpuminer.CPUMiner
-
-	// These fields define any optional indexes the RPC Server can make use
-	// of to provide additional data when queried.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
-
-	// The fee estimator keeps track of how long transactions are left in
-	// the mempool before they are mined into blocks.
-	FeeEstimator *mempool.FeeEstimator
-	MiningAddrs  []btcutil.Address
 }
 
 // rpcserverPeer represents a peer for use with the RPC server.
@@ -222,7 +171,7 @@ type rpcserverConnManager interface {
 // The interface contract requires that all of these methods are safe for
 // concurrent access.
 type rpcserverSyncManager interface {
-	// IsCurrent returns whether or not the sync manager believes the chain
+	// IsCurrent returns whether or not the sync manager believes the BlockChain
 	// is current as compared to the rest of the network.
 	IsCurrent() bool
 

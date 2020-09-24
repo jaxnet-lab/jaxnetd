@@ -47,7 +47,7 @@ func newGbtWorkState(timeSource blockchain.MedianTimeSource) *gbtWorkState {
 // This function MUST be called with the state locked.
 func (state *gbtWorkState) notifyLongPollers(latestHash *chainhash.Hash, lastGenerated time.Time) {
 	// Notify anything that is waiting for a block template update from a
-	// hash which is not the hash of the tip of the best chain since their
+	// hash which is not the hash of the tip of the best BlockChain since their
 	// work is now invalid.
 	for hash, channels := range state.notifyMap {
 		if !hash.IsEqual(latestHash) {
@@ -215,7 +215,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 			blockchain.CompactToBig(msgBlock.Header.Bits()))
 
 		// Get the minimum allowed timestamp for the block based on the
-		// median timestamp of the last several blocks per the chain
+		// median timestamp of the last several blocks per the BlockChain
 		// consensus rules.
 		best := s.node.Chain.BestSnapshot()
 		minTimestamp := mining.MinimumMedianTime(best)
@@ -276,7 +276,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 
 		// Update the time of the block template to the current time
 		// while accounting for the median time of the past several
-		// blocks per the chain consensus rules.
+		// blocks per the BlockChain consensus rules.
 		generator.UpdateBlockTime(msgBlock)
 		msgBlock.Header.SetNonce(0)
 
