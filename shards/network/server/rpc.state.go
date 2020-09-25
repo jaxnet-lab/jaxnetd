@@ -177,7 +177,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 	// generated.
 	var msgBlock *wire.MsgBlock
 	var targetDifficulty string
-	latestHash := &s.node.Chain.BestSnapshot().Hash
+	latestHash := &s.node.BlockChain.BestSnapshot().Hash
 	template := state.template
 	if template == nil || state.prevHash == nil ||
 		!state.prevHash.IsEqual(latestHash) ||
@@ -217,7 +217,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the BlockChain
 		// consensus rules.
-		best := s.node.Chain.BestSnapshot()
+		best := s.node.BlockChain.BestSnapshot()
 		minTimestamp := mining.MinimumMedianTime(best)
 
 		// Update work state to ensure another block template isn't

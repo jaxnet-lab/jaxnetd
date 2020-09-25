@@ -9,8 +9,6 @@ import (
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
@@ -50,7 +48,7 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
 	chainCtl.wg.Add(1)
 
-	block, err := chainCtl.beacon.blockchain.BlockByHeight(height)
+	block, err := chainCtl.beacon.chainActor.BlockChain.BlockByHeight(height)
 	if err != nil {
 		return err
 	}
@@ -109,9 +107,9 @@ type ShardCtl struct {
 	cfg   *Config
 	ctx   context.Context
 
-	db        database.DB
-	dbCtl     DBCtl
-	p2pServer *server2.P2PServer
+	dbCtl      DBCtl
+	p2pServer  *server2.P2PServer
+	chainActor *server.ChainActor
 }
 
 func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.IChain) *ShardCtl {
@@ -143,8 +141,10 @@ func (shardCtl ShardCtl) Init() error {
 		}
 	}()
 
-	cleanSmth, err := shardCtl.dbCtl.cleanIndexes(shardCtl.ctx, shardCtl.cfg, db)
-	if cleanSmth || err != nil {
+	shardCtl.chainActor, err = server.NewChainActor(shardCtl.ctx,
+		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, db, shardCtl.log)
+	if err != nil {
+		shardCtl.log.Error("unable to init ChainActor for shard", zap.Error(err))
 		return err
 	}
 
@@ -158,8 +158,7 @@ func (shardCtl ShardCtl) Init() error {
 	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer and start it.
-	shardCtl.p2pServer, err = server2.ShardServer(shardCtl.ctx, &shardCtl.cfg.Node.P2P, amgr, shardCtl.chain, db,
-		shardCtl.log.With(zap.String("p2pServer", "Shard P2P")))
+	shardCtl.p2pServer, err = server2.ShardServer(&shardCtl.cfg.Node.P2P, shardCtl.chainActor, amgr)
 	if err != nil {
 		shardCtl.log.Error("Unable to start p2pServer",
 			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))
@@ -168,51 +167,12 @@ func (shardCtl ShardCtl) Init() error {
 	return nil
 }
 
-func (shardCtl *ShardCtl) ChainActor() (*server.ChainActor, error) {
-	policy := mining.Policy{
-		BlockMinWeight:    shardCtl.cfg.Node.P2P.BlockMinWeight,
-		BlockMaxWeight:    shardCtl.cfg.Node.P2P.BlockMaxWeight,
-		BlockMinSize:      shardCtl.cfg.Node.P2P.BlockMinSize,
-		BlockMaxSize:      shardCtl.cfg.Node.P2P.BlockMaxSize,
-		BlockPrioritySize: shardCtl.cfg.Node.P2P.BlockPrioritySize,
-		TxMinFreeFee:      shardCtl.cfg.Node.P2P.MinRelayTxFeeValues,
-	}
-	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-		shardCtl.chain.Params(), shardCtl.p2pServer.TxMemPool, shardCtl.p2pServer.GetBlockChain(), shardCtl.p2pServer.TimeSource,
-		shardCtl.p2pServer.SigCache, shardCtl.p2pServer.HashCache)
-
-	_, err := shardCtl.cfg.Node.RPC.SetupRPCListeners()
-	if err != nil {
-		return nil, err
-	}
-
-	miningAddrs, err := shardCtl.cfg.Node.ParseMiningAddresses()
-	if err != nil {
-		return nil, err
-	}
-
-	return &server.ChainActor{
-		StartupTime:  shardCtl.p2pServer.StartupTime,
-		ConnMgr:      &server.RPCConnManager{Server: shardCtl.p2pServer},
-		SyncMgr:      &server.RPCSyncMgr{Server: shardCtl.p2pServer, SyncMgr: shardCtl.p2pServer.SyncManager},
-		TimeSource:   shardCtl.p2pServer.TimeSource,
-		DB:           shardCtl.db,
-		Generator:    blockTemplateGenerator,
-		TxIndex:      shardCtl.p2pServer.TxIndex,
-		AddrIndex:    shardCtl.p2pServer.AddrIndex,
-		CfIndex:      shardCtl.p2pServer.CfIndex,
-		FeeEstimator: shardCtl.p2pServer.FeeEstimator,
-		MiningAddrs:  miningAddrs,
-
-		// ShardsMgr:   shardCtl.shardsMgr,
-		Chain:       shardCtl.p2pServer.GetBlockChain(),
-		ChainParams: shardCtl.chain.Params(),
-		TxMemPool:   shardCtl.p2pServer.TxMemPool,
-	}, nil
+func (shardCtl *ShardCtl) ChainActor() *server.ChainActor {
+	return shardCtl.chainActor
 }
 
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
-	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.db)
+	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainActor.DB)
 	if cleanIndexes {
 		shardCtl.log.Info("clean db indexes")
 		return
@@ -240,7 +200,7 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	shardCtl.log.Info("Chain p2p server shutdown complete")
 
 	shardCtl.log.Info("Gracefully shutting down the database...")
-	if err := shardCtl.db.Close(); err != nil {
+	if err := shardCtl.chainActor.DB.Close(); err != nil {
 		shardCtl.log.Error("Can't close db", zap.Error(err))
 	}
 }

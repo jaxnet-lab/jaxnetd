@@ -82,8 +82,8 @@ func (s *P2PServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	// TODO: Check for max peers from a single IP.
 
 	// Limit max number of total peers.
-	if state.Count() >= s.cfg.MaxPeers {
-		s.logger.Infof("Max peers reached [%d] - disconnecting peer %s", s.cfg.MaxPeers, sp)
+	if state.Count() >= s.Config().MaxPeers {
+		s.logger.Infof("Max peers reached [%d] - disconnecting peer %s", s.Config().MaxPeers, sp)
 		sp.Disconnect()
 		// TODO: how to handle permanent peers here?
 		// they should be rescheduled.

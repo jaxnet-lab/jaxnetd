@@ -29,12 +29,13 @@ type chainController struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-	// -------------------------------
 
 	beacon      BeaconCtl
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
 	shardsMutex sync.RWMutex
+	// -------------------------------
+
 }
 
 func Controller(logger *zap.Logger) *chainController {
@@ -76,44 +77,40 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (chainCtl *chainController) updateShardsIndex() error {
+func (chainCtl *chainController) writeShardsIndex() error {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
-	file, err := os.OpenFile(shardsFile, os.O_RDWR|os.O_CREATE, 0644)
+	content, err := json.Marshal(chainCtl.shardsIndex)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	err = json.NewEncoder(file).Encode(chainCtl.shardsIndex)
-	if err != nil {
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(shardsFile, content, 0644)
 }
 
 func (chainCtl *chainController) syncShardsIndex() error {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
+	chainCtl.shardsIndex = &Index{
+		Shards: map[uint32]ShardInfo{},
+	}
+
 	_, err := os.Stat(shardsFile)
 	if os.IsNotExist(err) {
-		if err = chainCtl.updateShardsIndex(); err != nil {
+		if err = chainCtl.writeShardsIndex(); err != nil {
+			return err
+		}
+	} else {
+		file, err := ioutil.ReadFile(shardsFile)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, chainCtl.shardsIndex)
+		if err != nil {
 			return err
 		}
 	}
 
-	file, err := ioutil.ReadFile(shardsFile)
-	if err != nil {
-		return err
-	}
-	sIndex := &Index{
-		Shards: map[uint32]ShardInfo{},
-	}
-	err = json.Unmarshal(file, sIndex)
-	if err != nil {
-		return err
-	}
-
 	var maxHeight int32
-	snapshot := chainCtl.beacon.blockchain.BestSnapshot()
+	snapshot := chainCtl.beacon.chainActor.BlockChain.BestSnapshot()
 	if snapshot != nil {
 		maxHeight = snapshot.Height
 	}
@@ -122,8 +119,8 @@ func (chainCtl *chainController) syncShardsIndex() error {
 		return nil
 	}
 
-	for height := sIndex.LastBeaconHeight; height < maxHeight; height++ {
-		block, err := chainCtl.beacon.blockchain.BlockByHeight(height)
+	for height := chainCtl.shardsIndex.LastBeaconHeight; height < maxHeight; height++ {
+		block, err := chainCtl.beacon.chainActor.BlockChain.BlockByHeight(height)
 		if err != nil {
 			return err
 		}
@@ -134,17 +131,10 @@ func (chainCtl *chainController) syncShardsIndex() error {
 		if !version.ExpansionMade() {
 			continue
 		}
-		sIndex.AddShard(block)
+		chainCtl.shardsIndex.AddShard(block)
 	}
 
-	chainCtl.shardsIndex = sIndex
-
-	content, err := json.Marshal(sIndex)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(shardsFile, content, 0644)
+	return chainCtl.writeShardsIndex()
 }
 
 type ShardInfo struct {

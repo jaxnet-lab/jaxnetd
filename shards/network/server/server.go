@@ -449,7 +449,7 @@ func (s *P2PServer) handleQuery(state *peerState, querymsg interface{}) {
 	case connectNodeMsg:
 		// TODO: duplicate oneshots?
 		// Limit max number of total peers.
-		if state.Count() >= s.cfg.MaxPeers {
+		if state.Count() >= s.ChainActor.Config().MaxPeers {
 			msg.reply <- errors.New("max peers reached")
 			return
 		}
@@ -1145,16 +1145,17 @@ func (s *P2PServer) GetBlockChain() *blockchain.BlockChain {
 // newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func Server(ctx context.Context, cfg *P2pConfig,
-	amgr *addrmgr.AddrManager,
-	iChain chain.IChain, db database.DB, logger *zap.Logger) (*P2PServer, error) {
+func Server(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainActor.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainActor.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
 	// }
-	if cfg.NoCFilters {
+
+	if chainCfg.NoCFilters {
 		services &^= wire.SFNodeCF
 	}
 
@@ -1162,7 +1163,8 @@ func Server(ctx context.Context, cfg *P2pConfig,
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, iChain.Params().DefaultPort, amgr, cfg.Listeners, services, logger)
+		listeners, nat, err = initListeners(cfg, chainActor.IChain.Params().DefaultPort,
+			amgr, cfg.Listeners, services, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -1178,15 +1180,16 @@ func Server(ctx context.Context, cfg *P2pConfig,
 		logger.Info(fmt.Sprintf("User-agent whitelist %s", cfg.AgentWhitelist))
 	}
 
-	s := P2PServer{
+	p2pServer := P2PServer{
+		ChainActor:           chainActor,
 		cfg:                  cfg,
 		addrManager:          amgr,
-		newPeers:             make(chan *serverPeer, cfg.MaxPeers),
-		donePeers:            make(chan *serverPeer, cfg.MaxPeers),
-		banPeers:             make(chan *serverPeer, cfg.MaxPeers),
+		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
+		donePeers:            make(chan *serverPeer, chainCfg.MaxPeers),
+		banPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
 		query:                make(chan interface{}),
-		relayInv:             make(chan relayMsg, cfg.MaxPeers),
-		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
+		relayInv:             make(chan relayMsg, chainCfg.MaxPeers),
+		broadcast:            make(chan broadcastMsg, chainCfg.MaxPeers),
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
@@ -1201,9 +1204,6 @@ func Server(ctx context.Context, cfg *P2pConfig,
 		zapLogger:            logger,
 	}
 
-	var err error
-	s.ChainActor, err = NewChainActor(ctx, cfg.ChainRuntimeConfig, logger, iChain, db)
-
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
 	// in connect-only mode since it is only intended to connect to
@@ -1214,7 +1214,7 @@ func Server(ctx context.Context, cfg *P2pConfig,
 	if len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, error) {
 			for tries := 0; tries < 100; tries++ {
-				addr := s.addrManager.GetAddress()
+				addr := p2pServer.addrManager.GetAddress()
 				if addr == nil {
 					break
 				}
@@ -1226,7 +1226,7 @@ func Server(ctx context.Context, cfg *P2pConfig,
 				// to the same network segment at the expense of
 				// others.
 				key := addrmgr.GroupKey(addr.NetAddress())
-				if s.OutboundGroupCount(key) != 0 {
+				if p2pServer.OutboundGroupCount(key) != 0 {
 					continue
 				}
 
@@ -1238,15 +1238,15 @@ func Server(ctx context.Context, cfg *P2pConfig,
 
 				// allow nondefault ports after 50 failed tries.
 				if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-					s.ChainParams.DefaultPort {
+					p2pServer.ChainParams.DefaultPort {
 					continue
 				}
 
 				// Mark an attempt for the valid address.
-				s.addrManager.Attempt(addr.NetAddress())
+				p2pServer.addrManager.Attempt(addr.NetAddress())
 
 				addrString := addrmgr.NetAddressKey(addr.NetAddress())
-				return s.addrStringToNetAddr(addrString)
+				return p2pServer.addrStringToNetAddr(addrString)
 			}
 
 			return nil, errors.New("no valid connect address")
@@ -1255,22 +1255,22 @@ func Server(ctx context.Context, cfg *P2pConfig,
 
 	// Create a connection manager.
 	targetOutbound := defaultTargetOutbound
-	if cfg.MaxPeers < targetOutbound {
-		targetOutbound = cfg.MaxPeers
+	if chainCfg.MaxPeers < targetOutbound {
+		targetOutbound = chainCfg.MaxPeers
 	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       s.inboundPeerConnected,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
-		Dial:           s.btcdDial,
-		OnConnection:   s.outboundPeerConnected,
+		Dial:           p2pServer.btcdDial,
+		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  newAddressFunc,
 	})
 	if err != nil {
 		return nil, err
 	}
-	s.ConnManager = cmgr
+	p2pServer.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1278,33 +1278,34 @@ func Server(ctx context.Context, cfg *P2pConfig,
 		permanentPeers = cfg.Peers
 	}
 	for _, addr := range permanentPeers {
-		netAddr, err := s.addrStringToNetAddr(addr)
+		netAddr, err := p2pServer.addrStringToNetAddr(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		go s.ConnManager.Connect(&connmgr.ConnReq{
+		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
 		})
 	}
 
-	return &s, nil
+	return &p2pServer, nil
 }
 
 // newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager, iChain chain.IChain,
-	db database.DB, logger *zap.Logger) (*P2PServer, error) {
+func ShardServer(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainActor.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainActor.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
 	// }
-	if cfg.NoCFilters {
+	if chainCfg.NoCFilters {
 		services &^= wire.SFNodeCF
 	}
 
@@ -1312,7 +1313,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, iChain.Params().DefaultPort, amgr, []string{":"}, services, logger)
+		listeners, nat, err = initListeners(cfg, chainActor.IChain.Params().DefaultPort, amgr, []string{":"}, services, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -1321,15 +1322,16 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		}
 	}
 
-	srv := P2PServer{
+	p2pServer := P2PServer{
+		ChainActor:           chainActor,
 		cfg:                  cfg,
 		addrManager:          amgr,
-		newPeers:             make(chan *serverPeer, cfg.MaxPeers),
-		donePeers:            make(chan *serverPeer, cfg.MaxPeers),
-		banPeers:             make(chan *serverPeer, cfg.MaxPeers),
+		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
+		donePeers:            make(chan *serverPeer, chainCfg.MaxPeers),
+		banPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
 		query:                make(chan interface{}),
-		relayInv:             make(chan relayMsg, cfg.MaxPeers),
-		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
+		relayInv:             make(chan relayMsg, chainCfg.MaxPeers),
+		broadcast:            make(chan broadcastMsg, chainCfg.MaxPeers),
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
@@ -1343,9 +1345,6 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		zapLogger:       logger,
 	}
 
-	var err error
-	srv.ChainActor, err = NewChainActor(ctx, cfg.ChainRuntimeConfig, logger, iChain, db)
-
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
 	// in connect-only mode since it is only intended to connect to
@@ -1356,7 +1355,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	if len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, error) {
 			for tries := 0; tries < 100; tries++ {
-				addr := srv.addrManager.GetAddress()
+				addr := p2pServer.addrManager.GetAddress()
 				if addr == nil {
 					break
 				}
@@ -1368,7 +1367,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 				// to the same network segment at the expense of
 				// others.
 				key := addrmgr.GroupKey(addr.NetAddress())
-				if srv.OutboundGroupCount(key) != 0 {
+				if p2pServer.OutboundGroupCount(key) != 0 {
 					continue
 				}
 
@@ -1380,15 +1379,15 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 				// allow nondefault ports after 50 failed tries.
 				if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-					srv.ChainParams.DefaultPort {
+					p2pServer.ChainParams.DefaultPort {
 					continue
 				}
 
 				// Mark an attempt for the valid address.
-				srv.addrManager.Attempt(addr.NetAddress())
+				p2pServer.addrManager.Attempt(addr.NetAddress())
 
 				addrString := addrmgr.NetAddressKey(addr.NetAddress())
-				return srv.addrStringToNetAddr(addrString)
+				return p2pServer.addrStringToNetAddr(addrString)
 			}
 
 			return nil, errors.New("no valid connect address")
@@ -1397,22 +1396,22 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 	// Create a connection manager.
 	targetOutbound := defaultTargetOutbound
-	if cfg.MaxPeers < targetOutbound {
-		targetOutbound = cfg.MaxPeers
+	if chainCfg.MaxPeers < targetOutbound {
+		targetOutbound = chainCfg.MaxPeers
 	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       srv.inboundPeerConnected,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
-		Dial:           srv.btcdDial,
-		OnConnection:   srv.outboundPeerConnected,
+		Dial:           p2pServer.btcdDial,
+		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  newAddressFunc,
 	})
 	if err != nil {
 		return nil, err
 	}
-	srv.ConnManager = cmgr
+	p2pServer.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1421,19 +1420,19 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	}
 
 	for _, addr := range permanentPeers {
-		netAddr, err := srv.addrStringToNetAddr(addr)
+		netAddr, err := p2pServer.addrStringToNetAddr(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		go srv.ConnManager.Connect(&connmgr.ConnReq{
+		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
 		})
 	}
 
-	return &srv, nil
+	return &p2pServer, nil
 }
 
 // initListeners initializes the configured net listeners and adds any bound

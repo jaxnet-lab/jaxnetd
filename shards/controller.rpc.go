@@ -9,18 +9,11 @@ import (
 )
 
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
-	beaconActor, err := chainCtl.beacon.ChainActor()
-	if err != nil {
-		return err
-	}
+	beaconActor := chainCtl.beacon.ChainActor()
 
 	var shardsActors = map[uint32]*server.ChainActor{}
 	for id, ro := range chainCtl.shardsCtl {
-		actor, err := ro.ctl.ChainActor()
-		if err != nil {
-			return err
-		}
-		shardsActors[id] = actor
+		shardsActors[id] = ro.ctl.ChainActor()
 	}
 
 	srv := server.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger, beaconActor, shardsActors)
@@ -40,12 +33,13 @@ func (chainCtl *chainController) runShards() error {
 		return err
 	}
 
-	defer chainCtl.updateShardsIndex()
+	defer chainCtl.writeShardsIndex()
 
-	chainCtl.beacon.blockchain.Subscribe(func(not *blockchain.Notification) {
+	chainCtl.beacon.chainActor.BlockChain.Subscribe(func(not *blockchain.Notification) {
 		if not.Type != blockchain.NTBlockConnected {
 			return
 		}
+
 		block, ok := not.Data.(*btcutil.Block)
 		if !ok {
 			chainCtl.logger.Warn("block notification data is not a *btcutil.Block")

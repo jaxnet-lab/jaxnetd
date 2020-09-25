@@ -17,12 +17,49 @@ import (
 	"go.uber.org/zap"
 )
 
+type ChainRuntimeConfig struct {
+	SigCacheMaxSize     uint     `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
+	AddCheckpoints      []string `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+	AddrIndex           bool     `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+	MaxPeers            int      `yaml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
+	BlockMaxSize        uint32   `yaml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
+	BlockMinSize        uint32   `yaml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
+	BlockMaxWeight      uint32   `yaml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
+	BlockMinWeight      uint32   `yaml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
+	BlockPrioritySize   uint32   `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
+	TxIndex             bool     `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
+	NoRelayPriority     bool     `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
+	RejectReplacement   bool     `yaml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+	RelayNonStd         bool     `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
+	FreeTxRelayLimit    float64  `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
+	MaxOrphanTxs        int      `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
+	MinRelayTxFee       float64  `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
+	MinRelayTxFeeValues btcutil.Amount
+	NoCFilters          bool     `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
+	DisableCheckpoints  bool     `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
+	MiningAddresses     []string `yaml:"mining_addresses"`
+}
+
+func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chain.Params) ([]btcutil.Address, error) {
+	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
+	for _, address := range cfg.MiningAddresses {
+		addr, err := btcutil.DecodeAddress(address, params)
+		if err != nil {
+			return nil, err
+		}
+
+		miningAddrs = append(miningAddrs, addr)
+	}
+	return miningAddrs, nil
+}
+
 type ChainActor struct {
 
 	// StartupTime is the unix timestamp for when the Server that is hosting
 	// the RPC Server started.
 	StartupTime int64
 
+	// todo(mike): ConnMgr SyncMgr ShardsMgr are nil need to refactor it
 	// ConnMgr defines the connection manager for the RPC Server to use.  It
 	// provides the RPC Server with a means to do things such as add,
 	// remove, connect, disconnect, and query peers as well as other
@@ -38,7 +75,6 @@ type ChainActor struct {
 	// These fields allow the RPC Server to interface with the local block
 	// BlockChain data and state.
 	TimeSource  blockchain.MedianTimeSource
-	Chain       *blockchain.BlockChain
 	ChainParams *chain.Params
 	DB          database.DB
 
@@ -69,42 +105,46 @@ type ChainActor struct {
 	SyncManager *netsync.SyncManager
 	BlockChain  *blockchain.BlockChain
 
-	logger *zap.Logger
 	IChain chain.IChain
+	logger *zap.Logger
+	config *ChainRuntimeConfig
 }
 
-func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, log *zap.Logger, iChain chain.IChain, db database.DB) (*ChainActor, error) {
-	s := &ChainActor{
+func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, iChain chain.IChain, db database.DB, log *zap.Logger) (*ChainActor, error) {
+	chainActor := &ChainActor{
 		IChain:      iChain,
-		ChainParams: cfg.ChainParams(),
+		ChainParams: iChain.Params(),
 		DB:          db,
 		TimeSource:  blockchain.NewMedianTime(),
 		SigCache:    txscript.NewSigCache(cfg.SigCacheMaxSize),
 		HashCache:   txscript.NewHashCache(cfg.SigCacheMaxSize),
 		logger:      log,
+		config:      &cfg,
+		// ConnMgr:      &RPCConnManager{Server: beaconCtl.p2pServer},
+		// SyncMgr:      &RPCSyncMgr{Server: beaconCtl.p2pServer, SyncMgr: beaconCtl.p2pServer.SyncManager},
 	}
 
 	var err error
 
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
-	if err = db.Update(s.DBUpdateCallback); err != nil {
+	if err = db.Update(chainActor.DBUpdateCallback); err != nil {
 		return nil, err
 	}
 
-	if err = s.initBlockchainAndMempool(ctx, cfg); err != nil {
+	if err = chainActor.initBlockchainAndMempool(ctx, cfg); err != nil {
 		return nil, err
 	}
 
-	s.SyncManager, err = netsync.New(&netsync.Config{
+	chainActor.SyncManager, err = netsync.New(&netsync.Config{
 		// todo(fix me)
-		// PeerNotifier: s,
-		Chain:              s.BlockChain,
-		TxMemPool:          s.TxMemPool,
-		ChainParams:        s.ChainParams,
+		// PeerNotifier: chainActor,
+		Chain:              chainActor.BlockChain,
+		TxMemPool:          chainActor.TxMemPool,
+		ChainParams:        chainActor.ChainParams,
 		DisableCheckpoints: cfg.DisableCheckpoints,
 		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       s.FeeEstimator,
+		FeeEstimator:       chainActor.FeeEstimator,
 	})
 	if err != nil {
 		return nil, err
@@ -123,14 +163,19 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, log *zap.Logger,
 		BlockPrioritySize: cfg.BlockPrioritySize,
 		TxMinFreeFee:      cfg.MinRelayTxFeeValues,
 	}
-	s.Generator = mining.NewBlkTmplGenerator(&policy,
-		s.ChainParams, s.TxMemPool, s.BlockChain, s.TimeSource,
-		s.SigCache, s.HashCache)
+	chainActor.Generator = mining.NewBlkTmplGenerator(&policy,
+		chainActor.ChainParams, chainActor.TxMemPool, chainActor.BlockChain, chainActor.TimeSource,
+		chainActor.SigCache, chainActor.HashCache)
 
-	return s, nil
+	chainActor.MiningAddrs, err = cfg.ParseMiningAddresses(chainActor.IChain.Params())
+	if err != nil {
+		return nil, err
+	}
+
+	return chainActor, nil
 }
 
-func (s *ChainActor) DBUpdateCallback(tx database.Tx) error {
+func (chainActor *ChainActor) DBUpdateCallback(tx database.Tx) error {
 	metadata := tx.Metadata()
 	feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
 	if feeEstimationData != nil {
@@ -140,31 +185,53 @@ func (s *ChainActor) DBUpdateCallback(tx database.Tx) error {
 
 		// If there is an error, log it and make a new fee estimator.
 		var err error
-		s.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
+		chainActor.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
 		if err != nil {
-			s.logger.Error("Failed to restore fee estimator", zap.Error(err))
+			chainActor.logger.Error("Failed to restore fee estimator", zap.Error(err))
 		}
 	}
 
 	return nil
 }
 
-func (s *ChainActor) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig) error {
-	indexManager, checkpoints := s.initIndexes(cfg)
+func (chainActor *ChainActor) Config() *ChainRuntimeConfig {
+	return chainActor.config
+}
+
+func (chainActor *ChainActor) Log() *zap.Logger {
+	return chainActor.logger
+}
+
+func (chainActor *ChainActor) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
+	chainActor.CPUMiner = cpuminer.New(&cpuminer.Config{
+		ChainParams:            chainActor.ChainParams,
+		BlockTemplateGenerator: chainActor.Generator,
+		MiningAddrs:            chainActor.MiningAddrs,
+
+		ProcessBlock:   chainActor.SyncManager.ProcessBlock,
+		IsCurrent:      chainActor.SyncManager.IsCurrent,
+		ConnectedCount: connectedCount,
+	}, chainActor.logger)
+
+	return chainActor.CPUMiner
+}
+
+func (chainActor *ChainActor) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig) error {
+	indexManager, checkpoints := chainActor.initIndexes(cfg)
 
 	// Create a new blockchain instance with the appropriate configuration.
 	var err error
-	s.BlockChain, err = blockchain.New(&blockchain.Config{
-		DB:           s.DB,
+	chainActor.BlockChain, err = blockchain.New(&blockchain.Config{
+		DB:           chainActor.DB,
 		Interrupt:    ctx.Done(),
-		ChainParams:  s.ChainParams,
+		ChainParams:  chainActor.ChainParams,
 		Checkpoints:  checkpoints,
 		IndexManager: indexManager,
-		TimeSource:   s.TimeSource,
-		SigCache:     s.SigCache,
-		HashCache:    s.HashCache,
-		Chain:        s.IChain,
+		TimeSource:   chainActor.TimeSource,
+		SigCache:     chainActor.SigCache,
+		HashCache:    chainActor.HashCache,
+		Chain:        chainActor.IChain,
 	})
 	if err != nil {
 		return err
@@ -172,8 +239,8 @@ func (s *ChainActor) initBlockchainAndMempool(ctx context.Context, cfg ChainRunt
 
 	// If no FeeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
-	if s.FeeEstimator == nil || s.FeeEstimator.LastKnownHeight() != s.BlockChain.BestSnapshot().Height {
-		s.FeeEstimator = mempool.NewFeeEstimator(
+	if chainActor.FeeEstimator == nil || chainActor.FeeEstimator.LastKnownHeight() != chainActor.BlockChain.BestSnapshot().Height {
+		chainActor.FeeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
 	}
@@ -190,25 +257,25 @@ func (s *ChainActor) initBlockchainAndMempool(ctx context.Context, cfg ChainRunt
 			MaxTxVersion:         2,
 			RejectReplacement:    cfg.RejectReplacement,
 		},
-		ChainParams:    s.ChainParams,
-		FetchUtxoView:  s.BlockChain.FetchUtxoView,
-		BestHeight:     func() int32 { return s.BlockChain.BestSnapshot().Height },
-		MedianTimePast: func() time.Time { return s.BlockChain.BestSnapshot().MedianTime },
+		ChainParams:    chainActor.ChainParams,
+		FetchUtxoView:  chainActor.BlockChain.FetchUtxoView,
+		BestHeight:     func() int32 { return chainActor.BlockChain.BestSnapshot().Height },
+		MedianTimePast: func() time.Time { return chainActor.BlockChain.BestSnapshot().MedianTime },
 		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
-			return s.BlockChain.CalcSequenceLock(tx, view, true)
+			return chainActor.BlockChain.CalcSequenceLock(tx, view, true)
 		},
-		IsDeploymentActive: s.BlockChain.IsDeploymentActive,
-		SigCache:           s.SigCache,
-		HashCache:          s.HashCache,
-		AddrIndex:          s.AddrIndex,
-		FeeEstimator:       s.FeeEstimator,
+		IsDeploymentActive: chainActor.BlockChain.IsDeploymentActive,
+		SigCache:           chainActor.SigCache,
+		HashCache:          chainActor.HashCache,
+		AddrIndex:          chainActor.AddrIndex,
+		FeeEstimator:       chainActor.FeeEstimator,
 	}
 
-	s.TxMemPool = mempool.New(&txC)
+	chainActor.TxMemPool = mempool.New(&txC)
 	return nil
 }
 
-func (s *ChainActor) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManager, []chain.Checkpoint) {
+func (chainActor *ChainActor) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManager, []chain.Checkpoint) {
 	// Create the transaction and address indexes if needed.
 	//
 	// CAUTION: the txindex needs to be first in the indexes array because
@@ -220,37 +287,37 @@ func (s *ChainActor) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManage
 		// Enable transaction index if address index is enabled since it
 		// requires it.
 		if !cfg.TxIndex {
-			s.logger.Info("Transaction index enabled because it " +
+			chainActor.logger.Info("Transaction index enabled because it " +
 				"is required by the address index")
 			cfg.TxIndex = true
 		} else {
-			s.logger.Info("Transaction index is enabled")
+			chainActor.logger.Info("Transaction index is enabled")
 		}
 
-		s.TxIndex = indexers.NewTxIndex(s.DB)
-		indexes = append(indexes, s.TxIndex)
+		chainActor.TxIndex = indexers.NewTxIndex(chainActor.DB)
+		indexes = append(indexes, chainActor.TxIndex)
 	}
 	if cfg.AddrIndex {
-		s.logger.Info("Address index is enabled")
-		s.AddrIndex = indexers.NewAddrIndex(s.DB, cfg.ChainParams())
-		indexes = append(indexes, s.AddrIndex)
+		chainActor.logger.Info("Address index is enabled")
+		chainActor.AddrIndex = indexers.NewAddrIndex(chainActor.DB, chainActor.IChain.Params())
+		indexes = append(indexes, chainActor.AddrIndex)
 	}
 	if !cfg.NoCFilters {
-		s.logger.Info("Committed filter index is enabled")
-		s.CfIndex = indexers.NewCfIndex(s.DB, cfg.ChainParams())
-		indexes = append(indexes, s.CfIndex)
+		chainActor.logger.Info("Committed filter index is enabled")
+		chainActor.CfIndex = indexers.NewCfIndex(chainActor.DB, chainActor.IChain.Params())
+		indexes = append(indexes, chainActor.CfIndex)
 	}
 
 	// Create an index manager if any of the optional indexes are enabled.
 	var indexManager blockchain.IndexManager
 	if len(indexes) > 0 {
-		indexManager = indexers.NewManager(s.DB, indexes)
+		indexManager = indexers.NewManager(chainActor.DB, indexes)
 	}
 
 	// Merge given checkpoints with the default ones unless they are disabled.
 	var checkpoints []chain.Checkpoint
 	if !cfg.DisableCheckpoints {
-		// checkpoints = mergeCheckpoints(s.ChainParams.Checkpoints, cfg.AddCheckpoints)
+		// checkpoints = mergeCheckpoints(chainActor.ChainParams.Checkpoints, cfg.AddCheckpoints)
 	}
 
 	return indexManager, checkpoints

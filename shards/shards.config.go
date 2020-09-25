@@ -3,56 +3,27 @@ package shards
 import (
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
-// config defines the configuration options for btcd.
-//
-// See loadConfig for details on the configuration load process.
-
-// type RpcConfig struct {
-//	Listeners  []string `yaml:"listeners"`
-//	MaxClients int      `yaml:"maxclients"`
-//	User       string   `yaml:"user"`
-//	Password   string   `yaml:"password"`
-// }
-
-// type ChainConfig struct {
-//	p2pServer.P2pConfig
-// }
-
 type ShardConfig struct {
-	Enable bool                `yaml:"enable"`
-	IDs    map[uint32]struct{} `yaml:"ids"`
+	Enable      bool                                 `yaml:"enable"`
+	ChainParams map[uint32]server.ChainRuntimeConfig `yaml:"chain_params"`
 }
 
 type NodeConfig struct {
-	RPC             server.Config    `yaml:"rpc"`
-	P2P             server.P2pConfig `yaml:"p2p"`
-	Shards          ShardConfig      `yaml:"shards"`
-	DbType          string           `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
-	Net             string           `yaml:"net"`
-	MiningAddresses []string         `yaml:"mining_addresses"`
+	BeaconChain     server.ChainRuntimeConfig `yaml:"beacon_chain"`
+	RPC             server.Config             `yaml:"rpc"`
+	P2P             server.P2pConfig          `yaml:"p2p"`
+	Shards          ShardConfig               `yaml:"shards"`
+	DbType          string                    `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+	Net             string                    `yaml:"net"`
+	MiningAddresses []string                  `yaml:"mining_addresses"`
 }
 
 func (cfg *NodeConfig) ChainParams() *chain.Params {
 	return chain.NetName(cfg.Net).Params()
-}
-
-func (cfg *NodeConfig) ParseMiningAddresses() ([]btcutil.Address, error) {
-	params := cfg.ChainParams()
-	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
-	for _, address := range cfg.MiningAddresses {
-		addr, err := btcutil.DecodeAddress(address, params)
-		if err != nil {
-			return nil, err
-		}
-
-		miningAddrs = append(miningAddrs, addr)
-	}
-	return miningAddrs, nil
 }
 
 type Config struct {
