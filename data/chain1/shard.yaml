@@ -27,6 +27,7 @@ node:
       42: { }
 
   beacon_chain:
+    enable_cpu_miner: false
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 

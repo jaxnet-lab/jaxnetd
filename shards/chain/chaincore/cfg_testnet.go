@@ -23,27 +23,10 @@ var testNet3GenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 	0x01, 0xea, 0x33, 0x09, 0x00, 0x00, 0x00, 0x00,
 })
 
-//
-// // testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
-// // block for the test network (version 3).  It is the same as the merkle root
-// // for the main network.
-// var testNet3GenesisMerkleRoot = genesisMerkleRoot
-//
-// // testNet3GenesisBlock defines the genesis block of the block chain which
-// // serves as the public transaction ledger for the test network (version 3).
-// var testNet3GenesisBlock = wire.MsgBlock{
-// 	Header: shard.NewBlockHeader(
-// 		1,
-// 		chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
-// 		testNet3GenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-// 		chainhash.Hash{},
-// 		time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-// 		0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-// 		// 0x1d00ffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-// 		0x18aea41a, // 414098458
-// 	),
-// 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-// }
+// testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
+// block for the test network (version 3).  It is the same as the merkle root
+// for the main network.
+var testNet3GenesisMerkleRoot = genesisMerkleRoot
 
 // TestNet3Params defines the network parameters for the test Bitcoin network
 // (version 3).  Not to be confused with the regression test network, this
@@ -55,7 +38,14 @@ var TestNet3Params = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	// GenesisBlock: &testNet3GenesisBlock,
+	GenesisBlock: GenesisBlockOpts{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: testNet3GenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1296688602, 0),  // 2011-02-02 23:16:42 +0000 UTC
+		Bits:       0x1d00ffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x18aea41a,                // 414098458
+	},
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x1d00ffff,
@@ -79,10 +69,8 @@ var TestNet3Params = Params{
 	//
 	// The miner confirmation window is defined as:
 	//   target proof of work timespan / target proof of work spacing
-	// RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
-	// MinerConfirmationWindow:       2016,
-	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
-	MinerConfirmationWindow:       100,
+	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
+	MinerConfirmationWindow:       2016,
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentTestDummy: {
 			BitNumber:  28,

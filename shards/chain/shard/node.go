@@ -163,7 +163,13 @@ func (node *blockNode) Header() chain.BlockHeader {
 		prevHash = &h
 	}
 
-	return NewBlockHeader(node.version, *prevHash, node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
+	return NewBlockHeader(chain.BVersion(node.version),
+		*prevHash,
+		node.merkleRoot,
+		node.mmrRoot,
+		time.Unix(node.timestamp, 0),
+		node.bits,
+		node.nonce)
 }
 
 // Ancestor returns the ancestor block node at the provided height by following

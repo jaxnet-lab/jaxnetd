@@ -94,52 +94,17 @@ func (node *blockNode) NewNode() chain.IBlockNode {
 	return &res
 }
 
-func (node *blockNode) GetHeight() int32 {
-	return node.height
-}
-
-func (node *blockNode) GetHash() chainhash.Hash {
-	return node.hash
-}
-
-func (node *blockNode) Version() int32 {
-	return node.version
-}
-
-func (node *blockNode) Height() int32 {
-	return node.height
-}
-
-func (node *blockNode) Bits() uint32 {
-	return node.bits
-}
-func (node *blockNode) SetBits(value uint32) {
-	node.bits = value
-}
-
-func (node *blockNode) Parent() chain.IBlockNode {
-	return node.parent
-}
-
-func (node *blockNode) WorkSum() *big.Int {
-	return node.workSum
-}
-
-func (node *blockNode) Timestamp() int64 {
-	return node.timestamp
-}
-
-// func (node *blockNode) Header() chain.BlockHeader {
-//	return node.
-// }
-
-func (node *blockNode) Status() chain.BlockStatus {
-	return node.status
-}
-
-func (node *blockNode) SetStatus(status chain.BlockStatus) {
-	node.status = status
-}
+func (node *blockNode) GetHeight() int32                   { return node.height }
+func (node *blockNode) GetHash() chainhash.Hash            { return node.hash }
+func (node *blockNode) Version() int32                     { return node.version }
+func (node *blockNode) Height() int32                      { return node.height }
+func (node *blockNode) Bits() uint32                       { return node.bits }
+func (node *blockNode) SetBits(value uint32)               { node.bits = value }
+func (node *blockNode) Parent() chain.IBlockNode           { return node.parent }
+func (node *blockNode) WorkSum() *big.Int                  { return node.workSum }
+func (node *blockNode) Timestamp() int64                   { return node.timestamp }
+func (node *blockNode) Status() chain.BlockStatus          { return node.status }
+func (node *blockNode) SetStatus(status chain.BlockStatus) { node.status = status }
 
 // func (node *blockNode) NewHeader() chain.BlockHeader{
 //	return NewBlockHeader()

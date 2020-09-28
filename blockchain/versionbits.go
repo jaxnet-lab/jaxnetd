@@ -216,7 +216,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode chain.IBlockNode) (int32, err
 		}
 	}
 
-	// todo(mike): here will be expansion flag setup
+	// todo(mike): here will be expansion flag assigment
 	return int32(expectedVersion), nil
 }
 
@@ -225,11 +225,12 @@ func (b *BlockChain) calcNextBlockVersion(prevNode chain.IBlockNode) (int32, err
 // rule change deployments.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcNextBlockVersion() (int32, error) {
+func (b *BlockChain) CalcNextBlockVersion() (chain.BVersion, error) {
 	b.chainLock.Lock()
 	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
 	b.chainLock.Unlock()
-	return version, err
+
+	return chain.BVersion(version), err
 }
 
 // warnUnknownRuleActivations displays a warning when any unknown new rules are

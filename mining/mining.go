@@ -12,7 +12,6 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
@@ -862,8 +861,15 @@ mempoolLoop:
 	var msgBlock wire.MsgBlock
 
 	// todo (mike) may need to change the entire signature
-	msgBlock.Header = beacon.NewBlockHeader(chain.BVersion(nextBlockVersion),
-		best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
+	msgBlock.Header = beacon.NewBlockHeader(
+		nextBlockVersion,
+		best.Hash,
+		*merkles[len(merkles)-1],
+		chainhash.Hash{},
+		ts,
+		reqDifficulty,
+		0,
+	)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err
@@ -942,58 +948,10 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 
 	// Recalculate the merkle root with the updated extra nonce.
 	block := btcutil.NewBlock(msgBlock)
-
 	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
 	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
 	return nil
 }
-
-// func (g *BlkTmplGenerator) UpdateExtraNonce2(block *btcutil.Block, blockHeight int32, extraNonce uint64) error {
-//	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
-//	if err != nil {
-//		return err
-//	}
-//	if len(coinbaseScript) > blockchain.MaxCoinbaseScriptLen {
-//		return fmt.Errorf("coinbase transaction script length "+
-//			"of %d is out of range (min: %d, max: %d)",
-//			len(coinbaseScript), blockchain.MinCoinbaseScriptLen,
-//			blockchain.MaxCoinbaseScriptLen)
-//	}
-//	block.UpdateSignatureScript(coinbaseScript)
-//
-//	// TODO(davec): A btcutil.Block should use saved in the state to avoid
-//	// recalculating all of the other transaction hashes.
-//	// block.Transactions[0].InvalidateCache()
-//
-//
-//	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-//	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
-//	return nil
-// }
-
-// func (g *BlkTmplGenerator) UpdateExtraNonce2(msgBlock *Block, blockHeight int32, extraNonce uint64) error {
-//	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
-//	if err != nil {
-//		return err
-//	}
-//	if len(coinbaseScript) > blockchain.MaxCoinbaseScriptLen {
-//		return fmt.Errorf("coinbase transaction script length "+
-//			"of %d is out of range (min: %d, max: %d)",
-//			len(coinbaseScript), blockchain.MinCoinbaseScriptLen,
-//			blockchain.MaxCoinbaseScriptLen)
-//	}
-//	msgBlock.Transactions[0].TxIn[0].SignatureScript = coinbaseScript
-//
-//	// TODO(davec): A btcutil.Block should use saved in the state to avoid
-//	// recalculating all of the other transaction hashes.
-//	// block.Transactions[0].InvalidateCache()
-//
-//	// Recalculate the merkle root with the updated extra nonce.
-//	block := btcutil.NewBlock(msgBlock)
-//	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
-//	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
-//	return nil
-// }
 
 // BestSnapshot returns information about the current best chain block and
 // related state as of the current point in time using the chain instance

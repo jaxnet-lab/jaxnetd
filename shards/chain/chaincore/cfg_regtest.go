@@ -29,22 +29,7 @@ var regTestGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet
 // regTestGenesisMerkleRoot is the hash of the first transaction in the genesis
 // block for the regression test network.  It is the same as the merkle root for
 // the main network.
-// var regTestGenesisMerkleRoot = genesisMerkleRoot
-
-// // regTestGenesisBlock defines the genesis block of the block chain which serves
-// // as the public transaction ledger for the regression test network.
-// var regTestGenesisBlock = wire.MsgBlock{
-// 	Header: beacon.NewBlockHeader(
-// 		1,
-// 		chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-// 		regTestGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-// 		chainhash.Hash{},
-// 		time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-// 		0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
-// 		2,
-// 	),
-// 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-// }
+var regTestGenesisMerkleRoot = genesisMerkleRoot
 
 // RegressionNetParams defines the network parameters for the regression test
 // Bitcoin network.  Not to be confused with the test Bitcoin network (version
@@ -56,6 +41,14 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
+	GenesisBlock: GenesisBlockOpts{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: regTestGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
+		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+		Nonce:      2,
+	},
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,

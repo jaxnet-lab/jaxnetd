@@ -111,6 +111,15 @@ const (
 	DefinedDeployments
 )
 
+type GenesisBlockOpts struct {
+	Version    int32
+	PrevBlock  chainhash.Hash
+	MerkleRoot chainhash.Hash
+	Timestamp  time.Time
+	Bits       uint32
+	Nonce      uint32
+}
+
 // Params defines a Bitcoin network by its parameters.  These parameters may be
 // used by Bitcoin applications to differentiate networks as well as addresses
 // and keys for one network from those intended for use on another network.
@@ -130,7 +139,7 @@ type Params struct {
 
 	// GenesisBlock defines the first block of the chain.
 	// GenesisBlock *wire.MsgBlock
-
+	GenesisBlock GenesisBlockOpts
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
 

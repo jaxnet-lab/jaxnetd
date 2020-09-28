@@ -5,8 +5,7 @@
 package cpuminer
 
 import (
-	"bytes"
-	"encoding/binary"
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -95,7 +94,7 @@ type Config struct {
 // system which is typically sufficient.
 type CPUMiner struct {
 	sync.Mutex
-	g                 *mining.BlkTmplGenerator
+	generator         *mining.BlkTmplGenerator
 	cfg               Config
 	numWorkers        uint32
 	started           bool
@@ -168,7 +167,7 @@ func (miner *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	// possible a block was found and submitted in between.
 	msgBlock := block.MsgBlock()
 	h := msgBlock.Header.PrevBlock()
-	if !h.IsEqual(&miner.g.BestSnapshot().Hash) {
+	if !h.IsEqual(&miner.generator.BestSnapshot().Hash) {
 		miner.log.Debug(fmt.Sprintf("Block submitted via CPU miner with previous block %s is stale",
 			msgBlock.Header.PrevBlock))
 		return false
@@ -226,15 +225,10 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	header := msgBlock.Header
 	targetDifficulty := blockchain.CompactToBig(header.Bits())
 
-	prefixSize := len(targetDifficulty.Bytes())
-	prefixBytes := make([]byte, 32-len(targetDifficulty.Bytes()))
-
 	// Initial state.
 	lastGenerated := time.Now()
-	lastTxUpdate := miner.g.TxSource().LastUpdated()
+	lastTxUpdate := miner.generator.TxSource().LastUpdated()
 	hashesCompleted := uint64(0)
-
-	// fmt.Printf("%d. %v\n", worker, header)
 
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
@@ -243,9 +237,8 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Update the extra nonce in the block template with the
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
-		miner.g.UpdateExtraNonce(msgBlock, blockHeight, extraNonce+enOffset)
-		bd := header.BlockData()
-		noncePosition := len(bd) - 4
+		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, extraNonce+enOffset)
+
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
@@ -261,7 +254,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 				// The current block is stale if the best block
 				// has changed.
-				best := miner.g.BestSnapshot()
+				best := miner.generator.BestSnapshot()
 				h := header.PrevBlock()
 				if !(&h).IsEqual(&best.Hash) {
 					return false
@@ -271,14 +264,13 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				// has been updated since the block template was
 				// generated and it has been at least one
 				// minute.
-				if lastTxUpdate != miner.g.TxSource().LastUpdated() &&
+				if lastTxUpdate != miner.generator.TxSource().LastUpdated() &&
 					time.Now().After(lastGenerated.Add(time.Minute)) {
 
 					return false
 				}
 
-				miner.g.UpdateBlockTime(msgBlock)
-				bd = header.BlockData()
+				miner.generator.UpdateBlockTime(msgBlock)
 
 			default:
 				// Non-blocking select to fall through
@@ -288,25 +280,13 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// hash is actually a double sha256 (two hashes), so
 			// increment the number of hashes completed for each
 			// attempt accordingly.
-
-			binary.LittleEndian.PutUint32(bd[noncePosition:], i)
-			hash := DoubleHashH(bd)
-			// if worker == 1 {
-			//	fmt.Printf("%s:%s\n", hash.String(), DoubleHashH(bd).String())
-			// }
-
+			header.SetNonce(i)
+			hash := header.BlockHash()
 			hashesCompleted += 2
 
-			if bytes.Equal(hash[prefixSize:], prefixBytes) {
-				if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-					header.SetNonce(i)
-					miner.updateHashes <- hashesCompleted
-					return true
-				}
-			}
-
+			// The block is solved when the new block hash is less
+			// than the target difficulty.  Yay!
 			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
-				fmt.Println("miner.updateHashes: ", hashesCompleted)
 				miner.updateHashes <- hashesCompleted
 				return true
 			}
@@ -358,7 +338,7 @@ out:
 		// this would otherwise end up building a new block template on
 		// a block that is in the process of becoming stale.
 		miner.submitBlockLock.Lock()
-		curHeight := miner.g.BestSnapshot().Height
+		curHeight := miner.generator.BestSnapshot().Height
 		if curHeight != 0 && !miner.cfg.IsCurrent() {
 			miner.submitBlockLock.Unlock()
 			time.Sleep(time.Second)
@@ -376,7 +356,7 @@ out:
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.g.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
@@ -391,6 +371,11 @@ out:
 		// true a solution was found, so submit the solved block.
 		if miner.solveBlock(template.Block, curHeight+1, ticker, quit, worker) {
 			block := btcutil.NewBlock(template.Block)
+
+			check := blockchain.CheckProofOfWork(block, miner.cfg.ChainParams.PowLimit)
+
+			miner.log.Info("check PoW", zap.NamedError("valid", check))
+
 			miner.submitBlock(block)
 		}
 	}
@@ -459,6 +444,12 @@ out:
 	miner.workerWg.Wait()
 	close(miner.speedMonitorQuit)
 	miner.wg.Done()
+}
+
+func (miner *CPUMiner) Run(ctx context.Context) {
+	miner.Start()
+	<-ctx.Done()
+	miner.Stop()
 }
 
 // Start begins the CPU mining process as well as the speed monitor used to
@@ -621,7 +612,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// be changing and this would otherwise end up building a new block
 		// template on a block that is in the process of becoming stale.
 		miner.submitBlockLock.Lock()
-		curHeight := miner.g.BestSnapshot().Height
+		curHeight := miner.generator.BestSnapshot().Height
 
 		// Choose a payment address at random.
 		rand.Seed(time.Now().UnixNano())
@@ -630,7 +621,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.g.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to create new block "+
@@ -668,7 +659,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 func New(cfg *Config, log *zap.Logger) *CPUMiner {
 	return &CPUMiner{
 		log:               log,
-		g:                 cfg.BlockTemplateGenerator,
+		generator:         cfg.BlockTemplateGenerator,
 		cfg:               *cfg,
 		numWorkers:        defaultNumWorkers,
 		updateNumWorkers:  make(chan struct{}),

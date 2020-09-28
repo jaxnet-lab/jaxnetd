@@ -205,7 +205,7 @@ func (server *ChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]wire.T
 			txOuts := originTx.MsgTx().TxOut
 			if origin.Index >= uint32(len(txOuts)) {
 				errStr := fmt.Sprintf("unable to find output "+
-					"%v referenced from transaction %server:%d",
+					"%v referenced from transaction %s:%d",
 					origin, tx.TxHash(), txInIndex)
 				return nil, server.internalRPCError(errStr, "")
 			}
@@ -246,7 +246,7 @@ func (server *ChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]wire.T
 		// Add the referenced output to the map.
 		if origin.Index >= uint32(len(msgTx.TxOut)) {
 			errStr := fmt.Sprintf("unable to find output %v "+
-				"referenced from transaction %server:%d", origin,
+				"referenced from transaction %s:%d", origin,
 				tx.TxHash(), txInIndex)
 			return nil, server.internalRPCError(errStr, "")
 		}
@@ -803,10 +803,10 @@ func (server *ChainRPC) handleEstimateFee(cmd interface{}, closeChan <-chan stru
 }
 
 // handleGenerate handles generate commands.
-func (s *ChainRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *ChainRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Respond with an error if there are no addresses to pay the
 	// created blocks to.
-	if len(s.chainProvider.MiningAddrs) == 0 {
+	if len(server.chainProvider.MiningAddrs) == 0 {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCInternal.Code,
 			Message: "No payment addresses specified " +
@@ -839,7 +839,7 @@ func (s *ChainRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (i
 	// Create a reply
 	reply := make([]string, c.NumBlocks)
 
-	blockHashes, err := s.chainProvider.CPUMiner.GenerateNBlocks(c.NumBlocks)
+	blockHashes, err := server.chainProvider.CPUMiner.GenerateNBlocks(c.NumBlocks)
 	if err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCInternal.Code,
@@ -1407,7 +1407,7 @@ func (server *ChainRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 			}
 		}
 
-		server.logger.Infof("Rejected block proposal. %server", err.Error())
+		server.logger.Infof("Rejected block proposal. %s", err.Error())
 		return server.ChainErrToGBTErrString(err), nil
 	}
 
@@ -1465,7 +1465,7 @@ func (server *ChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan struc
 		}
 	}
 
-	server.logger.Debugf("Found committed filter for %server", hash.String())
+	server.logger.Debugf("Found committed filter for %s", hash.String())
 	return hex.EncodeToString(filterBytes), nil
 }
 
@@ -1486,7 +1486,7 @@ func (server *ChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan <-chan
 
 	headerBytes, err := server.chainProvider.CfIndex.FilterHeaderByBlockHash(hash, c.FilterType)
 	if len(headerBytes) > 0 {
-		server.logger.Debugf("Found header of committed filter for %server", hash.String())
+		server.logger.Debugf("Found header of committed filter for %s", hash.String())
 	} else {
 		server.logger.Debugf("Could not find header of committed filter for %v %v", hash, err)
 		return nil, &btcjson.RPCError{
@@ -1950,7 +1950,7 @@ func (server *ChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan struct{
 
 		txOut := mtx.TxOut[c.Vout]
 		if txOut == nil {
-			errStr := fmt.Sprintf("Output index: %d for txid: %server "+
+			errStr := fmt.Sprintf("Output index: %d for txid: %s "+
 				"does not exist", c.Vout, txHash)
 			return nil, server.internalRPCError(errStr, "")
 		}
@@ -2673,10 +2673,10 @@ func (server *ChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-chan stru
 	// nodes.  This will in turn relay it to the network like normal.
 	_, err = server.chainProvider.SyncMgr.SubmitBlock(block, blockchain.BFNone)
 	if err != nil {
-		return fmt.Sprintf("rejected: %server", err.Error()), nil
+		return fmt.Sprintf("rejected: %s", err.Error()), nil
 	}
 
-	server.logger.Infof("Accepted block %server via submitblock %server", block.Hash().String())
+	server.logger.Infof(fmt.Sprintf("Accepted block %s via submitblock", block.Hash().String()))
 	return nil, nil
 }
 

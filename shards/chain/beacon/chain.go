@@ -25,23 +25,25 @@ func Chain(params *chaincore.Params) chain.IChain {
 	clone := *params
 	clone.Name = "beacon"
 	beacon := &beaconChain{}
+	beacon.chainParams = &clone
+
 	gb := beacon.GenesisBlock().(*wire.MsgBlock)
 	hash := gb.BlockHash()
 	clone.GenesisHash = &hash
-	beacon.chainParams = &clone
+
 	return beacon
 }
 
 func (c *beaconChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
 		Header: NewBlockHeader(
-			chain.NewBVersion(1),
+			chain.NewBVersion(c.chainParams.GenesisBlock.Version),
+			c.chainParams.GenesisBlock.PrevBlock,
+			c.chainParams.GenesisBlock.MerkleRoot,
 			chainhash.Hash{},
-			genesisMerkleRoot,
-			chainhash.Hash{},
-			time.Unix(0x495fab29, 0),
-			0x1d00ffff,
-			0x7c2bac1d,
+			c.chainParams.GenesisBlock.Timestamp,
+			c.chainParams.GenesisBlock.Bits,
+			c.chainParams.GenesisBlock.Nonce,
 		),
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
@@ -75,7 +77,7 @@ func (c *beaconChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRoo
 		prevBlock:       prevHash,
 		merkleRoot:      merkleRootHash,
 		mergeMiningRoot: mergeMiningRoot,
-		timestamp:       timestamp, // time.Unix(time.Now().Unix(), 0),
+		timestamp:       timestamp,
 		bits:            bits,
 		nonce:           nonce,
 	}

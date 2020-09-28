@@ -6,13 +6,12 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // TestRejectCodeStringer tests the stringized output for the reject code type.

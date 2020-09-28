@@ -74,7 +74,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
-	// todo: fixme
+	// todo: improve
 	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
 }
 
@@ -101,11 +101,15 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 		beaconCtl.p2pServer.Run(ctx)
 	}()
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	beaconCtl.actor.CPUMiner.Run(ctx)
-	// }()
+	if beaconCtl.cfg.Node.BeaconChain.EnableCPUMiner {
+		// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
+		beaconCtl.chainProvider.InitCPUMiner(func() int32 { return 2 })
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			beaconCtl.chainProvider.CPUMiner.Run(ctx)
+		}()
+	}
 
 	<-ctx.Done()
 

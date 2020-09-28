@@ -23,27 +23,10 @@ var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 	0x01, 0xea, 0x33, 0x09, 0x00, 0x00, 0x00, 0x00,
 })
 
-//
-// // fTestNetGenesisMerkleRoot is the hash of the first transaction in the genesis
-// // block for the test network (version 3).  It is the same as the merkle root
-// // for the main network.
-// var fTestNetGenesisMerkleRoot = genesisMerkleRoot
-//
-// // fTestNetGenesisBlock defines the genesis block of the block chain which
-// // serves as the public transaction ledger for the test network (version 3).
-// var fTestNetGenesisBlock = wire.MsgBlock{
-// 	Header: shard.NewBlockHeader(
-// 		1,
-// 		chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
-// 		fTestNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-// 		chainhash.Hash{},
-// 		time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-// 		0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-// 		// 0x1d00ffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-// 		0x18aea41a, // 414098458
-// 	),
-// 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-// }
+// fTestNetGenesisMerkleRoot is the hash of the first transaction in the genesis
+// block for the test network (version 3).  It is the same as the merkle root
+// for the main network.
+var fTestNetGenesisMerkleRoot = genesisMerkleRoot
 
 // FTestNetParams defines the network parameters for the test network but whit low PoW params
 var FTestNetParams = Params{
@@ -53,7 +36,14 @@ var FTestNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	// GenesisBlock: &fTestNetGenesisBlock,
+	GenesisBlock: GenesisBlockOpts{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: fTestNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1296688602, 0),  // 2011-02-02 23:16:42 +0000 UTC
+		Bits:       0x1e0fffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x18aea41a,
+	},
 	GenesisHash:              &fTestNetGenesisHash,
 	PowLimit:                 fTestNetPowLimit,
 	PowLimitBits:             0x1e0dffff,

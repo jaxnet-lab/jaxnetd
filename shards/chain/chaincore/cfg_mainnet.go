@@ -67,29 +67,14 @@ var genesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
 })
 
-// // genesisMerkleRoot is the hash of the first transaction in the genesis block
-// // for the main network.
-// var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-// 	0x3b, 0xa3, 0xed, 0xfd, 0x7a, 0x7b, 0x12, 0xb2,
-// 	0x7a, 0xc7, 0x2c, 0x3e, 0x67, 0x76, 0x8f, 0x61,
-// 	0x7f, 0xc8, 0x1b, 0xc3, 0x88, 0x8a, 0x51, 0x32,
-// 	0x3a, 0x9f, 0xb8, 0xaa, 0x4b, 0x1e, 0x5e, 0x4a,
-// })
-//
-// // genesisBlock defines the genesis block of the block chain which serves as the
-// // public transaction ledger for the main network.
-// var genesisBlock = wire.MsgBlock{
-// 	Header: beacon.NewBlockHeader(
-// 		1,
-// 		chainhash.Hash{},  // 0000000000000000000000000000000000000000000000000000000000000000
-// 		genesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-// 		chainhash.Hash{},
-// 		time.Unix(0x495fab29, 0), // 2009-01-03 18:15:05 +0000 UTC
-// 		0x1d00ffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-// 		0x7c2bac1d,               // 2083236893
-// 	),
-// 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-// }
+// genesisMerkleRoot is the hash of the first transaction in the genesis block
+// for the main network.
+var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	0x3b, 0xa3, 0xed, 0xfd, 0x7a, 0x7b, 0x12, 0xb2,
+	0x7a, 0xc7, 0x2c, 0x3e, 0x67, 0x76, 0x8f, 0x61,
+	0x7f, 0xc8, 0x1b, 0xc3, 0x88, 0x8a, 0x51, 0x32,
+	0x3a, 0x9f, 0xb8, 0xaa, 0x4b, 0x1e, 0x5e, 0x4a,
+})
 
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
@@ -99,7 +84,15 @@ var MainNetParams = Params{
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	// GenesisBlock:             &genesisBlock,
+	GenesisBlock: GenesisBlockOpts{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(0x495fab29, 0), // 2009-01-03 18:15:05 +0000 UTC
+		Bits:       0x1d00ffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x7c2bac1d,               // 2083236893
+	},
+
 	GenesisHash:              &genesisHash,
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,

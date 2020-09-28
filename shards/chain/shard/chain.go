@@ -27,9 +27,18 @@ func Chain(shardID uint32, params *chaincore.Params, genesis *wire.MsgBlock, gHe
 	hash := genesis.BlockHash()
 	clone := params.ShardGenesis(shardID, gHeight, &hash)
 	clone.GenesisHash = &hash
+	clone.GenesisBlock = chaincore.GenesisBlockOpts{
+		Version:   int32(genesis.Header.Version()),
+		Timestamp: genesis.Header.Timestamp(),
+
+		// todo(mike) ensure that it correct
+		PrevBlock:  chainhash.Hash{},
+		MerkleRoot: chainhash.Hash{},
+		Bits:       genesis.Header.Bits(),
+		Nonce:      genesis.Header.Nonce(),
+	}
 	shard.chainParams = clone
 
-	// todo(mike)
 	return shard
 }
 
@@ -39,16 +48,18 @@ type shardChain struct {
 	chainParams  *chaincore.Params
 }
 
-func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
+func (c *shardChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &header{
-		prevBlock:  prevHash,
-		merkleRoot: merkleRootHash,
-		timestamp:  timestamp, // time.Unix(time.Now().Unix(), 0),
-		bits:       bits,
-		nonce:      nonce,
+		version:             version,
+		prevBlock:           prevHash,
+		merkleRoot:          merkleRootHash,
+		merkleMountainRange: mmr,
+		timestamp:           timestamp,
+		bits:                bits,
+		nonce:               nonce,
 	}
 }
 
@@ -75,8 +86,14 @@ func (c *shardChain) ShardID() int32 {
 
 func (c *shardChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-		Header: NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot,
-			chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),
+		Header: NewBlockHeader(
+			chain.NewBVersion(c.chainParams.GenesisBlock.Version),
+			c.chainParams.GenesisBlock.PrevBlock,
+			c.chainParams.GenesisBlock.MerkleRoot,
+			chainhash.Hash{},
+			c.chainParams.GenesisBlock.Timestamp,
+			c.chainParams.GenesisBlock.Bits,
+			c.chainParams.GenesisBlock.Nonce),
 		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 	}
 }

@@ -26,22 +26,7 @@ var simNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet 
 // // simNetGenesisMerkleRoot is the hash of the first transaction in the genesis
 // // block for the simulation test network.  It is the same as the merkle root for
 // // the main network.
-// var simNetGenesisMerkleRoot = genesisMerkleRoot
-//
-// // simNetGenesisBlock defines the genesis block of the block chain which serves
-// // as the public transaction ledger for the simulation test network.
-// var simNetGenesisBlock = wire.MsgBlock{
-// 	Header: shard.NewBlockHeader(
-// 		1,
-// 		chainhash.Hash{},        // 0000000000000000000000000000000000000000000000000000000000000000
-// 		simNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-// 		chainhash.Hash{},
-// 		time.Unix(1401292357, 0), // 2014-05-28 15:52:37 +0000 UTC
-// 		0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
-// 		2,
-// 	),
-// 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
-// }
+var simNetGenesisMerkleRoot = genesisMerkleRoot
 
 // SimNetParams defines the network parameters for the simulation test Bitcoin
 // network.  This network is similar to the normal test network except it is
@@ -57,7 +42,14 @@ var SimNetParams = Params{
 	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-	// GenesisBlock:             &simNetGenesisBlock,
+	GenesisBlock: GenesisBlockOpts{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: simNetGenesisMerkleRoot,  // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1401292357, 0), // 2014-05-28 15:52:37 +0000 UTC
+		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+		Nonce:      2,
+	},
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,

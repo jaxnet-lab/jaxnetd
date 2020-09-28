@@ -39,6 +39,7 @@ type ChainRuntimeConfig struct {
 	NoCFilters          bool     `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
 	DisableCheckpoints  bool     `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	MiningAddresses     []string `yaml:"mining_addresses"`
+	EnableCPUMiner      bool     `yaml:"enable_cpu_miner"`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincore.Params) ([]btcutil.Address, error) {
