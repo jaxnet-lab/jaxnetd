@@ -14,15 +14,14 @@ import (
 	"time"
 
 	"github.com/minio/sha256-simd"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"go.uber.org/zap"
-
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"go.uber.org/zap"
 )
 
 const (
@@ -49,14 +48,14 @@ var (
 	// defaultNumWorkers is the default number of workers to use for mining
 	// and is based on the number of processor cores.  This helps ensure the
 	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = uint32(1) //uint32(runtime.NumCPU())
+	defaultNumWorkers = uint32(1) // uint32(runtime.NumCPU())
 )
 
 // Config is a descriptor containing the cpu miner configuration.
 type Config struct {
 	// ChainParams identifies which chain parameters the cpu miner is
 	// associated with.
-	ChainParams *chain.Params
+	ChainParams *chaincore.Params
 
 	// BlockTemplateGenerator identifies the instance to use in order to
 	// generate block templates that the miner will attempt to solve.
@@ -235,7 +234,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 	lastTxUpdate := miner.g.TxSource().LastUpdated()
 	hashesCompleted := uint64(0)
 
-	//fmt.Printf("%d. %v\n", worker, header)
+	// fmt.Printf("%d. %v\n", worker, header)
 
 	// Note that the entire extra nonce range is iterated and the offset is
 	// added relying on the fact that overflow will wrap around 0 as
@@ -247,7 +246,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		miner.g.UpdateExtraNonce(msgBlock, blockHeight, extraNonce+enOffset)
 		bd := header.BlockData()
 		noncePosition := len(bd) - 4
-		//fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
+		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.
@@ -292,9 +291,9 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			binary.LittleEndian.PutUint32(bd[noncePosition:], i)
 			hash := DoubleHashH(bd)
-			//if worker == 1 {
+			// if worker == 1 {
 			//	fmt.Printf("%s:%s\n", hash.String(), DoubleHashH(bd).String())
-			//}
+			// }
 
 			hashesCompleted += 2
 
@@ -368,11 +367,11 @@ out:
 
 		// Choose a payment address at random.
 		rand.Seed(time.Now().UnixNano())
-		//fmt.Println("miner.cfg.MiningAddrs", miner.cfg.MiningAddrs)
-		//fmt.Println("rand.Intn(len(miner.cfg.MiningAddrs)) ", rand.Intn(len(miner.cfg.MiningAddrs)))
+		// fmt.Println("miner.cfg.MiningAddrs", miner.cfg.MiningAddrs)
+		// fmt.Println("rand.Intn(len(miner.cfg.MiningAddrs)) ", rand.Intn(len(miner.cfg.MiningAddrs)))
 		payToAddr := miner.cfg.MiningAddrs[rand.Intn(len(miner.cfg.MiningAddrs))]
 
-		//fmt.Println("payToAddr: ", payToAddr.String())
+		// fmt.Println("payToAddr: ", payToAddr.String())
 
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially

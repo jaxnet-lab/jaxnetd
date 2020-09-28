@@ -2,25 +2,25 @@ package shards
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"go.uber.org/zap"
 )
-
-type shardRO struct {
-	ctl    *ShardCtl
-	cancel context.CancelFunc
-}
 
 func (chainCtl *chainController) EnableShard(shardID uint32) error {
 	chainCtl.wg.Add(1)
@@ -48,7 +48,7 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
 	chainCtl.wg.Add(1)
 
-	block, err := chainCtl.beacon.chainActor.BlockChain.BlockByHeight(height)
+	block, err := chainCtl.beacon.chainProvider.BlockChain.BlockByHeight(height)
 	if err != nil {
 		return err
 	}
@@ -59,10 +59,49 @@ func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
 	if !version.ExpansionMade() {
 		return errors.New("invalid start genesis block, expansion not made at this height")
 	}
-	// fixme
 
+	chainCtl.shardsIndex.AddShard(block)
 	chainCtl.runShardRoutine(shardID, msgBlock, height)
 
+	return nil
+}
+
+func (chainCtl *chainController) runShards() error {
+	if err := chainCtl.syncShardsIndex(); err != nil {
+		return err
+	}
+
+	defer chainCtl.writeShardsIndex()
+
+	chainCtl.beacon.chainProvider.BlockChain.Subscribe(func(not *blockchain.Notification) {
+		if not.Type != blockchain.NTBlockConnected {
+			return
+		}
+
+		block, ok := not.Data.(*btcutil.Block)
+		if !ok {
+			chainCtl.logger.Warn("block notification data is not a *btcutil.Block")
+			return
+		}
+
+		msgBlock := block.MsgBlock()
+		version := msgBlock.Header.Version()
+
+		if !version.ExpansionMade() {
+			return
+		}
+
+		chainCtl.shardsIndex.AddShard(block)
+		chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock, block.Height())
+
+	})
+
+	for shardID, info := range chainCtl.shardsIndex.Shards {
+		err := chainCtl.NewShard(shardID, info.GenesisHeight)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -101,15 +140,116 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.Msg
 	}()
 }
 
+func (chainCtl *chainController) writeShardsIndex() error {
+	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
+	content, err := json.Marshal(chainCtl.shardsIndex)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(shardsFile, content, 0644)
+}
+
+func (chainCtl *chainController) syncShardsIndex() error {
+	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
+	chainCtl.shardsIndex = &Index{
+		Shards: map[uint32]ShardInfo{},
+	}
+
+	_, err := os.Stat(shardsFile)
+	if os.IsNotExist(err) {
+		if err = chainCtl.writeShardsIndex(); err != nil {
+			return err
+		}
+	} else {
+		file, err := ioutil.ReadFile(shardsFile)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, chainCtl.shardsIndex)
+		if err != nil {
+			return err
+		}
+	}
+
+	var maxHeight int32
+	snapshot := chainCtl.beacon.chainProvider.BlockChain.BestSnapshot()
+	if snapshot != nil {
+		maxHeight = snapshot.Height
+	}
+	if maxHeight == -1 {
+		// nothing to index
+		return nil
+	}
+
+	for height := chainCtl.shardsIndex.LastBeaconHeight; height < maxHeight; height++ {
+		block, err := chainCtl.beacon.chainProvider.BlockChain.BlockByHeight(height)
+		if err != nil {
+			return err
+		}
+
+		msgBlock := block.MsgBlock()
+		version := msgBlock.Header.Version()
+
+		if !version.ExpansionMade() {
+			continue
+		}
+		chainCtl.shardsIndex.AddShard(block)
+	}
+
+	return chainCtl.writeShardsIndex()
+}
+
+type ShardInfo struct {
+	ID            uint32         `json:"id"`
+	Name          string         `json:"name"`
+	LastVersion   chain.BVersion `json:"last_version"`
+	GenesisHeight int32          `json:"genesis_height"`
+	GenesisHash   string         `json:"genesis_hash"`
+	Enabled       bool           `json:"enabled"`
+}
+
+type Index struct {
+	LastShardID      uint32               `json:"last_shard_id"`
+	LastBeaconHeight int32                `json:"last_beacon_height"`
+	Shards           map[uint32]ShardInfo `json:"shards"`
+}
+
+func (index *Index) AddShard(block *btcutil.Block) {
+	index.LastShardID += 1
+
+	if index.LastBeaconHeight < block.Height() {
+		index.LastBeaconHeight = block.Height()
+	}
+
+	if index.Shards == nil {
+		index.Shards = map[uint32]ShardInfo{}
+	}
+
+	index.Shards[index.LastShardID] = ShardInfo{
+		ID:            index.LastShardID,
+		Name:          "0",
+		LastVersion:   block.MsgBlock().Header.Version(),
+		GenesisHeight: block.Height(),
+		GenesisHash:   block.Hash().String(),
+		Enabled:       true,
+	}
+}
+
+type shardRO struct {
+	ctl    *ShardCtl
+	cancel context.CancelFunc
+}
+
 type ShardCtl struct {
 	log   *zap.Logger
 	chain chain.IChain
 	cfg   *Config
 	ctx   context.Context
 
-	dbCtl      DBCtl
-	p2pServer  *server2.P2PServer
-	chainActor *server.ChainActor
+	dbCtl         DBCtl
+	p2pServer     *server2.P2PServer
+	chainProvider *server2.ChainProvider
 }
 
 func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.IChain) *ShardCtl {
@@ -141,10 +281,10 @@ func (shardCtl ShardCtl) Init() error {
 		}
 	}()
 
-	shardCtl.chainActor, err = server.NewChainActor(shardCtl.ctx,
+	shardCtl.chainProvider, err = server2.NewChainActor(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, db, shardCtl.log)
 	if err != nil {
-		shardCtl.log.Error("unable to init ChainActor for shard", zap.Error(err))
+		shardCtl.log.Error("unable to init ChainProvider for shard", zap.Error(err))
 		return err
 	}
 
@@ -158,7 +298,7 @@ func (shardCtl ShardCtl) Init() error {
 	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer and start it.
-	shardCtl.p2pServer, err = server2.ShardServer(&shardCtl.cfg.Node.P2P, shardCtl.chainActor, amgr)
+	shardCtl.p2pServer, err = server2.ShardServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider, amgr)
 	if err != nil {
 		shardCtl.log.Error("Unable to start p2pServer",
 			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))
@@ -167,12 +307,12 @@ func (shardCtl ShardCtl) Init() error {
 	return nil
 }
 
-func (shardCtl *ShardCtl) ChainActor() *server.ChainActor {
-	return shardCtl.chainActor
+func (shardCtl *ShardCtl) ChainProvider() *server2.ChainProvider {
+	return shardCtl.chainProvider
 }
 
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
-	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainActor.DB)
+	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
 	if cleanIndexes {
 		shardCtl.log.Info("clean db indexes")
 		return
@@ -200,7 +340,7 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	shardCtl.log.Info("Chain p2p server shutdown complete")
 
 	shardCtl.log.Info("Gracefully shutting down the database...")
-	if err := shardCtl.chainActor.DB.Close(); err != nil {
+	if err := shardCtl.chainProvider.DB.Close(); err != nil {
 		shardCtl.log.Error("Can't close db", zap.Error(err))
 	}
 }

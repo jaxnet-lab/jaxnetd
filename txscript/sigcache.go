@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // sigCacheEntry represents an entry in the SigCache. Entries within the

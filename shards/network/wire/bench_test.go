@@ -8,17 +8,17 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io/ioutil"
 	"net"
 	"os"
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for

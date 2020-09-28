@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -30,7 +30,7 @@ type OnSeed func(addrs []*wire.NetAddress)
 type LookupFunc func(string) ([]net.IP, error)
 
 // SeedFromDNS uses DNS seeding to populate the address manager with peers.
-func SeedFromDNS(chainParams *chain.Params, reqServices wire.ServiceFlag,
+func SeedFromDNS(chainParams *chaincore.Params, reqServices wire.ServiceFlag,
 	lookupFn LookupFunc, seedFn OnSeed) {
 
 	for _, dnsseed := range chainParams.DNSSeeds {

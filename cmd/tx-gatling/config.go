@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txutils"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,8 +22,8 @@ type Config struct {
 	Destinations []Destination   `yaml:"destinations"`
 }
 
-func (cfg *Config) NetParams() *chain.Params {
-	return chain.NetName(cfg.Net).Params()
+func (cfg *Config) NetParams() *chaincore.Params {
+	return chaincore.NetName(cfg.Net).Params()
 }
 
 func parseConfig(path string) (Config, error) {

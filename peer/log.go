@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btclog"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 

@@ -6,11 +6,12 @@ package bloom_test
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"math/rand"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // This example demonstrates how to create a new bloom filter, add a transaction

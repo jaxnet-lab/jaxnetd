@@ -9,13 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 const (
@@ -29,7 +28,7 @@ var (
 	btcdHomeDir     = btcutil.AppDataDir("btcd", false)
 	defaultDataDir  = filepath.Join(btcdHomeDir, "data")
 	knownDbTypes    = database.SupportedDrivers()
-	activeNetParams = &chain.MainNetParams
+	activeNetParams = &chaincore.MainNetParams
 )
 
 // config defines the configuration options for findcheckpoint.
@@ -63,9 +62,9 @@ func validDbType(dbType string) bool {
 // as "testnet" when the passed active network matches types.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
-//"testnet" is planned for the future, at which point this function can be
+// "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
-func netName(chainParams *chain.Params) string {
+func netName(chainParams *chaincore.Params) string {
 	switch chainParams.Net {
 	case types.TestNet3:
 		return "testnet"
@@ -100,15 +99,15 @@ func loadConfig() (*config, []string, error) {
 	// while we're at it
 	if cfg.TestNet3 {
 		numNets++
-		activeNetParams = &chain.TestNet3Params
+		activeNetParams = &chaincore.TestNet3Params
 	}
 	if cfg.RegressionTest {
 		numNets++
-		activeNetParams = &chain.RegressionNetParams
+		activeNetParams = &chaincore.RegressionNetParams
 	}
 	if cfg.SimNet {
 		numNets++
-		activeNetParams = &chain.SimNetParams
+		activeNetParams = &chaincore.SimNetParams
 	}
 	if numNets > 1 {
 		str := "%s: The testnet, regtest, and simnet params can't be " +

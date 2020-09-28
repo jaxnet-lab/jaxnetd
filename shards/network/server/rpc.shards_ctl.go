@@ -17,11 +17,11 @@ func (server *ChainRPC) handleManageShards(cmd interface{}, closeChan <-chan str
 			err = errors.New("initialHeight must be provided")
 			break
 		}
-		err = server.node.ShardsMgr.NewShard(c.ShardID, *c.InitialHeight)
+		err = server.chainProvider.ShardsMgr.NewShard(c.ShardID, *c.InitialHeight)
 	case "stop":
-		err = server.node.ShardsMgr.DisableShard(c.ShardID)
+		err = server.chainProvider.ShardsMgr.DisableShard(c.ShardID)
 	case "run":
-		err = server.node.ShardsMgr.EnableShard(c.ShardID)
+		err = server.chainProvider.ShardsMgr.EnableShard(c.ShardID)
 	default:
 		err = errors.New("invalid actions for manageshards")
 	}
@@ -38,7 +38,7 @@ func (server *ChainRPC) handleManageShards(cmd interface{}, closeChan <-chan str
 }
 
 func (server *ChainRPC) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	shards := server.node.ShardsMgr.ListShards()
+	shards := server.chainProvider.ShardsMgr.ListShards()
 	// no data returned unless an error.
 	return shards, nil
 }

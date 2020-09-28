@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -30,7 +30,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chain2.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincore.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return

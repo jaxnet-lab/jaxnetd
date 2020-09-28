@@ -13,8 +13,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -165,7 +165,7 @@ func (state *gbtWorkState) templateUpdateChan(prevHash *chainhash.Hash, lastGene
 //
 // This function MUST be called with the state locked.
 func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue bool) error {
-	generator := s.node.Generator
+	generator := s.chainProvider.Generator
 	lastTxUpdate := generator.TxSource().LastUpdated()
 	if lastTxUpdate.IsZero() {
 		lastTxUpdate = time.Now()
@@ -177,7 +177,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 	// generated.
 	var msgBlock *wire.MsgBlock
 	var targetDifficulty string
-	latestHash := &s.node.BlockChain.BestSnapshot().Hash
+	latestHash := &s.chainProvider.BlockChain.BestSnapshot().Hash
 	template := state.template
 	if template == nil || state.prevHash == nil ||
 		!state.prevHash.IsEqual(latestHash) ||
@@ -194,8 +194,8 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr btcutil.Address
-		if !useCoinbaseValue && len(s.node.MiningAddrs) > 0 {
-			payAddr = s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+		if !useCoinbaseValue && len(s.chainProvider.MiningAddrs) > 0 {
+			payAddr = s.chainProvider.MiningAddrs[rand.Intn(len(s.chainProvider.MiningAddrs))]
 		}
 
 		// Create a new block template that has a coinbase which anyone
@@ -217,7 +217,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the BlockChain
 		// consensus rules.
-		best := s.node.BlockChain.BestSnapshot()
+		best := s.chainProvider.BlockChain.BestSnapshot()
 		minTimestamp := mining.MinimumMedianTime(best)
 
 		// Update work state to ensure another block template isn't
@@ -251,7 +251,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		// returned if none have been specified.
 		if !useCoinbaseValue && !template.ValidPayAddress {
 			// Choose a payment address at random.
-			payToAddr := s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+			payToAddr := s.chainProvider.MiningAddrs[rand.Intn(len(s.chainProvider.MiningAddrs))]
 
 			// Update the block coinbase output of the template to
 			// pay to the randomly selected payment address.

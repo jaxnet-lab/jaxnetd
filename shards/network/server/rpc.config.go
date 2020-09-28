@@ -5,10 +5,10 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
@@ -105,12 +105,12 @@ type rpcserverPeer interface {
 	FeeFilter() int64
 }
 
-// rpcserverConnManager represents a connection manager for use with the RPC
+// RPCServerConnManager represents a connection manager for use with the RPC
 // server.
 //
 // The interface contract requires that all of these methods are safe for
 // concurrent access.
-type rpcserverConnManager interface {
+type RPCServerConnManager interface {
 	// Connect adds the provided address as a new outbound peer.  The
 	// permanent flag indicates whether or not to make the peer persistent
 	// and reconnect if the connection is lost.  Attempting to connect to an
@@ -166,11 +166,11 @@ type rpcserverConnManager interface {
 	RelayTransactions(txns []*mempool.TxDesc)
 }
 
-// rpcserverSyncManager represents a sync manager for use with the RPC server.
+// RPCServerSyncManager represents a sync manager for use with the RPC server.
 //
 // The interface contract requires that all of these methods are safe for
 // concurrent access.
-type rpcserverSyncManager interface {
+type RPCServerSyncManager interface {
 	// IsCurrent returns whether or not the sync manager believes the BlockChain
 	// is current as compared to the rest of the network.
 	IsCurrent() bool

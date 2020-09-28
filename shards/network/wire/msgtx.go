@@ -7,11 +7,11 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"strconv"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 const (

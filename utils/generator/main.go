@@ -6,6 +6,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 func main() {
@@ -13,7 +14,7 @@ func main() {
 	fmt.Println("res", data, " err: ", key)
 }
 
-func GenerateKeyAddress(params *chain.Params) ([]byte, string) {
+func GenerateKeyAddress(params *chaincore.Params) ([]byte, string) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		fmt.Printf("failed to make privKey for  %v", err)

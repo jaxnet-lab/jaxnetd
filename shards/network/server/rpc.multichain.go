@@ -10,21 +10,21 @@ import (
 
 type MultiChainRPC struct {
 	*RPCServerCore
-	beaconActor *ChainRPC
-	shardActors map[uint32]*ChainRPC
+	beaconRPC *ChainRPC
+	shardRPCs map[uint32]*ChainRPC
 }
 
-func NewMultiChainRPC(config *Config, logger *zap.Logger, beaconActor *ChainActor,
-	shardActors map[uint32]*ChainActor) *MultiChainRPC {
+func NewMultiChainRPC(config *Config, logger *zap.Logger, beaconActor *ChainProvider,
+	shardProviders map[uint32]*ChainProvider) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		RPCServerCore: NewRPCCore(config, logger),
-		beaconActor:   nil,
-		shardActors:   map[uint32]*ChainRPC{},
+		beaconRPC:     nil,
+		shardRPCs:     map[uint32]*ChainRPC{},
 	}
 
-	rpc.beaconActor = NewChainRPC(beaconActor, logger)
-	for shardID, actor := range shardActors {
-		rpc.shardActors[shardID] = NewChainRPC(actor, logger)
+	rpc.beaconRPC = NewChainRPC(beaconActor, logger)
+	for shardID, provider := range shardProviders {
+		rpc.shardRPCs[shardID] = NewChainRPC(provider, logger)
 	}
 
 	return rpc
@@ -32,10 +32,10 @@ func NewMultiChainRPC(config *Config, logger *zap.Logger, beaconActor *ChainActo
 
 func (server *MultiChainRPC) Run(ctx context.Context) {
 	rpcServeMux := http.NewServeMux()
-	rpcServeMux.HandleFunc("/beacon/", server.HandleFunc(server.beaconActor.CommandsMux))
+	rpcServeMux.HandleFunc("/beacon/", server.HandleFunc(server.beaconRPC.CommandsMux))
 	rpcServeMux.HandleFunc("/beacon/ws", server.WSHandleFunc())
 
-	for shardID, chainRPC := range server.shardActors {
+	for shardID, chainRPC := range server.shardRPCs {
 		path := fmt.Sprintf("/shard/%d", shardID)
 		rpcServeMux.HandleFunc(path+"/", server.HandleFunc(chainRPC.CommandsMux))
 		rpcServeMux.HandleFunc(path+"/ws", server.WSHandleFunc())

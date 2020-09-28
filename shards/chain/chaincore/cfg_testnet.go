@@ -1,22 +1,22 @@
-package chain
+package chaincore
 
 import (
 	"math"
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
-// fTestNetPowLimit is the highest proof of work value a Bitcoin block
+// testNet3PowLimit is the highest proof of work value a Bitcoin block
 // can have for the test network (version 3).  It is the value
 // 2^224 - 1.
-var fTestNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 
-// fTestNetGenesisHash is the hash of the first block in the block chain for the
+// testNet3GenesisHash is the hash of the first block in the block chain for the
 // test network (version 3).
-var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+var testNet3GenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x43, 0x49, 0x7f, 0xd7, 0xf8, 0x26, 0x95, 0x71,
 	0x08, 0xf4, 0xa3, 0x0f, 0xd9, 0xce, 0xc3, 0xae,
 	0xba, 0x79, 0x97, 0x20, 0x84, 0xe9, 0x0e, 0xad,
@@ -24,18 +24,18 @@ var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 })
 
 //
-// // fTestNetGenesisMerkleRoot is the hash of the first transaction in the genesis
+// // testNet3GenesisMerkleRoot is the hash of the first transaction in the genesis
 // // block for the test network (version 3).  It is the same as the merkle root
 // // for the main network.
-// var fTestNetGenesisMerkleRoot = genesisMerkleRoot
+// var testNet3GenesisMerkleRoot = genesisMerkleRoot
 //
-// // fTestNetGenesisBlock defines the genesis block of the block chain which
+// // testNet3GenesisBlock defines the genesis block of the block chain which
 // // serves as the public transaction ledger for the test network (version 3).
-// var fTestNetGenesisBlock = wire.MsgBlock{
+// var testNet3GenesisBlock = wire.MsgBlock{
 // 	Header: shard.NewBlockHeader(
 // 		1,
 // 		chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
-// 		fTestNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+// 		testNet3GenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
 // 		chainhash.Hash{},
 // 		time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
 // 		0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
@@ -45,27 +45,29 @@ var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 // 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 // }
 
-// FTestNetParams defines the network parameters for the test network but whit low PoW params
-var FTestNetParams = Params{
-	Name:        "fastnet",
-	Net:         types.FTestNet,
+// TestNet3Params defines the network parameters for the test Bitcoin network
+// (version 3).  Not to be confused with the regression test network, this
+// network is sometimes simply called "testnet".
+var TestNet3Params = Params{
+	Name:        "testnet",
+	Net:         types.TestNet3,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
-	// GenesisBlock: &fTestNetGenesisBlock,
-	GenesisHash:              &fTestNetGenesisHash,
-	PowLimit:                 fTestNetPowLimit,
-	PowLimitBits:             0x1e0dffff,
+	// GenesisBlock: &testNet3GenesisBlock,
+	GenesisHash:              &testNet3GenesisHash,
+	PowLimit:                 testNet3PowLimit,
+	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            0,
 	BIP0065Height:            0,
 	BIP0066Height:            0,
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
 
-	TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
-	TargetTimePerBlock:       time.Second * 15,           // 15 seconds
-	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
+	TargetTimespan:           time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
 	ReduceMinDifficulty:      true,
 	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 	GenerateSupported:        true,

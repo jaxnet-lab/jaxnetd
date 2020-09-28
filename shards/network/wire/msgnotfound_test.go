@@ -6,14 +6,14 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // TestNotFound tests the MsgNotFound API.
@@ -106,10 +106,10 @@ func TestNotFoundWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgNotFound    // Message to encode
-		out  *MsgNotFound    // Expected decoded message
-		buf  []byte          // Wire encoding
-		pver uint32          // Protocol version for wire encoding
+		in   *MsgNotFound            // Message to encode
+		out  *MsgNotFound            // Expected decoded message
+		buf  []byte                  // Wire encoding
+		pver uint32                  // Protocol version for wire encoding
 		enc  encoder.MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no inv vectors.
@@ -273,13 +273,13 @@ func TestNotFoundWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgNotFound    // Value to encode
-		buf      []byte          // Wire encoding
-		pver     uint32          // Protocol version for wire encoding
+		in       *MsgNotFound            // Value to encode
+		buf      []byte                  // Wire encoding
+		pver     uint32                  // Protocol version for wire encoding
 		enc      encoder.MessageEncoding // Message encoding format
-		max      int             // Max size of fixed buffer to induce errors
-		writeErr error           // Expected write error
-		readErr  error           // Expected read error
+		max      int                     // Max size of fixed buffer to induce errors
+		writeErr error                   // Expected write error
+		readErr  error                   // Expected read error
 	}{
 		// Force error in inventory vector count
 		{baseNotFound, baseNotFoundEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},

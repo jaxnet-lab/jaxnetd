@@ -15,10 +15,11 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -182,8 +183,8 @@ func rpcNoTxInfoError(txHash *chainhash.Hash) *btcjson.RPCError {
 
 // peerExists determines if a certain peer is currently connected given
 // information about all currently connected peers. Peer existence is
-// determined using either a target address or node id.
-func peerExists(connMgr rpcserverConnManager, addr string, nodeID int32) bool {
+// determined using either a target address or chainProvider id.
+func peerExists(connMgr RPCServerConnManager, addr string, nodeID int32) bool {
 	for _, p := range connMgr.ConnectedPeers() {
 		if p.ToPeer().ID() == nodeID || p.ToPeer().Addr() == addr {
 			return true
@@ -271,7 +272,7 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
 
 // CreateVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chain.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
+func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincore.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
 	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the
@@ -323,7 +324,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chain.Params, fil
 
 // CreateTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
-func (xt *ToolsXt) CreateTxRawResult(chainParams *chain.Params, mtx *wire.MsgTx,
+func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincore.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader chain.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
 
@@ -358,7 +359,7 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chain.Params, mtx *wire.MsgTx,
 
 // GetDifficultyRatio returns the proof-of-work difficulty as a multiple of the
 // minimum difficulty using the passed bits field from the header of a block.
-func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chain.Params) (float64, error) {
+func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chaincore.Params) (float64, error) {
 	// The minimum difficulty is the max possible proof-of-work limit bits
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block

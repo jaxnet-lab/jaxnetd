@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -23,7 +23,7 @@ type TxMan struct {
 	cfg ManagerCfg
 	key *KeyData
 
-	NetParams *chain.Params
+	NetParams *chaincore.Params
 	RPC       *rpcclient.Client
 
 	testMode bool

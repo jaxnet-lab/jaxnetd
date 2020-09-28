@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 func TestNewKeyData(t *testing.T) {
@@ -16,18 +16,18 @@ func TestNewKeyData(t *testing.T) {
 	assert.NoError(t, err)
 
 	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
-	simNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chain.SimNetParams)
+	simNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincore.SimNetParams)
 	assert.NoError(t, err)
 
 	private := hex.EncodeToString(key.Serialize())
 	println(private)
-	keyData, err := NewKeyData(private, &chain.SimNetParams)
+	keyData, err := NewKeyData(private, &chaincore.SimNetParams)
 	assert.NoError(t, err)
 	assert.Equal(t, keyData.Address.EncodeAddress(), simNetAddress.EncodeAddress())
 
 	println(fmt.Sprintf("%x", key.Serialize()))
 
-	keyData, err = NewKeyData(fmt.Sprintf("%x", key.Serialize()), &chain.SimNetParams)
+	keyData, err = NewKeyData(fmt.Sprintf("%x", key.Serialize()), &chaincore.SimNetParams)
 	assert.NoError(t, err)
 	assert.Equal(t, keyData.Address.EncodeAddress(), simNetAddress.EncodeAddress())
 
@@ -37,7 +37,7 @@ func TestNewKeyData(t *testing.T) {
 	EvaSk := "bdfb934f403bd6c3f74730f9690f6fc22863388f473860eb001a1e7f02261b79"
 
 	for _, sk := range []string{MinerSk, AliceSk, BobSk, EvaSk} {
-		kd, _ := NewKeyData(sk, &chain.TestNet3Params)
+		kd, _ := NewKeyData(sk, &chaincore.TestNet3Params)
 		println(kd.AddressPubKey.String())
 	}
 }

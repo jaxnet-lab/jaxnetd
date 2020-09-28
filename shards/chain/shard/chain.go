@@ -4,8 +4,9 @@ import (
 	"io"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
@@ -17,7 +18,7 @@ const (
 	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
 )
 
-func Chain(shardID uint32, params *chain.Params, genesis *wire.MsgBlock, gHeight int32) chain.IChain {
+func Chain(shardID uint32, params *chaincore.Params, genesis *wire.MsgBlock, gHeight int32) chain.IChain {
 	shard := &shardChain{
 		shardID:      shardID,
 		startVersion: genesis.Header.Version(),
@@ -35,7 +36,7 @@ func Chain(shardID uint32, params *chain.Params, genesis *wire.MsgBlock, gHeight
 type shardChain struct {
 	shardID      uint32
 	startVersion chain.BVersion
-	chainParams  *chain.Params
+	chainParams  *chaincore.Params
 }
 
 func (c *shardChain) NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
@@ -55,7 +56,7 @@ func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockN
 	return BlockNode(blockHeader, parent)
 }
 
-func (c *shardChain) Params() *chain.Params {
+func (c *shardChain) Params() *chaincore.Params {
 	// todo(mike) [chaincfg] change me
 	return c.chainParams
 }

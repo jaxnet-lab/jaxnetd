@@ -1,7 +1,7 @@
 package txutils
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 type NodeRPC struct {
@@ -16,6 +16,6 @@ type ManagerCfg struct {
 	PrivateKey string  `json:"private_key" yaml:"private_key"`
 }
 
-func (cfg *ManagerCfg) NetParams() *chain.Params {
-	return chain.NetName(cfg.Net).Params()
+func (cfg *ManagerCfg) NetParams() *chaincore.Params {
+	return chaincore.NetName(cfg.Net).Params()
 }

@@ -10,13 +10,13 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"hash"
 
-	"golang.org/x/crypto/ripemd160"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"golang.org/x/crypto/ripemd160"
 )
 
 // An opcode defines the information related to a txscript opcode.  opfunc, if

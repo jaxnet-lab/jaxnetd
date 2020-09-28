@@ -12,16 +12,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -65,7 +64,7 @@ type Config struct {
 
 	// ChainParams identifies which chain parameters the txpool is
 	// associated with.
-	ChainParams *chain.Params
+	ChainParams *chaincore.Params
 
 	// FetchUtxoView defines the function to use to fetch unspent
 	// transaction output information.
@@ -933,7 +932,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// segwit isn't active yet, then we won't accept it into the mempool as
 	// it can't be mined yet.
 	if tx.MsgTx().HasWitness() {
-		segwitActive, err := mp.cfg.IsDeploymentActive(chain.DeploymentSegwit)
+		segwitActive, err := mp.cfg.IsDeploymentActive(chaincore.DeploymentSegwit)
 		if err != nil {
 			return nil, nil, err
 		}

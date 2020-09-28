@@ -5,8 +5,8 @@ import (
 	"io"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
@@ -238,8 +238,8 @@ func (h *header) SetMerkleRoot(hash chainhash.Hash) {
 	h.merkleRoot = hash
 }
 
-func (h *header) SetMergeMiningRoot(value chainhash.Hash)  {
-	 h.mergeMiningRoot = value
+func (h *header) SetMergeMiningRoot(value chainhash.Hash) {
+	h.mergeMiningRoot = value
 }
 
 func (h *header) MergeMiningRoot() chainhash.Hash {

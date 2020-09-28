@@ -8,11 +8,10 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -756,7 +755,7 @@ func (c *Client) SendManyComment(fromAccount string,
 // AddMultisigAddressAsync RPC invocation (or an applicable error).
 type FutureAddMultisigAddressResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns the
@@ -877,7 +876,7 @@ func (c *Client) CreateNewAccount(account string) error {
 // GetNewAddressAsync RPC invocation (or an applicable error).
 type FutureGetNewAddressResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns a new
@@ -922,7 +921,7 @@ func (c *Client) GetNewAddress(account string) (btcutil.Address, error) {
 // a GetRawChangeAddressAsync RPC invocation (or an applicable error).
 type FutureGetRawChangeAddressResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns a new
@@ -969,7 +968,7 @@ func (c *Client) GetRawChangeAddress(account string) (btcutil.Address, error) {
 // a AddWitnessAddressAsync RPC invocation (or an applicable error).
 type FutureAddWitnessAddressResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns the new
@@ -1014,7 +1013,7 @@ func (c *Client) AddWitnessAddress(address string) (btcutil.Address, error) {
 // GetAccountAddressAsync RPC invocation (or an applicable error).
 type FutureGetAccountAddressResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns the current
@@ -1124,7 +1123,7 @@ func (c *Client) SetAccount(address btcutil.Address, account string) error {
 // of a GetAddressesByAccountAsync RPC invocation (or an applicable error).
 type FutureGetAddressesByAccountResult struct {
 	responseChannel chan *response
-	network         *chain.Params
+	network         *chaincore.Params
 }
 
 // Receive waits for the response promised by the future and returns the list of

@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -41,7 +41,7 @@ func TestAddSignatureToTx(ot *testing.T) {
 	t.Log(multiSigScript.Address)
 
 	scriptAddr, err := btcutil.NewAddressScriptHash(
-		multiSigScript.RawRedeemScript, &chain.TestNet3Params)
+		multiSigScript.RawRedeemScript, &chaincore.TestNet3Params)
 	assert.NoError(t, err)
 
 	scriptPkScript, err := txscript.PayToAddrScript(scriptAddr)

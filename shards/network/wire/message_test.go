@@ -13,13 +13,12 @@ import (
 	"testing"
 	"time"
 
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-
-	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 )
 
 // makeHeader is a convenience function to make a message header in the form of
@@ -40,7 +39,7 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	chain := beacon.Chain(&chain2.TestNet3Params)
+	chain := beacon.Chain(&chaincore.TestNet3Params)
 
 	pver := ProtocolVersion
 
@@ -191,7 +190,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
 
-	chain := beacon.Chain(&chain2.MainNetParams)
+	chain := beacon.Chain(&chaincore.MainNetParams)
 
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"

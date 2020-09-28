@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // ThresholdState define the various threshold states used when voting on

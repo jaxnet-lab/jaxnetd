@@ -7,13 +7,13 @@ import (
 )
 
 // RPCConnManager provides a connection manager for use with the RPC Server and
-// implements the rpcserverConnManager interface.
+// implements the RPCServerConnManager interface.
 type RPCConnManager struct {
 	Server *P2PServer
 }
 
-// Ensure RPCConnManager implements the rpcserverConnManager interface.
-var _ rpcserverConnManager = &RPCConnManager{}
+// Ensure RPCConnManager implements the RPCServerConnManager interface.
+var _ RPCServerConnManager = &RPCConnManager{}
 
 // Connect adds the provided address as a new outbound peer.  The permanent flag
 // indicates whether or not to make the peer persistent and reconnect if the
@@ -21,7 +21,7 @@ var _ rpcserverConnManager = &RPCConnManager{}
 // return an error.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) Connect(addr string, permanent bool) error {
 	replyChan := make(chan error)
 	cm.Server.Query(connectNodeMsg{
@@ -37,7 +37,7 @@ func (cm *RPCConnManager) Connect(addr string, permanent bool) error {
 // an error.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) RemoveByID(id int32) error {
 	replyChan := make(chan error)
 	cm.Server.query <- removeNodeMsg{
@@ -52,7 +52,7 @@ func (cm *RPCConnManager) RemoveByID(id int32) error {
 // exist will return an error.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) RemoveByAddr(addr string) error {
 	replyChan := make(chan error)
 	cm.Server.query <- removeNodeMsg{
@@ -67,7 +67,7 @@ func (cm *RPCConnManager) RemoveByAddr(addr string) error {
 // does not exist will return an error.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) DisconnectByID(id int32) error {
 	replyChan := make(chan error)
 	cm.Server.query <- disconnectNodeMsg{
@@ -82,7 +82,7 @@ func (cm *RPCConnManager) DisconnectByID(id int32) error {
 // address that does not exist will return an error.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) DisconnectByAddr(addr string) error {
 	replyChan := make(chan error)
 	cm.Server.query <- disconnectNodeMsg{
@@ -95,7 +95,7 @@ func (cm *RPCConnManager) DisconnectByAddr(addr string) error {
 // ConnectedCount returns the number of currently connected peers.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) ConnectedCount() int32 {
 	return cm.Server.ConnectedCount()
 }
@@ -104,7 +104,7 @@ func (cm *RPCConnManager) ConnectedCount() int32 {
 // for all peers.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) NetTotals() (uint64, uint64) {
 	return cm.Server.NetTotals()
 }
@@ -112,7 +112,7 @@ func (cm *RPCConnManager) NetTotals() (uint64, uint64) {
 // ConnectedPeers returns an array consisting of all connected peers.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) ConnectedPeers() []rpcserverPeer {
 	replyChan := make(chan []*serverPeer)
 	cm.Server.query <- getPeersMsg{reply: replyChan}
@@ -130,7 +130,7 @@ func (cm *RPCConnManager) ConnectedPeers() []rpcserverPeer {
 // peers.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) PersistentPeers() []rpcserverPeer {
 	replyChan := make(chan []*serverPeer)
 	cm.Server.query <- getAddedNodesMsg{reply: replyChan}
@@ -147,7 +147,7 @@ func (cm *RPCConnManager) PersistentPeers() []rpcserverPeer {
 // BroadcastMessage sends the provided message to all currently connected peers.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) BroadcastMessage(msg wire.Message) {
 	cm.Server.BroadcastMessage(msg)
 }
@@ -157,7 +157,7 @@ func (cm *RPCConnManager) BroadcastMessage(msg wire.Message) {
 // block.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverConnManager interface implementation.
+// RPCServerConnManager interface implementation.
 func (cm *RPCConnManager) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
 	cm.Server.AddRebroadcastInventory(iv, data)
 }

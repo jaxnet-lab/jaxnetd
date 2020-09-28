@@ -1,9 +1,10 @@
 package chain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"math/big"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 const (

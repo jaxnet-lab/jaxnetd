@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -24,7 +24,7 @@ func mockRemotePeer() error {
 	peerCfg := &peer.Config{
 		UserAgentName:    "peer",  // User agent name to advertise.
 		UserAgentVersion: "1.0.0", // User agent version to advertise.
-		ChainParams:      &chain.SimNetParams,
+		ChainParams:      &chaincore.SimNetParams,
 		TrickleInterval:  time.Second * 10,
 	}
 
@@ -70,7 +70,7 @@ func Example_newOutboundPeer() {
 	peerCfg := &peer.Config{
 		UserAgentName:    "peer",  // User agent name to advertise.
 		UserAgentVersion: "1.0.0", // User agent version to advertise.
-		ChainParams:      &chain.SimNetParams,
+		ChainParams:      &chaincore.SimNetParams,
 		Services:         0,
 		TrickleInterval:  time.Second * 10,
 		Listeners: peer.MessageListeners{

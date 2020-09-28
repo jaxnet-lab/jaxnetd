@@ -13,15 +13,15 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	peerpkg "gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 const (
@@ -160,7 +160,7 @@ type SyncManager struct {
 	shutdown       int32
 	chain          *blockchain.BlockChain
 	txMemPool      *mempool.TxPool
-	chainParams    *chain2.Params
+	chainParams    *chaincore.Params
 	progressLogger *blockProgressLogger
 	msgChan        chan interface{}
 	wg             sync.WaitGroup
@@ -178,7 +178,7 @@ type SyncManager struct {
 	headersFirstMode bool
 	headerList       *list.List
 	startHeader      *list.Element
-	nextCheckpoint   *chain2.Checkpoint
+	nextCheckpoint   *chaincore.Checkpoint
 
 	// An optional fee estimator.
 	feeEstimator *mempool.FeeEstimator
@@ -204,7 +204,7 @@ func (sm *SyncManager) resetHeaderState(newestHash *chainhash.Hash, newestHeight
 // It returns nil when there is not one either because the height is already
 // later than the final checkpoint or some other reason such as disabled
 // checkpoints.
-func (sm *SyncManager) findNextHeaderCheckpoint(height int32) *chain2.Checkpoint {
+func (sm *SyncManager) findNextHeaderCheckpoint(height int32) *chaincore.Checkpoint {
 	checkpoints := sm.chain.Checkpoints()
 	if len(checkpoints) == 0 {
 		return nil
@@ -241,7 +241,7 @@ func (sm *SyncManager) startSync() {
 	// Once the segwit soft-fork package has activated, we only
 	// want to sync from peers which are witness enabled to ensure
 	// that we fully validate all blockchain data.
-	segwitActive, err := sm.chain.IsDeploymentActive(chain2.DeploymentSegwit)
+	segwitActive, err := sm.chain.IsDeploymentActive(chaincore.DeploymentSegwit)
 	if err != nil {
 		log.Errorf("Unable to query for segwit soft-fork state: %v", err)
 		return
@@ -335,7 +335,7 @@ func (sm *SyncManager) startSync() {
 		// downloads when in regression test mode.
 		if sm.nextCheckpoint != nil &&
 			best.Height < sm.nextCheckpoint.Height &&
-			sm.chainParams != &chain2.RegressionNetParams {
+			sm.chainParams != &chaincore.RegressionNetParams {
 
 			bestPeer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
 			sm.headersFirstMode = true
@@ -362,7 +362,7 @@ func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
 	// Typically a peer is not a candidate for sync if it's not a full node,
 	// however regression test is special in that the regression tool is
 	// not a full node and still needs to be considered a sync candidate.
-	if sm.chainParams == &chain2.RegressionNetParams {
+	if sm.chainParams == &chaincore.RegressionNetParams {
 		// The peer is not a candidate if it's not coming from localhost
 		// or the hostname can't be determined for some reason.
 		host, _, err := net.SplitHostPort(peer.Addr())
@@ -377,7 +377,7 @@ func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
 		// The peer is not a candidate for sync if it's not a full
 		// node. Additionally, if the segwit soft-fork package has
 		// activated, then the peer must also be upgraded.
-		segwitActive, err := sm.chain.IsDeploymentActive(chain2.DeploymentSegwit)
+		segwitActive, err := sm.chain.IsDeploymentActive(chaincore.DeploymentSegwit)
 		if err != nil {
 			log.Errorf("Unable to query for segwit "+
 				"soft-fork state: %v", err)
@@ -640,7 +640,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// the peer or ignore the block when we're in regression test
 		// mode in this case so the chain code is actually fed the
 		// duplicate blocks.
-		if sm.chainParams != &chain2.RegressionNetParams {
+		if sm.chainParams != &chaincore.RegressionNetParams {
 			log.Warnf("Got unrequested block %v from %s -- "+
 				"disconnecting", blockHash, peer.Addr())
 			peer.Disconnect()

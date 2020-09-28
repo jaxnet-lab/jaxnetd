@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 type Operator struct {

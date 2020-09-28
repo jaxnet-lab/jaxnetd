@@ -6,11 +6,11 @@ package wire
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // maxFlagsPerMerkleBlock is the maximum number of flag bytes that could
@@ -55,10 +55,10 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.Messa
 		return err
 	}
 
-	//, err = chain.ReadBlockHeader(r)
-	//if err != nil {
+	// , err = chain.ReadBlockHeader(r)
+	// if err != nil {
 	//	return err
-	//}
+	// }
 
 	err = encoder.ReadElement(r, &msg.Transactions)
 	if err != nil {

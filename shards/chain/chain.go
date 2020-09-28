@@ -1,5 +1,7 @@
 package chain
 
+import "gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+
 //var DefaultChain IChain
 
 type IChain interface {
@@ -13,7 +15,7 @@ type IChain interface {
 	NewNode(blockHeader BlockHeader, parent IBlockNode) IBlockNode
 	MaxBlockHeaderPayload() int
 	BlockHeaderOverhead() int
-	Params() *Params
+	Params() *chaincore.Params
 	GenesisBlock() interface{}
 	//BlockOne()
 	//GenesisHash() chainhash.Hash

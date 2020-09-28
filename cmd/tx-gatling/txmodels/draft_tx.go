@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -21,7 +21,7 @@ type DraftTx struct {
 
 // SetPayToAddress creates regular pay-to-address script.
 // 	destAddress is hex-encoded btcutil.Address
-func (tx *DraftTx) SetPayToAddress(destAddress string, params *chain.Params) error {
+func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincore.Params) error {
 	decodedDestAddr, err := btcutil.DecodeAddress(destAddress, params)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (tx *DraftTx) SetPayToAddress(destAddress string, params *chain.Params) err
 
 // SetMultiSig2of2 creates multiSig script, what can be spent only whist 2 of 2 signatures.
 // 	firstPubKey and secondPubKey is hex-encoded btcutil.AddressPubKey, NOT an address.
-func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPubKey, params *chain.Params) error {
+func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPubKey, params *chaincore.Params) error {
 	pkScript, err := txscript.MultiSigScript([]*btcutil.AddressPubKey{firstPubKey, secondPubKey}, 2)
 	if err != nil {
 		return err

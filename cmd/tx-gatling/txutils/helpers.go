@@ -10,7 +10,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -84,7 +84,7 @@ func DecodeTx(hexTx string) (*wire.MsgTx, error) {
 	return tx, nil
 }
 
-func TxToJson(mtx *wire.MsgTx, chainParams *chain.Params) btcjson.TxRawDecodeResult {
+func TxToJson(mtx *wire.MsgTx, chainParams *chaincore.Params) btcjson.TxRawDecodeResult {
 	return btcjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
@@ -149,7 +149,7 @@ func createVinList(mtx *wire.MsgTx) []btcjson.Vin {
 
 // createVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func createVoutList(mtx *wire.MsgTx, chainParams *chain.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
+func createVoutList(mtx *wire.MsgTx, chainParams *chaincore.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
 	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the

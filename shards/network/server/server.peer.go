@@ -10,10 +10,11 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
@@ -177,7 +178,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	//
 	// NOTE: This is done before rejecting peers that are too old to ensure
 	// it is updated regardless in the case a new minimum protocol version is
-	// enforced and the remote node has not upgraded yet.
+	// enforced and the remote chainProvider has not upgraded yet.
 	isInbound := sp.Inbound()
 	remoteAddr := sp.NA()
 	addrManager := sp.server.addrManager
@@ -208,7 +209,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// connection to peers if they flag that they're segwit
 		// enabled.
 		blockChain := sp.server.BlockChain
-		segwitActive, err := blockChain.IsDeploymentActive(chain.DeploymentSegwit)
+		segwitActive, err := blockChain.IsDeploymentActive(chaincore.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
 				err)
@@ -909,7 +910,7 @@ func (sp *serverPeer) OnFeeFilter(_ *peer.Peer, msg *wire.MsgFeeFilter) {
 // filter.  The peer will be disconnected if a filter is not loaded when this
 // message is received or the Server is not configured to allow bloom filters.
 func (sp *serverPeer) OnFilterAdd(_ *peer.Peer, msg *wire.MsgFilterAdd) {
-	// Disconnect and/or ban depending on the node bloom services flag and
+	// Disconnect and/or ban depending on the chainProvider bloom services flag and
 	// negotiated protocol version.
 	if !sp.enforceNodeBloomFlag(msg.Command()) {
 		return
@@ -930,7 +931,7 @@ func (sp *serverPeer) OnFilterAdd(_ *peer.Peer, msg *wire.MsgFilterAdd) {
 // The peer will be disconnected if a filter is not loaded when this message is
 // received  or the Server is not configured to allow bloom filters.
 func (sp *serverPeer) OnFilterClear(_ *peer.Peer, msg *wire.MsgFilterClear) {
-	// Disconnect and/or ban depending on the node bloom services flag and
+	// Disconnect and/or ban depending on the chainProvider bloom services flag and
 	// negotiated protocol version.
 	if !sp.enforceNodeBloomFlag(msg.Command()) {
 		return
@@ -952,7 +953,7 @@ func (sp *serverPeer) OnFilterClear(_ *peer.Peer, msg *wire.MsgFilterClear) {
 // The peer will be disconnected if the Server is not configured to allow bloom
 // filters.
 func (sp *serverPeer) OnFilterLoad(_ *peer.Peer, msg *wire.MsgFilterLoad) {
-	// Disconnect and/or ban depending on the node bloom services flag and
+	// Disconnect and/or ban depending on the chainProvider bloom services flag and
 	// negotiated protocol version.
 	if !sp.enforceNodeBloomFlag(msg.Command()) {
 		return

@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // This example demonstrates signing a message with a secp256k1 private key that

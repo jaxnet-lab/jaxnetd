@@ -18,7 +18,7 @@ package blockchain_test
 //	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 //	"gitlab.com/jaxnet/core/shard.core.git/blockchain/fullblocktests"
 //	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-//	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+//	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 //	"gitlab.com/jaxnet/core/shard.core.git/database"
 //	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 //	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"

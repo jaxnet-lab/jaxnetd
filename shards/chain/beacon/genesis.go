@@ -1,7 +1,7 @@
 package beacon
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -69,7 +69,6 @@ var genesisMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet 
 
 // GenesisBlock defines the genesis block of the block chain which serves as the
 // public transaction ledger for the main network.
-
 
 //var GenesisBlock = wire.MsgBlock{
 //	Header:       chain.DefaultChain.NewBlockHeader(1, chainhash.Hash{}, genesisMerkleRoot, chainhash.Hash{}, time.Unix(0x495fab29, 0), 0x1d00ffff, 0x7c2bac1d),

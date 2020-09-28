@@ -25,11 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 var (
@@ -143,7 +142,7 @@ type Client struct {
 
 	// chainParams holds the params for the chain that this client is using,
 	// and is used for many wallet methods.
-	chainParams    *chain.Params
+	chainParams    *chaincore.Params
 	shardID        uint32
 	oneTimeShardID *uint32
 	// wsConn is the underlying websocket connection when not in HTTP POST
@@ -1387,7 +1386,7 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 
 	// Default network is mainnet, no parameters are necessary but if mainnet
 	// is specified it will be the param
-	client.chainParams = chain.NetName(config.Params).Params()
+	client.chainParams = chaincore.NetName(config.Params).Params()
 	if client.chainParams == nil {
 		return nil, fmt.Errorf("rpcclient.New: Unknown chain %s", config.Params)
 	}

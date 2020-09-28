@@ -3,8 +3,9 @@ package beacon
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
@@ -17,10 +18,10 @@ const (
 )
 
 type beaconChain struct {
-	chainParams *chain.Params
+	chainParams *chaincore.Params
 }
 
-func Chain(params *chain.Params) chain.IChain {
+func Chain(params *chaincore.Params) chain.IChain {
 	clone := *params
 	clone.Name = "beacon"
 	beacon := &beaconChain{}
@@ -50,7 +51,7 @@ func (c *beaconChain) IsBeacon() bool {
 	return true
 }
 
-func (c *beaconChain) Params() *chain.Params {
+func (c *beaconChain) Params() *chaincore.Params {
 	return c.chainParams
 }
 

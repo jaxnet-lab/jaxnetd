@@ -2,7 +2,6 @@ package shards
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -24,8 +23,8 @@ type BeaconCtl struct {
 	chain     chain.IChain
 	shardsMgr server.ShardManager
 
-	p2pServer  *server.P2PServer
-	chainActor *server.ChainActor
+	p2pServer     *server.P2PServer
+	chainProvider *server.ChainProvider
 }
 
 func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config, shardsMgr server.ShardManager) BeaconCtl {
@@ -49,10 +48,10 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
-	beaconCtl.chainActor, err = server.NewChainActor(beaconCtl.ctx,
+	beaconCtl.chainProvider, err = server.NewChainActor(beaconCtl.ctx,
 		beaconCtl.cfg.Node.BeaconChain, beaconCtl.chain, db, beaconCtl.log)
 	if err != nil {
-		beaconCtl.log.Error("unable to init ChainActor for beacon", zap.Error(err))
+		beaconCtl.log.Error("unable to init ChainProvider for beacon", zap.Error(err))
 		return err
 	}
 
@@ -67,7 +66,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 	beaconCtl.log.Info("P2P Listener ", zap.Any("Listeners", beaconCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer and start it.
-	beaconCtl.p2pServer, err = server.Server(&beaconCtl.cfg.Node.P2P, beaconCtl.chainActor, addrManager)
+	beaconCtl.p2pServer, err = server.Server(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager)
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
 		beaconCtl.log.Error(fmt.Sprintf("Unable to start p2pServer on %v: %v",
@@ -78,12 +77,12 @@ func (beaconCtl *BeaconCtl) Init() error {
 	return err
 }
 
-func (beaconCtl *BeaconCtl) ChainActor() *server.ChainActor {
-	return beaconCtl.chainActor
+func (beaconCtl *BeaconCtl) ChainProvider() *server.ChainProvider {
+	return beaconCtl.chainProvider
 }
 
 func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
-	cleanIndexes, err := beaconCtl.dbCtl.cleanIndexes(ctx, beaconCtl.cfg, beaconCtl.chainActor.DB)
+	cleanIndexes, err := beaconCtl.dbCtl.cleanIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
 	if cleanIndexes {
 		beaconCtl.log.Info("clean db indexes")
 		return
@@ -106,14 +105,13 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 	// 	defer wg.Done()
 	// 	beaconCtl.actor.CPUMiner.Run(ctx)
 	// }()
-	//
 
 	<-ctx.Done()
 
 	wg.Wait()
 
 	beaconCtl.log.Info("Gracefully shutting down the database...")
-	if err := beaconCtl.chainActor.DB.Close(); err != nil {
+	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
 		beaconCtl.log.Error("Can't close db", zap.Error(err))
 	}
 }
@@ -129,27 +127,7 @@ func (beaconCtl *BeaconCtl) Shutdown() {
 
 	// Ensure the database is sync'd and closed on shutdown.
 	beaconCtl.log.Info("Gracefully shutting down the database...")
-	if err := beaconCtl.chainActor.DB.Close(); err != nil {
+	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
 		beaconCtl.log.Error("Can't close db", zap.Error(err))
 	}
-}
-
-func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
-	if interruptRequested(ctx) {
-		return errors.New("can't create interrupt request")
-	}
-
-	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg, chainCtl)
-	if err := chainCtl.beacon.Init(); err != nil {
-		chainCtl.logger.Error("Can't init Beacon chainCtl", zap.Error(err))
-		return err
-	}
-
-	chainCtl.wg.Add(1)
-	go func() {
-		chainCtl.beacon.Run(ctx)
-		chainCtl.wg.Done()
-	}()
-
-	return nil
 }

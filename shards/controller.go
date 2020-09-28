@@ -2,14 +2,10 @@ package shards
 
 import (
 	"context"
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"errors"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
 )
 
@@ -77,98 +73,42 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (chainCtl *chainController) writeShardsIndex() error {
-	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
-	content, err := json.Marshal(chainCtl.shardsIndex)
-	if err != nil {
+func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
+	if interruptRequested(ctx) {
+		return errors.New("can't create interrupt request")
+	}
+
+	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg, chainCtl)
+	if err := chainCtl.beacon.Init(); err != nil {
+		chainCtl.logger.Error("Can't init Beacon chainCtl", zap.Error(err))
 		return err
 	}
 
-	return ioutil.WriteFile(shardsFile, content, 0644)
+	chainCtl.wg.Add(1)
+	go func() {
+		chainCtl.beacon.Run(ctx)
+		chainCtl.wg.Done()
+	}()
+
+	return nil
 }
 
-func (chainCtl *chainController) syncShardsIndex() error {
-	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
-	chainCtl.shardsIndex = &Index{
-		Shards: map[uint32]ShardInfo{},
+func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
+	beaconActor := chainCtl.beacon.ChainProvider()
+
+	var shardsProviders = map[uint32]*server.ChainProvider{}
+	for id, ro := range chainCtl.shardsCtl {
+		shardsProviders[id] = ro.ctl.ChainProvider()
 	}
 
-	_, err := os.Stat(shardsFile)
-	if os.IsNotExist(err) {
-		if err = chainCtl.writeShardsIndex(); err != nil {
-			return err
-		}
-	} else {
-		file, err := ioutil.ReadFile(shardsFile)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(file, chainCtl.shardsIndex)
-		if err != nil {
-			return err
-		}
-	}
+	srv := server.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger, beaconActor, shardsProviders)
+	chainCtl.wg.Add(1)
 
-	var maxHeight int32
-	snapshot := chainCtl.beacon.chainActor.BlockChain.BestSnapshot()
-	if snapshot != nil {
-		maxHeight = snapshot.Height
-	}
-	if maxHeight == -1 {
-		// nothing to index
-		return nil
-	}
+	go func() {
+		srv.Run(ctx)
+		chainCtl.wg.Done()
 
-	for height := chainCtl.shardsIndex.LastBeaconHeight; height < maxHeight; height++ {
-		block, err := chainCtl.beacon.chainActor.BlockChain.BlockByHeight(height)
-		if err != nil {
-			return err
-		}
+	}()
 
-		msgBlock := block.MsgBlock()
-		version := msgBlock.Header.Version()
-
-		if !version.ExpansionMade() {
-			continue
-		}
-		chainCtl.shardsIndex.AddShard(block)
-	}
-
-	return chainCtl.writeShardsIndex()
-}
-
-type ShardInfo struct {
-	ID            uint32         `json:"id"`
-	Name          string         `json:"name"`
-	LastVersion   chain.BVersion `json:"last_version"`
-	GenesisHeight int32          `json:"genesis_height"`
-	GenesisHash   string         `json:"genesis_hash"`
-	Enabled       bool           `json:"enabled"`
-}
-
-type Index struct {
-	LastShardID      uint32               `json:"last_shard_id"`
-	LastBeaconHeight int32                `json:"last_beacon_height"`
-	Shards           map[uint32]ShardInfo `json:"shards"`
-}
-
-func (index *Index) AddShard(block *btcutil.Block) {
-	index.LastShardID += 1
-
-	if index.LastBeaconHeight < block.Height() {
-		index.LastBeaconHeight = block.Height()
-	}
-
-	if index.Shards == nil {
-		index.Shards = map[uint32]ShardInfo{}
-	}
-
-	index.Shards[index.LastShardID] = ShardInfo{
-		ID:            index.LastShardID,
-		Name:          "0",
-		LastVersion:   block.MsgBlock().Header.Version(),
-		GenesisHeight: block.Height(),
-		GenesisHash:   block.Hash().String(),
-		Enabled:       true,
-	}
+	return nil
 }

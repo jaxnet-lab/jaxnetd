@@ -22,22 +22,21 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-	"go.uber.org/zap"
-
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"go.uber.org/zap"
 )
 
 const (
@@ -177,7 +176,7 @@ type P2PServer struct {
 	logger       network.ILogger
 	zapLogger    *zap.Logger
 
-	*ChainActor
+	*ChainProvider
 }
 
 // hasServices returns whether or not the provided advertised service flags have
@@ -449,7 +448,7 @@ func (s *P2PServer) handleQuery(state *peerState, querymsg interface{}) {
 	case connectNodeMsg:
 		// TODO: duplicate oneshots?
 		// Limit max number of total peers.
-		if state.Count() >= s.ChainActor.Config().MaxPeers {
+		if state.Count() >= s.ChainProvider.Config().MaxPeers {
 			msg.reply <- errors.New("max peers reached")
 			return
 		}
@@ -1145,9 +1144,9 @@ func (s *P2PServer) GetBlockChain() *blockchain.BlockChain {
 // newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func Server(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (*P2PServer, error) {
-	logger := chainActor.Log().With(zap.String("server", "p2p"))
-	chainCfg := chainActor.Config()
+func Server(cfg *P2pConfig, chainProvider *ChainProvider, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainProvider.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainProvider.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
@@ -1163,7 +1162,7 @@ func Server(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, chainActor.IChain.Params().DefaultPort,
+		listeners, nat, err = initListeners(cfg, chainProvider.IChain.Params().DefaultPort,
 			amgr, cfg.Listeners, services, logger)
 		if err != nil {
 			return nil, err
@@ -1181,7 +1180,7 @@ func Server(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (
 	}
 
 	p2pServer := P2PServer{
-		ChainActor:           chainActor,
+		ChainProvider:        chainProvider,
 		cfg:                  cfg,
 		addrManager:          amgr,
 		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
@@ -1296,9 +1295,9 @@ func Server(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (
 // newServer returns a new btcd Server configured to listen on addr for the
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func ShardServer(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManager) (*P2PServer, error) {
-	logger := chainActor.Log().With(zap.String("server", "p2p"))
-	chainCfg := chainActor.Config()
+func ShardServer(cfg *P2pConfig, chainProvider *ChainProvider, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainProvider.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainProvider.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
@@ -1313,7 +1312,7 @@ func ShardServer(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManag
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, chainActor.IChain.Params().DefaultPort, amgr, []string{":"}, services, logger)
+		listeners, nat, err = initListeners(cfg, chainProvider.IChain.Params().DefaultPort, amgr, []string{":"}, services, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -1323,7 +1322,7 @@ func ShardServer(cfg *P2pConfig, chainActor *ChainActor, amgr *addrmgr.AddrManag
 	}
 
 	p2pServer := P2PServer{
-		ChainActor:           chainActor,
+		ChainProvider:        chainProvider,
 		cfg:                  cfg,
 		addrManager:          amgr,
 		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
@@ -1561,7 +1560,7 @@ func (s *P2PServer) addrStringToNetAddr(addr string) (net.Addr, error) {
 	}, nil
 }
 
-// addLocalAddress adds an address that this node is listening on to the
+// addLocalAddress adds an address that this chainProvider is listening on to the
 // address manager so that it may be relayed to peers.
 func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) error {
 	host, portStr, err := net.SplitHostPort(addr)
@@ -1657,7 +1656,7 @@ func (s *P2PServer) isWhitelisted(addr net.Addr) bool {
 
 // checkpointSorter implements sort.Interface to allow a slice of checkpoints to
 // be sorted.
-type checkpointSorter []chain.Checkpoint
+type checkpointSorter []chaincore.Checkpoint
 
 // Len returns the number of checkpoints in the slice.  It is part of the
 // sort.Interface implementation.
@@ -1682,10 +1681,10 @@ func (s checkpointSorter) Less(i, j int) bool {
 // checkpoints contain a checkpoint with the same height as a checkpoint in the
 // default checkpoints, the additional checkpoint will take precedence and
 // overwrite the default one.
-func mergeCheckpoints(defaultCheckpoints, additional []chain.Checkpoint) []chain.Checkpoint {
+func mergeCheckpoints(defaultCheckpoints, additional []chaincore.Checkpoint) []chaincore.Checkpoint {
 	// Create a map of the additional checkpoints to remove duplicates while
 	// leaving the most recently-specified checkpoint.
-	extra := make(map[int32]chain.Checkpoint)
+	extra := make(map[int32]chaincore.Checkpoint)
 	for _, checkpoint := range additional {
 		extra[checkpoint.Height] = checkpoint
 	}
@@ -1693,7 +1692,7 @@ func mergeCheckpoints(defaultCheckpoints, additional []chain.Checkpoint) []chain
 	// Add all default checkpoints that do not have an override in the
 	// additional checkpoints.
 	numDefault := len(defaultCheckpoints)
-	checkpoints := make([]chain.Checkpoint, 0, numDefault+len(extra))
+	checkpoints := make([]chaincore.Checkpoint, 0, numDefault+len(extra))
 	for _, checkpoint := range defaultCheckpoints {
 		if _, exists := extra[checkpoint.Height]; !exists {
 			checkpoints = append(checkpoints, checkpoint)
