@@ -121,8 +121,6 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, iChain chain.ICh
 		HashCache:   txscript.NewHashCache(cfg.SigCacheMaxSize),
 		logger:      log,
 		config:      &cfg,
-		// ConnMgr:      &RPCConnManager{Server: beaconCtl.p2pServer},
-		// SyncMgr:      &RPCSyncMgr{Server: beaconCtl.p2pServer, SyncMgr: beaconCtl.p2pServer.SyncManager},
 	}
 
 	var err error
@@ -134,20 +132,6 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, iChain chain.ICh
 	}
 
 	if err = chainProvider.initBlockchainAndMempool(ctx, cfg); err != nil {
-		return nil, err
-	}
-
-	chainProvider.SyncManager, err = netsync.New(&netsync.Config{
-		// todo(fix me)
-		// PeerNotifier: chainProvider,
-		Chain:              chainProvider.BlockChain,
-		TxMemPool:          chainProvider.TxMemPool,
-		ChainParams:        chainProvider.ChainParams,
-		DisableCheckpoints: cfg.DisableCheckpoints,
-		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       chainProvider.FeeEstimator,
-	})
-	if err != nil {
 		return nil, err
 	}
 
@@ -174,6 +158,26 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, iChain chain.ICh
 	}
 
 	return chainProvider, nil
+}
+
+func (chainProvider *ChainProvider) SetP2PProvider(p2pProvider *P2PServer) (err error) {
+	chainProvider.SyncManager, err = netsync.New(&netsync.Config{
+		PeerNotifier:       p2pProvider,
+		Chain:              chainProvider.BlockChain,
+		TxMemPool:          chainProvider.TxMemPool,
+		ChainParams:        chainProvider.ChainParams,
+		DisableCheckpoints: chainProvider.config.DisableCheckpoints,
+		MaxPeers:           chainProvider.config.MaxPeers,
+		FeeEstimator:       chainProvider.FeeEstimator,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	chainProvider.ConnMgr = &RPCConnManager{Server: p2pProvider}
+	chainProvider.SyncMgr = RPCSyncMgr{Server: p2pProvider, SyncMgr: chainProvider.SyncManager}
+	return nil
 }
 
 func (chainProvider *ChainProvider) DBUpdateCallback(tx database.Tx) error {

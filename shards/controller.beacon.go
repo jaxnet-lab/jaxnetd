@@ -74,7 +74,8 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
-	return err
+	// todo: fixme
+	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
 }
 
 func (beaconCtl *BeaconCtl) ChainProvider() *server.ChainProvider {

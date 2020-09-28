@@ -265,7 +265,6 @@ func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.
 }
 
 func (shardCtl ShardCtl) Init() error {
-
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
@@ -304,7 +303,8 @@ func (shardCtl ShardCtl) Init() error {
 			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))
 		return err
 	}
-	return nil
+
+	return shardCtl.chainProvider.SetP2PProvider(shardCtl.p2pServer)
 }
 
 func (shardCtl *ShardCtl) ChainProvider() *server2.ChainProvider {
