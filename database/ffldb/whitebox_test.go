@@ -4,6 +4,7 @@
 
 // This file is part of the ffldb package rather than the ffldb_test package as
 // it provides whitebox testing.
+//+build deprecated_tests
 
 package ffldb
 

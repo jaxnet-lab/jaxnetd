@@ -1,12 +1,12 @@
 // Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+// +build deprecated_tests
 
 package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"net"
 	"reflect"
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
 
