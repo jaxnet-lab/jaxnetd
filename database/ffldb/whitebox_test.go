@@ -4,6 +4,7 @@
 
 // This file is part of the ffldb package rather than the ffldb_test package as
 // it provides whitebox testing.
+//+build deprecated_tests
 
 package ffldb
 
@@ -11,8 +12,6 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"hash/crc32"
 	"io"
 	"os"
@@ -23,6 +22,8 @@ import (
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 var (
@@ -56,7 +57,7 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 
 	// Set the first block as the genesis block.
 	blocks := make([]*btcutil.Block, 0, 256)
-	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesis := btcutil.NewBlock(chaincore.MainNetParams.GenesisBlock)
 	blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.

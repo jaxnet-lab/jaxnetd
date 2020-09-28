@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package chaincfg
+package chaincore
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -230,7 +230,7 @@ type Params struct {
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardGenesis(shard, height uint32,
+func (cfg Params) ShardGenesis(shard uint32, height int32,
 	// block *wire.MsgBlock, // fixme
 	hash *chainhash.Hash) *Params {
 	// shard's exclusive info
@@ -368,6 +368,8 @@ func (net NetName) Params() *Params {
 		return &TestNet3Params
 	case MainNetParams.Name:
 		return &MainNetParams
+	case FTestNetParams.Name:
+		return &FTestNetParams
 	}
 	return nil
 }
@@ -378,4 +380,5 @@ func init() {
 	mustRegister(&TestNet3Params)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
+	mustRegister(&FTestNetParams)
 }

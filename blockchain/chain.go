@@ -8,15 +8,15 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -94,10 +94,10 @@ type BlockChain struct {
 	// The following fields are set when the instance is created and can't
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
-	checkpoints         []chaincfg.Checkpoint
-	checkpointsByHeight map[int32]*chaincfg.Checkpoint
+	checkpoints         []chaincore.Checkpoint
+	checkpointsByHeight map[int32]*chaincore.Checkpoint
 	db                  database.DB
-	chainParams         *chaincfg.Params
+	chainParams         *chaincore.Params
 	timeSource          MedianTimeSource
 	sigCache            *txscript.SigCache
 	indexManager        IndexManager
@@ -137,7 +137,7 @@ type BlockChain struct {
 
 	// These fields are related to checkpoint handling.  They are protected
 	// by the chain lock.
-	nextCheckpoint *chaincfg.Checkpoint
+	nextCheckpoint *chaincore.Checkpoint
 	checkpointNode chain.IBlockNode
 
 	// The state is used as a fairly efficient way to cache information
@@ -384,7 +384,7 @@ func (b *BlockChain) calcSequenceLock(node chain.IBlockNode, tx *btcutil.Tx, utx
 		// Obtain the latest BIP9 version bits state for the
 		// CSV-package soft-fork deployment. The adherence of sequence
 		// locks depends on the current soft-fork state.
-		csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
+		csvState, err := b.deploymentState(node.Parent(), chaincore.DeploymentCSV)
 		if err != nil {
 			return nil, err
 		}
@@ -1682,7 +1682,7 @@ type Config struct {
 	// with.
 	//
 	// This field is required.
-	ChainParams *chaincfg.Params
+	ChainParams *chaincore.Params
 
 	// Checkpoints hold caller-defined checkpoints that should be added to
 	// the default checkpoints in ChainParams.  Checkpoints must be sorted
@@ -1690,7 +1690,7 @@ type Config struct {
 	//
 	// This field can be nil if the caller does not wish to specify any
 	// checkpoints.
-	Checkpoints []chaincfg.Checkpoint
+	Checkpoints []chaincore.Checkpoint
 
 	// TimeSource defines the median time source to use for things such as
 	// block processing and determining whether or not the chain is current.
@@ -1744,10 +1744,10 @@ func New(config *Config) (*BlockChain, error) {
 
 	// Generate a checkpoint by height map from the provided checkpoints
 	// and assert the provided checkpoints are sorted by height as required.
-	var checkpointsByHeight map[int32]*chaincfg.Checkpoint
+	var checkpointsByHeight map[int32]*chaincore.Checkpoint
 	var prevCheckpointHeight int32
 	if len(config.Checkpoints) > 0 {
-		checkpointsByHeight = make(map[int32]*chaincfg.Checkpoint)
+		checkpointsByHeight = make(map[int32]*chaincore.Checkpoint)
 		for i := range config.Checkpoints {
 			checkpoint := &config.Checkpoints[i]
 			if checkpoint.Height <= prevCheckpointHeight {
@@ -1782,7 +1782,7 @@ func New(config *Config) (*BlockChain, error) {
 		orphans:             make(map[chainhash.Hash]*orphanBlock),
 		prevOrphans:         make(map[chainhash.Hash][]*orphanBlock),
 		warningCaches:       newThresholdCaches(vbNumBits),
-		deploymentCaches:    newThresholdCaches(chaincfg.DefinedDeployments),
+		deploymentCaches:    newThresholdCaches(chaincore.DefinedDeployments),
 	}
 
 	// Initialize the chain state from the passed database.  When the db

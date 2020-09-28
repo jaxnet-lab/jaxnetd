@@ -6,10 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // MaxBlockLocatorsPerMsg is the maximum number of block locator hashes allowed

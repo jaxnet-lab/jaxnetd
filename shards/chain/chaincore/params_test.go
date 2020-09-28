@@ -2,9 +2,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package chaincfg
+package chaincore
 
-import "testing"
+import (
+	"testing"
+)
 
 // TestInvalidHashStr ensures the newShaHashFromStr function panics when used to
 // with an invalid hash string.

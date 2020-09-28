@@ -1,13 +1,14 @@
 package shard
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/utils"
 	"math/big"
 	"sort"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/utils"
 )
 
 var zeroHash chainhash.Hash
@@ -66,7 +67,7 @@ func initBlockNode(node *blockNode, blockHeader chain.BlockHeader, parent chain.
 	*node = blockNode{
 		hash:       blockHeader.BlockHash(),
 		workSum:    blockchain.CalcWork(blockHeader.Bits()),
-		version:    blockHeader.Version(),
+		version:    int32(blockHeader.Version()),
 		bits:       blockHeader.Bits(),
 		nonce:      blockHeader.Nonce(),
 		timestamp:  blockHeader.Timestamp().Unix(),
@@ -93,10 +94,10 @@ func (node *blockNode) NewNode() chain.IBlockNode {
 	return &res
 }
 
-//func (node *blockNode) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
+// func (node *blockNode) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
 //	var res blockNode
 //	return &res
-//}
+// }
 
 func (node *blockNode) GetHash() chainhash.Hash {
 	return node.hash
@@ -130,9 +131,9 @@ func (node *blockNode) Timestamp() int64 {
 	return node.timestamp
 }
 
-//func (node *blockNode) Header() chain.BlockHeader {
+// func (node *blockNode) Header() chain.BlockHeader {
 //	return node.
-//}
+// }
 
 func (node *blockNode) Status() chain.BlockStatus {
 	return node.status
@@ -142,9 +143,9 @@ func (node *blockNode) SetStatus(status chain.BlockStatus) {
 	node.status = status
 }
 
-//func (node *blockNode) NewHeader() chain.BlockHeader{
+// func (node *blockNode) NewHeader() chain.BlockHeader{
 //	return NewBlockHeader()
-//}
+// }
 
 func (node *blockNode) NewHeader() chain.BlockHeader {
 	res := new(header)

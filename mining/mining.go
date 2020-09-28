@@ -8,15 +8,16 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -248,7 +249,7 @@ func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
+func createCoinbaseTx(params *chaincore.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
 	// Create the script to pay to the provided payment address if one was
 	// specified.  Otherwise create a script that allows the coinbase to be
 	// redeemable by anyone.
@@ -345,7 +346,7 @@ func medianAdjustedTime(chainState *blockchain.BestState, timeSource blockchain.
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
 	policy      *Policy
-	chainParams *chaincfg.Params
+	chainParams *chaincore.Params
 	txSource    TxSource
 	chain       *blockchain.BlockChain
 	timeSource  blockchain.MedianTimeSource
@@ -359,7 +360,7 @@ type BlkTmplGenerator struct {
 // The additional state-related fields are required in order to ensure the
 // templates are built on top of the current best chain and adhere to the
 // consensus rules.
-func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
+func NewBlkTmplGenerator(policy *Policy, params *chaincore.Params,
 	txSource TxSource, chain *blockchain.BlockChain,
 	timeSource blockchain.MedianTimeSource,
 	sigCache *txscript.SigCache,
@@ -439,12 +440,12 @@ func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
 func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, error) {
-	//fmt.Println("New block for address ", payToAddress.String())
+	// fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
 	best := g.chain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
 
-	//fmt.Println("Height ", nextBlockHeight)
+	// fmt.Println("Height ", nextBlockHeight)
 
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
@@ -607,7 +608,7 @@ mempoolLoop:
 	// so then this means that we'll include any transactions with witness
 	// data in the mempool, and also add the witness commitment as an
 	// OP_RETURN output in the coinbase transaction.
-	segwitState, err := g.chain.ThresholdState(chaincfg.DeploymentSegwit)
+	segwitState, err := g.chain.ThresholdState(chaincore.DeploymentSegwit)
 	if err != nil {
 		return nil, err
 	}
@@ -859,7 +860,10 @@ mempoolLoop:
 	// Create a new block ready to be solved.
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
-	msgBlock.Header = beacon.NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
+
+	// todo (mike) may need to change the entire signature
+	msgBlock.Header = beacon.NewBlockHeader(chain.BVersion(nextBlockVersion),
+		best.Hash, *merkles[len(merkles)-1], chainhash.Hash{}, ts, reqDifficulty, 0)
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err
@@ -944,7 +948,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 	return nil
 }
 
-//func (g *BlkTmplGenerator) UpdateExtraNonce2(block *btcutil.Block, blockHeight int32, extraNonce uint64) error {
+// func (g *BlkTmplGenerator) UpdateExtraNonce2(block *btcutil.Block, blockHeight int32, extraNonce uint64) error {
 //	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
 //	if err != nil {
 //		return err
@@ -965,9 +969,9 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 //	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
 //	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
 //	return nil
-//}
+// }
 
-//func (g *BlkTmplGenerator) UpdateExtraNonce2(msgBlock *Block, blockHeight int32, extraNonce uint64) error {
+// func (g *BlkTmplGenerator) UpdateExtraNonce2(msgBlock *Block, blockHeight int32, extraNonce uint64) error {
 //	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
 //	if err != nil {
 //		return err
@@ -989,7 +993,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 //	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
 //	msgBlock.header.MerkleRoot = *merkles[len(merkles)-1]
 //	return nil
-//}
+// }
 
 // BestSnapshot returns information about the current best chain block and
 // related state as of the current point in time using the chain instance

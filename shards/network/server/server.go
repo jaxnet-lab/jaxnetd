@@ -22,26 +22,21 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
-	"go.uber.org/zap"
-
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
-	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/txscript"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"go.uber.org/zap"
 )
 
 const (
@@ -137,7 +132,7 @@ type cfHeaderKV struct {
 
 // server provides a bitcoin server for handling communications to and from
 // bitcoin peers.
-type server struct {
+type P2PServer struct {
 	// The following variables must only be used atomically.
 	// Putting the uint64s first makes them 64-bit aligned for 32-bit systems.
 	bytesReceived        uint64 // Total bytes received from all peers since start.
@@ -145,17 +140,10 @@ type server struct {
 	started              int32
 	shutdown             int32
 	shutdownSched        int32
-	StartupTime          int64
 	cfg                  *P2pConfig
-	chainParams          *chaincfg.Params
 	addrManager          *addrmgr.AddrManager
 	ConnManager          *connmgr.ConnManager
-	SigCache             *txscript.SigCache
-	HashCache            *txscript.HashCache
 	nodeServer           INodeServer
-	SyncManager          *netsync.SyncManager
-	chain                *blockchain.BlockChain
-	TxMemPool            *mempool.TxPool
 	modifyRebroadcastInv chan interface{}
 	newPeers             chan *serverPeer
 	donePeers            chan *serverPeer
@@ -167,21 +155,8 @@ type server struct {
 	wg                   sync.WaitGroup
 	quit                 chan struct{}
 	nat                  NAT
-	db                   database.DB
-	TimeSource           blockchain.MedianTimeSource
-	services             wire.ServiceFlag
 
-	// The following fields are used for optional indexes.  They will be nil
-	// if the associated index is not enabled.  These fields are set during
-	// initial creation of the Server and never changed afterwards, so they
-	// do not need to be protected for concurrent access.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
-
-	// The fee estimator keeps track of how long transactions are left in
-	// the mempool before they are mined into blocks.
-	FeeEstimator *mempool.FeeEstimator
+	services wire.ServiceFlag
 
 	// cfCheckptCaches stores a cached slice of filter headers for cfcheckpt
 	// messages for each filter type.
@@ -200,6 +175,8 @@ type server struct {
 	serverLogger network.ILogger
 	logger       network.ILogger
 	zapLogger    *zap.Logger
+
+	*ChainProvider
 }
 
 // hasServices returns whether or not the provided advertised service flags have
@@ -226,13 +203,13 @@ func randomUint16Number(max uint16) uint16 {
 	}
 }
 
-func (s *server) Query(value interface{}) {
+func (s *P2PServer) Query(value interface{}) {
 	s.query <- value
 }
 
 // AddRebroadcastInventory adds 'iv' to the list of inventories to be
 // rebroadcasted at random intervals until they show up in a block.
-func (s *server) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
+func (s *P2PServer) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&s.shutdown) != 0 {
 		return
@@ -243,7 +220,7 @@ func (s *server) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
 
 // RemoveRebroadcastInventory removes 'iv' from the list of items to be
 // rebroadcasted if present.
-func (s *server) RemoveRebroadcastInventory(iv *types.InvVect) {
+func (s *P2PServer) RemoveRebroadcastInventory(iv *types.InvVect) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&s.shutdown) != 0 {
 		return
@@ -254,7 +231,7 @@ func (s *server) RemoveRebroadcastInventory(iv *types.InvVect) {
 
 // relayTransactions generates and relays inventory vectors for all of the
 // passed transactions to all connected peers.
-func (s *server) relayTransactions(txns []*mempool.TxDesc) {
+func (s *P2PServer) relayTransactions(txns []*mempool.TxDesc) {
 	for _, txD := range txns {
 		iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
 		s.RelayInventory(iv, txD)
@@ -265,7 +242,7 @@ func (s *server) relayTransactions(txns []*mempool.TxDesc) {
 // both websocket and getblocktemplate long poll clients of the passed
 // transactions.  This function should be called whenever new transactions
 // are added to the mempool.
-func (s *server) AnnounceNewTransactions(txns []*mempool.TxDesc) {
+func (s *P2PServer) AnnounceNewTransactions(txns []*mempool.TxDesc) {
 	// Generate and relay inventory vectors for all newly accepted
 	// transactions.
 	s.relayTransactions(txns)
@@ -277,10 +254,10 @@ func (s *server) AnnounceNewTransactions(txns []*mempool.TxDesc) {
 	}
 }
 
-// Transaction has one confirmation on the main chain. Now we can mark it as no
+// Transaction has one confirmation on the main BlockChain. Now we can mark it as no
 // longer needing rebroadcasting.
-func (s *server) TransactionConfirmed(tx *btcutil.Tx) {
-	// Rebroadcasting is only necessary when the RPC Server is active.
+func (s *P2PServer) TransactionConfirmed(tx *btcutil.Tx) {
+	// Rebroadcasting is only necessary when the RPC server is active.
 	if s.nodeServer == nil {
 		return
 	}
@@ -291,7 +268,7 @@ func (s *server) TransactionConfirmed(tx *btcutil.Tx) {
 
 // pushTxMsg sends a tx message for the provided transaction hash to the
 // connected peer.  An error is returned if the transaction hash is not known.
-func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
+func (s *P2PServer) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
 	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Attempt to fetch the requested transaction from the pool.  A
@@ -320,12 +297,12 @@ func (s *server) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<-
 
 // pushBlockMsg sends a block message for the provided block hash to the
 // connected peer.  An error is returned if the block hash is not known.
-func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
+func (s *P2PServer) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
 	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
-	err := sp.server.db.View(func(dbTx database.Tx) error {
+	err := sp.server.DB.View(func(dbTx database.Tx) error {
 		var err error
 		blockBytes, err = dbTx.FetchBlock(hash)
 		return err
@@ -374,7 +351,7 @@ func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 	// to trigger it to issue another getblocks message for the next
 	// batch of inventory.
 	if sendInv {
-		best := sp.server.chain.BestSnapshot()
+		best := sp.server.BlockChain.BestSnapshot()
 		invMsg := wire.NewMsgInvSizeHint(1)
 		iv := types.NewInvVect(types.InvTypeBlock, &best.Hash)
 		invMsg.AddInvVect(iv)
@@ -388,7 +365,7 @@ func (s *server) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan cha
 // the connected peer.  Since a merkle block requires the peer to have a filter
 // loaded, this call will simply be ignored if there is no filter loaded.  An
 // error is returned if the block hash is not known.
-func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
+func (s *P2PServer) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
 	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
 
 	// Do not send a response if the peer doesn't have a filter loaded.
@@ -400,7 +377,7 @@ func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
 	}
 
 	// Fetch the raw block bytes from the database.
-	blk, err := sp.server.chain.BlockByHash(hash)
+	blk, err := sp.server.BlockChain.BlockByHash(hash)
 	if err != nil {
 		s.logger.Tracef("Unable to fetch requested block hash %v: %v",
 			hash, err)
@@ -447,7 +424,7 @@ func (s *server) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
 
 // handleQuery is the central handler for all queries and commands from other
 // goroutines related to peer state.
-func (s *server) handleQuery(state *peerState, querymsg interface{}) {
+func (s *P2PServer) handleQuery(state *peerState, querymsg interface{}) {
 	switch msg := querymsg.(type) {
 	case getConnCountMsg:
 		nconnected := int32(0)
@@ -471,7 +448,7 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 	case connectNodeMsg:
 		// TODO: duplicate oneshots?
 		// Limit max number of total peers.
-		if state.Count() >= s.cfg.MaxPeers {
+		if state.Count() >= s.ChainProvider.Config().MaxPeers {
 			msg.reply <- errors.New("max peers reached")
 			return
 		}
@@ -583,7 +560,7 @@ func disconnectPeer(peerList map[int32]*serverPeer, compareFunc func(*serverPeer
 }
 
 // newPeerConfig returns the configuration for the given serverPeer.
-func (s *server) newPeerConfig(sp *serverPeer) *peer.Config {
+func (s *P2PServer) newPeerConfig(sp *serverPeer) *peer.Config {
 	return &peer.Config{
 		Listeners: peer.MessageListeners{
 			OnVersion:      sp.OnVersion,
@@ -620,7 +597,7 @@ func (s *server) newPeerConfig(sp *serverPeer) *peer.Config {
 		UserAgentName:    userAgentName,
 		UserAgentVersion: userAgentVersion,
 		// UserAgentComments: s.cfg.UserAgentComments,
-		ChainParams:     sp.server.chainParams,
+		ChainParams:     sp.server.ChainParams,
 		Services:        sp.server.services,
 		DisableRelayTx:  s.cfg.BlocksOnly,
 		ProtocolVersion: peer.MaxProtocolVersion,
@@ -632,10 +609,10 @@ func (s *server) newPeerConfig(sp *serverPeer) *peer.Config {
 // connection is established.  It initializes a new inbound server peer
 // instance, associates it with the connection, and starts a goroutine to wait
 // for disconnection.
-func (s *server) inboundPeerConnected(conn net.Conn) {
+func (s *P2PServer) inboundPeerConnected(conn net.Conn) {
 	sp := newServerPeer(s, false)
 	sp.isWhitelisted = s.isWhitelisted(conn.RemoteAddr())
-	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp), s.chain.Chain())
+	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp), s.BlockChain.Chain())
 	sp.AssociateConnection(conn)
 	go s.peerDoneHandler(sp)
 }
@@ -645,9 +622,9 @@ func (s *server) inboundPeerConnected(conn net.Conn) {
 // peer instance, associates it with the relevant state such as the connection
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
-func (s *server) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
+func (s *P2PServer) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 	sp := newServerPeer(s, c.Permanent)
-	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String(), s.chain.Chain())
+	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String(), s.BlockChain.Chain())
 	if err != nil {
 		s.logger.Debugf("Cannot create outbound peer %s: %v", c.Addr, err)
 		if c.Permanent {
@@ -667,7 +644,7 @@ func (s *server) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 
 // peerDoneHandler handles peer disconnects by notifiying the server that it's
 // done along with other performing other desirable cleanup.
-func (s *server) peerDoneHandler(sp *serverPeer) {
+func (s *P2PServer) peerDoneHandler(sp *serverPeer) {
 	sp.WaitForDisconnect()
 	s.donePeers <- sp
 
@@ -689,7 +666,7 @@ func (s *server) peerDoneHandler(sp *serverPeer) {
 // peerHandler is used to handle peer operations such as adding and removing
 // peers to and from the server, banning peers, and broadcasting messages to
 // peers.  It must be run in a goroutine.
-func (s *server) peerHandler() {
+func (s *P2PServer) peerHandler() {
 	// Start the address manager and sync manager, both of which are needed
 	// by peers.  This is done here since their lifecycle is closely tied
 	// to this handler and rather than adding more channels to sychronize
@@ -710,7 +687,7 @@ func (s *server) peerHandler() {
 
 	if !s.cfg.DisableDNSSeed {
 		// Add peers discovered through DNS to the address manager.
-		connmgr.SeedFromDNS(s.chainParams, defaultRequiredServices,
+		connmgr.SeedFromDNS(s.ChainParams, defaultRequiredServices,
 			s.btcdLookup, func(addrs []*wire.NetAddress) {
 				// Bitcoind uses a lookup of the dns seeder here. This
 				// is rather strange since the values looked up by the
@@ -786,25 +763,25 @@ cleanup:
 	s.logger.Tracef("Peer handler done")
 }
 
-// AddPeer adds a new peer that has already been connected to the Server.
-func (s *server) AddPeer(sp *serverPeer) {
+// AddPeer adds a new peer that has already been connected to the server.
+func (s *P2PServer) AddPeer(sp *serverPeer) {
 	s.newPeers <- sp
 }
 
-// BanPeer bans a peer that has already been connected to the Server by ip.
-func (s *server) BanPeer(sp *serverPeer) {
+// BanPeer bans a peer that has already been connected to the server by ip.
+func (s *P2PServer) BanPeer(sp *serverPeer) {
 	s.banPeers <- sp
 }
 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
-func (s *server) RelayInventory(invVect *types.InvVect, data interface{}) {
+func (s *P2PServer) RelayInventory(invVect *types.InvVect, data interface{}) {
 	s.relayInv <- relayMsg{invVect: invVect, data: data}
 }
 
 // BroadcastMessage sends msg to all peers currently connected to the Server
 // except those in the passed peers to exclude.
-func (s *server) BroadcastMessage(msg wire.Message, exclPeers ...*serverPeer) {
+func (s *P2PServer) BroadcastMessage(msg wire.Message, exclPeers ...*serverPeer) {
 	// XXX: Need to determine if this is an alert that has already been
 	// broadcast and refrain from broadcasting again.
 	bmsg := broadcastMsg{message: msg, excludePeers: exclPeers}
@@ -812,7 +789,7 @@ func (s *server) BroadcastMessage(msg wire.Message, exclPeers ...*serverPeer) {
 }
 
 // ConnectedCount returns the number of currently connected peers.
-func (s *server) ConnectedCount() int32 {
+func (s *P2PServer) ConnectedCount() int32 {
 	replyChan := make(chan int32)
 
 	s.query <- getConnCountMsg{reply: replyChan}
@@ -822,36 +799,36 @@ func (s *server) ConnectedCount() int32 {
 
 // OutboundGroupCount returns the number of peers connected to the given
 // outbound group key.
-func (s *server) OutboundGroupCount(key string) int {
+func (s *P2PServer) OutboundGroupCount(key string) int {
 	replyChan := make(chan int)
 	s.query <- getOutboundGroup{key: key, reply: replyChan}
 	return <-replyChan
 }
 
 // AddBytesSent adds the passed number of bytes to the total bytes sent counter
-// for the Server.  It is safe for concurrent access.
-func (s *server) AddBytesSent(bytesSent uint64) {
+// for the server.  It is safe for concurrent access.
+func (s *P2PServer) AddBytesSent(bytesSent uint64) {
 	atomic.AddUint64(&s.bytesSent, bytesSent)
 }
 
 // AddBytesReceived adds the passed number of bytes to the total bytes received
-// counter for the Server.  It is safe for concurrent access.
-func (s *server) AddBytesReceived(bytesReceived uint64) {
+// counter for the server.  It is safe for concurrent access.
+func (s *P2PServer) AddBytesReceived(bytesReceived uint64) {
 	atomic.AddUint64(&s.bytesReceived, bytesReceived)
 }
 
 // NetTotals returns the sum of all bytes received and sent across the network
 // for all peers.  It is safe for concurrent access.
-func (s *server) NetTotals() (uint64, uint64) {
+func (s *P2PServer) NetTotals() (uint64, uint64) {
 	return atomic.LoadUint64(&s.bytesReceived),
 		atomic.LoadUint64(&s.bytesSent)
 }
 
 // UpdatePeerHeights updates the heights of all peers who have have announced
-// the latest connected main chain block, or a recognized orphan. These height
+// the latest connected main BlockChain block, or a recognized orphan. These height
 // updates allow us to dynamically refresh peer heights, ensuring sync peer
 // selection has access to the latest block heights for each peer.
-func (s *server) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight int32, updateSource *peer.Peer) {
+func (s *P2PServer) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight int32, updateSource *peer.Peer) {
 	s.peerHeightsUpdate <- updatePeerHeightsMsg{
 		newHash:    latestBlkHash,
 		newHeight:  latestHeight,
@@ -862,7 +839,7 @@ func (s *server) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight i
 // rebroadcastHandler keeps track of user submitted inventories that we have
 // sent out but have not yet made it into a block. We periodically rebroadcast
 // them in case our peers restarted or otherwise lost track of them.
-func (s *server) rebroadcastHandler() {
+func (s *P2PServer) rebroadcastHandler() {
 	// Wait 5 min before first tx rebroadcast.
 	timer := time.NewTimer(5 * time.Minute)
 	pendingInvs := make(map[types.InvVect]interface{})
@@ -915,8 +892,46 @@ cleanup:
 	s.wg.Done()
 }
 
+func (s *P2PServer) Run(ctx context.Context) {
+	// Already started?
+	if atomic.AddInt32(&s.started, 1) != 1 {
+		return
+	}
+
+	s.logger.Trace("Starting server")
+
+	// Server startup time. Used for the uptime command for uptime calculation.
+	s.StartupTime = time.Now().Unix()
+
+	// Start the peer handler which in turn starts the address and block
+	// managers.
+	s.wg.Add(1)
+	go s.peerHandler()
+
+	if s.nat != nil {
+		s.wg.Add(1)
+		go s.upnpUpdateThread()
+	}
+	<-ctx.Done()
+
+	// Save fee estimator state in the database.
+	s.DB.Update(func(tx database.Tx) error {
+		metadata := tx.Metadata()
+		metadata.Put(mempool.EstimateFeeDatabaseKey, s.FeeEstimator.Save())
+
+		return nil
+	})
+
+	// Signal the remaining goroutines to quit.
+	close(s.quit)
+
+	s.wg.Wait()
+
+	return
+}
+
 // Start begins accepting connections from peers.
-func (s *server) Start() {
+func (s *P2PServer) Start() {
 	// Already started?
 	if atomic.AddInt32(&s.started, 1) != 1 {
 		return
@@ -944,14 +959,14 @@ func (s *server) Start() {
 	//	// the RPC Server are rebroadcast until being included in a block.
 	//	go s.rebroadcastHandler()
 	//
-	//	s.rpcServer.Start()
+	//	s.RPCServer.Start()
 	// }
 
 }
 
 // Stop gracefully shuts down the Server by stopping and disconnecting all
 // peers and the main listener.
-func (s *server) Stop() error {
+func (s *P2PServer) Stop() error {
 	// Make sure this only happens once.
 	if atomic.AddInt32(&s.shutdown, 1) != 1 {
 		s.logger.Infof("Server is already in the process of shutting down")
@@ -963,11 +978,11 @@ func (s *server) Stop() error {
 
 	// Shutdown the RPC Server if it's not disabled.
 	// if !s.rpcCfg.Disable {
-	//	s.rpcServer.Stop()
+	//	s.RPCServer.Stop()
 	// }
 
 	// Save fee estimator state in the database.
-	s.db.Update(func(tx database.Tx) error {
+	s.DB.Update(func(tx database.Tx) error {
 		metadata := tx.Metadata()
 		metadata.Put(mempool.EstimateFeeDatabaseKey, s.FeeEstimator.Save())
 
@@ -980,14 +995,14 @@ func (s *server) Stop() error {
 }
 
 // WaitForShutdown blocks until the main listener and peer handlers are stopped.
-func (s *server) WaitForShutdown() {
+func (s *P2PServer) WaitForShutdown() {
 	s.wg.Wait()
 }
 
 // ScheduleShutdown schedules a Server shutdown after the specified duration.
 // It also dynamically adjusts how often to warn the Server is going down based
 // on remaining duration.
-func (s *server) ScheduleShutdown(duration time.Duration) {
+func (s *P2PServer) ScheduleShutdown(duration time.Duration) {
 	// Don't schedule shutdown more than once.
 	if atomic.AddInt32(&s.shutdownSched, 1) != 1 {
 		return
@@ -1068,11 +1083,11 @@ func ParseListeners(addrs []string) ([]net.Addr, error) {
 	return netAddrs, nil
 }
 
-func (s *server) upnpUpdateThread() {
+func (s *P2PServer) upnpUpdateThread() {
 	// Go off immediately to prevent code duplication, thereafter we renew
 	// lease every 15 minutes.
 	timer := time.NewTimer(0 * time.Second)
-	lport, _ := strconv.ParseInt(s.chainParams.DefaultPort, 10, 16)
+	lport, _ := strconv.ParseInt(s.ChainParams.DefaultPort, 10, 16)
 	first := true
 out:
 	for {
@@ -1084,7 +1099,7 @@ out:
 			// listen port?
 			// XXX this assumes timeout is in seconds.
 			listenPort, err := s.nat.AddPortMapping("tcp", int(lport), int(lport),
-				"shard chain p2p listen port", 20*60)
+				"shard BlockChain p2p listen port", 20*60)
 			if err != nil {
 				s.logger.Warnf("can't add UPnP port mapping: %v", err)
 			}
@@ -1122,23 +1137,24 @@ out:
 	s.wg.Done()
 }
 
-func (s *server) BlockChain() *blockchain.BlockChain {
-	return s.chain
+func (s *P2PServer) GetBlockChain() *blockchain.BlockChain {
+	return s.BlockChain
 }
 
 // newServer returns a new btcd Server configured to listen on addr for the
-// bitcoin network type specified by chainParams.  Use start to begin accepting
+// bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
-	chain chain.IChain, listenAddrs, agentBlacklist, agentWhitelist []string,
-	db database.DB, logger *zap.Logger) (*server, error) {
+func Server(cfg *P2pConfig, chainProvider *ChainProvider, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainProvider.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainProvider.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
 	// }
-	if cfg.NoCFilters {
+
+	if chainCfg.NoCFilters {
 		services &^= wire.SFNodeCF
 	}
 
@@ -1146,199 +1162,46 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, chain.Params().DefaultPort, amgr, listenAddrs, services, logger)
+		listeners, nat, err = initListeners(cfg, chainProvider.IChain.Params().DefaultPort,
+			amgr, cfg.Listeners, services, logger)
 		if err != nil {
 			return nil, err
 		}
 		if len(listeners) == 0 {
 			return nil, errors.New("no valid listen address")
 		}
-		cfg.Listeners = listenAddrs
 	}
 
-	if len(agentBlacklist) > 0 {
-		logger.Info(fmt.Sprintf("User-agent blacklist %s", agentBlacklist))
+	if len(cfg.AgentBlacklist) > 0 {
+		logger.Info(fmt.Sprintf("User-agent blacklist %s", cfg.AgentBlacklist))
 	}
-	if len(agentWhitelist) > 0 {
-		logger.Info(fmt.Sprintf("User-agent whitelist %s", agentWhitelist))
+	if len(cfg.AgentWhitelist) > 0 {
+		logger.Info(fmt.Sprintf("User-agent whitelist %s", cfg.AgentWhitelist))
 	}
 
-	s := server{
-		cfg: cfg,
-		// rpcCfg:               rpc.Config,
-		chainParams:          chain.Params(),
+	p2pServer := P2PServer{
+		ChainProvider:        chainProvider,
+		cfg:                  cfg,
 		addrManager:          amgr,
-		newPeers:             make(chan *serverPeer, cfg.MaxPeers),
-		donePeers:            make(chan *serverPeer, cfg.MaxPeers),
-		banPeers:             make(chan *serverPeer, cfg.MaxPeers),
+		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
+		donePeers:            make(chan *serverPeer, chainCfg.MaxPeers),
+		banPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
 		query:                make(chan interface{}),
-		relayInv:             make(chan relayMsg, cfg.MaxPeers),
-		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
+		relayInv:             make(chan relayMsg, chainCfg.MaxPeers),
+		broadcast:            make(chan broadcastMsg, chainCfg.MaxPeers),
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
-		db:                   db,
-		TimeSource:           blockchain.NewMedianTime(),
 		services:             services,
-		SigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
-		HashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
 		cfCheckptCaches:      make(map[wire.FilterType][]cfHeaderKV),
-		agentBlacklist:       agentBlacklist,
-		agentWhitelist:       agentWhitelist,
+		agentBlacklist:       cfg.AgentBlacklist,
+		agentWhitelist:       cfg.AgentWhitelist,
 		indexLogger:          network.LogAdapter(logger.With(zap.String("scope", "index"))),
 		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "Server"))),
 		logger:               network.LogAdapter(logger),
 		zapLogger:            logger,
 	}
-
-	// Create the transaction and address indexes if needed.
-	//
-	// CAUTION: the txindex needs to be first in the indexes array because
-	// the addrindex uses data from the txindex during catchup.  If the
-	// addrindex is run first, it may not have the transactions from the
-	// current block indexed.
-	var indexes []indexers.Indexer
-	if cfg.TxIndex || cfg.AddrIndex {
-		// Enable transaction index if address index is enabled since it
-		// requires it.
-		if !cfg.TxIndex {
-			s.indexLogger.Infof("Transaction index enabled because it " +
-				"is required by the address index")
-			cfg.TxIndex = true
-		} else {
-			s.indexLogger.Info("Transaction index is enabled")
-		}
-
-		s.TxIndex = indexers.NewTxIndex(db)
-		indexes = append(indexes, s.TxIndex)
-	}
-	if cfg.AddrIndex {
-		s.indexLogger.Info("Address index is enabled")
-		s.AddrIndex = indexers.NewAddrIndex(db, chain.Params())
-		indexes = append(indexes, s.AddrIndex)
-	}
-	if !cfg.NoCFilters {
-		s.indexLogger.Info("Committed filter index is enabled")
-		s.CfIndex = indexers.NewCfIndex(db, chain.Params())
-		indexes = append(indexes, s.CfIndex)
-	}
-
-	// Create an index manager if any of the optional indexes are enabled.
-	var indexManager blockchain.IndexManager
-	if len(indexes) > 0 {
-		indexManager = indexers.NewManager(db, indexes)
-	}
-
-	// Merge given checkpoints with the default ones unless they are disabled.
-	var checkpoints []chaincfg.Checkpoint
-	// if !cfg.DisableCheckpoints {
-	//	checkpoints = mergeCheckpoints(s.chainParams.Checkpoints, cfg.addCheckpoints)
-	// }
-
-	// Create a new block chain instance with the appropriate configuration.
-	var err error
-	s.chain, err = blockchain.New(&blockchain.Config{
-		DB:           s.db,
-		Interrupt:    ctx.Done(),
-		ChainParams:  s.chainParams,
-		Checkpoints:  checkpoints,
-		TimeSource:   s.TimeSource,
-		SigCache:     s.SigCache,
-		IndexManager: indexManager,
-		HashCache:    s.HashCache,
-		Chain:        chain,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Search for a FeeEstimator state in the database. If none can be found
-	// or if it cannot be loaded, create a new one.
-	db.Update(func(tx database.Tx) error {
-		metadata := tx.Metadata()
-		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
-		if feeEstimationData != nil {
-			// delete it from the database so that we don't try to restore the
-			// same thing again somehow.
-			metadata.Delete(mempool.EstimateFeeDatabaseKey)
-
-			// If there is an error, log it and make a new fee estimator.
-			var err error
-			s.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
-
-			if err != nil {
-				s.logger.Errorf("Failed to restore fee estimator %v", err)
-			}
-		}
-
-		return nil
-	})
-
-	// If no FeeEstimator has been found, or if the one that has been found
-	// is behind somehow, create a new one and start over.
-	if s.FeeEstimator == nil || s.FeeEstimator.LastKnownHeight() != s.chain.BestSnapshot().Height {
-		s.FeeEstimator = mempool.NewFeeEstimator(
-			mempool.DefaultEstimateFeeMaxRollback,
-			mempool.DefaultEstimateFeeMinRegisteredBlocks)
-	}
-
-	txC := mempool.Config{
-		Policy: mempool.Policy{
-			DisableRelayPriority: cfg.NoRelayPriority,
-			AcceptNonStd:         cfg.RelayNonStd,
-			FreeTxRelayLimit:     cfg.FreeTxRelayLimit,
-			MaxOrphanTxs:         cfg.MaxOrphanTxs,
-			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
-			MaxSigOpCostPerTx:    blockchain.MaxBlockSigOpsCost / 4,
-			MinRelayTxFee:        cfg.MinRelayTxFeeValues,
-			MaxTxVersion:         2,
-			RejectReplacement:    cfg.RejectReplacement,
-		},
-		ChainParams:    chain.Params(),
-		FetchUtxoView:  s.chain.FetchUtxoView,
-		BestHeight:     func() int32 { return s.chain.BestSnapshot().Height },
-		MedianTimePast: func() time.Time { return s.chain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
-			return s.chain.CalcSequenceLock(tx, view, true)
-		},
-		IsDeploymentActive: s.chain.IsDeploymentActive,
-		SigCache:           s.SigCache,
-		HashCache:          s.HashCache,
-		AddrIndex:          s.AddrIndex,
-		FeeEstimator:       s.FeeEstimator,
-	}
-	s.TxMemPool = mempool.New(&txC)
-
-	s.SyncManager, err = netsync.New(&netsync.Config{
-		PeerNotifier:       &s,
-		Chain:              s.chain,
-		TxMemPool:          s.TxMemPool,
-		ChainParams:        s.chainParams,
-		DisableCheckpoints: cfg.DisableCheckpoints,
-		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       s.FeeEstimator,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the mining policy and block template generator based on the
-	// configuration options.
-	//
-	// NOTE: The CPU miner relies on the mempool, so the mempool has to be
-	// created before calling the function to create the CPU miner.
-	// policy := mining.Policy{
-	//	BlockMinWeight:    cfg.BlockMinWeight,
-	//	BlockMaxWeight:    cfg.BlockMaxWeight,
-	//	BlockMinSize:      cfg.BlockMinSize,
-	//	BlockMaxSize:      cfg.BlockMaxSize,
-	//	BlockPrioritySize: cfg.BlockPrioritySize,
-	//	TxMinFreeFee:      cfg.MinRelayTxFeeValues,
-	// }
-	// blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-	//	s.chainParams, s.TxMemPool, s.chain, s.TimeSource,
-	//	s.SigCache, s.HashCache)
 
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
@@ -1350,7 +1213,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	if len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, error) {
 			for tries := 0; tries < 100; tries++ {
-				addr := s.addrManager.GetAddress()
+				addr := p2pServer.addrManager.GetAddress()
 				if addr == nil {
 					break
 				}
@@ -1362,7 +1225,7 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 				// to the same network segment at the expense of
 				// others.
 				key := addrmgr.GroupKey(addr.NetAddress())
-				if s.OutboundGroupCount(key) != 0 {
+				if p2pServer.OutboundGroupCount(key) != 0 {
 					continue
 				}
 
@@ -1374,15 +1237,15 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 				// allow nondefault ports after 50 failed tries.
 				if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-					s.chainParams.DefaultPort {
+					p2pServer.ChainParams.DefaultPort {
 					continue
 				}
 
 				// Mark an attempt for the valid address.
-				s.addrManager.Attempt(addr.NetAddress())
+				p2pServer.addrManager.Attempt(addr.NetAddress())
 
 				addrString := addrmgr.NetAddressKey(addr.NetAddress())
-				return s.addrStringToNetAddr(addrString)
+				return p2pServer.addrStringToNetAddr(addrString)
 			}
 
 			return nil, errors.New("no valid connect address")
@@ -1391,22 +1254,22 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 	// Create a connection manager.
 	targetOutbound := defaultTargetOutbound
-	if cfg.MaxPeers < targetOutbound {
-		targetOutbound = cfg.MaxPeers
+	if chainCfg.MaxPeers < targetOutbound {
+		targetOutbound = chainCfg.MaxPeers
 	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       s.inboundPeerConnected,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
-		Dial:           s.btcdDial,
-		OnConnection:   s.outboundPeerConnected,
+		Dial:           p2pServer.btcdDial,
+		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  newAddressFunc,
 	})
 	if err != nil {
 		return nil, err
 	}
-	s.ConnManager = cmgr
+	p2pServer.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1414,33 +1277,34 @@ func Server(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		permanentPeers = cfg.Peers
 	}
 	for _, addr := range permanentPeers {
-		netAddr, err := s.addrStringToNetAddr(addr)
+		netAddr, err := p2pServer.addrStringToNetAddr(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		go s.ConnManager.Connect(&connmgr.ConnReq{
+		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
 		})
 	}
 
-	return &s, nil
+	return &p2pServer, nil
 }
 
 // newServer returns a new btcd Server configured to listen on addr for the
-// bitcoin network type specified by chainParams.  Use start to begin accepting
+// bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
-func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager, chain chain.IChain,
-	db database.DB, logger *zap.Logger) (*server, error) {
+func ShardServer(cfg *P2pConfig, chainProvider *ChainProvider, amgr *addrmgr.AddrManager) (*P2PServer, error) {
+	logger := chainProvider.Log().With(zap.String("server", "p2p"))
+	chainCfg := chainProvider.Config()
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
 	// if cfg.NoPeerBloomFilters {
 	//	services &^= wire.SFNodeBloom
 	// }
-	if cfg.NoCFilters {
+	if chainCfg.NoCFilters {
 		services &^= wire.SFNodeCF
 	}
 
@@ -1448,7 +1312,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	var nat NAT
 	if !cfg.DisableListen {
 		var err error
-		listeners, nat, err = initListeners(cfg, chain.Params().DefaultPort, amgr, []string{":"}, services, logger)
+		listeners, nat, err = initListeners(cfg, chainProvider.IChain.Params().DefaultPort, amgr, []string{":"}, services, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -1457,148 +1321,28 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 		}
 	}
 
-	srv := server{
-		cfg: cfg,
-		// rpcCfg:               rpc.Config,
-		chainParams:          chain.Params(),
+	p2pServer := P2PServer{
+		ChainProvider:        chainProvider,
+		cfg:                  cfg,
 		addrManager:          amgr,
-		newPeers:             make(chan *serverPeer, cfg.MaxPeers),
-		donePeers:            make(chan *serverPeer, cfg.MaxPeers),
-		banPeers:             make(chan *serverPeer, cfg.MaxPeers),
+		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
+		donePeers:            make(chan *serverPeer, chainCfg.MaxPeers),
+		banPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
 		query:                make(chan interface{}),
-		relayInv:             make(chan relayMsg, cfg.MaxPeers),
-		broadcast:            make(chan broadcastMsg, cfg.MaxPeers),
+		relayInv:             make(chan relayMsg, chainCfg.MaxPeers),
+		broadcast:            make(chan broadcastMsg, chainCfg.MaxPeers),
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan updatePeerHeightsMsg),
 		nat:                  nat,
-		db:                   db,
-		TimeSource:           blockchain.NewMedianTime(),
-		services:             services,
-		SigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
-		HashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
-		cfCheckptCaches:      make(map[wire.FilterType][]cfHeaderKV),
-		indexLogger:          network.LogAdapter(logger.With(zap.String("scope", "index"))),
-		serverLogger:         network.LogAdapter(logger.With(zap.String("scope", "Server"))),
-		logger:               network.LogAdapter(logger),
-		zapLogger:            logger,
+
+		services:        services,
+		cfCheckptCaches: make(map[wire.FilterType][]cfHeaderKV),
+		indexLogger:     network.LogAdapter(logger.With(zap.String("scope", "index"))),
+		serverLogger:    network.LogAdapter(logger.With(zap.String("scope", "Server"))),
+		logger:          network.LogAdapter(logger),
+		zapLogger:       logger,
 	}
-
-	// Create the transaction and address indexes if needed.
-	//
-	// CAUTION: the txindex needs to be first in the indexes array because
-	// the addrindex uses data from the txindex during catchup.  If the
-	// addrindex is run first, it may not have the transactions from the
-	// current block indexed.
-
-	// Merge given checkpoints with the default ones unless they are disabled.
-	var checkpoints []chaincfg.Checkpoint
-	// if !cfg.DisableCheckpoints {
-	//	checkpoints = mergeCheckpoints(srv.chainParams.Checkpoints, cfg.addCheckpoints)
-	// }
-
-	// Create a new block chain instance with the appropriate configuration.
-	var err error
-	srv.chain, err = blockchain.New(&blockchain.Config{
-		DB:          srv.db,
-		Interrupt:   ctx.Done(),
-		ChainParams: srv.chainParams,
-		Checkpoints: checkpoints,
-		TimeSource:  srv.TimeSource,
-		SigCache:    srv.SigCache,
-		HashCache:   srv.HashCache,
-		Chain:       chain,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Search for a FeeEstimator state in the database. If none can be found
-	// or if it cannot be loaded, create a new one.
-	db.Update(func(tx database.Tx) error {
-		metadata := tx.Metadata()
-		feeEstimationData := metadata.Get(mempool.EstimateFeeDatabaseKey)
-		if feeEstimationData != nil {
-			// delete it from the database so that we don't try to restore the
-			// same thing again somehow.
-			metadata.Delete(mempool.EstimateFeeDatabaseKey)
-
-			// If there is an error, log it and make a new fee estimator.
-			var err error
-			srv.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
-
-			if err != nil {
-				srv.logger.Errorf("Failed to restore fee estimator %v", err)
-			}
-		}
-
-		return nil
-	})
-
-	// If no FeeEstimator has been found, or if the one that has been found
-	// is behind somehow, create a new one and start over.
-	if srv.FeeEstimator == nil || srv.FeeEstimator.LastKnownHeight() != srv.chain.BestSnapshot().Height {
-		srv.FeeEstimator = mempool.NewFeeEstimator(
-			mempool.DefaultEstimateFeeMaxRollback,
-			mempool.DefaultEstimateFeeMinRegisteredBlocks)
-	}
-
-	txC := mempool.Config{
-		Policy: mempool.Policy{
-			DisableRelayPriority: cfg.NoRelayPriority,
-			AcceptNonStd:         cfg.RelayNonStd,
-			FreeTxRelayLimit:     cfg.FreeTxRelayLimit,
-			MaxOrphanTxs:         cfg.MaxOrphanTxs,
-			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
-			MaxSigOpCostPerTx:    blockchain.MaxBlockSigOpsCost / 4,
-			MinRelayTxFee:        cfg.MinRelayTxFeeValues,
-			MaxTxVersion:         2,
-			RejectReplacement:    cfg.RejectReplacement,
-		},
-		ChainParams:    chain.Params(),
-		FetchUtxoView:  srv.chain.FetchUtxoView,
-		BestHeight:     func() int32 { return srv.chain.BestSnapshot().Height },
-		MedianTimePast: func() time.Time { return srv.chain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
-			return srv.chain.CalcSequenceLock(tx, view, true)
-		},
-		IsDeploymentActive: srv.chain.IsDeploymentActive,
-		SigCache:           srv.SigCache,
-		HashCache:          srv.HashCache,
-		AddrIndex:          srv.AddrIndex,
-		FeeEstimator:       srv.FeeEstimator,
-	}
-	srv.TxMemPool = mempool.New(&txC)
-
-	srv.SyncManager, err = netsync.New(&netsync.Config{
-		PeerNotifier:       &srv,
-		Chain:              srv.chain,
-		TxMemPool:          srv.TxMemPool,
-		ChainParams:        srv.chainParams,
-		DisableCheckpoints: cfg.DisableCheckpoints,
-		MaxPeers:           cfg.MaxPeers,
-		FeeEstimator:       srv.FeeEstimator,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the mining policy and block template generator based on the
-	// configuration options.
-	//
-	// NOTE: The CPU miner relies on the mempool, so the mempool has to be
-	// created before calling the function to create the CPU miner.
-	// policy := mining.Policy{
-	//	BlockMinWeight:    cfg.BlockMinWeight,
-	//	BlockMaxWeight:    cfg.BlockMaxWeight,
-	//	BlockMinSize:      cfg.BlockMinSize,
-	//	BlockMaxSize:      cfg.BlockMaxSize,
-	//	BlockPrioritySize: cfg.BlockPrioritySize,
-	//	TxMinFreeFee:      cfg.MinRelayTxFeeValues,
-	// }
-	// blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-	//	srv.chainParams, srv.TxMemPool, srv.chain, srv.TimeSource,
-	//	srv.SigCache, srv.HashCache)
 
 	// Only setup a function to return new addresses to connect to when
 	// not running in connect-only mode.  The simulation network is always
@@ -1610,7 +1354,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	if len(cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, error) {
 			for tries := 0; tries < 100; tries++ {
-				addr := srv.addrManager.GetAddress()
+				addr := p2pServer.addrManager.GetAddress()
 				if addr == nil {
 					break
 				}
@@ -1622,7 +1366,7 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 				// to the same network segment at the expense of
 				// others.
 				key := addrmgr.GroupKey(addr.NetAddress())
-				if srv.OutboundGroupCount(key) != 0 {
+				if p2pServer.OutboundGroupCount(key) != 0 {
 					continue
 				}
 
@@ -1634,15 +1378,15 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 				// allow nondefault ports after 50 failed tries.
 				if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-					srv.chainParams.DefaultPort {
+					p2pServer.ChainParams.DefaultPort {
 					continue
 				}
 
 				// Mark an attempt for the valid address.
-				srv.addrManager.Attempt(addr.NetAddress())
+				p2pServer.addrManager.Attempt(addr.NetAddress())
 
 				addrString := addrmgr.NetAddressKey(addr.NetAddress())
-				return srv.addrStringToNetAddr(addrString)
+				return p2pServer.addrStringToNetAddr(addrString)
 			}
 
 			return nil, errors.New("no valid connect address")
@@ -1651,22 +1395,22 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 
 	// Create a connection manager.
 	targetOutbound := defaultTargetOutbound
-	if cfg.MaxPeers < targetOutbound {
-		targetOutbound = cfg.MaxPeers
+	if chainCfg.MaxPeers < targetOutbound {
+		targetOutbound = chainCfg.MaxPeers
 	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       srv.inboundPeerConnected,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
-		Dial:           srv.btcdDial,
-		OnConnection:   srv.outboundPeerConnected,
+		Dial:           p2pServer.btcdDial,
+		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  newAddressFunc,
 	})
 	if err != nil {
 		return nil, err
 	}
-	srv.ConnManager = cmgr
+	p2pServer.ConnManager = cmgr
 
 	// Start up persistent peers.
 	permanentPeers := cfg.ConnectPeers
@@ -1675,19 +1419,19 @@ func ShardServer(ctx context.Context, cfg *P2pConfig, amgr *addrmgr.AddrManager,
 	}
 
 	for _, addr := range permanentPeers {
-		netAddr, err := srv.addrStringToNetAddr(addr)
+		netAddr, err := p2pServer.addrStringToNetAddr(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		go srv.ConnManager.Connect(&connmgr.ConnReq{
+		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
 			ShardID:   1010101,
 			Permanent: true,
 		})
 	}
 
-	return &srv, nil
+	return &p2pServer, nil
 }
 
 // initListeners initializes the configured net listeners and adds any bound
@@ -1714,7 +1458,7 @@ func initListeners(cfg *P2pConfig, defaultPort string, amgr *addrmgr.AddrManager
 	if len(cfg.ExternalIPs) != 0 {
 		defaultPort, err := strconv.ParseUint(defaultPort, 10, 16)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Can not parse default port %s for active chain: %v",
+			logger.Error(fmt.Sprintf("Can not parse default port %s for active BlockChain: %v",
 				defaultPort, err))
 			return nil, nil, err
 		}
@@ -1772,7 +1516,7 @@ func initListeners(cfg *P2pConfig, defaultPort string, amgr *addrmgr.AddrManager
 // a net.Addr which maps to the original address with any host names resolved
 // to IP addresses.  It also handles tor addresses properly by returning a
 // net.Addr that encapsulates the address.
-func (s *server) addrStringToNetAddr(addr string) (net.Addr, error) {
+func (s *P2PServer) addrStringToNetAddr(addr string) (net.Addr, error) {
 	host, strPort, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -1816,7 +1560,7 @@ func (s *server) addrStringToNetAddr(addr string) (net.Addr, error) {
 	}, nil
 }
 
-// addLocalAddress adds an address that this node is listening on to the
+// addLocalAddress adds an address that this chainProvider is listening on to the
 // address manager so that it may be relayed to peers.
 func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.ServiceFlag) error {
 	host, portStr, err := net.SplitHostPort(addr)
@@ -1886,7 +1630,7 @@ func dynamicTickDuration(remaining time.Duration) time.Duration {
 
 // isWhitelisted returns whether the IP address is included in the whitelisted
 // networks and IPs.
-func (s *server) isWhitelisted(addr net.Addr) bool {
+func (s *P2PServer) isWhitelisted(addr net.Addr) bool {
 	// if len(s.cfg.Whitelists) == 0 {
 	//	return false
 	// }
@@ -1912,7 +1656,7 @@ func (s *server) isWhitelisted(addr net.Addr) bool {
 
 // checkpointSorter implements sort.Interface to allow a slice of checkpoints to
 // be sorted.
-type checkpointSorter []chaincfg.Checkpoint
+type checkpointSorter []chaincore.Checkpoint
 
 // Len returns the number of checkpoints in the slice.  It is part of the
 // sort.Interface implementation.
@@ -1937,10 +1681,10 @@ func (s checkpointSorter) Less(i, j int) bool {
 // checkpoints contain a checkpoint with the same height as a checkpoint in the
 // default checkpoints, the additional checkpoint will take precedence and
 // overwrite the default one.
-func mergeCheckpoints(defaultCheckpoints, additional []chaincfg.Checkpoint) []chaincfg.Checkpoint {
+func mergeCheckpoints(defaultCheckpoints, additional []chaincore.Checkpoint) []chaincore.Checkpoint {
 	// Create a map of the additional checkpoints to remove duplicates while
 	// leaving the most recently-specified checkpoint.
-	extra := make(map[int32]chaincfg.Checkpoint)
+	extra := make(map[int32]chaincore.Checkpoint)
 	for _, checkpoint := range additional {
 		extra[checkpoint.Height] = checkpoint
 	}
@@ -1948,7 +1692,7 @@ func mergeCheckpoints(defaultCheckpoints, additional []chaincfg.Checkpoint) []ch
 	// Add all default checkpoints that do not have an override in the
 	// additional checkpoints.
 	numDefault := len(defaultCheckpoints)
-	checkpoints := make([]chaincfg.Checkpoint, 0, numDefault+len(extra))
+	checkpoints := make([]chaincore.Checkpoint, 0, numDefault+len(extra))
 	for _, checkpoint := range defaultCheckpoints {
 		if _, exists := extra[checkpoint.Height]; !exists {
 			checkpoints = append(checkpoints, checkpoint)
@@ -1971,7 +1715,7 @@ func pickNoun(n uint64, singular, plural string) string {
 	return plural
 }
 
-func (s *server) btcdLookup(host string) ([]net.IP, error) {
+func (s *P2PServer) btcdLookup(host string) ([]net.IP, error) {
 	if strings.HasSuffix(host, ".onion") {
 		return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 	}
@@ -1984,7 +1728,7 @@ func (s *server) btcdLookup(host string) ([]net.IP, error) {
 // example, .onion addresses will be dialed using the onion specific proxy if
 // one was specified, but will otherwise use the normal dial function (which
 // could itself use a proxy or not).
-func (s *server) btcdDial(addr net.Addr) (net.Conn, error) {
+func (s *P2PServer) btcdDial(addr net.Addr) (net.Conn, error) {
 	if strings.Contains(addr.String(), ".onion:") {
 		return s.cfg.Oniondial(addr.Network(), addr.String(),
 			defaultConnectTimeout)

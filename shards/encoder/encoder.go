@@ -4,13 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"math"
 	"net"
 	"reflect"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 const (
@@ -38,7 +39,7 @@ var (
 )
 
 //
-//type Encoder interface {
+// type Encoder interface {
 //	ReadElements(r io.Reader, elements ...interface{}) error
 //	WriteElements(w io.Writer, elements ...interface{}) error
 //
@@ -67,7 +68,7 @@ var (
 //
 //	Uint64(r io.Reader, ) (uint64, error)
 //	PutUint64(w io.Writer, val uint64) error
-//}
+// }
 
 // errNonCanonicalVarInt is the common format string used for non-canonically
 // encoded variable length integer errors.
@@ -583,13 +584,13 @@ func RandomUint64() (uint64, error) {
 // ReadInvVect reads an encoded InvVect from r depending on the protocol
 // version.
 func ReadInvVect(r io.Reader, iv *types.InvVect) error {
-	//enc := NewEncoder(CommandSize)
+	// enc := NewEncoder(CommandSize)
 	return ReadElements(r, &iv.Type, &iv.Hash)
 }
 
 // WriteInvVect serializes an InvVect to w depending on the protocol version.
 func WriteInvVect(w io.Writer, iv *types.InvVect) error {
-	//enc := chain.NewEncoder(chain.CommandSize)
+	// enc := chain.NewEncoder(chain.CommandSize)
 	return WriteElements(w, iv.Type, &iv.Hash)
 }
 
@@ -599,7 +600,7 @@ func WriteInvVect(w io.Writer, iv *types.InvVect) error {
 func ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) error {
 	var ip [16]byte
 
-	//enc := chain.NewEncoder(chain.CommandSize)
+	// enc := chain.NewEncoder(chain.CommandSize)
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// protocol version >= NetAddressTimeVersion
@@ -636,7 +637,7 @@ func WriteNetAddress(w io.Writer, pver uint32, na *types.NetAddress, ts bool) er
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.
-	//enc := chain.NewEncoder(chain.CommandSize)
+	// enc := chain.NewEncoder(chain.CommandSize)
 	if ts && pver >= types.NetAddressTimeVersion {
 		err := WriteElements(w, uint32(na.Timestamp.Unix()))
 		if err != nil {

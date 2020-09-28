@@ -9,11 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
@@ -22,7 +23,6 @@ import (
 // getblocktemplate.
 type gbtWorkState struct {
 	sync.Mutex
-	server        *rpcServer
 	lastTxUpdate  time.Time
 	lastGenerated time.Time
 	prevHash      *chainhash.Hash
@@ -34,9 +34,8 @@ type gbtWorkState struct {
 
 // newGbtWorkState returns a new instance of a gbtWorkState with all internal
 // fields initialized and ready to use.
-func newGbtWorkState(server *rpcServer, timeSource blockchain.MedianTimeSource) *gbtWorkState {
+func newGbtWorkState(timeSource blockchain.MedianTimeSource) *gbtWorkState {
 	return &gbtWorkState{
-		server:     server,
 		notifyMap:  make(map[chainhash.Hash]map[int64]chan struct{}),
 		timeSource: timeSource,
 	}
@@ -48,7 +47,7 @@ func newGbtWorkState(server *rpcServer, timeSource blockchain.MedianTimeSource) 
 // This function MUST be called with the state locked.
 func (state *gbtWorkState) notifyLongPollers(latestHash *chainhash.Hash, lastGenerated time.Time) {
 	// Notify anything that is waiting for a block template update from a
-	// hash which is not the hash of the tip of the best chain since their
+	// hash which is not the hash of the tip of the best BlockChain since their
 	// work is now invalid.
 	for hash, channels := range state.notifyMap {
 		if !hash.IsEqual(latestHash) {
@@ -165,8 +164,8 @@ func (state *gbtWorkState) templateUpdateChan(prevHash *chainhash.Hash, lastGene
 // addresses.
 //
 // This function MUST be called with the state locked.
-func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bool) error {
-	generator := s.node.Generator
+func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue bool) error {
+	generator := s.chainProvider.Generator
 	lastTxUpdate := generator.TxSource().LastUpdated()
 	if lastTxUpdate.IsZero() {
 		lastTxUpdate = time.Now()
@@ -178,7 +177,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 	// generated.
 	var msgBlock *wire.MsgBlock
 	var targetDifficulty string
-	latestHash := &s.node.Chain.BestSnapshot().Hash
+	latestHash := &s.chainProvider.BlockChain.BestSnapshot().Hash
 	template := state.template
 	if template == nil || state.prevHash == nil ||
 		!state.prevHash.IsEqual(latestHash) ||
@@ -195,8 +194,8 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr btcutil.Address
-		if !useCoinbaseValue && len(s.node.MiningAddrs) > 0 {
-			payAddr = s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+		if !useCoinbaseValue && len(s.chainProvider.MiningAddrs) > 0 {
+			payAddr = s.chainProvider.MiningAddrs[rand.Intn(len(s.chainProvider.MiningAddrs))]
 		}
 
 		// Create a new block template that has a coinbase which anyone
@@ -216,9 +215,9 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 			blockchain.CompactToBig(msgBlock.Header.Bits()))
 
 		// Get the minimum allowed timestamp for the block based on the
-		// median timestamp of the last several blocks per the chain
+		// median timestamp of the last several blocks per the BlockChain
 		// consensus rules.
-		best := s.node.Chain.BestSnapshot()
+		best := s.chainProvider.BlockChain.BestSnapshot()
 		minTimestamp := mining.MinimumMedianTime(best)
 
 		// Update work state to ensure another block template isn't
@@ -252,7 +251,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 		// returned if none have been specified.
 		if !useCoinbaseValue && !template.ValidPayAddress {
 			// Choose a payment address at random.
-			payToAddr := s.node.MiningAddrs[rand.Intn(len(s.node.MiningAddrs))]
+			payToAddr := s.chainProvider.MiningAddrs[rand.Intn(len(s.chainProvider.MiningAddrs))]
 
 			// Update the block coinbase output of the template to
 			// pay to the randomly selected payment address.
@@ -277,7 +276,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *rpcServer, useCoinbaseValue bo
 
 		// Update the time of the block template to the current time
 		// while accounting for the median time of the past several
-		// blocks per the chain consensus rules.
+		// blocks per the BlockChain consensus rules.
 		generator.UpdateBlockTime(msgBlock)
 		msgBlock.Header.SetNonce(0)
 
@@ -349,8 +348,8 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		// Serialize the transaction for later conversion to hex.
 		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(txBuf); err != nil {
-			context := "Failed to serialize transaction"
-			return nil, state.server.internalRPCError(err.Error(), context)
+			context := errors.Wrap(err, "Failed to serialize transaction").Error()
+			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, context)
 		}
 
 		bTx := btcutil.NewTx(tx)
@@ -370,7 +369,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	//  Including MinTime -> time/decrement
 	//  Omitting CoinbaseTxn -> coinbase, generation
 	targetDifficulty := fmt.Sprintf("%064x", blockchain.CompactToBig(header.Bits()))
-	templateID := encodeTemplateID(state.prevHash, state.lastGenerated)
+	templateID := ToolsXt{}.EncodeTemplateID(state.prevHash, state.lastGenerated)
 	reply := btcjson.GetBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
@@ -380,7 +379,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		SigOpLimit:   blockchain.MaxBlockSigOpsCost,
 		SizeLimit:    wire.MaxBlockPayload,
 		Transactions: transactions,
-		Version:      header.Version(),
+		Version:      int32(header.Version()),
 		LongPollID:   templateID,
 		SubmitOld:    submitOld,
 		Target:       targetDifficulty,
@@ -416,8 +415,8 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 		tx := msgBlock.Transactions[0]
 		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(txBuf); err != nil {
-			context := "Failed to serialize transaction"
-			return nil, state.server.internalRPCError(err.Error(), context)
+			err := errors.Wrap(err, "Failed to serialize transaction")
+			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, err.Error())
 		}
 
 		resultTx := btcjson.GetBlockTemplateResultTx{

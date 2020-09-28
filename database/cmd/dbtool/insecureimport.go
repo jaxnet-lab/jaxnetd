@@ -12,12 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -342,7 +341,7 @@ func (cmd *importCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(beacon.Chain(&chaincfg.TestNet3Params))
+	db, err := loadBlockDB(beacon.Chain(&chaincore.TestNet3Params))
 	if err != nil {
 		return err
 	}

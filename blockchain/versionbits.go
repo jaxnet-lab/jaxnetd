@@ -5,9 +5,10 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"math"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 const (
@@ -124,7 +125,7 @@ func (c bitConditionChecker) Condition(node chain.IBlockNode) (bool, error) {
 // test a specific deployment rule.  This is required for properly detecting
 // and activating consensus rule changes.
 type deploymentChecker struct {
-	deployment *chaincfg.ConsensusDeployment
+	deployment *chaincore.ConsensusDeployment
 	chain      *BlockChain
 }
 
@@ -214,6 +215,8 @@ func (b *BlockChain) calcNextBlockVersion(prevNode chain.IBlockNode) (int32, err
 			expectedVersion |= uint32(1) << deployment.BitNumber
 		}
 	}
+
+	// todo(mike): here will be expansion flag setup
 	return int32(expectedVersion), nil
 }
 

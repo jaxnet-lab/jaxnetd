@@ -2,9 +2,10 @@ package shards
 
 import (
 	"context"
+	"errors"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
 )
 
@@ -18,55 +19,96 @@ const (
 type chainController struct {
 	logger *zap.Logger
 	cfg    *Config
+	// -------------------------------
 
 	// controller runtime
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	beacon      chain.IChain
-	shards      map[uint32]chain.IChain
+	beacon      BeaconCtl
+	shardsCtl   map[uint32]shardRO
+	shardsIndex *Index
 	shardsMutex sync.RWMutex
-
 	// -------------------------------
+
 }
 
 func Controller(logger *zap.Logger) *chainController {
 	res := &chainController{
-		logger: logger,
-		shards: make(map[uint32]chain.IChain),
+		logger:    logger,
+		shardsCtl: make(map[uint32]shardRO),
+		shardsIndex: &Index{
+			LastShardID:      0,
+			LastBeaconHeight: 0,
+			Shards:           map[uint32]ShardInfo{},
+		},
 	}
 	return res
 }
 
-func (ctrl *chainController) Run(ctx context.Context, cfg *Config) error {
-	ctrl.cfg = cfg
-	ctrl.ctx, ctrl.cancel = context.WithCancel(ctx)
+func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
+	chainCtl.cfg = cfg
+	chainCtl.ctx, chainCtl.cancel = context.WithCancel(ctx)
 
-	ctrl.wg.Add(1)
-	go func() {
-		defer ctrl.wg.Done()
-		if err := ctrl.runBeacon(ctrl.ctx, cfg); err != nil {
-			ctrl.logger.Error("Beacon error", zap.Error(err))
+	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
+		chainCtl.logger.Error("Beacon error", zap.Error(err))
+		return err
+	}
+
+	if cfg.Node.Shards.Enable {
+		if err := chainCtl.runShards(); err != nil {
+			chainCtl.logger.Error("Shards error", zap.Error(err))
+			return err
 		}
-	}()
-
-	if !cfg.Node.Shards.Enable {
-		return nil
 	}
 
-	for shardID := range cfg.Node.Shards.IDs {
-		ctrl.wg.Add(1)
-		go ctrl.runShardRoutine(shardID)
+	if err := chainCtl.runRpc(ctx, cfg); err != nil {
+		chainCtl.logger.Error("RPC Init error", zap.Error(err))
+		return err
 	}
-
-	// if len(ctrl.shards) != len(cfg.Node.Shards.IDs) {
-	// 	ctrl.cancel()
-	// 	ctrl.wg.Wait()
-	// 	return errors.New("some shards not started")
-	// }
 
 	<-ctx.Done()
-	ctrl.wg.Wait()
+	chainCtl.wg.Wait()
+	return nil
+}
+
+func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
+	if interruptRequested(ctx) {
+		return errors.New("can't create interrupt request")
+	}
+
+	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg, chainCtl)
+	if err := chainCtl.beacon.Init(); err != nil {
+		chainCtl.logger.Error("Can't init Beacon chainCtl", zap.Error(err))
+		return err
+	}
+
+	chainCtl.wg.Add(1)
+	go func() {
+		chainCtl.beacon.Run(ctx)
+		chainCtl.wg.Done()
+	}()
+
+	return nil
+}
+
+func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
+	beaconActor := chainCtl.beacon.ChainProvider()
+
+	var shardsProviders = map[uint32]*server.ChainProvider{}
+	for id, ro := range chainCtl.shardsCtl {
+		shardsProviders[id] = ro.ctl.ChainProvider()
+	}
+
+	srv := server.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger, beaconActor, shardsProviders)
+	chainCtl.wg.Add(1)
+
+	go func() {
+		srv.Run(ctx)
+		chainCtl.wg.Done()
+
+	}()
+
 	return nil
 }

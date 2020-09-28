@@ -7,15 +7,15 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // mainNetGenesisHash is the hash of the first block in the block Chain for the
@@ -749,7 +749,7 @@ func TestRandomUint64(t *testing.T) {
 // and checks the results accordingly.
 func TestRandomUint64Errors(t *testing.T) {
 	// Test short reads.
-	//fr := fakeRandReader{n: 2, err: io.EOF}
+	// fr := fakeRandReader{n: 2, err: io.EOF}
 	nonce, err := encoder.RandomUint64()
 	if err != io.ErrUnexpectedEOF {
 		t.Errorf("Error not expected value of %v [%v]",

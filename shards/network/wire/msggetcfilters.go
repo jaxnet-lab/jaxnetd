@@ -5,10 +5,10 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // MaxGetCFiltersReqRange the maximum number of filters that may be requested in

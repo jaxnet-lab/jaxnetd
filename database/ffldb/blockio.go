@@ -11,15 +11,15 @@ import (
 	"container/list"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 const (

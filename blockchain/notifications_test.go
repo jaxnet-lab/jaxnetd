@@ -1,12 +1,14 @@
 // Copyright (c) 2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+//+build deprecated_tests
 
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 // TestNotifications ensures that notification callbacks are fired on events.
@@ -18,7 +20,7 @@ func TestNotifications(t *testing.T) {
 
 	// Create a new database and chain instance to run tests against.
 	chain, teardownFunc, err := chainSetup("notifications",
-		&chaincfg.MainNetParams)
+		&chaincore.MainNetParams)
 	if err != nil {
 		t.Fatalf("Failed to setup chain instance: %v", err)
 	}

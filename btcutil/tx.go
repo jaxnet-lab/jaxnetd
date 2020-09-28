@@ -6,9 +6,10 @@ package btcutil
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"io"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
 // TxIndexUnknown is the value returned for a transaction index that is unknown.

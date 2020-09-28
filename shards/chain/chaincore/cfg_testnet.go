@@ -1,11 +1,11 @@
-package chaincfg
+package chaincore
 
 import (
 	"math"
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -56,22 +56,18 @@ var TestNet3Params = Params{
 
 	// Chain parameters
 	// GenesisBlock: &testNet3GenesisBlock,
-	GenesisHash:  &testNet3GenesisHash,
-	PowLimit:     testNet3PowLimit,
-	PowLimitBits: 0x1d00ffff,
-	// PowLimitBits: 0x1e0fffff,
-	// PowLimitBits:             0x207fffff,
+	GenesisHash:              &testNet3GenesisHash,
+	PowLimit:                 testNet3PowLimit,
+	PowLimitBits:             0x1d00ffff,
 	BIP0034Height:            0,
 	BIP0065Height:            0,
 	BIP0066Height:            0,
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
 
-	TargetTimespan:     time.Second * 60 * 60 * 24,
-	TargetTimePerBlock: time.Second * 15,
-	// TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	// TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4, // 25% less, 400% more
+	TargetTimespan:           time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
 	ReduceMinDifficulty:      true,
 	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 	GenerateSupported:        true,

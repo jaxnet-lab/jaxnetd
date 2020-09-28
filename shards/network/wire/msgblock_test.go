@@ -6,16 +6,18 @@ package wire
 
 import (
 	"bytes"
-	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
+
 //
-//// TestBlock tests the MsgBlock API.
-//func TestBlock(t *testing.T) {
+// // TestBlock tests the MsgBlock API.
+// func TestBlock(t *testing.T) {
 //	pver := ProtocolVersion
 //
 //	// Block 1 header.
@@ -65,7 +67,7 @@ import (
 //		t.Errorf("ClearTransactions: wrong transactions - got %v, want %v",
 //			len(msg.Transactions), 0)
 //	}
-//}
+// }
 
 // TestBlockTxHashes tests the ability to generate a slice of all transaction
 // hashes from a block accurately.
@@ -484,7 +486,7 @@ func TestBlockSerializeSize(t *testing.T) {
 
 // blockOne is the first block in the mainnet block Chain.
 var blockOne = MsgBlock{
-	//Header: chain.DefaultChain.NewBlockHeader(1,
+	// Header: chain.DefaultChain.NewBlockHeader(1,
 	//	[chainhash.HashSize]byte{ // Make go vet happy.
 	//		0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 	//		0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,
@@ -501,7 +503,7 @@ var blockOne = MsgBlock{
 	//	time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
 	//	0x1d00ffff,               // 486604799
 	//	0x9962e301,               // 2573394689
-	//),
+	// ),
 	Transactions: []*MsgTx{
 		{
 			Version: 1,

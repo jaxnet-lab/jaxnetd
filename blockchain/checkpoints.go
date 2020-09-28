@@ -6,12 +6,12 @@ package blockchain
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -33,7 +33,7 @@ func newHashFromStr(hexStr string) *chainhash.Hash {
 // nil.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) Checkpoints() []chaincfg.Checkpoint {
+func (b *BlockChain) Checkpoints() []chaincore.Checkpoint {
 	return b.checkpoints
 }
 
@@ -49,7 +49,7 @@ func (b *BlockChain) HasCheckpoints() bool {
 // instance, it will return nil.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) LatestCheckpoint() *chaincfg.Checkpoint {
+func (b *BlockChain) LatestCheckpoint() *chaincore.Checkpoint {
 	if !b.HasCheckpoints() {
 		return nil
 	}

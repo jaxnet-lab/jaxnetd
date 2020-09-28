@@ -5,14 +5,14 @@
 package server
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"sync/atomic"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // rpcPeer provides a peer for use with the RPC server and implements the
@@ -61,20 +61,20 @@ func (p *rpcPeer) FeeFilter() int64 {
 }
 
 // RPCSyncMgr provides a block manager for use with the RPC Server and
-// implements the rpcserverSyncManager interface.
+// implements the RPCServerSyncManager interface.
 type RPCSyncMgr struct {
-	Server  *server
+	Server  *P2PServer
 	SyncMgr *netsync.SyncManager
 }
 
-// Ensure RPCSyncMgr implements the rpcserverSyncManager interface.
-var _ rpcserverSyncManager = (*RPCSyncMgr)(nil)
+// Ensure RPCSyncMgr implements the RPCServerSyncManager interface.
+var _ RPCServerSyncManager = (*RPCSyncMgr)(nil)
 
-// IsCurrent returns whether or not the sync manager believes the chain is
+// IsCurrent returns whether or not the sync manager believes the BlockChain is
 // current as compared to the rest of the network.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverSyncManager interface implementation.
+// RPCServerSyncManager interface implementation.
 func (b *RPCSyncMgr) IsCurrent() bool {
 	return b.SyncMgr.IsCurrent()
 }
@@ -83,7 +83,7 @@ func (b *RPCSyncMgr) IsCurrent() bool {
 // locally.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverSyncManager interface implementation.
+// RPCServerSyncManager interface implementation.
 func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
 	return b.SyncMgr.ProcessBlock(block, flags)
 }
@@ -91,7 +91,7 @@ func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.Behavior
 // Pause pauses the sync manager until the returned channel is closed.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverSyncManager interface implementation.
+// RPCServerSyncManager interface implementation.
 func (b *RPCSyncMgr) Pause() chan<- struct{} {
 	return b.SyncMgr.Pause()
 }
@@ -100,7 +100,7 @@ func (b *RPCSyncMgr) Pause() chan<- struct{} {
 // from.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverSyncManager interface implementation.
+// RPCServerSyncManager interface implementation.
 func (b *RPCSyncMgr) SyncPeerID() int32 {
 	return b.SyncMgr.SyncPeerID()
 }
@@ -110,7 +110,7 @@ func (b *RPCSyncMgr) SyncPeerID() int32 {
 // reached, up to a max of wire.MaxBlockHeadersPerMsg hashes.
 //
 // This function is safe for concurrent access and is part of the
-// rpcserverSyncManager interface implementation.
+// RPCServerSyncManager interface implementation.
 func (b *RPCSyncMgr) LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader {
-	return b.Server.chain.LocateHeaders(locators, hashStop)
+	return b.Server.BlockChain.LocateHeaders(locators, hashStop)
 }

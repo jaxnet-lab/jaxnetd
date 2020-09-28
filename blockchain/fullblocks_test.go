@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file.
 
 package blockchain_test
+
 //
 //import (
 //	"bytes"
@@ -17,7 +18,7 @@ package blockchain_test
 //	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 //	"gitlab.com/jaxnet/core/shard.core.git/blockchain/fullblocktests"
 //	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-//	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+//	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 //	"gitlab.com/jaxnet/core/shard.core.git/database"
 //	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 //	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -61,7 +62,7 @@ package blockchain_test
 //// chainSetup is used to create a new db and chain instance with the genesis
 //// block already inserted.  In addition to the new chain instance, it returns
 //// a teardown function the caller should invoke when done testing to clean up.
-//func chainSetup(dbName string, params *chaincfg.Params) (*blockchain.BlockChain, func(), error) {
+//func chainSetup(dbName string, params *chaincfg.Params) (*blockchain.GetBlockChain, func(), error) {
 //	if !isSupportedDbType(testDbType) {
 //		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
 //	}

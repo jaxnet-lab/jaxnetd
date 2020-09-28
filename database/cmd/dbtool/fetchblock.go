@@ -7,11 +7,11 @@ package main
 import (
 	"encoding/hex"
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // fetchBlockCmd defines the configuration options for the fetchblock command.

@@ -4,20 +4,16 @@ import (
 	"net"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
-	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
-// rpcserverConfig is a descriptor containing the RPC Server configuration.
+// Config is a descriptor containing the RPC Server configuration.
 type Config struct {
 	ListenerAddresses []string `yaml:"listeners"`
 	MaxClients        int      `yaml:"maxclients"`
@@ -30,59 +26,62 @@ type Config struct {
 	LimitUser         string `yaml:"limit_user"`
 	MaxConcurrentReqs int    `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	MaxWebsockets     int    `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
-}
 
-type NodeActor struct {
 	// Listeners defines a slice of listeners for which the RPC Server will
 	// take ownership of and accept connections.  Since the RPC Server takes
 	// ownership of these listeners, they will be closed when the RPC Server
 	// is stopped.
 	Listeners []net.Listener `yaml:"-"`
 
-	// StartupTime is the unix timestamp for when the Server that is hosting
-	// the RPC Server started.
-	StartupTime int64
+	WSEnable bool
+}
 
-	// ConnMgr defines the connection manager for the RPC Server to use.  It
-	// provides the RPC Server with a means to do things such as add,
-	// remove, connect, disconnect, and query peers as well as other
-	// connection-related data and tasks.
-	ConnMgr rpcserverConnManager
-
-	// SyncMgr defines the sync manager for the RPC Server to use.
-	SyncMgr rpcserverSyncManager
-
-	// ShardsMgr provides ability to manipulate running shards.
-	ShardsMgr shardManager
-
-	// These fields allow the RPC Server to interface with the local block
-	// chain data and state.
-	TimeSource  blockchain.MedianTimeSource
-	Chain       *blockchain.BlockChain
-	ChainParams *chaincfg.Params
-	DB          database.DB
-
-	// TxMemPool defines the transaction memory pool to interact with.
-	TxMemPool *mempool.TxPool
-
-	// These fields allow the RPC Server to interface with mining.
+// SetupRPCListeners returns a slice of listeners that are configured for use
+// with the RPC server depending on the configuration settings for listen
+// addresses and TLS.
+func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
+	// Setup TLS if not disabled.
+	listenFunc := net.Listen
+	// if !s.cfg.DisableTLS {
+	//	// Generate the TLS cert and key file if both don't already
+	//	// exist.
+	//	if !fileExists(cfg.RPCKey) && !fileExists(cfg.RPCCert) {
+	//		err := genCertPair(cfg.RPCCert, cfg.RPCKey)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//	}
+	//	keypair, err := tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
+	//	if err != nil {
+	//		return nil, err
+	//	}
 	//
-	// Generator produces block templates and the CPUMiner solves them using
-	// the CPU.  CPU mining is typically only useful for test purposes when
-	// doing regression or simulation testing.
-	Generator *mining.BlkTmplGenerator
-	// CPUMiner  *cpuminer.CPUMiner
+	//	tlsConfig := tls.Config{
+	//		Certificates: []tls.Certificate{keypair},
+	//		MinVersion:   tls.VersionTLS12,
+	//	}
+	//
+	//	// Change the standard net.Listen function to the tls one.
+	//	listenFunc = func(net string, laddr string) (net.Listener, error) {
+	//		return tls.Listen(net, laddr, &tlsConfig)
+	//	}
+	// }
 
-	// These fields define any optional indexes the RPC Server can make use
-	// of to provide additional data when queried.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
+	netAddrs, err := ParseListeners(cfg.ListenerAddresses)
+	if err != nil {
+		return nil, err
+	}
 
-	// The fee estimator keeps track of how long transactions are left in
-	// the mempool before they are mined into blocks.
-	FeeEstimator *mempool.FeeEstimator
-	MiningAddrs  []btcutil.Address
+	cfg.Listeners = make([]net.Listener, 0, len(netAddrs))
+	for _, addr := range netAddrs {
+		listener, err := listenFunc(addr.Network(), addr.String())
+		if err != nil {
+			continue
+		}
+		cfg.Listeners = append(cfg.Listeners, listener)
+	}
+
+	return cfg.Listeners, nil
 }
 
 // rpcserverPeer represents a peer for use with the RPC server.
@@ -106,12 +105,12 @@ type rpcserverPeer interface {
 	FeeFilter() int64
 }
 
-// rpcserverConnManager represents a connection manager for use with the RPC
+// RPCServerConnManager represents a connection manager for use with the RPC
 // server.
 //
 // The interface contract requires that all of these methods are safe for
 // concurrent access.
-type rpcserverConnManager interface {
+type RPCServerConnManager interface {
 	// Connect adds the provided address as a new outbound peer.  The
 	// permanent flag indicates whether or not to make the peer persistent
 	// and reconnect if the connection is lost.  Attempting to connect to an
@@ -167,12 +166,12 @@ type rpcserverConnManager interface {
 	RelayTransactions(txns []*mempool.TxDesc)
 }
 
-// rpcserverSyncManager represents a sync manager for use with the RPC server.
+// RPCServerSyncManager represents a sync manager for use with the RPC server.
 //
 // The interface contract requires that all of these methods are safe for
 // concurrent access.
-type rpcserverSyncManager interface {
-	// IsCurrent returns whether or not the sync manager believes the chain
+type RPCServerSyncManager interface {
+	// IsCurrent returns whether or not the sync manager believes the BlockChain
 	// is current as compared to the rest of the network.
 	IsCurrent() bool
 
@@ -194,12 +193,12 @@ type rpcserverSyncManager interface {
 	LocateHeaders(locators []*chainhash.Hash, hashStop *chainhash.Hash) []chain.BlockHeader
 }
 
-type shardManager interface {
+type ShardManager interface {
 	ListShards() map[uint32]string
 
 	EnableShard(shardID uint32) error
 
 	DisableShard(shardID uint32) error
 
-	NewShard(shardID uint32, height int64) error
+	NewShard(shardID uint32, height int32) error
 }

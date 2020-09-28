@@ -1,3 +1,5 @@
+//+build deprecated_tests
+
 package main
 
 import (

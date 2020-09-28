@@ -12,12 +12,16 @@ import (
 	"go.uber.org/zap"
 )
 
+type DBCtl struct {
+	logger *zap.Logger
+}
+
 // loadBlockDB loads (or creates when needed) the block database taking into
 // account the selected database backend and returns a handle to it.  It also
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (ctrl *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
+func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
@@ -72,7 +76,7 @@ func (ctrl *chainController) loadBlockDB(dataDir string, chain chain.IChain, cfg
 //
 // NOTE: The order is important here because dropping the tx index also
 // drops the address index since it relies on it.
-func (ctrl *chainController) cleanIndexes(ctx context.Context, cfg *Config, db database.DB) (bool, error) {
+func (ctrl *DBCtl) cleanIndexes(ctx context.Context, cfg *Config, db database.DB) (bool, error) {
 	cleanPerformed := cfg.DropAddrIndex || cfg.DropTxIndex || cfg.DropCfIndex
 	if cfg.DropAddrIndex {
 		if err := indexers.DropAddrIndex(db, ctx.Done()); err != nil {
@@ -96,7 +100,7 @@ func (ctrl *chainController) cleanIndexes(ctx context.Context, cfg *Config, db d
 }
 
 // dbPath returns the path to the block database given a database type.
-func (ctrl *chainController) blockDbPath(dataDir string, chain string, dbType string) string {
+func (ctrl *DBCtl) blockDbPath(dataDir string, chain string, dbType string) string {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + dbType
 	if dbType == "sqlite" {
@@ -109,7 +113,7 @@ func (ctrl *chainController) blockDbPath(dataDir string, chain string, dbType st
 // warnMultipleDBs shows a warning if multiple block database types are detected.
 // This is not a situation most users want.  It is handy for development however
 // to support multiple side-by-side databases.
-func (ctrl *chainController) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
+func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
 	// This is intentionally not using the known db types which depend
 	// on the database types compiled into the binary since we want to
 	// detect legacy db types as well.

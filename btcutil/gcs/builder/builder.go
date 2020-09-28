@@ -8,11 +8,12 @@ package builder
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
+
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"math"
 )
 
 const (

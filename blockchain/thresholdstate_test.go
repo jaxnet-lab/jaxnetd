@@ -7,7 +7,7 @@ package blockchain
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 // TestThresholdStateStringer tests the stringized output for the

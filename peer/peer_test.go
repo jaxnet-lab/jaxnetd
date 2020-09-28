@@ -2,14 +2,12 @@
 // Copyright (c) 2016-2018 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+//+build deprecated_tests
 
 package peer_test
 
 import (
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"io"
 	"net"
 	"strconv"
@@ -17,9 +15,12 @@ import (
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // conn mocks a network connection by implementing the net.Conn interface.  It
@@ -236,7 +237,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincfg.MainNetParams,
+		ChainParams:       &chaincore.MainNetParams,
 		ProtocolVersion:   wire.RejectVersion, // Configure with older version
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
@@ -246,7 +247,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincfg.MainNetParams,
+		ChainParams:       &chaincore.MainNetParams,
 		Services:          wire.SFNodeNetwork | wire.SFNodeWitness,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -451,7 +452,7 @@ func TestPeerListeners(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincfg.MainNetParams,
+		ChainParams:       &chaincore.MainNetParams,
 		Services:          wire.SFNodeBloom,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -622,7 +623,7 @@ func TestOutboundPeer(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincfg.MainNetParams,
+		ChainParams:       &chaincore.MainNetParams,
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -712,7 +713,7 @@ func TestOutboundPeer(t *testing.T) {
 	p1.Disconnect()
 
 	// Test regression
-	peerCfg.ChainParams = &chaincfg.RegressionNetParams
+	peerCfg.ChainParams = &chaincore.RegressionNetParams
 	peerCfg.Services = wire.SFNodeBloom
 	r2, w2 := io.Pipe()
 	c2 := &conn{raddr: "10.0.0.1:8333", Writer: w2, Reader: r2}
@@ -763,7 +764,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincfg.MainNetParams,
+		ChainParams:       &chaincore.MainNetParams,
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -874,7 +875,7 @@ func TestDuplicateVersionMsg(t *testing.T) {
 		},
 		UserAgentName:    "peer",
 		UserAgentVersion: "1.0",
-		ChainParams:      &chaincfg.MainNetParams,
+		ChainParams:      &chaincore.MainNetParams,
 		Services:         0,
 	}
 	inConn, outConn := pipe(

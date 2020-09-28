@@ -9,10 +9,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txutils"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 func main() {

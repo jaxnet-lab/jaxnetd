@@ -21,20 +21,19 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
-
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
+	"gitlab.com/jaxnet/core/shard.core.git/shards"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"gopkg.in/yaml.v3"
 )
 
@@ -354,31 +353,31 @@ func normalizeAddresses(addrs []string, defaultPort string) []string {
 }
 
 // newCheckpointFromStr parses checkpoints in the '<height>:<hash>' format.
-func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
+func newCheckpointFromStr(checkpoint string) (chaincore.Checkpoint, error) {
 	parts := strings.Split(checkpoint, ":")
 	if len(parts) != 2 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chaincore.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q -- use the syntax <height>:<hash>",
 			checkpoint)
 	}
 
 	height, err := strconv.ParseInt(parts[0], 10, 32)
 	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chaincore.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to malformed height", checkpoint)
 	}
 
 	if len(parts[1]) == 0 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chaincore.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to missing hash", checkpoint)
 	}
 	hash, err := chainhash.NewHashFromStr(parts[1])
 	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
+		return chaincore.Checkpoint{}, fmt.Errorf("unable to parse "+
 			"checkpoint %q due to malformed hash", checkpoint)
 	}
 
-	return chaincfg.Checkpoint{
+	return chaincore.Checkpoint{
 		Height: int32(height),
 		Hash:   hash,
 	}, nil
@@ -386,11 +385,11 @@ func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
 
 // parseCheckpoints checks the checkpoint strings for valid syntax
 // ('<height>:<hash>') and parses them to chaincfg.Checkpoint instances.
-func parseCheckpoints(checkpointStrings []string) ([]chaincfg.Checkpoint, error) {
+func parseCheckpoints(checkpointStrings []string) ([]chaincore.Checkpoint, error) {
 	if len(checkpointStrings) == 0 {
 		return nil, nil
 	}
-	checkpoints := make([]chaincfg.Checkpoint, len(checkpointStrings))
+	checkpoints := make([]chaincore.Checkpoint, len(checkpointStrings))
 	for i, cpString := range checkpointStrings {
 		checkpoint, err := newCheckpointFromStr(cpString)
 		if err != nil {
@@ -450,22 +449,24 @@ func loadConfig() (*shards.Config, []string, error) {
 		Node: shards.NodeConfig{
 			Net:    activeNetParams.Name,
 			DbType: defaultDbType,
-			P2P: server.P2pConfig{
+			BeaconChain: server.ChainRuntimeConfig{
 				BlockMinSize:      defaultBlockMinSize,
 				BlockMaxSize:      defaultBlockMaxSize,
 				BlockMinWeight:    defaultBlockMinWeight,
 				BlockMaxWeight:    defaultBlockMaxWeight,
-				BanDuration:       defaultBanDuration,
-				BanThreshold:      defaultBanThreshold,
 				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
 				MaxPeers:          defaultMaxPeers,
 				MinRelayTxFee:     mempool.DefaultMinRelayTxFee.ToBTC(),
 				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
-				TrickleInterval:   defaultTrickleInterval,
 				TxIndex:           defaultTxIndex,
 				AddrIndex:         defaultAddrIndex,
 				MaxOrphanTxs:      defaultMaxOrphanTransactions,
 				SigCacheMaxSize:   defaultSigCacheMaxSize,
+			},
+			P2P: server.P2pConfig{
+				BanThreshold:    defaultBanThreshold,
+				BanDuration:     defaultBanDuration,
+				TrickleInterval: defaultTrickleInterval,
 			},
 			RPC: server.Config{
 				MaxClients: defaultMaxRPCClients,
@@ -593,7 +594,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	// configuration value takes precedence over the default value for the
 	// selected network.
 	relayNonStd := activeNetParams.RelayNonStdTxs
-	cfg.Node.P2P.RelayNonStd = relayNonStd
+	cfg.Node.BeaconChain.RelayNonStd = relayNonStd
 
 	// Append the network type to the data directory so it is "namespaced"
 	// per network.  In addition to the block database, there are other
@@ -768,6 +769,12 @@ func loadConfig() (*shards.Config, []string, error) {
 			addr = net.JoinHostPort(addr, activeNetParams.rpcPort)
 			cfg.Node.RPC.ListenerAddresses = append(cfg.Node.RPC.ListenerAddresses, addr)
 		}
+
+	}
+
+	_, err = cfg.Node.RPC.SetupRPCListeners()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if cfg.Node.RPC.MaxConcurrentReqs < 0 {
@@ -780,7 +787,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Validate the the minrelaytxfee.
-	cfg.Node.P2P.MinRelayTxFeeValues, err = btcutil.NewAmount(cfg.Node.P2P.MinRelayTxFee)
+	cfg.Node.BeaconChain.MinRelayTxFeeValues, err = btcutil.NewAmount(cfg.Node.BeaconChain.MinRelayTxFee)
 	if err != nil {
 		str := "%s: invalid minrelaytxfee: %v"
 		err := fmt.Errorf(str, funcName, err)
@@ -790,61 +797,61 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// Limit the max block size to a sane value.
-	if cfg.Node.P2P.BlockMaxSize < blockMaxSizeMin || cfg.Node.P2P.BlockMaxSize >
+	if cfg.Node.BeaconChain.BlockMaxSize < blockMaxSizeMin || cfg.Node.BeaconChain.BlockMaxSize >
 		blockMaxSizeMax {
 
 		str := "%s: The blockmaxsize option must be in between %d " +
 			"and %d -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, blockMaxSizeMin,
-			blockMaxSizeMax, cfg.Node.P2P.BlockMaxSize)
+			blockMaxSizeMax, cfg.Node.BeaconChain.BlockMaxSize)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the max block weight to a sane value.
-	if cfg.Node.P2P.BlockMaxWeight < blockMaxWeightMin ||
-		cfg.Node.P2P.BlockMaxWeight > blockMaxWeightMax {
+	if cfg.Node.BeaconChain.BlockMaxWeight < blockMaxWeightMin ||
+		cfg.Node.BeaconChain.BlockMaxWeight > blockMaxWeightMax {
 
 		str := "%s: The blockmaxweight option must be in between %d " +
 			"and %d -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, blockMaxWeightMin,
-			blockMaxWeightMax, cfg.Node.P2P.BlockMaxWeight)
+			blockMaxWeightMax, cfg.Node.BeaconChain.BlockMaxWeight)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the max orphan count to a sane vlue.
-	if cfg.Node.P2P.MaxOrphanTxs < 0 {
+	if cfg.Node.BeaconChain.MaxOrphanTxs < 0 {
 		str := "%s: The maxorphantx option may not be less than 0 " +
 			"-- parsed [%d]"
-		err := fmt.Errorf(str, funcName, cfg.Node.P2P.MaxOrphanTxs)
+		err := fmt.Errorf(str, funcName, cfg.Node.BeaconChain.MaxOrphanTxs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
 
 	// Limit the block priority and minimum block sizes to max block size.
-	cfg.Node.P2P.BlockPrioritySize = minUint32(cfg.Node.P2P.BlockPrioritySize, cfg.Node.P2P.BlockMaxSize)
-	cfg.Node.P2P.BlockMinSize = minUint32(cfg.Node.P2P.BlockMinSize, cfg.Node.P2P.BlockMaxSize)
-	cfg.Node.P2P.BlockMinWeight = minUint32(cfg.Node.P2P.BlockMinWeight, cfg.Node.P2P.BlockMaxWeight)
+	cfg.Node.BeaconChain.BlockPrioritySize = minUint32(cfg.Node.BeaconChain.BlockPrioritySize, cfg.Node.BeaconChain.BlockMaxSize)
+	cfg.Node.BeaconChain.BlockMinSize = minUint32(cfg.Node.BeaconChain.BlockMinSize, cfg.Node.BeaconChain.BlockMaxSize)
+	cfg.Node.BeaconChain.BlockMinWeight = minUint32(cfg.Node.BeaconChain.BlockMinWeight, cfg.Node.BeaconChain.BlockMaxWeight)
 
 	switch {
 	// If the max block size isn't set, but the max weight is, then we'll
 	// set the limit for the max block size to a safe limit so weight takes
 	// precedence.
-	case cfg.Node.P2P.BlockMaxSize == defaultBlockMaxSize &&
-		cfg.Node.P2P.BlockMaxWeight != defaultBlockMaxWeight:
+	case cfg.Node.BeaconChain.BlockMaxSize == defaultBlockMaxSize &&
+		cfg.Node.BeaconChain.BlockMaxWeight != defaultBlockMaxWeight:
 
-		cfg.Node.P2P.BlockMaxSize = blockchain.MaxBlockBaseSize - 1000
+		cfg.Node.BeaconChain.BlockMaxSize = blockchain.MaxBlockBaseSize - 1000
 
 	// If the max block weight isn't set, but the block size is, then we'll
 	// scale the set weight accordingly based on the max block size value.
-	case cfg.Node.P2P.BlockMaxSize != defaultBlockMaxSize &&
-		cfg.Node.P2P.BlockMaxWeight == defaultBlockMaxWeight:
+	case cfg.Node.BeaconChain.BlockMaxSize != defaultBlockMaxSize &&
+		cfg.Node.BeaconChain.BlockMaxWeight == defaultBlockMaxWeight:
 
-		cfg.Node.P2P.BlockMaxWeight = cfg.Node.P2P.BlockMaxSize * blockchain.WitnessScaleFactor
+		cfg.Node.BeaconChain.BlockMaxWeight = cfg.Node.BeaconChain.BlockMaxSize * blockchain.WitnessScaleFactor
 	}
 
 	// // Look for illegal characters in the user agent comments.
@@ -860,7 +867,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	// }
 
 	// --txindex and --droptxindex do not mix.
-	if cfg.Node.P2P.TxIndex && cfg.DropTxIndex {
+	if cfg.Node.BeaconChain.TxIndex && cfg.DropTxIndex {
 		err := fmt.Errorf("%s: the --txindex and --droptxindex "+
 			"options may  not be activated at the same time",
 			funcName)
@@ -870,7 +877,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// --addrindex and --dropaddrindex do not mix.
-	if cfg.Node.P2P.AddrIndex && cfg.DropAddrIndex {
+	if cfg.Node.BeaconChain.AddrIndex && cfg.DropAddrIndex {
 		err := fmt.Errorf("%s: the --addrindex and --dropaddrindex "+
 			"options may not be activated at the same time",
 			funcName)
@@ -880,7 +887,7 @@ func loadConfig() (*shards.Config, []string, error) {
 	}
 
 	// --addrindex and --droptxindex do not mix.
-	if cfg.Node.P2P.AddrIndex && cfg.DropTxIndex {
+	if cfg.Node.BeaconChain.AddrIndex && cfg.DropTxIndex {
 		err := fmt.Errorf("%s: the --addrindex and --droptxindex "+
 			"options may not be activated at the same time "+
 			"because the address index relies on the transaction "+

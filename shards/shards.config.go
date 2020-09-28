@@ -3,41 +3,27 @@ package shards
 import (
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
-// config defines the configuration options for btcd.
-//
-// See loadConfig for details on the configuration load process.
-
-// type RpcConfig struct {
-//	Listeners  []string `yaml:"listeners"`
-//	MaxClients int      `yaml:"maxclients"`
-//	User       string   `yaml:"user"`
-//	Password   string   `yaml:"password"`
-// }
-
-// type ChainConfig struct {
-//	server.P2pConfig
-// }
-
 type ShardConfig struct {
-	Enable bool                `yaml:"enable"`
-	IDs    map[uint32]struct{} `yaml:"ids"`
+	Enable      bool                                 `yaml:"enable"`
+	ChainParams map[uint32]server.ChainRuntimeConfig `yaml:"chain_params"`
 }
 
 type NodeConfig struct {
-	RPC             server.Config    `yaml:"rpc"`
-	P2P             server.P2pConfig `yaml:"p2p"`
-	Shards          ShardConfig      `yaml:"shards"`
-	DbType          string           `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
-	Net             string           `yaml:"net"`
-	MiningAddresses []string         `yaml:"mining_addresses"`
+	BeaconChain     server.ChainRuntimeConfig `yaml:"beacon_chain"`
+	RPC             server.Config             `yaml:"rpc"`
+	P2P             server.P2pConfig          `yaml:"p2p"`
+	Shards          ShardConfig               `yaml:"shards"`
+	DbType          string                    `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+	Net             string                    `yaml:"net"`
+	MiningAddresses []string                  `yaml:"mining_addresses"`
 }
 
-func (cfg *NodeConfig) ChainParams() *chaincfg.Params {
-	return chaincfg.NetName(cfg.Net).Params()
+func (cfg *NodeConfig) ChainParams() *chaincore.Params {
+	return chaincore.NetName(cfg.Net).Params()
 }
 
 type Config struct {
@@ -60,7 +46,7 @@ type Config struct {
 	ShowVersion bool     `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
 	Whitelists  []string `yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 	// addCheckpoints    []chaincfg.Checkpoint
-	// MiningAddrs         []btcutil.Address
+	// MiningAddrs       []btcutil.Address
 	// whitelists        []*net.IPNet
 }
 

@@ -7,14 +7,14 @@ package indexers
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 )
 
@@ -592,7 +592,7 @@ type AddrIndex struct {
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
 	db          database.DB
-	chainParams *chaincfg.Params
+	chainParams *chaincore.Params
 
 	// The following fields are used to quickly link transactions and
 	// addresses that have not been included into a block yet when an
@@ -962,7 +962,7 @@ func (idx *AddrIndex) UnconfirmedTxnsForAddress(addr btcutil.Address) []*btcutil
 // It implements the Indexer interface which plugs into the IndexManager that in
 // turn is used by the blockchain package.  This allows the index to be
 // seamlessly maintained along with the chain.
-func NewAddrIndex(db database.DB, chainParams *chaincfg.Params) *AddrIndex {
+func NewAddrIndex(db database.DB, chainParams *chaincore.Params) *AddrIndex {
 	return &AddrIndex{
 		db:          db,
 		chainParams: chainParams,

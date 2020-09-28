@@ -25,11 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
 )
 
 var (
@@ -143,8 +142,9 @@ type Client struct {
 
 	// chainParams holds the params for the chain that this client is using,
 	// and is used for many wallet methods.
-	chainParams *chaincfg.Params
-
+	chainParams    *chaincore.Params
+	shardID        uint32
+	oneTimeShardID *uint32
 	// wsConn is the underlying websocket connection when not in HTTP POST
 	// mode.
 	wsConn *websocket.Conn
@@ -185,6 +185,15 @@ type Client struct {
 	disconnect      chan struct{}
 	shutdown        chan struct{}
 	wg              sync.WaitGroup
+}
+
+func (c *Client) ForBeacon() *Client {
+	return c.ForShard(0)
+}
+
+func (c *Client) ForShard(shardID uint32) *Client {
+	c.oneTimeShardID = &shardID
+	return c
 }
 
 // NextID returns the next id to be used when sending a JSON-RPC message.  This
@@ -842,9 +851,23 @@ func (c *Client) sendPost(jReq *jsonRequest) {
 	if !c.config.DisableTLS {
 		protocol = "https"
 	}
-	url := protocol + "://" + c.config.Host
+
+	path := protocol + "://" + c.config.Host
+
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+		c.oneTimeShardID = nil
+	}
+
+	if shardID == 0 {
+		path += "/beacon/"
+	} else {
+		path += fmt.Sprintf("/shard/%d", shardID)
+	}
+
 	bodyReader := bytes.NewReader(jReq.marshalledJSON)
-	httpReq, err := http.NewRequest("POST", url, bodyReader)
+	httpReq, err := http.NewRequest("POST", path, bodyReader)
 	if err != nil {
 		jReq.responseChan <- &response{result: nil, err: err}
 		return
@@ -1119,6 +1142,10 @@ type ConnConfig struct {
 	// mainnet will be used by default.
 	Params string
 
+	// ShardID specifies with what chain client will interact if 0,
+	// it's mean Beacon Chain.
+	ShardID uint32
+
 	// DisableTLS specifies whether transport layer security should be
 	// disabled.  It is recommended to always use TLS if the RPC server
 	// supports it as otherwise your username and password is sent across
@@ -1359,10 +1386,11 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 
 	// Default network is mainnet, no parameters are necessary but if mainnet
 	// is specified it will be the param
-	client.chainParams = chaincfg.NetName(config.Params).Params()
+	client.chainParams = chaincore.NetName(config.Params).Params()
 	if client.chainParams == nil {
 		return nil, fmt.Errorf("rpcclient.New: Unknown chain %s", config.Params)
 	}
+	client.shardID = config.ShardID
 
 	if start {
 		log.Infof("Established connection to RPC server %s",

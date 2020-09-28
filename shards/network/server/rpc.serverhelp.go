@@ -152,11 +152,11 @@ var helpDescsEnUS = map[string]string{
 	"getbestblockresult-height": "Height of the best block",
 
 	// GetBestBlockCmd help.
-	"getbestblock--synopsis": "Get block height and hash of best block in the main chain.",
-	"getbestblock--result0":  "Get block height and hash of best block in the main chain.",
+	"getbestblock--synopsis": "Get block height and hash of best block in the main BlockChain.",
+	"getbestblock--result0":  "Get block height and hash of best block in the main BlockChain.",
 
 	// GetBestBlockHashCmd help.
-	"getbestblockhash--synopsis": "Returns the hash of the of the best (most recent) block in the longest block chain.",
+	"getbestblockhash--synopsis": "Returns the hash of the of the best (most recent) block in the longest block BlockChain.",
 	"getbestblockhash--result0":  "The hex-encoded block hash",
 
 	// GetBlockCmd help.
@@ -171,16 +171,16 @@ var helpDescsEnUS = map[string]string{
 	"getblockchaininfo--synopsis": "Returns information about the current blockchain state and the status of any active soft-fork deployments.",
 
 	// GetBlockChainInfoResult help.
-	"getblockchaininforesult-chain":                "The name of the chain the daemon is on (testnet, mainnet, etc)",
-	"getblockchaininforesult-blocks":               "The number of blocks in the best known chain",
-	"getblockchaininforesult-headers":              "The number of headers that we've gathered for in the best known chain",
-	"getblockchaininforesult-bestblockhash":        "The block hash for the latest block in the main chain",
-	"getblockchaininforesult-difficulty":           "The current chain difficulty",
-	"getblockchaininforesult-mediantime":           "The median time from the PoV of the best block in the chain",
-	"getblockchaininforesult-verificationprogress": "An estimate for how much of the best chain we've verified",
+	"getblockchaininforesult-BlockChain":           "The name of the BlockChain the daemon is on (testnet, mainnet, etc)",
+	"getblockchaininforesult-blocks":               "The number of blocks in the best known BlockChain",
+	"getblockchaininforesult-headers":              "The number of headers that we've gathered for in the best known BlockChain",
+	"getblockchaininforesult-bestblockhash":        "The block hash for the latest block in the main BlockChain",
+	"getblockchaininforesult-difficulty":           "The current BlockChain difficulty",
+	"getblockchaininforesult-mediantime":           "The median time from the PoV of the best block in the BlockChain",
+	"getblockchaininforesult-verificationprogress": "An estimate for how much of the best BlockChain we've verified",
 	"getblockchaininforesult-pruned":               "A bool that indicates if the node is pruned or not",
-	"getblockchaininforesult-pruneheight":          "The lowest block retained in the current pruned chain",
-	"getblockchaininforesult-chainwork":            "The total cumulative work in the best chain",
+	"getblockchaininforesult-pruneheight":          "The lowest block retained in the current pruned BlockChain",
+	"getblockchaininforesult-chainwork":            "The total cumulative work in the best BlockChain",
 	"getblockchaininforesult-softforks":            "The status of the super-majority soft-forks",
 	"getblockchaininforesult-unifiedsoftforks":     "The status of the super-majority soft-forks used by bitcoind on or after v0.19.0",
 
@@ -239,7 +239,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-hash":              "The hash of the block (same as provided)",
 	"getblockverboseresult-confirmations":     "The number of confirmations",
 	"getblockverboseresult-size":              "The size of the block",
-	"getblockverboseresult-height":            "The height of the block in the block chain",
+	"getblockverboseresult-height":            "The height of the block in the block BlockChain",
 	"getblockverboseresult-version":           "The block version",
 	"getblockverboseresult-versionHex":        "The block version in hexadecimal",
 	"getblockverboseresult-merkleroot":        "Root hash of the merkle tree",
@@ -255,11 +255,11 @@ var helpDescsEnUS = map[string]string{
 	"getblockverboseresult-weight":            "The weight of the block",
 
 	// GetBlockCountCmd help.
-	"getblockcount--synopsis": "Returns the number of blocks in the longest block chain.",
+	"getblockcount--synopsis": "Returns the number of blocks in the longest block BlockChain.",
 	"getblockcount--result0":  "The current block count",
 
 	// GetBlockHashCmd help.
-	"getblockhash--synopsis": "Returns hash of the block in best block chain at the given height.",
+	"getblockhash--synopsis": "Returns hash of the block in best block BlockChain at the given height.",
 	"getblockhash-index":     "The block height",
 	"getblockhash--result0":  "The block hash",
 
@@ -274,7 +274,7 @@ var helpDescsEnUS = map[string]string{
 	// GetBlockHeaderVerboseResult help.
 	"getblockheaderverboseresult-hash":              "The hash of the block (same as provided)",
 	"getblockheaderverboseresult-confirmations":     "The number of confirmations",
-	"getblockheaderverboseresult-height":            "The height of the block in the block chain",
+	"getblockheaderverboseresult-height":            "The height of the block in the block BlockChain",
 	"getblockheaderverboseresult-version":           "The block version",
 	"getblockheaderverboseresult-versionHex":        "The block version in hexadecimal",
 	"getblockheaderverboseresult-merkleroot":        "Root hash of the merkle tree",
@@ -441,7 +441,7 @@ var helpDescsEnUS = map[string]string{
 	// GetNetworkHashPSCmd help.
 	"getnetworkhashps--synopsis": "Returns the estimated network hashes per second for the block heights provided by the parameters.",
 	"getnetworkhashps-blocks":    "The number of blocks, or -1 for blocks since last difficulty change",
-	"getnetworkhashps-height":    "Perform estimate ending with this height or -1 for current best chain block height",
+	"getnetworkhashps-height":    "Perform estimate ending with this height or -1 for current best BlockChain block height",
 	"getnetworkhashps--result0":  "Estimated hashes per second",
 
 	// GetNetTotalsCmd help.
@@ -583,14 +583,14 @@ var helpDescsEnUS = map[string]string{
 	"validateaddress-address":   "Bitcoin address to validate",
 
 	// VerifyChainCmd help.
-	"verifychain--synopsis": "Verifies the block chain database.\n" +
+	"verifychain--synopsis": "Verifies the block BlockChain database.\n" +
 		"The actual checks performed by the checklevel parameter are implementation specific.\n" +
 		"For btcd this is:\n" +
 		"checklevel=0 - Look up each block and ensure it can be loaded from the database.\n" +
 		"checklevel=1 - Perform basic context-free sanity checks on each block.",
 	"verifychain-checklevel": "How thorough the block verification is",
 	"verifychain-checkdepth": "The number of blocks to check",
-	"verifychain--result0":   "Whether or not the chain verified",
+	"verifychain--result0":   "Whether or not the BlockChain verified",
 
 	// VerifyMessageCmd help.
 	"verifymessage--synopsis": "Verify a signed message.",
@@ -606,10 +606,10 @@ var helpDescsEnUS = map[string]string{
 	"sessionresult-sessionid": "The unique session ID for a client's websocket connection.",
 
 	// NotifyBlocksCmd help.
-	"notifyblocks--synopsis": "Request notifications for whenever a block is connected or disconnected from the main (best) chain.",
+	"notifyblocks--synopsis": "Request notifications for whenever a block is connected or disconnected from the main (best) BlockChain.",
 
 	// StopNotifyBlocksCmd help.
-	"stopnotifyblocks--synopsis": "Cancel registered notifications for whenever a block is connected or disconnected from the main (best) chain.",
+	"stopnotifyblocks--synopsis": "Cancel registered notifications for whenever a block is connected or disconnected from the main (best) BlockChain.",
 
 	// NotifyNewTransactionsCmd help.
 	"notifynewtransactions--synopsis": "Send either a txaccepted or a txacceptedverbose notification when a new transaction is accepted into the mempool.",
@@ -646,8 +646,8 @@ var helpDescsEnUS = map[string]string{
 	"loadtxfilter-outpoints": "Array of outpoints to add to the transaction filter",
 
 	// Rescan help.
-	"rescan--synopsis": "Rescan block chain for transactions to addresses.\n" +
-		"When the endblock parameter is omitted, the rescan continues through the best block in the main chain.\n" +
+	"rescan--synopsis": "Rescan block BlockChain for transactions to addresses.\n" +
+		"When the endblock parameter is omitted, the rescan continues through the best block in the main BlockChain.\n" +
 		"Rescan results are sent as recvtx and redeemingtx notifications.\n" +
 		"This call returns once the rescan completes.",
 	"rescan-beginblock": "Hash of the first block to begin rescanning",
@@ -753,7 +753,7 @@ var rpcResultTypes = map[string][]interface{}{
 // the RPC server commands and caches the results for future calls.
 type helpCacher struct {
 	sync.Mutex
-	server     *rpcServer
+	server     *ChainRPC
 	usage      string
 	methodHelp map[string]string
 }
@@ -826,7 +826,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 
 // newHelpCacher returns a new instance of a help cacher which provides help and
 // usage for the RPC server commands and caches the results for future calls.
-func newHelpCacher(s *rpcServer) *helpCacher {
+func newHelpCacher(s *ChainRPC) *helpCacher {
 	return &helpCacher{
 		server:     s,
 		methodHelp: make(map[string]string),

@@ -7,10 +7,10 @@ package peer
 import (
 	"crypto/rand"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 // TestMruInventoryMap ensures the MruInventoryMap behaves as expected including

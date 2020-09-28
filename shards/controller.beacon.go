@@ -2,138 +2,132 @@ package shards
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core.git/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	server2 "gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 	"go.uber.org/zap"
 )
 
-func (ctrl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
-	if interruptRequested(ctx) {
-		return errors.New("can't create interrupt request")
+type BeaconCtl struct {
+	cfg *Config
+	ctx context.Context
+	log *zap.Logger
+
+	dbCtl     DBCtl
+	chain     chain.IChain
+	shardsMgr server.ShardManager
+
+	p2pServer     *server.P2PServer
+	chainProvider *server.ChainProvider
+}
+
+func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config, shardsMgr server.ShardManager) BeaconCtl {
+	logger = logger.With(zap.String("chain", "beacon"))
+	return BeaconCtl{
+		cfg:       cfg,
+		ctx:       ctx,
+		log:       logger,
+		dbCtl:     DBCtl{logger: logger},
+		shardsMgr: shardsMgr,
 	}
 
-	chain := beacon.Chain(cfg.Node.ChainParams())
-	ctrl.beacon = chain
+}
+func (beaconCtl *BeaconCtl) Init() error {
+	beaconCtl.chain = beacon.Chain(beaconCtl.cfg.Node.ChainParams())
 
 	// Load the block database.
-	db, err := ctrl.loadBlockDB(cfg.DataDir, chain, cfg.Node)
+	db, err := beaconCtl.dbCtl.loadBlockDB(beaconCtl.cfg.DataDir, beaconCtl.chain, beaconCtl.cfg.Node)
 	if err != nil {
-		ctrl.logger.Error("Can't load Block db", zap.Error(err))
-		return err
-	}
-	defer func() {
-		// Ensure the database is sync'd and closed on shutdown.
-		ctrl.logger.Info("Gracefully shutting down the database...")
-		if err := db.Close(); err != nil {
-			ctrl.logger.Error("Can't close db", zap.Error(err))
-		}
-	}()
-
-	cleanSmth, err := ctrl.cleanIndexes(ctx, cfg, db)
-	if cleanSmth || err != nil {
+		beaconCtl.log.Error("Can't load Block db", zap.Error(err))
 		return err
 	}
 
-	amgr := addrmgr.New(cfg.DataDir, func(host string) ([]net.IP, error) {
+	beaconCtl.chainProvider, err = server.NewChainActor(beaconCtl.ctx,
+		beaconCtl.cfg.Node.BeaconChain, beaconCtl.chain, db, beaconCtl.log)
+	if err != nil {
+		beaconCtl.log.Error("unable to init ChainProvider for beacon", zap.Error(err))
+		return err
+	}
+
+	addrManager := addrmgr.New(beaconCtl.cfg.DataDir, func(host string) ([]net.IP, error) {
 		if strings.HasSuffix(host, ".onion") {
 			return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 		}
 
-		return cfg.Node.P2P.Lookup(host)
+		return beaconCtl.cfg.Node.P2P.Lookup(host)
 	})
 
-	ctrl.logger.Info("P2P Listener ", zap.Any("Listeners", cfg.Node.P2P.Listeners))
-	// Create server and start it.
-	server, err := server2.Server(
-		ctx,
-		&cfg.Node.P2P,
-		amgr,
-		chain,
-		cfg.Node.P2P.Listeners,
-		cfg.Node.P2P.AgentBlacklist,
-		cfg.Node.P2P.AgentWhitelist,
-		db,
-		ctrl.logger.With(zap.String("server", "Beacon P2P")),
-	)
+	beaconCtl.log.Info("P2P Listener ", zap.Any("Listeners", beaconCtl.cfg.Node.P2P.Listeners))
+
+	// Create p2pServer and start it.
+	beaconCtl.p2pServer, err = server.Server(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager)
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
-		ctrl.logger.Error(fmt.Sprintf("Unable to start server on %v: %v",
-			cfg.Node.P2P.Listeners, err))
+		beaconCtl.log.Error(fmt.Sprintf("Unable to start p2pServer on %v: %v",
+			beaconCtl.cfg.Node.P2P.Listeners, err))
 		return err
 	}
 
-	l := ctrl.logger
-	defer func() {
-		l.Info("Gracefully shutting down the server...")
-		if err := server.Stop(); err != nil {
-			l.Error("Can't stop server ", zap.Error(err))
-		}
-		server.WaitForShutdown()
-		l.Info("Server shutdown complete")
-	}()
-	server.Start()
+	return err
+}
 
-	// todo(mike)
-	policy := mining.Policy{
-		BlockMinWeight:    cfg.Node.P2P.BlockMinWeight,
-		BlockMaxWeight:    cfg.Node.P2P.BlockMaxWeight,
-		BlockMinSize:      cfg.Node.P2P.BlockMinSize,
-		BlockMaxSize:      cfg.Node.P2P.BlockMaxSize,
-		BlockPrioritySize: cfg.Node.P2P.BlockPrioritySize,
-		TxMinFreeFee:      cfg.Node.P2P.MinRelayTxFeeValues,
+func (beaconCtl *BeaconCtl) ChainProvider() *server.ChainProvider {
+	return beaconCtl.chainProvider
+}
+
+func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
+	cleanIndexes, err := beaconCtl.dbCtl.cleanIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
+	if cleanIndexes {
+		beaconCtl.log.Info("clean db indexes")
+		return
 	}
-	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
-		chain.Params(), server.TxMemPool, server.BlockChain(), server.TimeSource,
-		server.SigCache, server.HashCache)
 
-	listeners, err := setupRPCListeners(cfg.Node.RPC.ListenerAddresses)
 	if err != nil {
-		return err
+		beaconCtl.log.Error("failed to clean indexes", zap.Error(err))
+		return
 	}
 
-	miningAddrs := make([]btcutil.Address, 0, len(cfg.Node.MiningAddresses))
-	for _, address := range cfg.Node.MiningAddresses {
-		addr, err := btcutil.DecodeAddress(address, chain.Params())
-		if err != nil {
-			return err
-		}
-
-		miningAddrs = append(miningAddrs, addr)
-	}
-
-	actor := &server2.NodeActor{
-		StartupTime:  server.StartupTime,
-		Listeners:    listeners,
-		ConnMgr:      &server2.RPCConnManager{Server: server},
-		SyncMgr:      &server2.RPCSyncMgr{Server: server, SyncMgr: server.SyncManager},
-		TimeSource:   server.TimeSource,
-		DB:           db,
-		Generator:    blockTemplateGenerator,
-		TxIndex:      server.TxIndex,
-		AddrIndex:    server.AddrIndex,
-		CfIndex:      server.CfIndex,
-		FeeEstimator: server.FeeEstimator,
-		MiningAddrs:  miningAddrs,
-
-		ShardsMgr:   ctrl,
-		Chain:       server.BlockChain(),
-		ChainParams: chain.Params(),
-		TxMemPool:   server.TxMemPool,
-	}
-
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
-		ctrl.runRpc(ctx, cfg, actor)
+		defer wg.Done()
+		beaconCtl.p2pServer.Run(ctx)
 	}()
+
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	beaconCtl.actor.CPUMiner.Run(ctx)
+	// }()
 
 	<-ctx.Done()
 
-	return nil
+	wg.Wait()
+
+	beaconCtl.log.Info("Gracefully shutting down the database...")
+	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
+		beaconCtl.log.Error("Can't close db", zap.Error(err))
+	}
+}
+
+func (beaconCtl *BeaconCtl) Shutdown() {
+	beaconCtl.log.Info("Gracefully shutting down the p2pServer...")
+	if err := beaconCtl.p2pServer.Stop(); err != nil {
+		beaconCtl.log.Error("Can't stop p2pServer ", zap.Error(err))
+	} else {
+		beaconCtl.p2pServer.WaitForShutdown()
+		beaconCtl.log.Info("Server shutdown complete")
+	}
+
+	// Ensure the database is sync'd and closed on shutdown.
+	beaconCtl.log.Info("Gracefully shutting down the database...")
+	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
+		beaconCtl.log.Error("Can't close db", zap.Error(err))
+	}
 }

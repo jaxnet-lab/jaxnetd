@@ -31,7 +31,7 @@ import "errors"
 //	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 //	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 //	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-//	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+//	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 //	"gitlab.com/jaxnet/core/shard.core.git/database"
 //	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 //	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -87,9 +87,9 @@ import "errors"
 //// WebsocketHandler handles a new websocket client by creating a new wsClient,
 //// starting it, and blocking until the connection closes.  Since it blocks, it
 //// must be run in a separate goroutine.  It should be invoked from the websocket
-//// Server handler which runs each new connection in a new goroutine thereby
+//// server handler which runs each new connection in a new goroutine thereby
 //// satisfying the requirement.
-//func (s *rpcServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
+//func (s *RPCServer) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
 //	authenticated bool, isAdmin bool) {
 //
 //	// Clear the read deadline that was set before the websocket hijacked
@@ -131,8 +131,8 @@ import "errors"
 //// have registered for and notifies them accordingly.  It is also used to keep
 //// track of all connected websocket clients.
 //type wsNotificationManager struct {
-//	// Server is the RPC Server the notification manager is associated with.
-//	Server *rpcServer
+//	// server is the RPC server the notification manager is associated with.
+//	server *RPCServer
 //
 //	// queueNotification queues a notification for handling.
 //	queueNotification chan interface{}
@@ -205,27 +205,27 @@ import "errors"
 //	m.wg.Done()
 //}
 //
-//// NotifyBlockConnected passes a block newly-connected to the best chain
+//// NotifyBlockConnected passes a block newly-connected to the best BlockChain
 //// to the notification manager for block and transaction notification
 //// processing.
 //func (m *wsNotificationManager) NotifyBlockConnected(block *btcutil.Block) {
 //	// As NotifyBlockConnected will be called by the block manager
-//	// and the RPC Server may no longer be running, use a select
+//	// and the RPC server may no longer be running, use a select
 //	// statement to unblock enqueuing the notification once the RPC
-//	// Server has begun shutting down.
+//	// server has begun shutting down.
 //	select {
 //	case m.queueNotification <- (*notificationBlockConnected)(block):
 //	case <-m.quit:
 //	}
 //}
 //
-//// NotifyBlockDisconnected passes a block disconnected from the best chain
+//// NotifyBlockDisconnected passes a block disconnected from the best BlockChain
 //// to the notification manager for block notification processing.
 //func (m *wsNotificationManager) NotifyBlockDisconnected(block *btcutil.Block) {
 //	// As NotifyBlockDisconnected will be called by the block manager
-//	// and the RPC Server may no longer be running, use a select
+//	// and the RPC server may no longer be running, use a select
 //	// statement to unblock enqueuing the notification once the RPC
-//	// Server has begun shutting down.
+//	// server has begun shutting down.
 //	select {
 //	case m.queueNotification <- (*notificationBlockDisconnected)(block):
 //	case <-m.quit:
@@ -242,9 +242,9 @@ import "errors"
 //		tx:    tx,
 //	}
 //
-//	// As NotifyMempoolTx will be called by mempool and the RPC Server
+//	// As NotifyMempoolTx will be called by mempool and the RPC server
 //	// may no longer be running, use a select statement to unblock
-//	// enqueuing the notification once the RPC Server has begun
+//	// enqueuing the notification once the RPC server has begun
 //	// shutting down.
 //	select {
 //	case m.queueNotification <- n:
@@ -599,7 +599,7 @@ import "errors"
 //		case m.numClients <- len(clients):
 //
 //		case <-m.quit:
-//			// RPC Server shutting down.
+//			// RPC server shutting down.
 //			break out
 //		}
 //	}
@@ -614,7 +614,7 @@ import "errors"
 //func (m *wsNotificationManager) NumClients() (n int) {
 //	select {
 //	case n = <-m.numClients:
-//	case <-m.quit: // Use default n (0) if Server has shut down.
+//	case <-m.quit: // Use default n (0) if server has shut down.
 //	}
 //	return
 //}
@@ -662,7 +662,7 @@ import "errors"
 //
 //	for i, output := range msgTx.TxOut {
 //		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
-//			output.PkScript, m.Server.cfg.ChainParams)
+//			output.PkScript, m.server.cfg.ChainParams)
 //		if err != nil {
 //			// Clients are not able to subscribe to
 //			// nonstandard or non-address outputs.
@@ -694,7 +694,7 @@ import "errors"
 //}
 //
 //// notifyBlockConnected notifies websocket clients that have registered for
-//// block updates when a block is connected to the main chain.
+//// block updates when a block is connected to the main BlockChain.
 //func (*wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
 //
@@ -713,7 +713,7 @@ import "errors"
 //}
 //
 //// notifyBlockDisconnected notifies websocket clients that have registered for
-//// block updates when a block is disconnected from the main chain (due to a
+//// block updates when a block is disconnected from the main BlockChain (due to a
 //// reorganize).
 //func (*wsNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*wsClient, block *btcutil.Block) {
 //	// Skip notification creation if no clients have requested block
@@ -737,7 +737,7 @@ import "errors"
 //}
 //
 //// notifyFilteredBlockConnected notifies websocket clients that have registered for
-//// block updates when a block is connected to the main chain.
+//// block updates when a block is connected to the main BlockChain.
 //func (m *wsNotificationManager) notifyFilteredBlockConnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
 //
@@ -782,7 +782,7 @@ import "errors"
 //}
 //
 //// notifyFilteredBlockDisconnected notifies websocket clients that have registered for
-//// block updates when a block is disconnected from the main chain (due to a
+//// block updates when a block is disconnected from the main BlockChain (due to a
 //// reorganize).
 //func (*wsNotificationManager) notifyFilteredBlockDisconnected(clients map[chan struct{}]*wsClient,
 //	block *btcutil.Block) {
@@ -852,8 +852,8 @@ import "errors"
 //				continue
 //			}
 //
-//			net := m.Server.cfg.ChainParams
-//			rawTx, err := createTxRawResult(net, mtx, txHashStr, nil,
+//			net := m.server.cfg.ChainParams
+//			rawTx, err := CreateTxRawResult(net, mtx, txHashStr, nil,
 //				"", 0, 0)
 //			if err != nil {
 //				return
@@ -876,7 +876,7 @@ import "errors"
 //
 //// RegisterSpentRequests requests a notification when each of the passed
 //// outpoints is confirmed spent (contained in a block connected to the main
-//// chain) for the passed websocket client.  The request is automatically
+//// BlockChain) for the passed websocket client.  The request is automatically
 //// removed once the notification has been sent.
 //func (m *wsNotificationManager) RegisterSpentRequests(wsc *wsClient, ops []*wire.OutPoint) {
 //	m.queueNotification <- &notificationRegisterSpent{
@@ -910,7 +910,7 @@ import "errors"
 //	// the mempool, if so send the notification immediately.
 //	spends := make(map[chainhash.Hash]*btcutil.Tx)
 //	for _, op := range ops {
-//		spend := m.Server.cfg.TxMemPool.CheckSpend(*op)
+//		spend := m.server.cfg.TxMemPool.CheckSpend(*op)
 //		if spend != nil {
 //			s.logger.Debugf("Found existing mempool spend for "+
 //				"outpoint<%v>: %v", op, spend.Hash())
@@ -925,7 +925,7 @@ import "errors"
 //
 //// UnregisterSpentRequest removes a request from the passed websocket client
 //// to be notified when the passed outpoint is confirmed spent (contained in a
-//// block connected to the main chain).
+//// block connected to the main BlockChain).
 //func (m *wsNotificationManager) UnregisterSpentRequest(wsc *wsClient, op *wire.OutPoint) {
 //	m.queueNotification <- &notificationUnregisterSpent{
 //		wsc: wsc,
@@ -969,14 +969,14 @@ import "errors"
 //
 //// blockDetails creates a BlockDetails struct to include in btcws notifications
 //// from a block and a transaction's block index.
-//func blockDetails(block *btcutil.Block, TxIndex int) *btcjson.BlockDetails {
+//func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
 //	if block == nil {
 //		return nil
 //	}
 //	return &btcjson.BlockDetails{
 //		Height: block.Height(),
 //		Hash:   block.Hash().String(),
-//		Index:  TxIndex,
+//		Index:  txIndex,
 //		Time:   block.MsgBlock().Header.Timestamp().Unix(),
 //	}
 //}
@@ -1005,7 +1005,7 @@ import "errors"
 //	wscNotified := make(map[chan struct{}]struct{})
 //	for i, txOut := range tx.MsgTx().TxOut {
 //		_, txAddrs, _, err := txscript.ExtractPkScriptAddrs(
-//			txOut.PkScript, m.Server.cfg.ChainParams)
+//			txOut.PkScript, m.server.cfg.ChainParams)
 //		if err != nil {
 //			continue
 //		}
@@ -1218,9 +1218,9 @@ import "errors"
 //
 //// newWsNotificationManager returns a new notification manager ready for use.
 //// See wsNotificationManager for more details.
-//func newWsNotificationManager(Server *rpcServer) *wsNotificationManager {
+//func newWsNotificationManager(server *RPCServer) *wsNotificationManager {
 //	return &wsNotificationManager{
-//		Server:            Server,
+//		server:            server,
 //		queueNotification: make(chan interface{}),
 //		notificationMsgs:  make(chan interface{}),
 //		numClients:        make(chan int),
@@ -1253,8 +1253,8 @@ import "errors"
 //type wsClient struct {
 //	sync.Mutex
 //
-//	// Server is the RPC Server that is servicing the client.
-//	Server *rpcServer
+//	// server is the RPC server that is servicing the client.
+//	server *RPCServer
 //
 //	// conn is the underlying websocket connection.
 //	conn *websocket.Conn
@@ -1270,7 +1270,7 @@ import "errors"
 //	// and therefore is allowed to communicated over the websocket.
 //	authenticated bool
 //
-//	// isAdmin specifies whether a client may change the state of the Server;
+//	// isAdmin specifies whether a client may change the state of the server;
 //	// false means its access is only to the limited set of RPC calls.
 //	isAdmin bool
 //
@@ -1412,8 +1412,8 @@ import "errors"
 //			login := authCmd.Username + ":" + authCmd.Passphrase
 //			auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(login))
 //			authSha := sha256.Sum256([]byte(auth))
-//			cmp := subtle.ConstantTimeCompare(authSha[:], c.Server.authsha[:])
-//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.Server.limitauthsha[:])
+//			cmp := subtle.ConstantTimeCompare(authSha[:], c.server.authSHA[:])
+//			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.server.limitAuthSHA[:])
 //			if cmp != 1 && limitcmp != 1 {
 //				s.logger.Warnf("Auth failure.")
 //				break out
@@ -1500,7 +1500,7 @@ import "errors"
 //	if ok {
 //		result, err = wsHandler(c, r.cmd)
 //	} else {
-//		result, err = c.Server.standardCmdResult(r, nil)
+//		result, err = c.server.CommandsMux(r, nil)
 //	}
 //	reply, err := createMarshalledReply(r.id, result, err)
 //	if err != nil {
@@ -1716,7 +1716,7 @@ var ErrClientQuit = errors.New("client quit")
 //// returned client is ready to start.  Once started, the client will process
 //// incoming and outgoing messages in separate goroutines complete with queuing
 //// and asynchrous handling for long-running operations.
-//func newWebsocketClient(Server *rpcServer, conn *websocket.Conn,
+//func newWebsocketClient(server *RPCServer, conn *websocket.Conn,
 //	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 //
 //	sessionID, err := encoder.RandomUint64()
@@ -1730,7 +1730,7 @@ var ErrClientQuit = errors.New("client quit")
 //		authenticated:     authenticated,
 //		isAdmin:           isAdmin,
 //		sessionID:         sessionID,
-//		Server:            Server,
+//		server:            server,
 //		addrRequests:      make(map[string]struct{}),
 //		spentRequests:     make(map[wire.OutPoint]struct{}),
 //		serviceRequestSem: makeSemaphore(main.cfg.RPCMaxConcurrentReqs),
@@ -1756,7 +1756,7 @@ var ErrClientQuit = errors.New("client quit")
 //		command = *cmd.Command
 //	}
 //	if command == "" {
-//		usage, err := wsc.Server.helpCacher.rpcUsage(true)
+//		usage, err := wsc.server.helpCacher.rpcUsage(true)
 //		if err != nil {
 //			context := "Failed to generate RPC usage"
 //			return nil, internalRPCError(err.Error(), context)
@@ -1781,7 +1781,7 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	// Get the help for the command.
-//	help, err := wsc.Server.helpCacher.rpcMethodHelp(command)
+//	help, err := wsc.server.helpCacher.rpcMethodHelp(command)
 //	if err != nil {
 //		context := "Failed to generate help"
 //		return nil, internalRPCError(err.Error(), context)
@@ -1811,7 +1811,7 @@ var ErrClientQuit = errors.New("client quit")
 //		}
 //	}
 //
-//	params := wsc.Server.cfg.ChainParams
+//	params := wsc.server.cfg.ChainParams
 //
 //	wsc.Lock()
 //	if cmd.Reload || wsc.filterData == nil {
@@ -1837,7 +1837,7 @@ var ErrClientQuit = errors.New("client quit")
 //// handleNotifyBlocks implements the notifyblocks command extension for
 //// websocket connections.
 //func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.Server.ntfnMgr.RegisterBlockUpdates(wsc)
+//	wsc.server.ntfnMgr.RegisterBlockUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1850,7 +1850,7 @@ var ErrClientQuit = errors.New("client quit")
 //// handleStopNotifyBlocks implements the stopnotifyblocks command extension for
 //// websocket connections.
 //func handleStopNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.Server.ntfnMgr.UnregisterBlockUpdates(wsc)
+//	wsc.server.ntfnMgr.UnregisterBlockUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1867,7 +1867,7 @@ var ErrClientQuit = errors.New("client quit")
 //		return nil, err
 //	}
 //
-//	wsc.Server.ntfnMgr.RegisterSpentRequests(wsc, outpoints)
+//	wsc.server.ntfnMgr.RegisterSpentRequests(wsc, outpoints)
 //	return nil, nil
 //}
 //
@@ -1880,14 +1880,14 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	wsc.verboseTxUpdates = cmd.Verbose != nil && *cmd.Verbose
-//	wsc.Server.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
+//	wsc.server.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
 //	return nil, nil
 //}
 //
 //// handleStopNotifyNewTransations implements the stopnotifynewtransactions
 //// command extension for websocket connections.
 //func handleStopNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	wsc.Server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
+//	wsc.server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
 //	return nil, nil
 //}
 //
@@ -1901,12 +1901,12 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Decode addresses to validate input, but the strings slice is used
 //	// directly if these are all ok.
-//	err := checkAddressValidity(cmd.Addresses, wsc.Server.cfg.ChainParams)
+//	err := checkAddressValidity(cmd.Addresses, wsc.server.cfg.ChainParams)
 //	if err != nil {
 //		return nil, err
 //	}
 //
-//	wsc.Server.ntfnMgr.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
+//	wsc.server.ntfnMgr.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
 //	return nil, nil
 //}
 //
@@ -1924,7 +1924,7 @@ var ErrClientQuit = errors.New("client quit")
 //	}
 //
 //	for _, outpoint := range outpoints {
-//		wsc.Server.ntfnMgr.UnregisterSpentRequest(wsc, outpoint)
+//		wsc.server.ntfnMgr.UnregisterSpentRequest(wsc, outpoint)
 //	}
 //
 //	return nil, nil
@@ -1940,13 +1940,13 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Decode addresses to validate input, but the strings slice is used
 //	// directly if these are all ok.
-//	err := checkAddressValidity(cmd.Addresses, wsc.Server.cfg.ChainParams)
+//	err := checkAddressValidity(cmd.Addresses, wsc.server.cfg.ChainParams)
 //	if err != nil {
 //		return nil, err
 //	}
 //
 //	for _, addr := range cmd.Addresses {
-//		wsc.Server.ntfnMgr.UnregisterTxOutAddressRequest(wsc, addr)
+//		wsc.server.ntfnMgr.UnregisterTxOutAddressRequest(wsc, addr)
 //	}
 //
 //	return nil, nil
@@ -2079,7 +2079,7 @@ var ErrClientQuit = errors.New("client quit")
 //			if err != nil {
 //				continue
 //			}
-//			addr, err := pkScript.Address(wsc.Server.cfg.ChainParams)
+//			addr, err := pkScript.Address(wsc.server.cfg.ChainParams)
 //			if err != nil {
 //				continue
 //			}
@@ -2111,7 +2111,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //		for txOutIdx, txout := range tx.MsgTx().TxOut {
 //			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(
-//				txout.PkScript, wsc.Server.cfg.ChainParams)
+//				txout.PkScript, wsc.server.cfg.ChainParams)
 //
 //			for _, addr := range addrs {
 //				if _, ok := lookups.addrs[addr.String()]; !ok {
@@ -2250,8 +2250,8 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Iterate over each block in the request and rescan.  When a block
 //	// contains relevant transactions, add it to the response.
-//	bc := wsc.Server.cfg.Chain
-//	params := wsc.Server.cfg.ChainParams
+//	bc := wsc.server.cfg.Chain
+//	params := wsc.server.cfg.ChainParams
 //	var lastBlockHash *chainhash.Hash
 //	for i := range blockHashes {
 //		block, err := bc.BlockByHash(blockHashes[i])
@@ -2287,10 +2287,10 @@ var ErrClientQuit = errors.New("client quit")
 //// verifies that the new range of blocks is on the same fork as a previous
 //// range of blocks.  If this condition does not hold true, the JSON-RPC error
 //// for an unrecoverable reorganize is returned.
-//func recoverFromReorg(chain *blockchain.BlockChain, minBlock, maxBlock int32,
+//func recoverFromReorg(BlockChain *blockchain.GetBlockChain, minBlock, maxBlock int32,
 //	lastBlock *chainhash.Hash) ([]chainhash.Hash, error) {
 //
-//	hashList, err := chain.HeightRange(minBlock, maxBlock)
+//	hashList, err := BlockChain.HeightRange(minBlock, maxBlock)
 //	if err != nil {
 //		s.logger.Errorf("Error looking up block range: %v", err)
 //		return nil, &btcjson.RPCError{
@@ -2302,7 +2302,7 @@ var ErrClientQuit = errors.New("client quit")
 //		return hashList, nil
 //	}
 //
-//	blk, err := chain.BlockByHash(&hashList[0])
+//	blk, err := BlockChain.BlockByHash(&hashList[0])
 //	if err != nil {
 //		s.logger.Errorf("Error looking up possibly reorged block: %v",
 //			err)
@@ -2335,7 +2335,7 @@ var ErrClientQuit = errors.New("client quit")
 //// we'll send back a rescan progress notification to the websockets client. The
 //// final block and block hash that we've scanned will be returned.
 //func scanBlockChunks(wsc *wsClient, cmd *btcjson.RescanCmd, lookups *rescanKeys, minBlock,
-//	maxBlock int32, chain *blockchain.BlockChain) (
+//	maxBlock int32, BlockChain *blockchain.GetBlockChain) (
 //	*btcutil.Block, *chainhash.Hash, error) {
 //
 //	// lastBlock and lastBlockHash track the previously-rescanned block.
@@ -2363,7 +2363,7 @@ var ErrClientQuit = errors.New("client quit")
 //		if maxLoopBlock-minBlock > types.MaxInvPerMsg {
 //			maxLoopBlock = minBlock + types.MaxInvPerMsg
 //		}
-//		hashList, err := chain.HeightRange(minBlock, maxLoopBlock)
+//		hashList, err := BlockChain.HeightRange(minBlock, maxLoopBlock)
 //		if err != nil {
 //			s.logger.Errorf("Error looking up block range: %v", err)
 //			return nil, nil, &btcjson.RPCError{
@@ -2391,13 +2391,13 @@ var ErrClientQuit = errors.New("client quit")
 //			// continuous notifications if necessary.  Otherwise,
 //			// continue the fetch loop again to rescan the new
 //			// blocks (or error due to an irrecoverable reorganize).
-//			pauseGuard := wsc.Server.cfg.SyncMgr.Pause()
-//			best := wsc.Server.cfg.Chain.BestSnapshot()
+//			pauseGuard := wsc.server.cfg.SyncMgr.Pause()
+//			best := wsc.server.cfg.Chain.BestSnapshot()
 //			curHash := &best.Hash
 //			again := true
 //			if lastBlockHash == nil || *lastBlockHash == *curHash {
 //				again = false
-//				n := wsc.Server.ntfnMgr
+//				n := wsc.server.ntfnMgr
 //				n.RegisterSpentRequests(wsc, lookups.unspentSlice())
 //				n.RegisterTxOutAddressRequests(wsc, cmd.Addresses)
 //			}
@@ -2419,7 +2419,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	loopHashList:
 //		for i := range hashList {
-//			blk, err := chain.BlockByHash(&hashList[i])
+//			blk, err := BlockChain.BlockByHash(&hashList[i])
 //			if err != nil {
 //				// Only handle reorgs if a block could not be
 //				// found for the hash.
@@ -2456,7 +2456,7 @@ var ErrClientQuit = errors.New("client quit")
 //				// reevaluated for the new hashList.
 //				minBlock += int32(i)
 //				hashList, err = recoverFromReorg(
-//					chain, minBlock, maxBlock, lastBlockHash,
+//					BlockChain, minBlock, maxBlock, lastBlockHash,
 //				)
 //				if err != nil {
 //					return nil, nil, err
@@ -2527,10 +2527,10 @@ var ErrClientQuit = errors.New("client quit")
 ////
 //// NOTE: This does not smartly handle reorgs, and fixing requires database
 //// changes (for safe, concurrent access to full block ranges, and support
-//// for other chains than the best chain).  It will, however, detect whether
+//// for other chains than the best BlockChain).  It will, however, detect whether
 //// a reorg removed a block that was previously processed, and result in the
 //// handler erroring.  Clients must handle this by finding a block still in
-//// the chain (perhaps from a rescanprogress notification) to resume their
+//// the BlockChain (perhaps from a rescanprogress notification) to resume their
 //// rescan.
 //func handleRescan(wsc *wsClient, icmd interface{}) (interface{}, error) {
 //	cmd, ok := icmd.(*btcjson.RescanCmd)
@@ -2568,13 +2568,13 @@ var ErrClientQuit = errors.New("client quit")
 //		lookups.unspent[*outpoint] = struct{}{}
 //	}
 //
-//	chain := wsc.Server.cfg.Chain
+//	BlockChain := wsc.server.cfg.Chain
 //
 //	minBlockHash, err := chainhash.NewHashFromStr(cmd.BeginBlock)
 //	if err != nil {
 //		return nil, rpcDecodeHexError(cmd.BeginBlock)
 //	}
-//	minBlock, err := chain.BlockHeightByHash(minBlockHash)
+//	minBlock, err := BlockChain.BlockHeightByHash(minBlockHash)
 //	if err != nil {
 //		return nil, &btcjson.RPCError{
 //			Code:    btcjson.ErrRPCBlockNotFound,
@@ -2588,7 +2588,7 @@ var ErrClientQuit = errors.New("client quit")
 //		if err != nil {
 //			return nil, rpcDecodeHexError(*cmd.EndBlock)
 //		}
-//		maxBlock, err = chain.BlockHeightByHash(maxBlockHash)
+//		maxBlock, err = BlockChain.BlockHeightByHash(maxBlockHash)
 //		if err != nil {
 //			return nil, &btcjson.RPCError{
 //				Code:    btcjson.ErrRPCBlockNotFound,
@@ -2606,7 +2606,7 @@ var ErrClientQuit = errors.New("client quit")
 //		// which will notify the clients of any address deposits or output
 //		// spends.
 //		lastBlock, lastBlockHash, err = scanBlockChunks(
-//			wsc, cmd, &lookups, minBlock, maxBlock, chain,
+//			wsc, cmd, &lookups, minBlock, maxBlock, BlockChain,
 //		)
 //		if err != nil {
 //			return nil, err
@@ -2624,9 +2624,9 @@ var ErrClientQuit = errors.New("client quit")
 //		// If we didn't actually do a rescan, then we'll give the
 //		// client our best known block within the final rescan finished
 //		// notification.
-//		chainTip := chain.BestSnapshot()
+//		chainTip := BlockChain.BestSnapshot()
 //		lastBlockHash = &chainTip.Hash
-//		lastBlock, err = chain.BlockByHash(lastBlockHash)
+//		lastBlock, err = BlockChain.BlockByHash(lastBlockHash)
 //		if err != nil {
 //			return nil, &btcjson.RPCError{
 //				Code:    btcjson.ErrRPCBlockNotFound,
