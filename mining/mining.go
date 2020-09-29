@@ -12,8 +12,8 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -248,7 +248,7 @@ func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func createCoinbaseTx(params *chaincore.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
+func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
 	// Create the script to pay to the provided payment address if one was
 	// specified.  Otherwise create a script that allows the coinbase to be
 	// redeemable by anyone.
@@ -345,7 +345,7 @@ func medianAdjustedTime(chainState *blockchain.BestState, timeSource blockchain.
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
 	policy      *Policy
-	chainParams *chaincore.Params
+	chainParams *chaincfg.Params
 	txSource    TxSource
 	chain       *blockchain.BlockChain
 	timeSource  blockchain.MedianTimeSource
@@ -359,7 +359,7 @@ type BlkTmplGenerator struct {
 // The additional state-related fields are required in order to ensure the
 // templates are built on top of the current best chain and adhere to the
 // consensus rules.
-func NewBlkTmplGenerator(policy *Policy, params *chaincore.Params,
+func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
 	txSource TxSource, chain *blockchain.BlockChain,
 	timeSource blockchain.MedianTimeSource,
 	sigCache *txscript.SigCache,
@@ -607,7 +607,7 @@ mempoolLoop:
 	// so then this means that we'll include any transactions with witness
 	// data in the mempool, and also add the witness commitment as an
 	// OP_RETURN output in the coinbase transaction.
-	segwitState, err := g.chain.ThresholdState(chaincore.DeploymentSegwit)
+	segwitState, err := g.chain.ThresholdState(chaincfg.DeploymentSegwit)
 	if err != nil {
 		return nil, err
 	}
@@ -861,7 +861,7 @@ mempoolLoop:
 	var msgBlock wire.MsgBlock
 
 	// todo (mike) may need to change the entire signature
-	msgBlock.Header = beacon.NewBlockHeader(
+	msgBlock.Header = chain.NewBeaconBlockHeader(
 		nextBlockVersion,
 		best.Hash,
 		*merkles[len(merkles)-1],
@@ -888,7 +888,7 @@ mempoolLoop:
 	log.Debugf("Created new block template (%d transactions, %d in "+
 		"fees, %d signature operations cost, %d weight, target difficulty "+
 		"%064x)", len(msgBlock.Transactions), totalFees, blockSigOpCost,
-		blockWeight, blockchain.CompactToBig(msgBlock.Header.Bits()))
+		blockWeight, chain.CompactToBig(msgBlock.Header.Bits()))
 
 	return &BlockTemplate{
 		Block:             &msgBlock,

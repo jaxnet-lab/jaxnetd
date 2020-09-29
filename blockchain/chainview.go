@@ -5,8 +5,9 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"sync"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // approxNodesPerWeek is an approximation of the number of new blocks there are
@@ -374,7 +375,7 @@ func (c *chainView) blockLocator(node chain.IBlockNode) BlockLocator {
 
 	step := int32(1)
 	for node != nil {
-		h :=node.GetHash()
+		h := node.GetHash()
 		locator = append(locator, &h)
 
 		// Nothing more to add once the genesis block has been added.

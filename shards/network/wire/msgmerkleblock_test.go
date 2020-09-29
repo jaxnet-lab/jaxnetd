@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
@@ -29,7 +29,7 @@ func TestMerkleBlock(t *testing.T) {
 	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
+	bh := chain.NewShardBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
@@ -122,7 +122,7 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := shard.NewBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
+	bh := chain.NewShardBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
 
 	msg := NewMsgMerkleBlock(bh)
 
@@ -378,7 +378,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 // merkleBlockOne is a merkle block created from block one of the block Chain
 // where the first transaction matches.
 var merkleBlockOne = MsgMerkleBlock{
-	Header: shard.NewBlockHeader(
+	Header: chain.NewShardBlockHeader(
 		1,
 		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,

@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -39,7 +39,7 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	chain := beacon.Chain(&chaincore.TestNet3Params)
+	chain := beacon.Chain(&chaincfg.TestNet3Params)
 
 	pver := ProtocolVersion
 
@@ -72,7 +72,7 @@ func TestMessage(t *testing.T) {
 	msgFilterAdd := NewMsgFilterAdd([]byte{0x01})
 	msgFilterClear := NewMsgFilterClear()
 	msgFilterLoad := NewMsgFilterLoad([]byte{0x01}, 10, 0, types.BloomUpdateNone)
-	bh := shard.NewBlockHeader(1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 0)
+	bh := chain2.NewShardBlockHeader(1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 0)
 	msgMerkleBlock := NewMsgMerkleBlock(bh)
 	msgReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	msgGetCFilters := NewMsgGetCFilters(GCSFilterRegular, 0, &chainhash.Hash{})
@@ -190,7 +190,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
 
-	chain := beacon.Chain(&chaincore.MainNetParams)
+	chain := beacon.Chain(&chaincfg.MainNetParams)
 
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"

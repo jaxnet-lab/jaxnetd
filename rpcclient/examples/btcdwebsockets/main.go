@@ -6,12 +6,12 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"log"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 func main() {

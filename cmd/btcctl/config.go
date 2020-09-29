@@ -17,7 +17,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gopkg.in/yaml.v3"
 )
 
@@ -115,24 +115,24 @@ type config struct {
 
 // normalizeAddress returns addr with the passed default port appended if
 // there is not already a port specified.
-func normalizeAddress(addr string, chain *chaincore.Params, useWallet bool) (string, error) {
+func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (string, error) {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		var defaultPort string
 		switch chain {
-		case &chaincore.TestNet3Params:
+		case &chaincfg.TestNet3Params:
 			if useWallet {
 				defaultPort = "18332"
 			} else {
 				defaultPort = "18334"
 			}
-		case &chaincore.SimNetParams:
+		case &chaincfg.SimNetParams:
 			if useWallet {
 				defaultPort = "18554"
 			} else {
 				defaultPort = "18556"
 			}
-		case &chaincore.RegressionNetParams:
+		case &chaincfg.RegressionNetParams:
 			if useWallet {
 				// TODO: add port once regtest is supported in btcwallet
 				paramErr := fmt.Errorf("cannot use -wallet with -regtest, btcwallet not yet compatible with regtest")
@@ -274,21 +274,21 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// default network is mainnet
-	network := &chaincore.MainNetParams
+	network := &chaincfg.MainNetParams
 
 	// Multiple networks can't be selected simultaneously.
 	numNets := 0
 	if cfg.TestNet3 {
 		numNets++
-		network = &chaincore.TestNet3Params
+		network = &chaincfg.TestNet3Params
 	}
 	if cfg.SimNet {
 		numNets++
-		network = &chaincore.SimNetParams
+		network = &chaincfg.SimNetParams
 	}
 	if cfg.RegressionTest {
 		numNets++
-		network = &chaincore.RegressionNetParams
+		network = &chaincfg.RegressionNetParams
 	}
 
 	if numNets > 1 {

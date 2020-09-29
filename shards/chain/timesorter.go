@@ -1,4 +1,4 @@
-package utils
+package chain
 
 // timeSorter implements sort.Interface to allow a slice of timestamps to
 // be sorted.

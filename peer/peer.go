@@ -22,7 +22,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -255,7 +255,7 @@ type Config struct {
 	// ChainParams identifies which chain parameters the peer is associated
 	// with.  It is highly recommended to specify this field, however it can
 	// be omitted in which case the test network will be used.
-	ChainParams *chaincore.Params
+	ChainParams *chaincfg.Params
 
 	// Services specifies which services to advertise as supported by the
 	// local peer.  This field can be omitted in which case it will be 0
@@ -2226,7 +2226,7 @@ func newPeerBase(origCfg *Config, inbound bool, iChain chain.IChain) *Peer {
 
 	// Set the iChain parameters to testnet if the caller did not specify any.
 	if cfg.ChainParams == nil {
-		cfg.ChainParams = &chaincore.TestNet3Params
+		cfg.ChainParams = &chaincfg.TestNet3Params
 	}
 
 	// Set the trickle interval if a non-positive value is specified.

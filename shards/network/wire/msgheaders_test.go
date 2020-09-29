@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
@@ -67,7 +67,7 @@ func TestHeadersWire(t *testing.T) {
 	mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bh := chain.NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	// Empty headers message.
 	noHeaders := NewMsgHeaders()
@@ -235,7 +235,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bh := chain.NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	// Headers message with one header.
 	oneHeader := NewMsgHeaders()
@@ -270,7 +270,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	// Intentionally invalid block header that has a transaction count used
 	// to force errors.
-	bhTrans := beacon.NewBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bhTrans := chain.NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
 
 	transHeader := NewMsgHeaders()
 	transHeader.AddBlockHeader(bhTrans)

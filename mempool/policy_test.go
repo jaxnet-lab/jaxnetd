@@ -11,7 +11,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -293,7 +293,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 	}
 	addrHash := [20]byte{0x01}
 	addr, err := btcutil.NewAddressPubKeyHash(addrHash[:],
-		&chaincore.TestNet3Params)
+		&chaincfg.TestNet3Params)
 	if err != nil {
 		t.Fatalf("NewAddressPubKeyHash: unexpected error: %v", err)
 	}

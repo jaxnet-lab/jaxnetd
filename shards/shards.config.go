@@ -3,7 +3,7 @@ package shards
 import (
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/server"
 )
 
@@ -22,8 +22,8 @@ type NodeConfig struct {
 	MiningAddresses []string                  `yaml:"mining_addresses"`
 }
 
-func (cfg *NodeConfig) ChainParams() *chaincore.Params {
-	return chaincore.NetName(cfg.Net).Params()
+func (cfg *NodeConfig) ChainParams() *chaincfg.Params {
+	return chaincfg.NetName(cfg.Net).Params()
 }
 
 type Config struct {

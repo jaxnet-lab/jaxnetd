@@ -9,7 +9,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
@@ -23,7 +23,7 @@ type blockIndex struct {
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
 	db          database.DB
-	chainParams *chaincore.Params
+	chainParams *chaincfg.Params
 
 	sync.RWMutex
 	index map[chainhash.Hash]chain.IBlockNode
@@ -33,7 +33,7 @@ type blockIndex struct {
 // newBlockIndex returns a new empty instance of a block index.  The index will
 // be dynamically populated as block nodes are loaded from the database and
 // manually added.
-func newBlockIndex(db database.DB, chainParams *chaincore.Params) *blockIndex {
+func newBlockIndex(db database.DB, chainParams *chaincfg.Params) *blockIndex {
 	return &blockIndex{
 		db:          db,
 		chainParams: chainParams,

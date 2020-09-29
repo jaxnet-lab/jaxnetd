@@ -18,7 +18,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 )
 
 // dbType is the database type name for this driver.
@@ -174,8 +174,8 @@ func TestPersistence(t *testing.T) {
 		"b1key2": "foo2",
 		"b1key3": "foo3",
 	}
-	genesisBlock := btcutil.NewBlock(chaincore.MainNetParams.GenesisBlock)
-	genesisHash := chaincore.MainNetParams.GenesisHash
+	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesisHash := chaincfg.MainNetParams.GenesisHash
 	err = db.Update(func(tx database.Tx) error {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {

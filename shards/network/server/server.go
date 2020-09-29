@@ -30,7 +30,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
@@ -1656,7 +1656,7 @@ func (s *P2PServer) isWhitelisted(addr net.Addr) bool {
 
 // checkpointSorter implements sort.Interface to allow a slice of checkpoints to
 // be sorted.
-type checkpointSorter []chaincore.Checkpoint
+type checkpointSorter []chaincfg.Checkpoint
 
 // Len returns the number of checkpoints in the slice.  It is part of the
 // sort.Interface implementation.
@@ -1681,10 +1681,10 @@ func (s checkpointSorter) Less(i, j int) bool {
 // checkpoints contain a checkpoint with the same height as a checkpoint in the
 // default checkpoints, the additional checkpoint will take precedence and
 // overwrite the default one.
-func mergeCheckpoints(defaultCheckpoints, additional []chaincore.Checkpoint) []chaincore.Checkpoint {
+func mergeCheckpoints(defaultCheckpoints, additional []chaincfg.Checkpoint) []chaincfg.Checkpoint {
 	// Create a map of the additional checkpoints to remove duplicates while
 	// leaving the most recently-specified checkpoint.
-	extra := make(map[int32]chaincore.Checkpoint)
+	extra := make(map[int32]chaincfg.Checkpoint)
 	for _, checkpoint := range additional {
 		extra[checkpoint.Height] = checkpoint
 	}
@@ -1692,7 +1692,7 @@ func mergeCheckpoints(defaultCheckpoints, additional []chaincore.Checkpoint) []c
 	// Add all default checkpoints that do not have an override in the
 	// additional checkpoints.
 	numDefault := len(defaultCheckpoints)
-	checkpoints := make([]chaincore.Checkpoint, 0, numDefault+len(extra))
+	checkpoints := make([]chaincfg.Checkpoint, 0, numDefault+len(extra))
 	for _, checkpoint := range defaultCheckpoints {
 		if _, exists := extra[checkpoint.Height]; !exists {
 			checkpoints = append(checkpoints, checkpoint)

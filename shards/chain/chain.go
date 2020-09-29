@@ -1,8 +1,8 @@
 package chain
 
-import "gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
-
-//var DefaultChain IChain
+import (
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+)
 
 type IChain interface {
 	//Read(r io.Reader) (BlockHeader, error)
@@ -15,8 +15,10 @@ type IChain interface {
 	NewNode(blockHeader BlockHeader, parent IBlockNode) IBlockNode
 	MaxBlockHeaderPayload() int
 	BlockHeaderOverhead() int
-	Params() *chaincore.Params
+	Params() *chaincfg.Params
 	GenesisBlock() interface{}
 	//BlockOne()
 	//GenesisHash() chainhash.Hash
 }
+
+var DefaultChain IChain

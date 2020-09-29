@@ -13,7 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/connmgr"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -209,7 +209,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// connection to peers if they flag that they're segwit
 		// enabled.
 		blockChain := sp.server.BlockChain
-		segwitActive, err := blockChain.IsDeploymentActive(chaincore.DeploymentSegwit)
+		segwitActive, err := blockChain.IsDeploymentActive(chaincfg.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
 				err)

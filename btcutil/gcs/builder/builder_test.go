@@ -12,7 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs/builder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -80,7 +80,7 @@ func TestUseBlockHash(t *testing.T) {
 	}
 
 	// btcutil.Address
-	addr, err := btcutil.DecodeAddress(testAddr, &chaincore.MainNetParams)
+	addr, err := btcutil.DecodeAddress(testAddr, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Fatalf("Address decode failed: %s", err.Error())
 	}

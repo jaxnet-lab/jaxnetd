@@ -22,8 +22,8 @@ import (
 const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
-	// wire.MaxBlockHeaderPayload is quite long.
-	// blockHdrSize = shard.MaxBlockHeaderPayload
+	// wire.MaxBeaconBlockHeaderPayload is quite long.
+	// blockHdrSize = shard.MaxBeaconBlockHeaderPayload
 
 	// latestUtxoSetBucketVersion is the current version of the utxo set
 	// bucket that is used to track all unspent outputs.

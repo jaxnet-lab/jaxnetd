@@ -14,6 +14,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -212,7 +213,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		template = blkTemplate
 		msgBlock = template.Block
 		targetDifficulty = fmt.Sprintf("%064x",
-			blockchain.CompactToBig(msgBlock.Header.Bits()))
+			chain.CompactToBig(msgBlock.Header.Bits()))
 
 		// Get the minimum allowed timestamp for the block based on the
 		// median timestamp of the last several blocks per the BlockChain
@@ -272,7 +273,7 @@ func (state *gbtWorkState) updateBlockTemplate(s *ChainRPC, useCoinbaseValue boo
 		// Set locals for convenience.
 		msgBlock = template.Block
 		targetDifficulty = fmt.Sprintf("%064x",
-			blockchain.CompactToBig(msgBlock.Header.Bits()))
+			chain.CompactToBig(msgBlock.Header.Bits()))
 
 		// Update the time of the block template to the current time
 		// while accounting for the median time of the past several
@@ -368,7 +369,7 @@ func (state *gbtWorkState) blockTemplateResult(useCoinbaseValue bool, submitOld 
 	// implied by the included or omission of fields:
 	//  Including MinTime -> time/decrement
 	//  Omitting CoinbaseTxn -> coinbase, generation
-	targetDifficulty := fmt.Sprintf("%064x", blockchain.CompactToBig(header.Bits()))
+	targetDifficulty := fmt.Sprintf("%064x", chain.CompactToBig(header.Bits()))
 	templateID := ToolsXt{}.EncodeTemplateID(state.prevHash, state.lastGenerated)
 	reply := btcjson.GetBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),

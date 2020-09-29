@@ -4,24 +4,17 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
-const (
-	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
-	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
-	// PrevBlock and MerkleRoot hashes.
-	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 3)
-)
-
 type beaconChain struct {
-	chainParams *chaincore.Params
+	chainParams *chaincfg.Params
 }
 
-func Chain(params *chaincore.Params) chain.IChain {
+func Chain(params *chaincfg.Params) chain.IChain {
 	clone := *params
 	clone.Name = "beacon"
 	beacon := &beaconChain{}
@@ -36,7 +29,7 @@ func Chain(params *chaincore.Params) chain.IChain {
 
 func (c *beaconChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-		Header: NewBlockHeader(
+		Header: chain.NewBeaconBlockHeader(
 			chain.NewBVersion(c.chainParams.GenesisBlock.Version),
 			c.chainParams.GenesisBlock.PrevBlock,
 			c.chainParams.GenesisBlock.MerkleRoot,
@@ -53,7 +46,7 @@ func (c *beaconChain) IsBeacon() bool {
 	return true
 }
 
-func (c *beaconChain) Params() *chaincore.Params {
+func (c *beaconChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
 
@@ -62,7 +55,7 @@ func (c *beaconChain) ShardID() int32 {
 }
 
 func (c *beaconChain) NewHeader() chain.BlockHeader {
-	return &header{}
+	return &chain.BeaconHeader{}
 }
 
 func (c *beaconChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRootHash chainhash.Hash,
@@ -72,25 +65,25 @@ func (c *beaconChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRoo
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
-	return &header{
-		version:         version,
-		prevBlock:       prevHash,
-		merkleRoot:      merkleRootHash,
-		mergeMiningRoot: mergeMiningRoot,
-		timestamp:       timestamp,
-		bits:            bits,
-		nonce:           nonce,
-	}
+	return chain.NewBeaconBlockHeader(
+		version,
+		prevHash,
+		merkleRootHash,
+		mergeMiningRoot,
+		timestamp,
+		bits,
+		nonce,
+	)
 }
 
 func (c *beaconChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
-	return BlockNode(blockHeader, parent)
+	return chain.NewBeaconBlockNode(blockHeader, parent)
 }
 
 func (c *beaconChain) MaxBlockHeaderPayload() int {
-	return maxBlockHeaderPayload
+	return chain.MaxBeaconBlockHeaderPayload
 }
 
 func (c *beaconChain) BlockHeaderOverhead() int {
-	return maxBlockHeaderPayload + encoder.MaxVarIntPayload
+	return chain.MaxBeaconBlockHeaderPayload + encoder.MaxVarIntPayload
 }

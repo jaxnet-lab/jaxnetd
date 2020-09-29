@@ -16,7 +16,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
@@ -54,7 +55,7 @@ var (
 type Config struct {
 	// ChainParams identifies which chain parameters the cpu miner is
 	// associated with.
-	ChainParams *chaincore.Params
+	ChainParams *chaincfg.Params
 
 	// BlockTemplateGenerator identifies the instance to use in order to
 	// generate block templates that the miner will attempt to solve.
@@ -223,7 +224,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 	// Create some convenience variables.
 	header := msgBlock.Header
-	targetDifficulty := blockchain.CompactToBig(header.Bits())
+	targetDifficulty := chain.CompactToBig(header.Bits())
 
 	// Initial state.
 	lastGenerated := time.Now()
@@ -286,7 +287,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 
 			// The block is solved when the new block hash is less
 			// than the target difficulty.  Yay!
-			if blockchain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+			if chain.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 				miner.updateHashes <- hashesCompleted
 				return true
 			}

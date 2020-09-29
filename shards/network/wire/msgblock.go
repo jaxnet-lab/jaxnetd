@@ -64,6 +64,10 @@ func (msg *MsgBlock) ClearTransactions() {
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
+	if msg.Header == nil {
+		// todo: fix this
+		msg.Header = chain.NewEmptyHeader()
+	}
 
 	if err := msg.Header.Read(r); err != nil {
 		return err
