@@ -9,9 +9,10 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"

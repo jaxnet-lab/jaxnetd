@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
@@ -198,9 +199,9 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			// expected based on elapsed time since the last checkpoint and
 			// maximum adjustment allowed by the retarget rules.
 			duration := blockHeader.Timestamp().Sub(checkpointTime)
-			requiredTarget := CompactToBig(b.calcEasiestDifficulty(
+			requiredTarget := chain.CompactToBig(b.calcEasiestDifficulty(
 				checkpointNode.Bits(), duration))
-			currentTarget := CompactToBig(blockHeader.Bits())
+			currentTarget := chain.CompactToBig(blockHeader.Bits())
 			if currentTarget.Cmp(requiredTarget) > 0 {
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+

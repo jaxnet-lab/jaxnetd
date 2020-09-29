@@ -13,7 +13,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -193,7 +193,7 @@ func isBIP0030Node(node chain.IBlockNode) bool {
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
-func CalcBlockSubsidy(height int32, chainParams *chaincore.Params) int64 {
+func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 	if chainParams.SubsidyReductionInterval == 0 {
 		return baseSubsidy
 	}
@@ -308,7 +308,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 //    difficulty is not performed.
 func checkProofOfWork(header chain.BlockHeader, powLimit *big.Int, flags BehaviorFlags) error {
 	// The target difficulty must be larger than zero.
-	target := CompactToBig(header.Bits())
+	target := chain.CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
 		str := fmt.Sprintf("block target difficulty of %064x is too low",
 			target)
@@ -327,7 +327,7 @@ func checkProofOfWork(header chain.BlockHeader, powLimit *big.Int, flags Behavio
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
 		// The block hash must be less than the claimed target.
 		hash := header.BlockHash()
-		hashNum := HashToBig(&hash)
+		hashNum := chain.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
 			str := fmt.Sprintf("block hash of %064x is higher than "+
 				"expected max of %064x", hashNum, target)
@@ -739,7 +739,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode chain.IBlo
 		// Obtain the latest state of the deployed CSV soft-fork in
 		// order to properly guard the new validation behavior based on
 		// the current BIP 9 version bits state.
-		csvState, err := b.deploymentState(prevNode, chaincore.DeploymentCSV)
+		csvState, err := b.deploymentState(prevNode, chaincfg.DeploymentCSV)
 		if err != nil {
 			return err
 		}
@@ -785,7 +785,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode chain.IBlo
 		// deployment. If segwit is active, we'll switch over to
 		// enforcing all the new rules.
 		segwitState, err := b.deploymentState(prevNode,
-			chaincore.DeploymentSegwit)
+			chaincfg.DeploymentSegwit)
 		if err != nil {
 			return err
 		}
@@ -874,7 +874,7 @@ func (b *BlockChain) checkBIP0030(node chain.IBlockNode, block *btcutil.Block, v
 //
 // NOTE: The transaction MUST have already been sanity checked with the
 // CheckTransactionSanity function prior to calling this function.
-func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincore.Params) (int64, error) {
+func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
@@ -1054,7 +1054,7 @@ func (b *BlockChain) checkConnectBlock(node chain.IBlockNode, block *btcutil.Blo
 	// Query for the Version Bits state for the segwit soft-fork
 	// deployment. If segwit is active, we'll switch over to enforcing all
 	// the new rules.
-	segwitState, err := b.deploymentState(node.Parent(), chaincore.DeploymentSegwit)
+	segwitState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentSegwit)
 	if err != nil {
 		return err
 	}
@@ -1179,7 +1179,7 @@ func (b *BlockChain) checkConnectBlock(node chain.IBlockNode, block *btcutil.Blo
 
 	// Enforce CHECKSEQUENCEVERIFY during all block validation checks once
 	// the soft-fork deployment is fully active.
-	csvState, err := b.deploymentState(node.Parent(), chaincore.DeploymentCSV)
+	csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
 	if err != nil {
 		return err
 	}

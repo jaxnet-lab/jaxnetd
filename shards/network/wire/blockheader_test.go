@@ -5,10 +5,11 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"testing"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -24,23 +25,23 @@ func TestBlockHeader(t *testing.T) {
 	hash := mainNetGenesisHash
 	merkleHash := mainNetGenesisMerkleRoot
 	bits := uint32(0x1d00ffff)
-	bh := shard.NewBlockHeader(1, hash, merkleHash, hash, time.Now(), bits, nonce)
+	bh := chain.NewShardBlockHeader(1, hash, merkleHash, hash, time.Now(), bits, nonce)
 
 	// Ensure we get the same data back out.
 	if bh.PrevBlock() != hash {
-		t.Errorf("NewBlockHeader: wrong prev hash - got %v, want %v",
+		t.Errorf("NewShardBlockHeader: wrong prev hash - got %v, want %v",
 			spew.Sprint(bh.PrevBlock), spew.Sprint(hash))
 	}
 	if bh.MerkleRoot() != merkleHash {
-		t.Errorf("NewBlockHeader: wrong merkle root - got %v, want %v",
+		t.Errorf("NewShardBlockHeader: wrong merkle root - got %v, want %v",
 			spew.Sprint(bh.MerkleRoot), spew.Sprint(merkleHash))
 	}
 	if bh.Bits() != bits {
-		t.Errorf("NewBlockHeader: wrong bits - got %v, want %v",
+		t.Errorf("NewShardBlockHeader: wrong bits - got %v, want %v",
 			bh.Bits(), bits)
 	}
 	if bh.Nonce() != nonce {
-		t.Errorf("NewBlockHeader: wrong nonce - got %v, want %v",
+		t.Errorf("NewShardBlockHeader: wrong nonce - got %v, want %v",
 			bh.Nonce(), nonce)
 	}
 }
@@ -53,7 +54,7 @@ func TestBlockHeader(t *testing.T) {
 //
 //	// baseBlockHdr is used in the various tests as a baseline BlockHeader.
 //	bits := uint32(0x1d00ffff)
-//	baseBlockHdr := shard.NewBlockHeader(1,
+//	baseBlockHdr := shard.NewShardBlockHeader(1,
 //		mainNetGenesisHash, mainNetGenesisMerkleRoot, chainhash.Hash{},
 //		time.Unix(0x495fab29, 0), bits, nonce,
 //	)

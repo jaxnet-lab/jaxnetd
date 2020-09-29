@@ -15,7 +15,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -30,7 +30,7 @@ type Transaction struct {
 	SignedTx           string `json:"signedtx"`
 }
 
-func CreateTransaction(destination string, amount int64, txHash string, netParams *chaincore.Params) (*wire.MsgTx, Transaction, error) {
+func CreateTransaction(destination string, amount int64, txHash string, netParams *chaincfg.Params) (*wire.MsgTx, Transaction, error) {
 	var transaction Transaction
 
 	pkBytes, err := hex.DecodeString("679887f4c91a1f509fd0ddd8365d3377675027982c16b5605fd2e9c198981ad1")
@@ -44,7 +44,7 @@ func CreateTransaction(destination string, amount int64, txHash string, netParam
 	sourceUtxoHash, _ := chainhash.NewHashFromStr(txHash)
 
 	fmt.Println("sourceUtxoHash", sourceUtxoHash.String())
-	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincore.MainNetParams)
+	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.MainNetParams)
 	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
 	if err != nil {
 		return nil, Transaction{}, err

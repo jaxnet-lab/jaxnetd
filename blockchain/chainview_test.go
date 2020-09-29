@@ -6,9 +6,7 @@ package blockchain
 
 import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-
-	//"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
+	// "gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -34,11 +32,12 @@ func chainedNodes(parent chain.IBlockNode, numNodes int) []chain.IBlockNode {
 			header.SetPrevBlock(tip.GetHash())
 		}
 
-		nodes[i] = beacon.BlockNode(header, tip)
+		nodes[i] = chain.NewBeaconBlockNode(header, tip)
 		tip = nodes[i]
 	}
 	return nodes
 }
+
 //
 //// String returns the block node as a human-readable name.
 //func (node blockNode) String() string {

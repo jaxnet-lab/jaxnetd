@@ -1,4 +1,4 @@
-package chaincore
+package chaincfg
 
 import (
 	"bytes"

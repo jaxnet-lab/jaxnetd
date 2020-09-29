@@ -13,7 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core.git/netsync"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
 	"go.uber.org/zap"
 )
@@ -42,7 +42,7 @@ type ChainRuntimeConfig struct {
 	EnableCPUMiner      bool     `yaml:"enable_cpu_miner"`
 }
 
-func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincore.Params) ([]btcutil.Address, error) {
+func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {
 	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
 	for _, address := range cfg.MiningAddresses {
 		addr, err := btcutil.DecodeAddress(address, params)
@@ -77,7 +77,7 @@ type ChainProvider struct {
 	// These fields allow the RPC Server to interface with the local block
 	// BlockChain data and state.
 	TimeSource  blockchain.MedianTimeSource
-	ChainParams *chaincore.Params
+	ChainParams *chaincfg.Params
 	DB          database.DB
 
 	// TxMemPool defines the transaction memory pool to interact with.
@@ -281,7 +281,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 	return nil
 }
 
-func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManager, []chaincore.Checkpoint) {
+func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManager, []chaincfg.Checkpoint) {
 	// Create the transaction and address indexes if needed.
 	//
 	// CAUTION: the txindex needs to be first in the indexes array because
@@ -321,7 +321,7 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 	}
 
 	// Merge given checkpoints with the default ones unless they are disabled.
-	var checkpoints []chaincore.Checkpoint
+	var checkpoints []chaincfg.Checkpoint
 	if !cfg.DisableCheckpoints {
 		// checkpoints = mergeCheckpoints(chainProvider.ChainParams.Checkpoints, cfg.AddCheckpoints)
 	}

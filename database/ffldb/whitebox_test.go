@@ -22,7 +22,7 @@ import (
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -57,7 +57,7 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 
 	// Set the first block as the genesis block.
 	blocks := make([]*btcutil.Block, 0, 256)
-	genesis := btcutil.NewBlock(chaincore.MainNetParams.GenesisBlock)
+	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
 	blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.

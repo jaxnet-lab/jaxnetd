@@ -13,7 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
@@ -26,7 +26,7 @@ var (
 // loadBlockDB opens the block database and returns a handle to it.
 func loadBlockDB() (database.DB, error) {
 
-	chain := beacon.Chain(&chaincore.TestNet3Params)
+	chain := beacon.Chain(&chaincfg.TestNet3Params)
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
@@ -43,7 +43,7 @@ func loadBlockDB() (database.DB, error) {
 // candidates at the last checkpoint that is already hard coded into btcchain
 // since there is no point in finding candidates before already existing
 // checkpoints.
-func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([]*chaincore.Checkpoint, error) {
+func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([]*chaincfg.Checkpoint, error) {
 	// Start with the latest block of the main chain.
 	block, err := chain.BlockByHash(latestHash)
 	if err != nil {
@@ -124,7 +124,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 // showCandidate display a checkpoint candidate using and output format
 // determined by the configuration parameters.  The Go syntax output
 // uses the format the btcchain code expects for checkpoints added to the list.
-func showCandidate(candidateNum int, checkpoint *chaincore.Checkpoint) {
+func showCandidate(candidateNum int, checkpoint *chaincfg.Checkpoint) {
 	if cfg.UseGoOutput {
 		fmt.Printf("Candidate %d -- {%d, newShaHashFromStr(\"%v\")},\n",
 			candidateNum, checkpoint.Height, checkpoint.Hash)

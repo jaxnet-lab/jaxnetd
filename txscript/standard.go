@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -521,7 +521,7 @@ func PushedData(script []byte) ([][]byte, error) {
 // signatures associated with the passed PkScript.  Note that it only works for
 // 'standard' transaction script types.  Any data such as public keys which are
 // invalid are omitted from the results.
-func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincore.Params) (ScriptClass, []btcutil.Address, int, error) {
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, error) {
 	var addrs []btcutil.Address
 	var requiredSigs int
 

@@ -10,7 +10,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcec"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -25,7 +25,7 @@ func ExamplePayToAddrScript() {
 	// the address type.  It is also required for the upcoming call to
 	// PayToAddrScript.
 	addressStr := "12gpXQVcCL2qhTNQgyLVdCFG2Qs2px98nV"
-	address, err := btcutil.DecodeAddress(addressStr, &chaincore.MainNetParams)
+	address, err := btcutil.DecodeAddress(addressStr, &chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -64,7 +64,7 @@ func ExampleExtractPkScriptAddrs() {
 
 	// Extract and print details from the script.
 	scriptClass, addresses, reqSigs, err := txscript.ExtractPkScriptAddrs(
-		script, &chaincore.MainNetParams)
+		script, &chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -92,7 +92,7 @@ func ExampleSignTxOutput() {
 	privKey, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBytes)
 	pubKeyHash := btcutil.Hash160(pubKey.SerializeCompressed())
 	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash,
-		&chaincore.MainNetParams)
+		&chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -151,7 +151,7 @@ func ExampleSignTxOutput() {
 	// Notice that the script database parameter is nil here since it isn't
 	// used.  It must be specified when pay-to-script-hash transactions are
 	// being signed.
-	sigScript, err := txscript.SignTxOutput(&chaincore.MainNetParams,
+	sigScript, err := txscript.SignTxOutput(&chaincfg.MainNetParams,
 		redeemTx, 0, originTx.TxOut[0].PkScript, txscript.SigHashAll,
 		txscript.KeyClosure(lookupKey), nil, nil)
 	if err != nil {

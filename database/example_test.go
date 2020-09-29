@@ -15,7 +15,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
@@ -137,7 +137,7 @@ func Example_blockStorageAndRetrieval() {
 	// read-write transaction and store a genesis block in the database as
 	// and example.
 	err = db.Update(func(tx database.Tx) error {
-		genesisBlock := chaincore.MainNetParams.GenesisBlock
+		genesisBlock := chaincfg.MainNetParams.GenesisBlock
 		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
 	})
 	if err != nil {
@@ -149,7 +149,7 @@ func Example_blockStorageAndRetrieval() {
 	// transaction and fetch the block stored above.
 	var loadedBlockBytes []byte
 	err = db.Update(func(tx database.Tx) error {
-		genesisHash := chaincore.MainNetParams.GenesisHash
+		genesisHash := chaincfg.MainNetParams.GenesisHash
 		blockBytes, err := tx.FetchBlock(genesisHash)
 		if err != nil {
 			return err

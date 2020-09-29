@@ -5,20 +5,13 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
-const (
-	// MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
-	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
-	// PrevBlock and MerkleRoot hashes.
-	maxBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
-)
-
-func Chain(shardID uint32, params *chaincore.Params, genesis *wire.MsgBlock, gHeight int32) chain.IChain {
+func Chain(shardID uint32, params *chaincfg.Params, genesis *wire.MsgBlock, gHeight int32) chain.IChain {
 	shard := &shardChain{
 		shardID:      shardID,
 		startVersion: genesis.Header.Version(),
@@ -27,7 +20,7 @@ func Chain(shardID uint32, params *chaincore.Params, genesis *wire.MsgBlock, gHe
 	hash := genesis.BlockHash()
 	clone := params.ShardGenesis(shardID, gHeight, &hash)
 	clone.GenesisHash = &hash
-	clone.GenesisBlock = chaincore.GenesisBlockOpts{
+	clone.GenesisBlock = chaincfg.GenesisBlockOpts{
 		Version:   int32(genesis.Header.Version()),
 		Timestamp: genesis.Header.Timestamp(),
 
@@ -45,35 +38,35 @@ func Chain(shardID uint32, params *chaincore.Params, genesis *wire.MsgBlock, gHe
 type shardChain struct {
 	shardID      uint32
 	startVersion chain.BVersion
-	chainParams  *chaincore.Params
+	chainParams  *chaincfg.Params
 }
 
 func (c *shardChain) NewBlockHeader(version chain.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) chain.BlockHeader {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
-	return &header{
-		version:             version,
-		prevBlock:           prevHash,
-		merkleRoot:          merkleRootHash,
-		merkleMountainRange: mmr,
-		timestamp:           timestamp,
-		bits:                bits,
-		nonce:               nonce,
-	}
+	return chain.NewShardBlockHeader(
+		version,
+		prevHash,
+		merkleRootHash,
+		mmr,
+		timestamp,
+		bits,
+		nonce,
+	)
 }
 
 func (c *shardChain) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
-	return BlockNode(blockHeader, parent)
+	return chain.NewShardBlockNode(blockHeader, parent)
 }
 
-func (c *shardChain) Params() *chaincore.Params {
+func (c *shardChain) Params() *chaincfg.Params {
 	// todo(mike) [chaincfg] change me
 	return c.chainParams
 }
 
 func (c *shardChain) NewHeader() chain.BlockHeader {
-	return &header{}
+	return &chain.ShardHeader{}
 }
 
 func (c *shardChain) IsBeacon() bool {
@@ -86,7 +79,7 @@ func (c *shardChain) ShardID() int32 {
 
 func (c *shardChain) GenesisBlock() interface{} {
 	return &wire.MsgBlock{
-		Header: NewBlockHeader(
+		Header: chain.NewShardBlockHeader(
 			chain.NewBVersion(c.chainParams.GenesisBlock.Version),
 			c.chainParams.GenesisBlock.PrevBlock,
 			c.chainParams.GenesisBlock.MerkleRoot,
@@ -99,20 +92,20 @@ func (c *shardChain) GenesisBlock() interface{} {
 }
 
 func (c *shardChain) Read(r io.Reader) (chain.BlockHeader, error) {
-	h := &header{}
-	err := readBlockHeader(r, h)
+	h := &chain.ShardHeader{}
+	err := chain.ReadShardBlockHeader(r, h)
 	return h, err
 }
 
 func (c *shardChain) Write(w io.Writer, h chain.BlockHeader) error {
-	header := h.(*header)
-	return writeBlockHeader(w, header)
+	header := h.(*chain.ShardHeader)
+	return chain.WriteShardBlockHeader(w, header)
 }
 
 func (c *shardChain) MaxBlockHeaderPayload() int {
-	return maxBlockHeaderPayload
+	return chain.MaxShardBlockHeaderPayload
 }
 
 func (c *shardChain) BlockHeaderOverhead() int {
-	return maxBlockHeaderPayload + encoder.MaxVarIntPayload
+	return chain.MaxShardBlockHeaderPayload + encoder.MaxVarIntPayload
 }

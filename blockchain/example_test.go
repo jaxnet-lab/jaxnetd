@@ -10,11 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
 	chain2 "gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -30,7 +29,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincore.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return
@@ -78,7 +77,7 @@ func ExampleBlockChain_ProcessBlock() {
 func ExampleCompactToBig() {
 	// Convert the bits from block 300000 in the main block chain.
 	bits := uint32(419465580)
-	targetDifficulty := blockchain.CompactToBig(bits)
+	targetDifficulty := chain2.CompactToBig(bits)
 
 	// Display it in hex.
 	fmt.Printf("%064x\n", targetDifficulty.Bytes())
@@ -98,7 +97,7 @@ func ExampleBigToCompact() {
 		fmt.Println("invalid target difficulty")
 		return
 	}
-	bits := blockchain.BigToCompact(targetDifficulty)
+	bits := chain2.BigToCompact(targetDifficulty)
 
 	fmt.Println(bits)
 

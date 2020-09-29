@@ -19,7 +19,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network"
@@ -1030,13 +1030,13 @@ func (server *ChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan <-cha
 		// fork-name.
 		var forkName string
 		switch deployment {
-		case chaincore.DeploymentTestDummy:
+		case chaincfg.DeploymentTestDummy:
 			forkName = "dummy"
 
-		case chaincore.DeploymentCSV:
+		case chaincfg.DeploymentCSV:
 			forkName = "csv"
 
-		case chaincore.DeploymentSegwit:
+		case chaincfg.DeploymentSegwit:
 			forkName = "segwit"
 
 		default:
@@ -1709,7 +1709,7 @@ func (server *ChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan
 			minTimestamp = header.Timestamp()
 			maxTimestamp = minTimestamp
 		} else {
-			totalWork.Add(totalWork, blockchain.CalcWork(header.Bits()))
+			totalWork.Add(totalWork, chain.CalcWork(header.Bits()))
 
 			if minTimestamp.After(header.Timestamp()) {
 				minTimestamp = header.Timestamp()
@@ -2083,7 +2083,7 @@ type retrievedTx struct {
 
 // createVinListPrevOut returns a slice of JSON objects for the inputs of the
 // passed transaction.
-func (server *ChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams *chaincore.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
+func (server *ChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams *chaincfg.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
 	// Coinbase transactions only have a single txin by definition.
 	if blockchain.IsCoinBaseTx(mtx) {
 		// Only include the transaction if the filter map is empty

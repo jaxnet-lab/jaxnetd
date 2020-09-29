@@ -1,6 +1,8 @@
 package chain
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestBVersion_ExpansionMade(t *testing.T) {
 	tests := []struct {

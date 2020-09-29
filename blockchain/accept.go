@@ -6,10 +6,10 @@ package blockchain
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if

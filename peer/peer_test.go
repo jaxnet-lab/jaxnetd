@@ -16,9 +16,9 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
@@ -237,7 +237,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincore.MainNetParams,
+		ChainParams:       &chaincfg.MainNetParams,
 		ProtocolVersion:   wire.RejectVersion, // Configure with older version
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
@@ -247,7 +247,7 @@ func TestPeerConnection(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincore.MainNetParams,
+		ChainParams:       &chaincfg.MainNetParams,
 		Services:          wire.SFNodeNetwork | wire.SFNodeWitness,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -452,7 +452,7 @@ func TestPeerListeners(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincore.MainNetParams,
+		ChainParams:       &chaincfg.MainNetParams,
 		Services:          wire.SFNodeBloom,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -518,7 +518,7 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnBlock",
-			wire.NewMsgBlock(shard.NewBlockHeader(1,
+			wire.NewMsgBlock(chain.NewShardBlockHeader(1,
 				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
 		},
 		{
@@ -584,7 +584,7 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnMerkleBlock",
-			wire.NewMsgMerkleBlock(shard.NewBlockHeader(1,
+			wire.NewMsgMerkleBlock(chain.NewShardBlockHeader(1,
 				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
 		},
 		// only one version message is allowed
@@ -623,7 +623,7 @@ func TestOutboundPeer(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincore.MainNetParams,
+		ChainParams:       &chaincfg.MainNetParams,
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -713,7 +713,7 @@ func TestOutboundPeer(t *testing.T) {
 	p1.Disconnect()
 
 	// Test regression
-	peerCfg.ChainParams = &chaincore.RegressionNetParams
+	peerCfg.ChainParams = &chaincfg.RegressionNetParams
 	peerCfg.Services = wire.SFNodeBloom
 	r2, w2 := io.Pipe()
 	c2 := &conn{raddr: "10.0.0.1:8333", Writer: w2, Reader: r2}
@@ -764,7 +764,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 		UserAgentName:     "peer",
 		UserAgentVersion:  "1.0",
 		UserAgentComments: []string{"comment"},
-		ChainParams:       &chaincore.MainNetParams,
+		ChainParams:       &chaincfg.MainNetParams,
 		Services:          0,
 		TrickleInterval:   time.Second * 10,
 	}
@@ -875,7 +875,7 @@ func TestDuplicateVersionMsg(t *testing.T) {
 		},
 		UserAgentName:    "peer",
 		UserAgentVersion: "1.0",
-		ChainParams:      &chaincore.MainNetParams,
+		ChainParams:      &chaincfg.MainNetParams,
 		Services:         0,
 	}
 	inConn, outConn := pipe(

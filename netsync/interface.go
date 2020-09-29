@@ -9,7 +9,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
@@ -32,7 +32,7 @@ type Config struct {
 	PeerNotifier PeerNotifier
 	Chain        *blockchain.BlockChain
 	TxMemPool    *mempool.TxPool
-	ChainParams  *chaincore.Params
+	ChainParams  *chaincfg.Params
 
 	DisableCheckpoints bool
 	MaxPeers           int

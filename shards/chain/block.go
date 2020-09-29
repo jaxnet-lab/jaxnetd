@@ -72,5 +72,3 @@ type IBlockNode interface {
 	WorkSum() *big.Int
 	Timestamp() int64
 }
-
-var DefaultChain IChain

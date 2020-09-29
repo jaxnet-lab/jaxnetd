@@ -8,7 +8,7 @@ import (
 	"math"
 
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 )
 
 const (
@@ -125,7 +125,7 @@ func (c bitConditionChecker) Condition(node chain.IBlockNode) (bool, error) {
 // test a specific deployment rule.  This is required for properly detecting
 // and activating consensus rule changes.
 type deploymentChecker struct {
-	deployment *chaincore.ConsensusDeployment
+	deployment *chaincfg.ConsensusDeployment
 	chain      *BlockChain
 }
 

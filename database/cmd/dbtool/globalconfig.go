@@ -13,14 +13,14 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
 )
 
 var (
 	btcdHomeDir     = btcutil.AppDataDir("btcd", false)
 	knownDbTypes    = database.SupportedDrivers()
-	activeNetParams = &chaincore.MainNetParams
+	activeNetParams = &chaincfg.MainNetParams
 
 	// Default global config.
 	cfg = &config{
@@ -68,7 +68,7 @@ func validDbType(dbType string) bool {
 // A proper upgrade to move the data and log directories for this network to
 // "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
-func netName(chainParams *chaincore.Params) string {
+func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
 	case types.TestNet3:
 		return "testnet"
@@ -87,15 +87,15 @@ func setupGlobalConfig() error {
 	numNets := 0
 	if cfg.TestNet3 {
 		numNets++
-		activeNetParams = &chaincore.TestNet3Params
+		activeNetParams = &chaincfg.TestNet3Params
 	}
 	if cfg.RegressionTest {
 		numNets++
-		activeNetParams = &chaincore.RegressionNetParams
+		activeNetParams = &chaincfg.RegressionNetParams
 	}
 	if cfg.SimNet {
 		numNets++
-		activeNetParams = &chaincore.SimNetParams
+		activeNetParams = &chaincfg.SimNetParams
 	}
 	if numNets > 1 {
 		return errors.New("The testnet, regtest, and simnet params " +

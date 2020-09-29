@@ -6,9 +6,10 @@ package wire
 
 import (
 	"fmt"
+	"io"
+
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"io"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in

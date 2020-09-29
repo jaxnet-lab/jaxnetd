@@ -7,10 +7,12 @@ package blockchain
 import (
 	"bytes"
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
@@ -622,7 +624,7 @@ func TestBestChainStateSerialization(t *testing.T) {
 				height:    0,
 				totalTxns: 1,
 				workSum: func() *big.Int {
-					workSum.Add(workSum, CalcWork(486604799))
+					workSum.Add(workSum, chain.CalcWork(486604799))
 					return new(big.Int).Set(workSum)
 				}(), // 0x0100010001
 			},
@@ -635,7 +637,7 @@ func TestBestChainStateSerialization(t *testing.T) {
 				height:    1,
 				totalTxns: 2,
 				workSum: func() *big.Int {
-					workSum.Add(workSum, CalcWork(486604799))
+					workSum.Add(workSum, chain.CalcWork(486604799))
 					return new(big.Int).Set(workSum)
 				}(), // 0x0200020002
 			},

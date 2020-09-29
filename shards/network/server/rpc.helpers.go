@@ -18,7 +18,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/mining"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 	"gitlab.com/jaxnet/core/shard.core.git/txscript"
@@ -272,7 +272,7 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
 
 // CreateVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincore.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
+func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
 	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the
@@ -324,7 +324,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincore.Params,
 
 // CreateTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
-func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincore.Params, mtx *wire.MsgTx,
+func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader chain.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
 
@@ -359,13 +359,13 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincore.Params, mtx *wire.Ms
 
 // GetDifficultyRatio returns the proof-of-work difficulty as a multiple of the
 // minimum difficulty using the passed bits field from the header of a block.
-func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chaincore.Params) (float64, error) {
+func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chaincfg.Params) (float64, error) {
 	// The minimum difficulty is the max possible proof-of-work limit bits
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block
 	// with the compact form which loses precision.
-	max := blockchain.CompactToBig(params.PowLimitBits)
-	target := blockchain.CompactToBig(bits)
+	max := chain.CompactToBig(params.PowLimitBits)
+	target := chain.CompactToBig(bits)
 
 	difficulty := new(big.Rat).SetFrac(max, target)
 	outString := difficulty.FloatString(8)

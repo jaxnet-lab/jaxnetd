@@ -6,8 +6,8 @@ package blockchain
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 

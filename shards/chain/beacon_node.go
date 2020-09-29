@@ -1,14 +1,11 @@
-package beacon
+package chain
 
 import (
 	"math/big"
 	"sort"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/utils"
 )
 
 var zeroHash chainhash.Hash
@@ -17,10 +14,10 @@ const (
 	medianTimeBlocks = 11
 )
 
-// blockNode represents a block within the block chain and is primarily used to
+// BeaconBlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.  The main chain is
 // stored into the block database.
-type blockNode struct {
+type BeaconBlockNode struct {
 	// NOTE: Additions, deletions, or modifications to the order of the
 	// definitions in this struct should not be changed without considering
 	// how it affects alignment on 64-bit platforms.  The current order is
@@ -29,7 +26,7 @@ type blockNode struct {
 	// padding adds up.
 
 	// parent is the parent block for this node.
-	parent chain.IBlockNode
+	parent IBlockNode
 
 	// hash is the double sha 256 of the block.
 	hash chainhash.Hash
@@ -56,17 +53,17 @@ type blockNode struct {
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
 	// blockIndex once the node has been added to the global index.
-	status chain.BlockStatus
+	status BlockStatus
 }
 
-// initBlockNode initializes a block node from the given header and parent node,
+// initBeaconBlockNode initializes a block node from the given header and parent node,
 // calculating the height and workSum from the respective fields on the parent.
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
-func initBlockNode(node *blockNode, blockHeader chain.BlockHeader, parent chain.IBlockNode) {
-	*node = blockNode{
+func initBeaconBlockNode(node *BeaconBlockNode, blockHeader BlockHeader, parent IBlockNode) {
+	*node = BeaconBlockNode{
 		hash:       blockHeader.BlockHash(),
-		workSum:    blockchain.CalcWork(blockHeader.Bits()),
+		workSum:    CalcWork(blockHeader.Bits()),
 		version:    int32(blockHeader.Version()),
 		bits:       blockHeader.Bits(),
 		nonce:      blockHeader.Nonce(),
@@ -83,42 +80,37 @@ func initBlockNode(node *blockNode, blockHeader chain.BlockHeader, parent chain.
 // newBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func BlockNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) *blockNode {
-	var node blockNode
-	initBlockNode(&node, blockHeader, parent)
+func NewBeaconBlockNode(blockHeader BlockHeader, parent IBlockNode) *BeaconBlockNode {
+	var node BeaconBlockNode
+	initBeaconBlockNode(&node, blockHeader, parent)
 	return &node
 }
 
-func (node *blockNode) NewNode() chain.IBlockNode {
-	var res blockNode
+func (node *BeaconBlockNode) NewNode() IBlockNode {
+	var res BeaconBlockNode
 	return &res
 }
 
-func (node *blockNode) GetHeight() int32                   { return node.height }
-func (node *blockNode) GetHash() chainhash.Hash            { return node.hash }
-func (node *blockNode) Version() int32                     { return node.version }
-func (node *blockNode) Height() int32                      { return node.height }
-func (node *blockNode) Bits() uint32                       { return node.bits }
-func (node *blockNode) SetBits(value uint32)               { node.bits = value }
-func (node *blockNode) Parent() chain.IBlockNode           { return node.parent }
-func (node *blockNode) WorkSum() *big.Int                  { return node.workSum }
-func (node *blockNode) Timestamp() int64                   { return node.timestamp }
-func (node *blockNode) Status() chain.BlockStatus          { return node.status }
-func (node *blockNode) SetStatus(status chain.BlockStatus) { node.status = status }
+func (node *BeaconBlockNode) GetHeight() int32             { return node.height }
+func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
+func (node *BeaconBlockNode) Version() int32               { return node.version }
+func (node *BeaconBlockNode) Height() int32                { return node.height }
+func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
+func (node *BeaconBlockNode) SetBits(value uint32)         { node.bits = value }
+func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
+func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
+func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }
+func (node *BeaconBlockNode) Status() BlockStatus          { return node.status }
+func (node *BeaconBlockNode) SetStatus(status BlockStatus) { node.status = status }
 
-// func (node *blockNode) NewHeader() chain.BlockHeader{
-//	return NewBlockHeader()
-// }
-
-func (node *blockNode) NewHeader() chain.BlockHeader {
-	res := new(header)
-	return res
+func (node *BeaconBlockNode) NewHeader() BlockHeader {
+	return new(BeaconHeader)
 }
 
 // header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) Header() chain.BlockHeader {
+func (node *BeaconBlockNode) Header() BlockHeader {
 	// No lock is needed because all accessed fields are immutable.
 	prevHash := &zeroHash
 	if node.parent != nil {
@@ -126,7 +118,7 @@ func (node *blockNode) Header() chain.BlockHeader {
 		prevHash = &h
 	}
 
-	return NewBlockHeader(chain.BVersion(node.version), *prevHash,
+	return NewBeaconBlockHeader(BVersion(node.version), *prevHash,
 		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
 }
 
@@ -136,12 +128,12 @@ func (node *blockNode) Header() chain.BlockHeader {
 // than zero.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) Ancestor(height int32) chain.IBlockNode {
+func (node *BeaconBlockNode) Ancestor(height int32) IBlockNode {
 	if height < 0 || height > node.height {
 		return nil
 	}
 
-	n := chain.IBlockNode(node)
+	n := IBlockNode(node)
 	for ; n != nil && n.Height() != height; n = n.Parent() {
 		// Intentionally left blank
 	}
@@ -154,7 +146,7 @@ func (node *blockNode) Ancestor(height int32) chain.IBlockNode {
 // height minus provided distance.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) RelativeAncestor(distance int32) chain.IBlockNode {
+func (node *BeaconBlockNode) RelativeAncestor(distance int32) IBlockNode {
 	return node.Ancestor(node.height - distance)
 }
 
@@ -162,12 +154,12 @@ func (node *blockNode) RelativeAncestor(distance int32) chain.IBlockNode {
 // prior to, and including, the block node.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) CalcPastMedianTime() time.Time {
+func (node *BeaconBlockNode) CalcPastMedianTime() time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
 	// the median per the number defined by the constant medianTimeBlocks.
 	timestamps := make([]int64, medianTimeBlocks)
 	numNodes := 0
-	iterNode := chain.IBlockNode(node)
+	iterNode := IBlockNode(node)
 	for i := 0; i < medianTimeBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.Timestamp()
 		numNodes++
@@ -179,7 +171,7 @@ func (node *blockNode) CalcPastMedianTime() time.Time {
 	// will be fewer than desired near the beginning of the block chain
 	// and sort them.
 	timestamps = timestamps[:numNodes]
-	sort.Sort(utils.TimeSorter(timestamps))
+	sort.Sort(TimeSorter(timestamps))
 
 	// NOTE: The consensus rules incorrectly calculate the median for even
 	// numbers of blocks.  A true median averages the middle two elements

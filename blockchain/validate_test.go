@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincore"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
@@ -70,7 +70,7 @@ func TestSequenceLocksActive(t *testing.T) {
 func TestCheckConnectBlockTemplate(t *testing.T) {
 	// Create a new database and chain instance to run tests against.
 	chain, teardownFunc, err := chainSetup("checkconnectblocktemplate",
-		&chaincore.MainNetParams)
+		&chaincfg.MainNetParams)
 	if err != nil {
 		t.Errorf("Failed to setup chain instance: %v", err)
 		return
@@ -153,7 +153,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 // TestCheckBlockSanity tests the CheckBlockSanity function to ensure it works
 // as expected.
 func TestCheckBlockSanity(t *testing.T) {
-	powLimit := chaincore.MainNetParams.PowLimit
+	powLimit := chaincfg.MainNetParams.PowLimit
 	block := btcutil.NewBlock(&Block100000)
 	timeSource := NewMedianTime()
 	err := CheckBlockSanity(block, powLimit, timeSource)
@@ -239,7 +239,7 @@ func TestCheckSerializedHeight(t *testing.T) {
 // Block100000 defines block 100,000 of the block chain.  It is used to
 // test Block operations.
 var Block100000 = wire.MsgBlock{
-	Header: shard.NewBlockHeader(1, [32]byte{ // Make go vet happy.
+	Header: chain.NewShardBlockHeader(1, [32]byte{ // Make go vet happy.
 		0x50, 0x12, 0x01, 0x19, 0x17, 0x2a, 0x61, 0x04,
 		0x21, 0xa6, 0xc3, 0x01, 0x1d, 0xd3, 0x30, 0xd9,
 		0xdf, 0x07, 0xb6, 0x36, 0x16, 0xc2, 0xcc, 0x1f,
