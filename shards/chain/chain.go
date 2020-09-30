@@ -1,7 +1,10 @@
 package chain
 
 import (
+	"time"
+
 	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
 )
 
 type IChain interface {
@@ -10,8 +13,10 @@ type IChain interface {
 	IsBeacon() bool
 	ShardID() int32
 	NewHeader() BlockHeader
-	//NewBlockHeader(version int32, prevHash, merkleRootHash chainhash.Hash,
-	//	mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) BlockHeader
+
+	NewBlockHeader(version BVersion, prevHash, merkleRootHash chainhash.Hash,
+		mmr chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) BlockHeader
+
 	NewNode(blockHeader BlockHeader, parent IBlockNode) IBlockNode
 	MaxBlockHeaderPayload() int
 	BlockHeaderOverhead() int
@@ -21,4 +26,4 @@ type IChain interface {
 	//GenesisHash() chainhash.Hash
 }
 
-var DefaultChain IChain
+var BeaconChain IChain

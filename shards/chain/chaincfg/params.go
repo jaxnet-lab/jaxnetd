@@ -21,6 +21,12 @@ var (
 	// bigOne is 1 represented as a big.Int.  It is defined here to avoid
 	// the overhead of creating it multiple times.
 	bigOne = big.NewInt(1)
+
+	// shardChainPowLimit is the highest proof of work value a Bitcoin block
+	// can have for the test network (version 3).  It is the value
+	// 2^255 - 1.
+	shardChainPowLimit        = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+	shardPoWBits       uint32 = 0x1e0dffff
 )
 
 var (
@@ -239,28 +245,19 @@ type Params struct {
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardGenesis(shard uint32, height int32,
-	// block *wire.MsgBlock, // fixme
-	hash *chainhash.Hash) *Params {
+func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 	// shard's exclusive info
-	// cfg.ShardID = shard
-	// cfg.StartHeight = height
 	cfg.Name = "shard_" + strconv.FormatUint(uint64(shard), 10)
-	// cfg.GenesisBlock = block
 	cfg.GenesisHash = hash
-	// -------
 
 	cfg.TargetTimespan = time.Second * 60 * 60 * 24
 	cfg.TargetTimePerBlock = time.Second * 15
 
-	// todo(mike): here is difficulty changing
-	// cfg.PowLimit = cfg.PowLimit
-	// cfg.PowLimitBits = cfg.PowLimitBits
-	// cfg.SubsidyReductionInterval = cfg.SubsidyReductionInterval
-	//
-	// cfg.RetargetAdjustmentFactor = cfg.RetargetAdjustmentFactor
-	// cfg.ReduceMinDifficulty = cfg.ReduceMinDifficulty
-	// cfg.MinDiffReductionTime = cfg.MinDiffReductionTime
+	cfg.PowLimit = shardChainPowLimit
+	cfg.PowLimitBits = shardPoWBits
+
+	cfg.ReduceMinDifficulty = true
+	cfg.MinDiffReductionTime = cfg.TargetTimePerBlock * 2
 
 	return &cfg
 }

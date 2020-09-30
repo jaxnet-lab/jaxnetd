@@ -20,14 +20,13 @@ type P2pConfig struct {
 	DisableBanning bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
 	BlocksOnly     bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
 
-	DisableTLS     bool   `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
-	OnionProxy     string `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	OnionProxyPass string `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy Server"`
-	OnionProxyUser string `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy Server"`
-	Proxy          string `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass      string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy Server"`
-	ProxyUser      string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy Server"`
-	// AddPeers        []string      `yaml:"add_peers" short:"a" long:"addpeer" description:"Add a Server to connect with at startup"`
+	DisableTLS      bool          `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
+	OnionProxy      string        `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	OnionProxyPass  string        `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy Server"`
+	OnionProxyUser  string        `yaml:"onion_proxy_user" long:"onionuser" description:"Username for onion proxy Server"`
+	Proxy           string        `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyPass       string        `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy Server"`
+	ProxyUser       string        `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy Server"`
 	RejectNonStd    bool          `yaml:"reject_non_std" long:"rejectnonstd" description:"Reject non-standard transactions regardless of the default settings for the active network."`
 	TrickleInterval time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
 	DisableDNSSeed  bool          `yaml:"disable_dns_seed" long:"nodnsseed" description:"Disable DNS seeding for peers"`

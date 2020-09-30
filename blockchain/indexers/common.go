@@ -10,9 +10,9 @@ package indexers
 import (
 	"encoding/binary"
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/database"
 )
 

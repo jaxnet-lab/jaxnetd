@@ -458,6 +458,6 @@ func main() {
 }
 
 func initChain() bool {
-	chain.DefaultChain = beacon.Chain(activeNetParams.Params)
+	chain.BeaconChain = beacon.Chain(activeNetParams.Params)
 	return true
 }

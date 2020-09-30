@@ -83,7 +83,7 @@ func CreateTransaction(destination string, amount int64, txHash string, netParam
 }
 
 func main() {
-	ch := chain.DefaultChain
+	ch := chain.BeaconChain
 	trx, transaction, err := CreateTransaction("1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", 1000, "ca0b8007c6a5751f6fdabc0c9341b75940914c14172c57a91338bbbba1e95f3d", ch.Params())
 	if err != nil {
 		fmt.Println("transaction error", err)

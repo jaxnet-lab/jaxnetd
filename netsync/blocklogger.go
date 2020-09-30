@@ -5,11 +5,11 @@
 package netsync
 
 import (
-	"github.com/btcsuite/btclog"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"sync"
 	"time"
 
+	"github.com/btcsuite/btclog"
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // blockProgressLogger provides periodic logging for other services in order

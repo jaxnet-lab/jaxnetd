@@ -11,7 +11,7 @@ import (
 
 // fTestNetPowLimit is the highest proof of work value a Bitcoin block
 // can have for the test network (version 3).  It is the value
-// 2^224 - 1.
+// 2^255 - 1.
 var fTestNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 // fTestNetGenesisHash is the hash of the first block in the block chain for the

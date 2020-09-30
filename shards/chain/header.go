@@ -16,17 +16,20 @@ const (
 	GCSFilterRegular FilterType = iota
 )
 const (
+	flagsReserve = 4
+
 	ExpansionApprove = 1 << iota
 	ExpansionExec
-	ShardBlock
 )
 
 type BVersion int32
 
 func NewBVersion(version int32) BVersion {
-	var v = BVersion(version << 4)
+	return BVersion(version << flagsReserve)
+}
 
-	return v
+func (bv BVersion) Version() int32 {
+	return int32(bv) >> flagsReserve
 }
 
 func (bv BVersion) ExpansionApproved() bool {
@@ -43,18 +46,6 @@ func (bv BVersion) ExpansionMade() bool {
 
 func (bv BVersion) SetExpansionMade() BVersion {
 	return bv ^ ExpansionExec
-}
-
-func (bv BVersion) BeaconChainBlock() bool {
-	return bv&ShardBlock != ShardBlock
-}
-
-func (bv BVersion) ShardChainBlock() bool {
-	return bv&ShardBlock == ShardBlock
-}
-
-func (bv BVersion) SetShard() BVersion {
-	return bv ^ ShardBlock
 }
 
 const BlockHeaderLen = 80
@@ -79,7 +70,7 @@ type BlockHeader interface {
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
-	//Size() int
+	// Size() int
 }
 
 type Block interface {

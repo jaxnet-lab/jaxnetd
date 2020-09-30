@@ -7,10 +7,12 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"io"
 	"strings"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 )
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a
@@ -249,13 +251,15 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 // NewMsgVersion returns a new bitcoin version message that conforms to the
 // Message interface using the passed parameters and defaults for the remaining
 // fields.
-func NewMsgVersion(me *NetAddress, you *NetAddress, nonce uint64,
+func NewMsgVersion(chain chain.IChain, me *NetAddress, you *NetAddress, nonce uint64,
 	lastBlock int32) *MsgVersion {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &MsgVersion{
 		ProtocolVersion: int32(ProtocolVersion),
+		IsBeacon:        chain.IsBeacon(),
+		Shard:           chain.ShardID(),
 		Services:        0,
 		Timestamp:       time.Unix(time.Now().Unix(), 0),
 		AddrYou:         *you,

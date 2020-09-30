@@ -11,32 +11,35 @@ import (
 	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
 )
 
-func Chain(shardID uint32, params *chaincfg.Params, genesis *wire.MsgBlock, gHeight int32) chain.IChain {
+func Chain(shardID uint32, params *chaincfg.Params, beaconGenesisBlc *wire.MsgBlock, gHeight int32) chain.IChain {
 	shard := &shardChain{
+		beaconHeight: gHeight,
 		shardID:      shardID,
-		startVersion: genesis.Header.Version(),
+		startVersion: beaconGenesisBlc.Header.Version(),
 	}
-
-	hash := genesis.BlockHash()
-	clone := params.ShardGenesis(shardID, gHeight, &hash)
-	clone.GenesisHash = &hash
+	clone := params.ShardGenesis(shardID, nil)
 	clone.GenesisBlock = chaincfg.GenesisBlockOpts{
-		Version:   int32(genesis.Header.Version()),
-		Timestamp: genesis.Header.Timestamp(),
+		Version:   int32(beaconGenesisBlc.Header.Version()),
+		Timestamp: beaconGenesisBlc.Header.Timestamp(),
 
-		// todo(mike) ensure that it correct
+		// todo(mike) ensure that this is correct
 		PrevBlock:  chainhash.Hash{},
 		MerkleRoot: chainhash.Hash{},
-		Bits:       genesis.Header.Bits(),
-		Nonce:      genesis.Header.Nonce(),
+		Bits:       beaconGenesisBlc.Header.Bits(),
+		Nonce:      beaconGenesisBlc.Header.Nonce(),
 	}
 	shard.chainParams = clone
+
+	genesis := shard.GenesisBlock().(*wire.MsgBlock)
+	hash := genesis.BlockHash()
+	clone.GenesisHash = &hash
 
 	return shard
 }
 
 type shardChain struct {
 	shardID      uint32
+	beaconHeight int32
 	startVersion chain.BVersion
 	chainParams  *chaincfg.Params
 }

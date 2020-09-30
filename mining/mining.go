@@ -344,13 +344,13 @@ func medianAdjustedTime(chainState *blockchain.BestState, timeSource blockchain.
 // It also houses additional state required in order to ensure the templates
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
-	policy      *Policy
-	chainParams *chaincfg.Params
-	txSource    TxSource
-	chain       *blockchain.BlockChain
-	timeSource  blockchain.MedianTimeSource
-	sigCache    *txscript.SigCache
-	hashCache   *txscript.HashCache
+	policy     *Policy
+	chainTools chain.IChain
+	txSource   TxSource
+	chain      *blockchain.BlockChain
+	timeSource blockchain.MedianTimeSource
+	sigCache   *txscript.SigCache
+	hashCache  *txscript.HashCache
 }
 
 // NewBlkTmplGenerator returns a new block template generator for the given
@@ -359,20 +359,20 @@ type BlkTmplGenerator struct {
 // The additional state-related fields are required in order to ensure the
 // templates are built on top of the current best chain and adhere to the
 // consensus rules.
-func NewBlkTmplGenerator(policy *Policy, params *chaincfg.Params,
+func NewBlkTmplGenerator(policy *Policy, chainTools chain.IChain,
 	txSource TxSource, chain *blockchain.BlockChain,
 	timeSource blockchain.MedianTimeSource,
 	sigCache *txscript.SigCache,
 	hashCache *txscript.HashCache) *BlkTmplGenerator {
 
 	return &BlkTmplGenerator{
-		policy:      policy,
-		chainParams: params,
-		txSource:    txSource,
-		chain:       chain,
-		timeSource:  timeSource,
-		sigCache:    sigCache,
-		hashCache:   hashCache,
+		policy:     policy,
+		chainTools: chainTools,
+		txSource:   txSource,
+		chain:      chain,
+		timeSource: timeSource,
+		sigCache:   sigCache,
+		hashCache:  hashCache,
 	}
 }
 
@@ -459,7 +459,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	if err != nil {
 		return nil, err
 	}
-	coinbaseTx, err := createCoinbaseTx(g.chainParams, coinbaseScript,
+	coinbaseTx, err := createCoinbaseTx(g.chainTools.Params(), coinbaseScript,
 		nextBlockHeight, payToAddress)
 	if err != nil {
 		return nil, err
@@ -741,7 +741,7 @@ mempoolLoop:
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
 		_, err = blockchain.CheckTransactionInputs(tx, nextBlockHeight,
-			blockUtxos, g.chainParams)
+			blockUtxos, g.chainTools.Params())
 		if err != nil {
 			log.Tracef("Skipping tx %s due to error in "+
 				"CheckTransactionInputs: %v", tx.Hash(), err)
@@ -860,8 +860,7 @@ mempoolLoop:
 	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
 	var msgBlock wire.MsgBlock
 
-	// todo (mike) may need to change the entire signature
-	msgBlock.Header = chain.NewBeaconBlockHeader(
+	msgBlock.Header = g.chainTools.NewBlockHeader(
 		nextBlockVersion,
 		best.Hash,
 		*merkles[len(merkles)-1],
@@ -870,6 +869,7 @@ mempoolLoop:
 		reqDifficulty,
 		0,
 	)
+
 	for _, tx := range blockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
 			return nil, err
@@ -914,7 +914,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	msgBlock.Header.SetTimestamp(newTime)
 
 	// Recalculate the difficulty if running on a network that requires it.
-	if g.chainParams.ReduceMinDifficulty {
+	if g.chainTools.Params().ReduceMinDifficulty {
 		difficulty, err := g.chain.CalcNextRequiredDifficulty(newTime)
 		if err != nil {
 			return err

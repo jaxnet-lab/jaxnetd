@@ -498,7 +498,7 @@ func (r FutureGetBlockHeaderResult) Receive() (chain.BlockHeader, error) {
 	}
 
 	// Deserialize the blockheader and return it.
-	bh := chain.DefaultChain.NewHeader()
+	bh := chain.BeaconChain.NewHeader()
 	err = bh.Read(bytes.NewReader(serializedBH))
 	if err != nil {
 		return nil, err

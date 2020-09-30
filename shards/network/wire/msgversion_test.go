@@ -1,7 +1,8 @@
 // Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-// +build deprecated_tests
+
+//+build deprecated_tests
 
 package wire
 
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
 	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
 )
@@ -35,7 +37,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	// Ensure we get the correct data back out.
-	msg := NewMsgVersion(me, you, nonce, lastBlock)
+	msg := NewMsgVersion(chain.BeaconChain, me, you, nonce, lastBlock)
 	if msg.ProtocolVersion != int32(pver) {
 		t.Errorf("NewMsgVersion: wrong protocol version - got %v, want %v",
 			msg.ProtocolVersion, pver)

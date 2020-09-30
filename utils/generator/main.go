@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	data, key := GenerateKeyAddress(chain.DefaultChain.Params())
+	data, key := GenerateKeyAddress(chain.BeaconChain.Params())
 	fmt.Println("res", data, " err: ", key)
 }
 

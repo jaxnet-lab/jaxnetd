@@ -823,7 +823,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 	}
 
 	// Remote peer writes version message advertising invalid protocol version 1
-	invalidVersionMsg := wire.NewMsgVersion(remoteNA, localNA, 0, 0)
+	invalidVersionMsg := wire.NewMsgVersion(chain.BeaconChain, remoteNA, localNA, 0, 0)
 	invalidVersionMsg.ProtocolVersion = 1
 
 	_, err = wire.WriteMessageN(

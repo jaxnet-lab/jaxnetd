@@ -35,7 +35,7 @@ func main() {
 	// params.PubKeyHashAddrID = byte(0x6F)
 	// params.PrivateKeyID = byte(0x80)
 
-	toAddress, err := btcutil.DecodeAddress(toAddress, chain.DefaultChain.Params())
+	toAddress, err := btcutil.DecodeAddress(toAddress, chain.BeaconChain.Params())
 	if err != nil {
 		log.Fatalf("invalid address: %v", err)
 	}

@@ -9,6 +9,7 @@ import (
 
 type ShardConfig struct {
 	Enable      bool                                 `yaml:"enable"`
+	Autorun     bool                                 `yaml:"autorun"`
 	ChainParams map[uint32]server.ChainRuntimeConfig `yaml:"chain_params"`
 }
 

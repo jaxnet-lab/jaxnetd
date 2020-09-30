@@ -230,6 +230,7 @@ func (b *BlockChain) CalcNextBlockVersion() (chain.BVersion, error) {
 	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
 	b.chainLock.Unlock()
 
+	// return chain.BVersion(version).SetExpansionMade(), err
 	return chain.BVersion(version), err
 }
 

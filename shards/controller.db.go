@@ -48,8 +48,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChain, cfg NodeConfi
 	ctrl.logger.Info(fmt.Sprintf("Loading block database from '%s'", dbPath))
 	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
 	if err != nil {
-		// Return the error if it's not because the database doesn't
-		// exist.
+		// Return the error if it's not because the database doesn't exist.
 		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
 			database.ErrDbDoesNotExist {
 

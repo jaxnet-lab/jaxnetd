@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
+	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"gitlab.com/jaxnet/core/shard.core.git/mempool"
 	"gitlab.com/jaxnet/core/shard.core.git/peer"
@@ -194,7 +195,7 @@ type RPCServerSyncManager interface {
 }
 
 type ShardManager interface {
-	ListShards() map[uint32]string
+	ListShards() []btcjson.ShardInfo
 
 	EnableShard(shardID uint32) error
 

@@ -2059,7 +2059,7 @@ func (p *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	sentNonces.Add(nonce)
 
 	// Version message.
-	msg := wire.NewMsgVersion(ourNA, theirNA, nonce, blockNum)
+	msg := wire.NewMsgVersion(p.chain, ourNA, theirNA, nonce, blockNum)
 	msg.AddUserAgent(p.cfg.UserAgentName, p.cfg.UserAgentVersion,
 		p.cfg.UserAgentComments...)
 

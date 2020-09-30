@@ -29,7 +29,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain2.DefaultChain, dbPath, chaincfg.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain2.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return

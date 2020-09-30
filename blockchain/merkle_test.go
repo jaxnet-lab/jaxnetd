@@ -2,11 +2,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+//+build deprecated_tests
+
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 )
 
 // TestMerkle tests the BuildMerkleTreeStore API.

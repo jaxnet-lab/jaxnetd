@@ -24,7 +24,7 @@ func BenchmarkBlockHeader(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblkhdr")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, blockDataNet)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func BenchmarkBlock(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblk")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, blockDataNet)
 	if err != nil {
 		b.Fatal(err)
 	}

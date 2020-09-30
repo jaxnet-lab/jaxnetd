@@ -95,7 +95,7 @@ func TestCreateOpenFail(t *testing.T) {
 		Open:   bogusCreateDB,
 	}
 	database.RegisterDriver(driver)
-	ch := chain.DefaultChain
+	ch := chain.BeaconChain
 	// Ensure creating a database with the new type fails with the expected
 	// error.
 	_, err := database.Create(dbType, ch)
@@ -118,7 +118,7 @@ func TestCreateOpenFail(t *testing.T) {
 // TestCreateOpenUnsupported ensures that attempting to create or open an
 // unsupported database type is handled properly.
 func TestCreateOpenUnsupported(t *testing.T) {
-	ch := chain.DefaultChain
+	ch := chain.BeaconChain
 	// Ensure creating a database with an unsupported type fails with the
 	// expected error.
 	testName := "create with unsupported database type"

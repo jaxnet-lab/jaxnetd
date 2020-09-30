@@ -52,7 +52,7 @@ func TestMessage(t *testing.T) {
 	addrMe := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8333}
 	me := NewNetAddress(addrMe, SFNodeNetwork)
 	me.Timestamp = time.Time{} // Version message has zero value timestamp.
-	msgVersion := NewMsgVersion(me, you, 123123, 0)
+	msgVersion := NewMsgVersion(chain, me, you, 123123, 0)
 
 	msgVerack := NewMsgVerAck()
 	msgGetAddr := NewMsgGetAddr()

@@ -4,7 +4,9 @@
 
 package btcjson
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // GetBlockHeaderVerboseResult models the data from the getblockheader command when
 // the verbose flag is set.  When the verbose flag is not set, getblockheader
@@ -675,7 +677,14 @@ type EstimateSmartFeeResult struct {
 	Blocks  int64    `json:"blocks"`
 }
 
-// todo(mike)
 type ShardListResult struct {
-	Shards map[uint32]string
+	Shards map[uint32]ShardInfo
+}
+
+type ShardInfo struct {
+	ID            uint32 `json:"id"`
+	LastVersion   int32  `json:"last_version"`
+	GenesisHeight int32  `json:"genesis_height"`
+	GenesisHash   string `json:"genesis_hash"`
+	Enabled       bool   `json:"enabled"`
 }

@@ -41,7 +41,7 @@ func Controller(logger *zap.Logger) *chainController {
 		shardsIndex: &Index{
 			LastShardID:      0,
 			LastBeaconHeight: 0,
-			Shards:           map[uint32]ShardInfo{},
+			Shards:           []ShardInfo{},
 		},
 	}
 	return res
@@ -61,6 +61,11 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 			chainCtl.logger.Error("Shards error", zap.Error(err))
 			return err
 		}
+		defer chainCtl.saveShardsIndex()
+	}
+
+	if cfg.Node.Shards.Autorun {
+		chainCtl.beacon.chainProvider.BlockChain.Subscribe(chainCtl.shardsAutorunCallback)
 	}
 
 	if err := chainCtl.runRpc(ctx, cfg); err != nil {
@@ -102,12 +107,11 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 	}
 
 	srv := server.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger, beaconActor, shardsProviders)
-	chainCtl.wg.Add(1)
 
+	chainCtl.wg.Add(1)
 	go func() {
 		srv.Run(ctx)
 		chainCtl.wg.Done()
-
 	}()
 
 	return nil

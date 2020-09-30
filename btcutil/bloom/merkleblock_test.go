@@ -31,7 +31,7 @@ func TestMerkleBlock3(t *testing.T) {
 		t.Errorf("TestMerkleBlock3 DecodeString failed: %v", err)
 		return
 	}
-	blk, err := btcutil.NewBlockFromBytes(chain.DefaultChain, blockBytes)
+	blk, err := btcutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
 	if err != nil {
 		t.Errorf("TestMerkleBlock3 NewBlockFromBytes failed: %v", err)
 		return

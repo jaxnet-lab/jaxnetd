@@ -65,7 +65,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 
 	beaconCtl.log.Info("P2P Listener ", zap.Any("Listeners", beaconCtl.cfg.Node.P2P.Listeners))
 
-	// Create p2pServer and start it.
+	// Create p2pServer.
 	beaconCtl.p2pServer, err = server.Server(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager)
 	if err != nil {
 		// TODO: this logging could do with some beautifying.

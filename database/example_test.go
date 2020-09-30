@@ -33,7 +33,7 @@ func ExampleCreate() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "examplecreate")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -59,7 +59,7 @@ func Example_basicUsage() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleusage")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -125,7 +125,7 @@ func Example_blockStorageAndRetrieval() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleblkstorage")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return

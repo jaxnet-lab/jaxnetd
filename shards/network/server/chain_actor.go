@@ -150,7 +150,7 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, iChain chain.ICh
 		TxMinFreeFee:      cfg.MinRelayTxFeeValues,
 	}
 	chainProvider.Generator = mining.NewBlkTmplGenerator(&policy,
-		chainProvider.ChainParams, chainProvider.TxMemPool, chainProvider.BlockChain, chainProvider.TimeSource,
+		chainProvider.IChain, chainProvider.TxMemPool, chainProvider.BlockChain, chainProvider.TimeSource,
 		chainProvider.SigCache, chainProvider.HashCache)
 
 	chainProvider.MiningAddrs, err = cfg.ParseMiningAddresses(chainProvider.IChain.Params())

@@ -32,7 +32,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(chain.DefaultChain)
+	db, err := loadBlockDB(chain.BeaconChain)
 	if err != nil {
 		return err
 	}
