@@ -7,8 +7,8 @@ package txscript
 import (
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // sigCacheEntry represents an entry in the SigCache. Entries within the

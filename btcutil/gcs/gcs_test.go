@@ -11,7 +11,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs"
 )
 
 var (

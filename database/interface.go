@@ -8,9 +8,9 @@
 package database
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a
@@ -430,7 +430,7 @@ type DB interface {
 	// was created with.
 	Type() string
 
-	Chain() chain.IChain
+	Chain() chain.IChainCtx
 
 	// Begin starts a transaction which is either read-only or read-write
 	// depending on the specified flag.  Multiple read-only transactions

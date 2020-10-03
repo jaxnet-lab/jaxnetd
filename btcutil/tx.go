@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TxIndexUnknown is the value returned for a transaction index that is unknown.

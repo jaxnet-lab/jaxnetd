@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
 )
 
 var stringTests = []struct {

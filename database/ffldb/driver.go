@@ -6,11 +6,12 @@ package ffldb
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types"
 
 	"github.com/btcsuite/btclog"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/database"
 )
 
 var log = btclog.Disabled
@@ -44,7 +45,7 @@ func parseArgs(funcName string, args ...interface{}) (string, types.BitcoinNet, 
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(chain chain.IChain, args ...interface{}) (database.DB, error) {
+func openDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
 	dbPath, network, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err
@@ -55,7 +56,7 @@ func openDBDriver(chain chain.IChain, args ...interface{}) (database.DB, error) 
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(chain chain.IChain, args ...interface{}) (database.DB, error) {
+func createDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
 	dbPath, network, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err

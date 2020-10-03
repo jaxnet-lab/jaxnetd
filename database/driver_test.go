@@ -6,11 +6,11 @@ package database_test
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 )
 
 var (
@@ -54,7 +54,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// driver function and intentionally returns a failure that can be
 	// detected if the interface allows a duplicate driver to overwrite an
 	// existing one.
-	bogusCreateDB := func(chain chain.IChain, args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
 		return nil, fmt.Errorf("duplicate driver allowed for database "+
 			"type [%v]", dbType)
 	}
@@ -83,7 +83,7 @@ func TestCreateOpenFail(t *testing.T) {
 	dbType := "createopenfail"
 	openError := fmt.Errorf("failed to create or open database for "+
 		"database type [%v]", dbType)
-	bogusCreateDB := func(chain chain.IChain, args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
 		return nil, openError
 	}
 

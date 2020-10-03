@@ -7,7 +7,7 @@ package base58_test
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
 )
 
 // This example demonstrates how to decode modified base58 encoded data.

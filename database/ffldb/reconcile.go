@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/database"
 )
 
 // The serialized write cursor location format is:

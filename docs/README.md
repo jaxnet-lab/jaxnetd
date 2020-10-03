@@ -69,7 +69,7 @@ details on how to install on the supported operating systems.
 
 **2.1.1 Windows Installation**<br />
 
-* Install the MSI available at: https://gitlab.com/jaxnet/core/shard.core.git/releases
+* Install the MSI available at: https://gitlab.com/jaxnet/core/shard.core/releases
 * Launch btcd from the Start Menu
 
 <a name="PosixInstallation" />
@@ -95,8 +95,8 @@ recommended that `GOPATH` is set to a directory in your home directory such as
 - Run the following commands to obtain btcd, all dependencies, and install it:
 
 ```bash
-$ git clone https://gitlab.com/jaxnet/core/shard.core.git $GOPATH/src/gitlab.com/jaxnet/core/shard.core.git
-$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core.git
+$ git clone https://gitlab.com/jaxnet/core/shard.core $GOPATH/src/gitlab.com/jaxnet/core/shard.core
+$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core
 $ GO111MODULE=on go install -v . ./cmd/...
 ```
 
@@ -109,7 +109,7 @@ $ GO111MODULE=on go install -v . ./cmd/...
 - Run the following commands to update btcd, all dependencies, and install it:
 
 ```bash
-$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core.git
+$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core
 $ git pull && GO111MODULE=on go install -v . ./cmd/...
 ```
 
@@ -126,7 +126,7 @@ $ git pull && GO111MODULE=on go install -v . ./cmd/...
 
 **2.2 Configuration**
 
-btcd has a number of [configuration](http://godoc.org/gitlab.com/jaxnet/core/shard.core.git)
+btcd has a number of [configuration](http://godoc.org/gitlab.com/jaxnet/core/shard.core)
 options, which can be viewed by running: `$ btcd --help`.
 
 <a name="BtcctlConfig" />
@@ -210,16 +210,16 @@ configuration necessary, however, there is an optional method to use a
 
 **3.1.1 bootstrap.dat**
 
-* [Using bootstrap.dat](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/using_bootstrap_dat.md)
+* [Using bootstrap.dat](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/using_bootstrap_dat.md)
 
 <a name="NetworkConfig" />
 
 **3.1.2 Network Configuration**
 
-* [What Ports Are Used by Default?](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/default_ports.md)
-* [How To Listen on Specific Interfaces](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/configure_peer_server_listen_interfaces.md)
-* [How To Configure RPC Server to Listen on Specific Interfaces](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/configure_rpc_server_listen_interfaces.md)
-* [Configuring btcd with Tor](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/configuring_tor.md)
+* [What Ports Are Used by Default?](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/default_ports.md)
+* [How To Listen on Specific Interfaces](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/configure_peer_server_listen_interfaces.md)
+* [How To Configure RPC Server to Listen on Specific Interfaces](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/configure_rpc_server_listen_interfaces.md)
+* [Configuring btcd with Tor](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/configuring_tor.md)
 
 <a name="Wallet" />
 
@@ -255,42 +255,42 @@ information.
 
 <a name="ContributionGuidelines" />
 
-* [Code Contribution Guidelines](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/code_contribution_guidelines.md)
+* [Code Contribution Guidelines](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/code_contribution_guidelines.md)
 
 <a name="JSONRPCReference" />
 
-* [JSON-RPC Reference](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/json_rpc_api.md)
-    * [RPC Examples](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/docs/json_rpc_api.md#ExampleCode)
+* [JSON-RPC Reference](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/json_rpc_api.md)
+    * [RPC Examples](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs/json_rpc_api.md#ExampleCode)
 
 <a name="GoPackages" />
 
 * The btcsuite Bitcoin-related Go Packages:
-    * [btcrpcclient](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/rpcclient) - Implements a
+    * [btcrpcclient](https://gitlab.com/jaxnet/core/shard.core/tree/master/rpcclient) - Implements a
       robust and easy to use Websocket-enabled Bitcoin JSON-RPC client
-    * [btcjson](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/btcjson) - Provides an extensive API
+    * [btcjson](https://gitlab.com/jaxnet/core/shard.core/tree/master/btcjson) - Provides an extensive API
       for the underlying JSON-RPC command and return values
-    * [wire](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/wire) - Implements the
+    * [wire](https://gitlab.com/jaxnet/core/shard.core/tree/master/wire) - Implements the
       Bitcoin wire protocol
-    * [peer](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/peer) -
+    * [peer](https://gitlab.com/jaxnet/core/shard.core/tree/master/peer) -
       Provides a common base for creating and managing Bitcoin network peers.
-    * [blockchain](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/blockchain) -
+    * [blockchain](https://gitlab.com/jaxnet/core/shard.core/tree/master/blockchain) -
       Implements Bitcoin block handling and chain selection rules
-    * [blockchain/fullblocktests](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/blockchain/fullblocktests) -
+    * [blockchain/fullblocktests](https://gitlab.com/jaxnet/core/shard.core/tree/master/blockchain/fullblocktests) -
       Provides a set of block tests for testing the consensus validation rules
-    * [txscript](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/txscript) -
+    * [txscript](https://gitlab.com/jaxnet/core/shard.core/tree/master/txscript) -
       Implements the Bitcoin transaction scripting language
-    * [btcec](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/btcec) - Implements
+    * [btcec](https://gitlab.com/jaxnet/core/shard.core/tree/master/btcec) - Implements
       support for the elliptic curve cryptographic functions needed for the
       Bitcoin scripts
-    * [database](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/database) -
+    * [database](https://gitlab.com/jaxnet/core/shard.core/tree/master/database) -
       Provides a database interface for the Bitcoin block chain
-    * [mempool](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/mempool) -
+    * [mempool](https://gitlab.com/jaxnet/core/shard.core/tree/master/mempool) -
       Package mempool provides a policy-enforced pool of unmined bitcoin
       transactions.
-    * [btcutil](https://gitlab.com/jaxnet/core/shard.core.git/btcutil) - Provides Bitcoin-specific
+    * [btcutil](https://gitlab.com/jaxnet/core/shard.core/btcutil) - Provides Bitcoin-specific
       convenience functions and types
-    * [chainhash](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/chaincfg/chainhash) -
+    * [chainhash](https://gitlab.com/jaxnet/core/shard.core/tree/master/chaincfg/chainhash) -
       Provides a generic hash type and associated functions that allows the
       specific hash algorithm to be abstracted.
-    * [connmgr](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/connmgr) -
+    * [connmgr](https://gitlab.com/jaxnet/core/shard.core/tree/master/connmgr) -
       Package connmgr implements a generic Bitcoin network connection manager.

@@ -7,8 +7,8 @@ package txscript
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestBadPC sets the pc to a deliberately bad result then confirms that Step()

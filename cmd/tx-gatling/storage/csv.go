@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/gocarina/gocsv"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 )
 
 type CSVStorage struct {

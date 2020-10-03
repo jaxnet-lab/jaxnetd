@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestParseOpcode tests for opcode parsing with bad data templates.

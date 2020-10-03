@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txutils"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txutils"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gopkg.in/yaml.v3"
 )
 
