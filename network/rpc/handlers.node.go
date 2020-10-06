@@ -177,7 +177,7 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 
 // handleGetDifficulty implements the getdifficulty command.
 func (server *NodeRPC) handleGetDifficulty(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	return server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
 }
 
@@ -227,7 +227,7 @@ func (server *NodeRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan str
 		}
 	}
 
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	// since we can't reasonably calculate the number of network hashes
 	// per second from invalid values.  When it'server negative, use the current
 	// best block height.
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	endHeight := int32(-1)
 	if c.Height != nil {
 		endHeight = int32(*c.Height)
@@ -298,14 +298,14 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	var minTimestamp, maxTimestamp time.Time
 	totalWork := big.NewInt(0)
 	for curHeight := startHeight; curHeight <= endHeight; curHeight++ {
-		hash, err := server.chainProvider.BlockChain.BlockHashByHeight(curHeight)
+		hash, err := server.chainProvider.BlockChain().BlockHashByHeight(curHeight)
 		if err != nil {
 			context := "Failed to fetch block hash"
 			return nil, server.InternalRPCError(err.Error(), context)
 		}
 
 		// Fetch the header from BlockChain.
-		header, err := server.chainProvider.BlockChain.HeaderByHash(hash)
+		header, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 		if err != nil {
 			context := "Failed to fetch block header"
 			return nil, server.InternalRPCError(err.Error(), context)

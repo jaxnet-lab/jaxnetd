@@ -6,11 +6,11 @@ package database_test
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core/database"
 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
 var (

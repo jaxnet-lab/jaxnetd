@@ -6,10 +6,11 @@ package mempool
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
@@ -89,7 +90,7 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee btcutil.Amoun
 // not perform those checks because the script engine already does this more
 // accurately and concisely via the txscript.ScriptVerifyCleanStack and
 // txscript.ScriptVerifySigPushOnly flags.
-func checkInputsStandard(tx *btcutil.Tx, utxoView *blockchain.UtxoViewpoint) error {
+func checkInputsStandard(tx *btcutil.Tx, utxoView *chaindata.UtxoViewpoint) error {
 	// NOTE: The reference implementation also does a coinbase check here,
 	// but coinbases have already been rejected prior to calling this
 	// function so no need to recheck.
@@ -248,7 +249,7 @@ func isDust(txOut *wire.TxOut, minRelayTxFee btcutil.Amount) bool {
 	// being spent and the sequence number of the input.
 	totalSize := txOut.SerializeSize() + 41
 	if txscript.IsWitnessProgram(txOut.PkScript) {
-		totalSize += (107 / blockchain.WitnessScaleFactor)
+		totalSize += (107 / chaindata.WitnessScaleFactor)
 	} else {
 		totalSize += 107
 	}
@@ -290,7 +291,7 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 
 	// The transaction must be finalized to be standard and therefore
 	// considered for inclusion in a block.
-	if !blockchain.IsFinalizedTransaction(tx, height, medianTimePast) {
+	if !chaindata.IsFinalizedTransaction(tx, height, medianTimePast) {
 		return txRuleError(wire.RejectNonstandard,
 			"transaction is not finalized")
 	}
@@ -299,7 +300,7 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 	// almost as much to process as the sender fees, limit the maximum
 	// size of a transaction.  This also helps mitigate CPU exhaustion
 	// attacks.
-	txWeight := blockchain.GetTransactionWeight(tx)
+	txWeight := chaindata.GetTransactionWeight(tx)
 	if txWeight > maxStandardTxWeight {
 		str := fmt.Sprintf("weight of transaction %v is larger than max "+
 			"allowed weight of %v", txWeight, maxStandardTxWeight)
@@ -377,6 +378,6 @@ func GetTxVirtualSize(tx *btcutil.Tx) int64 {
 	//       := (((baseSize * 3) + totalSize) + 3) / 4
 	// We add 3 here as a way to compute the ceiling of the prior arithmetic
 	// to 4. The division by 4 creates a discount for wit witness data.
-	return (blockchain.GetTransactionWeight(tx) + (blockchain.WitnessScaleFactor - 1)) /
-		blockchain.WitnessScaleFactor
+	return (chaindata.GetTransactionWeight(tx) + (chaindata.WitnessScaleFactor - 1)) /
+		chaindata.WitnessScaleFactor
 }

@@ -31,6 +31,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/network/peer"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
@@ -79,9 +80,9 @@ const (
 	defaultBlockMinWeight        = 0
 	defaultBlockMaxWeight        = 3000000
 	blockMaxSizeMin              = 1000
-	blockMaxSizeMax              = blockchain.MaxBlockBaseSize - 1000
+	blockMaxSizeMax              = chaindata.MaxBlockBaseSize - 1000
 	blockMaxWeightMin            = 4000
-	blockMaxWeightMax            = blockchain.MaxBlockWeight - 4000
+	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
 	defaultGenerate              = false
 	defaultMaxOrphanTransactions = 100
 	defaultSigCacheMaxSize       = 100000
@@ -356,7 +357,7 @@ func (s *Server) pushBlockMsg(sp *ServerPeer, hash *chainhash.Hash, doneChan cha
 	// to trigger it to issue another getblocks message for the next
 	// batch of inventory.
 	if sendInv {
-		best := sp.server.BlockChain.BestSnapshot()
+		best := sp.server.BlockChain().BestSnapshot()
 		invMsg := wire.NewMsgInvSizeHint(1)
 		iv := types.NewInvVect(types.InvTypeBlock, &best.Hash)
 		invMsg.AddInvVect(iv)
@@ -382,7 +383,7 @@ func (s *Server) pushMerkleBlockMsg(sp *ServerPeer, hash *chainhash.Hash,
 	}
 
 	// Fetch the raw block bytes from the database.
-	blk, err := sp.server.BlockChain.BlockByHash(hash)
+	blk, err := sp.server.BlockChain().BlockByHash(hash)
 	if err != nil {
 		s.logger.Tracef("Unable to fetch requested block hash %v: %v",
 			hash, err)
@@ -617,7 +618,7 @@ func (s *Server) newPeerConfig(sp *ServerPeer) *peer.Config {
 func (s *Server) inboundPeerConnected(conn net.Conn) {
 	sp := newServerPeer(s, false)
 	sp.isWhitelisted = s.isWhitelisted(conn.RemoteAddr())
-	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp), s.BlockChain.Chain())
+	sp.Peer = peer.NewInboundPeer(s.newPeerConfig(sp), s.BlockChain().Chain())
 	sp.AssociateConnection(conn)
 	go s.peerDoneHandler(sp)
 }
@@ -629,7 +630,7 @@ func (s *Server) inboundPeerConnected(conn net.Conn) {
 // manager of the attempt.
 func (s *Server) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 	sp := newServerPeer(s, c.Permanent)
-	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String(), s.BlockChain.Chain())
+	p, err := peer.NewOutboundPeer(s.newPeerConfig(sp), c.Addr.String(), s.BlockChain().Chain())
 	if err != nil {
 		s.logger.Debugf("Cannot create outbound peer %s: %v", c.Addr, err)
 		if c.Permanent {
@@ -1143,7 +1144,7 @@ out:
 }
 
 func (s *Server) GetBlockChain() *blockchain.BlockChain {
-	return s.BlockChain
+	return s.BlockChain()
 }
 
 // newServer returns a new shard.core p2p server configured to listen on addr for the

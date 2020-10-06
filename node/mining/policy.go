@@ -6,7 +6,7 @@ package mining
 
 import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -62,7 +62,7 @@ func minInt(a, b int) int {
 // age is the sum of this value for each txin.  Any inputs to the transaction
 // which are currently in the mempool and hence not mined into a block yet,
 // contribute no additional input age to the transaction.
-func calcInputValueAge(tx *wire.MsgTx, utxoView *blockchain.UtxoViewpoint, nextBlockHeight int32) float64 {
+func calcInputValueAge(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBlockHeight int32) float64 {
 	var totalInputAge float64
 	for _, txIn := range tx.TxIn {
 		// Don't attempt to accumulate the total input age if the
@@ -94,7 +94,7 @@ func calcInputValueAge(tx *wire.MsgTx, utxoView *blockchain.UtxoViewpoint, nextB
 // of each of its input values multiplied by their age (# of confirmations).
 // Thus, the final formula for the priority is:
 // sum(inputValue * inputAge) / adjustedTxSize
-func CalcPriority(tx *wire.MsgTx, utxoView *blockchain.UtxoViewpoint, nextBlockHeight int32) float64 {
+func CalcPriority(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBlockHeight int32) float64 {
 	// In order to encourage spending multiple old unspent transaction
 	// outputs thereby reducing the total set, don't count the constant
 	// overhead for each input as well as enough bytes of the signature

@@ -10,7 +10,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
@@ -389,7 +389,7 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
@@ -414,7 +414,7 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	// Remove all of the transactions in the block from the index.
 	if err := dbRemoveTxIndexEntries(dbTx, block); err != nil {

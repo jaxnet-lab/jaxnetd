@@ -3,7 +3,7 @@ package netsync
 import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -21,7 +21,7 @@ type ServerSyncManager interface {
 
 	// SubmitBlock submits the provided block to the network after
 	// processing it locally.
-	SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error)
+	SubmitBlock(block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error)
 
 	// Pause pauses the sync manager until the returned channel is closed.
 	Pause() chan<- struct{}
@@ -143,7 +143,7 @@ func (b *RPCSyncMgr) IsCurrent() bool {
 //
 // This function is safe for concurrent access and is part of the
 // ServerSyncManager interface implementation.
-func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags blockchain.BehaviorFlags) (bool, error) {
+func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	return b.SyncMgr.ProcessBlock(block, flags)
 }
 

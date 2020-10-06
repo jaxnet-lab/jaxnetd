@@ -5,7 +5,7 @@
 package mempool
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -52,7 +52,7 @@ func txRuleError(c wire.RejectCode, desc string) RuleError {
 
 // chainRuleError returns a RuleError that encapsulates the given
 // blockchain.RuleError.
-func chainRuleError(chainErr blockchain.RuleError) RuleError {
+func chainRuleError(chainErr chaindata.RuleError) RuleError {
 	return RuleError{
 		Err: chainErr,
 	}
@@ -68,26 +68,26 @@ func extractRejectCode(err error) (wire.RejectCode, bool) {
 	}
 
 	switch err := err.(type) {
-	case blockchain.RuleError:
+	case chaindata.RuleError:
 		// Convert the chain error to a reject code.
 		var code wire.RejectCode
 		switch err.ErrorCode {
 		// Rejected due to duplicate.
-		case blockchain.ErrDuplicateBlock:
+		case chaindata.ErrDuplicateBlock:
 			code = wire.RejectDuplicate
 
 		// Rejected due to obsolete version.
-		case blockchain.ErrBlockVersionTooOld:
+		case chaindata.ErrBlockVersionTooOld:
 			code = wire.RejectObsolete
 
 		// Rejected due to checkpoint.
-		case blockchain.ErrCheckpointTimeTooOld:
+		case chaindata.ErrCheckpointTimeTooOld:
 			fallthrough
-		case blockchain.ErrDifficultyTooLow:
+		case chaindata.ErrDifficultyTooLow:
 			fallthrough
-		case blockchain.ErrBadCheckpoint:
+		case chaindata.ErrBadCheckpoint:
 			fallthrough
-		case blockchain.ErrForkTooOld:
+		case chaindata.ErrForkTooOld:
 			code = wire.RejectCheckpoint
 
 		// Everything else is due to the block or transaction being invalid.

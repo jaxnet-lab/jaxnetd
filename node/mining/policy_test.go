@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
@@ -42,12 +42,12 @@ func hexToBytes(s string) []byte {
 // provided source transactions as if there were available at the respective
 // block height specified in the heights slice.  The length of the source txns
 // and source tx heights must match or it will panic.
-func newUtxoViewpoint(sourceTxns []*wire.MsgTx, sourceTxHeights []int32) *blockchain.UtxoViewpoint {
+func newUtxoViewpoint(sourceTxns []*wire.MsgTx, sourceTxHeights []int32) *chaindata.UtxoViewpoint {
 	if len(sourceTxns) != len(sourceTxHeights) {
 		panic("each transaction must have its block height specified")
 	}
 
-	view := blockchain.NewUtxoViewpoint()
+	view := chaindata.NewUtxoViewpoint()
 	for i, tx := range sourceTxns {
 		view.AddTxOuts(btcutil.NewTx(tx), sourceTxHeights[i])
 	}
@@ -117,11 +117,11 @@ func TestCalcPriority(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string                    // test description
-		tx         *wire.MsgTx               // tx to calc priority for
-		utxoView   *blockchain.UtxoViewpoint // inputs to tx
-		nextHeight int32                     // height for priority calc
-		want       float64                   // expected priority
+		name       string                   // test description
+		tx         *wire.MsgTx              // tx to calc priority for
+		utxoView   *chaindata.UtxoViewpoint // inputs to tx
+		nextHeight int32                    // height for priority calc
+		want       float64                  // expected priority
 	}{
 		{
 			name: "one height 7 input, prio tx height 169",

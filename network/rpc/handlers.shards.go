@@ -9,8 +9,9 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -19,13 +20,17 @@ import (
 
 type ShardRPC struct {
 	*CommonChainRPC
-	shardID uint32
+	shardID      uint32
+	gbtWorkState *mining.GBTWorkState
 }
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
-	connMgr netsync.P2PConnManager, logger *zap.Logger) *ShardRPC {
+	connMgr netsync.P2PConnManager,
+	generator *mining.BlkTmplGenerator,
+	logger *zap.Logger) *ShardRPC {
 	rpc := &ShardRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger),
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, generator,
+			logger.With(zap.String("ctx", "shard_rpc"))),
 	}
 
 	rpc.ComposeHandlers()
@@ -82,7 +87,7 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 			return nil, rpcDecodeHexError(c.HashStop)
 		}
 	}
-	headers := server.chainProvider.BlockChain.LocateHeaders(blockLocators, &hashStop)
+	headers := server.chainProvider.BlockChain().LocateHeaders(blockLocators, &hashStop)
 
 	// Return the serialized block headers as hex-encoded strings.
 	hexBlockHeaders := make([]string, len(headers))
@@ -134,18 +139,18 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 	}
 
 	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain.BlockHeightByHash(hash)
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 	blk.SetHeight(blockHeight)
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get next block hash unless there are none.
 	var nextHashString string
 	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain.BlockHashByHeight(blockHeight + 1)
+		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
 			context := "No next block"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -154,29 +159,29 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 	}
 
 	params := server.chainProvider.ChainParams
-	blockHeader := blk.MsgBlock().Header
+	blockHeader := blk.MsgBlock().Header.(*wire.ShardHeader)
 	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
 	if err != nil {
 		return nil, err
 	}
 
-	blockReply := btcjson.GetBlockVerboseResult{
-		Hash:                c.Hash,
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		PreviousHash:        blockHeader.PrevBlock().String(),
-		MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		Nonce:               blockHeader.Nonce(),
-		Time:                blockHeader.Timestamp().Unix(),
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		Height:              int64(blockHeight),
-		Size:                int32(len(blkBytes)),
-		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:              int32(blockchain.GetBlockWeight(blk)),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:          diff,
-		NextHash:            nextHashString,
+	blockReply := btcjson.GetShardBlockVerboseResult{
+		Hash:          c.Hash,
+		ShardHash:     blockHeader.ShardBlockHash().String(),
+		Version:       int32(blockHeader.Version()),
+		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:    blockHeader.MerkleRoot().String(),
+		PreviousHash:  blockHeader.PrevBlock().String(),
+		Nonce:         blockHeader.Nonce(),
+		Time:          blockHeader.Timestamp().Unix(),
+		Confirmations: int64(1 + best.Height - blockHeight),
+		Height:        int64(blockHeight),
+		Size:          int32(len(blkBytes)),
+		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:        int32(chaindata.GetBlockWeight(blk)),
+		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:    diff,
+		NextHash:      nextHashString,
 	}
 
 	if *c.Verbosity == 1 {
@@ -214,7 +219,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
 	}
-	blockHeader, err := server.chainProvider.BlockChain.HeaderByHash(hash)
+	blockHeader, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 	if err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
@@ -237,17 +242,17 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	// The verbose flag is set, so generate the JSON object and return it.
 
 	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain.BlockHeightByHash(hash)
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get next block hash unless there are none.
 	var nextHashString string
 	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain.BlockHashByHeight(blockHeight + 1)
+		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
 			context := "No next block"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -261,24 +266,24 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 		return nil, err
 	}
 	blockHeaderReply := btcjson.GetBlockHeaderVerboseResult{
-		Hash:                c.Hash,
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		Height:              blockHeight,
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		NextHash:            nextHashString,
-		PreviousHash:        blockHeader.PrevBlock().String(),
-		Nonce:               uint64(blockHeader.Nonce()),
-		Time:                blockHeader.Timestamp().Unix(),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:          diff,
+		Hash:          c.Hash,
+		Confirmations: int64(1 + best.Height - blockHeight),
+		Height:        blockHeight,
+		Version:       int32(blockHeader.Version()),
+		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:    blockHeader.MerkleRoot().String(),
+		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
+		NextHash:     nextHashString,
+		PreviousHash: blockHeader.PrevBlock().String(),
+		Nonce:        uint64(blockHeader.Nonce()),
+		Time:         blockHeader.Timestamp().Unix(),
+		Bits:         strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:   diff,
 	}
 	return blockHeaderReply, nil
 }
 
-// handleGetBlockTemplate implements the getblocktemplate command.
+// handleGetBlockTemplate implements the getShardBlockTemplate command.
 //
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
@@ -333,6 +338,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 		}
 	}
 
+	// todo: repair this logic
 	// // When a coinbase transaction has been requested, respond with an error
 	// // if there are no addresses to pay the created block template to.
 	// if !useCoinbaseValue && len(server.cfg.MiningAddrs) == 0 {
@@ -344,6 +350,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	//	}
 	// }
 
+	// todo: redo this
 	// // Return an error if there are no peers connected since there is no
 	// // way to relay a found block or receive transactions to work on.
 	// // However, allow this state when running in the regression test or
@@ -358,7 +365,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	// }
 
 	// No point in generating or accepting work before the BlockChain is synced.
-	currentHeight := server.chainProvider.BlockChain.BestSnapshot().Height
+	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCClientInInitialDownload,
@@ -384,10 +391,10 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	// seconds since the last template was generated.  Otherwise, the
 	// timestamp for the existing block template is updated (and possibly
 	// the difficulty on testnet per the consesus rules).
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
-	return state.blockTemplateResult(useCoinbaseValue, nil)
+	return state.BlockTemplateResult(useCoinbaseValue, nil)
 }
 
 // handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
@@ -427,14 +434,14 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 	block := btcutil.NewBlock(&msgBlock)
 
 	// Ensure the block is building from the expected previous block.
-	expectedPrevHash := server.chainProvider.BlockChain.BestSnapshot().Hash
+	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
 	prevHash := block.MsgBlock().Header.PrevBlock()
 	if !expectedPrevHash.IsEqual(&prevHash) {
 		return "bad-prevblk", nil
 	}
 
-	if err := server.chainProvider.BlockChain.CheckConnectBlockTemplate(block); err != nil {
-		if _, ok := err.(blockchain.RuleError); !ok {
+	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block); err != nil {
+		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			server.Log.Error(errStr)
 			return nil, &btcjson.RPCError{
@@ -467,7 +474,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// be manually unlocked before waiting for a notification about block
 	// template changes.
 
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		state.Unlock()
 		return nil, err
 	}
@@ -476,7 +483,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// the caller is invalid.
 	prevHash, lastGenerated, err := server.DecodeTemplateID(longPollID)
 	if err != nil {
-		result, err := state.blockTemplateResult(useCoinbaseValue, nil)
+		result, err := state.BlockTemplateResult(useCoinbaseValue, nil)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -489,15 +496,15 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.template.Block.Header.PrevBlock()
+	prevTemplateHash := state.Template.Block.Header.PrevBlock()
 	if !prevHash.IsEqual(&prevTemplateHash) ||
-		lastGenerated != state.lastGenerated.Unix() {
+		lastGenerated != state.LastGenerated.Unix() {
 
 		// Include whether or not it is valid to submit work against the
 		// old block template depending on whether or not a solution has
 		// already been found and added to the block BlockChain.
 		submitOld := prevHash.IsEqual(&prevTemplateHash)
-		result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
+		result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -511,7 +518,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Get a channel that will be notified when the template associated with
 	// the provided ID is stale and a new block template should be returned to
 	// the caller.
-	longPollChan := state.templateUpdateChan(prevHash, lastGenerated)
+	longPollChan := state.TemplateUpdateChan(prevHash, lastGenerated)
 	state.Unlock()
 
 	select {
@@ -529,16 +536,16 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	state.Lock()
 	defer state.Unlock()
 
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
 
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block BlockChain.
-	h := state.template.Block.Header.PrevBlock()
+	h := state.Template.Block.Header.PrevBlock()
 	submitOld := prevHash.IsEqual(&h)
-	result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
+	result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {
 		return nil, err
 	}

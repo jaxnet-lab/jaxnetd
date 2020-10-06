@@ -34,10 +34,6 @@ type BlockHeader interface {
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
-	// Size() int
-
-	SetMergeMiningRoot(value chainhash.Hash)
-	MergeMiningRoot() chainhash.Hash
 }
 
 type BVersion int32

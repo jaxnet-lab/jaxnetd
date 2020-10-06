@@ -6,7 +6,7 @@ package bloom
 
 import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
@@ -41,7 +41,7 @@ func (m *merkleBlock) calcHash(height, pos uint32) *chainhash.Hash {
 	} else {
 		right = left
 	}
-	return blockchain.HashMerkleBranches(left, right)
+	return chaindata.HashMerkleBranches(left, right)
 }
 
 // traverseAndBuild builds a partial merkle tree using a recursive depth-first

@@ -25,10 +25,10 @@ func TestMerkleBlock(t *testing.T) {
 	// Block 1 header.
 	prevHash := blockOne.Header.PrevBlock()
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MergeMiningRoot()
+	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := NewShardBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
+	bh := NewBeaconBlockHeader(1, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
@@ -118,10 +118,10 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
 	prevHash := blockOne.Header.PrevBlock()
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MergeMiningRoot()
+	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := NewShardBlockHeader(1, prevHash, merkleHash, mmrHash, time.Now(), bits, nonce)
+	bh := NewBeaconBlockHeader(1, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, nonce)
 
 	msg := NewMsgMerkleBlock(bh)
 
@@ -377,7 +377,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 // merkleBlockOne is a merkle block created from block one of the block Chain
 // where the first transaction matches.
 var merkleBlockOne = MsgMerkleBlock{
-	Header: NewShardBlockHeader(
+	Header: NewBeaconBlockHeader(
 		1,
 		[chainhash.HashSize]byte{ // Make go vet happy.
 			0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,

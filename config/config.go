@@ -31,7 +31,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/peer"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/node"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -60,9 +60,9 @@ const (
 	defaultBlockMinWeight        = 0
 	defaultBlockMaxWeight        = 3000000
 	blockMaxSizeMin              = 1000
-	blockMaxSizeMax              = blockchain.MaxBlockBaseSize - 1000
+	blockMaxSizeMax              = chaindata.MaxBlockBaseSize - 1000
 	blockMaxWeightMin            = 4000
-	blockMaxWeightMax            = blockchain.MaxBlockWeight - 4000
+	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
 	defaultGenerate              = false
 	defaultMaxOrphanTransactions = 100
 	defaultMaxOrphanTxSize       = 100000
@@ -736,14 +736,14 @@ func LoadConfig() (*node.Config, []string, error) {
 	case cfg.Node.BeaconChain.BlockMaxSize == defaultBlockMaxSize &&
 		cfg.Node.BeaconChain.BlockMaxWeight != defaultBlockMaxWeight:
 
-		cfg.Node.BeaconChain.BlockMaxSize = blockchain.MaxBlockBaseSize - 1000
+		cfg.Node.BeaconChain.BlockMaxSize = chaindata.MaxBlockBaseSize - 1000
 
 	// If the max block weight isn't set, but the block size is, then we'll
 	// scale the set weight accordingly based on the max block size value.
 	case cfg.Node.BeaconChain.BlockMaxSize != defaultBlockMaxSize &&
 		cfg.Node.BeaconChain.BlockMaxWeight == defaultBlockMaxWeight:
 
-		cfg.Node.BeaconChain.BlockMaxWeight = cfg.Node.BeaconChain.BlockMaxSize * blockchain.WitnessScaleFactor
+		cfg.Node.BeaconChain.BlockMaxWeight = cfg.Node.BeaconChain.BlockMaxSize * chaindata.WitnessScaleFactor
 	}
 
 	// // Look for illegal characters in the user agent comments.

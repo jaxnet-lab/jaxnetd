@@ -2250,7 +2250,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	// Iterate over each block in the request and rescan.  When a block
 //	// contains relevant transactions, add it to the response.
-//	bc := wsc.server.cfg.Chain
+//	bc := wsc.server.cfg.ChainCtx
 //	params := wsc.server.cfg.ChainParams
 //	var lastBlockHash *chainhash.Hash
 //	for i := range blockHashes {
@@ -2392,7 +2392,7 @@ var ErrClientQuit = errors.New("client quit")
 //			// continue the fetch loop again to rescan the new
 //			// blocks (or error due to an irrecoverable reorganize).
 //			pauseGuard := wsc.server.cfg.SyncMgr.Pause()
-//			best := wsc.server.cfg.Chain.BestSnapshot()
+//			best := wsc.server.cfg.ChainCtx.BestSnapshot()
 //			curHash := &best.Hash
 //			again := true
 //			if lastBlockHash == nil || *lastBlockHash == *curHash {
@@ -2568,7 +2568,7 @@ var ErrClientQuit = errors.New("client quit")
 //		lookups.unspent[*outpoint] = struct{}{}
 //	}
 //
-//	BlockChain := wsc.server.cfg.Chain
+//	BlockChain := wsc.server.cfg.ChainCtx
 //
 //	minBlockHash, err := chainhash.NewHashFromStr(cmd.BeginBlock)
 //	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -26,7 +26,7 @@ import (
 // transactions to appear as though they are spending completely valid utxos.
 type fakeChain struct {
 	sync.RWMutex
-	utxos          *blockchain.UtxoViewpoint
+	utxos          *chaindata.UtxoViewpoint
 	currentHeight  int32
 	medianTimePast time.Time
 }
@@ -37,7 +37,7 @@ type fakeChain struct {
 // view can be examined for duplicate transactions.
 //
 // This function is safe for concurrent access however the returned view is NOT.
-func (s *fakeChain) FetchUtxoView(tx *btcutil.Tx) (*blockchain.UtxoViewpoint, error) {
+func (s *fakeChain) FetchUtxoView(tx *btcutil.Tx) (*chaindata.UtxoViewpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -45,7 +45,7 @@ func (s *fakeChain) FetchUtxoView(tx *btcutil.Tx) (*blockchain.UtxoViewpoint, er
 	// do not affect the fake chain's view.
 
 	// Add an entry for the tx itself to the new view.
-	viewpoint := blockchain.NewUtxoViewpoint()
+	viewpoint := chaindata.NewUtxoViewpoint()
 	prevOut := wire.OutPoint{Hash: *tx.Hash()}
 	for txOutIdx := range tx.MsgTx().TxOut {
 		prevOut.Index = uint32(txOutIdx)
@@ -98,9 +98,9 @@ func (s *fakeChain) SetMedianTimePast(mtp time.Time) {
 // CalcSequenceLock returns the current sequence lock for the passed
 // transaction associated with the fake chain instance.
 func (s *fakeChain) CalcSequenceLock(tx *btcutil.Tx,
-	view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
+	view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
 
-	return &blockchain.SequenceLock{
+	return &chaindata.SequenceLock{
 		Seconds:     -1,
 		BlockHeight: -1,
 	}, nil
@@ -164,7 +164,7 @@ func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*b
 		SignatureScript: coinbaseScript,
 		Sequence:        wire.MaxTxInSequenceNum,
 	})
-	totalInput := blockchain.CalcBlockSubsidy(blockHeight, p.chainParams)
+	totalInput := chaindata.CalcBlockSubsidy(blockHeight, p.chainParams)
 	amountPerOutput := totalInput / int64(numOutputs)
 	remainder := totalInput - amountPerOutput*int64(numOutputs)
 	for i := uint32(0); i < numOutputs; i++ {
@@ -307,7 +307,7 @@ func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutp
 	}
 
 	// Create a new fake chain and harness bound to it.
-	chain := &fakeChain{utxos: blockchain.NewUtxoViewpoint()}
+	chain := &fakeChain{utxos: chaindata.NewUtxoViewpoint()}
 	harness := poolHarness{
 		signKey:     signKey,
 		payAddr:     payAddr,
@@ -321,7 +321,7 @@ func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutp
 				FreeTxRelayLimit:     15.0,
 				MaxOrphanTxs:         5,
 				MaxOrphanTxSize:      1000,
-				MaxSigOpCostPerTx:    blockchain.MaxBlockSigOpsCost / 4,
+				MaxSigOpCostPerTx:    chaindata.MaxBlockSigOpsCost / 4,
 				MinRelayTxFee:        1000, // 1 Satoshi per byte
 				MaxTxVersion:         1,
 			},

@@ -14,7 +14,7 @@ import (
 
 	"github.com/minio/sha256-simd"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -68,7 +68,7 @@ type Config struct {
 	// ProcessBlock defines the function to call with any solved blocks.
 	// It typically must run the provided block through the same set of
 	// rules and handling as any other block coming from the network.
-	ProcessBlock func(*btcutil.Block, blockchain.BehaviorFlags) (bool, error)
+	ProcessBlock func(*btcutil.Block, chaindata.BehaviorFlags) (bool, error)
 
 	// ConnectedCount defines the function to use to obtain how many other
 	// peers the server is connected to.  This is used by the automatic
@@ -176,11 +176,11 @@ func (miner *CPUMiner) submitBlock(block *btcutil.Block) bool {
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
-	isOrphan, err := miner.cfg.ProcessBlock(block, blockchain.BFNone)
+	isOrphan, err := miner.cfg.ProcessBlock(block, chaindata.BFNone)
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
-		if _, ok := err.(blockchain.RuleError); !ok {
+		if _, ok := err.(chaindata.RuleError); !ok {
 			miner.log.Error("Unexpected error while processing "+
 				"block submitted via CPU miner", zap.Error(err))
 			return false

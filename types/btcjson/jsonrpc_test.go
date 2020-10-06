@@ -104,7 +104,7 @@ func TestMiscErrors(t *testing.T) {
 
 	// Force an error in NewRequest by giving it a parameter type that is
 	// not supported.
-	_, err := btcjson.NewRequest(nil, btcjson.ScopedMethod("", "test"), []interface{}{make(chan int)})
+	_, err := btcjson.NewRequest(nil, btcjson.ScopedMethod("", "test"), 0, []interface{}{make(chan int)})
 	if err == nil {
 		t.Error("NewRequest: did not receive error")
 		return

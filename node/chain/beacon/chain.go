@@ -3,8 +3,8 @@ package beacon
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -48,9 +48,7 @@ func (c *beaconChain) Params() *chaincfg.Params {
 }
 
 func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-	mergeMiningRoot chainhash.Hash,
-	timestamp time.Time,
-	bits uint32, nonce uint32) wire.BlockHeader {
+	timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
@@ -58,11 +56,11 @@ func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRoot
 		version,
 		prevHash,
 		merkleRootHash,
-		mergeMiningRoot,
+		chainhash.Hash{},
 		timestamp,
 		bits,
 		nonce,
-	)
+	), nil
 }
 
 func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {

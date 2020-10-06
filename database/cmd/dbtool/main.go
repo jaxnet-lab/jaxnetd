@@ -5,15 +5,15 @@
 package main
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/btcsuite/btclog"
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
 const (

@@ -9,8 +9,9 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -22,9 +23,12 @@ type BeaconRPC struct {
 }
 
 func NewBeaconRPC(chainProvider *cprovider.ChainProvider,
-	connMgr netsync.P2PConnManager, logger *zap.Logger) *BeaconRPC {
+	connMgr netsync.P2PConnManager,
+	generator *mining.BlkTmplGenerator,
+	logger *zap.Logger) *BeaconRPC {
 	rpc := &BeaconRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger),
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, generator,
+			logger.With(zap.String("ctx", "beacon_rpc"))),
 	}
 	rpc.ComposeHandlers()
 	return rpc
@@ -69,7 +73,7 @@ func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan stru
 			return nil, rpcDecodeHexError(c.HashStop)
 		}
 	}
-	headers := server.chainProvider.BlockChain.LocateHeaders(blockLocators, &hashStop)
+	headers := server.chainProvider.BlockChain().LocateHeaders(blockLocators, &hashStop)
 
 	// Return the serialized block headers as hex-encoded strings.
 	hexBlockHeaders := make([]string, len(headers))
@@ -121,18 +125,18 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 	}
 
 	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain.BlockHeightByHash(hash)
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 	blk.SetHeight(blockHeight)
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get next block hash unless there are none.
 	var nextHashString string
 	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain.BlockHashByHeight(blockHeight + 1)
+		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
 			context := "No next block"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -147,23 +151,23 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 		return nil, err
 	}
 
-	blockReply := btcjson.GetBlockVerboseResult{
-		Hash:                c.Hash,
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		PreviousHash:        blockHeader.PrevBlock().String(),
-		MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		Nonce:               blockHeader.Nonce(),
-		Time:                blockHeader.Timestamp().Unix(),
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		Height:              int64(blockHeight),
-		Size:                int32(len(blkBytes)),
-		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:              int32(blockchain.GetBlockWeight(blk)),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:          diff,
-		NextHash:            nextHashString,
+	blockReply := btcjson.GetBeaconBlockVerboseResult{
+		Hash:         c.Hash,
+		Version:      int32(blockHeader.Version()),
+		VersionHex:   fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:   blockHeader.MerkleRoot().String(),
+		PreviousHash: blockHeader.PrevBlock().String(),
+		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
+		Nonce:         blockHeader.Nonce(),
+		Time:          blockHeader.Timestamp().Unix(),
+		Confirmations: int64(1 + best.Height - blockHeight),
+		Height:        int64(blockHeight),
+		Size:          int32(len(blkBytes)),
+		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:        int32(chaindata.GetBlockWeight(blk)),
+		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:    diff,
+		NextHash:      nextHashString,
 	}
 
 	if *c.Verbosity == 1 {
@@ -201,7 +205,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
 	}
-	blockHeader, err := server.chainProvider.BlockChain.HeaderByHash(hash)
+	blockHeader, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 	if err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
@@ -224,17 +228,17 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	// The verbose flag is set, so generate the JSON object and return it.
 
 	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain.BlockHeightByHash(hash)
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
 		context := "Failed to obtain block height"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get next block hash unless there are none.
 	var nextHashString string
 	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain.BlockHashByHeight(blockHeight + 1)
+		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
 			context := "No next block"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -248,19 +252,19 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		return nil, err
 	}
 	blockHeaderReply := btcjson.GetBlockHeaderVerboseResult{
-		Hash:                c.Hash,
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		Height:              blockHeight,
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		NextHash:            nextHashString,
-		PreviousHash:        blockHeader.PrevBlock().String(),
-		Nonce:               uint64(blockHeader.Nonce()),
-		Time:                blockHeader.Timestamp().Unix(),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:          diff,
+		Hash:          c.Hash,
+		Confirmations: int64(1 + best.Height - blockHeight),
+		Height:        blockHeight,
+		Version:       int32(blockHeader.Version()),
+		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:    blockHeader.MerkleRoot().String(),
+		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
+		NextHash:     nextHashString,
+		PreviousHash: blockHeader.PrevBlock().String(),
+		Nonce:        uint64(blockHeader.Nonce()),
+		Time:         blockHeader.Timestamp().Unix(),
+		Bits:         strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:   diff,
 	}
 	return blockHeaderReply, nil
 }
@@ -345,7 +349,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// }
 
 	// No point in generating or accepting work before the BlockChain is synced.
-	currentHeight := server.chainProvider.BlockChain.BestSnapshot().Height
+	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCClientInInitialDownload,
@@ -371,10 +375,10 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// seconds since the last template was generated.  Otherwise, the
 	// timestamp for the existing block template is updated (and possibly
 	// the difficulty on testnet per the consesus rules).
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
-	return state.blockTemplateResult(useCoinbaseValue, nil)
+	return state.BlockTemplateResult(useCoinbaseValue, nil)
 }
 
 // handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
@@ -414,14 +418,14 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 	block := btcutil.NewBlock(&msgBlock)
 
 	// Ensure the block is building from the expected previous block.
-	expectedPrevHash := server.chainProvider.BlockChain.BestSnapshot().Hash
+	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
 	prevHash := block.MsgBlock().Header.PrevBlock()
 	if !expectedPrevHash.IsEqual(&prevHash) {
 		return "bad-prevblk", nil
 	}
 
-	if err := server.chainProvider.BlockChain.CheckConnectBlockTemplate(block); err != nil {
-		if _, ok := err.(blockchain.RuleError); !ok {
+	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block); err != nil {
+		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			server.Log.Error(errStr)
 			return nil, &btcjson.RPCError{
@@ -454,7 +458,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// be manually unlocked before waiting for a notification about block
 	// template changes.
 
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		state.Unlock()
 		return nil, err
 	}
@@ -463,7 +467,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// the caller is invalid.
 	prevHash, lastGenerated, err := server.DecodeTemplateID(longPollID)
 	if err != nil {
-		result, err := state.blockTemplateResult(useCoinbaseValue, nil)
+		result, err := state.BlockTemplateResult(useCoinbaseValue, nil)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -476,15 +480,15 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.template.Block.Header.PrevBlock()
+	prevTemplateHash := state.Template.Block.Header.PrevBlock()
 	if !prevHash.IsEqual(&prevTemplateHash) ||
-		lastGenerated != state.lastGenerated.Unix() {
+		lastGenerated != state.LastGenerated.Unix() {
 
 		// Include whether or not it is valid to submit work against the
 		// old block template depending on whether or not a solution has
 		// already been found and added to the block BlockChain.
 		submitOld := prevHash.IsEqual(&prevTemplateHash)
-		result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
+		result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -498,7 +502,8 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// Get a channel that will be notified when the template associated with
 	// the provided ID is stale and a new block template should be returned to
 	// the caller.
-	longPollChan := state.templateUpdateChan(prevHash, lastGenerated)
+	longPollChan := state.
+		TemplateUpdateChan(prevHash, lastGenerated)
 	state.Unlock()
 
 	select {
@@ -516,16 +521,16 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	state.Lock()
 	defer state.Unlock()
 
-	if err := state.updateBlockTemplate(server.CommonChainRPC, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
 
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block BlockChain.
-	h := state.template.Block.Header.PrevBlock()
+	h := state.Template.Block.Header.PrevBlock()
 	submitOld := prevHash.IsEqual(&h)
-	result, err := state.blockTemplateResult(useCoinbaseValue, &submitOld)
+	result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {
 		return nil, err
 	}

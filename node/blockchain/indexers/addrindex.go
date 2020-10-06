@@ -11,7 +11,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -702,7 +702,7 @@ func (idx *AddrIndex) indexPkScript(data writeIndexData, pkScript []byte, txIdx 
 // in the passed block and maps each of them to the associated transaction using
 // the passed map.
 func (idx *AddrIndex) indexBlock(data writeIndexData, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) {
+	stxos []chaindata.SpentTxOut) {
 
 	stxoIndex := 0
 	for txIdx, tx := range block.Transactions() {
@@ -736,7 +736,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *btcutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	// The offset and length of the transactions within the serialized
 	// block.
@@ -776,7 +776,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
@@ -881,7 +881,7 @@ func (idx *AddrIndex) indexUnconfirmedAddresses(pkScript []byte, tx *btcutil.Tx)
 // addresses not being indexed.
 //
 // This function is safe for concurrent access.
-func (idx *AddrIndex) AddUnconfirmedTx(tx *btcutil.Tx, utxoView *blockchain.UtxoViewpoint) {
+func (idx *AddrIndex) AddUnconfirmedTx(tx *btcutil.Tx, utxoView *chaindata.UtxoViewpoint) {
 	// Index addresses of all referenced previous transaction outputs.
 	//
 	// The existence checks are elided since this is only called after the

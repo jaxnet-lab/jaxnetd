@@ -51,7 +51,7 @@ type BeaconHeader struct {
 	shards uint32
 }
 
-func NewEmptyHeader() *BeaconHeader { return &BeaconHeader{} }
+func NewEmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 
 // NewBeaconBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
@@ -79,6 +79,7 @@ func (h *BeaconHeader) MerkleRoot() chainhash.Hash      { return h.merkleRoot }
 func (h *BeaconHeader) PrevBlock() chainhash.Hash       { return h.prevBlock }
 func (h *BeaconHeader) Timestamp() time.Time            { return h.timestamp }
 func (h *BeaconHeader) Version() BVersion               { return h.version }
+func (h *BeaconHeader) SetVersion(v BVersion)           { h.version = v }
 
 func (h *BeaconHeader) SetBits(bits uint32)                     { h.bits = bits }
 func (h *BeaconHeader) SetMergeMiningRoot(value chainhash.Hash) { h.mergeMiningRoot = value }

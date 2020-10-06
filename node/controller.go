@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
+	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +28,18 @@ type chainController struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	beacon      BeaconCtl
+	beacon BeaconCtl
+
+	// These fields allow the RPC Server to interface with mining.
+	//
+	// Generator produces block templates and the CPUMiner solves them using
+	// the CPU.  CPU mining is typically only useful for test purposes when
+	// doing regression or simulation testing.
+	beaconGenerator *mining.BlkTmplGenerator
+
+	// todo: repair
+	miner *cpuminer.CPUMiner
+
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
 	shardsMutex sync.RWMutex
@@ -65,13 +78,23 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if cfg.Node.Shards.Autorun {
-		chainCtl.beacon.chainProvider.BlockChain.Subscribe(chainCtl.shardsAutorunCallback)
+		chainCtl.beacon.chainProvider.BlockChain().Subscribe(chainCtl.shardsAutorunCallback)
 	}
 
 	if err := chainCtl.runRpc(ctx, cfg); err != nil {
 		chainCtl.logger.Error("RPC ComposeHandlers error", zap.Error(err))
 		return err
 	}
+
+	// if beaconCtl.cfg.Node.BeaconChain.EnableCPUMiner {
+	// 	// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
+	// 	beaconCtl.chainProvider.InitCPUMiner(func() int32 { return 2 })
+	// 	wg.Add(1)
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		beaconCtl.chainProvider.CPUMiner.Run(ctx)
+	// 	}()
+	// }
 
 	<-ctx.Done()
 	chainCtl.wg.Wait()
@@ -83,7 +106,7 @@ func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) err
 		return errors.New("can't create interrupt request")
 	}
 
-	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg, chainCtl)
+	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg)
 	if err := chainCtl.beacon.Init(); err != nil {
 		chainCtl.logger.Error("Can't init Beacon chainCtl", zap.Error(err))
 		return err
@@ -102,11 +125,13 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
 	nodeRPC := rpc.NewNodeRPC(chainCtl, chainCtl.logger)
-	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
+	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr,
+		chainCtl.beacon.BlkTmplGenerator(), chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
 	for shardID, ro := range chainCtl.shardsCtl {
-		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr, chainCtl.logger)
+		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr,
+			ro.ctl.BlkTmplGenerator(beaconRPC.BlockGenerator), chainCtl.logger)
 	}
 
 	srv := rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,

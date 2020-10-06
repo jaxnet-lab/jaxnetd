@@ -11,6 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
@@ -69,7 +70,7 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
 func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block,
-	stxo []blockchain.SpentTxOut) error {
+	stxo []chaindata.SpentTxOut) error {
 
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
@@ -100,7 +101,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
 func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block,
-	stxo []blockchain.SpentTxOut) error {
+	stxo []chaindata.SpentTxOut) error {
 
 	// Assert that the block being disconnected is the current tip of the
 	// index.
@@ -418,7 +419,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		// Connect the block for all indexes that need it.
-		var spentTxos []blockchain.SpentTxOut
+		var spentTxos []chaindata.SpentTxOut
 		for i, indexer := range m.enabledIndexes {
 			// Skip indexes that don't need to be updated with this
 			// block.
@@ -503,7 +504,7 @@ func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, error) {
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
@@ -523,7 +524,7 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxo []blockchain.SpentTxOut) error {
+	stxo []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.

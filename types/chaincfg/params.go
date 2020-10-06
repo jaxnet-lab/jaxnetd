@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -120,6 +121,7 @@ type GenesisBlockOpts struct {
 	Timestamp  time.Time
 	Bits       uint32
 	Nonce      uint32
+	BCHeader   *wire.BeaconHeader
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be
@@ -140,7 +142,6 @@ type Params struct {
 	DNSSeeds []DNSSeed
 
 	// GenesisBlock defines the first block of the chain.
-	// GenesisBlock *wire.MsgBlock
 	GenesisBlock GenesisBlockOpts
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash

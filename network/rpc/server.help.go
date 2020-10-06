@@ -235,7 +235,7 @@ var helpDescsEnUS = map[string]string{
 	"searchrawtransactionsresult-vsize":         "The virtual size of the transaction in bytes",
 	"searchrawtransactionsresult-weight":        "The transaction's weight (between vsize*4-3 and vsize*4)",
 
-	// GetBlockVerboseResult help.
+	// GetBeaconBlockVerboseResult help.
 	"getblockverboseresult-hash":              "The hash of the block (same as provided)",
 	"getblockverboseresult-confirmations":     "The number of confirmations",
 	"getblockverboseresult-size":              "The size of the block",
@@ -697,7 +697,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getaddednodeinfo":      {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
 	"getbestblock":          {(*btcjson.GetBestBlockResult)(nil)},
 	"getbestblockhash":      {(*string)(nil)},
-	"getblock":              {(*string)(nil), (*btcjson.GetBlockVerboseResult)(nil)},
+	"getblock":              {(*string)(nil), (*btcjson.GetBeaconBlockVerboseResult)(nil)},
 	"getblockcount":         {(*int64)(nil)},
 	"getblockhash":          {(*string)(nil)},
 	"getblockheader":        {(*string)(nil), (*btcjson.GetBlockHeaderVerboseResult)(nil)},

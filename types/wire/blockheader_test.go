@@ -24,7 +24,7 @@ func TestBlockHeader(t *testing.T) {
 	hash := mainNetGenesisHash
 	merkleHash := mainNetGenesisMerkleRoot
 	bits := uint32(0x1d00ffff)
-	bh := NewShardBlockHeader(1, hash, merkleHash, hash, time.Now(), bits, nonce)
+	bh := NewBeaconBlockHeader(1, hash, merkleHash, hash, time.Now(), bits, nonce)
 
 	// Ensure we get the same data back out.
 	if bh.PrevBlock() != hash {

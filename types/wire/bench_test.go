@@ -365,7 +365,7 @@ func BenchmarkReadBlockHeader(b *testing.B) {
 		0x00, // TxnCount Varint
 	}
 	r := bytes.NewReader(buf)
-	header := NewEmptyHeader()
+	header := NewEmptyBeaconHeader()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
 		header.Read(r)
@@ -422,7 +422,10 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddBlockHeader(NewShardBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i)))
+		m.AddBlockHeader(
+			// NewShardBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i))
+			NewBeaconBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i)),
+		)
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -568,7 +571,7 @@ func BenchmarkDecodeMerkleBlock(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 	}
-	m.Header = NewShardBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(10000))
+	m.Header = NewBeaconBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(10000))
 	for i := 0; i < 105; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {

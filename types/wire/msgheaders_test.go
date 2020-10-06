@@ -12,6 +12,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // TestHeaders tests the MsgHeaders API.
@@ -63,7 +64,8 @@ func TestHeaders(t *testing.T) {
 func TestHeadersWire(t *testing.T) {
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MergeMiningRoot()
+	mmrHash := chainhash.Hash{}
+	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
 	bh := NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
@@ -230,7 +232,8 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	hash := mainNetGenesisHash
 	merkleHash := blockOne.Header.MerkleRoot()
-	mmrHash := blockOne.Header.MergeMiningRoot()
+	// mmrHash := blockOne.Header.MergeMiningRoot()
+	mmrHash := chainhash.Hash{}
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)

@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"go.uber.org/zap"
 )
@@ -86,7 +87,7 @@ func (shardCtl *ShardCtl) Init() error {
 		return err
 	}
 
-	shardCtl.chainProvider, err = cprovider.NewChainActor(shardCtl.ctx,
+	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, db, shardCtl.log)
 	if err != nil {
 		shardCtl.log.Error("unable to init ChainProvider for shard", zap.Error(err))
@@ -117,6 +118,25 @@ func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
 	return shardCtl.chainProvider
 }
 
+func (shardCtl *ShardCtl) BlkTmplGenerator(
+	beaconBlockGen func(useCoinbase bool) (mining.BlockTemplate, error)) *mining.BlkTmplGenerator {
+	// Create the mining policy and block template generator based on the
+	// configuration options.
+	policy := mining.Policy{
+		BlockMinWeight:    shardCtl.cfg.Node.BeaconChain.BlockMinWeight,
+		BlockMaxWeight:    shardCtl.cfg.Node.BeaconChain.BlockMaxWeight,
+		BlockMinSize:      shardCtl.cfg.Node.BeaconChain.BlockMinSize,
+		BlockMaxSize:      shardCtl.cfg.Node.BeaconChain.BlockMaxSize,
+		BlockPrioritySize: shardCtl.cfg.Node.BeaconChain.BlockPrioritySize,
+		TxMinFreeFee:      shardCtl.cfg.Node.BeaconChain.MinRelayTxFeeValues,
+	}
+	return mining.NewBlkTmplGenerator(&policy,
+		shardCtl.chainProvider.ChainCtx,
+		&shard.HeaderGenerator{BlockGenerator: beaconBlockGen},
+		shardCtl.chainProvider.TxMemPool,
+		shardCtl.chainProvider.BlockChain())
+}
+
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
 	if cleanIndexes {
@@ -129,15 +149,10 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		shardCtl.p2pServer.Run(ctx)
-	}()
+	shardCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
-	wg.Wait()
+
 	shardCtl.log.Info("Chain p2p server shutdown complete")
 
 	shardCtl.log.Info("Gracefully shutting down the database...")

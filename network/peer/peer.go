@@ -21,7 +21,7 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -431,7 +431,7 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
-	chain chain.IChainCtx
+	chain chain2.IChainCtx
 
 	conn net.Conn
 
@@ -2216,7 +2216,7 @@ func (p *Peer) WaitForDisconnect() {
 // newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
 // is used by the NewInboundPeer and NewOutboundPeer functions to perform base
 // setup needed by both types of peers.
-func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer {
+func newPeerBase(origCfg *Config, inbound bool, chainCtx chain2.IChainCtx) *Peer {
 	// Default to the max supported protocol version if not specified by the
 	// caller.
 	cfg := *origCfg // Copy to avoid mutating caller.
@@ -2257,12 +2257,12 @@ func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer 
 
 // NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
 // processing incoming and outgoing messages.
-func NewInboundPeer(cfg *Config, chain chain.IChainCtx) *Peer {
+func NewInboundPeer(cfg *Config, chain chain2.IChainCtx) *Peer {
 	return newPeerBase(cfg, true, chain)
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string, chain chain.IChainCtx) (*Peer, error) {
+func NewOutboundPeer(cfg *Config, addr string, chain chain2.IChainCtx) (*Peer, error) {
 	p := newPeerBase(cfg, false, chain)
 	p.addr = addr
 

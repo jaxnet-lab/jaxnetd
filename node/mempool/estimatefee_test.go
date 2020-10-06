@@ -71,7 +71,7 @@ func (eft *estimateFeeTester) newBlock(txs []*wire.MsgTx) {
 	eft.height++
 
 	block := btcutil.NewBlock(&wire.MsgBlock{
-		// Header:       shard.NewEmptyHeader(),
+		// Header:       shard.NewEmptyBeaconHeader(),
 		Transactions: txs,
 	})
 	block.SetHeight(eft.height)

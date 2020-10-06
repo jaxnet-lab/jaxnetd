@@ -518,8 +518,8 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnBlock",
-			wire.NewMsgBlock(wire.NewShardBlockHeader(1,
-				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
+			wire.NewMsgBlock(wire.NewShardBlockHeader(
+				chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, wire.BeaconHeader{})),
 		},
 		{
 			"OnInv",
@@ -584,8 +584,8 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnMerkleBlock",
-			wire.NewMsgMerkleBlock(wire.NewShardBlockHeader(1,
-				chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, 1)),
+			wire.NewMsgBlock(wire.NewShardBlockHeader(
+				chainhash.Hash{}, chainhash.Hash{}, time.Now(), 1, wire.BeaconHeader{})),
 		},
 		// only one version message is allowed
 		// only one verack message is allowed

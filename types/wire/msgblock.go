@@ -65,7 +65,7 @@ func (msg *MsgBlock) ClearTransactions() {
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
 	if msg.Header == nil {
 		// todo: fix this
-		msg.Header = NewEmptyHeader()
+		msg.Header = NewEmptyBeaconHeader()
 	}
 
 	if err := msg.Header.Read(r); err != nil {

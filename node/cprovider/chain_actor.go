@@ -10,9 +10,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"go.uber.org/zap"
@@ -58,27 +57,18 @@ func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]
 }
 
 type ChainProvider struct {
-
 	// StartupTime is the unix timestamp for when the Server that is hosting
 	// the RPC Server started.
 	StartupTime int64
 
 	// These fields allow the RPC Server to interface with the local block
 	// BlockChain data and state.
-	TimeSource  blockchain.MedianTimeSource
+	TimeSource  chaindata.MedianTimeSource
 	ChainParams *chaincfg.Params
 	DB          database.DB
 
 	// TxMemPool defines the transaction memory pool to interact with.
 	TxMemPool *mempool.TxPool
-
-	// These fields allow the RPC Server to interface with mining.
-	//
-	// Generator produces block templates and the CPUMiner solves them using
-	// the CPU.  CPU mining is typically only useful for test purposes when
-	// doing regression or simulation testing.
-	Generator *mining.BlkTmplGenerator
-	CPUMiner  *cpuminer.CPUMiner
 
 	// These fields define any optional indexes the RPC Server can make use
 	// of to provide additional data when queried.
@@ -94,20 +84,20 @@ type ChainProvider struct {
 	SigCache    *txscript.SigCache
 	HashCache   *txscript.HashCache
 	SyncManager *netsync.SyncManager
-	BlockChain  *blockchain.BlockChain
+	blockChain  *blockchain.BlockChain
 
 	ChainCtx chain.IChainCtx
 	logger   *zap.Logger
 	config   *ChainRuntimeConfig
 }
 
-func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.IChainCtx,
+func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.IChainCtx,
 	db database.DB, log *zap.Logger) (*ChainProvider, error) {
 	chainProvider := &ChainProvider{
 		ChainCtx:    chainCtx,
 		ChainParams: chainCtx.Params(),
 		DB:          db,
-		TimeSource:  blockchain.NewMedianTime(),
+		TimeSource:  chaindata.NewMedianTime(),
 		SigCache:    txscript.NewSigCache(cfg.SigCacheMaxSize),
 		HashCache:   txscript.NewHashCache(cfg.SigCacheMaxSize),
 		logger:      log,
@@ -126,23 +116,6 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.I
 		return nil, err
 	}
 
-	// Create the mining policy and block template generator based on the
-	// configuration options.
-	//
-	// NOTE: The CPU miner relies on the mempool, so the mempool has to be
-	// created before calling the function to create the CPU miner.
-	policy := mining.Policy{
-		BlockMinWeight:    cfg.BlockMinWeight,
-		BlockMaxWeight:    cfg.BlockMaxWeight,
-		BlockMinSize:      cfg.BlockMinSize,
-		BlockMaxSize:      cfg.BlockMaxSize,
-		BlockPrioritySize: cfg.BlockPrioritySize,
-		TxMinFreeFee:      cfg.MinRelayTxFeeValues,
-	}
-	chainProvider.Generator = mining.NewBlkTmplGenerator(&policy,
-		chainProvider.ChainCtx, chainProvider.TxMemPool, chainProvider.BlockChain, chainProvider.TimeSource,
-		chainProvider.SigCache, chainProvider.HashCache)
-
 	chainProvider.MiningAddrs, err = cfg.ParseMiningAddresses(chainProvider.ChainCtx.Params())
 	if err != nil {
 		return nil, err
@@ -154,7 +127,7 @@ func NewChainActor(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.I
 func (chainProvider *ChainProvider) SetP2PProvider(p2pProvider netsync.PeerNotifier) (err error) {
 	chainProvider.SyncManager, err = netsync.New(&netsync.Config{
 		PeerNotifier:       p2pProvider,
-		Chain:              chainProvider.BlockChain,
+		Chain:              chainProvider.blockChain,
 		TxMemPool:          chainProvider.TxMemPool,
 		ChainParams:        chainProvider.ChainParams,
 		DisableCheckpoints: chainProvider.config.DisableCheckpoints,
@@ -196,26 +169,35 @@ func (chainProvider *ChainProvider) Log() *zap.Logger {
 	return chainProvider.logger
 }
 
-func (chainProvider *ChainProvider) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
-	chainProvider.CPUMiner = cpuminer.New(&cpuminer.Config{
-		ChainParams:            chainProvider.ChainParams,
-		BlockTemplateGenerator: chainProvider.Generator,
-		MiningAddrs:            chainProvider.MiningAddrs,
-
-		ProcessBlock:   chainProvider.SyncManager.ProcessBlock,
-		IsCurrent:      chainProvider.SyncManager.IsCurrent,
-		ConnectedCount: connectedCount,
-	}, chainProvider.logger)
-
-	return chainProvider.CPUMiner
+func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
+	return chainProvider.blockChain
 }
+
+func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
+	return chainProvider.MiningAddrs
+}
+
+//
+// func (chainProvider *ChainProvider) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
+// 	chainProvider.CPUMiner = cpuminer.New(&cpuminer.Config{
+// 		ChainParams:            chainProvider.ChainParams,
+// 		BlockTemplateGenerator: chainProvider.Generator(),
+// 		MiningAddrs:            chainProvider.MiningAddrs,
+//
+// 		ProcessBlock:   chainProvider.SyncManager.ProcessBlock,
+// 		IsCurrent:      chainProvider.SyncManager.IsCurrent,
+// 		ConnectedCount: connectedCount,
+// 	}, chainProvider.logger)
+//
+// 	return chainProvider.CPUMiner
+// }
 
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)
 
 	// Create a new blockchain instance with the appropriate configuration.
 	var err error
-	chainProvider.BlockChain, err = blockchain.New(&blockchain.Config{
+	chainProvider.blockChain, err = blockchain.New(&blockchain.Config{
 		DB:           chainProvider.DB,
 		Interrupt:    ctx.Done(),
 		ChainParams:  chainProvider.ChainParams,
@@ -224,7 +206,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 		TimeSource:   chainProvider.TimeSource,
 		SigCache:     chainProvider.SigCache,
 		HashCache:    chainProvider.HashCache,
-		Chain:        chainProvider.ChainCtx,
+		ChainCtx:     chainProvider.ChainCtx,
 	})
 	if err != nil {
 		return err
@@ -232,7 +214,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 
 	// If no FeeEstimator has been found, or if the one that has been found
 	// is behind somehow, create a new one and start over.
-	if chainProvider.FeeEstimator == nil || chainProvider.FeeEstimator.LastKnownHeight() != chainProvider.BlockChain.BestSnapshot().Height {
+	if chainProvider.FeeEstimator == nil || chainProvider.FeeEstimator.LastKnownHeight() != chainProvider.blockChain.BestSnapshot().Height {
 		chainProvider.FeeEstimator = mempool.NewFeeEstimator(
 			mempool.DefaultEstimateFeeMaxRollback,
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
@@ -245,19 +227,19 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 			FreeTxRelayLimit:     cfg.FreeTxRelayLimit,
 			MaxOrphanTxs:         cfg.MaxOrphanTxs,
 			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
-			MaxSigOpCostPerTx:    blockchain.MaxBlockSigOpsCost / 4,
+			MaxSigOpCostPerTx:    chaindata.MaxBlockSigOpsCost / 4,
 			MinRelayTxFee:        cfg.MinRelayTxFeeValues,
 			MaxTxVersion:         2,
 			RejectReplacement:    cfg.RejectReplacement,
 		},
 		ChainParams:    chainProvider.ChainParams,
-		FetchUtxoView:  chainProvider.BlockChain.FetchUtxoView,
-		BestHeight:     func() int32 { return chainProvider.BlockChain.BestSnapshot().Height },
-		MedianTimePast: func() time.Time { return chainProvider.BlockChain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *blockchain.UtxoViewpoint) (*blockchain.SequenceLock, error) {
-			return chainProvider.BlockChain.CalcSequenceLock(tx, view, true)
+		FetchUtxoView:  chainProvider.blockChain.FetchUtxoView,
+		BestHeight:     func() int32 { return chainProvider.blockChain.BestSnapshot().Height },
+		MedianTimePast: func() time.Time { return chainProvider.blockChain.BestSnapshot().MedianTime },
+		CalcSequenceLock: func(tx *btcutil.Tx, view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
+			return chainProvider.blockChain.CalcSequenceLock(tx, view, true)
 		},
-		IsDeploymentActive: chainProvider.BlockChain.IsDeploymentActive,
+		IsDeploymentActive: chainProvider.blockChain.IsDeploymentActive,
 		SigCache:           chainProvider.SigCache,
 		HashCache:          chainProvider.HashCache,
 		AddrIndex:          chainProvider.AddrIndex,

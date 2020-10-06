@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types"
@@ -272,7 +272,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 
 		// Grab the block height.
 		blkHash = blockRegion.Hash
-		blkHeight, err = server.chainProvider.BlockChain.BlockHeightByHash(blkHash)
+		blkHeight, err = server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
 		if err != nil {
 			context := "Failed to retrieve block height"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -311,7 +311,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	var chainHeight int32
 	if blkHash != nil {
 		// Fetch the header from BlockChain.
-		header, err := server.chainProvider.BlockChain.HeaderByHash(blkHash)
+		header, err := server.chainProvider.BlockChain().HeaderByHash(blkHash)
 		if err != nil {
 			context := "Failed to fetch block header"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -319,7 +319,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 
 		blkHeader = header
 		blkHashStr = blkHash.String()
-		chainHeight = server.chainProvider.BlockChain.BestSnapshot().Height
+		chainHeight = server.chainProvider.BlockChain().BestSnapshot().Height
 	}
 
 	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainParams, mtx, txHash.String(),
@@ -476,15 +476,15 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 			return nil, server.InternalRPCError(errStr, "")
 		}
 
-		best := server.chainProvider.BlockChain.BestSnapshot()
+		best := server.chainProvider.BlockChain().BestSnapshot()
 		bestBlockHash = best.Hash.String()
 		confirmations = 0
 		value = txOut.Value
 		pkScript = txOut.PkScript
-		isCoinbase = blockchain.IsCoinBaseTx(mtx)
+		isCoinbase = chaindata.IsCoinBaseTx(mtx)
 	} else {
 		out := wire.OutPoint{Hash: *txHash, Index: c.Vout}
-		entry, err := server.chainProvider.BlockChain.FetchUtxoEntry(out)
+		entry, err := server.chainProvider.BlockChain().FetchUtxoEntry(out)
 		if err != nil {
 			return nil, rpcNoTxInfoError(txHash)
 		}
@@ -498,7 +498,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 			return nil, nil
 		}
 
-		best := server.chainProvider.BlockChain.BestSnapshot()
+		best := server.chainProvider.BlockChain().BestSnapshot()
 		bestBlockHash = best.Hash.String()
 		confirmations = 1 + best.Height - entry.BlockHeight()
 		value = entry.Amount()
@@ -723,7 +723,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 	}
 
 	// The verbose flag is set, so generate the JSON object and return it.
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	srtList := make([]btcjson.SearchRawTransactionsResult, len(addressTxns))
 	for i := range addressTxns {
 		// The deserialized transaction is needed, so deserialize the
@@ -766,7 +766,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 		var blkHeight int32
 		if blkHash := rtx.blkHash; blkHash != nil {
 			// Fetch the header from BlockChain.
-			header, err := server.chainProvider.BlockChain.HeaderByHash(blkHash)
+			header, err := server.chainProvider.BlockChain().HeaderByHash(blkHash)
 			if err != nil {
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrRPCBlockNotFound,
@@ -775,7 +775,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 			}
 
 			// Get the block height from BlockChain.
-			height, err := server.chainProvider.BlockChain.BlockHeightByHash(blkHash)
+			height, err := server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
 			if err != nil {
 				context := "Failed to obtain block height"
 				return nil, server.InternalRPCError(err.Error(), context)

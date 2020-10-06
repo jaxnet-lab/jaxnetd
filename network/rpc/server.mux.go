@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jaxnet/core/shard.core/network"
+	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"go.uber.org/zap"
 )
@@ -54,7 +55,7 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 }
 
 type Mux struct {
-	ToolsXt
+	rpcutli.ToolsXt
 	Log      network.ILogger
 	handlers map[btcjson.MethodName]CommandHandler
 }

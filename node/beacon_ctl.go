@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"go.uber.org/zap"
 )
 
@@ -21,37 +19,34 @@ type BeaconCtl struct {
 	ctx context.Context
 	log *zap.Logger
 
-	dbCtl     DBCtl
-	chain     chain.IChainCtx
-	shardsMgr rpc.ShardManager
+	dbCtl DBCtl
 
 	p2pServer     *p2p.Server
 	chainProvider *cprovider.ChainProvider
 }
 
-func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config, shardsMgr rpc.ShardManager) BeaconCtl {
+func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config) BeaconCtl {
 	logger = logger.With(zap.String("chain", "beacon"))
 	return BeaconCtl{
-		cfg:       cfg,
-		ctx:       ctx,
-		log:       logger,
-		dbCtl:     DBCtl{logger: logger},
-		shardsMgr: shardsMgr,
+		cfg:   cfg,
+		ctx:   ctx,
+		log:   logger,
+		dbCtl: DBCtl{logger: logger},
 	}
 
 }
 func (beaconCtl *BeaconCtl) Init() error {
-	beaconCtl.chain = beacon.Chain(beaconCtl.cfg.Node.ChainParams())
+	chain := beacon.Chain(beaconCtl.cfg.Node.ChainParams())
 
 	// Load the block database.
-	db, err := beaconCtl.dbCtl.loadBlockDB(beaconCtl.cfg.DataDir, beaconCtl.chain, beaconCtl.cfg.Node)
+	db, err := beaconCtl.dbCtl.loadBlockDB(beaconCtl.cfg.DataDir, chain, beaconCtl.cfg.Node)
 	if err != nil {
 		beaconCtl.log.Error("Can't load Block db", zap.Error(err))
 		return err
 	}
 
-	beaconCtl.chainProvider, err = cprovider.NewChainActor(beaconCtl.ctx,
-		beaconCtl.cfg.Node.BeaconChain, beaconCtl.chain, db, beaconCtl.log)
+	beaconCtl.chainProvider, err = cprovider.NewChainProvider(beaconCtl.ctx,
+		beaconCtl.cfg.Node.BeaconChain, chain, db, beaconCtl.log)
 	if err != nil {
 		beaconCtl.log.Error("unable to init ChainProvider for beacon", zap.Error(err))
 		return err
@@ -80,6 +75,24 @@ func (beaconCtl *BeaconCtl) Init() error {
 	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
 }
 
+func (beaconCtl *BeaconCtl) BlkTmplGenerator() *mining.BlkTmplGenerator {
+	// Create the mining policy and block template generator based on the
+	// configuration options.
+	policy := mining.Policy{
+		BlockMinWeight:    beaconCtl.cfg.Node.BeaconChain.BlockMinWeight,
+		BlockMaxWeight:    beaconCtl.cfg.Node.BeaconChain.BlockMaxWeight,
+		BlockMinSize:      beaconCtl.cfg.Node.BeaconChain.BlockMinSize,
+		BlockMaxSize:      beaconCtl.cfg.Node.BeaconChain.BlockMaxSize,
+		BlockPrioritySize: beaconCtl.cfg.Node.BeaconChain.BlockPrioritySize,
+		TxMinFreeFee:      beaconCtl.cfg.Node.BeaconChain.MinRelayTxFeeValues,
+	}
+	return mining.NewBlkTmplGenerator(&policy,
+		beaconCtl.chainProvider.ChainCtx,
+		beaconCtl.chainProvider.ChainCtx,
+		beaconCtl.chainProvider.TxMemPool,
+		beaconCtl.chainProvider.BlockChain())
+}
+
 func (beaconCtl *BeaconCtl) ChainProvider() *cprovider.ChainProvider {
 	return beaconCtl.chainProvider
 }
@@ -96,26 +109,9 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		beaconCtl.p2pServer.Run(ctx)
-	}()
-
-	if beaconCtl.cfg.Node.BeaconChain.EnableCPUMiner {
-		// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
-		beaconCtl.chainProvider.InitCPUMiner(func() int32 { return 2 })
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			beaconCtl.chainProvider.CPUMiner.Run(ctx)
-		}()
-	}
+	beaconCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
-
-	wg.Wait()
 
 	beaconCtl.log.Info("Gracefully shutting down the database...")
 	if err := beaconCtl.chainProvider.DB.Close(); err != nil {

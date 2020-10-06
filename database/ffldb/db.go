@@ -24,7 +24,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/database/internal/treap"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
@@ -958,7 +958,7 @@ type transaction struct {
 	closed         bool // Is the transaction closed?
 	writable       bool // Is the transaction writable?
 	db             *db  // DB instance the tx was created from.
-	chain          chain.IChainCtx
+	chain          chain2.IChainCtx
 	snapshot       *dbCacheSnapshot // Underlying snapshot for txns.
 	metaBucket     *bucket          // The root metadata bucket.
 	blockIdxBucket *bucket          // The block index bucket.
@@ -1734,7 +1734,7 @@ type db struct {
 	closed    bool         // Is the database closed?
 	store     *blockStore  // Handles read/writing blocks to flat files.
 	cache     *dbCache     // Cache layer which wraps underlying leveldb DB.
-	chain     chain.IChainCtx
+	chain     chain2.IChainCtx
 }
 
 // Enforce db implements the database.DB interface.
@@ -1817,7 +1817,7 @@ func (db *db) Begin(writable bool) (database.Tx, error) {
 	return db.begin(writable)
 }
 
-func (db *db) Chain() chain.IChainCtx {
+func (db *db) Chain() chain2.IChainCtx {
 	return db.chain
 }
 
@@ -1989,7 +1989,7 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, chain chain.IChainCtx, network types.BitcoinNet, create bool) (database.DB, error) {
+func openDB(dbPath string, chain chain2.IChainCtx, network types.BitcoinNet, create bool) (database.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)

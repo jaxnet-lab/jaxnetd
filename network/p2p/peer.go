@@ -67,7 +67,7 @@ func newServerPeer(s *Server, isPersistent bool) *ServerPeer {
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
 func (sp *ServerPeer) newestBlock() (*chainhash.Hash, int32, error) {
-	best := sp.server.BlockChain.BestSnapshot()
+	best := sp.server.BlockChain().BestSnapshot()
 	return &best.Hash, best.Height, nil
 }
 
@@ -209,7 +209,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// After soft-fork activation, only make outbound
 		// connection to peers if they flag that they're segwit
 		// enabled.
-		blockChain := sp.server.BlockChain
+		blockChain := sp.server.BlockChain()
 		segwitActive, err := blockChain.IsDeploymentActive(chaincfg.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
@@ -479,7 +479,7 @@ func (sp *ServerPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	chain := sp.server.BlockChain
+	chain := sp.server.BlockChain()
 	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop,
 		wire.MaxBlocksPerMsg)
 
@@ -523,7 +523,7 @@ func (sp *ServerPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	ch := sp.server.BlockChain
+	ch := sp.server.BlockChain()
 	headers := ch.LocateHeaders(msg.BlockLocatorHashes, &msg.HashStop)
 
 	// Send found headers to the requesting peer.
@@ -552,7 +552,7 @@ func (sp *ServerPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		return
 	}
 
-	hashes, err := sp.server.BlockChain.HeightToHashRange(
+	hashes, err := sp.server.BlockChain().HeightToHashRange(
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
@@ -618,7 +618,7 @@ func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 	}
 
 	// Fetch the hashes from the block index.
-	hashList, err := sp.server.BlockChain.HeightToHashRange(
+	hashList, err := sp.server.BlockChain().HeightToHashRange(
 		startHeight, &msg.StopHash, maxResults,
 	)
 	if err != nil {
@@ -726,7 +726,7 @@ func (sp *ServerPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	// Now that we know the client is fetching a filter that we know of,
 	// we'll fetch the block hashes et each check point interval so we can
 	// compare against our cache, and create new check points if necessary.
-	blockHashes, err := sp.server.BlockChain.IntervalBlockHashes(
+	blockHashes, err := sp.server.BlockChain().IntervalBlockHashes(
 		&msg.StopHash, wire.CFCheckptInterval,
 	)
 	if err != nil {

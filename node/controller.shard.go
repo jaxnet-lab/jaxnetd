@@ -45,7 +45,7 @@ func (chainCtl *chainController) ListShards() []btcjson.ShardInfo {
 }
 
 func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
-	block, err := chainCtl.beacon.chainProvider.BlockChain.BlockByHeight(height)
+	block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(height)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
 	}
 
 	chainCtl.shardsIndex.AddShard(block)
-	chainCtl.runShardRoutine(shardID, msgBlock, height)
+	chainCtl.runShardRoutine(shardID, msgBlock)
 
 	return nil
 }
@@ -82,7 +82,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	}
 
 	chainCtl.shardsIndex.AddShard(block)
-	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock, block.Height())
+	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock)
 }
 
 func (chainCtl *chainController) runShards() error {
@@ -99,7 +99,7 @@ func (chainCtl *chainController) runShards() error {
 	return nil
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.MsgBlock, height int32) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.MsgBlock) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
@@ -108,7 +108,13 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.Msg
 	}
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
-	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(), block, height)
+	genesisHeader, ok := block.Header.(*wire.BeaconHeader)
+	if !ok {
+		// todo
+		return
+	}
+
+	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(), genesisHeader)
 
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx)
 	if err := shardCtl.Init(); err != nil {
@@ -169,7 +175,7 @@ func (chainCtl *chainController) syncShardsIndex() error {
 	}
 
 	var maxHeight int32
-	snapshot := chainCtl.beacon.chainProvider.BlockChain.BestSnapshot()
+	snapshot := chainCtl.beacon.chainProvider.BlockChain().BestSnapshot()
 	if snapshot != nil {
 		maxHeight = snapshot.Height
 	}
@@ -179,7 +185,7 @@ func (chainCtl *chainController) syncShardsIndex() error {
 	}
 
 	for height := chainCtl.shardsIndex.LastBeaconHeight; height < maxHeight; height++ {
-		block, err := chainCtl.beacon.chainProvider.BlockChain.BlockByHeight(height)
+		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(height)
 		if err != nil {
 			return err
 		}

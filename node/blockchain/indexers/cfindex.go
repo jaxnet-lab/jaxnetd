@@ -11,7 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs"
 	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs/builder"
 	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -210,7 +210,7 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 // connected to the main chain. This indexer adds a hash-to-cf mapping for
 // every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
-	stxos []blockchain.SpentTxOut) error {
+	stxos []chaindata.SpentTxOut) error {
 
 	prevScripts := make([][]byte, len(stxos))
 	for i, stxo := range stxos {
@@ -229,7 +229,7 @@ func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 // disconnected from the main chain.  This indexer removes the hash-to-cf
 // mapping for every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
-	_ []blockchain.SpentTxOut) error {
+	_ []chaindata.SpentTxOut) error {
 
 	for _, key := range cfIndexKeys {
 		err := dbDeleteFilterIdxEntry(dbTx, key, block.Hash())

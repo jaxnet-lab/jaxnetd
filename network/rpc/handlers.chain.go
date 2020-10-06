@@ -12,9 +12,11 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -33,12 +35,12 @@ type CommonChainRPC struct {
 	connMgr netsync.P2PConnManager
 
 	chainProvider *cprovider.ChainProvider
-	gbtWorkState  *gbtWorkState
+	gbtWorkState  *mining.GBTWorkState
 	helpCache     *helpCacher
 }
 
-func NewCommonChainRPC(chainProvider *cprovider.ChainProvider,
-	connMgr netsync.P2PConnManager, logger *zap.Logger) *CommonChainRPC {
+func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
+	generator *mining.BlkTmplGenerator, logger *zap.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
@@ -48,9 +50,13 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider,
 	}
 	rpc.ComposeHandlers()
 
-	rpc.gbtWorkState = newGbtWorkState(chainProvider.TimeSource)
+	rpc.gbtWorkState = mining.NewGbtWorkState(chainProvider.TimeSource, generator, logger)
 	rpc.helpCache = newHelpCacher(rpc)
 	return rpc
+}
+
+func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool) (mining.BlockTemplate, error) {
+	return server.gbtWorkState.BlockTemplate(server.chainProvider, useCoinbaseValue)
 }
 
 func (server *CommonChainRPC) Handlers() map[btcjson.MethodName]CommandHandler {
@@ -210,7 +216,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 }
 
 func (server *CommonChainRPC) verifyChain(level, depth int32) error {
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	finishHeight := best.Height - depth
 	if finishHeight < 0 {
 		finishHeight = 0
@@ -220,7 +226,7 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 
 	for height := best.Height; height > finishHeight; height-- {
 		// Level 0 just looks up the block.
-		block, err := server.chainProvider.BlockChain.BlockByHeight(height)
+		block, err := server.chainProvider.BlockChain().BlockByHeight(height)
 		if err != nil {
 			server.Log.Errorf("Verify is unable to fetch block at "+
 				"height %d: %v", height, err)
@@ -229,7 +235,7 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 
 		// Level 1 does basic BlockChain sanity checks.
 		if level > 0 {
-			err := blockchain.CheckBlockSanity(block,
+			err := chaindata.CheckBlockSanity(block,
 				server.chainProvider.ChainParams.PowLimit, server.chainProvider.TimeSource)
 			if err != nil {
 				server.Log.Errorf("Verify is unable to validate "+
@@ -310,7 +316,7 @@ func (server *CommonChainRPC) handleGetBestBlock(cmd interface{}, closeChan <-ch
 	// All other "get block" commands give either the height, the
 	// hash, or both but require the block SHA.  This gets both for
 	// the best block.
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	result := &btcjson.GetBestBlockResult{
 		Hash:   best.Hash.String(),
 		Height: best.Height,
@@ -320,7 +326,7 @@ func (server *CommonChainRPC) handleGetBestBlock(cmd interface{}, closeChan <-ch
 
 // handleGetBestBlockHash implements the getbestblockhash command.
 func (server *CommonChainRPC) handleGetBestBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	return best.Hash.String(), nil
 }
 
@@ -329,7 +335,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	// Obtain a snapshot of the current best known blockchain state. We'll
 	// populate the response to this call primarily from this snapshot.
 	params := server.chainProvider.ChainParams
-	blockChain := server.chainProvider.BlockChain
+	blockChain := server.chainProvider.BlockChain()
 	chainSnapshot := blockChain.BestSnapshot()
 	diff, err := server.GetDifficultyRatio(chainSnapshot.Bits, params)
 	if err != nil {
@@ -438,14 +444,14 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 
 // handleGetBlockCount implements the getblockcount command.
 func (server *CommonChainRPC) handleGetBlockCount(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	best := server.chainProvider.BlockChain.BestSnapshot()
+	best := server.chainProvider.BlockChain().BestSnapshot()
 	return int64(best.Height), nil
 }
 
 // handleGetBlockHash implements the getblockhash command.
 func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetBlockHashCmd)
-	hash, err := server.chainProvider.BlockChain.BlockHashByHeight(int32(c.Index))
+	hash, err := server.chainProvider.BlockChain().BlockHashByHeight(int32(c.Index))
 	if err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCOutOfRange,
@@ -523,7 +529,7 @@ func (server *CommonChainRPC) handleGetCurrentNet(cmd interface{}, closeChan <-c
 // passed transaction.
 func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams *chaincfg.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
 	// Coinbase transactions only have a single txin by definition.
-	if blockchain.IsCoinBaseTx(mtx) {
+	if chaindata.IsCoinBaseTx(mtx) {
 		// Only include the transaction if the filter map is empty
 		// because a coinbase input has no addresses and so would never
 		// match a non-empty filter.
@@ -671,7 +677,7 @@ func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
 	//
 	//	// Potentially notify any getblocktemplate long poll clients
 	//	// about stale block templates due to the new transaction.
-	//	server.gbtWorkState.NotifyMempoolTx(server.cfg.TxMemPool.LastUpdated())
+	//	server.GBTWorkState.NotifyMempoolTx(server.cfg.TxMemPool.LastUpdated())
 	// }
 }
 
@@ -699,7 +705,7 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
-	_, err = server.chainProvider.SyncManager.ProcessBlock(block, blockchain.BFNone)
+	_, err = server.chainProvider.SyncManager.ProcessBlock(block, chaindata.BFNone)
 	if err != nil {
 		return fmt.Sprintf("rejected: %s", err.Error()), nil
 	}

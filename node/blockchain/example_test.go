@@ -12,7 +12,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/database"
 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
 )
@@ -30,7 +30,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain2.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return

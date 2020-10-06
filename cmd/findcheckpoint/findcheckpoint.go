@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
@@ -157,7 +158,7 @@ func main() {
 	chain, err := blockchain.New(&blockchain.Config{
 		DB:          db,
 		ChainParams: activeNetParams,
-		TimeSource:  blockchain.NewMedianTime(),
+		TimeSource:  chaindata.NewMedianTime(),
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize chain: %v\n", err)

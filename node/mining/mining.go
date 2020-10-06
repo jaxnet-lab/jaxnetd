@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -218,11 +219,21 @@ type BlockTemplate struct {
 	WitnessCommitment []byte
 }
 
+type BlockTxsCollection struct {
+	BlockTxns         []*btcutil.Tx
+	BlockWeight       uint32
+	TotalFees         int64
+	BlockSigOpCost    int64
+	WitnessCommitment []byte
+	TxFees            []int64
+	TxSigOpCosts      []int64
+}
+
 // mergeUtxoView adds all of the entries in viewB to viewA.  The result is that
 // viewA will contain all of its original entries plus all of the entries
 // in viewB.  It will replace any entries in viewB which also exist in viewA
 // if the entry in viewA is spent.
-func mergeUtxoView(viewA *blockchain.UtxoViewpoint, viewB *blockchain.UtxoViewpoint) {
+func mergeUtxoView(viewA *chaindata.UtxoViewpoint, viewB *chaindata.UtxoViewpoint) {
 	viewAEntries := viewA.Entries()
 	for outpoint, entryB := range viewB.Entries() {
 		if entryA, exists := viewAEntries[outpoint]; !exists ||
@@ -279,7 +290,7 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 		Sequence:        wire.MaxTxInSequenceNum,
 	})
 	tx.AddTxOut(&wire.TxOut{
-		Value:    blockchain.CalcBlockSubsidy(nextBlockHeight, params),
+		Value:    chaindata.CalcBlockSubsidy(nextBlockHeight, params),
 		PkScript: pkScript,
 	})
 	return btcutil.NewTx(tx), nil
@@ -288,7 +299,7 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 // spendTransaction updates the passed view by marking the inputs to the passed
 // transaction as spent.  It also adds all outputs in the passed transaction
 // which are not provably unspendable as available unspent transaction outputs.
-func spendTransaction(utxoView *blockchain.UtxoViewpoint, tx *btcutil.Tx, height int32) error {
+func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *btcutil.Tx, height int32) error {
 	for _, txIn := range tx.MsgTx().TxIn {
 		entry := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if entry != nil {
@@ -317,14 +328,14 @@ func logSkippedDeps(tx *btcutil.Tx, deps map[chainhash.Hash]*txPrioItem) {
 // on the end of the provided best chain.  In particular, it is one second after
 // the median timestamp of the last several blocks per the chain consensus
 // rules.
-func MinimumMedianTime(chainState *blockchain.BestState) time.Time {
+func MinimumMedianTime(chainState *chaindata.BestState) time.Time {
 	return chainState.MedianTime.Add(time.Second)
 }
 
 // medianAdjustedTime returns the current time adjusted to ensure it is at least
 // one second after the median timestamp of the last several blocks per the
 // chain consensus rules.
-func medianAdjustedTime(chainState *blockchain.BestState, timeSource blockchain.MedianTimeSource) time.Time {
+func medianAdjustedTime(chainState *chaindata.BestState, timeSource chaindata.MedianTimeSource) time.Time {
 	// The timestamp for the block must not be before the median timestamp
 	// of the last several blocks.  Thus, choose the maximum between the
 	// current time and one second after the past median time.  The current
@@ -340,18 +351,21 @@ func medianAdjustedTime(chainState *blockchain.BestState, timeSource blockchain.
 	return newTimestamp
 }
 
+type headerProvider interface {
+	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
+}
+
 // BlkTmplGenerator provides a type that can be used to generate block templates
 // based on a given mining policy and source of transactions to choose from.
 // It also houses additional state required in order to ensure the templates
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
-	policy     *Policy
-	chainTools chain.IChainCtx
-	txSource   TxSource
-	chain      *blockchain.BlockChain
-	timeSource blockchain.MedianTimeSource
-	sigCache   *txscript.SigCache
-	hashCache  *txscript.HashCache
+	policy         *Policy
+	chainCtx       chain.IChainCtx
+	txSource       TxSource
+	blockChain     *blockchain.BlockChain
+	headerProvider headerProvider
 }
 
 // NewBlkTmplGenerator returns a new block template generator for the given
@@ -360,20 +374,18 @@ type BlkTmplGenerator struct {
 // The additional state-related fields are required in order to ensure the
 // templates are built on top of the current best chain and adhere to the
 // consensus rules.
-func NewBlkTmplGenerator(policy *Policy, chainTools chain.IChainCtx,
-	txSource TxSource, chain *blockchain.BlockChain,
-	timeSource blockchain.MedianTimeSource,
-	sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache) *BlkTmplGenerator {
+func NewBlkTmplGenerator(policy *Policy,
+	chainCtx chain.IChainCtx,
+	headerProvider headerProvider,
+	txSource TxSource,
+	chain *blockchain.BlockChain) *BlkTmplGenerator {
 
 	return &BlkTmplGenerator{
-		policy:     policy,
-		chainTools: chainTools,
-		txSource:   txSource,
-		chain:      chain,
-		timeSource: timeSource,
-		sigCache:   sigCache,
-		hashCache:  hashCache,
+		policy:         policy,
+		chainCtx:       chainCtx,
+		txSource:       txSource,
+		blockChain:     chain,
+		headerProvider: headerProvider,
 	}
 }
 
@@ -439,14 +451,78 @@ func NewBlkTmplGenerator(policy *Policy, chainTools chain.IChainCtx,
 //  |  transactions (while block size   |   |
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
+
 func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, error) {
 	// fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
-	best := g.chain.BestSnapshot()
+	best := g.blockChain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
+	txsCollection, err := g.CollectTxsForBlock(payToAddress, nextBlockHeight)
+	if err != nil {
+		return nil, err
+	}
 
-	// fmt.Println("Height ", nextBlockHeight)
+	// Calculate the required difficulty for the block.  The timestamp
+	// is potentially adjusted to ensure it comes after the median time of
+	// the last several blocks per the chain consensus rules.
+	ts := medianAdjustedTime(best, g.blockChain.TimeSource)
+	reqDifficulty, err := g.blockChain.CalcNextRequiredDifficulty(ts)
+	if err != nil {
+		return nil, err
+	}
 
+	// Calculate the next expected block version based on the state of the
+	// rule change deployments.
+	nextBlockVersion, err := g.blockChain.CalcNextBlockVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new block ready to be solved.
+	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
+
+	var msgBlock wire.MsgBlock
+
+	msgBlock.Header, err = g.chainCtx.NewBlockHeader(
+		nextBlockVersion,
+		best.Hash,
+		*merkles[len(merkles)-1],
+		ts,
+		reqDifficulty,
+		0,
+	)
+
+	for _, tx := range txsCollection.BlockTxns {
+		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
+			return nil, err
+		}
+	}
+
+	// Finally, perform a full check on the created block against the chain
+	// consensus rules to ensure it properly connects to the current best
+	// chain with no issues.
+	block := btcutil.NewBlock(&msgBlock)
+	block.SetHeight(nextBlockHeight)
+	if err := g.blockChain.CheckConnectBlockTemplate(block); err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Created new block template (%d transactions, %d in "+
+		"fees, %d signature operations cost, %d weight, target difficulty "+
+		"%064x)", len(msgBlock.Transactions), txsCollection.TotalFees, txsCollection.BlockSigOpCost,
+		txsCollection.BlockWeight, pow.CompactToBig(msgBlock.Header.Bits()))
+
+	return &BlockTemplate{
+		Block:             &msgBlock,
+		Fees:              txsCollection.TxFees,
+		SigOpCosts:        txsCollection.TxSigOpCosts,
+		Height:            nextBlockHeight,
+		ValidPayAddress:   payToAddress != nil,
+		WitnessCommitment: txsCollection.WitnessCommitment,
+	}, nil
+}
+
+func (g *BlkTmplGenerator) CollectTxsForBlock(payToAddress btcutil.Address, nextHeight int32) (*BlockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -456,16 +532,16 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 	extraNonce := uint64(0)
-	coinbaseScript, err := standardCoinbaseScript(nextBlockHeight, extraNonce)
+	coinbaseScript, err := standardCoinbaseScript(nextHeight, extraNonce)
 	if err != nil {
 		return nil, err
 	}
-	coinbaseTx, err := createCoinbaseTx(g.chainTools.Params(), coinbaseScript,
-		nextBlockHeight, payToAddress)
+	coinbaseTx, err := createCoinbaseTx(g.chainCtx.Params(), coinbaseScript,
+		nextHeight, payToAddress)
 	if err != nil {
 		return nil, err
 	}
-	coinbaseSigOpCost := int64(blockchain.CountSigOps(coinbaseTx)) * blockchain.WitnessScaleFactor
+	coinbaseSigOpCost := int64(chaindata.CountSigOps(coinbaseTx)) * chaindata.WitnessScaleFactor
 
 	// Get the current source transactions and create a priority queue to
 	// hold the transactions which are ready for inclusion into a block
@@ -483,7 +559,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	// avoided.
 	blockTxns := make([]*btcutil.Tx, 0, len(sourceTxns))
 	blockTxns = append(blockTxns, coinbaseTx)
-	blockUtxos := blockchain.NewUtxoViewpoint()
+	blockUtxos := chaindata.NewUtxoViewpoint()
 
 	// dependers is used to track transactions which depend on another
 	// transaction in the source pool.  This, in conjunction with the
@@ -511,12 +587,12 @@ mempoolLoop:
 		// A block can't have more than one coinbase or contain
 		// non-finalized transactions.
 		tx := txDesc.Tx
-		if blockchain.IsCoinBase(tx) {
+		if chaindata.IsCoinBase(tx) {
 			log.Tracef("Skipping coinbase tx %s", tx.Hash())
 			continue
 		}
-		if !blockchain.IsFinalizedTransaction(tx, nextBlockHeight,
-			g.timeSource.AdjustedTime()) {
+		if !chaindata.IsFinalizedTransaction(tx, nextHeight,
+			g.blockChain.TimeSource.AdjustedTime()) {
 
 			log.Tracef("Skipping non-finalized tx %s", tx.Hash())
 			continue
@@ -527,7 +603,7 @@ mempoolLoop:
 		// mempool since a transaction which depends on other
 		// transactions in the mempool must come after those
 		// dependencies in the final generated block.
-		utxos, err := g.chain.FetchUtxoView(tx)
+		utxos, err := g.blockChain.FetchUtxoView(tx)
 		if err != nil {
 			log.Warnf("Unable to fetch utxo view for tx %s: %v",
 				tx.Hash(), err)
@@ -575,7 +651,7 @@ mempoolLoop:
 		// value age sum as well as the adjusted transaction size.  The
 		// formula is: sum(inputValue * inputAge) / adjustedTxSize
 		prioItem.priority = CalcPriority(tx.MsgTx(), utxos,
-			nextBlockHeight)
+			nextHeight)
 
 		// Calculate the fee in Satoshi/kB.
 		prioItem.feePerKB = txDesc.FeePerKB
@@ -599,8 +675,8 @@ mempoolLoop:
 	// The starting block size is the size of the block header plus the max
 	// possible transaction count size, plus the size of the coinbase
 	// transaction.
-	blockWeight := uint32((g.chain.Chain().BlockHeaderOverhead() * blockchain.WitnessScaleFactor) +
-		int(blockchain.GetTransactionWeight(coinbaseTx)))
+	blockWeight := uint32((g.blockChain.Chain().BlockHeaderOverhead() * chaindata.WitnessScaleFactor) +
+		int(chaindata.GetTransactionWeight(coinbaseTx)))
 	blockSigOpCost := coinbaseSigOpCost
 	totalFees := int64(0)
 
@@ -608,7 +684,7 @@ mempoolLoop:
 	// so then this means that we'll include any transactions with witness
 	// data in the mempool, and also add the witness commitment as an
 	// OP_RETURN output in the coinbase transaction.
-	segwitState, err := g.chain.ThresholdState(chaincfg.DeploymentSegwit)
+	segwitState, err := g.blockChain.ThresholdState(chaincfg.DeploymentSegwit)
 	if err != nil {
 		return nil, err
 	}
@@ -643,19 +719,19 @@ mempoolLoop:
 			coinbaseCopy := btcutil.NewTx(coinbaseTx.MsgTx().Copy())
 			coinbaseCopy.MsgTx().TxIn[0].Witness = [][]byte{
 				bytes.Repeat([]byte("a"),
-					blockchain.CoinbaseWitnessDataLen),
+					chaindata.CoinbaseWitnessDataLen),
 			}
 			coinbaseCopy.MsgTx().AddTxOut(&wire.TxOut{
 				PkScript: bytes.Repeat([]byte("a"),
-					blockchain.CoinbaseWitnessPkScriptLength),
+					chaindata.CoinbaseWitnessPkScriptLength),
 			})
 
 			// In order to accurately account for the weight
 			// addition due to this coinbase transaction, we'll add
 			// the difference of the transaction before and after
 			// the addition of the commitment to the block weight.
-			weightDiff := blockchain.GetTransactionWeight(coinbaseCopy) -
-				blockchain.GetTransactionWeight(coinbaseTx)
+			weightDiff := chaindata.GetTransactionWeight(coinbaseCopy) -
+				chaindata.GetTransactionWeight(coinbaseTx)
 
 			blockWeight += uint32(weightDiff)
 
@@ -666,7 +742,7 @@ mempoolLoop:
 		deps := dependers[*tx.Hash()]
 
 		// Enforce maximum block size.  Also check for overflow.
-		txWeight := uint32(blockchain.GetTransactionWeight(tx))
+		txWeight := uint32(chaindata.GetTransactionWeight(tx))
 		blockPlusTxWeight := blockWeight + txWeight
 		if blockPlusTxWeight < blockWeight ||
 			blockPlusTxWeight >= g.policy.BlockMaxWeight {
@@ -679,7 +755,7 @@ mempoolLoop:
 
 		// Enforce maximum signature operation cost per block.  Also
 		// check for overflow.
-		sigOpCost, err := blockchain.GetSigOpCost(tx, false,
+		sigOpCost, err := chaindata.GetSigOpCost(tx, false,
 			blockUtxos, true, segwitActive)
 		if err != nil {
 			log.Tracef("Skipping tx %s due to error in "+
@@ -688,7 +764,7 @@ mempoolLoop:
 			continue
 		}
 		if blockSigOpCost+int64(sigOpCost) < blockSigOpCost ||
-			blockSigOpCost+int64(sigOpCost) > blockchain.MaxBlockSigOpsCost {
+			blockSigOpCost+int64(sigOpCost) > chaindata.MaxBlockSigOpsCost {
 			log.Tracef("Skipping tx %s because it would "+
 				"exceed the maximum sigops per block", tx.Hash())
 			logSkippedDeps(tx, deps)
@@ -741,17 +817,17 @@ mempoolLoop:
 
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
-		_, err = blockchain.CheckTransactionInputs(tx, nextBlockHeight,
-			blockUtxos, g.chainTools.Params())
+		_, err = chaindata.CheckTransactionInputs(tx, nextHeight,
+			blockUtxos, g.chainCtx.Params())
 		if err != nil {
 			log.Tracef("Skipping tx %s due to error in "+
 				"CheckTransactionInputs: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
-		err = blockchain.ValidateTransactionScripts(tx, blockUtxos,
-			txscript.StandardVerifyFlags, g.sigCache,
-			g.hashCache)
+		err = chaindata.ValidateTransactionScripts(tx, blockUtxos,
+			txscript.StandardVerifyFlags, g.blockChain.SigCache,
+			g.blockChain.HashCache)
 		if err != nil {
 			log.Tracef("Skipping tx %s due to error in "+
 				"ValidateTransactionScripts: %v", tx.Hash(), err)
@@ -763,7 +839,7 @@ mempoolLoop:
 		// an entry for it to ensure any transactions which reference
 		// this one have it available as an input and can ensure they
 		// aren't double spending.
-		spendTransaction(blockUtxos, tx, nextBlockHeight)
+		spendTransaction(blockUtxos, tx, nextHeight)
 
 		// Add the transaction to the block, increment counters, and
 		// save the fees and signature operation counts to the block
@@ -796,7 +872,7 @@ mempoolLoop:
 	// the total fees accordingly.
 	blockWeight -= encoder.MaxVarIntPayload -
 		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) *
-			blockchain.WitnessScaleFactor)
+			chaindata.WitnessScaleFactor)
 	coinbaseTx.MsgTx().TxOut[0].Value += totalFees
 	txFees[0] = -totalFees
 
@@ -807,13 +883,13 @@ mempoolLoop:
 	if witnessIncluded {
 		// The witness of the coinbase transaction MUST be exactly 32-bytes
 		// of all zeroes.
-		var witnessNonce [blockchain.CoinbaseWitnessDataLen]byte
+		var witnessNonce [chaindata.CoinbaseWitnessDataLen]byte
 		coinbaseTx.MsgTx().TxIn[0].Witness = wire.TxWitness{witnessNonce[:]}
 
 		// Next, obtain the merkle root of a tree which consists of the
 		// wtxid of all transactions in the block. The coinbase
 		// transaction will have a special wtxid of all zeroes.
-		witnessMerkleTree := blockchain.BuildMerkleTreeStore(blockTxns,
+		witnessMerkleTree := chaindata.BuildMerkleTreeStore(blockTxns,
 			true)
 		witnessMerkleRoot := witnessMerkleTree[len(witnessMerkleTree)-1]
 
@@ -829,7 +905,7 @@ mempoolLoop:
 		// OP_DATA_36 {0xaa21a9ed || witnessCommitment}. The leading
 		// prefix is referred to as the "witness magic bytes".
 		witnessCommitment = chainhash.DoubleHashB(witnessPreimage[:])
-		witnessScript := append(blockchain.WitnessMagicBytes, witnessCommitment...)
+		witnessScript := append(chaindata.WitnessMagicBytes, witnessCommitment...)
 
 		// Finally, create the OP_RETURN carrying witness commitment
 		// output as an additional output within the coinbase.
@@ -841,65 +917,16 @@ mempoolLoop:
 			commitmentOutput)
 	}
 
-	// Calculate the required difficulty for the block.  The timestamp
-	// is potentially adjusted to ensure it comes after the median time of
-	// the last several blocks per the chain consensus rules.
-	ts := medianAdjustedTime(best, g.timeSource)
-	reqDifficulty, err := g.chain.CalcNextRequiredDifficulty(ts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate the next expected block version based on the state of the
-	// rule change deployments.
-	nextBlockVersion, err := g.chain.CalcNextBlockVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new block ready to be solved.
-	merkles := blockchain.BuildMerkleTreeStore(blockTxns, false)
-	var msgBlock wire.MsgBlock
-
-	msgBlock.Header = g.chainTools.NewBlockHeader(
-		nextBlockVersion,
-		best.Hash,
-		*merkles[len(merkles)-1],
-		chainhash.Hash{},
-		ts,
-		reqDifficulty,
-		0,
-	)
-
-	for _, tx := range blockTxns {
-		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
-			return nil, err
-		}
-	}
-	msgBlock.BlockHash()
-
-	// Finally, perform a full check on the created block against the chain
-	// consensus rules to ensure it properly connects to the current best
-	// chain with no issues.
-	block := btcutil.NewBlock(&msgBlock)
-	block.SetHeight(nextBlockHeight)
-	if err := g.chain.CheckConnectBlockTemplate(block); err != nil {
-		return nil, err
-	}
-
-	log.Debugf("Created new block template (%d transactions, %d in "+
-		"fees, %d signature operations cost, %d weight, target difficulty "+
-		"%064x)", len(msgBlock.Transactions), totalFees, blockSigOpCost,
-		blockWeight, pow.CompactToBig(msgBlock.Header.Bits()))
-
-	return &BlockTemplate{
-		Block:             &msgBlock,
-		Fees:              txFees,
-		SigOpCosts:        txSigOpCosts,
-		Height:            nextBlockHeight,
-		ValidPayAddress:   payToAddress != nil,
+	return &BlockTxsCollection{
+		BlockTxns:         blockTxns,
+		BlockWeight:       blockWeight,
+		TxFees:            txFees,
+		TotalFees:         totalFees,
+		TxSigOpCosts:      txSigOpCosts,
+		BlockSigOpCost:    blockSigOpCost,
 		WitnessCommitment: witnessCommitment,
 	}, nil
+
 }
 
 // UpdateBlockTime updates the timestamp in the header of the passed block to
@@ -912,12 +939,12 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	// The new timestamp is potentially adjusted to ensure it comes after
 	// the median time of the last several blocks per the chain consensus
 	// rules.
-	newTime := medianAdjustedTime(g.chain.BestSnapshot(), g.timeSource)
+	newTime := medianAdjustedTime(g.blockChain.BestSnapshot(), g.blockChain.TimeSource)
 	msgBlock.Header.SetTimestamp(newTime)
 
 	// Recalculate the difficulty if running on a network that requires it.
-	if g.chainTools.Params().ReduceMinDifficulty {
-		difficulty, err := g.chain.CalcNextRequiredDifficulty(newTime)
+	if g.chainCtx.Params().ReduceMinDifficulty {
+		difficulty, err := g.blockChain.CalcNextRequiredDifficulty(newTime)
 		if err != nil {
 			return err
 		}
@@ -936,11 +963,11 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 	if err != nil {
 		return err
 	}
-	if len(coinbaseScript) > blockchain.MaxCoinbaseScriptLen {
+	if len(coinbaseScript) > chaindata.MaxCoinbaseScriptLen {
 		return fmt.Errorf("coinbase transaction script length "+
 			"of %d is out of range (min: %d, max: %d)",
-			len(coinbaseScript), blockchain.MinCoinbaseScriptLen,
-			blockchain.MaxCoinbaseScriptLen)
+			len(coinbaseScript), chaindata.MinCoinbaseScriptLen,
+			chaindata.MaxCoinbaseScriptLen)
 	}
 	msgBlock.Transactions[0].TxIn[0].SignatureScript = coinbaseScript
 
@@ -950,7 +977,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 
 	// Recalculate the merkle root with the updated extra nonce.
 	block := btcutil.NewBlock(msgBlock)
-	merkles := blockchain.BuildMerkleTreeStore(block.Transactions(), false)
+	merkles := chaindata.BuildMerkleTreeStore(block.Transactions(), false)
 	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
 	return nil
 }
@@ -961,8 +988,8 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 // treated as immutable since it is shared by all callers.
 //
 // This function is safe for concurrent access.
-func (g *BlkTmplGenerator) BestSnapshot() *blockchain.BestState {
-	return g.chain.BestSnapshot()
+func (g *BlkTmplGenerator) BestSnapshot() *chaindata.BestState {
+	return g.blockChain.BestSnapshot()
 }
 
 // TxSource returns the associated transaction source.
