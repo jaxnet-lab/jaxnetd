@@ -16,6 +16,9 @@ const (
 )
 
 type BlockHeader interface {
+	BeaconHeader() *BeaconHeader
+	SetBeaconHeader(bh *BeaconHeader)
+
 	BlockData() []byte
 	BlockHash() chainhash.Hash
 	PrevBlock() chainhash.Hash
@@ -65,7 +68,7 @@ func (bv BVersion) SetExpansionMade() BVersion {
 const BlockHeaderLen = 80
 
 type HeaderConstructor interface {
-	NewEmptyHeader() BlockHeader
+	EmptyHeader() BlockHeader
 	BlockHeaderOverhead() int
 	MaxBlockHeaderPayload() int
 	IsBeacon() bool
@@ -74,20 +77,22 @@ type HeaderConstructor interface {
 
 type BeaconHeaderConstructor struct{}
 
-func (b BeaconHeaderConstructor) NewEmptyHeader() BlockHeader { return &BeaconHeader{} }
-func (b BeaconHeaderConstructor) IsBeacon() bool              { return true }
-func (b BeaconHeaderConstructor) ShardID() uint32             { return 0 }
-func (b BeaconHeaderConstructor) MaxBlockHeaderPayload() int  { return MaxBeaconBlockHeaderPayload }
+func (b BeaconHeaderConstructor) EmptyHeader() BlockHeader   { return &BeaconHeader{} }
+func (b BeaconHeaderConstructor) IsBeacon() bool             { return true }
+func (b BeaconHeaderConstructor) ShardID() uint32            { return 0 }
+func (b BeaconHeaderConstructor) MaxBlockHeaderPayload() int { return MaxBeaconBlockHeaderPayload }
 func (b BeaconHeaderConstructor) BlockHeaderOverhead() int {
 	return MaxBeaconBlockHeaderPayload + encoder.MaxVarIntPayload
 }
 
 type ShardHeaderConstructor struct{ ID uint32 }
 
-func (b ShardHeaderConstructor) NewEmptyHeader() BlockHeader { return &ShardHeader{} }
-func (b ShardHeaderConstructor) IsBeacon() bool              { return false }
-func (b ShardHeaderConstructor) ShardID() uint32             { return b.ID }
-func (b ShardHeaderConstructor) MaxBlockHeaderPayload() int  { return MaxShardBlockHeaderPayload }
+func (b ShardHeaderConstructor) EmptyHeader() BlockHeader {
+	return &ShardHeader{BCHeader: BeaconHeader{}}
+}
+func (b ShardHeaderConstructor) IsBeacon() bool             { return false }
+func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }
+func (b ShardHeaderConstructor) MaxBlockHeaderPayload() int { return MaxShardBlockHeaderPayload }
 func (b ShardHeaderConstructor) BlockHeaderOverhead() int {
 	return MaxShardBlockHeaderPayload + encoder.MaxVarIntPayload
 }

@@ -421,7 +421,7 @@ func TestMarshalCmdErrors(t *testing.T) {
 		{
 			name: "nil instance of registered type",
 			id:   1,
-			cmd:  (*btcjson.GetBlockCmd)(nil),
+			cmd:  (*btcjson.GetBeaconBlockCmd)(nil),
 			err:  btcjson.Error{ErrorCode: btcjson.ErrInvalidType},
 		},
 		{

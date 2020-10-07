@@ -154,7 +154,7 @@ func MigrateBlockIndex(db database.DB) error {
 func readBlockTree(chain chain.IChainCtx, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
-		header := chain.NewEmptyHeader()
+		header := chain.EmptyHeader()
 		blockHdrSize := uint32(chain.MaxBlockHeaderPayload())
 		endOffset := blockHdrOffset + blockHdrSize
 		headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]

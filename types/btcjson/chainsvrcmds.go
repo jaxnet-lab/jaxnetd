@@ -132,19 +132,37 @@ func NewGetBestBlockHashCmd() *GetBestBlockHashCmd {
 	return &GetBestBlockHashCmd{}
 }
 
-// GetBlockCmd defines the getblock JSON-RPC command.
-type GetBlockCmd struct {
+// GetBeaconBlockCmd defines the getBeaconBlock JSON-RPC command.
+type GetBeaconBlockCmd struct {
 	Hash      string
 	Verbosity *int `jsonrpcdefault:"1"`
 }
 
-// NewGetBlockCmd returns a new instance which can be used to issue a getblock
+// NewGetBeaconBlockCmd returns a new instance which can be used to issue a getBeaconBlock
 // JSON-RPC command.
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewGetBlockCmd(hash string, verbosity *int) *GetBlockCmd {
-	return &GetBlockCmd{
+func NewGetBeaconBlockCmd(hash string, verbosity *int) *GetBeaconBlockCmd {
+	return &GetBeaconBlockCmd{
+		Hash:      hash,
+		Verbosity: verbosity,
+	}
+}
+
+// GetShardBlockCmd defines the getShardBlock JSON-RPC command.
+type GetShardBlockCmd struct {
+	Hash      string
+	Verbosity *int `jsonrpcdefault:"1"`
+}
+
+// NewGetShardBlockCmd returns a new instance which can be used to issue a getShardBlock
+// JSON-RPC command.
+//
+// The parameters which are pointers indicate they are optional.  Passing nil
+// for optional parameters will use the default value.
+func NewGetShardBlockCmd(hash string, verbosity *int) *GetShardBlockCmd {
+	return &GetShardBlockCmd{
 		Hash:      hash,
 		Verbosity: verbosity,
 	}
@@ -181,16 +199,31 @@ func NewGetBlockHashCmd(index int64) *GetBlockHashCmd {
 	}
 }
 
-// GetBlockHeaderCmd defines the getblockheader JSON-RPC command.
-type GetBlockHeaderCmd struct {
+// GetBeaconBlockHeaderCmd defines the getBeaconBlockHeader JSON-RPC command.
+type GetBeaconBlockHeaderCmd struct {
 	Hash    string
 	Verbose *bool `jsonrpcdefault:"true"`
 }
 
-// NewGetBlockHeaderCmd returns a new instance which can be used to issue a
-// getblockheader JSON-RPC command.
-func NewGetBlockHeaderCmd(hash string, verbose *bool) *GetBlockHeaderCmd {
-	return &GetBlockHeaderCmd{
+// NewGetBeaconBlockHeaderCmd returns a new instance which can be used to issue a
+// getBeaconBlockHeader JSON-RPC command.
+func NewGetBeaconBlockHeaderCmd(hash string, verbose *bool) *GetBeaconBlockHeaderCmd {
+	return &GetBeaconBlockHeaderCmd{
+		Hash:    hash,
+		Verbose: verbose,
+	}
+}
+
+// GetShardBlockHeaderCmd defines the getShardBlockHeader JSON-RPC command.
+type GetShardBlockHeaderCmd struct {
+	Hash    string
+	Verbose *bool `jsonrpcdefault:"true"`
+}
+
+// NewGetShardBlockHeaderCmd returns a new instance which can be used to issue a
+// getShardBlockHeader JSON-RPC command.
+func NewGetShardBlockHeaderCmd(hash string, verbose *bool) *GetShardBlockHeaderCmd {
+	return &GetShardBlockHeaderCmd{
 		Hash:    hash,
 		Verbose: verbose,
 	}
@@ -248,7 +281,7 @@ func NewGetBlockStatsCmd(hashOrHeight HashOrHeight, stats *[]string) *GetBlockSt
 
 // TemplateRequest is a request object as defined in BIP22
 // (https://en.bitcoin.it/wiki/BIP_0022), it is optionally provided as an
-// pointer argument to GetBlockTemplateCmd.
+// pointer argument to GetBeaconBlockTemplateCmd.
 type TemplateRequest struct {
 	Mode         string   `json:"mode,omitempty"`
 	Capabilities []string `json:"capabilities,omitempty"`
@@ -318,18 +351,34 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// GetBlockTemplateCmd defines the getblocktemplate JSON-RPC command.
-type GetBlockTemplateCmd struct {
+// GetBeaconBlockTemplateCmd defines the getBeaconBlockTemplate JSON-RPC command.
+type GetBeaconBlockTemplateCmd struct {
 	Request *TemplateRequest
 }
 
-// NewGetBlockTemplateCmd returns a new instance which can be used to issue a
+// NewGetBeaconBlockTemplateCmd returns a new instance which can be used to issue a
 // getblocktemplate JSON-RPC command.
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewGetBlockTemplateCmd(request *TemplateRequest) *GetBlockTemplateCmd {
-	return &GetBlockTemplateCmd{
+func NewGetBeaconBlockTemplateCmd(request *TemplateRequest) *GetBeaconBlockTemplateCmd {
+	return &GetBeaconBlockTemplateCmd{
+		Request: request,
+	}
+}
+
+// GetShardBlockTemplateCmd defines the getShardBlockTemplate JSON-RPC command.
+type GetShardBlockTemplateCmd struct {
+	Request *TemplateRequest
+}
+
+// NewGetShardBlockTemplateCmd returns a new instance which can be used to issue a
+// getblocktemplate JSON-RPC command.
+//
+// The parameters which are pointers indicate they are optional.  Passing nil
+// for optional parameters will use the default value.
+func NewGetShardBlockTemplateCmd(request *TemplateRequest) *GetShardBlockTemplateCmd {
+	return &GetShardBlockTemplateCmd{
 		Request: request,
 	}
 }
@@ -918,16 +967,16 @@ func init() {
 	MustRegisterCmd("node", "stop", (*StopCmd)(nil), flags)
 
 	// ---- beacon rpc commands ----------------------------------------------------------------------------------------
-	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetHeadersCmd)(nil), flags)
-	MustRegisterCmd("beacon", "getBeaconBlock", (*GetBlockCmd)(nil), flags)
-	MustRegisterCmd("beacon", "getBeaconBlockHeader", (*GetBlockHeaderCmd)(nil), flags)
-	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconBlock", (*GetBeaconBlockCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconBlockHeader", (*GetBeaconBlockHeaderCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBeaconBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------
-	MustRegisterCmd("shard", "getShardHeaders", (*GetHeadersCmd)(nil), flags)
-	MustRegisterCmd("shard", "getShardBlock", (*GetBlockCmd)(nil), flags)
-	MustRegisterCmd("shard", "getShardBlockHeader", (*GetBlockHeaderCmd)(nil), flags)
-	MustRegisterCmd("shard", "getShardBlockTemplate", (*GetBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardBlock", (*GetShardBlockCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardBlockHeader", (*GetShardBlockHeaderCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardBlockTemplate", (*GetShardBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardHeaders", (*GetShardHeadersCmd)(nil), flags)
 
 	// ---- NOT IMPLEMENTED --------------------------------------------------------------------------------------------
 	MustRegisterCmd("chain", "getchaintips", (*GetChainTipsCmd)(nil), flags)

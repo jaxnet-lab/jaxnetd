@@ -324,7 +324,8 @@ func (s *Server) pushBlockMsg(sp *ServerPeer, hash *chainhash.Hash, doneChan cha
 	}
 
 	// Deserialize the block.
-	var msgBlock wire.MsgBlock
+	var msgBlock = s.ChainCtx.EmptyBlock()
+
 	err = msgBlock.Deserialize(bytes.NewReader(blockBytes))
 	if err != nil {
 		s.logger.Tracef("Unable to deserialize requested block hash "+

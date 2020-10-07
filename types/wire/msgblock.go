@@ -42,8 +42,23 @@ type TxLoc struct {
 // block message.  It is used to deliver block and transaction information in
 // response to a getdata message (MsgGetData) for a given block hash.
 type MsgBlock struct {
+	ShardBlock   bool
 	Header       BlockHeader
 	Transactions []*MsgTx
+}
+
+func EmptyBeaconBlock() MsgBlock {
+	return MsgBlock{
+		ShardBlock: true,
+		Header:     EmptyBeaconHeader(),
+	}
+}
+
+func EmptyShardBlock() MsgBlock {
+	return MsgBlock{
+		ShardBlock: true,
+		Header:     EmptyShardHeader(),
+	}
 }
 
 // AddTransaction adds a transaction to the message.
@@ -65,7 +80,7 @@ func (msg *MsgBlock) ClearTransactions() {
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
 	if msg.Header == nil {
 		// todo: fix this
-		msg.Header = NewEmptyBeaconHeader()
+		msg.Header = EmptyBeaconHeader()
 	}
 
 	if err := msg.Header.Read(r); err != nil {

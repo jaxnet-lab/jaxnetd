@@ -981,7 +981,7 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 func DeserializeBlockRow(ch chain.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknode.BlockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
-	header := ch.NewEmptyHeader()
+	header := ch.EmptyHeader()
 	err := header.Read(buffer)
 	if err != nil {
 		return nil, blocknode.StatusNone, err
@@ -1003,7 +1003,7 @@ func dbFetchHeaderByHash(chain chain.IChainCtx, dbTx database.Tx, hash *chainhas
 		return nil, err
 	}
 
-	header := chain.NewEmptyHeader()
+	header := chain.EmptyHeader()
 	err = header.Read(bytes.NewReader(headerBytes))
 	if err != nil {
 		return nil, err

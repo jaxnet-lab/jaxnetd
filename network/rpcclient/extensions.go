@@ -6,9 +6,7 @@
 package rpcclient
 
 import (
-	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -16,7 +14,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -234,76 +231,6 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // NOTE: This is a btcd extension.
 func (c *Client) GetCurrentNet() (types.BitcoinNet, error) {
 	return c.GetCurrentNetAsync().Receive()
-}
-
-// FutureGetHeadersResult is a future promise to deliver the result of a
-// getheaders RPC invocation (or an applicable error).
-//
-// NOTE: This is a btcsuite extension ported from
-// github.com/decred/dcrrpcclient.
-type FutureGetHeadersResult chan *response
-
-// Receive waits for the response promised by the future and returns the
-// getheaders result.
-//
-// NOTE: This is a btcsuite extension ported from
-// github.com/decred/dcrrpcclient.
-func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, error) {
-	res, err := receiveFuture(r)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal result as a slice of strings.
-	var result []string
-	err = json.Unmarshal(res, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	// Deserialize the []string into []chain.BlockHeader.
-	headers := make([]wire.BlockHeader, len(result))
-	for i, headerHex := range result {
-		serialized, err := hex.DecodeString(headerHex)
-		if err != nil {
-			return nil, err
-		}
-		err = headers[i].Read(bytes.NewReader(serialized))
-		if err != nil {
-			return nil, err
-		}
-	}
-	return headers, nil
-}
-
-// GetHeadersAsync returns an instance of a type that can be used to get the result
-// of the RPC at some future time by invoking the Receive function on the returned instance.
-//
-// See GetHeaders for the blocking version and more details.
-//
-// NOTE: This is a btcsuite extension ported from
-// github.com/decred/dcrrpcclient.
-func (c *Client) GetHeadersAsync(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) FutureGetHeadersResult {
-	locators := make([]string, len(blockLocators))
-	for i := range blockLocators {
-		locators[i] = blockLocators[i].String()
-	}
-	hash := ""
-	if hashStop != nil {
-		hash = hashStop.String()
-	}
-	cmd := btcjson.NewGetHeadersCmd(locators, hash)
-	return c.sendCmd(cmd)
-}
-
-// GetHeaders mimics the wire protocol getheaders and headers messages by
-// returning all headers on the main chain after the first known block in the
-// locators, up until a block hash matches hashStop.
-//
-// NOTE: This is a btcsuite extension ported from
-// github.com/decred/dcrrpcclient.
-func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BlockHeader, error) {
-	return c.GetHeadersAsync(blockLocators, hashStop).Receive()
 }
 
 // FutureExportWatchingWalletResult is a future promise to deliver the result of

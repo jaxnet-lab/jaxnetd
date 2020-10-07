@@ -51,7 +51,7 @@ type BeaconHeader struct {
 	shards uint32
 }
 
-func NewEmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
+func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 
 // NewBeaconBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
@@ -71,6 +71,9 @@ func NewBeaconBlockHeader(version BVersion, prevHash, merkleRootHash chainhash.H
 		nonce:           nonce,
 	}
 }
+
+func (h *BeaconHeader) BeaconHeader() *BeaconHeader      { return h }
+func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader) { *h = *bh }
 
 func (h *BeaconHeader) Bits() uint32                    { return h.bits }
 func (h *BeaconHeader) Nonce() uint32                   { return h.nonce }

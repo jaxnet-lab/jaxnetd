@@ -365,7 +365,7 @@ func BenchmarkReadBlockHeader(b *testing.B) {
 		0x00, // TxnCount Varint
 	}
 	r := bytes.NewReader(buf)
-	header := NewEmptyBeaconHeader()
+	header := EmptyBeaconHeader()
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
 		header.Read(r)

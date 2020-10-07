@@ -92,7 +92,7 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 			return nil, 0, err
 		}
 
-		block, err := client.RPC.GetBlock(hash)
+		block, err := client.RPC.GetBeaconBlock(hash)
 		if err != nil {
 			return nil, 0, err
 		}

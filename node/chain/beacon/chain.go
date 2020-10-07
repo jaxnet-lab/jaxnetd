@@ -3,7 +3,6 @@ package beacon
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -67,6 +66,6 @@ func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBl
 	return blocknode.NewBeaconBlockNode(blockHeader, parent)
 }
 
-func (c *beaconChain) BlockHeaderOverhead() int {
-	return wire.MaxBeaconBlockHeaderPayload + encoder.MaxVarIntPayload
+func (c *beaconChain) EmptyBlock() wire.MsgBlock {
+	return wire.EmptyBeaconBlock()
 }

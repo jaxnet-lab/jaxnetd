@@ -43,6 +43,8 @@ type ShardHeader struct {
 	BCHeader BeaconHeader
 }
 
+func EmptyShardHeader() *ShardHeader { return &ShardHeader{BCHeader: *EmptyBeaconHeader()} }
+
 // NewShardBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
@@ -59,6 +61,9 @@ func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time
 		BCHeader:   bcHeader,
 	}
 }
+
+func (h *ShardHeader) BeaconHeader() *BeaconHeader      { return &h.BCHeader }
+func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader) { h.BCHeader = *bh }
 
 func (h *ShardHeader) Bits() uint32        { return h.bits }
 func (h *ShardHeader) SetBits(bits uint32) { h.bits = bits }

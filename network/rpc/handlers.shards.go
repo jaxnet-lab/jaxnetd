@@ -3,6 +3,7 @@ package rpc
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -68,7 +69,7 @@ func (server *ShardRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
 func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetHeadersCmd)
+	c := cmd.(*btcjson.GetShardHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -106,7 +107,7 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 
 // handleGetBlock implements the getblock command.
 func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockCmd)
+	c := cmd.(*btcjson.GetShardBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -165,14 +166,12 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		return nil, err
 	}
 
+	beaconHeader := blockHeader.BeaconHeader()
 	blockReply := btcjson.GetShardBlockVerboseResult{
 		Hash:          c.Hash,
 		ShardHash:     blockHeader.ShardBlockHash().String(),
-		Version:       int32(blockHeader.Version()),
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		PreviousHash:  blockHeader.PrevBlock().String(),
-		Nonce:         blockHeader.Nonce(),
 		Time:          blockHeader.Timestamp().Unix(),
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        int64(blockHeight),
@@ -182,6 +181,27 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
 		Difficulty:    diff,
 		NextHash:      nextHashString,
+		BCBlock: btcjson.GetBeaconBlockVerboseResult{
+			Confirmations: 0,
+			StrippedSize:  0,
+			Size:          0,
+			Weight:        0,
+			Height:        0,
+			Tx:            nil,
+			RawTx:         nil,
+			Time:          0,
+			Difficulty:    0,
+			PreviousHash:  "",
+			NextHash:      "",
+
+			Bits:                strconv.FormatInt(int64(beaconHeader.Bits()), 16),
+			Hash:                beaconHeader.BlockHash().String(),
+			MerkleRoot:          beaconHeader.MerkleRoot().String(),
+			MerkleMountainRange: beaconHeader.MergeMiningRoot().String(),
+			Version:             int32(blockHeader.Version()),
+			VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
+			Nonce:               blockHeader.Nonce(),
+		},
 	}
 
 	if *c.Verbosity == 1 {
@@ -212,7 +232,7 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 
 // handleGetBlockHeader implements the getblockheader command.
 func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockHeaderCmd)
+	c := cmd.(*btcjson.GetShardBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -265,20 +285,39 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	if err != nil {
 		return nil, err
 	}
-	blockHeaderReply := btcjson.GetBlockHeaderVerboseResult{
+	shardHeader, ok := blockHeader.(*wire.ShardHeader)
+	if !ok {
+		return nil, errors.New("header cast failed")
+	}
+
+	beaconHeader := blockHeader.BeaconHeader()
+	blockHeaderReply := btcjson.GetShardBlockHeaderVerboseResult{
 		Hash:          c.Hash,
+		ShardHash:     shardHeader.ShardBlockHash().String(),
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        blockHeight,
-		Version:       int32(blockHeader.Version()),
-		VersionHex:    fmt.Sprintf("%08x", blockHeader.Version()),
+		NextHash:      nextHashString,
+		PreviousHash:  blockHeader.PrevBlock().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
-		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		NextHash:     nextHashString,
-		PreviousHash: blockHeader.PrevBlock().String(),
-		Nonce:        uint64(blockHeader.Nonce()),
-		Time:         blockHeader.Timestamp().Unix(),
-		Bits:         strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:   diff,
+		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:    diff,
+		Time:          blockHeader.Timestamp().Unix(),
+		BCHeader: btcjson.GetBeaconBlockHeaderVerboseResult{
+			Confirmations: 0,
+			Height:        0,
+			Difficulty:    0,
+			NextHash:      "",
+
+			Hash:                beaconHeader.BlockHash().String(),
+			MerkleRoot:          beaconHeader.MerkleRoot().String(),
+			MerkleMountainRange: beaconHeader.MergeMiningRoot().String(),
+			Time:                beaconHeader.Timestamp().Unix(),
+			Bits:                strconv.FormatInt(int64(beaconHeader.Bits()), 16),
+			PreviousHash:        beaconHeader.PrevBlock().String(),
+			Version:             int32(beaconHeader.Version()),
+			VersionHex:          fmt.Sprintf("%08x", beaconHeader.Version()),
+			Nonce:               uint64(beaconHeader.Nonce()),
+		},
 	}
 	return blockHeaderReply, nil
 }
@@ -288,7 +327,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
 func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockTemplateCmd)
+	c := cmd.(*btcjson.GetShardBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -394,7 +433,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
-	return state.BlockTemplateResult(useCoinbaseValue, nil)
+	return state.ShardBlockTemplateResult(useCoinbaseValue, nil)
 }
 
 // handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
@@ -424,7 +463,7 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 				"hexadecimal string (not %q)", hexData),
 		}
 	}
-	var msgBlock wire.MsgBlock
+	var msgBlock = server.chainProvider.ChainCtx.EmptyBlock()
 	if err := msgBlock.Deserialize(bytes.NewReader(dataBytes)); err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCDeserialization,
@@ -483,7 +522,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// the caller is invalid.
 	prevHash, lastGenerated, err := server.DecodeTemplateID(longPollID)
 	if err != nil {
-		result, err := state.BlockTemplateResult(useCoinbaseValue, nil)
+		result, err := state.ShardBlockTemplateResult(useCoinbaseValue, nil)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -504,7 +543,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 		// old block template depending on whether or not a solution has
 		// already been found and added to the block BlockChain.
 		submitOld := prevHash.IsEqual(&prevTemplateHash)
-		result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
+		result, err := state.ShardBlockTemplateResult(useCoinbaseValue, &submitOld)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -545,7 +584,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// been found and added to the block BlockChain.
 	h := state.Template.Block.Header.PrevBlock()
 	submitOld := prevHash.IsEqual(&h)
-	result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
+	result, err := state.ShardBlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {
 		return nil, err
 	}

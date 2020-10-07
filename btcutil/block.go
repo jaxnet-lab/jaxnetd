@@ -246,9 +246,7 @@ func NewBlockFromBytes(chain chain.IChainCtx, serializedBlock []byte) (*Block, e
 // Reader to deserialize the block.  See Block.
 func NewBlockFromReader(chain chain.IChainCtx, r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
-	msgBlock := wire.MsgBlock{
-		Header: chain.NewEmptyHeader(),
-	}
+	msgBlock := chain.EmptyBlock()
 	err := msgBlock.Deserialize(r)
 	if err != nil {
 		return nil, err

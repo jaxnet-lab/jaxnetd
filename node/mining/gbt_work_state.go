@@ -244,7 +244,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 	// changed or the transactions in the memory pool have been updated and
 	// it has been at least gbtRegenerateSecond since the last template was
 	// generated.
-	var msgBlock *wire.MsgBlock
+	var msgBlock = state.generator.chainCtx.EmptyBlock()
 	var targetDifficulty string
 
 	miningAddrs := chainProvider.MiningAddresses()
@@ -282,7 +282,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		}
 
 		template = blkTemplate
-		msgBlock = template.Block
+		msgBlock = *template.Block
 		targetDifficulty = fmt.Sprintf("%064x",
 			pow.CompactToBig(msgBlock.Header.Bits()))
 
@@ -343,14 +343,14 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		}
 
 		// Set locals for convenience.
-		msgBlock = template.Block
+		msgBlock = *template.Block
 		targetDifficulty = fmt.Sprintf("%064x",
 			pow.CompactToBig(msgBlock.Header.Bits()))
 
 		// Update the time of the block template to the current time
 		// while accounting for the median time of the past several
 		// blocks per the BlockChain consensus rules.
-		state.generator.UpdateBlockTime(msgBlock)
+		state.generator.UpdateBlockTime(&msgBlock)
 		msgBlock.Header.SetNonce(0)
 
 		state.Log.Debug("Updated block template",
@@ -362,12 +362,12 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 	return nil
 }
 
-// BlockTemplateResult returns the current block template associated with the
-// state as a btcjson.GetBlockTemplateResult that is ready to be encoded to JSON
+// BeaconBlockTemplateResult returns the current block template associated with the
+// state as a btcjson.GetBeaconBlockTemplateResult that is ready to be encoded to JSON
 // and returned to the caller.
 //
 // This function MUST be called with the state locked.
-func (state *GBTWorkState) BlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*btcjson.GetBlockTemplateResult, error) {
+func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*btcjson.GetBeaconBlockTemplateResult, error) {
 	// Ensure the timestamps are still in valid range for the template.
 	// This should really only ever happen if the local clock is changed
 	// after the template is generated, but it's important to avoid serving
@@ -377,6 +377,7 @@ func (state *GBTWorkState) BlockTemplateResult(useCoinbaseValue bool, submitOld 
 	header := msgBlock.Header
 	adjustedTime := state.timeSource.AdjustedTime()
 	maxTime := adjustedTime.Add(time.Second * chaindata.MaxTimeOffsetSeconds)
+
 	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
@@ -387,13 +388,186 @@ func (state *GBTWorkState) BlockTemplateResult(useCoinbaseValue bool, submitOld 
 		}
 	}
 
+	transactions, err := state.TransformTxs(template)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate the block template reply.  Note that following mutations are
+	// implied by the included or omission of fields:
+	//  Including MinTime -> time/decrement
+	//  Omitting CoinbaseTxn -> coinbase, generation
+	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
+	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
+	reply := btcjson.GetBeaconBlockTemplateResult{
+		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:      header.Timestamp().Unix(),
+		PreviousHash: header.PrevBlock().String(),
+		Height:       int64(template.Height),
+		Version:      int32(header.Version()),
+		WeightLimit:  chaindata.MaxBlockWeight,
+		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
+		SizeLimit:    wire.MaxBlockPayload,
+		Transactions: transactions,
+		LongPollID:   templateID,
+		SubmitOld:    submitOld,
+		Target:       targetDifficulty,
+		MinTime:      state.minTimestamp.Unix(),
+		MaxTime:      maxTime.Unix(),
+		Mutable:      gbtMutableFields,
+		NonceRange:   gbtNonceRange,
+		Capabilities: gbtCapabilities,
+	}
+
+	// If the generated block template includes transactions with witness
+	// data, then include the witness commitment in the GBT result.
+	if template.WitnessCommitment != nil {
+		reply.DefaultWitnessCommitment = hex.EncodeToString(template.WitnessCommitment)
+	}
+
+	cData, err := state.CoinbaseData(template, useCoinbaseValue)
+	if err != nil {
+		return nil, err
+	}
+
+	reply.CoinbaseAux = cData.CoinbaseAux
+	reply.CoinbaseValue = cData.CoinbaseValue
+	reply.CoinbaseTxn = cData.CoinbaseTxn
+
+	return &reply, nil
+}
+
+// ShardBlockTemplateResult returns the current block template associated with the
+// state as a btcjson.GetShardBlockTemplateResult that is ready to be encoded to JSON
+// and returned to the caller.
+//
+// This function MUST be called with the state locked.
+func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*btcjson.GetShardBlockTemplateResult, error) {
+	// Ensure the timestamps are still in valid range for the template.
+	// This should really only ever happen if the local clock is changed
+	// after the template is generated, but it's important to avoid serving
+	// invalid block templates.
+	template := state.Template
+	msgBlock := template.Block
+	header := msgBlock.Header
+	adjustedTime := state.timeSource.AdjustedTime()
+	maxTime := adjustedTime.Add(time.Second * chaindata.MaxTimeOffsetSeconds)
+
+	if header.Timestamp().After(maxTime) {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCOutOfRange,
+			Message: fmt.Sprintf("The template time is after the "+
+				"maximum allowed time for a block - template "+
+				"time %v, maximum time %v", adjustedTime,
+				maxTime),
+		}
+	}
+
+	transactions, err := state.TransformTxs(template)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate the block template reply.  Note that following mutations are
+	// implied by the included or omission of fields:
+	//  Including MinTime -> time/decrement
+	//  Omitting CoinbaseTxn -> coinbase, generation
+	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
+	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
+	reply := btcjson.GetShardBlockTemplateResult{
+		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:      header.Timestamp().Unix(),
+		PreviousHash: header.PrevBlock().String(),
+		Height:       int64(template.Height),
+		Version:      int32(header.Version()),
+		WeightLimit:  chaindata.MaxBlockWeight,
+		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
+		SizeLimit:    wire.MaxBlockPayload,
+		Transactions: transactions,
+		LongPollID:   templateID,
+		SubmitOld:    submitOld,
+		Target:       targetDifficulty,
+		MinTime:      state.minTimestamp.Unix(),
+		MaxTime:      maxTime.Unix(),
+		Mutable:      gbtMutableFields,
+		NonceRange:   gbtNonceRange,
+		Capabilities: gbtCapabilities,
+	}
+
+	// If the generated block template includes transactions with witness
+	// data, then include the witness commitment in the GBT result.
+	if template.WitnessCommitment != nil {
+		reply.DefaultWitnessCommitment = hex.EncodeToString(template.WitnessCommitment)
+	}
+
+	cData, err := state.CoinbaseData(template, useCoinbaseValue)
+	if err != nil {
+		return nil, err
+	}
+
+	reply.CoinbaseAux = cData.CoinbaseAux
+	reply.CoinbaseValue = cData.CoinbaseValue
+	reply.CoinbaseTxn = cData.CoinbaseTxn
+
+	return &reply, nil
+}
+
+type coinbaseData struct {
+	CoinbaseAux   *btcjson.GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
+	CoinbaseTxn   *btcjson.GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
+	CoinbaseValue *int64                             `json:"coinbasevalue,omitempty"`
+}
+
+func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
+	reply := new(coinbaseData)
+
+	if useCoinbaseValue {
+		reply.CoinbaseAux = gbtCoinbaseAux
+		reply.CoinbaseValue = &template.Block.Transactions[0].TxOut[0].Value
+		return reply, nil
+	}
+
+	// Ensure the template has a valid payment address associated
+	// with it when a full coinbase is requested.
+	if !template.ValidPayAddress {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCInternal.Code,
+			Message: "A coinbase transaction has been " +
+				"requested, but the Server has not " +
+				"been configured with any payment " +
+				"addresses via --miningaddr",
+		}
+	}
+
+	// Serialize the transaction for conversion to hex.
+	tx := template.Block.Transactions[0]
+	txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
+	if err := tx.Serialize(txBuf); err != nil {
+		err := errors.Wrap(err, "Failed to serialize transaction")
+		return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, err.Error())
+	}
+
+	resultTx := btcjson.GetBlockTemplateResultTx{
+		Data:    hex.EncodeToString(txBuf.Bytes()),
+		Hash:    tx.TxHash().String(),
+		Depends: []int64{},
+		Fee:     template.Fees[0],
+		SigOps:  template.SigOpCosts[0],
+	}
+
+	reply.CoinbaseTxn = &resultTx
+	return reply, nil
+}
+
+func (state *GBTWorkState) TransformTxs(template *BlockTemplate) ([]btcjson.GetBlockTemplateResultTx, error) {
+
 	// Convert each transaction in the block template to a template result
 	// transaction.  The result does not include the coinbase, so notice
 	// the adjustments to the various lengths and indices.
-	numTx := len(msgBlock.Transactions)
+	numTx := len(template.Block.Transactions)
 	transactions := make([]btcjson.GetBlockTemplateResultTx, 0, numTx-1)
 	txIndex := make(map[chainhash.Hash]int64, numTx)
-	for i, tx := range msgBlock.Transactions {
+	for i, tx := range template.Block.Transactions {
 		txHash := tx.TxHash()
 		txIndex[txHash] = int64(i)
 
@@ -437,72 +611,6 @@ func (state *GBTWorkState) BlockTemplateResult(useCoinbaseValue bool, submitOld 
 		}
 		transactions = append(transactions, resultTx)
 	}
+	return transactions, nil
 
-	// Generate the block template reply.  Note that following mutations are
-	// implied by the included or omission of fields:
-	//  Including MinTime -> time/decrement
-	//  Omitting CoinbaseTxn -> coinbase, generation
-	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
-	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
-	reply := btcjson.GetBlockTemplateResult{
-		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:      header.Timestamp().Unix(),
-		Height:       int64(template.Height),
-		PreviousHash: header.PrevBlock().String(),
-		WeightLimit:  chaindata.MaxBlockWeight,
-		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
-		SizeLimit:    wire.MaxBlockPayload,
-		Transactions: transactions,
-		Version:      int32(header.Version()),
-		LongPollID:   templateID,
-		SubmitOld:    submitOld,
-		Target:       targetDifficulty,
-		MinTime:      state.minTimestamp.Unix(),
-		MaxTime:      maxTime.Unix(),
-		Mutable:      gbtMutableFields,
-		NonceRange:   gbtNonceRange,
-		Capabilities: gbtCapabilities,
-	}
-	// If the generated block template includes transactions with witness
-	// data, then include the witness commitment in the GBT result.
-	if template.WitnessCommitment != nil {
-		reply.DefaultWitnessCommitment = hex.EncodeToString(template.WitnessCommitment)
-	}
-
-	if useCoinbaseValue {
-		reply.CoinbaseAux = gbtCoinbaseAux
-		reply.CoinbaseValue = &msgBlock.Transactions[0].TxOut[0].Value
-	} else {
-		// Ensure the template has a valid payment address associated
-		// with it when a full coinbase is requested.
-		if !template.ValidPayAddress {
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInternal.Code,
-				Message: "A coinbase transaction has been " +
-					"requested, but the Server has not " +
-					"been configured with any payment " +
-					"addresses via --miningaddr",
-			}
-		}
-
-		// Serialize the transaction for conversion to hex.
-		tx := msgBlock.Transactions[0]
-		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
-		if err := tx.Serialize(txBuf); err != nil {
-			err := errors.Wrap(err, "Failed to serialize transaction")
-			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, err.Error())
-		}
-
-		resultTx := btcjson.GetBlockTemplateResultTx{
-			Data:    hex.EncodeToString(txBuf.Bytes()),
-			Hash:    tx.TxHash().String(),
-			Depends: []int64{},
-			Fee:     template.Fees[0],
-			SigOps:  template.SigOpCosts[0],
-		}
-
-		reply.CoinbaseTxn = &resultTx
-	}
-
-	return &reply, nil
 }

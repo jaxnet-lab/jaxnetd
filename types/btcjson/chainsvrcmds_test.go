@@ -160,10 +160,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblock", "123", btcjson.Int(0))
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockCmd("123", btcjson.Int(0))
+				return btcjson.NewGetBeaconBlockCmd("123", btcjson.Int(0))
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123",0],"id":1}`,
-			unmarshalled: &btcjson.GetBlockCmd{
+			unmarshalled: &btcjson.GetBeaconBlockCmd{
 				Hash:      "123",
 				Verbosity: btcjson.Int(0),
 			},
@@ -174,10 +174,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblock", "123")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockCmd("123", nil)
+				return btcjson.NewGetBeaconBlockCmd("123", nil)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123"],"id":1}`,
-			unmarshalled: &btcjson.GetBlockCmd{
+			unmarshalled: &btcjson.GetBeaconBlockCmd{
 				Hash:      "123",
 				Verbosity: btcjson.Int(1),
 			},
@@ -188,10 +188,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblock", "123", btcjson.Int(1))
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockCmd("123", btcjson.Int(1))
+				return btcjson.NewGetBeaconBlockCmd("123", btcjson.Int(1))
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123",1],"id":1}`,
-			unmarshalled: &btcjson.GetBlockCmd{
+			unmarshalled: &btcjson.GetBeaconBlockCmd{
 				Hash:      "123",
 				Verbosity: btcjson.Int(1),
 			},
@@ -202,10 +202,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblock", "123", btcjson.Int(2))
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockCmd("123", btcjson.Int(2))
+				return btcjson.NewGetBeaconBlockCmd("123", btcjson.Int(2))
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblock","params":["123",2],"id":1}`,
-			unmarshalled: &btcjson.GetBlockCmd{
+			unmarshalled: &btcjson.GetBeaconBlockCmd{
 				Hash:      "123",
 				Verbosity: btcjson.Int(2),
 			},
@@ -249,10 +249,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblockheader", "123")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockHeaderCmd("123", nil)
+				return btcjson.NewGetBeaconBlockHeaderCmd("123", nil)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblockheader","params":["123"],"id":1}`,
-			unmarshalled: &btcjson.GetBlockHeaderCmd{
+			unmarshalled: &btcjson.GetBeaconBlockHeaderCmd{
 				Hash:    "123",
 				Verbose: btcjson.Bool(true),
 			},
@@ -317,10 +317,10 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getblocktemplate")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetBlockTemplateCmd(nil)
+				return btcjson.NewGetBeaconBlockTemplateCmd(nil)
 			},
 			marshalled:   `{"jsonrpc":"1.0","method":"getblocktemplate","params":[],"id":1}`,
-			unmarshalled: &btcjson.GetBlockTemplateCmd{Request: nil},
+			unmarshalled: &btcjson.GetBeaconBlockTemplateCmd{Request: nil},
 		},
 		{
 			name: "getblocktemplate optional - template request",
@@ -332,10 +332,10 @@ func TestChainSvrCmds(t *testing.T) {
 					Mode:         "template",
 					Capabilities: []string{"longpoll", "coinbasetxn"},
 				}
-				return btcjson.NewGetBlockTemplateCmd(&template)
+				return btcjson.NewGetBeaconBlockTemplateCmd(&template)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblocktemplate","params":[{"mode":"template","capabilities":["longpoll","coinbasetxn"]}],"id":1}`,
-			unmarshalled: &btcjson.GetBlockTemplateCmd{
+			unmarshalled: &btcjson.GetBeaconBlockTemplateCmd{
 				Request: &btcjson.TemplateRequest{
 					Mode:         "template",
 					Capabilities: []string{"longpoll", "coinbasetxn"},
@@ -355,10 +355,10 @@ func TestChainSvrCmds(t *testing.T) {
 					SizeLimit:    100000000,
 					MaxVersion:   2,
 				}
-				return btcjson.NewGetBlockTemplateCmd(&template)
+				return btcjson.NewGetBeaconBlockTemplateCmd(&template)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblocktemplate","params":[{"mode":"template","capabilities":["longpoll","coinbasetxn"],"sigoplimit":500,"sizelimit":100000000,"maxversion":2}],"id":1}`,
-			unmarshalled: &btcjson.GetBlockTemplateCmd{
+			unmarshalled: &btcjson.GetBeaconBlockTemplateCmd{
 				Request: &btcjson.TemplateRequest{
 					Mode:         "template",
 					Capabilities: []string{"longpoll", "coinbasetxn"},
@@ -381,10 +381,10 @@ func TestChainSvrCmds(t *testing.T) {
 					SizeLimit:    100000000,
 					MaxVersion:   2,
 				}
-				return btcjson.NewGetBlockTemplateCmd(&template)
+				return btcjson.NewGetBeaconBlockTemplateCmd(&template)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getblocktemplate","params":[{"mode":"template","capabilities":["longpoll","coinbasetxn"],"sigoplimit":true,"sizelimit":100000000,"maxversion":2}],"id":1}`,
-			unmarshalled: &btcjson.GetBlockTemplateCmd{
+			unmarshalled: &btcjson.GetBeaconBlockTemplateCmd{
 				Request: &btcjson.TemplateRequest{
 					Mode:         "template",
 					Capabilities: []string{"longpoll", "coinbasetxn"},

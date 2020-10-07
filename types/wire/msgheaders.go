@@ -57,7 +57,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 	headers := make([]BlockHeader, count)
 	msg.Headers = make([]BlockHeader, 0, count)
 	for i := uint64(0); i < count; i++ {
-		bh := msg.Chain.NewEmptyHeader()
+		bh := msg.Chain.EmptyHeader()
 		if err := bh.Read(r); err != nil {
 			return err
 		}

@@ -552,7 +552,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.NewEmptyHeader()
+	blockHeader := chain.BeaconChain.EmptyHeader()
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, nil, err
@@ -607,7 +607,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.NewEmptyHeader()
+	blockHeader := chain.BeaconChain.EmptyHeader()
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, err

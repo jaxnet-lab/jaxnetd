@@ -189,7 +189,11 @@ type Client struct {
 }
 
 func (c *Client) ForBeacon() *Client {
-	return c.ForShard(0)
+	if c.shardID != 0 || c.oneTimeShardID != nil {
+		return c.ForShard(0)
+	}
+
+	return c
 }
 
 func (c *Client) ForShard(shardID uint32) *Client {

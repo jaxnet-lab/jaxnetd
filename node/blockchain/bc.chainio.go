@@ -10,7 +10,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // FetchSpendJournal attempts to retrieve the spend journal, or the set of
@@ -246,9 +245,7 @@ func (b *BlockChain) initChainState() error {
 		if err != nil {
 			return err
 		}
-		block := wire.MsgBlock{
-			Header: b.chain.NewEmptyHeader(),
-		}
+		block := b.chain.EmptyBlock()
 		err = block.Deserialize(bytes.NewReader(blockBytes))
 		if err != nil {
 			return err

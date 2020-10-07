@@ -46,7 +46,7 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 
 func (c *shardChain) NewBlockHeader(ver wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error) {
-	header := wire.NewEmptyBeaconHeader()
+	header := wire.EmptyBeaconHeader()
 	header.SetVersion(ver)
 	header.SetTimestamp(timestamp)
 	header.SetBits(bits)
@@ -69,6 +69,10 @@ func (c *shardChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
 
+func (c *shardChain) EmptyBlock() wire.MsgBlock {
+	return wire.EmptyShardBlock()
+}
+
 func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
 		Header: wire.NewShardBlockHeader(
@@ -89,7 +93,7 @@ type HeaderGenerator struct {
 func (c *HeaderGenerator) generateBeaconHeader(ver wire.BVersion,
 	timestamp time.Time, bits uint32, nonce uint32) (*wire.BeaconHeader, error) {
 	if c.BlockGenerator == nil {
-		header := wire.NewEmptyBeaconHeader()
+		header := wire.EmptyBeaconHeader()
 		header.SetVersion(ver)
 		header.SetTimestamp(timestamp)
 		header.SetBits(bits)

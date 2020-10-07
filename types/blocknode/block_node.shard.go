@@ -119,7 +119,7 @@ func (node *ShardBlockNode) Status() BlockStatus { return node.status }
 
 func (node *ShardBlockNode) SetStatus(status BlockStatus) { node.status = status }
 
-func (node *ShardBlockNode) NewHeader() wire.BlockHeader { return new(wire.ShardHeader) }
+func (node *ShardBlockNode) NewHeader() wire.BlockHeader { return wire.EmptyShardHeader() }
 
 // ShardHeader constructs a block ShardHeader from the node and returns it.
 //

@@ -481,7 +481,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	// Create a new block ready to be solved.
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
-	var msgBlock wire.MsgBlock
+	var msgBlock = g.chainCtx.EmptyBlock()
 
 	msgBlock.Header, err = g.chainCtx.NewBlockHeader(
 		nextBlockVersion,

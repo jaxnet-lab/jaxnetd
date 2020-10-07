@@ -107,11 +107,32 @@ func NewGetCurrentNetCmd() *GetCurrentNetCmd {
 	return &GetCurrentNetCmd{}
 }
 
-// GetHeadersCmd defines the getheaders JSON-RPC command.
+// GetBeaconHeadersCmd defines the getheaders JSON-RPC command.
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrd/dcrjson.
-type GetHeadersCmd struct {
+type GetBeaconHeadersCmd struct {
+	BlockLocators []string `json:"blocklocators"`
+	HashStop      string   `json:"hashstop"`
+}
+
+// NewGetBeaconHeadersCmd returns a new instance which can be used to issue a
+// getheaders JSON-RPC command.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrd/dcrjson.
+func NewGetBeaconHeadersCmd(blockLocators []string, hashStop string) *GetBeaconHeadersCmd {
+	return &GetBeaconHeadersCmd{
+		BlockLocators: blockLocators,
+		HashStop:      hashStop,
+	}
+}
+
+// GetShardHeadersCmd defines the getheaders JSON-RPC command.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrd/dcrjson.
+type GetShardHeadersCmd struct {
 	BlockLocators []string `json:"blocklocators"`
 	HashStop      string   `json:"hashstop"`
 }
@@ -121,8 +142,8 @@ type GetHeadersCmd struct {
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrd/dcrjson.
-func NewGetHeadersCmd(blockLocators []string, hashStop string) *GetHeadersCmd {
-	return &GetHeadersCmd{
+func NewGetShardHeadersCmd(blockLocators []string, hashStop string) *GetShardHeadersCmd {
+	return &GetShardHeadersCmd{
 		BlockLocators: blockLocators,
 		HashStop:      hashStop,
 	}

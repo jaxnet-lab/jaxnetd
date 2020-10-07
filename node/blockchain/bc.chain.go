@@ -1412,7 +1412,7 @@ func (b *BlockChain) HeaderByHash(hash *chainhash.Hash) (wire.BlockHeader, error
 	node := b.index.LookupNode(hash)
 	if node == nil {
 		err := fmt.Errorf("block %s is not known", hash)
-		return b.chain.NewEmptyHeader(), err
+		return b.chain.EmptyHeader(), err
 	}
 
 	return node.Header(), nil
@@ -1740,7 +1740,7 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	// Populate and return the found headers.
 	headers := make([]wire.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, b.chain.NewEmptyHeader())
+		headers = append(headers, b.chain.EmptyHeader())
 		node = b.bestChain.Next(node)
 	}
 	return headers

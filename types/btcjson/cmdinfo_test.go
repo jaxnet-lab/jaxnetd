@@ -29,8 +29,8 @@ func TestCmdMethod(t *testing.T) {
 		},
 		{
 			name:   "nil pointer of registered type",
-			cmd:    (*btcjson.GetBlockCmd)(nil),
-			method: "getblock",
+			cmd:    (*btcjson.GetBeaconBlockCmd)(nil),
+			method: "getBeaconBlock",
 		},
 		{
 			name:   "nil instance of registered type",

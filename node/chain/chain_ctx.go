@@ -12,13 +12,13 @@ import (
 type IChainCtx interface {
 	wire.HeaderConstructor
 
-	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
-
-	NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode
-
 	Params() *chaincfg.Params
 	GenesisBlock() *wire.MsgBlock
+	EmptyBlock() wire.MsgBlock
+
+	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
+	NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode
 }
 
 var BeaconChain IChainCtx

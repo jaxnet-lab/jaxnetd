@@ -14,7 +14,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"go.uber.org/zap"
 )
 
@@ -54,7 +53,7 @@ func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
 func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetHeadersCmd)
+	c := cmd.(*btcjson.GetBeaconHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -92,7 +91,7 @@ func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan stru
 
 // handleGetBlock implements the getblock command.
 func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockCmd)
+	c := cmd.(*btcjson.GetBeaconBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -198,7 +197,7 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 
 // handleGetBlockHeader implements the getblockheader command.
 func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockHeaderCmd)
+	c := cmd.(*btcjson.GetBeaconBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -251,7 +250,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	if err != nil {
 		return nil, err
 	}
-	blockHeaderReply := btcjson.GetBlockHeaderVerboseResult{
+	blockHeaderReply := btcjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:          c.Hash,
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        blockHeight,
@@ -274,7 +273,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
 func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockTemplateCmd)
+	c := cmd.(*btcjson.GetBeaconBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -378,7 +377,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
 		return nil, err
 	}
-	return state.BlockTemplateResult(useCoinbaseValue, nil)
+	return state.BeaconBlockTemplateResult(useCoinbaseValue, nil)
 }
 
 // handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
@@ -408,7 +407,9 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 				"hexadecimal string (not %q)", hexData),
 		}
 	}
-	var msgBlock wire.MsgBlock
+
+	var msgBlock = server.chainProvider.ChainCtx.EmptyBlock()
+
 	if err := msgBlock.Deserialize(bytes.NewReader(dataBytes)); err != nil {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCDeserialization,
@@ -467,7 +468,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// the caller is invalid.
 	prevHash, lastGenerated, err := server.DecodeTemplateID(longPollID)
 	if err != nil {
-		result, err := state.BlockTemplateResult(useCoinbaseValue, nil)
+		result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, nil)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -488,7 +489,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 		// old block template depending on whether or not a solution has
 		// already been found and added to the block BlockChain.
 		submitOld := prevHash.IsEqual(&prevTemplateHash)
-		result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
+		result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, &submitOld)
 		if err != nil {
 			state.Unlock()
 			return nil, err
@@ -530,7 +531,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// been found and added to the block BlockChain.
 	h := state.Template.Block.Header.PrevBlock()
 	submitOld := prevHash.IsEqual(&h)
-	result, err := state.BlockTemplateResult(useCoinbaseValue, &submitOld)
+	result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {
 		return nil, err
 	}

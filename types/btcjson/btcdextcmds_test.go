@@ -160,13 +160,13 @@ func TestBtcdExtCmds(t *testing.T) {
 				return btcjson.NewCmd("getheaders", []string{}, "")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetHeadersCmd(
+				return btcjson.NewGetBeaconHeadersCmd(
 					[]string{},
 					"",
 				)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getheaders","params":[[],""],"id":1}`,
-			unmarshalled: &btcjson.GetHeadersCmd{
+			unmarshalled: &btcjson.GetBeaconHeadersCmd{
 				BlockLocators: []string{},
 				HashStop:      "",
 			},
@@ -177,7 +177,7 @@ func TestBtcdExtCmds(t *testing.T) {
 				return btcjson.NewCmd("getheaders", []string{"000000000000000001f1739002418e2f9a84c47a4fd2a0eb7a787a6b7dc12f16", "0000000000000000026f4b7f56eef057b32167eb5ad9ff62006f1807b7336d10"}, "000000000000000000ba33b33e1fad70b69e234fc24414dd47113bff38f523f7")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetHeadersCmd(
+				return btcjson.NewGetBeaconHeadersCmd(
 					[]string{
 						"000000000000000001f1739002418e2f9a84c47a4fd2a0eb7a787a6b7dc12f16",
 						"0000000000000000026f4b7f56eef057b32167eb5ad9ff62006f1807b7336d10",
@@ -186,7 +186,7 @@ func TestBtcdExtCmds(t *testing.T) {
 				)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getheaders","params":[["000000000000000001f1739002418e2f9a84c47a4fd2a0eb7a787a6b7dc12f16","0000000000000000026f4b7f56eef057b32167eb5ad9ff62006f1807b7336d10"],"000000000000000000ba33b33e1fad70b69e234fc24414dd47113bff38f523f7"],"id":1}`,
-			unmarshalled: &btcjson.GetHeadersCmd{
+			unmarshalled: &btcjson.GetBeaconHeadersCmd{
 				BlockLocators: []string{
 					"000000000000000001f1739002418e2f9a84c47a4fd2a0eb7a787a6b7dc12f16",
 					"0000000000000000026f4b7f56eef057b32167eb5ad9ff62006f1807b7336d10",

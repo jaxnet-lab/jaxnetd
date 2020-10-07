@@ -14,6 +14,156 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 )
 
+// rpcResultTypes specifies the result types that each RPC command can return.
+// This information is used to generate the help.  Each result type must be a
+// pointer to the type (or nil to indicate no return value).
+var rpcResultTypes = map[string][]interface{}{
+	"addNode":                nil,
+	"createRawTransaction":   {(*string)(nil)},
+	"debugLevel":             {(*string)(nil), (*string)(nil)},
+	"decodeRawTransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
+	"decodeScript":           {(*btcjson.DecodeScriptResult)(nil)},
+	"estimateFee":            {(*float64)(nil)},
+	"generate":               {(*[]string)(nil)},
+	"getAddedNodeInfo":       {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
+	"getBestBlock":           {(*btcjson.GetBestBlockResult)(nil)},
+	"getNestBlockHash":       {(*string)(nil)},
+	"getBlock":               {(*string)(nil), (*btcjson.GetBeaconBlockVerboseResult)(nil)},
+	"getBlockCount":          {(*int64)(nil)},
+	"getBlockHash":           {(*string)(nil)},
+	"getBlockHeader":         {(*string)(nil), (*btcjson.GetBeaconBlockHeaderVerboseResult)(nil)},
+	"getBeaconBlockTemplate": {(*btcjson.GetBeaconBlockTemplateResult)(nil), (*string)(nil), nil},
+	"getBlockchainInfo":      {(*btcjson.GetBlockChainInfoResult)(nil)},
+	"getCFilter":             {(*string)(nil)},
+	"getCFilterHeader":       {(*string)(nil)},
+	"getConnectionCount":     {(*int32)(nil)},
+	"getCurrentNet":          {(*uint32)(nil)},
+	"getDifficulty":          {(*float64)(nil)},
+	"getGenerate":            {(*bool)(nil)},
+	"getHashesPerSec":        {(*float64)(nil)},
+	"getHeaders":             {(*[]string)(nil)},
+	"getInfo":                {(*btcjson.InfoChainResult)(nil)},
+	"getMempoolInfo":         {(*btcjson.GetMempoolInfoResult)(nil)},
+	"getMiningInfo":          {(*btcjson.GetMiningInfoResult)(nil)},
+	"getNetTotals":           {(*btcjson.GetNetTotalsResult)(nil)},
+	"getNetworkHashPs":       {(*int64)(nil)},
+	"getPeerInfo":            {(*[]btcjson.GetPeerInfoResult)(nil)},
+	"getRawMempool":          {(*[]string)(nil), (*btcjson.GetRawMempoolVerboseResult)(nil)},
+	"getRawTransaction":      {(*string)(nil), (*btcjson.TxRawResult)(nil)},
+	"getTxOut":               {(*btcjson.GetTxOutResult)(nil)},
+	"node":                   nil,
+	"help":                   {(*string)(nil), (*string)(nil)},
+	"ping":                   nil,
+	"searchRawTransactions":  {(*string)(nil), (*[]btcjson.SearchRawTransactionsResult)(nil)},
+	"sendRawTransaction":     {(*string)(nil)},
+	"setGenerate":            nil,
+	"stop":                   {(*string)(nil)},
+	"submitBlock":            {nil, (*string)(nil)},
+	"uptime":                 {(*int64)(nil)},
+	"validateAddress":        {(*btcjson.ValidateAddressChainResult)(nil)},
+	"verifyChain":            {(*bool)(nil)},
+	"verifyMessage":          {(*bool)(nil)},
+	"version":                {(*map[string]btcjson.VersionResult)(nil)},
+
+	// Websocket commands.
+	"loadTxFilter":              nil,
+	"session":                   {(*btcjson.SessionResult)(nil)},
+	"notifyBlocks":              nil,
+	"stopNotifyNlocks":          nil,
+	"notifyNewTransactions":     nil,
+	"stopNotifyNewTransactions": nil,
+	"notifyReceived":            nil,
+	"stopNotifyReceived":        nil,
+	"notifySpent":               nil,
+	"stopNotifySpent":           nil,
+	"rescan":                    nil,
+	"rescanBlocks":              {(*[]btcjson.RescannedBlock)(nil)},
+}
+
+// helpCacher provides a concurrent safe type that provides help and usage for
+// the RPC server commands and caches the results for future calls.
+type helpCacher struct {
+	sync.Mutex
+	server     *CommonChainRPC
+	usage      string
+	methodHelp map[string]string
+}
+
+// rpcMethodHelp returns an RPC help string for the provided method.
+//
+// This function is safe for concurrent access.
+func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	// Return the cached method help if it exists.
+	if help, exists := c.methodHelp[method]; exists {
+		return help, nil
+	}
+
+	// Look up the result types for the method.
+	resultTypes, ok := rpcResultTypes[method]
+	if !ok {
+		return "", errors.New("no result types specified for method " +
+			method)
+	}
+
+	// Generate, cache, and return the help.
+	help, err := btcjson.GenerateHelp(method, helpDescsEnUS, resultTypes...)
+	if err != nil {
+		return "", err
+	}
+	c.methodHelp[method] = help
+	return help, nil
+}
+
+// rpcUsage returns one-line usage for all support RPC commands.
+//
+// This function is safe for concurrent access.
+func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	// Return the cached usage if it is available.
+	if c.usage != "" {
+		return c.usage, nil
+	}
+
+	// Generate a list of one-line usage for every command.
+	usageTexts := make([]string, 0, len(c.server.handlers))
+	for k := range c.server.handlers {
+		usage, err := btcjson.MethodUsageText(k.Method)
+		if err != nil {
+			return "", err
+		}
+		usageTexts = append(usageTexts, usage)
+	}
+
+	// Include websockets commands if requested.
+	// if includeWebsockets {
+	// for k := range wsHandlers {
+	//	usage, err := btcjson.MethodUsageText(k)
+	//	if err != nil {
+	//		return "", err
+	//	}
+	//	usageTexts = append(usageTexts, usage)
+	// }
+	// }
+
+	sort.Strings(usageTexts)
+	c.usage = strings.Join(usageTexts, "\n")
+	return c.usage, nil
+}
+
+// newHelpCacher returns a new instance of a help cacher which provides help and
+// usage for the RPC server commands and caches the results for future calls.
+func newHelpCacher(s *CommonChainRPC) *helpCacher {
+	return &helpCacher{
+		server:     s,
+		methodHelp: make(map[string]string),
+	}
+}
+
 // helpDescsEnUS defines the English descriptions used for the help strings.
 var helpDescsEnUS = map[string]string{
 	// DebugLevelCmd help.
@@ -159,7 +309,7 @@ var helpDescsEnUS = map[string]string{
 	"getbestblockhash--synopsis": "Returns the hash of the of the best (most recent) block in the longest block BlockChain.",
 	"getbestblockhash--result0":  "The hex-encoded block hash",
 
-	// GetBlockCmd help.
+	// GetBeaconBlockCmd help.
 	"getblock--synopsis":   "Returns information about a block given its hash.",
 	"getblock-hash":        "The hash of the block",
 	"getblock-verbosity":   "Specifies whether the block data should be returned as a hex-encoded string (0), as parsed data with a slice of TXIDs (1), or as parsed data with parsed transaction data (2) ",
@@ -263,7 +413,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockhash-index":     "The block height",
 	"getblockhash--result0":  "The block hash",
 
-	// GetBlockHeaderCmd help.
+	// GetBeaconBlockHeaderCmd help.
 	"getblockheader--synopsis":   "Returns information about a block header given its hash.",
 	"getblockheader-hash":        "The hash of the block",
 	"getblockheader-verbose":     "Specifies the block header is returned as a JSON object instead of hex-encoded string",
@@ -271,7 +421,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockheader--condition1": "verbose=true",
 	"getblockheader--result0":    "The block header hash",
 
-	// GetBlockHeaderVerboseResult help.
+	// GetBeaconBlockHeaderVerboseResult help.
 	"getblockheaderverboseresult-hash":              "The hash of the block (same as provided)",
 	"getblockheaderverboseresult-confirmations":     "The number of confirmations",
 	"getblockheaderverboseresult-height":            "The height of the block in the block BlockChain",
@@ -307,7 +457,7 @@ var helpDescsEnUS = map[string]string{
 	// GetBlockTemplateResultAux help.
 	"getblocktemplateresultaux-flags": "Hex-encoded byte-for-byte data to include in the coinbase signature script",
 
-	// GetBlockTemplateResult help.
+	// GetBeaconBlockTemplateResult help.
 	"getblocktemplateresult-bits":                       "Hex-encoded compressed difficulty",
 	"getblocktemplateresult-curtime":                    "Current time as seen by the Server (recommended for block time); must fall within mintime/maxtime rules",
 	"getblocktemplateresult-height":                     "Height of the block to be solved",
@@ -334,7 +484,7 @@ var helpDescsEnUS = map[string]string{
 	"getblocktemplateresult-default_witness_commitment": "The witness commitment itself. Will be populated if the block has witness data",
 	"getblocktemplateresult-weightlimit":                "The current limit on the max allowed weight of a block",
 
-	// GetBlockTemplateCmd help.
+	// GetBeaconBlockTemplateCmd help.
 	"getblocktemplate--synopsis": "Returns a JSON object with information necessary to construct a block to mine or accepts a proposal to validate.\n" +
 		"See BIP0022 and BIP0023 for the full specification.",
 	"getblocktemplate-request":     "Request object which controls the mode and several parameters",
@@ -405,7 +555,7 @@ var helpDescsEnUS = map[string]string{
 	"infowalletresult-relayfee":        "The minimum relay fee for non-free transactions in BTC/KB",
 	"infowalletresult-errors":          "Any current errors",
 
-	// GetHeadersCmd help.
+	// GetBeaconHeadersCmd help.
 	"getheaders--synopsis":     "Returns block headers starting with the first known block hash from the request",
 	"getheaders-blocklocators": "JSON array of hex-encoded hashes of blocks.  Headers are returned starting from the first known hash in this list",
 	"getheaders-hashstop":      "Block hash to stop including block headers for; if not found, all headers to the latest known block are returned.",
@@ -681,154 +831,4 @@ var helpDescsEnUS = map[string]string{
 	"versionresult-patch":         "The patch component of the JSON-RPC API version",
 	"versionresult-prerelease":    "Prerelease info about the current build",
 	"versionresult-buildmetadata": "Metadata about the current build",
-}
-
-// rpcResultTypes specifies the result types that each RPC command can return.
-// This information is used to generate the help.  Each result type must be a
-// pointer to the type (or nil to indicate no return value).
-var rpcResultTypes = map[string][]interface{}{
-	"addnode":               nil,
-	"createrawtransaction":  {(*string)(nil)},
-	"debuglevel":            {(*string)(nil), (*string)(nil)},
-	"decoderawtransaction":  {(*btcjson.TxRawDecodeResult)(nil)},
-	"decodescript":          {(*btcjson.DecodeScriptResult)(nil)},
-	"estimatefee":           {(*float64)(nil)},
-	"generate":              {(*[]string)(nil)},
-	"getaddednodeinfo":      {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
-	"getbestblock":          {(*btcjson.GetBestBlockResult)(nil)},
-	"getbestblockhash":      {(*string)(nil)},
-	"getblock":              {(*string)(nil), (*btcjson.GetBeaconBlockVerboseResult)(nil)},
-	"getblockcount":         {(*int64)(nil)},
-	"getblockhash":          {(*string)(nil)},
-	"getblockheader":        {(*string)(nil), (*btcjson.GetBlockHeaderVerboseResult)(nil)},
-	"getblocktemplate":      {(*btcjson.GetBlockTemplateResult)(nil), (*string)(nil), nil},
-	"getblockchaininfo":     {(*btcjson.GetBlockChainInfoResult)(nil)},
-	"getcfilter":            {(*string)(nil)},
-	"getcfilterheader":      {(*string)(nil)},
-	"getconnectioncount":    {(*int32)(nil)},
-	"getcurrentnet":         {(*uint32)(nil)},
-	"getdifficulty":         {(*float64)(nil)},
-	"getgenerate":           {(*bool)(nil)},
-	"gethashespersec":       {(*float64)(nil)},
-	"getheaders":            {(*[]string)(nil)},
-	"getinfo":               {(*btcjson.InfoChainResult)(nil)},
-	"getmempoolinfo":        {(*btcjson.GetMempoolInfoResult)(nil)},
-	"getmininginfo":         {(*btcjson.GetMiningInfoResult)(nil)},
-	"getnettotals":          {(*btcjson.GetNetTotalsResult)(nil)},
-	"getnetworkhashps":      {(*int64)(nil)},
-	"getpeerinfo":           {(*[]btcjson.GetPeerInfoResult)(nil)},
-	"getrawmempool":         {(*[]string)(nil), (*btcjson.GetRawMempoolVerboseResult)(nil)},
-	"getrawtransaction":     {(*string)(nil), (*btcjson.TxRawResult)(nil)},
-	"gettxout":              {(*btcjson.GetTxOutResult)(nil)},
-	"node":                  nil,
-	"help":                  {(*string)(nil), (*string)(nil)},
-	"ping":                  nil,
-	"searchrawtransactions": {(*string)(nil), (*[]btcjson.SearchRawTransactionsResult)(nil)},
-	"sendrawtransaction":    {(*string)(nil)},
-	"setgenerate":           nil,
-	"stop":                  {(*string)(nil)},
-	"submitblock":           {nil, (*string)(nil)},
-	"uptime":                {(*int64)(nil)},
-	"validateaddress":       {(*btcjson.ValidateAddressChainResult)(nil)},
-	"verifychain":           {(*bool)(nil)},
-	"verifymessage":         {(*bool)(nil)},
-	"version":               {(*map[string]btcjson.VersionResult)(nil)},
-
-	// Websocket commands.
-	"loadtxfilter":              nil,
-	"session":                   {(*btcjson.SessionResult)(nil)},
-	"notifyblocks":              nil,
-	"stopnotifyblocks":          nil,
-	"notifynewtransactions":     nil,
-	"stopnotifynewtransactions": nil,
-	"notifyreceived":            nil,
-	"stopnotifyreceived":        nil,
-	"notifyspent":               nil,
-	"stopnotifyspent":           nil,
-	"rescan":                    nil,
-	"rescanblocks":              {(*[]btcjson.RescannedBlock)(nil)},
-}
-
-// helpCacher provides a concurrent safe type that provides help and usage for
-// the RPC server commands and caches the results for future calls.
-type helpCacher struct {
-	sync.Mutex
-	server     *CommonChainRPC
-	usage      string
-	methodHelp map[string]string
-}
-
-// rpcMethodHelp returns an RPC help string for the provided method.
-//
-// This function is safe for concurrent access.
-func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	// Return the cached method help if it exists.
-	if help, exists := c.methodHelp[method]; exists {
-		return help, nil
-	}
-
-	// Look up the result types for the method.
-	resultTypes, ok := rpcResultTypes[method]
-	if !ok {
-		return "", errors.New("no result types specified for method " +
-			method)
-	}
-
-	// Generate, cache, and return the help.
-	help, err := btcjson.GenerateHelp(method, helpDescsEnUS, resultTypes...)
-	if err != nil {
-		return "", err
-	}
-	c.methodHelp[method] = help
-	return help, nil
-}
-
-// rpcUsage returns one-line usage for all support RPC commands.
-//
-// This function is safe for concurrent access.
-func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	// Return the cached usage if it is available.
-	if c.usage != "" {
-		return c.usage, nil
-	}
-
-	// Generate a list of one-line usage for every command.
-	usageTexts := make([]string, 0, len(c.server.handlers))
-	for k := range c.server.handlers {
-		usage, err := btcjson.MethodUsageText(k.Method)
-		if err != nil {
-			return "", err
-		}
-		usageTexts = append(usageTexts, usage)
-	}
-
-	// Include websockets commands if requested.
-	//if includeWebsockets {
-	//for k := range wsHandlers {
-	//	usage, err := btcjson.MethodUsageText(k)
-	//	if err != nil {
-	//		return "", err
-	//	}
-	//	usageTexts = append(usageTexts, usage)
-	//}
-	//}
-
-	sort.Strings(usageTexts)
-	c.usage = strings.Join(usageTexts, "\n")
-	return c.usage, nil
-}
-
-// newHelpCacher returns a new instance of a help cacher which provides help and
-// usage for the RPC server commands and caches the results for future calls.
-func newHelpCacher(s *CommonChainRPC) *helpCacher {
-	return &helpCacher{
-		server:     s,
-		methodHelp: make(map[string]string),
-	}
 }

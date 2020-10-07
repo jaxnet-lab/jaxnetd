@@ -109,7 +109,7 @@ func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) 
 
 	case CmdBlock:
 		msg = &MsgBlock{
-			Header: chain.NewEmptyHeader(),
+			Header: chain.EmptyHeader(),
 		}
 	case CmdInv:
 		msg = &MsgInv{}
