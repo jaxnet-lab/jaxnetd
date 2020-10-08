@@ -483,7 +483,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 
 	var msgBlock = g.chainCtx.EmptyBlock()
 
-	msgBlock.Header, err = g.chainCtx.NewBlockHeader(
+	msgBlock.Header, err = g.headerProvider.NewBlockHeader(
 		nextBlockVersion,
 		best.Hash,
 		*merkles[len(merkles)-1],
