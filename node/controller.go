@@ -7,6 +7,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"go.uber.org/zap"
 )
 
@@ -30,7 +31,7 @@ type chainController struct {
 	beacon BeaconCtl
 
 	// todo: repair
-	// miner *cpuminer.CPUMiner
+	miner *cpuminer.CPUMiner
 
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
@@ -80,19 +81,33 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	// if beaconCtl.cfg.Node.BeaconChain.EnableCPUMiner {
-	// 	// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
-	// 	beaconCtl.chainProvider.InitCPUMiner(func() int32 { return 2 })
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		beaconCtl.chainProvider.CPUMiner.Run(ctx)
-	// 	}()
-	// }
+	if chainCtl.cfg.Node.EnableCPUMiner {
+		// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
+		chainCtl.InitCPUMiner(func() int32 { return 2 })
+		chainCtl.wg.Add(1)
+		go func() {
+			defer chainCtl.wg.Done()
+			chainCtl.miner.Run(ctx)
+		}()
+	}
 
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
+}
+
+func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
+	chainCtl.miner = cpuminer.New(&cpuminer.Config{
+		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
+		BlockTemplateGenerator: chainCtl.beacon.BlkTmplGenerator(),
+		MiningAddrs:            chainCtl.beacon.chainProvider.MiningAddrs,
+
+		ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
+		IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
+		ConnectedCount: connectedCount,
+	}, chainCtl.logger)
+
+	return chainCtl.miner
 }
 
 func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {

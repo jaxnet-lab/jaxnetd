@@ -37,7 +37,8 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 	shard.chainParams = clone
 
 	genesis := shard.GenesisBlock()
-	hash := genesis.BlockHash()
+	h := genesis.Header.(*wire.ShardHeader)
+	hash := h.BlockHash()
 	clone.GenesisHash = &hash
 
 	return shard

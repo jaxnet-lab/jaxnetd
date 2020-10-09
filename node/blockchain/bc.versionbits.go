@@ -231,8 +231,16 @@ func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
 	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
 	b.chainLock.Unlock()
 
-	// return chain.BVersion(version).SetExpansionMade(), err
-	return wire.BVersion(version), err
+	if b.chain.Params().AutoExpand {
+		return wire.BVersion(version).
+			SetExpansionApproved().
+			SetExpansionMade(), err
+	}
+
+	return wire.BVersion(version).
+		UnsetExpansionApproved().
+		UnsetExpansionMade(), err
+
 }
 
 // warnUnknownRuleActivations displays a warning when any unknown new rules are

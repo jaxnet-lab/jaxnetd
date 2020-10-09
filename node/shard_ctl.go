@@ -63,17 +63,19 @@ type ShardCtl struct {
 	dbCtl         DBCtl
 	p2pServer     *p2p.Server
 	chainProvider *cprovider.ChainProvider
+	listenCfg     p2p.ListenOpts
 }
 
-func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.IChainCtx) *ShardCtl {
+func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
 	log = log.With(zap.String("chain", chain.Params().Name))
 
 	return &ShardCtl{
-		ctx:   ctx,
-		cfg:   cfg,
-		log:   log,
-		chain: chain,
-		dbCtl: DBCtl{logger: log},
+		ctx:       ctx,
+		cfg:       cfg,
+		log:       log,
+		chain:     chain,
+		dbCtl:     DBCtl{logger: log},
+		listenCfg: listenCfg,
 	}
 }
 
@@ -102,10 +104,8 @@ func (shardCtl *ShardCtl) Init() error {
 	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer and start it.
-	shardCtl.p2pServer, err = p2p.NewServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider, addrManager, p2p.ListenOpts{
-		DefaultPort: "",
-		Listeners:   nil,
-	})
+	shardCtl.p2pServer, err = p2p.NewServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider,
+		addrManager, shardCtl.listenCfg)
 	if err != nil {
 		shardCtl.log.Error("Unable to start p2pServer",
 			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))

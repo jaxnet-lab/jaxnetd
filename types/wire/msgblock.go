@@ -56,7 +56,7 @@ func EmptyBeaconBlock() MsgBlock {
 
 func EmptyShardBlock() MsgBlock {
 	return MsgBlock{
-		ShardBlock: true,
+		ShardBlock: false,
 		Header:     EmptyShardHeader(),
 	}
 }

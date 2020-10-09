@@ -118,7 +118,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.
 	chainCtl.shardsIndex.AddShard(block, opts)
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
-	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx)
+	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
 	if err := shardCtl.Init(); err != nil {
 		chainCtl.logger.Error("Can't init shard chainCtl", zap.Error(err))
 		return

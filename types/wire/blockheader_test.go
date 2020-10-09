@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 )
 
 // TestBlockHeader tests the BlockHeader API.

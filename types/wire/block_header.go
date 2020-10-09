@@ -54,7 +54,17 @@ func (bv BVersion) ExpansionApproved() bool {
 }
 
 func (bv BVersion) SetExpansionApproved() BVersion {
-	return bv ^ ExpansionApprove
+	if bv&ExpansionApprove != ExpansionApprove {
+		return bv ^ ExpansionApprove
+	}
+	return bv
+}
+
+func (bv BVersion) UnsetExpansionApproved() BVersion {
+	if bv&ExpansionApprove == ExpansionApprove {
+		return bv ^ ExpansionApprove
+	}
+	return bv
 }
 
 func (bv BVersion) ExpansionMade() bool {
@@ -62,7 +72,17 @@ func (bv BVersion) ExpansionMade() bool {
 }
 
 func (bv BVersion) SetExpansionMade() BVersion {
-	return bv ^ ExpansionExec
+	if bv&ExpansionExec != ExpansionExec {
+		return bv ^ ExpansionExec
+	}
+	return bv
+}
+
+func (bv BVersion) UnsetExpansionMade() BVersion {
+	if bv&ExpansionExec == ExpansionExec {
+		return bv ^ ExpansionExec
+	}
+	return bv
 }
 
 const BlockHeaderLen = 80

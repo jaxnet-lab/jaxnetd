@@ -11,6 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
+	"gitlab.com/jaxnet/core/shard.core/types"
 	"go.uber.org/zap"
 )
 
@@ -36,7 +37,10 @@ func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config) BeaconCt
 
 }
 func (beaconCtl *BeaconCtl) Init() error {
-	chain := beacon.Chain(beaconCtl.cfg.Node.ChainParams())
+	params := beaconCtl.cfg.Node.ChainParams()
+	params.AutoExpand = params.Net != types.MainNet && beaconCtl.cfg.Node.BeaconChain.AutoExpand
+
+	chain := beacon.Chain(params)
 
 	// Load the block database.
 	db, err := beaconCtl.dbCtl.loadBlockDB(beaconCtl.cfg.DataDir, chain, beaconCtl.cfg.Node)
