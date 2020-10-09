@@ -27,22 +27,25 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 	return nil
 }
 
-func (chainCtl *chainController) ListShards() []btcjson.ShardInfo {
+func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
 	chainCtl.shardsMutex.RLock()
 	defer chainCtl.shardsMutex.RUnlock()
-	list := make([]btcjson.ShardInfo, 0, len(chainCtl.shardsIndex.Shards))
+	list := make(map[uint32]btcjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
 
-	for id, shardInfo := range chainCtl.shardsIndex.Shards {
-		list[id] = btcjson.ShardInfo{
+	for _, shardInfo := range chainCtl.shardsIndex.Shards {
+		list[shardInfo.ID] = btcjson.ShardInfo{
 			ID:            shardInfo.ID,
 			LastVersion:   int32(shardInfo.LastVersion),
 			GenesisHeight: shardInfo.GenesisHeight,
 			GenesisHash:   shardInfo.GenesisHash,
 			Enabled:       shardInfo.Enabled,
+			P2PPort:       shardInfo.P2PInfo.DefaultPort,
 		}
 	}
 
-	return list
+	return btcjson.ShardListResult{
+		Shards: list,
+	}
 }
 
 func (chainCtl *chainController) runShards() error {

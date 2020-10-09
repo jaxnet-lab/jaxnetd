@@ -21,8 +21,7 @@ import (
 
 type ShardRPC struct {
 	*CommonChainRPC
-	shardID      uint32
-	gbtWorkState *mining.GBTWorkState
+	shardID uint32
 }
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
