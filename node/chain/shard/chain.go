@@ -1,7 +1,6 @@
 package shard
 
 import (
-	"errors"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
@@ -106,10 +105,7 @@ func (c *HeaderGenerator) generateBeaconHeader(ver wire.BVersion,
 		return nil, err
 	}
 
-	beaconHeader, ok := blockTemplate.Block.Header.(*wire.BeaconHeader)
-	if !ok {
-		return nil, errors.New("invalid header type")
-	}
+	beaconHeader := blockTemplate.Block.Header.BeaconHeader()
 	beaconHeader.SetNonce(nonce)
 
 	return beaconHeader, nil

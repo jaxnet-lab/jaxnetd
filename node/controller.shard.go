@@ -7,12 +7,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"go.uber.org/zap"
 )
 
@@ -44,22 +45,18 @@ func (chainCtl *chainController) ListShards() []btcjson.ShardInfo {
 	return list
 }
 
-func (chainCtl *chainController) NewShard(shardID uint32, height int32) error {
+func (chainCtl *chainController) newShard(shardID uint32, height int32) error {
 	block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(height)
 	if err != nil {
 		return err
 	}
 
-	msgBlock := block.MsgBlock()
-	version := msgBlock.Header.Version()
-
+	version := block.MsgBlock().Header.Version()
 	if !version.ExpansionMade() {
 		return errors.New("invalid start genesis block, expansion not made at this height")
 	}
 
-	chainCtl.shardsIndex.AddShard(block)
-	chainCtl.runShardRoutine(shardID, msgBlock)
-
+	chainCtl.runShardRoutine(shardID, block)
 	return nil
 }
 
@@ -74,15 +71,12 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	msgBlock := block.MsgBlock()
-	version := msgBlock.Header.Version()
-
+	version := block.MsgBlock().Header.Version()
 	if !version.ExpansionMade() {
 		return
 	}
 
-	chainCtl.shardsIndex.AddShard(block)
-	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, msgBlock)
+	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, block)
 }
 
 func (chainCtl *chainController) runShards() error {
@@ -91,31 +85,39 @@ func (chainCtl *chainController) runShards() error {
 	}
 
 	for _, info := range chainCtl.shardsIndex.Shards {
-		err := chainCtl.NewShard(info.ID, info.GenesisHeight)
+		err := chainCtl.newShard(info.ID, info.GenesisHeight)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.MsgBlock) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.Block) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
 			zap.Error(errors.New("can't create interrupt request")))
 		return
 	}
+	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
+		block.MsgBlock().Header.BeaconHeader())
 
-	nCtx, cancel := context.WithCancel(chainCtl.ctx)
-	genesisHeader, ok := block.Header.(*wire.BeaconHeader)
-	if !ok {
-		// todo
-		return
+	port, err := p2p.GetFreePort()
+	if err != nil {
+		chainCtl.logger.Error("unable to get free port",
+			zap.Uint32("shard_id", shardID),
+			zap.Error(err))
 	}
 
-	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(), genesisHeader)
+	opts := p2p.ListenOpts{
+		DefaultPort: strconv.Itoa(port),
+		Listeners:   p2p.SetPortForListeners(chainCtl.cfg.Node.P2P.Listeners, port),
+	}
+	chainCtl.shardsIndex.AddShard(block, opts)
 
+	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx)
 	if err := shardCtl.Init(); err != nil {
 		chainCtl.logger.Error("Can't init shard chainCtl", zap.Error(err))
@@ -123,9 +125,11 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *wire.Msg
 	}
 
 	chainCtl.shardsMutex.Lock()
+	chainCtl.ports.Add(shardID, port)
 	chainCtl.shardsCtl[shardID] = shardRO{
 		ctl:    shardCtl,
 		cancel: cancel,
+		port:   port,
 	}
 	chainCtl.wg.Add(1)
 	chainCtl.shardsMutex.Unlock()
@@ -196,7 +200,7 @@ func (chainCtl *chainController) syncShardsIndex() error {
 		if !version.ExpansionMade() {
 			continue
 		}
-		chainCtl.shardsIndex.AddShard(block)
+		chainCtl.shardsIndex.AddShard(block, p2p.ListenOpts{})
 	}
 
 	chainCtl.saveShardsIndex()

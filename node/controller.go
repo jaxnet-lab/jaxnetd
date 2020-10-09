@@ -5,9 +5,8 @@ import (
 	"errors"
 	"sync"
 
+	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"go.uber.org/zap"
 )
 
@@ -30,19 +29,13 @@ type chainController struct {
 
 	beacon BeaconCtl
 
-	// These fields allow the RPC Server to interface with mining.
-	//
-	// Generator produces block templates and the CPUMiner solves them using
-	// the CPU.  CPU mining is typically only useful for test purposes when
-	// doing regression or simulation testing.
-	beaconGenerator *mining.BlkTmplGenerator
-
 	// todo: repair
-	miner *cpuminer.CPUMiner
+	// miner *cpuminer.CPUMiner
 
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
 	shardsMutex sync.RWMutex
+	ports       *p2p.ChainsPortIndex
 	// -------------------------------
 
 }
@@ -56,6 +49,7 @@ func Controller(logger *zap.Logger) *chainController {
 			LastBeaconHeight: 0,
 			Shards:           []ShardInfo{},
 		},
+		ports: p2p.NewPortsIndex(),
 	}
 	return res
 }

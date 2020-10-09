@@ -63,7 +63,10 @@ func (beaconCtl *BeaconCtl) Init() error {
 	beaconCtl.log.Info("P2P Listener ", zap.Any("Listeners", beaconCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer.
-	beaconCtl.p2pServer, err = p2p.NewServer(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager)
+	beaconCtl.p2pServer, err = p2p.NewServer(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager, p2p.ListenOpts{
+		DefaultPort: chain.Params().DefaultPort,
+		Listeners:   beaconCtl.cfg.Node.P2P.Listeners,
+	})
 	if err != nil {
 		// TODO: this logging could do with some beautifying.
 		beaconCtl.log.Error(fmt.Sprintf("Unable to start p2pServer on %v: %v",

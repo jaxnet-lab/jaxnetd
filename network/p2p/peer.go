@@ -67,7 +67,7 @@ func newServerPeer(s *Server, isPersistent bool) *ServerPeer {
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
 func (sp *ServerPeer) newestBlock() (*chainhash.Hash, int32, error) {
-	best := sp.server.BlockChain().BestSnapshot()
+	best := sp.server.chain.BlockChain().BestSnapshot()
 	return &best.Hash, best.Height, nil
 }
 
@@ -209,7 +209,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 		// After soft-fork activation, only make outbound
 		// connection to peers if they flag that they're segwit
 		// enabled.
-		blockChain := sp.server.BlockChain()
+		blockChain := sp.server.chain.BlockChain()
 		segwitActive, err := blockChain.IsDeploymentActive(chaincfg.DeploymentSegwit)
 		if err != nil {
 			sp.logger.Errorf("Unable to query for segwit soft-fork state: %v",
@@ -227,7 +227,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 
 	// Add the remote peer time as a sample for creating an offset against
 	// the local clock to keep the network time in sync.
-	sp.server.TimeSource.AddTimeSample(sp.Addr(), msg.Timestamp)
+	sp.server.chain.TimeSource.AddTimeSample(sp.Addr(), msg.Timestamp)
 
 	// Choose whether or not to relay transactions before a filter command
 	// is received.
@@ -267,7 +267,7 @@ func (sp *ServerPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 	// per message.  The NewMsgInvSizeHint function automatically limits
 	// the passed hint to the maximum allowed, so it's safe to pass it
 	// without double checking it here.
-	txMemPool := sp.server.TxMemPool
+	txMemPool := sp.server.chain.TxMemPool
 	txDescs := txMemPool.TxDescs()
 	invMsg := wire.NewMsgInvSizeHint(uint(len(txDescs)))
 
@@ -313,7 +313,7 @@ func (sp *ServerPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 	// processed and known good or bad.  This helps prevent a malicious peer
 	// from queuing up a bunch of bad transactions before disconnecting (or
 	// being disconnected) and wasting memory.
-	sp.server.SyncManager.QueueTx(tx, sp.Peer, sp.txProcessed)
+	sp.server.chain.SyncManager.QueueTx(tx, sp.Peer, sp.txProcessed)
 	<-sp.txProcessed
 }
 
@@ -339,7 +339,7 @@ func (sp *ServerPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// reference implementation processes blocks in the same
 	// thread and therefore blocks further messages until
 	// the bitcoin block has been fully processed.
-	sp.server.SyncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
+	sp.server.chain.SyncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
 	<-sp.blockProcessed
 }
 
@@ -350,7 +350,7 @@ func (sp *ServerPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 func (sp *ServerPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 	if !sp.server.cfg.BlocksOnly {
 		if len(msg.InvList) > 0 {
-			sp.server.SyncManager.QueueInv(msg, sp.Peer)
+			sp.server.chain.SyncManager.QueueInv(msg, sp.Peer)
 		}
 		return
 	}
@@ -376,14 +376,14 @@ func (sp *ServerPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 	}
 
 	if len(newInv.InvList) > 0 {
-		sp.server.SyncManager.QueueInv(newInv, sp.Peer)
+		sp.server.chain.SyncManager.QueueInv(newInv, sp.Peer)
 	}
 }
 
 // OnHeaders is invoked when a peer receives a headers bitcoin
 // message.  The message is passed down to the sync manager.
 func (sp *ServerPeer) OnHeaders(_ *peer.Peer, msg *wire.MsgHeaders) {
-	sp.server.SyncManager.QueueHeaders(msg, sp.Peer)
+	sp.server.chain.SyncManager.QueueHeaders(msg, sp.Peer)
 }
 
 // handleGetData is invoked when a peer receives a getdata bitcoin message and
@@ -479,7 +479,7 @@ func (sp *ServerPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	chain := sp.server.BlockChain()
+	chain := sp.server.chain.BlockChain()
 	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop,
 		wire.MaxBlocksPerMsg)
 
@@ -509,7 +509,7 @@ func (sp *ServerPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 // message.
 func (sp *ServerPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 	// Ignore getheaders requests if not in sync.
-	if !sp.server.SyncManager.IsCurrent() {
+	if !sp.server.chain.SyncManager.IsCurrent() {
 		return
 	}
 
@@ -523,7 +523,7 @@ func (sp *ServerPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	ch := sp.server.BlockChain()
+	ch := sp.server.chain.BlockChain()
 	headers := ch.LocateHeaders(msg.BlockLocatorHashes, &msg.HashStop)
 
 	// Send found headers to the requesting peer.
@@ -537,7 +537,7 @@ func (sp *ServerPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 // OnGetCFilters is invoked when a peer receives a getcfilters bitcoin message.
 func (sp *ServerPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 	// Ignore getcfilters requests if not in sync.
-	if !sp.server.SyncManager.IsCurrent() {
+	if !sp.server.chain.SyncManager.IsCurrent() {
 		return
 	}
 
@@ -552,7 +552,7 @@ func (sp *ServerPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		return
 	}
 
-	hashes, err := sp.server.BlockChain().HeightToHashRange(
+	hashes, err := sp.server.chain.BlockChain().HeightToHashRange(
 		int32(msg.StartHeight), &msg.StopHash, wire.MaxGetCFiltersReqRange,
 	)
 	if err != nil {
@@ -567,7 +567,7 @@ func (sp *ServerPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 		hashPtrs[i] = &hashes[i]
 	}
 
-	filters, err := sp.server.CfIndex.FiltersByBlockHashes(
+	filters, err := sp.server.chain.CfIndex.FiltersByBlockHashes(
 		hashPtrs, msg.FilterType,
 	)
 	if err != nil {
@@ -592,7 +592,7 @@ func (sp *ServerPeer) OnGetCFilters(_ *peer.Peer, msg *wire.MsgGetCFilters) {
 // OnGetCFHeaders is invoked when a peer receives a getcfheader bitcoin message.
 func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 	// Ignore getcfilterheader requests if not in sync.
-	if !sp.server.SyncManager.IsCurrent() {
+	if !sp.server.chain.SyncManager.IsCurrent() {
 		return
 	}
 
@@ -618,7 +618,7 @@ func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 	}
 
 	// Fetch the hashes from the block index.
-	hashList, err := sp.server.BlockChain().HeightToHashRange(
+	hashList, err := sp.server.chain.BlockChain().HeightToHashRange(
 		startHeight, &msg.StopHash, maxResults,
 	)
 	if err != nil {
@@ -641,7 +641,7 @@ func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 	}
 
 	// Fetch the raw filter hash bytes from the database for all blocks.
-	filterHashes, err := sp.server.CfIndex.FilterHashesByBlockHashes(
+	filterHashes, err := sp.server.chain.CfIndex.FilterHashesByBlockHashes(
 		hashPtrs, msg.FilterType,
 	)
 	if err != nil {
@@ -658,7 +658,7 @@ func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 
 		// Fetch the raw committed filter header bytes from the
 		// database.
-		headerBytes, err := sp.server.CfIndex.FilterHeaderByBlockHash(
+		headerBytes, err := sp.server.chain.CfIndex.FilterHeaderByBlockHash(
 			prevBlockHash, msg.FilterType)
 		if err != nil {
 			sp.logger.Errorf("Error retrieving CF header: %v", err)
@@ -708,7 +708,7 @@ func (sp *ServerPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 // OnGetCFCheckpt is invoked when a peer receives a getcfcheckpt bitcoin message.
 func (sp *ServerPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	// Ignore getcfcheckpt requests if not in sync.
-	if !sp.server.SyncManager.IsCurrent() {
+	if !sp.server.chain.SyncManager.IsCurrent() {
 		return
 	}
 
@@ -726,7 +726,7 @@ func (sp *ServerPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	// Now that we know the client is fetching a filter that we know of,
 	// we'll fetch the block hashes et each check point interval so we can
 	// compare against our cache, and create new check points if necessary.
-	blockHashes, err := sp.server.BlockChain().IntervalBlockHashes(
+	blockHashes, err := sp.server.chain.BlockChain().IntervalBlockHashes(
 		&msg.StopHash, wire.CFCheckptInterval,
 	)
 	if err != nil {
@@ -810,7 +810,7 @@ func (sp *ServerPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	for i := forkIdx; i < len(blockHashes); i++ {
 		blockHashPtrs = append(blockHashPtrs, &blockHashes[i])
 	}
-	filterHeaders, err := sp.server.CfIndex.FilterHeadersByBlockHashes(
+	filterHeaders, err := sp.server.chain.CfIndex.FilterHeadersByBlockHashes(
 		blockHashPtrs, msg.FilterType,
 	)
 	if err != nil {

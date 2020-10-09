@@ -18,11 +18,12 @@ import (
 )
 
 type ShardInfo struct {
-	ID            uint32        `json:"id"`
-	LastVersion   wire.BVersion `json:"last_version"`
-	GenesisHeight int32         `json:"genesis_height"`
-	GenesisHash   string        `json:"genesis_hash"`
-	Enabled       bool          `json:"enabled"`
+	ID            uint32         `json:"id"`
+	LastVersion   wire.BVersion  `json:"last_version"`
+	GenesisHeight int32          `json:"genesis_height"`
+	GenesisHash   string         `json:"genesis_hash"`
+	Enabled       bool           `json:"enabled"`
+	P2PInfo       p2p.ListenOpts `json:"p2p_info"`
 }
 
 type Index struct {
@@ -31,15 +32,11 @@ type Index struct {
 	Shards           []ShardInfo `json:"shards"`
 }
 
-func (index *Index) AddShard(block *btcutil.Block) {
+func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) {
 	index.LastShardID += 1
 
 	if index.LastBeaconHeight < block.Height() {
 		index.LastBeaconHeight = block.Height()
-	}
-
-	if index.Shards == nil {
-		index.Shards = []ShardInfo{}
 	}
 
 	index.Shards = append(index.Shards, ShardInfo{
@@ -53,6 +50,7 @@ func (index *Index) AddShard(block *btcutil.Block) {
 
 type shardRO struct {
 	ctl    *ShardCtl
+	port   int
 	cancel context.CancelFunc
 }
 
@@ -104,7 +102,10 @@ func (shardCtl *ShardCtl) Init() error {
 	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
 
 	// Create p2pServer and start it.
-	shardCtl.p2pServer, err = p2p.ShardServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider, addrManager)
+	shardCtl.p2pServer, err = p2p.NewServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider, addrManager, p2p.ListenOpts{
+		DefaultPort: "",
+		Listeners:   nil,
+	})
 	if err != nil {
 		shardCtl.log.Error("Unable to start p2pServer",
 			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))

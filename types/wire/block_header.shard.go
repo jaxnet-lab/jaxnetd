@@ -86,7 +86,7 @@ func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) { h.BCHeader.SetM
 
 func (h *ShardHeader) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteBeaconBlockHeader(buf, h)
+	_ = WriteShardBlockHeader(buf, h)
 	return buf.Bytes()
 }
 
@@ -153,24 +153,31 @@ func (h *ShardHeader) Write(w io.Writer) error {
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func ReadShardBlockHeader(r io.Reader, bh *ShardHeader) error {
-	return encoder.ReadElements(r,
+	err := encoder.ReadElements(r,
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		(*encoder.Uint32Time)(&bh.timestamp),
 		&bh.MergeMiningNumber,
 	)
+	if err != nil {
+		return err
+	}
+	return bh.BCHeader.Read(r)
 }
 
 // WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
-func WriteShardBlockHeader(w io.Writer, h BlockHeader) error {
-	bh := h.(*ShardHeader)
+func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 	sec := uint32(bh.timestamp.Unix())
-	return encoder.WriteElements(w,
+	err := encoder.WriteElements(w,
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		sec,
 		bh.MergeMiningNumber,
 	)
+	if err != nil {
+		return err
+	}
+	return bh.BCHeader.Write(w)
 }

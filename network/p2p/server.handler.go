@@ -81,8 +81,8 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	// TODO: Check for max peers from a single IP.
 
 	// Limit max number of total peers.
-	if state.Count() >= s.Config().MaxPeers {
-		s.logger.Infof("Max peers reached [%d] - disconnecting peer %s", s.Config().MaxPeers, sp)
+	if state.Count() >= s.chain.Config().MaxPeers {
+		s.logger.Infof("Max peers reached [%d] - disconnecting peer %s", s.chain.Config().MaxPeers, sp)
 		sp.Disconnect()
 		// TODO: how to handle permanent peers here?
 		// they should be rescheduled.
@@ -109,7 +109,7 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	}
 
 	// Signal the sync manager this peer is a new sync candidate.
-	s.SyncManager.NewPeer(sp.Peer)
+	s.chain.SyncManager.NewPeer(sp.Peer)
 
 	// Update the address manager and request known addresses from the
 	// remote peer for outbound connections. This is skipped when running on
@@ -120,7 +120,7 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 		// Advertise the local address when the Server accepts incoming
 		// connections and it believes itself to be close to the best
 		// known tip.
-		if !s.cfg.DisableListen && s.SyncManager.IsCurrent() {
+		if !s.cfg.DisableListen && s.chain.SyncManager.IsCurrent() {
 			// Get address that best matches.
 			lna := s.addrManager.GetBestLocalAddress(sp.NA())
 			if addrmgr.IsRoutable(lna) {
