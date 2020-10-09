@@ -19,12 +19,14 @@ type BlockHeader interface {
 	BeaconHeader() *BeaconHeader
 	SetBeaconHeader(bh *BeaconHeader)
 
-	BlockData() []byte
-	BlockHash() chainhash.Hash
+	Version() BVersion
+
 	PrevBlock() chainhash.Hash
 	SetPrevBlock(prevBlock chainhash.Hash)
+
 	Timestamp() time.Time
 	SetTimestamp(time.Time)
+
 	MerkleRoot() chainhash.Hash
 	SetMerkleRoot(chainhash.Hash)
 
@@ -32,8 +34,11 @@ type BlockHeader interface {
 	SetBits(uint32)
 	Nonce() uint32
 	SetNonce(uint32)
+	MaxLength() int
 
-	Version() BVersion
+	BlockData() []byte
+	BlockHash() chainhash.Hash
+
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error

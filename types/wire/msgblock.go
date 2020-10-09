@@ -49,14 +49,14 @@ type MsgBlock struct {
 
 func EmptyBeaconBlock() MsgBlock {
 	return MsgBlock{
-		ShardBlock: true,
+		ShardBlock: false,
 		Header:     EmptyBeaconHeader(),
 	}
 }
 
 func EmptyShardBlock() MsgBlock {
 	return MsgBlock{
-		ShardBlock: false,
+		ShardBlock: true,
 		Header:     EmptyShardHeader(),
 	}
 }
@@ -248,7 +248,7 @@ func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
 func (msg *MsgBlock) SerializeSize() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
@@ -262,7 +262,7 @@ func (msg *MsgBlock) SerializeSize() int {
 func (msg *MsgBlock) SerializeSizeStripped() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()

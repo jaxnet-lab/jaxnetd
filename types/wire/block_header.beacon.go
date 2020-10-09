@@ -11,9 +11,9 @@ import (
 
 const (
 	// MaxBeaconBlockHeaderPayload is the maximum number of bytes a block BeaconHeader can be.
-	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
-	// PrevBlock and MerkleRoot hashes.
-	MaxBeaconBlockHeaderPayload = 16 + (chainhash.HashSize * 3)
+	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes + Shards 4 bytes +
+	// PrevBlock, MerkleRoot, MergeMiningRoot hashes + tree X bytes. //todo: add treeEncoding len
+	MaxBeaconBlockHeaderPayload = (4 * 5) + (chainhash.HashSize * 3)
 
 	// beaconBlockHeaderLen is a constant that represents the number of bytes for a block
 	// BeaconHeader.
@@ -34,6 +34,7 @@ type BeaconHeader struct {
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
 
+	// Root of Merge-mining tree
 	mergeMiningRoot chainhash.Hash
 
 	// Time the block was created.  This is, unfortunately, encoded as a
@@ -46,6 +47,7 @@ type BeaconHeader struct {
 	// Nonce used to generate the block.
 	nonce uint32
 
+	// Encoding of the Merge-mining tree
 	treeEncoding []uint8
 
 	shards uint32
@@ -92,8 +94,14 @@ func (h *BeaconHeader) SetTimestamp(t time.Time)              { h.timestamp = t 
 
 func (h *BeaconHeader) MergeMiningRoot() chainhash.Hash         { return h.mergeMiningRoot }
 func (h *BeaconHeader) SetMergeMiningRoot(value chainhash.Hash) { h.mergeMiningRoot = value }
-func (h *BeaconHeader) Shards() uint32                          { return h.shards }
-func (h *BeaconHeader) SetShards(value uint32)                  { h.shards = value }
+
+func (h *BeaconHeader) Shards() uint32         { return h.shards }
+func (h *BeaconHeader) SetShards(value uint32) { h.shards = value }
+
+func (h *BeaconHeader) MergeMiningTrie() []uint8         { return h.treeEncoding }
+func (h *BeaconHeader) SetMergeMiningTrie(value []uint8) { h.treeEncoding = value }
+
+func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 
 func (h *BeaconHeader) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
@@ -160,7 +168,7 @@ func (h *BeaconHeader) Write(w io.Writer) error {
 // decoding from the wire.
 func ReadBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
-		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce, &bh.treeEncoding, &bh.shards)
+		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.nonce, &bh.shards, &bh.treeEncoding)
 	return err
 }
 
@@ -170,5 +178,5 @@ func ReadBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 func WriteBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 	sec := uint32(bh.timestamp.Unix())
 	return encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
-		sec, bh.bits, bh.nonce, &bh.treeEncoding, &bh.shards)
+		sec, bh.bits, bh.nonce, &bh.shards, &bh.treeEncoding)
 }

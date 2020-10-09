@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 )
 
 // TestGetAddr tests the MsgGetAddr API.

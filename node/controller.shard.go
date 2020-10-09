@@ -45,18 +45,30 @@ func (chainCtl *chainController) ListShards() []btcjson.ShardInfo {
 	return list
 }
 
-func (chainCtl *chainController) newShard(shardID uint32, height int32) error {
-	block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(height)
-	if err != nil {
+func (chainCtl *chainController) runShards() error {
+	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err
 	}
 
-	version := block.MsgBlock().Header.Version()
-	if !version.ExpansionMade() {
-		return errors.New("invalid start genesis block, expansion not made at this height")
+	for _, info := range chainCtl.shardsIndex.Shards {
+		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(info.GenesisHeight)
+		if err != nil {
+			return err
+		}
+
+		version := block.MsgBlock().Header.Version()
+		if !version.ExpansionMade() {
+			return errors.New("invalid start genesis block, expansion not made at this height")
+		}
+
+		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners)
+		if err != nil {
+			return err
+		}
+
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block)
 	}
 
-	chainCtl.runShardRoutine(shardID, block)
 	return nil
 }
 
@@ -76,38 +88,9 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, block)
-}
-
-func (chainCtl *chainController) runShards() error {
-	if err := chainCtl.syncShardsIndex(); err != nil {
-		return err
-	}
-
-	for _, info := range chainCtl.shardsIndex.Shards {
-		err := chainCtl.newShard(info.ID, info.GenesisHeight)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.Block) {
-	if interruptRequested(chainCtl.ctx) {
-		chainCtl.logger.Error("shard run interrupted",
-			zap.Uint32("shard_id", shardID),
-			zap.Error(errors.New("can't create interrupt request")))
-		return
-	}
-	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
-		block.MsgBlock().Header.BeaconHeader())
-
 	port, err := p2p.GetFreePort()
 	if err != nil {
 		chainCtl.logger.Error("unable to get free port",
-			zap.Uint32("shard_id", shardID),
 			zap.Error(err))
 	}
 
@@ -115,7 +98,21 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.
 		DefaultPort: strconv.Itoa(port),
 		Listeners:   p2p.SetPortForListeners(chainCtl.cfg.Node.P2P.Listeners, port),
 	}
-	chainCtl.shardsIndex.AddShard(block, opts)
+	shardID := chainCtl.shardsIndex.AddShard(block, opts)
+
+	chainCtl.runShardRoutine(shardID, opts, block)
+}
+
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block) {
+	if interruptRequested(chainCtl.ctx) {
+		chainCtl.logger.Error("shard run interrupted",
+			zap.Uint32("shard_id", shardID),
+			zap.Error(errors.New("can't create interrupt request")))
+		return
+	}
+
+	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
+		block.MsgBlock().Header.BeaconHeader())
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
@@ -125,11 +122,11 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.
 	}
 
 	chainCtl.shardsMutex.Lock()
-	chainCtl.ports.Add(shardID, port)
+	chainCtl.ports.Add(shardID, opts.DefaultPort)
 	chainCtl.shardsCtl[shardID] = shardRO{
 		ctl:    shardCtl,
 		cancel: cancel,
-		port:   port,
+		port:   opts.DefaultPort,
 	}
 	chainCtl.wg.Add(1)
 	chainCtl.shardsMutex.Unlock()

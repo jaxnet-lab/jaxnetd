@@ -32,7 +32,7 @@ type Index struct {
 	Shards           []ShardInfo `json:"shards"`
 }
 
-func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) {
+func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
 	index.LastShardID += 1
 
 	if index.LastBeaconHeight < block.Height() {
@@ -45,12 +45,14 @@ func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) {
 		GenesisHeight: block.Height(),
 		GenesisHash:   block.Hash().String(),
 		Enabled:       true,
+		P2PInfo:       opts,
 	})
+	return index.LastShardID
 }
 
 type shardRO struct {
 	ctl    *ShardCtl
-	port   int
+	port   string
 	cancel context.CancelFunc
 }
 

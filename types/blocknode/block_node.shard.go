@@ -45,13 +45,12 @@ type ShardBlockNode struct {
 	// reconstructing headers from memory.  These must be treated as
 	// immutable and are intentionally ordered to avoid padding on 64-bit
 	// platforms.
-	version    int32
-	bits       uint32
-	nonce      uint32
-	timestamp  int64
-	merkleRoot chainhash.Hash
-	mmrRoot    chainhash.Hash
-
+	version           int32
+	bits              uint32
+	timestamp         int64
+	merkleRoot        chainhash.Hash
+	mergeMiningNumber uint32
+	bcHeader          beaconBlockNodeFields
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -59,45 +58,79 @@ type ShardBlockNode struct {
 	status BlockStatus
 }
 
-// initShardBlockNode initializes a block node from the given ShardHeader and parent node,
-// calculating the height and workSum from the respective fields on the parent.
-// This function is NOT safe for concurrent access.  It must only be called when
-// initially creating a node.
-func initShardBlockNode(node *ShardBlockNode, blockHeader wire.BlockHeader, parent IBlockNode) {
-	*node = ShardBlockNode{
-		hash:       blockHeader.BlockHash(),
-		workSum:    pow.CalcWork(blockHeader.Bits()),
-		version:    int32(blockHeader.Version()),
-		bits:       blockHeader.Bits(),
-		nonce:      blockHeader.Nonce(),
-		timestamp:  blockHeader.Timestamp().Unix(),
-		merkleRoot: blockHeader.MerkleRoot(),
-	}
-	if parent != nil {
-		node.parent = parent
-		node.height = parent.Height() + 1
-		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
-	}
+type beaconBlockNodeFields struct {
+	// hash is the double sha 256 of the block.
+	hash chainhash.Hash
+	// workSum is the total amount of work in the chain up to and including
+	// this node.
+	workSum *big.Int
+
+	// Some fields from block headers to aid in best chain selection and
+	// reconstructing headers from memory.  These must be treated as
+	// immutable and are intentionally ordered to avoid padding on 64-bit
+	// platforms.
+	version    int32
+	bits       uint32
+	nonce      uint32
+	timestamp  int64
+	merkleRoot chainhash.Hash
+	mmrRoot    chainhash.Hash
+	// Encoding of the Merge-mining tree
+	treeEncoding []uint8
+
+	shards   uint32
+	prevHash chainhash.Hash
 }
 
 // NewShardBlockNode returns a new block node for the given block ShardHeader and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
 func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardBlockNode {
-	var node ShardBlockNode
-	initShardBlockNode(&node, blockHeader, parent)
-	return &node
+	return initShardBlockNode(blockHeader, parent)
+}
+
+// initShardBlockNode initializes a block node from the given ShardHeader and parent node,
+// calculating the height and workSum from the respective fields on the parent.
+// This function is NOT safe for concurrent access.  It must only be called when
+// initially creating a node.
+func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardBlockNode {
+	shardHeader, _ := blockHeader.(*wire.ShardHeader)
+	beaconHeader := blockHeader.BeaconHeader()
+	node := &ShardBlockNode{
+		hash:              shardHeader.BlockHash(),
+		workSum:           pow.CalcWork(shardHeader.Bits()),
+		version:           int32(shardHeader.Version()),
+		bits:              shardHeader.Bits(),
+		timestamp:         shardHeader.Timestamp().Unix(),
+		merkleRoot:        shardHeader.MerkleRoot(),
+		mergeMiningNumber: shardHeader.MergeMiningNumber(),
+
+		bcHeader: beaconBlockNodeFields{
+			hash:         beaconHeader.BlockHash(),
+			workSum:      pow.CalcWork(beaconHeader.Bits()),
+			version:      int32(beaconHeader.Version()),
+			bits:         beaconHeader.Bits(),
+			nonce:        beaconHeader.Nonce(),
+			timestamp:    beaconHeader.Timestamp().Unix(),
+			merkleRoot:   beaconHeader.MerkleRoot(),
+			mmrRoot:      beaconHeader.MergeMiningRoot(),
+			shards:       beaconHeader.Shards(),
+			treeEncoding: beaconHeader.MergeMiningTrie(),
+			prevHash:     beaconHeader.PrevBlock(),
+		},
+	}
+	if parent != nil {
+		node.parent = parent
+		node.height = parent.Height() + 1
+		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
+	}
+
+	return node
 }
 
 func (node *ShardBlockNode) NewNode() IBlockNode {
-	var res ShardBlockNode
-	return &res
+	return new(ShardBlockNode)
 }
-
-// func (node *ShardBlockNode) NewNode(blockHeader chain.BlockHeader, parent chain.IBlockNode) chain.IBlockNode {
-//	var res ShardBlockNode
-//	return &res
-// }
 
 func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
 
@@ -131,17 +164,27 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 		h := node.parent.GetHash()
 		prevHash = &h
 	}
+	beaconHeader := wire.NewBeaconBlockHeader(
+		wire.BVersion(node.bcHeader.version),
+		node.bcHeader.prevHash,
+		node.bcHeader.merkleRoot,
+		node.bcHeader.mmrRoot,
+		time.Unix(node.bcHeader.timestamp, 0),
+		node.bcHeader.bits,
+		node.bcHeader.nonce)
+	beaconHeader.SetShards(node.bcHeader.shards)
+	beaconHeader.SetMergeMiningTrie(node.bcHeader.treeEncoding)
 
-	return wire.NewShardBlockHeader(
-		// wire.BVersion(node.version),
+	header := wire.NewShardBlockHeader(
 		*prevHash,
 		node.merkleRoot,
-		// node.mmrRoot,
 		time.Unix(node.timestamp, 0),
 		node.bits,
-		// node.nonce
-		wire.BeaconHeader{},
+		*beaconHeader,
 	)
+
+	header.SetMergeMiningNumber(node.mergeMiningNumber)
+	return header
 }
 
 // Ancestor returns the ancestor block node at the provided height by following
