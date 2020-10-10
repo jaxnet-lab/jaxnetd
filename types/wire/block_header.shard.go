@@ -61,6 +61,18 @@ func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time
 	}
 }
 
+// Copy creates a deep copy of a BlockHeader so that the original does not get
+// modified when the copy is manipulated.
+func (h *ShardHeader) Copy() BlockHeader {
+	clone := *h
+
+	// all fields except this are passed by value
+	// so we manually copy the following fields to prevent side effects
+	bc := h.BCHeader.Copy().BeaconHeader()
+	clone.BCHeader = *bc
+	return &clone
+}
+
 func (h *ShardHeader) BeaconHeader() *BeaconHeader      { return &h.BCHeader }
 func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader) { h.BCHeader = *bh }
 

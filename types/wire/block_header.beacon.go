@@ -163,6 +163,19 @@ func (h *BeaconHeader) Write(w io.Writer) error {
 	return WriteBeaconBlockHeader(w, h)
 }
 
+// Copy creates a deep copy of a BlockHeader so that the original does not get
+// modified when the copy is manipulated.
+func (h *BeaconHeader) Copy() BlockHeader {
+	clone := *h
+
+	// all fields except this are passed by value
+	// so we manually copy the following fields to prevent side effects
+	clone.treeEncoding = []uint8{}
+	copy(clone.treeEncoding, h.treeEncoding)
+
+	return &clone
+}
+
 // ReadBeaconBlockHeader reads a bitcoin block BeaconHeader from r.  See Deserialize for
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.

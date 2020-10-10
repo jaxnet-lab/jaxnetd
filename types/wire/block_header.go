@@ -42,6 +42,10 @@ type BlockHeader interface {
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
+
+	// Copy creates a deep copy of a BlockHeader so that the original does not get
+	// modified when the copy is manipulated.
+	Copy() BlockHeader
 }
 
 type BVersion int32
