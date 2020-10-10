@@ -19,7 +19,7 @@ func TestBadgerProof(t *testing.T) {
 		data := make([]byte, 32)
 		data[0] = byte(i)
 		//rand.Read(data[:32])
-		mmr := mmrInstance.Append(i, big.NewInt(int64(i)), data[:])
+		mmr := mmrInstance.Set(i, big.NewInt(int64(i)), data[:])
 		i++
 		fmt.Printf("\t%d. mmr: %x\n", i, mmr)
 	}

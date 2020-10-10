@@ -2,10 +2,14 @@ package node
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 
@@ -56,7 +60,8 @@ func (chainCtl *chainController) newShard(shardID uint32, height int32) error {
 		return errors.New("invalid start genesis block, expansion not made at this height")
 	}
 
-	chainCtl.runShardRoutine(shardID, block)
+
+	chainCtl.runShardRoutine(shardID, block, true)
 	return nil
 }
 
@@ -76,7 +81,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, block)
+	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, block, false)
 }
 
 func (chainCtl *chainController) runShards() error {
@@ -94,14 +99,27 @@ func (chainCtl *chainController) runShards() error {
 	return nil
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.Block) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.Block, runNew bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
 			zap.Error(errors.New("can't create interrupt request")))
 		return
 	}
-	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
+
+	mmrDb, err := mmr.BadgerDB(path.Join(chainCtl.cfg.DataDir, "mmr"))
+	if err != nil{
+		chainCtl.logger.Error("Can't init shard mmr DB", zap.Error(err))
+		return
+
+	}
+
+	mountainRange := mmr.Mmr(sha256.New, mmrDb)
+	if runNew{
+		mountainRange.Set(0, big.NewInt(0), block.Hash().CloneBytes())
+	}
+
+	chainCtx := shard.Chain(shardID, mountainRange, chainCtl.cfg.Node.ChainParams(),
 		block.MsgBlock().Header.BeaconHeader())
 
 	port, err := p2p.GetFreePort()
