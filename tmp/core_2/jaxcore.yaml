@@ -20,10 +20,10 @@ node:
       - 0.0.0.0:18444
     peers:
       - 127.0.0.1:18333
+
   shards:
     enable: true
     autorun: true
-
   #  enable_cpu_miner: true
 
   beacon_chain:
@@ -37,3 +37,6 @@ notls: 1
 
 # txindex=1
 # addrindex=1
+
+
+#debug_level: debug

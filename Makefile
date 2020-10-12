@@ -1,22 +1,16 @@
 include builder/Makefile-defaults.mk
 
-all: dep build
-
-dep:
-	go mod vendor
-
-#install:
-#	cp configuration-manager $(DESTDIR)
+all: build
 
 build:
-	 go build -o shardcore .
+	go build -o shard.core
+	go build -o jaxctl gitlab.com/jaxnet/core/shard.core/cmd/btcctl
 
 clean:
 	go clean
 	rm -fr vendor
 
-.PHONY: all dep build clean install
-
+.PHONY: all dep build clean
 build_docker_local:
 	docker build --no-cache -t shard-core .
 

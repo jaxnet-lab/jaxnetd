@@ -4,7 +4,7 @@ RUN apk add --no-cache git bash
 
 #ENV GOPROXY=direct
 ENV GO111MODULE=on
-#ENV GOPRIVATE=gitlab.com
+ENV GOPRIVATE=gitlab.com
 
 
 WORKDIR /shard-core
