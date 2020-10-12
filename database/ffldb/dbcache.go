@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database/internal/treap"
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/util"
+	"gitlab.com/jaxnet/core/shard.core/database/internal/treap"
 )
 
 const (

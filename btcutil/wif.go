@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private

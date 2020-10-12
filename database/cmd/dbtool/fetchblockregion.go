@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // blockRegionCmd defines the configuration options for the fetchblockregion
@@ -59,7 +59,7 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(chain.DefaultChain)
+	db, err := loadBlockDB(chain.BeaconChain)
 	if err != nil {
 		return err
 	}

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 	flags "github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
 type config struct {

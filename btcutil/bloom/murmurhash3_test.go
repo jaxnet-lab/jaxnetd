@@ -7,7 +7,7 @@ package bloom_test
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
 )
 
 // TestMurmurHash3 ensure the MurmurHash3 function produces the correct hash

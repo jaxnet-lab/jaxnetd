@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"math"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/gcs"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/txscript"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 const (

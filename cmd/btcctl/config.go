@@ -15,9 +15,9 @@ import (
 	"strings"
 
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,10 +29,10 @@ const (
 )
 
 var (
-	btcdHomeDir           = btcutil.AppDataDir("btcd", false)
+	btcdHomeDir           = btcutil.AppDataDir("shard.core", false)
 	btcctlHomeDir         = btcutil.AppDataDir("btcctl", false)
 	btcwalletHomeDir      = btcutil.AppDataDir("btcwallet", false)
-	defaultConfigFile     = filepath.Join(btcctlHomeDir, "btcctl.conf")
+	defaultConfigFile     = "btcctl.yaml"
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(btcdHomeDir, "rpc.cert")
 	defaultWalletCertFile = filepath.Join(btcwalletHomeDir, "rpc.cert")
@@ -95,22 +95,24 @@ func listCommands() {
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ConfigFile     string `short:"C" long:"configfile" description:"Path to configuration file"`
-	ListCommands   bool   `short:"l" long:"listcommands" description:"List all of the supported commands and exit"`
-	NoTLS          bool   `yaml:"no_tls" long:"notls" description:"Disable TLS"`
-	Proxy          string `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	ProxyPass      string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
-	ProxyUser      string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
-	RegressionTest bool   `yaml:"regression_test" long:"regtest" description:"Connect to the regression test network"`
-	RPCCert        string `yaml:"rpc_cert" short:"c" long:"rpccert" description:"RPC server certificate chain for validation"`
-	RPCPassword    string `yaml:"rpc_password" short:"P" long:"rpcpass" default-mask:"-" description:"RPC password"`
-	RPCServer      string `yaml:"rpc_server" short:"s" long:"rpcserver" description:"RPC server to connect to"`
-	RPCUser        string `yaml:"rpc_user" short:"u" long:"rpcuser" description:"RPC username"`
-	SimNet         bool   `yaml:"sim_net" long:"simnet" description:"Connect to the simulation test network"`
-	TLSSkipVerify  bool   `yaml:"tls_skip_verify" long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
-	TestNet3       bool   `yaml:"test_net_3" long:"testnet" description:"Connect to testnet"`
-	ShowVersion    bool   `yaml:"show_version" short:"V" long:"version" description:"Display version information and exit"`
-	Wallet         bool   `yaml:"wallet" long:"wallet" description:"Connect to wallet"`
+	ConfigFile   string `yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
+	ListCommands bool   `yaml:"-" short:"l" long:"listcommands" description:"List all of the supported commands and exit"`
+	ShowVersion  bool   `yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
+	ShardID      uint32 `yaml:"shard_id" short:"S" long:"shardid" description:"Send request to some shard, if not set request will be send to beacon"`
+
+	Net         string `yaml:"net" description:"Network name"`
+	RPCServer   string `yaml:"rpc_server" short:"s" long:"rpcserver" description:"RPC server to connect to"`
+	RPCUser     string `yaml:"rpc_user" short:"u" long:"rpcuser" description:"RPC username"`
+	RPCPassword string `yaml:"rpc_password" short:"P" long:"rpcpass" default-mask:"-" description:"RPC password"`
+	RPCCert     string `yaml:"rpc_cert" short:"c" long:"rpccert" description:"RPC server certificate chain for validation"`
+
+	Proxy     string `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	ProxyPass string `yaml:"proxy_pass" long:"proxypass" default-mask:"-" description:"Password for proxy server"`
+	ProxyUser string `yaml:"proxy_user" long:"proxyuser" description:"Username for proxy server"`
+
+	NoTLS         bool `yaml:"no_tls" long:"notls" description:"Disable TLS"`
+	TLSSkipVerify bool `yaml:"tls_skip_verify" long:"skipverify" description:"Do not verify tls certificates (not recommended!)"`
+	Wallet        bool `yaml:"wallet" long:"wallet" description:"Connect to wallet"`
 }
 
 // normalizeAddress returns addr with the passed default port appended if
@@ -134,7 +136,6 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 			}
 		case &chaincfg.RegressionNetParams:
 			if useWallet {
-				// TODO: add port once regtest is supported in btcwallet
 				paramErr := fmt.Errorf("cannot use -wallet with -regtest, btcwallet not yet compatible with regtest")
 				return "", paramErr
 			} else {
@@ -273,28 +274,10 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// default network is mainnet
-	network := &chaincfg.MainNetParams
-
-	// Multiple networks can't be selected simultaneously.
-	numNets := 0
-	if cfg.TestNet3 {
-		numNets++
-		network = &chaincfg.TestNet3Params
-	}
-	if cfg.SimNet {
-		numNets++
-		network = &chaincfg.SimNetParams
-	}
-	if cfg.RegressionTest {
-		numNets++
-		network = &chaincfg.RegressionNetParams
-	}
-
-	if numNets > 1 {
-		str := "%s: Multiple network params can't be used " +
-			"together -- choose one"
-		err := fmt.Errorf(str, "loadConfig")
+	network := chaincfg.NetName(cfg.Net).Params()
+	if network == nil {
+		str := "%s: Unknown network name - %s"
+		err := fmt.Errorf(str, "loadConfig", cfg.Net)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}

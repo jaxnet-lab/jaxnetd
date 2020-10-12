@@ -7,7 +7,7 @@ package base58_test
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
 )
 
 var checkEncodingStringTests = []struct {

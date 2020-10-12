@@ -8,7 +8,7 @@ package gcs
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"io"
 	"sort"
 

@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/encoder"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // Bip16Activation is the timestamp where BIP0016 is valid to use in the

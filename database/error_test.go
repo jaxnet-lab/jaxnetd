@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/database"
 )
 
 // TestErrorCodeStringer tests the stringized output for the ErrorCode type.

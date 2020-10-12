@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bech32"
 )
 
 func TestBech32(t *testing.T) {

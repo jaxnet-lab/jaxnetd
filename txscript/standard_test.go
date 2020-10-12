@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // mustParseShortForm parses the passed short form script and returns the

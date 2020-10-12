@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bech32"
 )
 
 // This example demonstrates how to decode a bech32 encoded string.

@@ -5,15 +5,15 @@
 package main
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/btcsuite/btclog"
-	flags "github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
 const (
@@ -27,7 +27,7 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB(chain chain.IChain) (database.DB, error) {
+func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)

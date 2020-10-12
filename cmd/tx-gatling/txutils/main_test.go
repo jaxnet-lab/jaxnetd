@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/jaxnet/core/shard.core.git/txscript"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
 )
 
 type T testing.T

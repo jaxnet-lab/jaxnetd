@@ -3,7 +3,7 @@ package txmodels
 import (
 	"encoding/hex"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
 // UTXOIndex is a storage for UTXO data.

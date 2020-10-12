@@ -1074,7 +1074,7 @@ various languages.
 **9.1 Go**
 
 This section provides examples of using the RPC interface using Go and the
-[rpcclient](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/rpcclient) package.
+[rpcclient](https://gitlab.com/jaxnet/core/shard.core/tree/master/rpcclient) package.
 
 * [Using getblockcount to Retrieve the Current Block Height](#ExampleGetBlockCount)
 * [Using getblock to Retrieve the Genesis Block](#ExampleGetBlock)
@@ -1086,7 +1086,7 @@ This section provides examples of using the RPC interface using Go and the
 **9.1.1 Using getblockcount to Retrieve the Current Block Height**<br />
 
 The following is an example Go application which uses the
-[rpcclient](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/rpcclient) package to connect with
+[rpcclient](https://gitlab.com/jaxnet/core/shard.core/tree/master/rpcclient) package to connect with
 a btcd instance via Websockets, issues [getblockcount](#getblockcount) to
 retrieve the current block height, and displays it.
 
@@ -1098,8 +1098,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
 func main() {
@@ -1148,7 +1148,7 @@ Which results in:
 **9.1.2 Using getblock to Retrieve the Genesis Block**<br />
 
 The following is an example Go application which uses the
-[rpcclient](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/rpcclient) package to connect with
+[rpcclient](https://gitlab.com/jaxnet/core/shard.core/tree/master/rpcclient) package to connect with
 a btcd instance via Websockets, issues [getblock](#getblock) to retrieve
 information about the Genesis block, and display a few details about it.
 
@@ -1161,9 +1161,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
 func main() {
@@ -1238,7 +1238,7 @@ Num transactions: 1
 Notifications (Websocket-specific)**<br />
 
 The following is an example Go application which uses the
-[rpcclient](https://gitlab.com/jaxnet/core/shard.core.git/tree/master/rpcclient) package to connect with
+[rpcclient](https://gitlab.com/jaxnet/core/shard.core/tree/master/rpcclient) package to connect with
 a btcd instance via Websockets and registers for
 [blockconnected](#blockconnected) and [blockdisconnected](#blockdisconnected)
 notifications with [notifyblocks](#notifyblocks).  It also sets up handlers for
@@ -1253,9 +1253,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
 func main() {

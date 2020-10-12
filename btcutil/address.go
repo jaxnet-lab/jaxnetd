@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bech32"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"golang.org/x/crypto/ripemd160"
 )
 

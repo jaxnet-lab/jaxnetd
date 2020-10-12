@@ -9,12 +9,12 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestFilterLarge ensures a maximum sized filter can be created.
@@ -587,7 +587,7 @@ func TestFilterInsertP2PubKeyOnly(t *testing.T) {
 		t.Errorf("TestFilterInsertP2PubKeyOnly DecodeString failed: %v", err)
 		return
 	}
-	block, err := btcutil.NewBlockFromBytes(chain.DefaultChain, blockBytes)
+	block, err := btcutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
 	if err != nil {
 		t.Errorf("TestFilterInsertP2PubKeyOnly NewBlockFromBytes failed: %v", err)
 		return

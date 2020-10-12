@@ -1,7 +1,7 @@
 package txutils
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 type NodeRPC struct {

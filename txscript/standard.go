@@ -7,9 +7,9 @@ package txscript
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 const (

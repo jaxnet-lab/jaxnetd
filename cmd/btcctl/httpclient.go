@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/go-socks/socks"
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the
@@ -72,6 +72,12 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 		protocol = "https"
 	}
 	url := protocol + "://" + cfg.RPCServer
+
+	if cfg.ShardID == 0 {
+		url += "/beacon/"
+	} else {
+		url += fmt.Sprintf("/shard/%d", cfg.ShardID)
+	}
 	bodyReader := bytes.NewReader(marshalledJSON)
 	httpRequest, err := http.NewRequest("POST", url, bodyReader)
 	if err != nil {

@@ -11,12 +11,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 // This example demonstrates creating a new database.
@@ -24,8 +24,8 @@ func ExampleCreate() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	// 	"gitlab.com/jaxnet/core/shard.core/database"
+	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -33,7 +33,7 @@ func ExampleCreate() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "examplecreate")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -50,8 +50,8 @@ func Example_basicUsage() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	// 	"gitlab.com/jaxnet/core/shard.core/database"
+	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -59,7 +59,7 @@ func Example_basicUsage() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleusage")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -116,8 +116,8 @@ func Example_blockStorageAndRetrieval() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core.git/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	// 	"gitlab.com/jaxnet/core/shard.core/database"
+	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -125,7 +125,7 @@ func Example_blockStorageAndRetrieval() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleblkstorage")
-	db, err := database.Create("ffldb", chain.DefaultChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return

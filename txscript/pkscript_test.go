@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestParsePkScript ensures that the supported script types can be parsed

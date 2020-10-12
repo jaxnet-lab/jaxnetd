@@ -13,6 +13,7 @@ import (
 	"github.com/btcsuite/winsvc/eventlog"
 	"github.com/btcsuite/winsvc/mgr"
 	"github.com/btcsuite/winsvc/svc"
+	"gitlab.com/jaxnet/core/shard.core/config"
 )
 
 const (
@@ -37,9 +38,9 @@ var elog *eventlog.Log
 func logServiceStartOfDay(srvr *server) {
 	var message string
 	message += fmt.Sprintf("Version %s\n", version())
-	message += fmt.Sprintf("Configuration directory: %s\n", defaultHomeDir)
-	message += fmt.Sprintf("Configuration file: %s\n", cfg.ConfigFile)
-	message += fmt.Sprintf("Data directory: %s\n", cfg.DataDir)
+	message += fmt.Sprintf("Configuration directory: %s\n", config.defaultHomeDir)
+	message += fmt.Sprintf("Configuration file: %s\n", config.ConfigFile)
+	message += fmt.Sprintf("Data directory: %s\n", config.DataDir)
 
 	elog.Info(1, message)
 }
@@ -302,6 +303,6 @@ func serviceMain() (bool, error) {
 
 // Set windows specific functions to real functions.
 func init() {
-	runServiceCommand = performServiceCommand
+	config.runServiceCommand = performServiceCommand
 	winServiceMain = serviceMain
 }

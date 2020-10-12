@@ -17,9 +17,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/types"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 const (

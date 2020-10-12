@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
 )
 
 func BenchmarkBase58Encode(b *testing.B) {

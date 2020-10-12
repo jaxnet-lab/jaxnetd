@@ -9,7 +9,7 @@ ENV GO111MODULE=on
 
 WORKDIR /shard-core
 ADD . .
-RUN go build -o /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core.git/cmd/btcctl
+RUN go build -o /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core/cmd/btcctl
 
 # Final stage
 FROM alpine:3.7

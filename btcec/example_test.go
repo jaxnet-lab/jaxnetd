@@ -8,8 +8,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // This example demonstrates signing a message with a secp256k1 private key that

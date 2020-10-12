@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // genTestTx creates a random transaction for uses within test cases.

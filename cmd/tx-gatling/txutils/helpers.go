@@ -5,14 +5,14 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/storage"
-	"gitlab.com/jaxnet/core/shard.core.git/cmd/tx-gatling/txmodels"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/txscript"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // UTXOProvider is provider that cat give list of txmodels.UTXO for provided amount.
@@ -116,7 +116,7 @@ func witnessToHex(witness wire.TxWitness) []string {
 func createVinList(mtx *wire.MsgTx) []btcjson.Vin {
 	// Coinbase transactions only have a single txin by definition.
 	vinList := make([]btcjson.Vin, len(mtx.TxIn))
-	if blockchain.IsCoinBaseTx(mtx) {
+	if chaindata.IsCoinBaseTx(mtx) {
 		txIn := mtx.TxIn[0]
 		vinList[0].Coinbase = hex.EncodeToString(txIn.SignatureScript)
 		vinList[0].Sequence = txIn.Sequence

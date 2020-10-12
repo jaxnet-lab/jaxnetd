@@ -9,9 +9,9 @@ import (
 	"errors"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // fetchBlockCmd defines the configuration options for the fetchblock command.
@@ -38,7 +38,7 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(chain.DefaultChain)
+	db, err := loadBlockDB(chain.BeaconChain)
 	if err != nil {
 		return err
 	}

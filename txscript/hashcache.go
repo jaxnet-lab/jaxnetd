@@ -7,8 +7,8 @@ package txscript
 import (
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/network/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TxSigHashes houses the partial set of sighashes introduced within BIP0143.

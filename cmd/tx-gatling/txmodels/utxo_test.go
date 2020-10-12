@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 )
 
 func _TestUTXOIndex_AddTxs(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/shards/chain/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 func TestNewKeyData(t *testing.T) {
