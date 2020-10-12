@@ -202,7 +202,8 @@ func (b *Block) TxLoc() ([]wire.TxLoc, error) {
 	}
 	rbuf := bytes.NewBuffer(rawMsg)
 
-	var mblock wire.MsgBlock
+	var mblock = *b.msgBlock
+
 	txLocs, err := mblock.DeserializeTxLoc(rbuf)
 	if err != nil {
 		return nil, err

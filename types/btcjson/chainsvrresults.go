@@ -786,7 +786,7 @@ type EstimateSmartFeeResult struct {
 }
 
 type ShardListResult struct {
-	Shards map[uint32]ShardInfo
+	Shards map[uint32]ShardInfo `json:"shards"`
 }
 
 type ShardInfo struct {
@@ -795,4 +795,5 @@ type ShardInfo struct {
 	GenesisHeight int32  `json:"genesis_height"`
 	GenesisHash   string `json:"genesis_hash"`
 	Enabled       bool   `json:"enabled"`
+	P2PPort       string `json:"p2p_port"`
 }

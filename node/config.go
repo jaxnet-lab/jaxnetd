@@ -41,6 +41,7 @@ type NodeConfig struct {
 	DbType          string                       `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
 	Net             string                       `yaml:"net"`
 	MiningAddresses []string                     `yaml:"mining_addresses"`
+	EnableCPUMiner  bool                         `yaml:"enable_cpu_miner"`
 }
 
 type ShardConfig struct {

@@ -239,6 +239,8 @@ type Params struct {
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
 	HDCoinType uint32
+
+	AutoExpand bool
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.

@@ -11,12 +11,11 @@ import (
 
 const (
 	// MaxShardBlockHeaderPayload is the maximum number of bytes a block ShardHeader can be.
-	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
-	// PrevBlock and MerkleRoot hashes.
-	MaxShardBlockHeaderPayload = 16 + (chainhash.HashSize * 2)
+	// PrevBlock and MerkleRoot hashes + Timestamp 4 bytes + Bits 4 bytes +
+	// + mergeMiningNumber 4 bytes + MaxBeaconBlockHeaderPayload.
+	MaxShardBlockHeaderPayload = (chainhash.HashSize * 2) + (4 * 4) + MaxBeaconBlockHeaderPayload
 
-	// ShardBlockHeaderLen is a constant that represents the number of bytes for a block
-	// ShardHeader.
+	// ShardBlockHeaderLen is a constant that represents the number of bytes for a block header.
 	ShardBlockHeaderLen = 80
 )
 
@@ -38,7 +37,7 @@ type ShardHeader struct {
 
 	// Merge-mining number is the miner’s claim about how
 	// many shards he was mining
-	MergeMiningNumber uint32
+	mergeMiningNumber uint32
 
 	BCHeader BeaconHeader
 }
@@ -62,6 +61,18 @@ func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time
 	}
 }
 
+// Copy creates a deep copy of a BlockHeader so that the original does not get
+// modified when the copy is manipulated.
+func (h *ShardHeader) Copy() BlockHeader {
+	clone := *h
+
+	// all fields except this are passed by value
+	// so we manually copy the following fields to prevent side effects
+	bc := h.BCHeader.Copy().BeaconHeader()
+	clone.BCHeader = *bc
+	return &clone
+}
+
 func (h *ShardHeader) BeaconHeader() *BeaconHeader      { return &h.BCHeader }
 func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader) { h.BCHeader = *bh }
 
@@ -78,8 +89,14 @@ func (h *ShardHeader) Timestamp() time.Time     { return h.timestamp }
 func (h *ShardHeader) SetTimestamp(t time.Time) { h.timestamp = t }
 
 func (h *ShardHeader) Version() BVersion { return h.BCHeader.version }
+
 func (h *ShardHeader) Nonce() uint32     { return h.BCHeader.nonce }
 func (h *ShardHeader) SetNonce(n uint32) { h.BCHeader.SetNonce(n) }
+
+func (h *ShardHeader) MaxLength() int { return MaxShardBlockHeaderPayload }
+
+func (h *ShardHeader) MergeMiningNumber() uint32     { return h.mergeMiningNumber }
+func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n }
 
 func (h *ShardHeader) MergeMiningRoot() chainhash.Hash         { return h.BCHeader.MergeMiningRoot() }
 func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) { h.BCHeader.SetMergeMiningRoot(value) }
@@ -157,12 +174,13 @@ func ReadShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		(*encoder.Uint32Time)(&bh.timestamp),
-		&bh.MergeMiningNumber,
+		&bh.bits,
+		&bh.mergeMiningNumber,
 	)
 	if err != nil {
 		return err
 	}
-	return bh.BCHeader.Read(r)
+	return ReadBeaconBlockHeader(r, &bh.BCHeader)
 }
 
 // WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
@@ -174,7 +192,8 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		sec,
-		bh.MergeMiningNumber,
+		&bh.bits,
+		bh.mergeMiningNumber,
 	)
 	if err != nil {
 		return err

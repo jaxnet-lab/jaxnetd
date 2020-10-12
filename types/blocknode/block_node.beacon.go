@@ -50,6 +50,11 @@ type BeaconBlockNode struct {
 	merkleRoot chainhash.Hash
 	mmrRoot    chainhash.Hash
 
+	// Encoding of the Merge-mining tree
+	treeEncoding []uint8
+
+	shards uint32
+
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -61,30 +66,34 @@ type BeaconBlockNode struct {
 // calculating the height and workSum from the respective fields on the parent.
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
-func initBeaconBlockNode(node *BeaconBlockNode, blockHeader wire.BlockHeader, parent IBlockNode) {
-	*node = BeaconBlockNode{
-		hash:       blockHeader.BlockHash(),
-		workSum:    pow.CalcWork(blockHeader.Bits()),
-		version:    int32(blockHeader.Version()),
-		bits:       blockHeader.Bits(),
-		nonce:      blockHeader.Nonce(),
-		timestamp:  blockHeader.Timestamp().Unix(),
-		merkleRoot: blockHeader.MerkleRoot(),
+func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
+	beaconHeader := blockHeader.BeaconHeader()
+
+	node := &BeaconBlockNode{
+		hash:         blockHeader.BlockHash(),
+		workSum:      pow.CalcWork(blockHeader.Bits()),
+		version:      int32(blockHeader.Version()),
+		bits:         blockHeader.Bits(),
+		nonce:        blockHeader.Nonce(),
+		timestamp:    blockHeader.Timestamp().Unix(),
+		merkleRoot:   blockHeader.MerkleRoot(),
+		mmrRoot:      beaconHeader.MergeMiningRoot(),
+		shards:       beaconHeader.Shards(),
+		treeEncoding: beaconHeader.MergeMiningTrie(),
 	}
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
+	return node
 }
 
 // newBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
 func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
-	var node BeaconBlockNode
-	initBeaconBlockNode(&node, blockHeader, parent)
-	return &node
+	return initBeaconBlockNode(blockHeader, parent)
 }
 
 func (node *BeaconBlockNode) NewNode() IBlockNode {
@@ -118,9 +127,11 @@ func (node *BeaconBlockNode) Header() wire.BlockHeader {
 		h := node.parent.GetHash()
 		prevHash = &h
 	}
-
-	return wire.NewBeaconBlockHeader(wire.BVersion(node.version), *prevHash,
+	header := wire.NewBeaconBlockHeader(wire.BVersion(node.version), *prevHash,
 		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
+	header.SetShards(node.shards)
+	header.SetMergeMiningTrie(node.treeEncoding)
+	return header
 }
 
 // Ancestor returns the ancestor block node at the provided height by following

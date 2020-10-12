@@ -31,37 +31,51 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 	return nil
 }
 
-func (chainCtl *chainController) ListShards() []btcjson.ShardInfo {
+func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
 	chainCtl.shardsMutex.RLock()
 	defer chainCtl.shardsMutex.RUnlock()
-	list := make([]btcjson.ShardInfo, 0, len(chainCtl.shardsIndex.Shards))
+	list := make(map[uint32]btcjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
 
-	for id, shardInfo := range chainCtl.shardsIndex.Shards {
-		list[id] = btcjson.ShardInfo{
+	for _, shardInfo := range chainCtl.shardsIndex.Shards {
+		list[shardInfo.ID] = btcjson.ShardInfo{
 			ID:            shardInfo.ID,
 			LastVersion:   int32(shardInfo.LastVersion),
 			GenesisHeight: shardInfo.GenesisHeight,
 			GenesisHash:   shardInfo.GenesisHash,
 			Enabled:       shardInfo.Enabled,
+			P2PPort:       shardInfo.P2PInfo.DefaultPort,
 		}
 	}
 
-	return list
+	return btcjson.ShardListResult{
+		Shards: list,
+	}
 }
 
-func (chainCtl *chainController) newShard(shardID uint32, height int32) error {
-	block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(height)
-	if err != nil {
+func (chainCtl *chainController) runShards() error {
+	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err
 	}
 
-	version := block.MsgBlock().Header.Version()
-	if !version.ExpansionMade() {
-		return errors.New("invalid start genesis block, expansion not made at this height")
+	for _, info := range chainCtl.shardsIndex.Shards {
+		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(info.GenesisHeight)
+		if err != nil {
+			return err
+		}
+
+		version := block.MsgBlock().Header.Version()
+		if !version.ExpansionMade() {
+			return errors.New("invalid start genesis block, expansion not made at this height")
+		}
+
+		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners)
+		if err != nil {
+			return err
+		}
+
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true)
 	}
 
-
-	chainCtl.runShardRoutine(shardID, block, true)
 	return nil
 }
 
@@ -81,25 +95,22 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	chainCtl.runShardRoutine(chainCtl.shardsIndex.LastShardID, block, false)
-}
-
-func (chainCtl *chainController) runShards() error {
-	if err := chainCtl.syncShardsIndex(); err != nil {
-		return err
+	port, err := p2p.GetFreePort()
+	if err != nil {
+		chainCtl.logger.Error("unable to get free port",
+			zap.Error(err))
 	}
 
-	for _, info := range chainCtl.shardsIndex.Shards {
-		err := chainCtl.newShard(info.ID, info.GenesisHeight)
-		if err != nil {
-			return err
-		}
+	opts := p2p.ListenOpts{
+		DefaultPort: strconv.Itoa(port),
+		Listeners:   p2p.SetPortForListeners(chainCtl.cfg.Node.P2P.Listeners, port),
 	}
+	shardID := chainCtl.shardsIndex.AddShard(block, opts)
 
-	return nil
+	chainCtl.runShardRoutine(shardID, opts, block, false)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.Block, runNew bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, runNew bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
@@ -122,32 +133,19 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, block *btcutil.
 	chainCtx := shard.Chain(shardID, mountainRange, chainCtl.cfg.Node.ChainParams(),
 		block.MsgBlock().Header.BeaconHeader())
 
-	port, err := p2p.GetFreePort()
-	if err != nil {
-		chainCtl.logger.Error("unable to get free port",
-			zap.Uint32("shard_id", shardID),
-			zap.Error(err))
-	}
-
-	opts := p2p.ListenOpts{
-		DefaultPort: strconv.Itoa(port),
-		Listeners:   p2p.SetPortForListeners(chainCtl.cfg.Node.P2P.Listeners, port),
-	}
-	chainCtl.shardsIndex.AddShard(block, opts)
-
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
-	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx)
+	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
 	if err := shardCtl.Init(); err != nil {
 		chainCtl.logger.Error("Can't init shard chainCtl", zap.Error(err))
 		return
 	}
 
 	chainCtl.shardsMutex.Lock()
-	chainCtl.ports.Add(shardID, port)
+	chainCtl.ports.Add(shardID, opts.DefaultPort)
 	chainCtl.shardsCtl[shardID] = shardRO{
 		ctl:    shardCtl,
 		cancel: cancel,
-		port:   port,
+		port:   opts.DefaultPort,
 	}
 	chainCtl.wg.Add(1)
 	chainCtl.shardsMutex.Unlock()

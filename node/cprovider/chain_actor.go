@@ -40,7 +40,7 @@ type ChainRuntimeConfig struct {
 	NoCFilters          bool     `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
 	DisableCheckpoints  bool     `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	MiningAddresses     []string `yaml:"mining_addresses"`
-	EnableCPUMiner      bool     `yaml:"enable_cpu_miner"`
+	AutoExpand          bool     `yaml:"auto_expand"`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {
@@ -176,21 +176,6 @@ func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
 func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
 	return chainProvider.MiningAddrs
 }
-
-//
-// func (chainProvider *ChainProvider) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
-// 	chainProvider.CPUMiner = cpuminer.New(&cpuminer.Config{
-// 		ChainParams:            chainProvider.ChainParams,
-// 		BlockTemplateGenerator: chainProvider.Generator(),
-// 		MiningAddrs:            chainProvider.MiningAddrs,
-//
-// 		ProcessBlock:   chainProvider.SyncManager.ProcessBlock,
-// 		IsCurrent:      chainProvider.SyncManager.IsCurrent,
-// 		ConnectedCount: connectedCount,
-// 	}, chainProvider.logger)
-//
-// 	return chainProvider.CPUMiner
-// }
 
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)

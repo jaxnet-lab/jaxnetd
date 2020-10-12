@@ -79,7 +79,7 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 }
 
 type ShardManager interface {
-	ListShards() []btcjson.ShardInfo
+	ListShards() btcjson.ShardListResult
 
 	EnableShard(shardID uint32) error
 

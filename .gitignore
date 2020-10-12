@@ -30,3 +30,6 @@ vendor/*
 
 /tmp
 shard.core
+
+!/tmp/core_1/jaxcore.yaml
+!/tmp/core_2/jaxcore.yaml

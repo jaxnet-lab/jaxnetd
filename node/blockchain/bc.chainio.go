@@ -129,7 +129,7 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
-
+		log.Infof("Store new genesis: Chain %s Hash %s", b.chain.Params().Name, genesisBlock.Hash())
 		// Store the genesis block into the database.
 		return chaindata.DBStoreBlock(dbTx, genesisBlock)
 	})
@@ -202,10 +202,11 @@ func (b *BlockChain) initChainState() error {
 			var parent blocknode.IBlockNode
 			if lastNode == nil {
 				blockHash := header.BlockHash()
-				if !blockHash.IsEqual(b.chainParams.GenesisHash) {
-					return chaindata.AssertError(fmt.Sprintf("initChainState: Expected "+
-						"first entry in block index to be genesis block, "+
-						"found %s", blockHash))
+				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
+					return chaindata.AssertError(fmt.Sprintf(
+						"initChainState: Expected first entry in block index to be genesis block:"+
+							" expected %s, found %s",
+						b.chainParams.GenesisHash, blockHash))
 				}
 			} else if header.PrevBlock() == lastNode.GetHash() {
 				// Since we iterate block headers in order of height, if the

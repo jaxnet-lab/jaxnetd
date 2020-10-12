@@ -49,7 +49,7 @@ type MsgBlock struct {
 
 func EmptyBeaconBlock() MsgBlock {
 	return MsgBlock{
-		ShardBlock: true,
+		ShardBlock: false,
 		Header:     EmptyBeaconHeader(),
 	}
 }
@@ -59,6 +59,22 @@ func EmptyShardBlock() MsgBlock {
 		ShardBlock: true,
 		Header:     EmptyShardHeader(),
 	}
+}
+
+// Copy creates a deep copy of a MsgBlock so that the original does not get
+// modified when the copy is manipulated.
+func (msg *MsgBlock) Copy() *MsgBlock {
+	clone := new(MsgBlock)
+	clone.ShardBlock = msg.ShardBlock
+	clone.Header = msg.Header.Copy()
+
+	clone.Transactions = make([]*MsgTx, len(msg.Transactions))
+	for i, tx := range msg.Transactions {
+		clone.Transactions[i] = tx.Copy()
+	}
+
+	return clone
+
 }
 
 // AddTransaction adds a transaction to the message.
@@ -248,7 +264,7 @@ func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
 func (msg *MsgBlock) SerializeSize() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
@@ -262,7 +278,7 @@ func (msg *MsgBlock) SerializeSize() int {
 func (msg *MsgBlock) SerializeSizeStripped() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := BlockHeaderLen + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()

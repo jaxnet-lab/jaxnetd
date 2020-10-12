@@ -50,6 +50,16 @@ type ListenOpts struct {
 	Listeners   []string
 }
 
+func (o *ListenOpts) Update(listeners []string) error {
+	port, err := GetFreePort()
+	if err != nil {
+		return err
+	}
+	o.DefaultPort = strconv.Itoa(port)
+	o.Listeners = SetPortForListeners(listeners, port)
+	return nil
+}
+
 func SetPortForListeners(listeners []string, port int) []string {
 	for i, listener := range listeners {
 		host, _, _ := net.SplitHostPort(listener)

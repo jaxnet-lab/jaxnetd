@@ -14,9 +14,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
@@ -38,7 +36,7 @@ func makeHeader(btcnet types.BitcoinNet, command string,
 
 // TestMessage tests the Read/WriteMessage and Read/WriteMessageN API.
 func TestMessage(t *testing.T) {
-	chain := beacon.Chain(&chaincfg.TestNet3Params)
+	chain := BeaconHeaderConstructor{}
 
 	pver := ProtocolVersion
 
@@ -189,8 +187,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := types.MainNet
 
-	chain := beacon.Chain(&chaincfg.MainNetParams)
-
+	chain := BeaconHeaderConstructor{}
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"
 	testErr := MessageError{Description: wantErr}

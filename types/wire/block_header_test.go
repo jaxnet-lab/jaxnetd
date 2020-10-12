@@ -21,6 +21,9 @@ func TestBVersion_ExpansionMade(t *testing.T) {
 		{
 			bv:   NewBVersion(100500).SetExpansionMade(),
 			want: true,
+		}, {
+			bv:   NewBVersion(100500).SetExpansionMade().UnsetExpansionMade(),
+			want: false,
 		},
 		{
 			bv:   NewBVersion(42).SetExpansionApproved(),
@@ -55,6 +58,12 @@ func TestBVersion_ExpansionApproved(t *testing.T) {
 		{
 			bv:   NewBVersion(1).SetExpansionApproved(),
 			want: true,
+		},
+		{
+			bv: NewBVersion(1).
+				SetExpansionApproved().
+				UnsetExpansionApproved(),
+			want: false,
 		},
 		{
 			bv:   NewBVersion(100500).SetExpansionApproved(),

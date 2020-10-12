@@ -19,12 +19,14 @@ type BlockHeader interface {
 	BeaconHeader() *BeaconHeader
 	SetBeaconHeader(bh *BeaconHeader)
 
-	BlockData() []byte
-	BlockHash() chainhash.Hash
+	Version() BVersion
+
 	PrevBlock() chainhash.Hash
 	SetPrevBlock(prevBlock chainhash.Hash)
+
 	Timestamp() time.Time
 	SetTimestamp(time.Time)
+
 	MerkleRoot() chainhash.Hash
 	SetMerkleRoot(chainhash.Hash)
 
@@ -32,11 +34,18 @@ type BlockHeader interface {
 	SetBits(uint32)
 	Nonce() uint32
 	SetNonce(uint32)
+	MaxLength() int
 
-	Version() BVersion
+	BlockData() []byte
+	BlockHash() chainhash.Hash
+
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
+
+	// Copy creates a deep copy of a BlockHeader so that the original does not get
+	// modified when the copy is manipulated.
+	Copy() BlockHeader
 }
 
 type BVersion int32
@@ -54,7 +63,17 @@ func (bv BVersion) ExpansionApproved() bool {
 }
 
 func (bv BVersion) SetExpansionApproved() BVersion {
-	return bv ^ ExpansionApprove
+	if bv&ExpansionApprove != ExpansionApprove {
+		return bv ^ ExpansionApprove
+	}
+	return bv
+}
+
+func (bv BVersion) UnsetExpansionApproved() BVersion {
+	if bv&ExpansionApprove == ExpansionApprove {
+		return bv ^ ExpansionApprove
+	}
+	return bv
 }
 
 func (bv BVersion) ExpansionMade() bool {
@@ -62,7 +81,17 @@ func (bv BVersion) ExpansionMade() bool {
 }
 
 func (bv BVersion) SetExpansionMade() BVersion {
-	return bv ^ ExpansionExec
+	if bv&ExpansionExec != ExpansionExec {
+		return bv ^ ExpansionExec
+	}
+	return bv
+}
+
+func (bv BVersion) UnsetExpansionMade() BVersion {
+	if bv&ExpansionExec == ExpansionExec {
+		return bv ^ ExpansionExec
+	}
+	return bv
 }
 
 const BlockHeaderLen = 80
