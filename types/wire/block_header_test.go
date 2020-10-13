@@ -1,6 +1,10 @@
 package wire
 
 import (
+	"bytes"
+	"crypto/rand"
+	"fmt"
+	rand2 "math/rand"
 	"testing"
 )
 
@@ -88,4 +92,37 @@ func TestBVersion_ExpansionApproved(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTreeEncoding(t *testing.T) {
+	bh := BeaconHeader{}
+
+	i := 0
+	for i < 1000 {
+		hashesSize := int(rand2.Int31n(100000) + 1)
+		hashes := make([]byte, hashesSize)
+		rand.Read(hashes[:])
+
+		codingSize := int(rand2.Int31n(100000) + 1)
+		coding := make([]byte, codingSize)
+		rand.Read(coding[:])
+
+		bitsSize := rand2.Uint32() + 1
+		bh.SetMergeMiningTrie(hashes, coding, bitsSize)
+
+		hashes2, coding2, bitsSize2 := bh.MergedMiningTreeCodingProof()
+		if  bytes.Compare(hashes, hashes2) != 0{
+			t.Error("Hashes not equal at ", i)
+		}
+
+		if  bytes.Compare(coding, coding2) != 0{
+			t.Error("Coding not equal at ", i)
+		}
+		if bitsSize != bitsSize2 {
+			t.Error("Bits not equal at ", i)
+		}
+		fmt.Printf("%d. Test ok. Hash %d, Coding %d, %d\n", i, hashesSize, codingSize, bitsSize)
+		i++
+	}
+
 }

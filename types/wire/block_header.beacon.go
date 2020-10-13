@@ -2,6 +2,7 @@ package wire
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
 	"time"
 
@@ -98,8 +99,46 @@ func (h *BeaconHeader) SetMergeMiningRoot(value chainhash.Hash) { h.mergeMiningR
 func (h *BeaconHeader) Shards() uint32         { return h.shards }
 func (h *BeaconHeader) SetShards(value uint32) { h.shards = value }
 
-func (h *BeaconHeader) MergeMiningTrie() []uint8         { return h.treeEncoding }
-func (h *BeaconHeader) SetMergeMiningTrie(value []uint8) { h.treeEncoding = value }
+func (h *BeaconHeader) MergedMiningTree() []byte {
+	return h.treeEncoding
+}
+
+func (h *BeaconHeader) SetMergedMiningTree(treeData []byte) {
+	h.treeEncoding = treeData
+}
+
+func (h *BeaconHeader) MergedMiningTreeCodingProof() (hashes, coding []byte, codingLengthBits uint32) {
+	buf := h.treeEncoding[:]
+	hashesSize, size := binary.Uvarint(buf)
+	buf = buf[size:]
+
+	hashes, buf = buf[:hashesSize], buf[hashesSize:]
+
+	codingSize, size := binary.Uvarint(buf)
+	buf = buf[size:]
+
+	coding, buf = buf[:codingSize], buf[codingSize:]
+
+	bitsSize, _ := binary.Uvarint(buf)
+	codingLengthBits = uint32(bitsSize)
+	return
+}
+
+func (h *BeaconHeader) SetMergedMiningTreeCodingProof(hashes, coding []byte, codingLengthBits uint32) {
+	buf := make([]byte, 12+len(hashes)+len(coding))
+
+	shift := binary.PutUvarint(buf, uint64(len(hashes)))
+	copy(buf[shift:], hashes)
+	shift += len(hashes)
+
+	shift += binary.PutUvarint(buf[shift:], uint64(len(coding)))
+
+	copy(buf[shift:], coding)
+	shift += len(coding)
+
+	shift += binary.PutUvarint(buf[shift:], uint64(codingLengthBits))
+	h.treeEncoding = buf[:shift]
+}
 
 func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 

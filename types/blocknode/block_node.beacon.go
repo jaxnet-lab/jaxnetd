@@ -79,7 +79,7 @@ func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *Beaco
 		merkleRoot:   blockHeader.MerkleRoot(),
 		mmrRoot:      beaconHeader.MergeMiningRoot(),
 		shards:       beaconHeader.Shards(),
-		treeEncoding: beaconHeader.MergeMiningTrie(),
+		treeEncoding: beaconHeader.MergedMiningTree(),
 	}
 	if parent != nil {
 		node.parent = parent
@@ -130,7 +130,7 @@ func (node *BeaconBlockNode) Header() wire.BlockHeader {
 	header := wire.NewBeaconBlockHeader(wire.BVersion(node.version), *prevHash,
 		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
 	header.SetShards(node.shards)
-	header.SetMergeMiningTrie(node.treeEncoding)
+	header.SetMergedMiningTree(node.treeEncoding)
 	return header
 }
 
