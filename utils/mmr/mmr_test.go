@@ -289,7 +289,7 @@ func TestAppendNode(t *testing.T) {
 	var i uint64 = 0
 	for i < 20 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 }
@@ -323,7 +323,7 @@ func TestGetProof(t *testing.T) {
 	h := Hash{}
 	for i <= 20 {
 		rand.Read(data[:32])
-		h = mmr.Append(i, big.NewInt(int64(i)), data)
+		h = mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 	h2 := mmr.GetRoot(20)
@@ -366,7 +366,7 @@ func TestGetProof200(t *testing.T) {
 	h := Hash{}
 	for i <= 203 {
 		rand.Read(data[:32])
-		h = mmr.Append(i, big.NewInt(int64(i)), data)
+		h = mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 	h2 := mmr.GetRoot(203)
@@ -413,7 +413,7 @@ func TestGetProofs(t *testing.T) {
 	var i uint64 = 0
 	for i < 21 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 
@@ -454,7 +454,7 @@ func TestGetProofsFileDB(t *testing.T) {
 	var i uint64 = 0
 	for i < 21 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 

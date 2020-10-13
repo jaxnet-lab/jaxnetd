@@ -1,6 +1,8 @@
 package shard
 
 import (
+	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
@@ -13,15 +15,17 @@ import (
 type shardChain struct {
 	wire.ShardHeaderConstructor
 	chainParams *chaincfg.Params
+	mmr         mmr.IMountainRange
 
 	blockGenerator func(useCoinbaseValue bool) (mining.BlockTemplate, error)
 }
 
-func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHeader) *shardChain {
+func Chain(shardID uint32, mmr mmr.IMountainRange, params *chaincfg.Params, beaconGenesis *wire.BeaconHeader) *shardChain {
 	shard := &shardChain{
 		ShardHeaderConstructor: wire.ShardHeaderConstructor{
 			ID: shardID,
 		},
+		mmr: mmr,
 	}
 
 	clone := params.ShardGenesis(shardID, nil)
@@ -52,8 +56,12 @@ func (c *shardChain) NewBlockHeader(ver wire.BVersion, prevHash, merkleRootHash 
 	header.SetBits(bits)
 	header.SetNonce(nonce)
 
+	mmrRoot := c.mmr.Root()
+	prevCommitment := chainhash.Hash{}
+	copy(prevCommitment[:], mmrRoot[:])
+
 	return wire.NewShardBlockHeader(
-		prevHash,
+		prevCommitment,
 		merkleRootHash,
 		timestamp,
 		bits,
@@ -72,6 +80,13 @@ func (c *shardChain) Params() *chaincfg.Params {
 func (c *shardChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyShardBlock()
 }
+
+func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error{
+	h := blockHeader.BlockHash()
+	c.mmr.Append(big.NewInt(0), h.CloneBytes())
+	return nil
+}
+
 
 func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
@@ -119,6 +134,7 @@ func (c *HeaderGenerator) NewBlockHeader(ver wire.BVersion, prevHash, merkleRoot
 		return nil, err
 	}
 
+
 	return wire.NewShardBlockHeader(
 		prevHash,
 		merkleRootHash,
@@ -127,3 +143,4 @@ func (c *HeaderGenerator) NewBlockHeader(ver wire.BVersion, prevHash, merkleRoot
 		*header,
 	), nil
 }
+
