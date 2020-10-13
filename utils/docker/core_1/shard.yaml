@@ -27,14 +27,4 @@ node:
   beacon_chain:
     auto_expand: true
     mining_addresses:
-      - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFzl: info
-
-debuglevel: info
-nodnsseed: 1
-notls: 1
-
-# txindex=1
-# addrindex=1
-
-
-#debug_level: debug
+      - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFzl
