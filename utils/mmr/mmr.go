@@ -22,7 +22,11 @@ type MmrProof struct {
 }
 
 type IMountainRange interface {
-	Append(value []byte)
+	Set(index uint64, weight *big.Int, hash []byte) (root Hash)
+	Append(weight *big.Int, hash []byte) (root Hash)
+	Index() int
+	Root() (root Hash)
+	Copy(db IStore) IMountainRange
 }
 
 type mmr struct {
@@ -40,6 +44,27 @@ func Mmr(hasher Hasher, db IStore) *mmr {
 	return &mmr{hasher: hasher, db: db}
 }
 
+func (m *mmr) Copy(db IStore) IMountainRange {
+	res := Mmr(m.hasher, db)
+	m.Lock()
+	blocks := m.db.Blocks()
+	for _, index := range blocks {
+		if block, ok := m.db.GetBlock(index); ok {
+			res.db.SetBlock(index, block)
+		}
+	}
+
+	nodes := m.db.Nodes()
+	for _, index := range nodes{
+		if node, ok := m.db.GetNode(index); ok {
+			res.db.SetNode(index, node)
+		}
+	}
+	m.Unlock()
+
+	return res
+}
+
 func (m *mmr) MmrFromProofs(hasher Hasher, db IStore, proof MmrProof) *mmr {
 	res := Mmr(hasher, db)
 
@@ -49,35 +74,44 @@ func (m *mmr) MmrFromProofs(hasher Hasher, db IStore, proof MmrProof) *mmr {
 	return res
 }
 
+func (m *mmr) Index() int {
+	return len(m.db.Blocks())
+}
+
+func (m *mmr) Root() (root Hash) {
+	return m.GetRoot(uint64(len(m.db.Blocks())))
+}
+
+func (m *mmr) Append(weight *big.Int, hash []byte) (root Hash){
+	m.Lock()
+	defer m.Unlock()
+	index := uint64(len(m.db.Blocks()))
+
+	blockHash := Hash{}
+	copy(blockHash[:], hash[:])
+
+	node := LeafIndex(index)
+	node.AppendValue(m, &BlockData{
+		Weight: weight,
+		Hash:   blockHash,
+	})
+	return m.GetRoot(index)
+}
+
 // Append mmr with the block data by index
-func (m *mmr) Append(index uint64, weight *big.Int, hash []byte) (root Hash) {
+func (m *mmr) Set(index uint64, weight *big.Int, hash []byte) (root Hash) {
 	m.Lock()
 	defer m.Unlock()
 
 	blockHash := Hash{}
 	copy(blockHash[:], hash[:])
 
-	str := ""
 	node := LeafIndex(index)
-
-	if index == 128 {
-		str += "Index 128:\n Append Value\n"
-	}
 	node.AppendValue(m, &BlockData{
 		Weight: weight,
 		Hash:   blockHash,
 	})
-
-	res := m.GetRoot(index)
-	if index == 128 {
-		str += fmt.Sprintf("%x\n", res)
-	}
-
-	if str != "" {
-		fmt.Println(str)
-	}
-
-	return res
+	return m.GetRoot(index)
 }
 
 func (m *mmr) GetProofs(length uint64, indexes ...uint64) (result *MmrProof, err error) {
@@ -132,10 +166,6 @@ func (m *mmr) Proofs(length uint64, indexes ...uint64) (result *mmr, err error) 
 	result = Mmr(m.hasher, MemoryDb())
 	for _, index := range indexes {
 		var currentIndex IBlockIndex = LeafIndex(index)
-
-		//if value, ok := currentIndex.Value(m); ok {
-		//	currentIndex.SetValue(result, value)
-		//}
 
 		//Go By current branch
 		for {

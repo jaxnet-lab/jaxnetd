@@ -69,3 +69,7 @@ func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBl
 func (c *beaconChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyBeaconBlock()
 }
+
+func (c *beaconChain) AcceptBlock(blockHeader wire.BlockHeader) error{
+	return nil
+}
