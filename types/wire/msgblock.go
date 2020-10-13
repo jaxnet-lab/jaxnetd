@@ -67,7 +67,6 @@ func (msg *MsgBlock) Copy() *MsgBlock {
 	clone := new(MsgBlock)
 	clone.ShardBlock = msg.ShardBlock
 	clone.Header = msg.Header.Copy()
-
 	clone.Transactions = make([]*MsgTx, len(msg.Transactions))
 	for i, tx := range msg.Transactions {
 		clone.Transactions[i] = tx.Copy()

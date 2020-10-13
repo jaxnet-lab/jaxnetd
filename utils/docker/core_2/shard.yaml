@@ -1,13 +1,18 @@
 data_dir: /core/data
+log_dir: /core/logs
 
 node:
   #  net: mainnet
-  net: testnet
+  #  net: testnet
+  net: fastnet
+
   p2p:
     listeners:
       - 0.0.0.0:28444
     peers:
-      - 0.0.0.0:29333
+      - 172.17.0.1:18444
+      # - 172.17.0.1:28444
+      - 172.17.0.1:38444
   rpc:
     disable: false
     user: somerpc
@@ -15,21 +20,13 @@ node:
     maxclients: 10
     listeners:
       - 0.0.0.0:28334
-    peers:
-      - 172.17.0.1:18444
-#      - 172.17.0.1:28444
-      - 172.17.0.1:38444
+
   shards:
     enable: true
-    ids:
-      1: { }
-      2: { }
-      3: { }
-      42: { }
+    autorun: true
+  #  enable_cpu_miner: true
 
-debuglevel: info
-nodnsseed: 1
-notls: 1
-
-# txindex=1
-# addrindex=1
+  beacon_chain:
+    auto_expand: true
+    mining_addresses:
+      - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFzl

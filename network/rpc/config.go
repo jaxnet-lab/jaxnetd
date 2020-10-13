@@ -14,20 +14,19 @@ type Config struct {
 	User              string   `yaml:"user"`
 	Password          string   `yaml:"password"`
 	Disable           bool     `yaml:"disable" long:"norpc" description:"Disable built-in RPC Server -- NOTE: The RPC Server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
-	// RPCCert            string  `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
-	// RPCKey             string  `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
-	LimitPass         string `yaml:"limit_pass"`
-	LimitUser         string `yaml:"limit_user"`
-	MaxConcurrentReqs int    `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
-	MaxWebsockets     int    `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+	RPCCert           string   `yaml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
+	RPCKey            string   `yaml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
+	LimitPass         string   `yaml:"limit_pass"`
+	LimitUser         string   `yaml:"limit_user"`
+	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
+	MaxWebsockets     int      `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+	WSEnable          bool     `yaml:"ws_enable"`
 
 	// Listeners defines a slice of listeners for which the RPC Server will
 	// take ownership of and accept connections.  Since the RPC Server takes
 	// ownership of these listeners, they will be closed when the RPC Server
 	// is stopped.
 	Listeners []net.Listener `yaml:"-"`
-
-	WSEnable bool
 }
 
 // SetupRPCListeners returns a slice of listeners that are configured for use

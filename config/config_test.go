@@ -7,6 +7,12 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
+
+	"gitlab.com/jaxnet/core/shard.core/network/p2p"
+	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/node"
+	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -69,4 +75,97 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if !rpcpassRegexp.Match(content) {
 		t.Error("Could not find rpcpass in generated default config file.")
 	}
+}
+func TestLoadConfig(t *testing.T) {
+	cfg := node.Config{
+		ConfigFile:  "",
+		ShowVersion: false,
+		Node: node.NodeConfig{
+			BeaconChain: cprovider.ChainRuntimeConfig{
+				SigCacheMaxSize:     0,
+				AddCheckpoints:      nil,
+				AddrIndex:           false,
+				MaxPeers:            0,
+				BlockMaxSize:        0,
+				BlockMinSize:        0,
+				BlockMaxWeight:      0,
+				BlockMinWeight:      0,
+				BlockPrioritySize:   0,
+				TxIndex:             false,
+				NoRelayPriority:     false,
+				RejectReplacement:   false,
+				RelayNonStd:         false,
+				FreeTxRelayLimit:    0,
+				MaxOrphanTxs:        0,
+				MinRelayTxFee:       0,
+				MinRelayTxFeeValues: 0,
+				NoCFilters:          false,
+				DisableCheckpoints:  false,
+				MiningAddresses:     nil,
+				AutoExpand:          false,
+			},
+			RPC: rpc.Config{
+				ListenerAddresses: nil,
+				MaxClients:        0,
+				User:              "",
+				Password:          "",
+				Disable:           false,
+				LimitPass:         "",
+				LimitUser:         "",
+				MaxConcurrentReqs: 0,
+				MaxWebsockets:     0,
+				Listeners:         nil,
+				WSEnable:          false,
+			},
+			P2P: p2p.Config{
+				Peers:           nil,
+				Listeners:       nil,
+				AgentBlacklist:  nil,
+				AgentWhitelist:  nil,
+				DisableListen:   false,
+				ExternalIPs:     nil,
+				ConnectPeers:    nil,
+				BanDuration:     0,
+				BanThreshold:    0,
+				DisableBanning:  false,
+				BlocksOnly:      false,
+				DisableTLS:      false,
+				OnionProxy:      "",
+				OnionProxyPass:  "",
+				OnionProxyUser:  "",
+				Proxy:           "",
+				ProxyPass:       "",
+				ProxyUser:       "",
+				RejectNonStd:    false,
+				TrickleInterval: 0,
+				DisableDNSSeed:  false,
+				NoOnion:         false,
+				Upnp:            false,
+				Oniondial:       nil,
+				Dial:            nil,
+				Lookup:          nil,
+			},
+			Shards: node.ShardConfig{
+				Enable:      false,
+				Autorun:     false,
+				ChainParams: nil,
+			},
+			DbType:          "",
+			Net:             "",
+			MiningAddresses: nil,
+			EnableCPUMiner:  false,
+		},
+		DataDir:       "",
+		LogDir:        "",
+		CPUProfile:    "",
+		DebugLevel:    "",
+		Profile:       "",
+		DropAddrIndex: false,
+		DropCfIndex:   false,
+		DropTxIndex:   false,
+		TorIsolation:  false,
+		Whitelists:    nil,
+	}
+	data, _ := yaml.Marshal(cfg)
+	println(string(data))
 }

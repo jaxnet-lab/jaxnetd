@@ -31,5 +31,9 @@ services:
       - ./core_3/shard.yaml:/shard.yaml
     command: /shard.core -C /shard.yaml
 
-#networks:
-#  luxtrade:
+  miner:
+    image: registry.gitlab.com/jaxnet/core/miner/master:latest
+    volumes:
+      - ./node_3/core:/core
+      - ./miner.yaml:/conf.yaml
+    command: /miner

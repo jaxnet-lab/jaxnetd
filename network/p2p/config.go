@@ -40,9 +40,9 @@ type Config struct {
 	NoOnion         bool          `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
 	Upnp            bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
 
-	Oniondial func(string, string, time.Duration) (net.Conn, error)
-	Dial      func(string, string, time.Duration) (net.Conn, error)
-	Lookup    func(string) ([]net.IP, error)
+	Oniondial func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
+	Dial      func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
+	Lookup    func(string) ([]net.IP, error)                        `yaml:"-"`
 }
 
 type ListenOpts struct {
