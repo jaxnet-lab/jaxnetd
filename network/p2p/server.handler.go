@@ -13,7 +13,7 @@ import (
 
 // handleUpdatePeerHeight updates the heights of all peers who were known to
 // announce a block we recently accepted.
-func (s *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerHeightsMsg) {
+func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerHeightsMsg) {
 	state.forAllPeers(func(sp *ServerPeer) {
 		// The origin peer should already have the updated height.
 		if sp.Peer == umsg.OriginPeer {
@@ -41,20 +41,20 @@ func (s *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerHeight
 
 // handleAddPeerMsg deals with adding new peers.  It is invoked from the
 // peerHandler goroutine.
-func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
+func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	if sp == nil || !sp.Connected() {
 		return false
 	}
 
 	// Disconnect peers with unwanted user agents.
-	if sp.HasUndesiredUserAgent(s.agentBlacklist, s.agentWhitelist) {
+	if sp.HasUndesiredUserAgent(server.agentBlacklist, server.agentWhitelist) {
 		sp.Disconnect()
 		return false
 	}
 
 	// Ignore new peers if we're shutting down.
-	if atomic.LoadInt32(&s.shutdown) != 0 {
-		s.logger.Infof("New peer %s ignored - Server is shutting down", sp)
+	if atomic.LoadInt32(&server.shutdown) != 0 {
+		server.logger.Infof("New peer %s ignored - Server is shutting down", sp)
 		sp.Disconnect()
 		return false
 	}
@@ -62,27 +62,27 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	// Disconnect banned peers.
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
-		s.logger.Debugf("can't split hostport %v", err)
+		server.logger.Debugf("can't split hostport %v", err)
 		sp.Disconnect()
 		return false
 	}
 	if banEnd, ok := state.banned[host]; ok {
 		if time.Now().Before(banEnd) {
-			s.logger.Debugf("Peer %s is banned for another %v - disconnecting",
+			server.logger.Debugf("Peer %s is banned for another %v - disconnecting",
 				host, time.Until(banEnd))
 			sp.Disconnect()
 			return false
 		}
 
-		s.logger.Infof("Peer %s is no longer banned", host)
+		server.logger.Infof("Peer %s is no longer banned", host)
 		delete(state.banned, host)
 	}
 
 	// TODO: Check for max peers from a single IP.
 
 	// Limit max number of total peers.
-	if state.Count() >= s.chain.Config().MaxPeers {
-		s.logger.Infof("Max peers reached [%d] - disconnecting peer %s", s.chain.Config().MaxPeers, sp)
+	if state.Count() >= server.chain.Config().MaxPeers {
+		server.logger.Infof("Max peers reached [%d] - disconnecting peer %s", server.chain.Config().MaxPeers, sp)
 		sp.Disconnect()
 		// TODO: how to handle permanent peers here?
 		// they should be rescheduled.
@@ -90,7 +90,7 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	}
 
 	// Add the new peer and start it.
-	s.logger.Debugf("New peer %s", sp)
+	server.logger.Debugf("New peer %s", sp)
 	if sp.Inbound() {
 		state.inboundPeers[sp.ID()] = sp
 	} else {
@@ -105,11 +105,11 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	// Update the address' last seen time if the peer has acknowledged
 	// our version and has sent us its version as well.
 	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
-		s.addrManager.Connected(sp.NA())
+		server.addrManager.Connected(sp.NA())
 	}
 
 	// Signal the sync manager this peer is a new sync candidate.
-	s.chain.SyncManager.NewPeer(sp.Peer)
+	server.chain.SyncManager.NewPeer(sp.Peer)
 
 	// Update the address manager and request known addresses from the
 	// remote peer for outbound connections. This is skipped when running on
@@ -120,9 +120,9 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 		// Advertise the local address when the Server accepts incoming
 		// connections and it believes itself to be close to the best
 		// known tip.
-		if !s.cfg.DisableListen && s.chain.SyncManager.IsCurrent() {
+		if !server.cfg.DisableListen && server.chain.SyncManager.IsCurrent() {
 			// Get address that best matches.
-			lna := s.addrManager.GetBestLocalAddress(sp.NA())
+			lna := server.addrManager.GetBestLocalAddress(sp.NA())
 			if addrmgr.IsRoutable(lna) {
 				// Filter addresses the peer already knows about.
 				addresses := []*wire.NetAddress{lna}
@@ -134,12 +134,12 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 		// more and the peer has a protocol version new enough to
 		// include a timestamp with addresses.
 		hasTimestamp := sp.ProtocolVersion() >= wire.NetAddressTimeVersion
-		if s.addrManager.NeedMoreAddresses() && hasTimestamp {
+		if server.addrManager.NeedMoreAddresses() && hasTimestamp {
 			sp.QueueMessage(wire.NewMsgGetAddr(), nil)
 		}
 
 		// Mark the address as a known good address.
-		s.addrManager.Good(sp.NA())
+		server.addrManager.Good(sp.NA())
 	}
 
 	return true
@@ -147,7 +147,7 @@ func (s *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 
 // handleDonePeerMsg deals with peers that have signalled they are done.  It is
 // invoked from the peerHandler goroutine.
-func (s *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
+func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 	var list map[int32]*ServerPeer
 	if sp.persistent {
 		list = state.persistentPeers
@@ -162,10 +162,10 @@ func (s *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 	// process a peer's `done` message before its `add`.
 	if !sp.Inbound() {
 		if sp.persistent {
-			s.ConnManager.Disconnect(sp.connReq.ID())
+			server.ConnManager.Disconnect(sp.connReq.ID())
 		} else {
-			s.ConnManager.Remove(sp.connReq.ID())
-			go s.ConnManager.NewConnReq()
+			server.ConnManager.Remove(sp.connReq.ID())
+			go server.ConnManager.NewConnReq()
 		}
 	}
 
@@ -174,23 +174,23 @@ func (s *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
 		}
 		delete(list, sp.ID())
-		s.logger.Debugf("Removed peer %s", sp)
+		server.logger.Debugf("Removed peer %s", sp)
 		return
 	}
 }
 
 // handleBanPeerMsg deals with banning peers.  It is invoked from the
 // peerHandler goroutine.
-func (s *Server) handleBanPeerMsg(state *peerState, sp *ServerPeer) {
+func (server *Server) handleBanPeerMsg(state *peerState, sp *ServerPeer) {
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
-		s.logger.Debugf("can't split ban peer %s %v", sp.Addr(), err)
+		server.logger.Debugf("can't split ban peer %s %v", sp.Addr(), err)
 		return
 	}
 	direction := directionString(sp.Inbound())
-	s.logger.Infof("Banned peer %s (%s) for %v", host, direction,
-		s.cfg.BanDuration)
-	state.banned[host] = time.Now().Add(s.cfg.BanDuration)
+	server.logger.Infof("Banned peer %s (%s) for %v", host, direction,
+		server.cfg.BanDuration)
+	state.banned[host] = time.Now().Add(server.cfg.BanDuration)
 }
 
 // directionString is a helper function that returns a string that represents
@@ -204,7 +204,7 @@ func directionString(inbound bool) string {
 
 // handleRelayInvMsg deals with relaying inventory to peers that are not already
 // known to have it.  It is invoked from the peerHandler goroutine.
-func (s *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
+func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 	state.forAllPeers(func(sp *ServerPeer) {
 		if !sp.Connected() {
 			return
@@ -216,13 +216,13 @@ func (s *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 		if msg.InvVect.Type == types.InvTypeBlock && sp.WantsHeaders() {
 			blockHeader, ok := msg.Data.(wire.BlockHeader)
 			if !ok {
-				s.logger.Warnf("Underlying data for headers" +
+				server.logger.Warnf("Underlying data for headers" +
 					" is not a block header")
 				return
 			}
 			msgHeaders := wire.NewMsgHeaders()
 			if err := msgHeaders.AddBlockHeader(blockHeader); err != nil {
-				s.logger.Errorf("Failed to add block"+
+				server.logger.Errorf("Failed to add block"+
 					" header: %v", err)
 				return
 			}
@@ -239,7 +239,7 @@ func (s *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 
 			txD, ok := msg.Data.(*mempool.TxDesc)
 			if !ok {
-				s.logger.Warnf("Underlying data for tx inv "+
+				server.logger.Warnf("Underlying data for tx inv "+
 					"relay is not a *mempool.TxDesc: %T",
 					msg.Data)
 				return
@@ -270,7 +270,7 @@ func (s *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 
 // handleBroadcastMsg deals with broadcasting messages to peers.  It is invoked
 // from the peerHandler goroutine.
-func (s *Server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
+func (server *Server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
 	state.forAllPeers(func(sp *ServerPeer) {
 		if !sp.Connected() {
 			return

@@ -230,7 +230,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 
 // Command returns the protocol command string for the message.  This is part
 // of the Message interface implementation.
-func (msg *MsgVersion) Command() string {
+func (*MsgVersion) Command() string {
 	return CmdVersion
 }
 

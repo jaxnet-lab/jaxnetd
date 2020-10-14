@@ -21,7 +21,7 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -281,6 +281,7 @@ type Config struct {
 
 	// ChainsPortsProvider is a function to get the port of some p2p shard.
 	ChainsPortsProvider func(shardID uint32) (int, bool)
+	TriggerRedirect     func(redirect *wire.MsgPortRedirect)
 }
 
 // minUint32 is a helper function to return the minimum of two uint32s.
@@ -434,7 +435,7 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
-	chain chain2.IChainCtx
+	chain chain.IChainCtx
 
 	conn net.Conn
 
@@ -1880,44 +1881,52 @@ func (peer *Peer) Disconnect() {
 // readRemoteVersionMsg waits for the next message to arrive from the remote
 // peer.  If the next message is not a version message or the version is not
 // acceptable then return an error.
-func (peer *Peer) readRemoteVersionMsg(inbound bool) error {
+func (peer *Peer) readRemoteVersionMsg(inbound bool) (*wire.MsgPortRedirect, error) {
 	// Read their version message.
 	remoteMsg, _, err := peer.readMessage(wire.LatestEncoding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Notify and disconnect clients if the first message is not a version
-	// message.
-	msg, ok := remoteMsg.(*wire.MsgVersion)
-	if !ok {
+	var msg *wire.MsgVersion
+	switch m := remoteMsg.(type) {
+	case *wire.MsgVersion:
+		msg = m
+	case *wire.MsgPortRedirect:
+		return m, nil
+	default:
+		// Notify and disconnect clients if the first message is not a version
+		// message.
 		reason := "a version message must precede all others"
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
 			reason)
 		_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return nil, errors.New(reason)
 	}
 
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
-		return errors.New("disconnecting peer connected to self")
+		return nil, errors.New("disconnecting peer connected to self")
 	}
 
-	if peer.chain.IsBeacon() && !msg.IsBeacon {
-		port, ok := peer.cfg.ChainsPortsProvider(msg.Shard)
-		if !ok {
-			return errors.New("node doesn't have required shard for peer")
-		}
-		_ = port
-
-	}
-
-	if peer.chain.IsBeacon() != msg.IsBeacon {
-		return errors.New("peer type not supported")
+	if !inbound && peer.chain.ShardID() != msg.Shard {
+		return nil, errors.New("shardID of remote peer is not match")
 	}
 
 	if peer.chain.ShardID() != msg.Shard {
-		return errors.New("peer IS not supported")
+		port, ok := peer.cfg.ChainsPortsProvider(msg.Shard)
+		if !ok {
+			return nil, errors.New("peer is not supported")
+		}
+
+		addr := peer.conn.LocalAddr()
+		host, _, _ := net.SplitHostPort(addr.String())
+		ip := net.ParseIP(host)
+		respMsg := wire.NewMsgPortRedirect(msg.Shard, uint32(port), ip)
+		_ = peer.writeMessage(respMsg, wire.LatestEncoding)
+
+		reason := "remote peer shardID not match"
+		return nil, errors.New(reason)
 	}
 
 	// Negotiate the protocol version and set the services to what the remote
@@ -1966,7 +1975,7 @@ func (peer *Peer) readRemoteVersionMsg(inbound bool) error {
 		rejectMsg := peer.cfg.Listeners.OnVersion(peer, msg)
 		if rejectMsg != nil {
 			_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-			return errors.New(rejectMsg.Reason)
+			return nil, errors.New(rejectMsg.Reason)
 		}
 	}
 
@@ -1985,10 +1994,10 @@ func (peer *Peer) readRemoteVersionMsg(inbound bool) error {
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectObsolete,
 			reason)
 		_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-		return errors.New(reason)
+		return nil, errors.New(reason)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // readRemoteVerAckMsg waits for the next message to arrive from the remote
@@ -2102,11 +2111,15 @@ func (peer *Peer) writeLocalVersionMsg() error {
 // returned:
 //
 //   1. Remote peer sends their version.
-//   2. We send our version.
+//   2.1 We send our version [if shardID eq].
+//   2.2 We send address of proper shard peer address [if shardID not eq].
 //   3. We send our verack.
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
-	if err := peer.readRemoteVersionMsg(true); err != nil {
+	if redirect, err := peer.readRemoteVersionMsg(true); err != nil {
+		if redirect != nil {
+			peer.conn.Close()
+		}
 		return err
 	}
 
@@ -2127,7 +2140,8 @@ func (peer *Peer) negotiateInboundProtocol() error {
 // returned:
 //
 //   1. We send our version.
-//   2. Remote peer sends their version.
+//   2.1 Remote peer sends their version [if shardID eq].
+//   2.2 Remote peer sends peer address [if shardID not eq].
 //   3. Remote peer sends their verack.
 //   4. We send our verack.
 func (peer *Peer) negotiateOutboundProtocol() error {
@@ -2135,7 +2149,10 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 		return err
 	}
 
-	if err := peer.readRemoteVersionMsg(false); err != nil {
+	if redirect, err := peer.readRemoteVersionMsg(false); err != nil {
+		if redirect != nil && peer.cfg.TriggerRedirect != nil {
+			peer.cfg.TriggerRedirect(redirect)
+		}
 		return err
 	}
 
@@ -2166,10 +2183,12 @@ func (peer *Peer) start() error {
 			peer.Disconnect()
 			return err
 		}
+
 	case <-time.After(negotiateTimeout):
 		peer.Disconnect()
 		return errors.New("protocol negotiation timeout")
 	}
+
 	log.Debugf("Connected to %s", peer.Addr())
 
 	// The protocol has been negotiated successfully so start processing input
@@ -2183,7 +2202,7 @@ func (peer *Peer) start() error {
 	return nil
 }
 
-// AssociateConnection associates the given conn to the peer.   Calling this
+// AssociateConnection associates the given conn to the peer. Calling this
 // function when the peer is already connected will have no effect.
 func (peer *Peer) AssociateConnection(conn net.Conn) {
 	// Already connected?
@@ -2228,7 +2247,7 @@ func (peer *Peer) WaitForDisconnect() {
 // newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
 // is used by the NewInboundPeer and NewOutboundPeer functions to perform base
 // setup needed by both types of peers.
-func newPeerBase(origCfg *Config, inbound bool, chainCtx chain2.IChainCtx) *Peer {
+func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer {
 	// Default to the max supported protocol version if not specified by the
 	// caller.
 	cfg := *origCfg // Copy to avoid mutating caller.
@@ -2269,13 +2288,13 @@ func newPeerBase(origCfg *Config, inbound bool, chainCtx chain2.IChainCtx) *Peer
 
 // NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
 // processing incoming and outgoing messages.
-func NewInboundPeer(cfg *Config, chain chain2.IChainCtx) *Peer {
-	return newPeerBase(cfg, true, chain)
+func NewInboundPeer(cfg *Config, chainCtx chain.IChainCtx) *Peer {
+	return newPeerBase(cfg, true, chainCtx)
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string, chain chain2.IChainCtx) (*Peer, error) {
-	p := newPeerBase(cfg, false, chain)
+func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer, error) {
+	p := newPeerBase(cfg, false, chainCtx)
 	p.addr = addr
 
 	host, portStr, err := net.SplitHostPort(addr)
