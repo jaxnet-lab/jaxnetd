@@ -24,6 +24,7 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
@@ -151,7 +152,7 @@ func supportedSubsystems() []string {
 // parseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
-func parseAndSetDebugLevels(debugLevel string) error {
+func parseAndSetDebugLevels(debugLevel string, logfile string, disableStdOutLog bool) error {
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
@@ -162,8 +163,8 @@ func parseAndSetDebugLevels(debugLevel string) error {
 		}
 
 		// Change the logging level for all subsystems.
-		setLogLevels(debugLevel)
-
+		setLogLevels(debugLevel, logfile, disableStdOutLog)
+		setLoggers()
 		return nil
 	}
 
@@ -193,9 +194,9 @@ func parseAndSetDebugLevels(debugLevel string) error {
 			return fmt.Errorf(str, logLevel)
 		}
 
-		setLogLevel(subsysID, logLevel)
+		setLogLevel(subsysID, logLevel, logfile, disableStdOutLog)
 	}
-
+	setLoggers()
 	return nil
 }
 
@@ -510,10 +511,11 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Initialize log rotation.  After log rotation has been initialized, the
 	// logger variables may be used.
-	initLogRotator(filepath.Join(cfg.LogDir, defaultLogFilename))
+	// initLogRotator(filepath.Join(cfg.LogDir, corelog.DefaultLogFile))
 
 	// Parse, validate, and set debug log level(s).
-	if err := parseAndSetDebugLevels(cfg.DebugLevel); err != nil {
+	err = parseAndSetDebugLevels(cfg.DebugLevel, filepath.Join(cfg.LogDir, corelog.DefaultLogFile), cfg.DisableStdOutLog)
+	if err != nil {
 		err := fmt.Errorf("%s: %v", funcName, err.Error())
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -647,7 +649,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	if cfg.Node.RPC.Disable {
-		BtcdLog.Infof("RPC service is disabled")
+		BtcdLog.Info("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
@@ -975,7 +977,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		BtcdLog.Warnf("%v", configFileError)
+		BtcdLog.Warn(configFileError.Error())
 	}
 
 	return &cfg, remainingArgs, nil

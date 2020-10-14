@@ -97,23 +97,23 @@ type ChainPort struct {
 
 type ChainsPortIndex struct {
 	mutex       sync.RWMutex
-	shardsPorts map[uint32]string
+	shardsPorts map[uint32]int
 }
 
 func NewPortsIndex() *ChainsPortIndex {
 	return &ChainsPortIndex{
 		mutex:       sync.RWMutex{},
-		shardsPorts: map[uint32]string{},
+		shardsPorts: map[uint32]int{},
 	}
 }
 
-func (ind *ChainsPortIndex) Add(shardID uint32, port string) {
+func (ind *ChainsPortIndex) Add(shardID uint32, port int) {
 	ind.mutex.Lock()
 	ind.shardsPorts[shardID] = port
 	ind.mutex.Unlock()
 }
 
-func (ind *ChainsPortIndex) Get(shardID uint32) (string, bool) {
+func (ind *ChainsPortIndex) Get(shardID uint32) (int, bool) {
 	ind.mutex.RLock()
 	port, ok := ind.shardsPorts[shardID]
 	ind.mutex.RUnlock()

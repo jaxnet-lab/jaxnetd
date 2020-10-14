@@ -1,11 +1,12 @@
 package shard
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 	"math/big"
 	"time"
 
+
 	"gitlab.com/jaxnet/core/merged-mining-tree"
+	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"

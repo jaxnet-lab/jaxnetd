@@ -5,10 +5,11 @@
 package indexers
 
 import (
-	"github.com/btcsuite/btclog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"sync"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 )
 
 // blockProgressLogger provides periodic logging for other services in order
@@ -19,7 +20,7 @@ type blockProgressLogger struct {
 	receivedLogTx     int64
 	lastBlockLogTime  time.Time
 
-	subsystemLogger btclog.Logger
+	subsystemLogger corelog.ILogger
 	progressAction  string
 	sync.Mutex
 }
@@ -28,7 +29,7 @@ type blockProgressLogger struct {
 // The progress message is templated as follows:
 //  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
 //  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
-func newBlockProgressLogger(progressMessage string, logger btclog.Logger) *blockProgressLogger {
+func newBlockProgressLogger(progressMessage string, logger corelog.ILogger) *blockProgressLogger {
 	return &blockProgressLogger{
 		lastBlockLogTime: time.Now(),
 		progressAction:   progressMessage,

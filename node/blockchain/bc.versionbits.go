@@ -217,8 +217,23 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (int32,
 		}
 	}
 
-	// todo(mike): here will be expansion flag assigment
-	return int32(expectedVersion), nil
+	version := wire.BVersion(expectedVersion).
+		UnsetExpansionApproved().
+		UnsetExpansionMade()
+
+	var prevHeight int32
+	if prevNode != nil {
+		prevHeight = prevNode.Height()
+	}
+	allowed := prevHeight%b.chain.Params().ExpansionRule == 0
+
+	if b.chain.Params().AutoExpand && allowed {
+		version = wire.BVersion(expectedVersion).
+			SetExpansionApproved().
+			SetExpansionMade()
+	}
+
+	return int32(version), nil
 }
 
 // CalcNextBlockVersion calculates the expected version of the block after the
@@ -231,16 +246,7 @@ func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
 	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
 	b.chainLock.Unlock()
 
-	if b.chain.Params().AutoExpand {
-		return wire.BVersion(version).
-			SetExpansionApproved().
-			SetExpansionMade(), err
-	}
-
-	return wire.BVersion(version).
-		UnsetExpansionApproved().
-		UnsetExpansionMade(), err
-
+	return wire.BVersion(version), err
 }
 
 // warnUnknownRuleActivations displays a warning when any unknown new rules are

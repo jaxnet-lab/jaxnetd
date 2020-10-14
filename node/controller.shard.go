@@ -5,13 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
+
+	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
@@ -73,7 +75,7 @@ func (chainCtl *chainController) runShards() error {
 			return err
 		}
 
-		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true)
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true, false)
 	}
 
 	return nil
@@ -95,22 +97,16 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	port, err := p2p.GetFreePort()
-	if err != nil {
-		chainCtl.logger.Error("unable to get free port",
-			zap.Error(err))
+	opts := p2p.ListenOpts{}
+	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners); err != nil {
+		chainCtl.logger.Error("unable to get free port", zap.Error(err))
 	}
 
-	opts := p2p.ListenOpts{
-		DefaultPort: strconv.Itoa(port),
-		Listeners:   p2p.SetPortForListeners(chainCtl.cfg.Node.P2P.Listeners, port),
-	}
 	shardID := chainCtl.shardsIndex.AddShard(block, opts)
-
-	chainCtl.runShardRoutine(shardID, opts, block, false)
+	chainCtl.runShardRoutine(shardID, opts, block, false, true)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, runNew bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, runNew, addRPC bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
@@ -118,15 +114,16 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		return
 	}
 
-	mmrDb, err := mmr.BadgerDB(path.Join(chainCtl.cfg.DataDir, "mmr"))
-	if err != nil{
+	// todo: fix this
+	mmrDb, err := mmr.BadgerDB(path.Join(chainCtl.cfg.DataDir,
+		"shard_"+strconv.FormatUint(uint64(shardID), 10), "mmr"))
+	if err != nil {
 		chainCtl.logger.Error("Can't init shard mmr DB", zap.Error(err))
 		return
-
 	}
 
 	mountainRange := mmr.Mmr(sha256.New, mmrDb)
-	if runNew{
+	if runNew {
 		mountainRange.Set(0, big.NewInt(0), block.Hash().CloneBytes())
 	}
 
@@ -158,6 +155,12 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		delete(chainCtl.shardsCtl, shardID)
 		chainCtl.shardsMutex.Unlock()
 	}()
+
+	if addRPC {
+		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr,
+			shardCtl.BlkTmplGenerator(chainCtl.rpc.beacon.BlockGenerator), chainCtl.logger)
+		chainCtl.rpc.server.AddShard(shardID, shardRPC)
+	}
 }
 
 func (chainCtl *chainController) saveShardsIndex() {

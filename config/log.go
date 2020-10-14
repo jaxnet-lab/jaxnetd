@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/btcsuite/btclog"
 	"github.com/jrick/logrotate/rotator"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
@@ -22,6 +22,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and
@@ -46,60 +48,65 @@ var (
 	// backendLog is the logging backend used to create all subsystem loggers.
 	// The backend must not be used before the log rotator has been initialized,
 	// or data races and/or nil pointer dereferences will occur.
-	backendLog = btclog.NewBackend(logWriter{})
+	backendLog = corelog.New(corelog.DefaultLevel, corelog.DefaultLogFile, false)
 
 	// LogRotator is one of the logging outputs.  It should be closed on
 	// application shutdown.
 	LogRotator *rotator.Rotator
 
-	adxrLog = backendLog.Logger("ADXR")
-	amgrLog = backendLog.Logger("AMGR")
-	cmgrLog = backendLog.Logger("CMGR")
-	bcdbLog = backendLog.Logger("BCDB")
-	BtcdLog = backendLog.Logger("BTCD")
-	chanLog = backendLog.Logger("CHAN")
-	discLog = backendLog.Logger("DISC")
-	indxLog = backendLog.Logger("INDX")
-	minrLog = backendLog.Logger("MINR")
-	peerLog = backendLog.Logger("PEER")
-	rpcsLog = backendLog.Logger("RPCS")
-	scrpLog = backendLog.Logger("SCRP")
-	srvrLog = backendLog.Logger("SRVR")
-	syncLog = backendLog.Logger("SYNC")
-	txmpLog = backendLog.Logger("TXMP")
+	BtcdLog = backendLog.With(zap.String("app.unit", "BTCD"))
+
+	adxrLog = backendLog.With(zap.String("app.unit", "ADXR"))
+	amgrLog = backendLog.With(zap.String("app.unit", "AMGR"))
+	cmgrLog = backendLog.With(zap.String("app.unit", "CMGR"))
+	bcdbLog = backendLog.With(zap.String("app.unit", "BCDB"))
+	chanLog = backendLog.With(zap.String("app.unit", "CHAN"))
+	discLog = backendLog.With(zap.String("app.unit", "DISC"))
+	indxLog = backendLog.With(zap.String("app.unit", "INDX"))
+	minrLog = backendLog.With(zap.String("app.unit", "MINR"))
+	peerLog = backendLog.With(zap.String("app.unit", "PEER"))
+	rpcsLog = backendLog.With(zap.String("app.unit", "RPCS"))
+	scrpLog = backendLog.With(zap.String("app.unit", "SCRP"))
+	srvrLog = backendLog.With(zap.String("app.unit", "SRVR"))
+	syncLog = backendLog.With(zap.String("app.unit", "SYNC"))
+	txmpLog = backendLog.With(zap.String("app.unit", "TXMP"))
+
+	// subsystemLoggers maps each subsystem identifier to its associated logger.
+	subsystemLoggers = map[string]*zap.Logger{
+		"ADXR": adxrLog,
+		"AMGR": amgrLog,
+		"CMGR": cmgrLog,
+		"BCDB": bcdbLog,
+		"BTCD": BtcdLog,
+		"CHAN": chanLog,
+		"DISC": discLog,
+		"INDX": indxLog,
+		"MINR": minrLog,
+		"PEER": peerLog,
+		"RPCS": rpcsLog,
+		"SCRP": scrpLog,
+		"SRVR": srvrLog,
+		"SYNC": syncLog,
+		"TXMP": txmpLog,
+	}
 )
 
-// Initialize package-global logger variables.
 func init() {
-	addrmgr.UseLogger(amgrLog)
-	connmgr.UseLogger(cmgrLog)
-	database.UseLogger(bcdbLog)
-	blockchain.UseLogger(chanLog)
-	indexers.UseLogger(indxLog)
-	mining.UseLogger(minrLog)
-	peer.UseLogger(peerLog)
-	txscript.UseLogger(scrpLog)
-	netsync.UseLogger(syncLog)
-	mempool.UseLogger(txmpLog)
+	setLoggers()
 }
 
-// subsystemLoggers maps each subsystem identifier to its associated logger.
-var subsystemLoggers = map[string]btclog.Logger{
-	"ADXR": adxrLog,
-	"AMGR": amgrLog,
-	"CMGR": cmgrLog,
-	"BCDB": bcdbLog,
-	"BTCD": BtcdLog,
-	"CHAN": chanLog,
-	"DISC": discLog,
-	"INDX": indxLog,
-	"MINR": minrLog,
-	"PEER": peerLog,
-	"RPCS": rpcsLog,
-	"SCRP": scrpLog,
-	"SRVR": srvrLog,
-	"SYNC": syncLog,
-	"TXMP": txmpLog,
+// Initialize package-global logger variables.
+func setLoggers() {
+	addrmgr.UseLogger(corelog.Adapter(amgrLog))
+	connmgr.UseLogger(corelog.Adapter(cmgrLog))
+	database.UseLogger(corelog.Adapter(bcdbLog))
+	blockchain.UseLogger(corelog.Adapter(chanLog))
+	indexers.UseLogger(corelog.Adapter(indxLog))
+	mining.UseLogger(corelog.Adapter(minrLog))
+	peer.UseLogger(corelog.Adapter(peerLog))
+	txscript.UseLogger(corelog.Adapter(scrpLog))
+	netsync.UseLogger(corelog.Adapter(syncLog))
+	mempool.UseLogger(corelog.Adapter(txmpLog))
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and
@@ -124,43 +131,26 @@ func initLogRotator(logFile string) {
 // setLogLevel sets the logging level for provided subsystem.  Invalid
 // subsystems are ignored.  Uninitialized subsystems are dynamically created as
 // needed.
-func setLogLevel(subsystemID string, logLevel string) {
+func setLogLevel(subsystemID, logLevel, file string, disableStdOut bool) {
 	// Ignore invalid subsystems.
 	logger, ok := subsystemLoggers[subsystemID]
 	if !ok {
 		return
 	}
 
-	// Defaults to info if the log level is invalid.
-	level, _ := btclog.LevelFromString(logLevel)
-	logger.SetLevel(level)
+	level := zapcore.DebugLevel
+	_ = level.Set(logLevel)
+	logger = corelog.New(level, file, disableStdOut)
+	subsystemLoggers[subsystemID] = logger.With(zap.String("app.unit", subsystemID))
 }
 
 // setLogLevels sets the log level for all subsystem loggers to the passed
 // level.  It also dynamically creates the subsystem loggers as needed, so it
 // can be used to initialize the logging system.
-func setLogLevels(logLevel string) {
+func setLogLevels(logLevel, file string, disableStdOut bool) {
 	// Configure all sub-systems with the new logging level.  Dynamically
 	// create loggers as needed.
 	for subsystemID := range subsystemLoggers {
-		setLogLevel(subsystemID, logLevel)
+		setLogLevel(subsystemID, logLevel, file, disableStdOut)
 	}
-}
-
-// directionString is a helper function that returns a string that represents
-// the direction of a connection (inbound or outbound).
-func directionString(inbound bool) string {
-	if inbound {
-		return "inbound"
-	}
-	return "outbound"
-}
-
-// pickNoun returns the singular or plural form of a noun depending
-// on the count n.
-func pickNoun(n uint64, singular, plural string) string {
-	if n == 1 {
-		return singular
-	}
-	return plural
 }

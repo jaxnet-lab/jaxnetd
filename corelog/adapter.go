@@ -1,10 +1,26 @@
-package network
+package corelog
 
 import (
 	"fmt"
+	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+var (
+	Disabled    ILogger
+	DisabledZap *zap.Logger
+
+	DefaultLevel   = zap.InfoLevel
+	DefaultLogFile = "shard.core.log"
+)
+
+func init() {
+	Disabled = Adapter(zap.NewNop())
+	DisabledZap = zap.NewNop()
+}
 
 type ILogger interface {
 	Trace(format string)
@@ -18,11 +34,33 @@ type ILogger interface {
 	Warnf(format string, params ...interface{})
 	Errorf(format string, params ...interface{})
 }
+
 type logAdapter struct {
 	logger *zap.Logger
 }
 
-func LogAdapter(logger *zap.Logger) ILogger {
+func New(logLevel zapcore.Level, file string, disableStdOut bool) *zap.Logger {
+	w := zapcore.AddSync(&lumberjack.Logger{
+		Filename:   file,
+		MaxSize:    100, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, // days
+	})
+
+	core := zapcore.NewTee(
+		zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), os.Stdout, logLevel),
+		zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), w, logLevel),
+	)
+
+	if disableStdOut {
+		core = zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), w, logLevel)
+	}
+
+	log := zap.New(core).With(zap.String("app", "shard.core"))
+	return log
+}
+
+func Adapter(logger *zap.Logger) ILogger {
 	res := &logAdapter{
 		logger: logger,
 	}
@@ -58,7 +96,6 @@ func (l *logAdapter) Warnf(format string, params ...interface{}) {
 	if params != nil {
 		l.logger.Warn(fmt.Sprintf(format, params...))
 	} else {
-		fmt.Println("warn format...", format, l.logger)
 		l.logger.Warn(format)
 	}
 }
