@@ -19,8 +19,8 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
@@ -70,15 +70,16 @@ type cfHeaderKV struct {
 type Server struct {
 	// The following variables must only be used atomically.
 	// Putting the uint64s first makes them 64-bit aligned for 32-bit systems.
-	bytesReceived        uint64 // Total bytes received from all peers since start.
-	bytesSent            uint64 // Total bytes sent by all peers since start.
-	started              int32
-	shutdown             int32
-	shutdownSched        int32
-	cfg                  *Config
-	addrManager          *addrmgr.AddrManager
-	ConnManager          *connmgr.ConnManager
-	nodeServer           INodeServer
+	bytesReceived uint64 // Total bytes received from all peers since start.
+	bytesSent     uint64 // Total bytes sent by all peers since start.
+	started       int32
+	shutdown      int32
+	shutdownSched int32
+	cfg           *Config
+	addrManager   *addrmgr.AddrManager
+	ConnManager   *connmgr.ConnManager
+	nodeServer    INodeServer
+
 	modifyRebroadcastInv chan interface{}
 	newPeers             chan *ServerPeer
 	donePeers            chan *ServerPeer
@@ -89,7 +90,8 @@ type Server struct {
 	peerHeightsUpdate    chan UpdatePeerHeightsMsg
 	wg                   sync.WaitGroup
 	quit                 chan struct{}
-	nat                  NAT
+
+	nat NAT
 
 	services wire.ServiceFlag
 
@@ -106,7 +108,7 @@ type Server struct {
 	// whitelisting will be applied if the list is empty or nil.
 	agentWhitelist []string
 
-	logger network.ILogger
+	logger corelog.ILogger
 
 	chain *cprovider.ChainProvider
 }
@@ -151,9 +153,14 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	}
 
 	p2pServer := Server{
-		chain:                chainProvider,
-		cfg:                  cfg,
-		addrManager:          amgr,
+		chain:           chainProvider,
+		cfg:             cfg,
+		addrManager:     amgr,
+		nat:             nat,
+		services:        services,
+		cfCheckptCaches: make(map[wire.FilterType][]cfHeaderKV),
+		logger:          corelog.Adapter(logger),
+
 		newPeers:             make(chan *ServerPeer, chainCfg.MaxPeers),
 		donePeers:            make(chan *ServerPeer, chainCfg.MaxPeers),
 		banPeers:             make(chan *ServerPeer, chainCfg.MaxPeers),
@@ -163,11 +170,6 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 		quit:                 make(chan struct{}),
 		modifyRebroadcastInv: make(chan interface{}),
 		peerHeightsUpdate:    make(chan UpdatePeerHeightsMsg),
-		nat:                  nat,
-
-		services:        services,
-		cfCheckptCaches: make(map[wire.FilterType][]cfHeaderKV),
-		logger:          network.LogAdapter(logger),
 	}
 
 	// Create a connection manager.
@@ -204,7 +206,7 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 
 		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
-			ShardID:   1010101,
+			ShardID:   chainProvider.ChainCtx.ShardID(),
 			Permanent: true,
 		})
 	}
@@ -544,10 +546,11 @@ func (s *Server) handleQuery(state *peerState, querymsg interface{}) {
 		// TODO: if too many, nuke a non-perm peer.
 		go s.ConnManager.Connect(&connmgr.ConnReq{
 			Addr:      netAddr,
-			ShardID:   1010101,
+			ShardID:   s.chain.ChainCtx.ShardID(),
 			Permanent: msg.Permanent,
 		})
 		msg.Reply <- nil
+
 	case RemoveNodeMsg:
 		found := disconnectPeer(state.persistentPeers, msg.Cmp, func(sp *ServerPeer) {
 			// Keep group counts ok since we remove from
@@ -560,6 +563,7 @@ func (s *Server) handleQuery(state *peerState, querymsg interface{}) {
 		} else {
 			msg.Reply <- errors.New("peer not found")
 		}
+
 	case GetOutboundGroup:
 		count, ok := state.outboundGroups[msg.Key]
 		if ok {
@@ -567,6 +571,7 @@ func (s *Server) handleQuery(state *peerState, querymsg interface{}) {
 		} else {
 			msg.Reply <- 0
 		}
+
 	// Request a list of the persistent (added) peers.
 	case GetAddedNodesMsg:
 		// Respond with a slice of the relevant peers.
@@ -575,6 +580,7 @@ func (s *Server) handleQuery(state *peerState, querymsg interface{}) {
 			peers = append(peers, sp)
 		}
 		msg.Reply <- peers
+
 	case DisconnectNodeMsg:
 		// Check inbound peers. We pass a nil callback since we don't
 		// require any additional actions on disconnect for inbound peers.
@@ -669,11 +675,12 @@ func (s *Server) newPeerConfig(sp *ServerPeer) *peer.Config {
 		UserAgentName:    userAgentName,
 		UserAgentVersion: userAgentVersion,
 		// UserAgentComments: s.cfg.UserAgentComments,
-		ChainParams:     sp.server.chain.ChainParams,
-		Services:        sp.server.services,
-		DisableRelayTx:  s.cfg.BlocksOnly,
-		ProtocolVersion: peer.MaxProtocolVersion,
-		TrickleInterval: s.cfg.TrickleInterval,
+		ChainParams:         sp.server.chain.ChainParams,
+		Services:            sp.server.services,
+		DisableRelayTx:      s.cfg.BlocksOnly,
+		ProtocolVersion:     peer.MaxProtocolVersion,
+		TrickleInterval:     s.cfg.TrickleInterval,
+		ChainsPortsProvider: s.cfg.GetChainPort,
 	}
 }
 

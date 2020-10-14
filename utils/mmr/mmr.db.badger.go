@@ -4,22 +4,37 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
+	"os"
 
-	badger "github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger"
 )
 
 type badgerDB struct {
 	db *badger.DB
 }
 
-func BadgerDB(path string) (res *badgerDB, err error) {
-	res = &badgerDB{}
-	res.db, err = badger.Open(badger.DefaultOptions(path))
+func BadgerDB(path string) (*badgerDB, error) {
+	res := &badgerDB{}
+	opts := badger.DefaultOptions(path)
+	opts.Logger = nil
+	err := ensureDir(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return
+
+	res.db, err = badger.Open(opts)
+	return res, err
+}
+
+func ensureDir(path string) error {
+	_, err := os.Stat(path)
+	if err == nil {
+		return nil
+	}
+	if os.IsNotExist(err) {
+		return os.MkdirAll(path, 0700)
+	}
+	return err
 }
 
 func (b *badgerDB) Close() error {

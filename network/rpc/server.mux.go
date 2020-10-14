@@ -3,8 +3,9 @@ package rpc
 import (
 	"context"
 	"net/http"
+	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/network"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"go.uber.org/zap"
@@ -12,9 +13,10 @@ import (
 
 type MultiChainRPC struct {
 	*ServerCore
-	nodeRPC   *NodeRPC
-	beaconRPC *BeaconRPC
-	shardRPCs map[uint32]*ShardRPC
+	nodeRPC     *NodeRPC
+	beaconRPC   *BeaconRPC
+	shardRPCs   map[uint32]*ShardRPC
+	chainsMutex sync.RWMutex
 }
 
 func NewMultiChainRPC(config *Config, logger *zap.Logger,
@@ -29,6 +31,12 @@ func NewMultiChainRPC(config *Config, logger *zap.Logger,
 	return rpc
 }
 
+func (server *MultiChainRPC) AddShard(shardID uint32, rpc *ShardRPC) {
+	server.chainsMutex.Lock()
+	server.shardRPCs[shardID] = rpc
+	server.chainsMutex.Unlock()
+}
+
 func (server *MultiChainRPC) Run(ctx context.Context) {
 	rpcServeMux := http.NewServeMux()
 
@@ -41,13 +49,18 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			if cmd.shardID == 0 {
 				return server.beaconRPC.HandleCommand(cmd, closeChan)
 			}
-			if _, ok := server.shardRPCs[cmd.shardID]; !ok {
+
+			server.chainsMutex.RLock()
+			prcPtr, ok := server.shardRPCs[cmd.shardID]
+			server.chainsMutex.RUnlock()
+			if !ok {
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrShardIDMismatch,
 					Message: "Provided ShardID does not match with any present",
 				}
 			}
-			return server.shardRPCs[cmd.shardID].HandleCommand(cmd, closeChan)
+
+			return prcPtr.HandleCommand(cmd, closeChan)
 
 		}))
 
@@ -56,13 +69,13 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 
 type Mux struct {
 	rpcutli.ToolsXt
-	Log      network.ILogger
+	Log      corelog.ILogger
 	handlers map[btcjson.MethodName]CommandHandler
 }
 
 func NewRPCMux(logger *zap.Logger) Mux {
 	return Mux{
-		Log:      network.LogAdapter(logger),
+		Log:      corelog.Adapter(logger),
 		handlers: map[btcjson.MethodName]CommandHandler{},
 	}
 }

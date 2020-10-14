@@ -279,8 +279,8 @@ type Config struct {
 	// inventory to a peer.
 	TrickleInterval time.Duration
 
-	// PortsProvider is a function to get the port of some p2p shard.
-	PortsProvider func(shardID uint32) (int, bool)
+	// ChainsPortsProvider is a function to get the port of some p2p shard.
+	ChainsPortsProvider func(shardID uint32) (int, bool)
 }
 
 // minUint32 is a helper function to return the minimum of two uint32s.
@@ -1904,7 +1904,7 @@ func (peer *Peer) readRemoteVersionMsg(inbound bool) error {
 	}
 
 	if peer.chain.IsBeacon() && !msg.IsBeacon {
-		port, ok := peer.cfg.PortsProvider(msg.Shard)
+		port, ok := peer.cfg.ChainsPortsProvider(msg.Shard)
 		if !ok {
 			return errors.New("node doesn't have required shard for peer")
 		}

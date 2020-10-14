@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 
-	"github.com/btcsuite/btclog"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
@@ -26,7 +26,7 @@ const (
 // log is a logger that is initialized with no output filters.  This
 // means the package will not perform any logging by default until the caller
 // requests it.
-var log btclog.Logger
+var log corelog.ILogger
 
 // The default amount of logging is none.
 func init() {
@@ -36,11 +36,11 @@ func init() {
 // DisableLog disables all library log output.  Logging output is disabled
 // by default until UseLogger is called.
 func DisableLog() {
-	log = btclog.Disabled
+	log = corelog.Disabled
 }
 
 // UseLogger uses a specified Logger to output package logging info.
-func UseLogger(logger btclog.Logger) {
+func UseLogger(logger corelog.ILogger) {
 	log = logger
 }
 

@@ -97,17 +97,20 @@ func btcdMain() error {
 	defer config.BtcdLog.Info("Shutdown complete")
 
 	// Show version at startup.
-	config.BtcdLog.Infof("Version %s", version())
+	config.BtcdLog.Info(fmt.Sprintf("Version %s", version()))
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
 		go func() {
 			listenAddr := net.JoinHostPort("", cfg.Profile)
-			config.BtcdLog.Infof("Profile server listening on %s", listenAddr)
+			config.BtcdLog.Info(fmt.Sprintf("Profile server listening on %s", listenAddr))
 			profileRedirect := http.RedirectHandler("/debug/pprof",
 				http.StatusSeeOther)
 			http.Handle("/", profileRedirect)
-			config.BtcdLog.Errorf("%v", http.ListenAndServe(listenAddr, nil))
+			err = http.ListenAndServe(listenAddr, nil)
+			if err != nil {
+				config.BtcdLog.Error("listen and serve failed", zap.Error(err))
+			}
 		}()
 	}
 
@@ -115,7 +118,7 @@ func btcdMain() error {
 	if cfg.CPUProfile != "" {
 		f, err := os.Create(cfg.CPUProfile)
 		if err != nil {
-			config.BtcdLog.Errorf("Unable to create cpu profile: %v", err)
+			config.BtcdLog.Error("Unable to create cpu profile", zap.Error(err))
 			return err
 		}
 		pprof.StartCPUProfile(f)
@@ -125,28 +128,22 @@ func btcdMain() error {
 
 	// Perform upgrades to btcd as new versions require it.
 	if err := config.DoUpgrades(cfg); err != nil {
-		config.BtcdLog.Errorf("%v", err)
+		config.BtcdLog.Error("can not do upgrade", zap.Error(err))
 		return err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		logger.Error("Can't init logger", zap.Error(err))
-		os.Exit(1)
-	}
-
-	sigChan := interruptListener(logger)
+	sigChan := interruptListener(config.BtcdLog)
 	go func() {
 		select {
 		case <-sigChan:
-			logger.Info("propagate stop signal")
+			config.BtcdLog.Info("propagate stop signal")
 			cancel()
 		}
 	}()
 
-	if err := node.Controller(logger).Run(ctx, cfg); err != nil {
-		logger.Error("Can't run Chains", zap.Error(err))
+	if err := node.Controller(config.BtcdLog).Run(ctx, cfg); err != nil {
+		config.BtcdLog.Error("Can't run Chains", zap.Error(err))
 		os.Exit(2)
 	}
 
