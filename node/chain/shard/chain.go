@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	"gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -81,12 +82,18 @@ func (c *shardChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyShardBlock()
 }
 
-func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error{
+func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error {
 	h := blockHeader.BlockHash()
 	c.mmr.Append(big.NewInt(0), h.CloneBytes())
-	return nil
-}
+	hashes, coding, codingBitSize := blockHeader.BeaconHeader().MergedMiningTreeCodingProof()
+	shardHeader := blockHeader.(*wire.ShardHeader)
 
+	tree := merged_mining_tree.NewSparseMerkleTree(shardHeader.MergeMiningNumber())
+	rootHash := shardHeader.MergeMiningRoot()
+	var validationRoot merged_mining_tree.BinHash
+	copy(validationRoot[:], rootHash[:])
+	return tree.Validate(codingBitSize, coding, hashes, shardHeader.MergeMiningNumber(), validationRoot)
+}
 
 func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
@@ -134,7 +141,6 @@ func (c *HeaderGenerator) NewBlockHeader(ver wire.BVersion, prevHash, merkleRoot
 		return nil, err
 	}
 
-
 	return wire.NewShardBlockHeader(
 		prevHash,
 		merkleRootHash,
@@ -143,4 +149,3 @@ func (c *HeaderGenerator) NewBlockHeader(ver wire.BVersion, prevHash, merkleRoot
 		*header,
 	), nil
 }
-
