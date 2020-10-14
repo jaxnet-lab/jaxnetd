@@ -86,8 +86,8 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if chainCtl.cfg.Node.EnableCPUMiner {
-		chainCtl.InitCPUMiner(chainCtl.beacon.p2pServer.ConnectedCount)
-		// chainCtl.InitCPUMiner(func() int32 { return 2 })
+		// chainCtl.InitCPUMiner(chainCtl.beacon.p2pServer.ConnectedCount)
+		chainCtl.InitCPUMiner(func() int32 { return 1 })
 		chainCtl.wg.Add(1)
 		go func() {
 			defer chainCtl.wg.Done()

@@ -6,8 +6,10 @@ package wire
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"io"
+	"net"
+
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 )
 
 // MaxAddrPerMsg is the maximum number of addresses that can be in a single
@@ -42,7 +44,7 @@ func (msg *MsgAddr) AddAddress(na *NetAddress) error {
 }
 
 // AddAddress adds a known active server to the message.
-func (msg *MsgAddr) AddShardAddress(shardId int32, na *NetAddress) error {
+func (msg *MsgAddr) AddShardAddress(shardId uint32, na *NetAddress) error {
 	if len(msg.AddrList)+1 > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses in message [max %v]",
 			MaxAddrPerMsg)
@@ -117,7 +119,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 		if err != nil {
 			return err
 		}
-		na.ShardID = int32(id)
+		na.ShardID = uint32(id)
 		err = readNetAddress(r, pver, na.Address, true)
 		if err != nil {
 			return err
@@ -201,4 +203,54 @@ func NewMsgAddr() *MsgAddr {
 	return &MsgAddr{
 		AddrList: make([]*NetAddress, 0, MaxAddrPerMsg),
 	}
+}
+
+type MsgPortRedirect struct {
+	ShardID uint32
+
+	// Port the server is using.
+	Port uint32
+
+	// IP address of the server.
+	IP net.IP
+}
+
+func (m *MsgPortRedirect) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncoding) error {
+	var ip [16]byte
+
+	err := encoder.ReadElements(r, &m.ShardID, &m.Port, &ip)
+	if err != nil {
+		return err
+	}
+
+	m.IP = ip[:]
+	return nil
+}
+
+func (m *MsgPortRedirect) BtcEncode(w io.Writer, _ uint32, _ encoder.MessageEncoding) error {
+	// Ensure to always write 16 bytes even if the ip is nil.
+	var ip [16]byte
+	if m.IP != nil {
+		copy(ip[:], m.IP.To16())
+	}
+
+	return encoder.WriteElements(w, m.ShardID, m.Port, ip)
+}
+
+func (m *MsgPortRedirect) Command() string {
+	return CmdPortRedirect
+}
+
+func (m *MsgPortRedirect) MaxPayloadLength(uint32) uint32 {
+	// shardID 4 bytes + port 4 bytes + ip 16 bytes.
+	return 4 + 4 + 16
+}
+
+func NewMsgPortRedirect(shardID, port uint32, ip net.IP) *MsgPortRedirect {
+	return &MsgPortRedirect{
+		Port:    port,
+		ShardID: shardID,
+		IP:      ip,
+	}
+
 }

@@ -1,7 +1,7 @@
 data_dir: ./core
 log_dir: ./core/logs
 
-debug_level: debug
+#debug_level: debug
 
 node:
   #  net: mainnet
@@ -17,12 +17,10 @@ node:
     password: somerpc
     maxclients: 10
     listeners:
-      - 0.0.0.0:18444
-    peers:
-      - 127.0.0.1:18333
+      - 0.0.0.0:28444
 
   shards:
-    enable: true
+#    enable: true
     autorun: true
   #  enable_cpu_miner: true
 

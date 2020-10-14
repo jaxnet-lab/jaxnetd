@@ -59,6 +59,7 @@ const (
 	CmdCFilter      = "cfilter"
 	CmdCFHeaders    = "cfheaders"
 	CmdCFCheckpt    = "cfcheckpt"
+	CmdPortRedirect = "portredirect"
 )
 
 const (
@@ -103,6 +104,9 @@ func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) 
 
 	case CmdAddr:
 		msg = &MsgAddr{}
+
+	case CmdPortRedirect:
+		msg = &MsgPortRedirect{}
 
 	case CmdGetBlocks:
 		msg = &MsgGetBlocks{}

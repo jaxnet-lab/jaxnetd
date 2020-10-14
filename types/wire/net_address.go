@@ -6,10 +6,11 @@ package wire
 
 import (
 	"encoding/binary"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"io"
 	"net"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 )
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
@@ -30,7 +31,7 @@ func maxNetAddressPayload(pver uint32) uint32 {
 // NetAddress defines information about a server on the network including the time
 // it was last seen, the services it supports, its IP address, and port.
 type ShardAddress struct {
-	ShardID int32
+	ShardID uint32
 	Address *NetAddress
 }
 

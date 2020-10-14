@@ -56,39 +56,42 @@ var (
 
 	BtcdLog = backendLog.With(zap.String("app.unit", "BTCD"))
 
-	adxrLog = backendLog.With(zap.String("app.unit", "ADXR"))
-	amgrLog = backendLog.With(zap.String("app.unit", "AMGR"))
-	cmgrLog = backendLog.With(zap.String("app.unit", "CMGR"))
-	bcdbLog = backendLog.With(zap.String("app.unit", "BCDB"))
-	chanLog = backendLog.With(zap.String("app.unit", "CHAN"))
-	discLog = backendLog.With(zap.String("app.unit", "DISC"))
-	indxLog = backendLog.With(zap.String("app.unit", "INDX"))
-	minrLog = backendLog.With(zap.String("app.unit", "MINR"))
-	peerLog = backendLog.With(zap.String("app.unit", "PEER"))
-	rpcsLog = backendLog.With(zap.String("app.unit", "RPCS"))
-	scrpLog = backendLog.With(zap.String("app.unit", "SCRP"))
-	srvrLog = backendLog.With(zap.String("app.unit", "SRVR"))
-	syncLog = backendLog.With(zap.String("app.unit", "SYNC"))
-	txmpLog = backendLog.With(zap.String("app.unit", "TXMP"))
-
 	// subsystemLoggers maps each subsystem identifier to its associated logger.
 	subsystemLoggers = map[string]*zap.Logger{
-		"ADXR": adxrLog,
-		"AMGR": amgrLog,
-		"CMGR": cmgrLog,
-		"BCDB": bcdbLog,
-		"BTCD": BtcdLog,
-		"CHAN": chanLog,
-		"DISC": discLog,
-		"INDX": indxLog,
-		"MINR": minrLog,
-		"PEER": peerLog,
-		"RPCS": rpcsLog,
-		"SCRP": scrpLog,
-		"SRVR": srvrLog,
-		"SYNC": syncLog,
-		"TXMP": txmpLog,
+		logUnitADXR: backendLog.With(zap.String("app.unit", logUnitADXR)),
+		logUnitAMGR: backendLog.With(zap.String("app.unit", logUnitAMGR)),
+		logUnitCMGR: backendLog.With(zap.String("app.unit", logUnitCMGR)),
+		logUnitBCDB: backendLog.With(zap.String("app.unit", logUnitBCDB)),
+		logUnitBTCD: backendLog.With(zap.String("app.unit", logUnitBTCD)),
+		logUnitCHAN: backendLog.With(zap.String("app.unit", logUnitCHAN)),
+		logUnitDISC: backendLog.With(zap.String("app.unit", logUnitDISC)),
+		logUnitINDX: backendLog.With(zap.String("app.unit", logUnitINDX)),
+		logUnitMINR: backendLog.With(zap.String("app.unit", logUnitMINR)),
+		logUnitPEER: backendLog.With(zap.String("app.unit", logUnitPEER)),
+		logUnitRPCS: backendLog.With(zap.String("app.unit", logUnitRPCS)),
+		logUnitSCRP: backendLog.With(zap.String("app.unit", logUnitSCRP)),
+		logUnitSRVR: backendLog.With(zap.String("app.unit", logUnitSRVR)),
+		logUnitSYNC: backendLog.With(zap.String("app.unit", logUnitSYNC)),
+		logUnitTXMP: backendLog.With(zap.String("app.unit", logUnitTXMP)),
 	}
+)
+
+const (
+	logUnitADXR = "ADXR"
+	logUnitAMGR = "AMGR"
+	logUnitCMGR = "CMGR"
+	logUnitBCDB = "BCDB"
+	logUnitBTCD = "BTCD"
+	logUnitCHAN = "CHAN"
+	logUnitDISC = "DISC"
+	logUnitINDX = "INDX"
+	logUnitMINR = "MINR"
+	logUnitPEER = "PEER"
+	logUnitRPCS = "RPCS"
+	logUnitSCRP = "SCRP"
+	logUnitSRVR = "SRVR"
+	logUnitSYNC = "SYNC"
+	logUnitTXMP = "TXMP"
 )
 
 func init() {
@@ -97,16 +100,16 @@ func init() {
 
 // Initialize package-global logger variables.
 func setLoggers() {
-	addrmgr.UseLogger(corelog.Adapter(amgrLog))
-	connmgr.UseLogger(corelog.Adapter(cmgrLog))
-	database.UseLogger(corelog.Adapter(bcdbLog))
-	blockchain.UseLogger(corelog.Adapter(chanLog))
-	indexers.UseLogger(corelog.Adapter(indxLog))
-	mining.UseLogger(corelog.Adapter(minrLog))
-	peer.UseLogger(corelog.Adapter(peerLog))
-	txscript.UseLogger(corelog.Adapter(scrpLog))
-	netsync.UseLogger(corelog.Adapter(syncLog))
-	mempool.UseLogger(corelog.Adapter(txmpLog))
+	addrmgr.UseLogger(corelog.Adapter(subsystemLoggers[logUnitAMGR]))
+	connmgr.UseLogger(corelog.Adapter(subsystemLoggers[logUnitCMGR]))
+	database.UseLogger(corelog.Adapter(subsystemLoggers[logUnitBCDB]))
+	blockchain.UseLogger(corelog.Adapter(subsystemLoggers[logUnitCHAN]))
+	indexers.UseLogger(corelog.Adapter(subsystemLoggers[logUnitINDX]))
+	mining.UseLogger(corelog.Adapter(subsystemLoggers[logUnitMINR]))
+	peer.UseLogger(corelog.Adapter(subsystemLoggers[logUnitPEER]))
+	txscript.UseLogger(corelog.Adapter(subsystemLoggers[logUnitSRVR]))
+	netsync.UseLogger(corelog.Adapter(subsystemLoggers[logUnitSYNC]))
+	mempool.UseLogger(corelog.Adapter(subsystemLoggers[logUnitTXMP]))
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and

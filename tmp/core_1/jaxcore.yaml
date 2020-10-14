@@ -9,8 +9,8 @@ node:
   p2p:
     listeners:
       - 0.0.0.0:18333
-#    peers:
-#      - 127.0.0.1:28333
+    peers:
+      - 127.0.0.1:28333
   rpc:
     disable: false
     user: somerpc
@@ -18,15 +18,16 @@ node:
     maxclients: 10
     listeners:
       - 0.0.0.0:18444
+
   shards:
-    enable: true
+#    enable: true
     autorun: true
 
-#  enable_cpu_miner: true
+  enable_cpu_miner: true
 
   beacon_chain:
-#    auto_expand: true
-    expansion_rule: 10
+    auto_expand: true
+    expansion_rule: 100
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
