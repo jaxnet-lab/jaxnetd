@@ -7,14 +7,14 @@ package ffldb
 import (
 	"fmt"
 
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/types"
 
-	"github.com/btcsuite/btclog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 )
 
-var log = btclog.Disabled
+var log = corelog.Disabled
 
 const (
 	dbType = "ffldb"
@@ -67,7 +67,7 @@ func createDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, er
 
 // useLogger is the callback provided during driver registration that sets the
 // current logger to the provided one.
-func useLogger(logger btclog.Logger) {
+func useLogger(logger corelog.ILogger) {
 	log = logger
 }
 

@@ -40,13 +40,14 @@ type Config struct {
 	NoOnion         bool          `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
 	Upnp            bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
 
-	Oniondial func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
-	Dial      func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
-	Lookup    func(string) ([]net.IP, error)                        `yaml:"-"`
+	Oniondial    func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
+	Dial         func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
+	Lookup       func(string) ([]net.IP, error)                        `yaml:"-"`
+	GetChainPort func(shardID uint32) (int, bool)                      `yaml:"-"`
 }
 
 type ListenOpts struct {
-	DefaultPort string
+	DefaultPort int
 	Listeners   []string
 }
 
@@ -55,7 +56,7 @@ func (o *ListenOpts) Update(listeners []string) error {
 	if err != nil {
 		return err
 	}
-	o.DefaultPort = strconv.Itoa(port)
+	o.DefaultPort = port
 	o.Listeners = SetPortForListeners(listeners, port)
 	return nil
 }
@@ -93,7 +94,8 @@ func GetFreePort() (port int, err error) {
 // initListeners initializes the configured net listeners and adds any bound
 // addresses to the address manager. Returns the listeners and a NAT interface,
 // which is non-nil if UPnP is in use.
-func initListeners(cfg *Config, defaultPort string, amgr *addrmgr.AddrManager, listenAddrs []string, services wire.ServiceFlag, logger *zap.Logger) ([]net.Listener, NAT, error) {
+func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
+	listenAddrs []string, services wire.ServiceFlag, logger *zap.Logger) ([]net.Listener, NAT, error) {
 	// Listen for TCP connections at the configured addresses
 	netAddrs, err := ParseListeners(listenAddrs)
 	if err != nil {
@@ -112,13 +114,6 @@ func initListeners(cfg *Config, defaultPort string, amgr *addrmgr.AddrManager, l
 
 	var nat NAT
 	if len(cfg.ExternalIPs) != 0 {
-		defaultPort, err := strconv.ParseUint(defaultPort, 10, 16)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Can not parse default port %s for active BlockChain: %v",
-				defaultPort, err))
-			return nil, nil, err
-		}
-
 		for _, sip := range cfg.ExternalIPs {
 			eport := uint16(defaultPort)
 			host, portstr, err := net.SplitHostPort(sip)

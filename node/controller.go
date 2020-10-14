@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
@@ -37,6 +38,7 @@ type chainController struct {
 	shardsIndex *Index
 	shardsMutex sync.RWMutex
 	ports       *p2p.ChainsPortIndex
+	rpc         rpcRO
 	// -------------------------------
 
 }
@@ -56,6 +58,8 @@ func Controller(logger *zap.Logger) *chainController {
 }
 
 func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
+	// todo: fix after p2p refactoring
+	cfg.Node.P2P.GetChainPort = chainCtl.ports.Get
 	chainCtl.cfg = cfg
 	chainCtl.ctx, chainCtl.cancel = context.WithCancel(ctx)
 
@@ -76,18 +80,18 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		chainCtl.beacon.chainProvider.BlockChain().Subscribe(chainCtl.shardsAutorunCallback)
 	}
 
-	if err := chainCtl.runRpc(ctx, cfg); err != nil {
+	if err := chainCtl.runRpc(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error("RPC ComposeHandlers error", zap.Error(err))
 		return err
 	}
 
 	if chainCtl.cfg.Node.EnableCPUMiner {
-		// beaconCtl.chainProvider.InitCPUMiner(beaconCtl.p2pServer.ConnectedCount)
-		chainCtl.InitCPUMiner(func() int32 { return 2 })
+		chainCtl.InitCPUMiner(chainCtl.beacon.p2pServer.ConnectedCount)
+		// chainCtl.InitCPUMiner(func() int32 { return 2 })
 		chainCtl.wg.Add(1)
 		go func() {
 			defer chainCtl.wg.Done()
-			chainCtl.miner.Run(ctx)
+			chainCtl.miner.Run(chainCtl.ctx)
 		}()
 	}
 
@@ -130,6 +134,13 @@ func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) err
 	return nil
 }
 
+type rpcRO struct {
+	server  *rpc.MultiChainRPC
+	beacon  *rpc.BeaconRPC
+	node    *rpc.NodeRPC
+	connMgr netsync.P2PConnManager
+}
+
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
@@ -143,14 +154,17 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 			ro.ctl.BlkTmplGenerator(beaconRPC.BlockGenerator), chainCtl.logger)
 	}
 
-	srv := rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
+	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
 		nodeRPC, beaconRPC, shardRPCs)
 
 	chainCtl.wg.Add(1)
 	go func() {
-		srv.Run(ctx)
+		chainCtl.rpc.server.Run(ctx)
 		chainCtl.wg.Done()
 	}()
 
+	chainCtl.rpc.node = nodeRPC
+	chainCtl.rpc.beacon = beaconRPC
+	chainCtl.rpc.connMgr = connMgr
 	return nil
 }

@@ -52,7 +52,7 @@ func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
 
 type shardRO struct {
 	ctl    *ShardCtl
-	port   string
+	port   int
 	cancel context.CancelFunc
 }
 

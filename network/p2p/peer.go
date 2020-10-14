@@ -9,7 +9,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core/network"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
@@ -46,8 +46,7 @@ type ServerPeer struct {
 	BanScore       connmgr.DynamicBanScore
 	DisableRelayTx bool
 
-	srvrLog network.ILogger
-	logger  network.ILogger
+	logger corelog.ILogger
 }
 
 // newServerPeer returns a new ServerPeer instance. The peer needs to be set by
@@ -61,6 +60,7 @@ func newServerPeer(s *Server, isPersistent bool) *ServerPeer {
 		quit:           make(chan struct{}),
 		txProcessed:    make(chan struct{}, 1),
 		blockProcessed: make(chan struct{}, 1),
+		logger:         s.logger,
 	}
 }
 
@@ -197,7 +197,7 @@ func (sp *ServerPeer) OnVersion(_ *peer.Peer, msg *wire.MsgVersion) *wire.MsgRej
 	wantServices := wire.SFNodeNetwork
 	if !isInbound && !hasServices(msg.Services, wantServices) {
 		missingServices := wantServices & ^msg.Services
-		sp.srvrLog.Debugf("Rejecting peer %s with services %v due to not "+
+		sp.logger.Debugf("Rejecting peer %s with services %v due to not "+
 			"providing desired services %v", sp.Peer, msg.Services,
 			missingServices)
 		reason := fmt.Sprintf("required services %#x not offered",
@@ -1068,7 +1068,7 @@ func (sp *ServerPeer) HasUndesiredUserAgent(blacklistedAgents,
 	// will ignore the connection request.
 	for _, blacklistedAgent := range blacklistedAgents {
 		if strings.Contains(agent, blacklistedAgent) {
-			sp.srvrLog.Debugf("Ignoring peer %s, user agent "+
+			sp.logger.Debugf("Ignoring peer %s, user agent "+
 				"contains blacklisted user agent: %s", sp,
 				agent)
 			return true
@@ -1090,7 +1090,7 @@ func (sp *ServerPeer) HasUndesiredUserAgent(blacklistedAgents,
 
 	// Otherwise, the peer's user agent was not included in our whitelist.
 	// Ignore just in case it could stall the initial block download.
-	sp.srvrLog.Debugf("Ignoring peer %s, user agent: %s not found in "+
+	sp.logger.Debugf("Ignoring peer %s, user agent: %s not found in "+
 		"whitelist", sp, agent)
 
 	return true

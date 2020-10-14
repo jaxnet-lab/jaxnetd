@@ -7,7 +7,7 @@ package database
 import (
 	"fmt"
 
-	"github.com/btcsuite/btclog"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
@@ -29,7 +29,7 @@ type Driver struct {
 	Open func(chain chain.IChainCtx, args ...interface{}) (DB, error)
 
 	// UseLogger uses a specified Logger to output package logging info.
-	UseLogger func(logger btclog.Logger)
+	UseLogger func(logger corelog.ILogger)
 }
 
 // driverList holds all of the registered database backends.

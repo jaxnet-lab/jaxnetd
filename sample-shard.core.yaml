@@ -44,6 +44,7 @@ node:
     disable_checkpoints: false
     mining_addresses: [ ]
     auto_expand: false
+    expansion_rule: 10
 
   rpc:
     listeners: [ ]

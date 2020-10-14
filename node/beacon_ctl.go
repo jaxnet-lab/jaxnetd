@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
@@ -39,6 +40,7 @@ func NewBeaconCtl(ctx context.Context, logger *zap.Logger, cfg *Config) BeaconCt
 func (beaconCtl *BeaconCtl) Init() error {
 	params := beaconCtl.cfg.Node.ChainParams()
 	params.AutoExpand = params.Net != types.MainNet && beaconCtl.cfg.Node.BeaconChain.AutoExpand
+	params.ExpansionRule = beaconCtl.cfg.Node.BeaconChain.ExpansionRule
 
 	chain := beacon.Chain(params)
 
@@ -65,10 +67,10 @@ func (beaconCtl *BeaconCtl) Init() error {
 	})
 
 	beaconCtl.log.Info("P2P Listener ", zap.Any("Listeners", beaconCtl.cfg.Node.P2P.Listeners))
-
+	port, _ := strconv.ParseInt(chain.Params().DefaultPort, 10, 16)
 	// Create p2pServer.
 	beaconCtl.p2pServer, err = p2p.NewServer(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager, p2p.ListenOpts{
-		DefaultPort: chain.Params().DefaultPort,
+		DefaultPort: int(port),
 		Listeners:   beaconCtl.cfg.Node.P2P.Listeners,
 	})
 	if err != nil {

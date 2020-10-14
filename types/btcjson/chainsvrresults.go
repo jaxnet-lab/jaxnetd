@@ -795,5 +795,5 @@ type ShardInfo struct {
 	GenesisHeight int32  `json:"genesis_height"`
 	GenesisHash   string `json:"genesis_hash"`
 	Enabled       bool   `json:"enabled"`
-	P2PPort       string `json:"p2p_port"`
+	P2PPort       int    `json:"p2p_port"`
 }

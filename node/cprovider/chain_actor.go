@@ -41,6 +41,7 @@ type ChainRuntimeConfig struct {
 	DisableCheckpoints  bool           `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	MiningAddresses     []string       `yaml:"mining_addresses"`
 	AutoExpand          bool           `yaml:"auto_expand"`
+	ExpansionRule       int32          `yaml:"expansion_rule"`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {

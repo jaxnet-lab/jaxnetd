@@ -19,7 +19,7 @@ import (
 const maxFailedAttempts = 25
 
 var (
-	//ErrDialNil is used to indicate that Dial cannot be nil in the configuration.
+	// ErrDialNil is used to indicate that Dial cannot be nil in the configuration.
 	ErrDialNil = errors.New("Config: Dial cannot be nil")
 
 	// maxRetryDuration is the max duration of time retrying of a persistent
@@ -56,16 +56,15 @@ const (
 // connection will be retried on disconnection.
 type ConnReq struct {
 	// The following variables must only be used atomically.
-	id      uint64
-	ShardID uint64
-
-	Addr      net.Addr
-	Permanent bool
-
+	id         uint64
 	conn       net.Conn
 	state      ConnState
 	stateMtx   sync.RWMutex
 	retryCount uint32
+
+	Addr      net.Addr
+	Permanent bool
+	ShardID   uint32
 }
 
 // updateState updates the state of the connection request.

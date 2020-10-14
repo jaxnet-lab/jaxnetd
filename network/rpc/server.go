@@ -27,7 +27,7 @@ import (
 
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"go.uber.org/zap"
 )
@@ -51,7 +51,7 @@ type ServerCore struct {
 	wg                     sync.WaitGroup
 	requestProcessShutdown chan struct{}
 	quit                   chan int
-	logger                 network.ILogger
+	logger                 corelog.ILogger
 }
 
 func NewRPCCore(config *Config, logger *zap.Logger) *ServerCore {
@@ -60,7 +60,7 @@ func NewRPCCore(config *Config, logger *zap.Logger) *ServerCore {
 		statusLines:            make(map[int]string),
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
-		logger:                 network.LogAdapter(logger),
+		logger:                 corelog.Adapter(logger),
 
 		started:      0,
 		shutdown:     0,
