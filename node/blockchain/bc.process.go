@@ -190,6 +190,9 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 
 	// Handle orphan blocks.
 	prevHash := blockHeader.PrevBlock()
+	if err := b.chain.ValidateBlock(blockHeader); err != nil {
+		return false, false, err
+	}
 	prevHashExists, err := b.blockExists(&prevHash)
 	if err != nil {
 		return false, false, err
