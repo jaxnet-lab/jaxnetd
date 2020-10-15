@@ -20,6 +20,7 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
@@ -27,6 +28,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"go.uber.org/zap"
 )
 
 const (
@@ -488,6 +490,7 @@ type Peer struct {
 	queueQuit     chan struct{}
 	outQuit       chan struct{}
 	quit          chan struct{}
+	log           *zap.Logger
 }
 
 // String returns the peer's address and directionality as a human-readable
@@ -1332,8 +1335,12 @@ func (peer *Peer) inHandler() {
 	// is processed.
 	idleTimer := time.AfterFunc(idleTimeout, func() {
 		log.Warnf("Peer %s no answer for %s -- disconnecting", peer, idleTimeout)
+		peer.log.Debug(fmt.Sprintf("Peer %s no answer for %s -- disconnecting", peer, idleTimeout))
+
 		peer.Disconnect()
 	})
+
+	peer.log.Debug("start read loop")
 
 out:
 	for atomic.LoadInt32(&peer.disconnect) == 0 {
@@ -1373,6 +1380,10 @@ out:
 			}
 			break out
 		}
+
+		peer.log.Debug("new income message from peer",
+			zap.String("msg_type", fmt.Sprintf("%T", rmsg)))
+
 		atomic.StoreInt64(&peer.lastRecv, time.Now().Unix())
 		peer.stallControl <- stallControlMsg{sccReceiveMessage, rmsg}
 
@@ -1732,11 +1743,11 @@ out:
 
 			err := peer.writeMessage(msg.msg, msg.encoding)
 			if err != nil {
-				peer.Disconnect()
 				if peer.shouldLogWriteError(err) {
 					log.Errorf("Failed to send message to "+
 						"%s: %v", peer, err)
 				}
+				peer.Disconnect()
 				if msg.doneChan != nil {
 					msg.doneChan <- struct{}{}
 				}
@@ -2180,6 +2191,7 @@ func (peer *Peer) start() error {
 	select {
 	case err := <-negotiateErr:
 		if err != nil {
+			peer.log.Error("negotiateErr", zap.String("remote_addr", peer.addr), zap.Error(err))
 			peer.Disconnect()
 			return err
 		}
@@ -2190,6 +2202,7 @@ func (peer *Peer) start() error {
 	}
 
 	log.Debugf("Connected to %s", peer.Addr())
+	peer.log.Warn("Connected to peer", zap.String("remote_addr", peer.Addr()))
 
 	// The protocol has been negotiated successfully so start processing input
 	// and output messages.
@@ -2221,7 +2234,7 @@ func (peer *Peer) AssociateConnection(conn net.Conn) {
 		// and no point recomputing.
 		na, err := newNetAddress(peer.conn.RemoteAddr(), peer.services)
 		if err != nil {
-			log.Errorf("Cannot create remote net address: %v", err)
+			peer.log.Error("cannot create remote net address", zap.Error(err))
 			peer.Disconnect()
 			return
 		}
@@ -2229,8 +2242,10 @@ func (peer *Peer) AssociateConnection(conn net.Conn) {
 	}
 
 	go func() {
+		peer.log.Debug("start peer", zap.String("remote_addr", peer.addr))
 		if err := peer.start(); err != nil {
 			log.Debugf("Cannot start peer %v: %v", peer, err)
+			peer.log.Debug("start peer: disconnect", zap.String("remote_addr", peer.addr), zap.Error(err))
 			peer.Disconnect()
 		}
 	}()
@@ -2264,6 +2279,7 @@ func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer 
 	if cfg.TrickleInterval <= 0 {
 		cfg.TrickleInterval = DefaultTrickleInterval
 	}
+	logger := log.(*corelog.LogAdapter)
 
 	p := Peer{
 		inbound:         inbound,
@@ -2282,6 +2298,10 @@ func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer 
 		cfg:             cfg, // Copy so caller can't mutate.
 		services:        cfg.Services,
 		protocolVersion: cfg.ProtocolVersion,
+		log: logger.Logger.With(
+			zap.Bool("inbound", inbound),
+			zap.Uint32("shardID", chainCtx.ShardID()),
+		),
 	}
 	return &p
 }
@@ -2317,6 +2337,10 @@ func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer,
 		p.na = wire.NewNetAddressIPPort(net.ParseIP(host), uint16(port), 0)
 	}
 
+	p.log = p.log.With(
+		zap.String("remote_ip", p.NA().IP.String()),
+		zap.Uint16("remote_port", p.NA().Port),
+	)
 	return p, nil
 }
 

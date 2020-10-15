@@ -13,7 +13,7 @@ import (
 )
 
 // MsgGetAddr implements the Message interface and represents a bitcoin
-// getaddr message.  It is used to request a list of known active peers on the
+// getaddr message. It is used to request a list of known active peers on the
 // network from a server to help identify potential nodes.  The list is returned
 // via one or more addr messages (MsgAddr).
 //
@@ -53,7 +53,7 @@ func (msg *MsgGetAddr) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgGetAddr) MaxPayloadLength(pver uint32) uint32 {
-	return 0
+	return 4
 }
 
 // NewMsgGetAddr returns a new bitcoin getaddr message that conforms to the

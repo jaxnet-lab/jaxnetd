@@ -9,8 +9,8 @@ node:
   p2p:
     listeners:
       - 0.0.0.0:18333
-    peers:
-      - 127.0.0.1:28333
+#    peers:
+#      - 127.0.0.1:28333
   rpc:
     disable: false
     user: somerpc
