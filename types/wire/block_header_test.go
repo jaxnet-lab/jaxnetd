@@ -1,11 +1,13 @@
 package wire
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"fmt"
 	rand2 "math/rand"
 	"testing"
+	"time"
 )
 
 func TestBVersion_ExpansionMade(t *testing.T) {
@@ -108,14 +110,14 @@ func TestTreeEncoding(t *testing.T) {
 		rand.Read(coding[:])
 
 		bitsSize := rand2.Uint32() + 1
-		bh.SetMergeMiningTrie(hashes, coding, bitsSize)
+		bh.SetMergedMiningTreeCodingProof(hashes, coding, bitsSize)
 
 		hashes2, coding2, bitsSize2 := bh.MergedMiningTreeCodingProof()
-		if  bytes.Compare(hashes, hashes2) != 0{
+		if bytes.Compare(hashes, hashes2) != 0 {
 			t.Error("Hashes not equal at ", i)
 		}
 
-		if  bytes.Compare(coding, coding2) != 0{
+		if bytes.Compare(coding, coding2) != 0 {
 			t.Error("Coding not equal at ", i)
 		}
 		if bitsSize != bitsSize2 {
@@ -124,5 +126,82 @@ func TestTreeEncoding(t *testing.T) {
 		fmt.Printf("%d. Test ok. Hash %d, Coding %d, %d\n", i, hashesSize, codingSize, bitsSize)
 		i++
 	}
+}
 
+func TestShardHeaderEncoding(t *testing.T) {
+	sh := ShardHeader{}
+	sh.timestamp = time.Now()
+	sh.BCHeader = BeaconHeader{
+		bits:  1,
+		nonce: 2,
+	}
+	sh.bits = 3
+	sh.mergeMiningNumber = 4
+	rand.Read(sh.merkleRoot[:])
+	rand.Read(sh.prevBlock[:])
+	sh.mergeMiningNumber = 5
+
+	hashes := make([]byte, 400)
+	coding := make([]byte, 300)
+	var bits uint32 = 222
+
+	sh.BCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+
+	var b bytes.Buffer
+	wr := bufio.NewWriter(&b)
+	if err := WriteShardBlockHeader(wr, &sh); err != nil {
+		t.Error(err)
+		return
+	}
+	wr.Flush()
+
+	fmt.Printf("%d %d\n", wr.Size(), wr.Available())
+	sh2 := ShardHeader{}
+	reader := bufio.NewReader(&b)
+	if err := ReadShardBlockHeader(reader, &sh2); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if sh.timestamp.Unix() != sh2.timestamp.Unix() {
+		t.Error("Timestamp not equal")
+		return
+	}
+
+	if sh.bits != sh2.bits {
+		t.Error("Bits not equal")
+		return
+	}
+
+	if sh.mergeMiningNumber != sh2.mergeMiningNumber {
+		t.Error("MergeMiningNumber not equal")
+		return
+	}
+
+	if bytes.Compare(sh.merkleRoot[:], sh2.merkleRoot[:]) != 0 {
+		t.Error("Merkle Root not equal")
+		return
+	}
+
+	if bytes.Compare(sh.prevBlock[:], sh2.prevBlock[:]) != 0 {
+		t.Error("prevBlock Root not equal")
+		return
+	}
+
+	hashes2, coding2, bits2 := sh.BCHeader.MergedMiningTreeCodingProof()
+
+	if bytes.Compare(hashes, hashes2) != 0 {
+		t.Error("Proof hashes not equal")
+		return
+	}
+
+	if bytes.Compare(coding, coding2) != 0 {
+		t.Error("Proof coding not equal")
+		return
+	}
+
+	if bits != bits2{
+		t.Error("Proof bits not equal")
+		return
+	}
 }

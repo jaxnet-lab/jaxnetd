@@ -690,7 +690,9 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 	if len(hexStr)%2 != 0 {
 		hexStr = "0" + c.HexBlock
 	}
+
 	serializedBlock, err := hex.DecodeString(hexStr)
+	fmt.Printf("HandleSubmitBlock: %s, Beacon: %t \n", hexStr, server.chainProvider.DB.Chain().IsBeacon())
 	if err != nil {
 		return nil, rpcDecodeHexError(hexStr)
 	}
