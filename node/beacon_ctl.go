@@ -74,7 +74,6 @@ func (beaconCtl *BeaconCtl) Init() error {
 		Listeners:   beaconCtl.cfg.Node.P2P.Listeners,
 	})
 	if err != nil {
-		// TODO: this logging could do with some beautifying.
 		beaconCtl.log.Error(fmt.Sprintf("Unable to start p2pServer on %v: %v",
 			beaconCtl.cfg.Node.P2P.Listeners, err))
 		return err
@@ -122,22 +121,6 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 
 	<-ctx.Done()
 
-	beaconCtl.log.Info("Gracefully shutting down the database...")
-	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
-		beaconCtl.log.Error("Can't close db", zap.Error(err))
-	}
-}
-
-func (beaconCtl *BeaconCtl) Shutdown() {
-	beaconCtl.log.Info("Gracefully shutting down the p2pServer...")
-	if err := beaconCtl.p2pServer.Stop(); err != nil {
-		beaconCtl.log.Error("Can't stop p2pServer ", zap.Error(err))
-	} else {
-		beaconCtl.p2pServer.WaitForShutdown()
-		beaconCtl.log.Info("Server shutdown complete")
-	}
-
-	// Ensure the database is sync'd and closed on shutdown.
 	beaconCtl.log.Info("Gracefully shutting down the database...")
 	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
 		beaconCtl.log.Error("Can't close db", zap.Error(err))

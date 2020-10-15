@@ -192,25 +192,6 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 
 	p2pServer.ConnManager = cmgr
 
-	// Start up persistent peers.
-	permanentPeers := cfg.ConnectPeers
-	if len(permanentPeers) == 0 {
-		permanentPeers = cfg.Peers
-	}
-
-	for _, addr := range permanentPeers {
-		netAddr, err := p2pServer.addrStringToNetAddr(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		go p2pServer.ConnManager.Connect(&connmgr.ConnReq{
-			Addr:      netAddr,
-			ShardID:   chainProvider.ChainCtx.ShardID(),
-			Permanent: true,
-		})
-	}
-
 	return &p2pServer, nil
 }
 
@@ -996,6 +977,25 @@ func (server *Server) Run(ctx context.Context) {
 	// Server startup time. Used for the uptime command for uptime calculation.
 	server.chain.StartupTime = time.Now().Unix()
 
+	// Start up persistent peers.
+	permanentPeers := server.cfg.ConnectPeers
+	if len(permanentPeers) == 0 {
+		permanentPeers = server.cfg.Peers
+	}
+
+	for _, addr := range permanentPeers {
+		netAddr, err := server.addrStringToNetAddr(addr)
+		if err != nil {
+			// return  err
+		}
+
+		go server.ConnManager.Connect(&connmgr.ConnReq{
+			Addr:      netAddr,
+			ShardID:   server.chain.ChainCtx.ShardID(),
+			Permanent: true,
+		})
+	}
+
 	// Start the peer handler which in turn starts the address and block
 	// managers.
 	server.wg.Add(1)
@@ -1021,30 +1021,6 @@ func (server *Server) Run(ctx context.Context) {
 	server.wg.Wait()
 
 	return
-}
-
-// Start begins accepting connections from peers.
-func (server *Server) Start() {
-	// Already started?
-	if atomic.AddInt32(&server.started, 1) != 1 {
-		return
-	}
-
-	server.logger.Trace("Starting Server")
-
-	// Server startup time. Used for the uptime command for uptime calculation.
-	server.chain.StartupTime = time.Now().Unix()
-
-	// Start the peer handler which in turn starts the address and block
-	// managers.
-	server.wg.Add(1)
-	go server.peerHandler()
-
-	if server.nat != nil {
-		server.wg.Add(1)
-		go server.upnpUpdateThread()
-	}
-
 }
 
 // Stop gracefully shuts down the Server by stopping and disconnecting all
