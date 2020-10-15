@@ -83,9 +83,7 @@ func (c *shardChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyShardBlock()
 }
 
-func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error {
-	h := blockHeader.BlockHash()
-	c.mmr.Append(big.NewInt(0), h.CloneBytes())
+func (c *shardChain) ValidateBlock(blockHeader wire.BlockHeader) error {
 	hashes, coding, codingBitSize := blockHeader.BeaconHeader().MergedMiningTreeCodingProof()
 	shardHeader := blockHeader.(*wire.ShardHeader)
 
@@ -94,6 +92,12 @@ func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error {
 	var validationRoot merged_mining_tree.BinHash
 	copy(validationRoot[:], rootHash[:])
 	return tree.Validate(codingBitSize, coding, hashes, shardHeader.MergeMiningNumber(), validationRoot)
+}
+
+func (c *shardChain) AcceptBlock(blockHeader wire.BlockHeader) error {
+	h := blockHeader.BlockHash()
+	c.mmr.Append(big.NewInt(0), h.CloneBytes())
+	return nil
 }
 
 func (c *shardChain) GenesisBlock() *wire.MsgBlock {

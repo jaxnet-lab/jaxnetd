@@ -70,6 +70,10 @@ func (c *beaconChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyBeaconBlock()
 }
 
+func (c *beaconChain) ValidateBlock(blockHeader wire.BlockHeader) error {
+	return nil
+}
+
 func (c *beaconChain) AcceptBlock(blockHeader wire.BlockHeader) error {
 	return nil
 }

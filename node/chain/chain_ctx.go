@@ -20,6 +20,7 @@ type IChainCtx interface {
 		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
 	NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode
 
+	ValidateBlock(blockHeader wire.BlockHeader) error
 	AcceptBlock(blockHeader wire.BlockHeader) error
 }
 
