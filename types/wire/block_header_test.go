@@ -200,7 +200,106 @@ func TestShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bits != bits2{
+	if bits != bits2 {
+		t.Error("Proof bits not equal")
+		return
+	}
+}
+
+func TestBlockShardHeaderEncoding(t *testing.T) {
+
+	sh := &ShardHeader{}
+	block := &MsgBlock{
+
+		ShardBlock: true,
+		Header:     sh,
+	}
+
+	sh.timestamp = time.Now()
+	sh.BCHeader = BeaconHeader{
+		version: BVersion(7),
+		bits:    1,
+		nonce:   2,
+		timestamp: time.Now().Add(1 * time.Hour),
+	}
+	sh.bits = 3
+	sh.mergeMiningNumber = 4
+	rand.Read(sh.merkleRoot[:])
+	rand.Read(sh.prevBlock[:])
+	sh.mergeMiningNumber = 5
+
+	hashes := make([]byte, 400)
+	coding := make([]byte, 300)
+	rand.Read(hashes[:])
+	rand.Read(coding[:])
+
+	var bits uint32 = 222
+
+	sh.BCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+
+	var b bytes.Buffer
+	wr := bufio.NewWriter(&b)
+
+	if err := block.BtcEncode(wr, 0, BaseEncoding); err != nil {
+		t.Error(err)
+		return
+	}
+	wr.Flush()
+
+	fmt.Printf("%x %d %d\n", b.Bytes(), wr.Size(), wr.Available())
+
+	block2 := &MsgBlock{
+		ShardBlock: true,
+		Header: &ShardHeader{
+		},
+	}
+	reader := bufio.NewReader(&b)
+
+	if err := block2.BtcDecode(reader, 0, BaseEncoding); err != nil {
+		t.Error(err)
+		return
+	}
+
+	sh2 := block2.Header.(*ShardHeader)
+
+	if sh.timestamp.Unix() != sh2.timestamp.Unix() {
+		t.Error("Timestamp not equal")
+		return
+	}
+
+	if sh.bits != sh2.bits {
+		t.Error("Bits not equal")
+		return
+	}
+
+	if sh.mergeMiningNumber != sh2.mergeMiningNumber {
+		t.Error("MergeMiningNumber not equal")
+		return
+	}
+
+	if bytes.Compare(sh.merkleRoot[:], sh2.merkleRoot[:]) != 0 {
+		t.Error("Merkle Root not equal")
+		return
+	}
+
+	if bytes.Compare(sh.prevBlock[:], sh2.prevBlock[:]) != 0 {
+		t.Error("prevBlock Root not equal")
+		return
+	}
+
+	hashes2, coding2, bits2 := sh.BCHeader.MergedMiningTreeCodingProof()
+
+	if bytes.Compare(hashes, hashes2) != 0 {
+		t.Error("Proof hashes not equal")
+		return
+	}
+
+	if bytes.Compare(coding, coding2) != 0 {
+		t.Error("Proof coding not equal")
+		return
+	}
+
+	if bits != bits2 {
 		t.Error("Proof bits not equal")
 		return
 	}

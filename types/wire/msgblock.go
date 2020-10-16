@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 
@@ -88,14 +89,38 @@ func (msg *MsgBlock) ClearTransactions() {
 	msg.Transactions = make([]*MsgTx, 0, defaultTransactionAlloc)
 }
 
+// BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
+// This is part of the Message interface implementation.
+// See Serialize for encoding blocks to be stored to disk, such as in a
+// database, as opposed to encoding blocks for the wire.
+func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+	//msg.ShardBlock
+	if err := msg.Header.Write(w); err != nil {
+		return err
+	}
+
+	err := encoder.WriteVarInt(w, uint64(len(msg.Transactions)))
+	if err != nil {
+		return err
+	}
+
+	for _, tx := range msg.Transactions {
+		err = tx.BtcEncode(w, pver, enc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
 	if msg.Header == nil {
-		// todo: fix this
-		msg.Header = EmptyBeaconHeader()
+		return errors.New("block not initialized")
 	}
 
 	if err := msg.Header.Read(r); err != nil {
@@ -104,7 +129,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnco
 
 	txCount, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	// Prevent more transactions than could possibly fit into a block.
@@ -204,30 +229,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 	return txLocs, nil
 }
 
-// BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
-// This is part of the Message interface implementation.
-// See Serialize for encoding blocks to be stored to disk, such as in a
-// database, as opposed to encoding blocks for the wire.
-func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 
-	if err := msg.Header.Write(w); err != nil {
-		return err
-	}
-
-	err := encoder.WriteVarInt(w, uint64(len(msg.Transactions)))
-	if err != nil {
-		return err
-	}
-
-	for _, tx := range msg.Transactions {
-		err = tx.BtcEncode(w, pver, enc)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 // Serialize encodes the block to w using a format that suitable for long-term
 // storage such as a database while respecting the Version field in the block.
