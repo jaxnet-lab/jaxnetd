@@ -240,13 +240,18 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
 
-	if err := block.BtcEncode(wr, 0, BaseEncoding); err != nil {
+	bCopy := block.Copy()
+
+	fmt.Println("Clone 1" , sh.BCHeader.treeEncoding)
+	fmt.Println("Clone 2" , bCopy.Header.BeaconHeader().treeEncoding)
+
+	if err := bCopy.BtcEncode(wr, 0, BaseEncoding); err != nil {
 		t.Error(err)
 		return
 	}
 	wr.Flush()
 
-	fmt.Printf("%x %d %d\n", b.Bytes(), wr.Size(), wr.Available())
+
 
 	block2 := &MsgBlock{
 		ShardBlock: true,
@@ -287,8 +292,9 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	hashes2, coding2, bits2 := sh.BCHeader.MergedMiningTreeCodingProof()
+	hashes2, coding2, bits2 := sh2.BCHeader.MergedMiningTreeCodingProof()
 
+	fmt.Println(hashes2, coding2, bits2)
 	if bytes.Compare(hashes, hashes2) != 0 {
 		t.Error("Proof hashes not equal")
 		return
