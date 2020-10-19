@@ -29,11 +29,7 @@ type chainController struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	beacon BeaconCtl
-
-	// todo: repair
-	miner *cpuminer.CPUMiner
-
+	beacon      BeaconCtl
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
 	shardsMutex sync.RWMutex
@@ -41,6 +37,7 @@ type chainController struct {
 	rpc         rpcRO
 	// -------------------------------
 
+	miner *cpuminer.CPUMiner
 }
 
 func Controller(logger *zap.Logger) *chainController {
@@ -103,7 +100,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
 	chainCtl.miner = cpuminer.New(&cpuminer.Config{
 		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
-		BlockTemplateGenerator: chainCtl.beacon.BlkTmplGenerator(),
+		BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
 		MiningAddrs:            chainCtl.beacon.chainProvider.MiningAddrs,
 
 		ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
@@ -145,13 +142,11 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
 	nodeRPC := rpc.NewNodeRPC(chainCtl, chainCtl.logger)
-	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr,
-		chainCtl.beacon.BlkTmplGenerator(), chainCtl.logger)
+	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
 	for shardID, ro := range chainCtl.shardsCtl {
-		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr,
-			ro.ctl.BlkTmplGenerator(beaconRPC.BlockGenerator), chainCtl.logger)
+		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr, chainCtl.logger)
 	}
 
 	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,

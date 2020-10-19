@@ -12,7 +12,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -26,11 +25,9 @@ type ShardRPC struct {
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
 	connMgr netsync.P2PConnManager,
-	generator *mining.BlkTmplGenerator,
 	logger *zap.Logger) *ShardRPC {
 	rpc := &ShardRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, generator,
-			logger.With(zap.String("ctx", "shard_rpc"))),
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger.With(zap.String("ctx", "shard_rpc"))),
 	}
 
 	rpc.ComposeHandlers()

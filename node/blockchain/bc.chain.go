@@ -78,11 +78,22 @@ type IndexManager interface {
 
 // Config is a descriptor which specifies the blockchain instance configuration.
 type Config struct {
+	// todo: combine this fields
+
 	// DB defines the database which houses the blocks and will be used to
 	// store all metadata created by this package such as the utxo set.
 	//
 	// This field is required.
 	DB database.DB
+
+	// ChainParams identifies which chain parameters the chain is associated
+	// with.
+	//
+	// This field is required.
+	ChainParams *chaincfg.Params
+	ChainCtx    chain2.IChainCtx
+	BlockGen    ChainBlockGenerator
+	// ------ ------ ------ ------ ------
 
 	// Interrupt specifies a channel the caller can close to signal that
 	// long running operations, such as catching up indexes or performing
@@ -90,12 +101,6 @@ type Config struct {
 	//
 	// This field can be nil if the caller does not desire the behavior.
 	Interrupt <-chan struct{}
-
-	// ChainParams identifies which chain parameters the chain is associated
-	// with.
-	//
-	// This field is required.
-	ChainParams *chaincfg.Params
 
 	// Checkpoints hold caller-defined checkpoints that should be added to
 	// the default checkpoints in ChainParams.  Checkpoints must be sorted
@@ -138,8 +143,6 @@ type Config struct {
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
 	HashCache *txscript.HashCache
-
-	ChainCtx chain2.IChainCtx
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -180,9 +183,13 @@ func New(config *Config) (*BlockChain, error) {
 	b := BlockChain{
 		checkpoints:         config.Checkpoints,
 		checkpointsByHeight: checkpointsByHeight,
-		db:                  config.DB,
-		chain:               config.ChainCtx,
-		chainParams:         params,
+
+		// todo: combine this fields
+		db:          config.DB,
+		chain:       config.ChainCtx,
+		blockGen:    config.BlockGen,
+		chainParams: params,
+		// ------ ------ ------ ------ ------
 		TimeSource:          config.TimeSource,
 		SigCache:            config.SigCache,
 		indexManager:        config.IndexManager,
@@ -232,6 +239,15 @@ func New(config *Config) (*BlockChain, error) {
 	return &b, nil
 }
 
+type ChainBlockGenerator interface {
+	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
+
+	AcceptBlock(blockHeader wire.BlockHeader) error
+
+	ValidateBlock(blockHeader wire.BlockHeader) error
+}
+
 // BlockChain provides functions for working with the bitcoin block chain.
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, orphan handling, checkpoint handling, and best chain
@@ -242,13 +258,19 @@ type BlockChain struct {
 	// separate mutex.
 	checkpoints         []chaincfg.Checkpoint
 	checkpointsByHeight map[int32]*chaincfg.Checkpoint
-	db                  database.DB
-	chainParams         *chaincfg.Params
-	TimeSource          chaindata.MedianTimeSource
-	SigCache            *txscript.SigCache
-	indexManager        IndexManager
-	HashCache           *txscript.HashCache
-	chain               chain2.IChainCtx
+
+	indexManager IndexManager
+
+	// todo: combine this fields
+	chainParams *chaincfg.Params
+	chain       chain2.IChainCtx
+	blockGen    ChainBlockGenerator
+	db          database.DB
+	// ------ ------ ------ ------ ------
+
+	TimeSource chaindata.MedianTimeSource
+	SigCache   *txscript.SigCache
+	HashCache  *txscript.HashCache
 
 	// The following fields are calculated based upon the provided chain
 	// parameters.  They are also set when the instance is created and
@@ -431,6 +453,10 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 
 func (b *BlockChain) Chain() chain2.IChainCtx {
 	return b.chain
+}
+
+func (b *BlockChain) ChainBlockGenerator() ChainBlockGenerator {
+	return b.blockGen
 }
 
 // addOrphanBlock adds the passed block (which is already determined to be

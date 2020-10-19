@@ -2,8 +2,12 @@ package node
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"math/big"
 	"net"
+	"path"
+	"strconv"
 	"strings"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
@@ -12,8 +16,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 	"go.uber.org/zap"
 )
 
@@ -81,7 +85,7 @@ func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.
 	}
 }
 
-func (shardCtl *ShardCtl) Init() error {
+func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRun bool) error {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
@@ -89,8 +93,22 @@ func (shardCtl *ShardCtl) Init() error {
 		return err
 	}
 
+	mmrDb, err := mmr.BadgerDB(path.Join(shardCtl.cfg.DataDir,
+		"shard_"+strconv.FormatUint(uint64(shardCtl.chain.ShardID()), 10), "mmr"))
+	if err != nil {
+		shardCtl.log.Error("Can't init shard mmr DB", zap.Error(err))
+		return err
+	}
+
+	mountainRange := mmr.Mmr(sha256.New, mmrDb)
+	if firstRun {
+		hash := shardCtl.chain.GenesisBlock().BlockHash()
+		mountainRange.Set(0, big.NewInt(0), hash.CloneBytes())
+	}
+
+	blockGen := shard.NewChainBlockGenerator(beaconBlockGen, mountainRange)
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
-		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, db, shardCtl.log)
+		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
 	if err != nil {
 		shardCtl.log.Error("unable to init ChainProvider for shard", zap.Error(err))
 		return err
@@ -119,25 +137,6 @@ func (shardCtl *ShardCtl) Init() error {
 
 func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
 	return shardCtl.chainProvider
-}
-
-func (shardCtl *ShardCtl) BlkTmplGenerator(
-	beaconBlockGen func(useCoinbase bool) (mining.BlockTemplate, error)) *mining.BlkTmplGenerator {
-	// Create the mining policy and block template generator based on the
-	// configuration options.
-	policy := mining.Policy{
-		BlockMinWeight:    shardCtl.cfg.Node.BeaconChain.BlockMinWeight,
-		BlockMaxWeight:    shardCtl.cfg.Node.BeaconChain.BlockMaxWeight,
-		BlockMinSize:      shardCtl.cfg.Node.BeaconChain.BlockMinSize,
-		BlockMaxSize:      shardCtl.cfg.Node.BeaconChain.BlockMaxSize,
-		BlockPrioritySize: shardCtl.cfg.Node.BeaconChain.BlockPrioritySize,
-		TxMinFreeFee:      shardCtl.cfg.Node.BeaconChain.MinRelayTxFeeValues,
-	}
-	return mining.NewBlkTmplGenerator(&policy,
-		shardCtl.chainProvider.ChainCtx,
-		&shard.HeaderGenerator{BlockGenerator: beaconBlockGen},
-		shardCtl.chainProvider.TxMemPool,
-		shardCtl.chainProvider.BlockChain())
 }
 
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
