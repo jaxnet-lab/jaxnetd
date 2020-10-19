@@ -40,7 +40,7 @@ type CommonChainRPC struct {
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	generator *mining.BlkTmplGenerator, logger *zap.Logger) *CommonChainRPC {
+	logger *zap.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
@@ -50,7 +50,7 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P
 	}
 	rpc.ComposeHandlers()
 
-	rpc.gbtWorkState = mining.NewGbtWorkState(chainProvider.TimeSource, generator, logger)
+	rpc.gbtWorkState = chainProvider.GbtWorkState()
 	rpc.helpCache = newHelpCacher(rpc)
 	return rpc
 }
@@ -690,7 +690,9 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 	if len(hexStr)%2 != 0 {
 		hexStr = "0" + c.HexBlock
 	}
+
 	serializedBlock, err := hex.DecodeString(hexStr)
+	fmt.Printf("HandleSubmitBlock: %s, Beacon: %t \n", hexStr, server.chainProvider.DB.Chain().IsBeacon())
 	if err != nil {
 		return nil, rpcDecodeHexError(hexStr)
 	}

@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
+	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"go.uber.org/zap"
@@ -90,10 +91,14 @@ type ChainProvider struct {
 	ChainCtx chain.IChainCtx
 	logger   *zap.Logger
 	config   *ChainRuntimeConfig
+
+	blockTmplGenerator *mining.BlkTmplGenerator
+	gbtWorkState       *mining.GBTWorkState
 }
 
 func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.IChainCtx,
-	db database.DB, log *zap.Logger) (*ChainProvider, error) {
+	blockGen blockchain.ChainBlockGenerator, db database.DB, log *zap.Logger) (*ChainProvider, error) {
+	var err error
 	chainProvider := &ChainProvider{
 		ChainCtx:    chainCtx,
 		ChainParams: chainCtx.Params(),
@@ -105,7 +110,10 @@ func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chai
 		config:      &cfg,
 	}
 
-	var err error
+	chainProvider.MiningAddrs, err = cfg.ParseMiningAddresses(chainProvider.ChainCtx.Params())
+	if err != nil {
+		return nil, err
+	}
 
 	// Search for a FeeEstimator state in the database. If none can be found
 	// or if it cannot be loaded, create a new one.
@@ -113,14 +121,11 @@ func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chai
 		return nil, err
 	}
 
-	if err = chainProvider.initBlockchainAndMempool(ctx, cfg); err != nil {
+	if err = chainProvider.initBlockchainAndMempool(ctx, cfg, blockGen); err != nil {
 		return nil, err
 	}
 
-	chainProvider.MiningAddrs, err = cfg.ParseMiningAddresses(chainProvider.ChainCtx.Params())
-	if err != nil {
-		return nil, err
-	}
+	chainProvider.initBlkTmplGenerator()
 
 	return chainProvider, nil
 }
@@ -174,11 +179,58 @@ func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
 	return chainProvider.blockChain
 }
 
+func (chainProvider *ChainProvider) initBlkTmplGenerator() {
+	// Create the mining policy and block template generator based on the
+	// configuration options.
+	policy := mining.Policy{
+		BlockMinWeight:    chainProvider.config.BlockMinWeight,
+		BlockMaxWeight:    chainProvider.config.BlockMaxWeight,
+		BlockMinSize:      chainProvider.config.BlockMinSize,
+		BlockMaxSize:      chainProvider.config.BlockMaxSize,
+		BlockPrioritySize: chainProvider.config.BlockPrioritySize,
+		TxMinFreeFee:      chainProvider.config.MinRelayTxFeeValues,
+	}
+
+	chainProvider.blockTmplGenerator = mining.NewBlkTmplGenerator(&policy,
+		chainProvider.ChainCtx, chainProvider.TxMemPool, chainProvider.blockChain)
+
+	chainProvider.gbtWorkState = mining.NewGbtWorkState(chainProvider.TimeSource,
+		chainProvider.blockTmplGenerator, chainProvider.logger)
+
+}
+
+func (chainProvider *ChainProvider) BlkTmplGenerator() *mining.BlkTmplGenerator {
+	return chainProvider.blockTmplGenerator
+}
+
+func (chainProvider *ChainProvider) GbtWorkState() *mining.GBTWorkState {
+	return chainProvider.gbtWorkState
+}
+
+func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool) (mining.BlockTemplate, error) {
+	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue)
+}
+
+func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
+	snap := chainProvider.BlockChain().BestSnapshot()
+	if snap == nil {
+		return 0, nil
+	}
+
+	bestBlock, err := chainProvider.BlockChain().BlockByHash(&snap.Hash)
+	if err != nil {
+		return 0, err
+	}
+
+	return bestBlock.MsgBlock().Header.BeaconHeader().Shards(), nil
+}
+
 func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
 	return chainProvider.MiningAddrs
 }
 
-func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig) error {
+func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,
+	blockGen blockchain.ChainBlockGenerator) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)
 
 	// Create a new blockchain instance with the appropriate configuration.
@@ -193,6 +245,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 		SigCache:     chainProvider.SigCache,
 		HashCache:    chainProvider.HashCache,
 		ChainCtx:     chainProvider.ChainCtx,
+		BlockGen:     blockGen,
 	})
 	if err != nil {
 		return err

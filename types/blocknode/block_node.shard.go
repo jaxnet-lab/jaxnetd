@@ -115,7 +115,7 @@ func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardB
 			merkleRoot:   beaconHeader.MerkleRoot(),
 			mmrRoot:      beaconHeader.MergeMiningRoot(),
 			shards:       beaconHeader.Shards(),
-			treeEncoding: beaconHeader.MergeMiningTrie(),
+			treeEncoding: beaconHeader.MergedMiningTree(),
 			prevHash:     beaconHeader.PrevBlock(),
 		},
 	}
@@ -173,7 +173,7 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 		node.bcHeader.bits,
 		node.bcHeader.nonce)
 	beaconHeader.SetShards(node.bcHeader.shards)
-	beaconHeader.SetMergeMiningTrie(node.bcHeader.treeEncoding)
+	beaconHeader.SetMergedMiningTree(node.bcHeader.treeEncoding)
 
 	header := wire.NewShardBlockHeader(
 		*prevHash,

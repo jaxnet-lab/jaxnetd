@@ -11,7 +11,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"go.uber.org/zap"
@@ -23,10 +22,9 @@ type BeaconRPC struct {
 
 func NewBeaconRPC(chainProvider *cprovider.ChainProvider,
 	connMgr netsync.P2PConnManager,
-	generator *mining.BlkTmplGenerator,
 	logger *zap.Logger) *BeaconRPC {
 	rpc := &BeaconRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, generator,
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr,
 			logger.With(zap.String("ctx", "beacon_rpc"))),
 	}
 	rpc.ComposeHandlers()

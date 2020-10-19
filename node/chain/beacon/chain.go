@@ -51,7 +51,7 @@ func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRoot
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
-	return wire.NewBeaconBlockHeader(
+	header := wire.NewBeaconBlockHeader(
 		version,
 		prevHash,
 		merkleRootHash,
@@ -59,7 +59,13 @@ func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRoot
 		timestamp,
 		bits,
 		nonce,
-	), nil
+	)
+
+	if version.ExpansionApproved() {
+		header.SetShards(header.Shards() + 1)
+	}
+
+	return header, nil
 }
 
 func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
@@ -70,6 +76,10 @@ func (c *beaconChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyBeaconBlock()
 }
 
-func (c *beaconChain) AcceptBlock(blockHeader wire.BlockHeader) error{
+func (c *beaconChain) ValidateBlock(wire.BlockHeader) error {
+	return nil
+}
+
+func (c *beaconChain) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }

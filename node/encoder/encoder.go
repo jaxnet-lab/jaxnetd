@@ -204,14 +204,22 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	t := reflect.TypeOf(element)
 	v := reflect.ValueOf(element)
-	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Array {
+	if t.Kind() == reflect.Ptr && (t.Elem().Kind() == reflect.Slice) {
 		v := v.Elem()
-		bytes := make([]byte, v.Len())
-		_, err := io.ReadFull(r, bytes[:])
+
+		length, err := BinarySerializer.Uint32(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		reflect.Copy(v, reflect.ValueOf(bytes))
+
+		bytes := make([]byte, length)
+		_, err = io.ReadFull(r, bytes[:])
+		if err != nil {
+			return err
+		}
+		reflectSlice := reflect.MakeSlice(v.Type(), int(length), int(length))
+		v.Set(reflectSlice)
+		reflect.Copy(reflectSlice, reflect.ValueOf(bytes))
 		return nil
 	}
 
@@ -224,7 +232,6 @@ func ReadElement(r io.Reader, element interface{}) error {
 // calls to readElement.
 func ReadElements(r io.Reader, elements ...interface{}) error {
 	for _, element := range elements {
-
 		err := ReadElement(r, element)
 		if err != nil {
 			return err
@@ -235,7 +242,6 @@ func ReadElements(r io.Reader, elements ...interface{}) error {
 
 // writeElement writes the little endian representation of element to w.
 func WriteElement(w io.Writer, element interface{}) error {
-
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -324,13 +330,19 @@ func WriteElement(w io.Writer, element interface{}) error {
 		return nil
 	}
 
+
 	t := reflect.TypeOf(element)
 	v := reflect.ValueOf(element)
-	if t.Kind() == reflect.Array {
-		bytes := make([]byte, v.Len())
-		reflect.Copy(reflect.ValueOf(bytes), v)
+	if t.Kind() == reflect.Ptr && (t.Elem().Kind() == reflect.Slice) {
+		if err := BinarySerializer.PutUint32(w, littleEndian, uint32(v.Elem().Len())); err != nil {
+			return err
+
+		}
+		bytes := make([]byte, v.Elem().Len())
+		reflect.Copy(reflect.ValueOf(bytes), v.Elem())
 		_, err := w.Write(bytes)
 		return err
+
 	}
 
 	// Fall back to the slower binary.Write if a fast path was not available
