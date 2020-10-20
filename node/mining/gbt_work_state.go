@@ -405,6 +405,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		PreviousHash: header.PrevBlock().String(),
 		Height:       int64(template.Height),
 		Version:      int32(header.Version()),
+		Shards:       header.BeaconHeader().Shards(),
 		WeightLimit:  chaindata.MaxBlockWeight,
 		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
 		SizeLimit:    wire.MaxBlockPayload,

@@ -666,6 +666,19 @@ func (server *Server) newPeerConfig(sp *ServerPeer) *peer.Config {
 	}
 }
 
+func (server *Server) handlePeerRedirect(peerAddress, newAddress *wire.NetAddress) {
+	netAddr := &net.TCPAddr{
+		IP:   newAddress.IP,
+		Port: int(newAddress.Port),
+	}
+	server.addrManager.Replace(peerAddress, newAddress)
+	go server.ConnManager.Connect(&connmgr.ConnReq{
+		Addr:      netAddr,
+		ShardID:   server.chain.ChainCtx.ShardID(),
+		Permanent: true,
+	})
+}
+
 func (server *Server) handlePeerRedirect(redirect *wire.MsgPortRedirect) {
 	netAddr := &net.TCPAddr{
 		IP:   redirect.IP,

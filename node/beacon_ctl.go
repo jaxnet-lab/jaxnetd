@@ -11,7 +11,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"go.uber.org/zap"
 )
@@ -51,8 +50,15 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
+	blockGen := beacon.NewChainBlockGenerator(beacon.StateProvider{ShardCount: func() (uint32, error) {
+		if beaconCtl.chainProvider != nil && beaconCtl.chainProvider.BlockChain() != nil {
+			return beaconCtl.chainProvider.ShardCount()
+		}
+		return 0, nil
+	}})
+
 	beaconCtl.chainProvider, err = cprovider.NewChainProvider(beaconCtl.ctx,
-		beaconCtl.cfg.Node.BeaconChain, chain, db, beaconCtl.log)
+		beaconCtl.cfg.Node.BeaconChain, chain, blockGen, db, beaconCtl.log)
 	if err != nil {
 		beaconCtl.log.Error("unable to init ChainProvider for beacon", zap.Error(err))
 		return err
@@ -81,24 +87,6 @@ func (beaconCtl *BeaconCtl) Init() error {
 
 	// todo: improve
 	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
-}
-
-func (beaconCtl *BeaconCtl) BlkTmplGenerator() *mining.BlkTmplGenerator {
-	// Create the mining policy and block template generator based on the
-	// configuration options.
-	policy := mining.Policy{
-		BlockMinWeight:    beaconCtl.cfg.Node.BeaconChain.BlockMinWeight,
-		BlockMaxWeight:    beaconCtl.cfg.Node.BeaconChain.BlockMaxWeight,
-		BlockMinSize:      beaconCtl.cfg.Node.BeaconChain.BlockMinSize,
-		BlockMaxSize:      beaconCtl.cfg.Node.BeaconChain.BlockMaxSize,
-		BlockPrioritySize: beaconCtl.cfg.Node.BeaconChain.BlockPrioritySize,
-		TxMinFreeFee:      beaconCtl.cfg.Node.BeaconChain.MinRelayTxFeeValues,
-	}
-	return mining.NewBlkTmplGenerator(&policy,
-		beaconCtl.chainProvider.ChainCtx,
-		beaconCtl.chainProvider.ChainCtx,
-		beaconCtl.chainProvider.TxMemPool,
-		beaconCtl.chainProvider.BlockChain())
 }
 
 func (beaconCtl *BeaconCtl) ChainProvider() *cprovider.ChainProvider {

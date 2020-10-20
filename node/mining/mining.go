@@ -351,21 +351,15 @@ func medianAdjustedTime(chainState *chaindata.BestState, timeSource chaindata.Me
 	return newTimestamp
 }
 
-type headerProvider interface {
-	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
-}
-
 // BlkTmplGenerator provides a type that can be used to generate block templates
 // based on a given mining policy and source of transactions to choose from.
 // It also houses additional state required in order to ensure the templates
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
-	policy         *Policy
-	chainCtx       chain.IChainCtx
-	txSource       TxSource
-	blockChain     *blockchain.BlockChain
-	headerProvider headerProvider
+	policy     *Policy
+	chainCtx   chain.IChainCtx
+	txSource   TxSource
+	blockChain *blockchain.BlockChain
 }
 
 // NewBlkTmplGenerator returns a new block template generator for the given
@@ -376,16 +370,14 @@ type BlkTmplGenerator struct {
 // consensus rules.
 func NewBlkTmplGenerator(policy *Policy,
 	chainCtx chain.IChainCtx,
-	headerProvider headerProvider,
 	txSource TxSource,
 	chain *blockchain.BlockChain) *BlkTmplGenerator {
 
 	return &BlkTmplGenerator{
-		policy:         policy,
-		chainCtx:       chainCtx,
-		txSource:       txSource,
-		blockChain:     chain,
-		headerProvider: headerProvider,
+		policy:     policy,
+		chainCtx:   chainCtx,
+		txSource:   txSource,
+		blockChain: chain,
 	}
 }
 
@@ -483,7 +475,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 
 	var msgBlock = g.chainCtx.EmptyBlock()
 
-	msgBlock.Header, err = g.headerProvider.NewBlockHeader(
+	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(
 		nextBlockVersion,
 		best.Hash,
 		*merkles[len(merkles)-1],

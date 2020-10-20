@@ -992,6 +992,21 @@ func (a *AddrManager) SetServices(addr *wire.NetAddress, services wire.ServiceFl
 	}
 }
 
+// Replace change old address in case when peer provides redirect message.
+func (a *AddrManager) Replace(addr, newAddress *wire.NetAddress) {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	ka := a.find(addr)
+	if ka == nil {
+		return
+	}
+
+	// ka.na is immutable, so replace it.
+	naCopy := *newAddress
+	ka.na = &naCopy
+}
+
 // AddLocalAddress adds na to the list of known local addresses to advertise
 // with the given priority.
 func (a *AddrManager) AddLocalAddress(na *wire.NetAddress, priority AddressPriority) error {

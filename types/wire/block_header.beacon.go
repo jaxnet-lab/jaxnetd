@@ -209,9 +209,8 @@ func (h *BeaconHeader) Copy() BlockHeader {
 
 	// all fields except this are passed by value
 	// so we manually copy the following fields to prevent side effects
-	clone.treeEncoding = []uint8{}
+	clone.treeEncoding = make([]byte, len(h.treeEncoding))
 	copy(clone.treeEncoding, h.treeEncoding)
-
 	return &clone
 }
 

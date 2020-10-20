@@ -46,22 +46,6 @@ func (c *beaconChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
 
-func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error) {
-
-	// Limit the timestamp to one second precision since the protocol
-	// doesn't support better.
-	return wire.NewBeaconBlockHeader(
-		version,
-		prevHash,
-		merkleRootHash,
-		chainhash.Hash{},
-		timestamp,
-		bits,
-		nonce,
-	), nil
-}
-
 func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
 	return blocknode.NewBeaconBlockNode(blockHeader, parent)
 }
@@ -70,10 +54,55 @@ func (c *beaconChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyBeaconBlock()
 }
 
-func (c *beaconChain) ValidateBlock(blockHeader wire.BlockHeader) error {
+type StateProvider struct {
+	ShardCount func() (uint32, error)
+}
+
+type BlockGenerator struct {
+	stateInfo StateProvider
+}
+
+func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
+	return &BlockGenerator{
+		stateInfo: stateInfo,
+	}
+}
+
+func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+	timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error) {
+
+	// Limit the timestamp to one second precision since the protocol
+	// doesn't support better.
+	header := wire.NewBeaconBlockHeader(
+		version,
+		prevHash,
+		merkleRootHash,
+		chainhash.Hash{},
+		timestamp,
+		bits,
+		nonce,
+	)
+
+	count, err := c.stateInfo.ShardCount()
+	if err != nil {
+		// an error will occur if it is impossible
+		// to get the last block from the chain state
+		return header, err
+	}
+
+	header.SetShards(count)
+
+	if version.ExpansionMade() {
+		header.SetShards(count + 1)
+	}
+
+	return header, nil
+}
+
+func (c *BlockGenerator) ValidateBlock(wire.BlockHeader) error {
 	return nil
 }
 
-func (c *beaconChain) AcceptBlock(blockHeader wire.BlockHeader) error {
+func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }
