@@ -1909,7 +1909,7 @@ func (peer *Peer) readRemoteVersionMsg() error {
 	// Read their version message.
 	remoteMsg, _, err := peer.readMessage(wire.LatestEncoding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var msg *wire.MsgVersion
@@ -1938,7 +1938,11 @@ func (peer *Peer) readRemoteVersionMsg() error {
 
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
-		return errors.New("disconnecting peer connected to self")
+		return nil, errors.New("disconnecting peer connected to self")
+	}
+
+	if !inbound && peer.chain.ShardID() != msg.Shard {
+		return nil, errors.New("shardID of remote peer is not match")
 	}
 
 	if peer.chain.ShardID() != msg.Shard {
@@ -2040,7 +2044,7 @@ func (peer *Peer) readRemoteVersionMsg() error {
 		return errors.New(reason)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // readRemoteVerAckMsg waits for the next message to arrive from the remote
