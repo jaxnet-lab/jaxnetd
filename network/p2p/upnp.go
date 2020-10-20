@@ -1,5 +1,3 @@
-package p2p
-
 // Upnp code taken from Taipei Torrent license is below:
 // Copyright (c) 2010 Jack Palevich. All rights reserved.
 //
@@ -28,6 +26,7 @@ package p2p
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+package p2p
 
 // Just enough UPnP to be able to forward ports
 //

@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package mmr
 
 import (
@@ -55,7 +58,7 @@ func (m *mmr) Copy(db IStore) IMountainRange {
 	}
 
 	nodes := m.db.Nodes()
-	for _, index := range nodes{
+	for _, index := range nodes {
 		if node, ok := m.db.GetNode(index); ok {
 			res.db.SetNode(index, node)
 		}
@@ -82,7 +85,7 @@ func (m *mmr) Root() (root Hash) {
 	return m.GetRoot(uint64(len(m.db.Blocks())))
 }
 
-func (m *mmr) Append(weight *big.Int, hash []byte) (root Hash){
+func (m *mmr) Append(weight *big.Int, hash []byte) (root Hash) {
 	m.Lock()
 	defer m.Unlock()
 	index := uint64(len(m.db.Blocks()))

@@ -1,4 +1,5 @@
 // Copyright (c) 2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +12,6 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
-
 
 // TestTxFeePrioHeap ensures the priority queue for transaction fees and
 // priorities works as expected.

@@ -1,11 +1,15 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package mmr
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/sha3"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 )
 
 func TestBadgerProof(t *testing.T) {
@@ -18,7 +22,7 @@ func TestBadgerProof(t *testing.T) {
 	for i < 10 {
 		data := make([]byte, 32)
 		data[0] = byte(i)
-		//rand.Read(data[:32])
+		// rand.Read(data[:32])
 		mmr := mmrInstance.Set(i, big.NewInt(int64(i)), data[:])
 		i++
 		fmt.Printf("\t%d. mmr: %x\n", i, mmr)

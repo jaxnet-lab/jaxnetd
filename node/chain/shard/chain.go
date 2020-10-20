@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package shard
 
 import (
@@ -101,7 +104,7 @@ func (c *BlockGenerator) ValidateBlock(header wire.BlockHeader) error {
 
 	treeValidationShouldBeSkipped := false
 	mmNumber := shardHeader.MergeMiningNumber()
-	if mmNumber % 2 == 0 {
+	if mmNumber%2 == 0 {
 		if header.BeaconHeader().Shards() == mmNumber {
 			if mmNumber <= lastKnownShardsAmount {
 				treeValidationShouldBeSkipped = true

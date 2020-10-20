@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package wire
 
 import (
@@ -217,9 +220,9 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	sh.timestamp = time.Now()
 	sh.BCHeader = BeaconHeader{
-		version: BVersion(7),
-		bits:    1,
-		nonce:   2,
+		version:   BVersion(7),
+		bits:      1,
+		nonce:     2,
 		timestamp: time.Now().Add(1 * time.Hour),
 	}
 	sh.bits = 3
@@ -242,8 +245,8 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	bCopy := block.Copy()
 
-	fmt.Println("Clone 1" , sh.BCHeader.treeEncoding)
-	fmt.Println("Clone 2" , bCopy.Header.BeaconHeader().treeEncoding)
+	fmt.Println("Clone 1", sh.BCHeader.treeEncoding)
+	fmt.Println("Clone 2", bCopy.Header.BeaconHeader().treeEncoding)
 
 	if err := bCopy.BtcEncode(wr, 0, BaseEncoding); err != nil {
 		t.Error(err)
@@ -251,12 +254,9 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	}
 	wr.Flush()
 
-
-
 	block2 := &MsgBlock{
 		ShardBlock: true,
-		Header: &ShardHeader{
-		},
+		Header:     &ShardHeader{},
 	}
 	reader := bufio.NewReader(&b)
 

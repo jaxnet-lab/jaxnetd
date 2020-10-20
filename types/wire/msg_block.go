@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -228,8 +229,6 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 
 	return txLocs, nil
 }
-
-
 
 // Serialize encodes the block to w using a format that suitable for long-term
 // storage such as a database while respecting the Version field in the block.

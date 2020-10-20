@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -222,6 +223,7 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 			fetchSet[prevOut] = struct{}{}
 		}
 	}
+	// todo: allow swap
 	err := view.FetchUtxos(b.db, fetchSet)
 	if err != nil {
 		return err

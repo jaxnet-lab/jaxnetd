@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package encoder
 
 import (
@@ -329,7 +332,6 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 		return nil
 	}
-
 
 	t := reflect.TypeOf(element)
 	v := reflect.ValueOf(element)

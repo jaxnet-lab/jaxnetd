@@ -1,12 +1,16 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package mmr
 
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/sha3"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 )
 
 func TestInitMmr(t *testing.T) {
