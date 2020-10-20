@@ -679,19 +679,6 @@ func (server *Server) handlePeerRedirect(peerAddress, newAddress *wire.NetAddres
 	})
 }
 
-func (server *Server) handlePeerRedirect(redirect *wire.MsgPortRedirect) {
-	netAddr := &net.TCPAddr{
-		IP:   redirect.IP,
-		Port: int(redirect.Port),
-	}
-
-	go server.ConnManager.Connect(&connmgr.ConnReq{
-		Addr:      netAddr,
-		ShardID:   server.chain.ChainCtx.ShardID(),
-		Permanent: true,
-	})
-}
-
 // inboundPeerConnected is invoked by the connection manager when a new inbound
 // connection is established.  It initializes a new inbound server peer
 // instance, associates it with the connection, and starts a goroutine to wait
