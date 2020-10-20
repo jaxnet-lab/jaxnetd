@@ -157,6 +157,10 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 		list = state.outboundPeers
 	}
 
+	// if sp.Peer.RedirectRequested() && sp.Peer.NewAddress() != nil{
+	// 	server.addrManager.Replace(sp.Peer.NA(), sp.Peer.NewAddress())
+	// }
+
 	// Regardless of whether the peer was found in our list, we'll inform
 	// our connection manager about the disconnection. This can happen if we
 	// process a peer's `done` message before its `add`.

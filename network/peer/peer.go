@@ -6,9 +6,7 @@
 package peer
 
 import (
-	"bytes"
 	"container/list"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -19,7 +17,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
@@ -283,7 +281,7 @@ type Config struct {
 
 	// ChainsPortsProvider is a function to get the port of some p2p shard.
 	ChainsPortsProvider func(shardID uint32) (int, bool)
-	TriggerRedirect     func(redirect *wire.MsgPortRedirect)
+	TriggerRedirect     func(peerAddress, newAddress *wire.NetAddress)
 }
 
 // minUint32 is a helper function to return the minimum of two uint32s.
@@ -491,6 +489,9 @@ type Peer struct {
 	outQuit       chan struct{}
 	quit          chan struct{}
 	log           *zap.Logger
+
+	redirectRequested bool
+	newAddress        *wire.NetAddress
 }
 
 // String returns the peer's address and directionality as a human-readable
@@ -580,6 +581,18 @@ func (peer *Peer) ID() int32 {
 	peer.flagsMtx.Unlock()
 
 	return id
+}
+
+func (peer *Peer) RedirectRequested() bool {
+	return peer.redirectRequested
+}
+
+func (peer *Peer) NewAddress() *wire.NetAddress {
+	peer.flagsMtx.Lock()
+	na := *peer.newAddress
+	peer.flagsMtx.Unlock()
+
+	return &na
 }
 
 // NA returns the peer network address.
@@ -1030,21 +1043,21 @@ func (peer *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, [
 
 	// Use closures to log expensive operations so they are only run when
 	// the logging level requires it.
-	log.Debugf("%v", newLogClosure(func() string {
-		// Debug summary of message.
-		summary := messageSummary(msg)
-		if len(summary) > 0 {
-			summary = " (" + summary + ")"
-		}
-		return fmt.Sprintf("Received %v%s from %s",
-			msg.Command(), summary, peer)
-	}))
-	log.Tracef("%v", newLogClosure(func() string {
-		return spew.Sdump(msg)
-	}))
-	log.Tracef("%v", newLogClosure(func() string {
-		return spew.Sdump(buf)
-	}))
+	// log.Debugf("%v", newLogClosure(func() string {
+	// 	// Debug summary of message.
+	// 	summary := messageSummary(msg)
+	// 	if len(summary) > 0 {
+	// 		summary = " (" + summary + ")"
+	// 	}
+	// 	return fmt.Sprintf("Received %v%s from %s",
+	// 		msg.Command(), summary, peer)
+	// }))
+	// log.Tracef("%v", newLogClosure(func() string {
+	// 	return spew.Sdump(msg)
+	// }))
+	// log.Tracef("%v", newLogClosure(func() string {
+	// 	return spew.Sdump(buf)
+	// }))
 
 	return msg, buf, nil
 }
@@ -1058,27 +1071,27 @@ func (peer *Peer) writeMessage(msg wire.Message, enc encoder.MessageEncoding) er
 
 	// Use closures to log expensive operations so they are only run when
 	// the logging level requires it.
-	log.Debugf("%v", newLogClosure(func() string {
-		// Debug summary of message.
-		summary := messageSummary(msg)
-		if len(summary) > 0 {
-			summary = " (" + summary + ")"
-		}
-		return fmt.Sprintf("Sending %v%s to %s", msg.Command(),
-			summary, peer)
-	}))
-	log.Tracef("%v", newLogClosure(func() string {
-		return spew.Sdump(msg)
-	}))
-	log.Tracef("%v", newLogClosure(func() string {
-		var buf bytes.Buffer
-		_, err := wire.WriteMessageWithEncodingN(&buf, msg, peer.ProtocolVersion(),
-			peer.cfg.ChainParams.Net, enc)
-		if err != nil {
-			return err.Error()
-		}
-		return spew.Sdump(buf.Bytes())
-	}))
+	// log.Debugf("%v", newLogClosure(func() string {
+	// 	// Debug summary of message.
+	// 	summary := messageSummary(msg)
+	// 	if len(summary) > 0 {
+	// 		summary = " (" + summary + ")"
+	// 	}
+	// 	return fmt.Sprintf("Sending %v%s to %s", msg.Command(),
+	// 		summary, peer)
+	// }))
+	// log.Tracef("%v", newLogClosure(func() string {
+	// 	return spew.Sdump(msg)
+	// }))
+	// log.Tracef("%v", newLogClosure(func() string {
+	// 	var buf bytes.Buffer
+	// 	_, err := wire.WriteMessageWithEncodingN(&buf, msg, peer.ProtocolVersion(),
+	// 		peer.cfg.ChainParams.Net, enc)
+	// 	if err != nil {
+	// 		return err.Error()
+	// 	}
+	// 	return spew.Sdump(buf.Bytes())
+	// }))
 
 	// Write the message to the peer.
 	n, err := wire.WriteMessageWithEncodingN(peer.conn, msg,
@@ -1892,52 +1905,67 @@ func (peer *Peer) Disconnect() {
 // readRemoteVersionMsg waits for the next message to arrive from the remote
 // peer.  If the next message is not a version message or the version is not
 // acceptable then return an error.
-func (peer *Peer) readRemoteVersionMsg(inbound bool) (*wire.MsgPortRedirect, error) {
+func (peer *Peer) readRemoteVersionMsg() error {
 	// Read their version message.
 	remoteMsg, _, err := peer.readMessage(wire.LatestEncoding)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var msg *wire.MsgVersion
 	switch m := remoteMsg.(type) {
 	case *wire.MsgVersion:
 		msg = m
+
 	case *wire.MsgPortRedirect:
-		return m, nil
+		peer.redirectRequested = true
+		peer.newAddress = wire.NewNetAddressIPPort(m.IP, uint16(m.Port), peer.services)
+
+		return errors.New("redirect required")
+
 	default:
 		// Notify and disconnect clients if the first message is not a version
 		// message.
 		reason := "a version message must precede all others"
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
 			reason)
-		_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-		return nil, errors.New(reason)
+
+		if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
+			return err
+		}
+		return errors.New(reason)
 	}
 
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
-		return nil, errors.New("disconnecting peer connected to self")
-	}
-
-	if !inbound && peer.chain.ShardID() != msg.Shard {
-		return nil, errors.New("shardID of remote peer is not match")
+		return errors.New("disconnecting peer connected to self")
 	}
 
 	if peer.chain.ShardID() != msg.Shard {
 		port, ok := peer.cfg.ChainsPortsProvider(msg.Shard)
 		if !ok {
-			return nil, errors.New("peer is not supported")
+			reason := "shard with requested ID not found or not supported"
+			rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectInvalid,
+				reason)
+
+			if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
+				return err
+			}
+			return errors.New(reason)
 		}
 
 		addr := peer.conn.LocalAddr()
 		host, _, _ := net.SplitHostPort(addr.String())
 		ip := net.ParseIP(host)
-		respMsg := wire.NewMsgPortRedirect(msg.Shard, uint32(port), ip)
-		_ = peer.writeMessage(respMsg, wire.LatestEncoding)
 
-		reason := "remote peer shardID not match"
-		return nil, errors.New(reason)
+		respMsg := wire.NewMsgPortRedirect(msg.Shard, uint32(port), ip)
+		if err = peer.writeMessage(respMsg, wire.LatestEncoding); err != nil {
+			return err
+		}
+
+		peer.redirectRequested = true
+		reason := "remote peer shardID not match; redirect instruction send"
+		return errors.New(reason)
 	}
 
 	// Negotiate the protocol version and set the services to what the remote
@@ -1985,8 +2013,10 @@ func (peer *Peer) readRemoteVersionMsg(inbound bool) (*wire.MsgPortRedirect, err
 	if peer.cfg.Listeners.OnVersion != nil {
 		rejectMsg := peer.cfg.Listeners.OnVersion(peer, msg)
 		if rejectMsg != nil {
-			_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-			return nil, errors.New(rejectMsg.Reason)
+			if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
+				return err
+			}
+			return errors.New(rejectMsg.Reason)
 		}
 	}
 
@@ -2004,11 +2034,13 @@ func (peer *Peer) readRemoteVersionMsg(inbound bool) (*wire.MsgPortRedirect, err
 			MinAcceptableProtocolVersion)
 		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectObsolete,
 			reason)
-		_ = peer.writeMessage(rejectMsg, wire.LatestEncoding)
-		return nil, errors.New(reason)
+		if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
+			return err
+		}
+		return errors.New(reason)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // readRemoteVerAckMsg waits for the next message to arrive from the remote
@@ -2127,9 +2159,9 @@ func (peer *Peer) writeLocalVersionMsg() error {
 //   3. We send our verack.
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
-	if redirect, err := peer.readRemoteVersionMsg(true); err != nil {
-		if redirect != nil {
-			peer.conn.Close()
+	if err := peer.readRemoteVersionMsg(); err != nil {
+		if peer.redirectRequested && peer.newAddress != nil && peer.cfg.TriggerRedirect != nil {
+			peer.cfg.TriggerRedirect(peer.na, peer.newAddress)
 		}
 		return err
 	}
@@ -2160,9 +2192,9 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 		return err
 	}
 
-	if redirect, err := peer.readRemoteVersionMsg(false); err != nil {
-		if redirect != nil && peer.cfg.TriggerRedirect != nil {
-			peer.cfg.TriggerRedirect(redirect)
+	if err := peer.readRemoteVersionMsg(); err != nil {
+		if peer.redirectRequested && peer.newAddress != nil && peer.cfg.TriggerRedirect != nil {
+			peer.cfg.TriggerRedirect(peer.na, peer.newAddress)
 		}
 		return err
 	}
@@ -2191,7 +2223,10 @@ func (peer *Peer) start() error {
 	select {
 	case err := <-negotiateErr:
 		if err != nil {
-			peer.log.Error("negotiateErr", zap.String("remote_addr", peer.addr), zap.Error(err))
+			if !peer.redirectRequested {
+				peer.log.Error("negotiateErr", zap.String("remote_addr", peer.addr), zap.Error(err))
+			}
+
 			peer.Disconnect()
 			return err
 		}
@@ -2201,8 +2236,7 @@ func (peer *Peer) start() error {
 		return errors.New("protocol negotiation timeout")
 	}
 
-	log.Debugf("Connected to %s", peer.Addr())
-	peer.log.Warn("Connected to peer", zap.String("remote_addr", peer.Addr()))
+	peer.log.Debug("Connected to peer", zap.String("remote_addr", peer.Addr()))
 
 	// The protocol has been negotiated successfully so start processing input
 	// and output messages.

@@ -37,21 +37,24 @@ type Index struct {
 }
 
 func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
-	index.LastShardID += 1
-
 	if index.LastBeaconHeight < block.Height() {
 		index.LastBeaconHeight = block.Height()
 	}
+	shardID := block.MsgBlock().Header.BeaconHeader().Shards()
+	if index.LastShardID < shardID {
+		index.LastShardID = shardID
+	}
 
 	index.Shards = append(index.Shards, ShardInfo{
-		ID:            index.LastShardID,
+		ID:            shardID,
 		LastVersion:   block.MsgBlock().Header.Version(),
 		GenesisHeight: block.Height(),
 		GenesisHash:   block.Hash().String(),
 		Enabled:       true,
 		P2PInfo:       opts,
 	})
-	return index.LastShardID
+
+	return shardID
 }
 
 type shardRO struct {

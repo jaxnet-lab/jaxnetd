@@ -50,8 +50,15 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
+	blockGen := beacon.NewChainBlockGenerator(beacon.StateProvider{ShardCount: func() (uint32, error) {
+		if beaconCtl.chainProvider != nil && beaconCtl.chainProvider.BlockChain() != nil {
+			return beaconCtl.chainProvider.ShardCount()
+		}
+		return 0, nil
+	}})
+
 	beaconCtl.chainProvider, err = cprovider.NewChainProvider(beaconCtl.ctx,
-		beaconCtl.cfg.Node.BeaconChain, chain, chain, db, beaconCtl.log)
+		beaconCtl.cfg.Node.BeaconChain, chain, blockGen, db, beaconCtl.log)
 	if err != nil {
 		beaconCtl.log.Error("unable to init ChainProvider for beacon", zap.Error(err))
 		return err

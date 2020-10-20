@@ -241,7 +241,7 @@ func New(config *Config) (*BlockChain, error) {
 
 type ChainBlockGenerator interface {
 	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error)
+		timestamp time.Time, bits, nonce uint32) (wire.BlockHeader, error)
 
 	AcceptBlock(blockHeader wire.BlockHeader) error
 

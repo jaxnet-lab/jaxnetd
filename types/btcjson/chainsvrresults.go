@@ -319,6 +319,7 @@ type GetBeaconBlockTemplateResult struct {
 	WeightLimit   int64                      `json:"weightlimit,omitempty"`
 	Transactions  []GetBlockTemplateResultTx `json:"transactions"`
 	Version       int32                      `json:"version"`
+	Shards        uint32                     `json:"shards"`
 	CoinbaseAux   *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
 	CoinbaseTxn   *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
 	CoinbaseValue *int64                     `json:"coinbasevalue,omitempty"`

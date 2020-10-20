@@ -46,7 +46,29 @@ func (c *beaconChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
 
-func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
+	return blocknode.NewBeaconBlockNode(blockHeader, parent)
+}
+
+func (c *beaconChain) EmptyBlock() wire.MsgBlock {
+	return wire.EmptyBeaconBlock()
+}
+
+type StateProvider struct {
+	ShardCount func() (uint32, error)
+}
+
+type BlockGenerator struct {
+	stateInfo StateProvider
+}
+
+func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
+	return &BlockGenerator{
+		stateInfo: stateInfo,
+	}
+}
+
+func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits uint32, nonce uint32) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
@@ -61,25 +83,26 @@ func (c *beaconChain) NewBlockHeader(version wire.BVersion, prevHash, merkleRoot
 		nonce,
 	)
 
-	if version.ExpansionApproved() {
-		header.SetShards(header.Shards() + 1)
+	count, err := c.stateInfo.ShardCount()
+	if err != nil {
+		// an error will occur if it is impossible
+		// to get the last block from the chain state
+		return header, err
+	}
+
+	header.SetShards(count)
+
+	if version.ExpansionMade() {
+		header.SetShards(count + 1)
 	}
 
 	return header, nil
 }
 
-func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewBeaconBlockNode(blockHeader, parent)
-}
-
-func (c *beaconChain) EmptyBlock() wire.MsgBlock {
-	return wire.EmptyBeaconBlock()
-}
-
-func (c *beaconChain) ValidateBlock(wire.BlockHeader) error {
+func (c *BlockGenerator) ValidateBlock(wire.BlockHeader) error {
 	return nil
 }
 
-func (c *beaconChain) AcceptBlock(wire.BlockHeader) error {
+func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }
