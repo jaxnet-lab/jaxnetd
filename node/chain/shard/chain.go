@@ -1,10 +1,11 @@
 package shard
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
-	merged_mining_tree "gitlab.com/jaxnet/core/merged-mining-tree"
+	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -87,22 +88,44 @@ func NewChainBlockGenerator(beacon BeaconBlockProvider, mmr mmr.IMountainRange) 
 	}
 }
 
-func (c *BlockGenerator) ValidateBlock(blockHeader wire.BlockHeader) error {
-	hashes, coding, codingBitSize := blockHeader.BeaconHeader().MergedMiningTreeCodingProof()
-	shardHeader := blockHeader.(*wire.ShardHeader)
-
-	count, err := c.beacon.ShardCount()
+func (c *BlockGenerator) ValidateBlock(header wire.BlockHeader) error {
+	lastKnownShardsAmount, err := c.beacon.ShardCount()
 	if err != nil {
-		// an error will occur if it is impossible
-		// to get the last block from the chain state
-		return err
+		// An error will occur if it is impossible
+		// to get the last block from the chain state.
+		return fmt.Errorf("can't fetch last beacon block: %w", err)
 	}
 
-	tree := merged_mining_tree.NewSparseMerkleTree(count)
-	rootHash := shardHeader.MergeMiningRoot()
-	var validationRoot merged_mining_tree.BinHash
-	copy(validationRoot[:], rootHash[:])
-	return tree.Validate(codingBitSize, coding, hashes, shardHeader.MergeMiningNumber(), validationRoot)
+	beaconHeader := header.BeaconHeader()
+	shardHeader := header.(*wire.ShardHeader)
+
+	treeValidationShouldBeSkipped := false
+	mmNumber := shardHeader.MergeMiningNumber()
+	if mmNumber % 2 == 0 {
+		if header.BeaconHeader().Shards() == mmNumber {
+			if mmNumber <= lastKnownShardsAmount {
+				treeValidationShouldBeSkipped = true
+			}
+		}
+	}
+
+	if !treeValidationShouldBeSkipped {
+		hashes, coding, codingBitsLen := beaconHeader.MergedMiningTreeCodingProof()
+
+		var (
+			providedRoot   = shardHeader.MergeMiningRoot()
+			validationRoot mmtree.BinHash
+		)
+		copy(validationRoot[:], providedRoot[:])
+
+		tree := mmtree.NewSparseMerkleTree(lastKnownShardsAmount)
+		err = tree.Validate(codingBitsLen, coding, hashes, mmNumber, validationRoot)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *BlockGenerator) AcceptBlock(blockHeader wire.BlockHeader) error {

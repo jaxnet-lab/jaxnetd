@@ -20,8 +20,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
-	gitlab.com/jaxnet/core/merged-mining-tree v0.3.0
-	gitlab.com/jaxnet/core/shard.core.git v0.0.1
+	gitlab.com/jaxnet/core/merged-mining-tree v1.0.2
+	//gitlab.com/jaxnet/core/shard.core.git v0.0.1
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
