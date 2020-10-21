@@ -39,8 +39,9 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 		Host:         cfg.RPC.Host,
 		User:         cfg.RPC.User,
 		Pass:         cfg.RPC.Pass,
-		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
-		DisableTLS:   true, // Bitcoin core does not provide TLS by default
+		ShardID:      cfg.ShardID,
+		HTTPPostMode: true,
+		DisableTLS:   true,
 	}
 
 	// Notice the notification parameter is nil since notifications are
@@ -77,6 +78,12 @@ func (client *TxMan) WithKeys(key *KeyData) *TxMan {
 	return clone
 }
 
+func (client *TxMan) ForShard(shardID uint32) *TxMan {
+	clone := *client
+	clone.cfg.ShardID = shardID
+	return &clone
+}
+
 func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORows, int64, error) {
 	maxHeight, err := client.RPC.GetBlockCount()
 	if err != nil {
@@ -95,7 +102,13 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 			return nil, 0, err
 		}
 
-		block, err := client.RPC.GetBeaconBlock(hash)
+		var block *wire.MsgBlock
+		if client.cfg.ShardID == 0 {
+			block, err = client.RPC.GetBeaconBlock(hash)
+		} else {
+			block, err = client.RPC.ForShard(client.cfg.ShardID).GetShardBlock(hash)
+		}
+
 		if err != nil {
 			return nil, 0, err
 		}
@@ -120,6 +133,7 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 				for _, skAddress := range decodedScript.Addresses {
 					if address == "" || address == skAddress {
 						index.AddUTXO(txmodels.UTXO{
+							ShardID:    client.cfg.ShardID,
 							Address:    skAddress,
 							Height:     height,
 							TxHash:     msgTx.TxHash().String(),
@@ -141,7 +155,8 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 }
 
 func (client *TxMan) NetworkFee() (int64, error) {
-	fee, err := client.RPC.EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
+	fee, err := client.RPC.ForShard(client.cfg.ShardID).
+		EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
 	if err != nil {
 		return 0, errors.Wrap(err, "unable to get fee")
 	}
@@ -188,6 +203,75 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		Amount:      amount,
 		SignedTx:    EncodeTx(msgTx),
 		RawTX:       msgTx,
+	}, nil
+}
+
+// NewSwapTx creates new wire.TxVerShardsSwap transaction.
+// It is a special tx for atomic swap between chains.
+// It can contain only TWO inputs and TWO outputs.
+// TxIn and TxOut are strictly associated with each other by index.
+// One pair corresponds to the one chain. The second is for another.
+// | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
+// | - | ---------------- | --- | ----------------- | - |
+// | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
+// | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
+func (client *TxMan) NewSwapTx(data map[string]txmodels.UTXO, postVerify bool) (*txmodels.SwapTransaction, error) {
+	if client.key == nil {
+		return nil, errors.New("keys not set")
+	}
+
+	msgTx := wire.NewMsgTx(wire.TxVerShardsSwap)
+
+	ind := 0
+	outIndexes := map[string]int{}
+
+	for destination, utxo := range data {
+		fee, err := client.ForShard(utxo.ShardID).NetworkFee()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to get fee")
+		}
+		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "can not decode TxHash")
+		}
+
+		draft := txmodels.DraftTx{
+			Amount:     utxo.Value - fee,
+			NetworkFee: fee,
+			UTXO:       []txmodels.UTXO{utxo},
+		}
+
+		err = draft.SetPayToAddress(destination, client.NetParams)
+		if err != nil {
+			return nil, errors.Wrap(err, "pay to address not set")
+		}
+		msgTx.AddTxOut(wire.NewTxOut(draft.Amount, draft.ReceiverScript))
+
+		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
+		txIn := wire.NewTxIn(outPoint, nil, nil)
+		msgTx.AddTxIn(txIn)
+
+		outIndexes[destination] = ind
+		ind += 1
+	}
+
+	for destination, utxo := range data {
+		txInIndex := outIndexes[destination]
+		utxo := utxo.ToShort()
+
+		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to sing utxo")
+		}
+
+	}
+
+	return &txmodels.SwapTransaction{
+		TxHash:       msgTx.TxHash().String(),
+		Source:       client.key.Address.String(),
+		Destinations: outIndexes,
+		SignedTx:     EncodeTx(msgTx),
+		RawTX:        msgTx,
 	}, nil
 }
 
@@ -318,7 +402,8 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		txInIndex := i
 		prevOut := msgTx.TxIn[i].PreviousOutPoint
 
-		out, err := client.RPC.GetTxOut(&prevOut.Hash, prevOut.Index, false)
+		out, err := client.RPC.ForShard(client.cfg.ShardID).
+			GetTxOut(&prevOut.Hash, prevOut.Index, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get utxo from node")
 		}

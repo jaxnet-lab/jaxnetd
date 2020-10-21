@@ -76,6 +76,7 @@ func (index *UTXOIndex) Rows() UTXORows {
 }
 
 type UTXO struct {
+	ShardID    uint32 `json:"shard_id" csv:"shard_id"`
 	Address    string `json:"address" csv:"address"`
 	Height     int64  `json:"height" csv:"height"`
 	TxHash     string `json:"tx_hash" csv:"tx_hash"`

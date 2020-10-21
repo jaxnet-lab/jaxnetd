@@ -70,6 +70,15 @@ type Transaction struct {
 	RawTX *wire.MsgTx `json:"-" csv:"-"`
 }
 
+type SwapTransaction struct {
+	TxHash       string         `json:"tx_hash" csv:"tx_hash"`
+	Source       string         `json:"source" csv:"source"`
+	Destinations map[string]int `json:"destinations" csv:"destinations"`
+	SignedTx     string         `json:"signed_tx" csv:"signed_tx"`
+
+	RawTX *wire.MsgTx `json:"-" csv:"-"`
+}
+
 func (t *Transaction) UnmarshalBinary(data []byte) error {
 	var dest = new(gobTx)
 	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)

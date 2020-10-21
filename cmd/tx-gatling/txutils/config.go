@@ -15,6 +15,7 @@ type NodeRPC struct {
 
 type ManagerCfg struct {
 	Net        string  `json:"net" yaml:"net"`
+	ShardID    uint32  `json:"shard_id" yaml:"shard_id"`
 	RPC        NodeRPC `json:"rpc" yaml:"rpc"`
 	PrivateKey string  `json:"private_key" yaml:"private_key"`
 }
