@@ -1347,11 +1347,11 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 		// Log information about how the block is forking the chain.
 		fork := b.bestChain.FindFork(node)
 		if fork.GetHash() == parentHash {
-			log.Infof("FORK: Block %v forks the chain at height %d"+
+			log.Debugf("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		} else {
-			log.Infof("EXTEND FORK: Block %v extends a side chain "+
+			log.Debugf("EXTEND FORK: Block %v extends a side chain "+
 				"which forks the chain at height %d/block %v",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		}

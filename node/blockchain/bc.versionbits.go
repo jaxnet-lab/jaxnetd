@@ -226,7 +226,8 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (int32,
 	if prevNode != nil {
 		prevHeight = prevNode.Height()
 	}
-	allowed := prevHeight%b.chain.Params().ExpansionRule == 0
+
+	allowed := prevHeight%b.chain.Params().ExpansionRule == 0 && prevHeight != 0
 
 	if b.chain.Params().AutoExpand && allowed {
 		version = wire.BVersion(expectedVersion).
