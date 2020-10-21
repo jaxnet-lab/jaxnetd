@@ -205,7 +205,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// transactions version 2 or higher.
 		{
 			tx: &wire.MsgTx{
-				Version: 1,
+				Version: wire.TxVerRegular,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(false, 3),
@@ -222,7 +222,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// should be disabled.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         wire.MaxTxInSequenceNum,
@@ -242,7 +242,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// the targeted block.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(true, 2),
@@ -260,7 +260,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// chain.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(true, 1024),
@@ -280,7 +280,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// latest lock that isn't disabled.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(true, 2560),
@@ -305,7 +305,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// height of 2 meaning it can be included at height 3.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(false, 3),
@@ -322,7 +322,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// be the time further in the future.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(true, 5120),
@@ -343,7 +343,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// indicating it can be included at height 11.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(false, 1),
@@ -363,7 +363,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// further into the future for both inputs should be chosen.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: utxo,
 					Sequence:         LockTimeToSequence(true, 2560),
@@ -392,7 +392,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// after that.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: unConfUtxo,
 					Sequence:         LockTimeToSequence(false, 2),
@@ -410,7 +410,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// MTP of the *next* block.
 		{
 			tx: &wire.MsgTx{
-				Version: 2,
+				Version: wire.TxVerTimeLock,
 				TxIn: []*wire.TxIn{{
 					PreviousOutPoint: unConfUtxo,
 					Sequence:         LockTimeToSequence(true, 1024),

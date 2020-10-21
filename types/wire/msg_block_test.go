@@ -507,7 +507,7 @@ var blockOne = MsgBlock{
 	// ),
 	Transactions: []*MsgTx{
 		{
-			Version: 1,
+			Version: TxVerRegular,
 			TxIn: []*TxIn{
 				{
 					PreviousOutPoint: OutPoint{

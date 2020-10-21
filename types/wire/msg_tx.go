@@ -17,7 +17,7 @@ import (
 
 const (
 	// TxVersion is the current latest supported transaction version.
-	TxVersion = 1
+	TxVersion = TxVerRegular
 
 	// MaxTxInSequenceNum is the maximum sequence number the sequence field
 	// of a transaction input can be.
@@ -281,6 +281,12 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 		PkScript: pkScript,
 	}
 }
+
+const (
+	TxVerRegular    = 1
+	TxVerTimeLock   = 2
+	TxVerShardsSwap = 3
+)
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
 // It is used to deliver transaction information in response to a getdata

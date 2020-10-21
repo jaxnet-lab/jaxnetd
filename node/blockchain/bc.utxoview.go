@@ -23,7 +23,7 @@ func (b *BlockChain) FetchUtxoView(tx *btcutil.Tx) (*chaindata.UtxoViewpoint, er
 		prevOut.Index = uint32(txOutIdx)
 		neededSet[prevOut] = struct{}{}
 	}
-	if !chaindata.IsCoinBase(tx) { // todo: here will be new special case
+	if !chaindata.IsCoinBase(tx) {
 		for _, txIn := range tx.MsgTx().TxIn {
 			neededSet[txIn.PreviousOutPoint] = struct{}{}
 		}

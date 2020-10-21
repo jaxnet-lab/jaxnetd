@@ -265,8 +265,8 @@ func TestWTxSha(t *testing.T) {
 // of transaction inputs and outputs and protocol versions.
 func TestTxWire(t *testing.T) {
 	// Empty tx message.
-	noTx := NewMsgTx(1)
-	noTx.Version = 1
+	noTx := NewMsgTx(TxVerRegular)
+	noTx.Version = TxVerRegular
 	noTxEncoded := []byte{
 		0x01, 0x00, 0x00, 0x00, // Version
 		0x00,                   // Varint for number of input transactions
@@ -471,7 +471,7 @@ func TestTxWireErrors(t *testing.T) {
 // TestTxSerialize tests MsgTx serialize and deserialize.
 func TestTxSerialize(t *testing.T) {
 	noTx := NewMsgTx(1)
-	noTx.Version = 1
+	noTx.Version = TxVerRegular
 	noTxEncoded := []byte{
 		0x01, 0x00, 0x00, 0x00, // Version
 		0x00,                   // Varint for number of input transactions
@@ -727,8 +727,8 @@ func TestTxOverflowErrors(t *testing.T) {
 // various transactions is accurate.
 func TestTxSerializeSizeStripped(t *testing.T) {
 	// Empty tx message.
-	noTx := NewMsgTx(1)
-	noTx.Version = 1
+	noTx := NewMsgTx(TxVerRegular)
+	noTx.Version = TxVerRegular
 
 	tests := []struct {
 		in   *MsgTx // Tx to encode
@@ -782,7 +782,7 @@ func TestTxWitnessSize(t *testing.T) {
 
 // multiTx is a MsgTx with an input and output and used in various tests.
 var multiTx = &MsgTx{
-	Version: 1,
+	Version: TxVerRegular,
 	TxIn: []*TxIn{
 		{
 			PreviousOutPoint: OutPoint{
@@ -882,7 +882,7 @@ var multiTxPkScriptLocs = []int{63, 139}
 // multiWitnessTx is a MsgTx with an input with witness data, and an
 // output used in various tests.
 var multiWitnessTx = &MsgTx{
-	Version: 1,
+	Version: TxVerRegular,
 	TxIn: []*TxIn{
 		{
 			PreviousOutPoint: OutPoint{

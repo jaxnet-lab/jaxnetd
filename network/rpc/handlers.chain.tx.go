@@ -354,6 +354,13 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		}
 	}
 
+	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerShardsSwap {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCTxError,
+			Message: "Beacon not support ShardSwapTx",
+		}
+	}
+
 	// Use 0 for the tag to represent local chainProvider.
 	tx := btcutil.NewTx(&msgTx)
 	acceptedTxs, err := server.chainProvider.TxMemPool.ProcessTransaction(tx, false, false, 0)

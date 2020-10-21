@@ -63,7 +63,7 @@ func TestCalcPriority(t *testing.T) {
 	// From block 7 in main blockchain.
 	// tx 0437cd7f8525ceed2324359c2d0ba26006d92d856a9c20fa0241106ee5a597c9
 	commonSourceTx1 := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{{
 			PreviousOutPoint: wire.OutPoint{
 				Hash:  chainhash.Hash{},
@@ -87,7 +87,7 @@ func TestCalcPriority(t *testing.T) {
 	//
 	// It originally came from block 170 in main blockchain.
 	commonRedeemTx1 := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{{
 			PreviousOutPoint: wire.OutPoint{
 				Hash: *newHashFromStr("0437cd7f8525ceed232435" +
