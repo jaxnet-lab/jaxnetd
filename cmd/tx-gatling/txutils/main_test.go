@@ -229,7 +229,7 @@ func TestMakeSwapTx(ot *testing.T) {
 	}
 	// -----------------------------------------------------------------------------------------
 
-	swapTX, err := op.TxMan.NewSwapTx(map[string]txmodels.UTXO{
+	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(map[string]txmodels.UTXO{
 		"address_in_shard_1": shard1UTXO,
 		"address_in_shard_2": shard2UTXO,
 	}, false)
