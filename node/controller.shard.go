@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -150,6 +152,10 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	if addRPC {
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
+	}
+
+	if chainCtl.cfg.Metrics.Enable {
+		chainCtl.metrics.Add(metrics.ChainMetrics(shardCtl.ChainProvider().BlockChain(), fmt.Sprintf("shard_%d", shardID), chainCtl.logger))
 	}
 }
 

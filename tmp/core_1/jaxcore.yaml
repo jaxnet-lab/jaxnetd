@@ -31,3 +31,5 @@ node:
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
+metrics:
+  enable: true
