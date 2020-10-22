@@ -8,6 +8,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core/config"
+	"gitlab.com/jaxnet/core/shard.core/limits"
+	"gitlab.com/jaxnet/core/shard.core/node"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"go.uber.org/zap"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -15,13 +21,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
-
-	"gitlab.com/jaxnet/core/shard.core/config"
-	"gitlab.com/jaxnet/core/shard.core/limits"
-	"gitlab.com/jaxnet/core/shard.core/node"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"go.uber.org/zap"
 )
 
 func initChain() bool {

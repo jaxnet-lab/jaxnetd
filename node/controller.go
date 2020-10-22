@@ -6,7 +6,9 @@ package node
 import (
 	"context"
 	"errors"
+	metrics2 "gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"sync"
+	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
@@ -40,7 +42,8 @@ type chainController struct {
 	rpc         rpcRO
 	// -------------------------------
 
-	miner *cpuminer.CPUMiner
+	miner   *cpuminer.CPUMiner
+	metrics metrics2.IMetricManager
 }
 
 func Controller(logger *zap.Logger) *chainController {
@@ -95,6 +98,13 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		}()
 	}
 
+	if cfg.Node.Shards.Enable {
+		go func() {
+			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {
+				chainCtl.logger.Error("listen metrics server", zap.Error(err))
+			}
+		}()
+	}
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
@@ -165,4 +175,22 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 	chainCtl.rpc.beacon = beaconRPC
 	chainCtl.rpc.connMgr = connMgr
 	return nil
+}
+
+func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Config) error {
+	childCtx, _ := context.WithCancel(ctx)
+	chainCtl.logger.Info("Metrics Enabled")
+	interval := cfg.Metrics.Interval
+	if interval == 0 {
+		interval = 5
+	}
+	port := cfg.Metrics.Port
+	if port == 0 {
+		port = 2112
+	}
+
+	chainCtl.metrics = metrics2.Metrics(childCtx, time.Duration(interval)*time.Second)
+	chainCtl.metrics.Add(metrics2.ChainMetrics(chainCtl.beacon.chainProvider.BlockChain(), "beacon", chainCtl.logger))
+
+	return chainCtl.metrics.Listen("/metrics", port)
 }
