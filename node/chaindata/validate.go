@@ -336,7 +336,7 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	// to avoid proof of work checks is set.
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
 		// The block Hash must be less than the claimed target.
-		hash := header.BlockHash()
+		hash := header.BeaconHeader().BlockHash()
 		hashNum := pow.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
 			str := fmt.Sprintf("block Hash of %064x is higher than "+
