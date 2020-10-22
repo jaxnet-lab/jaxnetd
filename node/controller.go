@@ -6,13 +6,14 @@ package node
 import (
 	"context"
 	"errors"
-	metrics2 "gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"sync"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	metrics2 "gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"go.uber.org/zap"
 )
@@ -42,7 +43,7 @@ type chainController struct {
 	rpc         rpcRO
 	// -------------------------------
 
-	miner   *cpuminer.CPUMiner
+	miner   *cpuminer.MultiMiner
 	metrics metrics2.IMetricManager
 }
 
@@ -110,18 +111,43 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) *cpuminer.CPUMiner {
-	chainCtl.miner = cpuminer.New(&cpuminer.Config{
-		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
-		BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
-		MiningAddrs:            chainCtl.beacon.chainProvider.MiningAddrs,
+func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
+	minerSet := map[string]*cpuminer.Config{
+		"beacon": {
+			ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
+			BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
+			MiningAddrs:            chainCtl.beacon.chainProvider.MiningAddrs,
 
-		ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
-		IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
-		ConnectedCount: connectedCount,
-	}, chainCtl.logger)
+			ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
+			IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
+			ConnectedCount: connectedCount,
+		},
+	}
 
-	return chainCtl.miner
+	for _, ro := range chainCtl.shardsCtl {
+		minerSet[ro.ctl.chain.Params().Name] = &cpuminer.Config{
+			ChainParams:            ro.ctl.chainProvider.ChainParams,
+			BlockTemplateGenerator: ro.ctl.chainProvider.BlkTmplGenerator(),
+			MiningAddrs:            ro.ctl.chainProvider.MiningAddrs,
+			ProcessBlock:           ro.ctl.chainProvider.SyncManager.ProcessBlock,
+			IsCurrent:              ro.ctl.chainProvider.SyncManager.IsCurrent,
+			ConnectedCount:         connectedCount,
+		}
+	}
+
+	chainCtl.miner = cpuminer.NewMiner(minerSet, chainCtl.logger.With(zap.String("context", "miner")))
+	return
+}
+
+func (chainCtl *chainController) runShardMiner(chainProvider *cprovider.ChainProvider) {
+	chainCtl.miner.AddChainMiner(chainProvider.ChainCtx.Params().Name, &cpuminer.Config{
+		ChainParams:            chainProvider.ChainParams,
+		BlockTemplateGenerator: chainProvider.BlkTmplGenerator(),
+		MiningAddrs:            chainProvider.MiningAddrs,
+		ProcessBlock:           chainProvider.SyncManager.ProcessBlock,
+		IsCurrent:              chainProvider.SyncManager.IsCurrent,
+		ConnectedCount:         func() int32 { return 1 },
+	})
 }
 
 func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {

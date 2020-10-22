@@ -12,7 +12,6 @@ require (
 	github.com/btcsuite/goleveldb v1.0.0
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792
 	github.com/btcsuite/winsvc v1.0.0
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20200928162600-f2cc35102c2a // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgraph-io/badger v1.6.1
@@ -21,10 +20,10 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20200827134620-49f5c3fa2b3e
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
-	github.com/hpcloud/tail v1.0.0 // indirect
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/kkdai/bstream v1.0.0
+	github.com/lancer-kit/uwe/v2 v2.2.2
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/minio/sha256-simd v0.1.1
 	github.com/opencontainers/image-spec v1.0.1 // indirect
@@ -38,9 +37,7 @@ require (
 	gitlab.com/jaxnet/core/merged-mining-tree v1.0.2
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 	gotest.tools v2.2.0+incompatible // indirect

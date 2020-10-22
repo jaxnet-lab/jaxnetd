@@ -664,3 +664,4 @@ func New(cfg *Config, log *zap.Logger) *CPUMiner {
 		updateHashes:      make(chan uint64),
 	}
 }
+
