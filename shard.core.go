@@ -98,7 +98,7 @@ func shardCoreMain() error {
 	defer config.Log.Info("Shutdown complete")
 
 	// Show version at startup.
-	config.Log.Info(fmt.Sprintf("Version %s", version()))
+	config.Log.Info(fmt.Sprintf("Version %s", getVersion()))
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {

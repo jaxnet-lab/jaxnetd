@@ -63,9 +63,12 @@ release_build:
   image:
     name: goreleaser/goreleaser
   script:
-    - goreleaser release --snapshot
+    - goreleaser release --snapshot --rm-dist
   tags:
     - docker
+  artifacts:
+    paths:
+      - dist
   except:
     refs:
       - tags
@@ -74,6 +77,8 @@ release:
   stage: release
   image:
     name: goreleaser/goreleaser:latest
+  variables:
+    GITLAB_TOKEN: $CI_JOB_TOKEN
   before_script:
     - mkdir -p ${GOPATH}/src/${PROJECT_PATH}
     - cp -r . ${GOPATH}/src/${PROJECT_PATH}

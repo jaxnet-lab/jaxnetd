@@ -38,7 +38,7 @@ var elog *eventlog.Log
 // been started to the Windows event log.
 func logServiceStartOfDay() {
 	var message string
-	message += fmt.Sprintf("Version %s\n", version())
+	message += fmt.Sprintf("Version %s\n", getVersion())
 	elog.Info(1, message)
 }
 
