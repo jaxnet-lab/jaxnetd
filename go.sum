@@ -179,6 +179,8 @@ gitlab.com/jaxnet/core/merged-mining-tree v1.0.2 h1:CdGp3sxRHRqcKOLEJsc/8TUER0HG
 gitlab.com/jaxnet/core/merged-mining-tree v1.0.2/go.mod h1:HbIdqU52BydekeWOe1Apq9is8jTYZSCAwI5dea0LU8k=
 gitlab.com/jaxnet/core/merged-mining-tree v1.0.5-0.20201023061446-01deffbe1123 h1:WLTiwtc87T0lxRlQbMbKO0p8P+Wa/QXoCq7ud3moJ6k=
 gitlab.com/jaxnet/core/merged-mining-tree v1.0.5-0.20201023061446-01deffbe1123/go.mod h1:HbIdqU52BydekeWOe1Apq9is8jTYZSCAwI5dea0LU8k=
+gitlab.com/jaxnet/core/merged-mining-tree v1.0.5 h1:sfcCeYdiHPi4ZAwHHg0EPXq+QsFqd0ojKFEdJ8RntbY=
+gitlab.com/jaxnet/core/merged-mining-tree v1.0.5/go.mod h1:HbIdqU52BydekeWOe1Apq9is8jTYZSCAwI5dea0LU8k=
 gitlab.com/jaxnet/core/shard.core.git v0.0.1 h1:vVowJ/BVLIFLd9AqikYL6n8InjYDQrjUMKfNTrylToI=
 gitlab.com/jaxnet/core/shard.core.git v0.0.1/go.mod h1:41II7UbJol1nVSbT8pkohaaQfGrlY+tsbP+XBTMMhfY=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=

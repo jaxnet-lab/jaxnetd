@@ -28,7 +28,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
-	gitlab.com/jaxnet/core/merged-mining-tree v1.0.5-0.20201023061446-01deffbe1123
+	gitlab.com/jaxnet/core/merged-mining-tree v1.0.5
 	//gitlab.com/jaxnet/core/shard.core.git v0.0.1
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
