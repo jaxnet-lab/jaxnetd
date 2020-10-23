@@ -38,8 +38,8 @@ release:
     owner: jaxnet/core
     name: shard.core
 
-gitlab_urls:
-  api: https://gitlab.com/api/v4/
-  download: https://gitlab.com/jaxnet/core/shard.core
-  # set to true if you use a self-signed certificate
-  skip_tls_verify: false
+#gitlab_urls:
+#  api: https://gitlab.com/api/v4/
+#  download: https://gitlab.com/jaxnet/core/shard.core
+#  # set to true if you use a self-signed certificate
+#  skip_tls_verify: false
