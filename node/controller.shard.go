@@ -16,7 +16,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"go.uber.org/zap"
 )
@@ -153,7 +152,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
 		if chainCtl.cfg.Metrics.Enable {
-			chainCtl.metrics.Add(metrics.ChainMetrics(shardCtl.ChainProvider().BlockChain(),
+			chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
 				shardCtl.chain.Params().Name, chainCtl.logger))
 		}
 

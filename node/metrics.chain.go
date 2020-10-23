@@ -1,8 +1,9 @@
-package metrics
+package node
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -33,6 +34,18 @@ func (s *chainMetrics) Read() {
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "median_time"), float64(snapshot.MedianTime.Unix()))
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "bits"), float64(snapshot.Bits))
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "total_transactions"), float64(snapshot.TotalTxns))
+	block, err := s.chain.BlockByHeight(snapshot.Height)
+	if err != nil{
+		s.logger.Error("can't get block height", zap.Error(err))
+		return
+	}
+	if !block.MsgBlock().ShardBlock {
+		h := block.MsgBlock().Header.(*wire.BeaconHeader)
+		_,_, nBits := h.MergedMiningTreeCodingProof()
+		s.updateGauge(prometheus.BuildFQName("chain", s.name, "shards"), float64(nBits))
+	//} else{
+	//	h := block.MsgBlock().Header.(*wire.ShardHeader)
+	}
 }
 
 func (s *chainMetrics) updateGauge(name string, value float64) {
@@ -41,7 +54,7 @@ func (s *chainMetrics) updateGauge(name string, value float64) {
 	if !ok {
 		m = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: name,
-			Help: "Beacon Height",
+			//Help: "Beacon Height",
 		})
 		err := prometheus.Register(m)
 		if err != nil {
