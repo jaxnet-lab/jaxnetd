@@ -72,6 +72,14 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if cfg.Node.Shards.Enable {
+		go func() {
+			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {
+				chainCtl.logger.Error("listen metrics server", zap.Error(err))
+			}
+		}()
+	}
+
+	if cfg.Node.Shards.Enable {
 		if err := chainCtl.runShards(); err != nil {
 			chainCtl.logger.Error("Shards error", zap.Error(err))
 			return err
@@ -98,13 +106,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		}()
 	}
 
-	if cfg.Node.Shards.Enable {
-		go func() {
-			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {
-				chainCtl.logger.Error("listen metrics server", zap.Error(err))
-			}
-		}()
-	}
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
