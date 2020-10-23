@@ -1,4 +1,4 @@
-package metrics
+package node
 
 import (
 	"context"
@@ -44,6 +44,7 @@ func (m *metricsManager) Add(metrics ...IMetric) {
 
 func (m *metricsManager) collector(ctx context.Context) {
 	for {
+
 		select {
 		case <-ctx.Done():
 			return
