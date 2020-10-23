@@ -6,6 +6,7 @@ log_dir: ./core/logs
 node:
   #  net: mainnet
   net: fastnet
+#  net: testnet
   p2p:
     listeners:
       - 0.0.0.0:18333
@@ -20,7 +21,7 @@ node:
       - 0.0.0.0:18444
 
   shards:
-#    enable: true
+    enable: true
     autorun: true
 
   enable_cpu_miner: true
@@ -31,3 +32,6 @@ node:
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
+metrics:
+  enable: true
+  port: 12112

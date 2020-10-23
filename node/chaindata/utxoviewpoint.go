@@ -225,6 +225,10 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 		view.AddTxOuts(tx, blockHeight)
 		return nil
 	}
+	txVersion := tx.MsgTx().Version
+	if txVersion == wire.TxVerShardsSwap {
+		return view.connectSwapTransaction(tx, blockHeight, stxos)
+	}
 
 	// Spend the referenced utxos by marking them spent in the view and,
 	// if a slice was provided for the spent txout details, append an entry
@@ -258,6 +262,70 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 
 	// Add the transaction's outputs as available utxos.
 	view.AddTxOuts(tx, blockHeight)
+	return nil
+}
+
+// connectSwapTransaction updates the view by adding all new utxos created by the
+// passed transaction and marking all utxos that the transactions spend as
+// spent. This function handles special case for the wire.TxVerShardsSwap transactions.
+// wire.TxVerShardsSwap transaction is a special tx for atomic swap between chains.
+// It can contain only TWO inputs and TWO outputs. TxIn and TxOut are strictly associated with each other by index.
+// One pair corresponds to the current chain. The second is for another, unknown chain.
+//
+// | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
+// | - | ---------------- | --- | ----------------- | - |
+// | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
+// | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
+//
+// The order is not deterministic.
+func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
+	if len(tx.MsgTx().TxIn) > 2 || len(tx.MsgTx().TxOut) > 2 {
+		return AssertError("ShardSwap tx with more than 2 inputs and outputs not allowed")
+	}
+
+	inputs := tx.MsgTx().TxIn
+	outputs := tx.MsgTx().TxOut
+
+	// Spend the referenced utxos by marking them spent in the view and,
+	// if a slice was provided for the spent txout details, append an entry
+	// to it.
+	for txInIdx, txIn := range inputs {
+
+		// Check that the specified utxo exists in the view.
+		// If UTXO does not exist, it means the UTXO is from a different chain.
+		entry, ok := view.entries[txIn.PreviousOutPoint]
+		if !ok || entry == nil {
+			continue
+		}
+
+		// Only create the stxo details if requested.
+		if stxos != nil {
+			// Populate the stxo details using the utxo entry.
+			var stxo = SpentTxOut{
+				Amount:     entry.Amount(),
+				PkScript:   entry.PkScript(),
+				Height:     entry.BlockHeight(),
+				IsCoinBase: entry.IsCoinBase(),
+			}
+			*stxos = append(*stxos, stxo)
+		}
+
+		// Mark the entry as spent.  This is not done until after the
+		// relevant details have been accessed since spending it might
+		// clear the fields from memory in the future.
+		entry.Spend()
+
+		prevOut := wire.OutPoint{Hash: *tx.Hash()}
+		// todo(mike): DESCRIBE THIS WTF!!!
+		// Update existing entries.  All fields are updated because it's
+		// possible (although extremely unlikely) that the existing
+		// entry is being replaced by a different transaction with the
+		// same Hash.  This is allowed so long as the previous
+		// transaction is fully spent.
+		prevOut.Index = uint32(txInIdx)
+		txOut := outputs[txInIdx]
+		view.addTxOut(prevOut, txOut, false, blockHeight)
+	}
 	return nil
 }
 
@@ -554,6 +622,16 @@ func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *btcutil.Block)
 	// what is already known (in-flight).
 	neededSet := make(map[wire.OutPoint]struct{})
 	for i, tx := range transactions[1:] {
+		// switch tx.MsgTx().Version {
+		// case wire.TxVerShardsSwap:
+		// 	// todo: here fault tolerant fetch
+		//
+		// case wire.TxVerRegular,
+		// 	wire.TxVerTimeLock:
+		// 	fallthrough
+		//
+		// default:
+
 		for _, txIn := range tx.MsgTx().TxIn {
 			// It is acceptable for a transaction input to reference
 			// the output of another transaction in this block only
@@ -583,6 +661,8 @@ func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *btcutil.Block)
 
 			neededSet[txIn.PreviousOutPoint] = struct{}{}
 		}
+		// }
+
 	}
 
 	// Request the input utxos from the database.

@@ -1,4 +1,5 @@
 net: testnet
+shard_id: 2
 
 node_rpc:
   host: 127.0.0.1:28334

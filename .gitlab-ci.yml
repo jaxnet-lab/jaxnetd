@@ -4,36 +4,40 @@ services:
 
 stages:
   - build
+  - release
   - deploy
 
 variables:
   DOCKER_TLS_CERTDIR: ""
   IMAGE: registry.gitlab.com/jaxnet/core/shard.core/$CI_COMMIT_REF_NAME:latest
 
-before_script:
-  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
-  - eval $(ssh-agent -s)
-  - echo "$JAX_KEY" > ./key.file
-  - chmod 400 ./key.file
-  - ssh-add ./key.file
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-  - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
+.before_script: &before_script
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+    - eval $(ssh-agent -s)
+    - echo "$JAX_KEY" > ./key.file
+    - chmod 400 ./key.file
+    - ssh-add ./key.file
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
 
 build:
   stage: build
+  <<: *before_script
   only:
     - master
     - dev
   tags:
     - shell
   script:
-    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
+    - docker build --pull -t $IMAGE .
     - docker push $IMAGE
 
 .deploy: &deploy
   stage: deploy
+  <<: *before_script
   when: manual
   tags:
     - docker
@@ -57,3 +61,39 @@ deploy:stage:
   only:
     - stage
 
+
+release_build:
+  stage: release
+  image:
+    name: goreleaser/goreleaser
+    entrypoint: [""]
+  before_script:
+    - echo Just to replace default
+  script:
+    - goreleaser release --snapshot --rm-dist
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - dist
+  only:
+    - master
+    - dev
+    - stage
+
+release:
+  stage: release
+  image:
+    name: goreleaser/goreleaser:latest
+    entrypoint: [""]
+  variables:
+    GITLAB_TOKEN: $CI_ACCESS_TOKEN
+  before_script:
+    - apk add build-base
+  script:
+    - goreleaser release --rm-dist
+  tags:
+    - docker
+  only:
+    refs:
+      - tags

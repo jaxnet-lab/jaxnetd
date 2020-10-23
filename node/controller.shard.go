@@ -72,7 +72,7 @@ func (chainCtl *chainController) runShards() error {
 			return err
 		}
 
-		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, false, false)
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, false)
 	}
 
 	return nil
@@ -100,10 +100,10 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	}
 
 	shardID := chainCtl.shardsIndex.AddShard(block, opts)
-	chainCtl.runShardRoutine(shardID, opts, block, true, true)
+	chainCtl.runShardRoutine(shardID, opts, block, true)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, addRPC, firstRun bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, autoInit bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error("shard run interrupted",
 			zap.Uint32("shard_id", shardID),
@@ -123,7 +123,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		ShardCount:     chainCtl.beacon.chainProvider.ShardCount,
 	}
 
-	if err := shardCtl.Init(beaconBlockGen, firstRun); err != nil {
+	if err := shardCtl.Init(beaconBlockGen, autoInit); err != nil {
 		chainCtl.logger.Error("Can't init shard chainCtl", zap.Error(err))
 		return
 	}
@@ -147,9 +147,18 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		chainCtl.shardsMutex.Unlock()
 	}()
 
-	if addRPC {
+	if autoInit {
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
+
+		if chainCtl.cfg.Metrics.Enable {
+			chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
+				shardCtl.chain.Params().Name, chainCtl.logger))
+		}
+
+		if chainCtl.cfg.Node.EnableCPUMiner {
+			chainCtl.runShardMiner(shardCtl.ChainProvider())
+		}
 	}
 }
 

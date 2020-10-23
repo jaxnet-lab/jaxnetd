@@ -113,14 +113,16 @@ func (h *ShardHeader) BlockData() []byte {
 // ShardBlockHash computes the block identifier hash for the given block ShardHeader.
 func (h *ShardHeader) ShardBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteShardBlockHeader(buf, h)
+	_ = WriteShardBlockHeaderNoBC(buf, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
 
 // BlockHash computes the block identifier hash for the BeaconChain Container for the given block.
 func (h *ShardHeader) BlockHash() chainhash.Hash {
-	return h.BCHeader.BlockHash()
+	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
+	_ = WriteShardBlockHeader(buf, h)
+	return chainhash.DoubleHashH(buf.Bytes())
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
@@ -202,4 +204,18 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		return err
 	}
 	return bh.BCHeader.Write(w)
+}
+
+// WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
+// encoding block headers to be stored to disk, such as in a database, as
+// opposed to encoding for the wire.
+func WriteShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
+	sec := uint32(bh.timestamp.Unix())
+	return encoder.WriteElements(w,
+		&bh.prevBlock,
+		&bh.merkleRoot,
+		sec,
+		&bh.bits,
+		bh.mergeMiningNumber,
+	)
 }

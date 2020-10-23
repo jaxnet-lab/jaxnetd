@@ -55,7 +55,7 @@ var (
 	// application shutdown.
 	LogRotator *rotator.Rotator
 
-	BtcdLog = backendLog.With(zap.String("app.unit", "BTCD"))
+	Log = backendLog.With(zap.String("app.unit", "BTCD"))
 
 	// subsystemLoggers maps each subsystem identifier to its associated logger.
 	subsystemLoggers = map[string]*zap.Logger{

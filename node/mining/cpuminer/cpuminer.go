@@ -283,7 +283,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 			// increment the number of hashes completed for each
 			// attempt accordingly.
 			header.SetNonce(i)
-			hash := header.BlockHash()
+			hash := header.BeaconHeader().BlockHash()
 			hashesCompleted += 2
 
 			// The block is solved when the new block hash is less
@@ -664,3 +664,4 @@ func New(cfg *Config, log *zap.Logger) *CPUMiner {
 		updateHashes:      make(chan uint64),
 	}
 }
+

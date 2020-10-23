@@ -20,9 +20,10 @@ node:
       - 0.0.0.0:28444
 
   shards:
-#    enable: true
+    enable: true
     autorun: true
-  #  enable_cpu_miner: true
+
+#  enable_cpu_miner: true
 
   beacon_chain:
     auto_expand: true
@@ -30,3 +31,5 @@ node:
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
+metrics:
+  enable: true

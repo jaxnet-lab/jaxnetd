@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 )
 
@@ -166,4 +167,114 @@ waitLoop:
 		time.Sleep(time.Second)
 	}
 	// -----------------------------------------------------------------------------------------
+}
+
+func TestMakeSwapTx(ot *testing.T) {
+	t := (*T)(ot)
+
+	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	// -----------------------------------------------------------------------------------------
+
+	// ---/---- PREPARE ----\----
+	cfg := ManagerCfg{
+		Net: "testnet",
+		RPC: NodeRPC{
+			Host: "116.202.107.209:18334",
+			User: "somerpc",
+			Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	assert.NoError(t, err)
+
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	assert.NoError(t, err)
+
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	signers := []string{
+		aliceKP.AddressPubKey.String(),
+		bobKP.AddressPubKey.String(),
+	}
+
+	multiSigScript, err := MakeMultiSigScript(signers, len(signers), cfg.NetParams())
+	assert.NoError(t, err)
+
+	shard1UTXO := txmodels.UTXO{
+		ShardID:    1,
+		Address:    multiSigScript.Address,
+		Value:      OneCoin,
+		Height:     0,
+		TxHash:     "",
+		OutIndex:   0,
+		Used:       false,
+		PKScript:   "",
+		ScriptType: "",
+	}
+
+	shard2UTXO := txmodels.UTXO{
+		ShardID:    2,
+		Address:    multiSigScript.Address,
+		Value:      OneCoin,
+		Height:     0,
+		TxHash:     "",
+		OutIndex:   0,
+		Used:       false,
+		PKScript:   "",
+		ScriptType: "",
+	}
+	// -----------------------------------------------------------------------------------------
+
+	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(map[string]txmodels.UTXO{
+		"address_in_shard_1": shard1UTXO,
+		"address_in_shard_2": shard2UTXO,
+	}, false)
+	assert.NoError(t, err)
+
+	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
+	swapTxWithMultisig, err := op.TxMan.WithKeys(aliceKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
+	assert.NoError(t, err)
+
+	swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
+	assert.NoError(t, err)
+	// -----------------------------------------------------------------------------------------
+
+	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
+	// publish created transaction
+	txHash, err := op.TxMan.RPC.ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	assert.NoError(t, err)
+
+	for {
+		// wait for the transaction to be added to the block
+		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		if out != nil && out.Confirmations > 2 {
+			println("tx mined into block")
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+	txHash, err = op.TxMan.RPC.ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	assert.NoError(t, err)
+
+	for {
+		// wait for the transaction to be added to the block
+		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		if out != nil && out.Confirmations > 2 {
+			println("tx mined into block")
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+	// -----------------------------------------------------------------------------------------
+
 }

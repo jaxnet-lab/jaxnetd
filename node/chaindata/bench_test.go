@@ -56,7 +56,7 @@ var Block100000 = wire.MsgBlock{
 	),
 	Transactions: []*wire.MsgTx{
 		{
-			Version: 1,
+			Version: wire.TxVerRegular,
 			TxIn: []*wire.TxIn{
 				{
 					PreviousOutPoint: wire.OutPoint{
@@ -90,7 +90,7 @@ var Block100000 = wire.MsgBlock{
 			LockTime: 0,
 		},
 		{
-			Version: 1,
+			Version: wire.TxVerRegular,
 			TxIn: []*wire.TxIn{
 				{
 					PreviousOutPoint: wire.OutPoint{
@@ -159,7 +159,7 @@ var Block100000 = wire.MsgBlock{
 			LockTime: 0,
 		},
 		{
-			Version: 1,
+			Version: wire.TxVerRegular,
 			TxIn: []*wire.TxIn{
 				{
 					PreviousOutPoint: wire.OutPoint{
@@ -227,7 +227,7 @@ var Block100000 = wire.MsgBlock{
 			LockTime: 0,
 		},
 		{
-			Version: 1,
+			Version: wire.TxVerRegular,
 			TxIn: []*wire.TxIn{
 				{
 					PreviousOutPoint: wire.OutPoint{

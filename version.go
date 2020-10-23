@@ -18,12 +18,19 @@ const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 // versioning 2.0.0 spec (http://semver.org/).
 const (
 	appMajor uint = 0
-	appMinor uint = 20
-	appPatch uint = 1
+	appMinor uint = 1
+	appPatch uint = 0
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
 	// per the semantic versioning spec.
 	appPreRelease = "beta"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -33,7 +40,7 @@ var appBuild string
 
 // version returns the application version as a properly formed string per the
 // semantic versioning 2.0.0 spec (http://semver.org/).
-func version() string {
+func getVersion() string {
 	// Start with the major, minor, and patch versions.
 	version := fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
 

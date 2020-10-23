@@ -26,7 +26,7 @@ func TestBadPC(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{
@@ -85,7 +85,7 @@ func TestCheckErrorCondition(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{{
 			PreviousOutPoint: wire.OutPoint{
 				Hash: chainhash.Hash([32]byte{
@@ -157,7 +157,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{

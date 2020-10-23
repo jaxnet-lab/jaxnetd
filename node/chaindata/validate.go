@@ -221,6 +221,11 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		return NewRuleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
+	if msgTx.Version == wire.TxVerShardsSwap && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
+		return NewRuleError(ErrInvalidShardSwapInOuts,
+			"ShardSwap tx with more than 2 inputs and outputs not allowed")
+	}
+
 	// A transaction must not exceed the maximum allowed block payload when
 	// serialized.
 	serializedTxSize := tx.MsgTx().SerializeSizeStripped()
@@ -291,9 +296,9 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		}
 	} else {
 		// Previous transaction outputs referenced by the inputs to this
-		// transaction must not be null.
+		// transaction must not be null. Null allowed only for ShardsSwapTxs.
 		for _, txIn := range msgTx.TxIn {
-			if isNullOutpoint(&txIn.PreviousOutPoint) {
+			if isNullOutpoint(&txIn.PreviousOutPoint) && msgTx.Version != wire.TxVerShardsSwap {
 				return NewRuleError(ErrBadTxInput, "transaction "+
 					"input refers to previous output that "+
 					"is null")
@@ -331,7 +336,7 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	// to avoid proof of work checks is set.
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
 		// The block Hash must be less than the claimed target.
-		hash := header.BlockHash()
+		hash := header.BeaconHeader().BlockHash()
 		hashNum := pow.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
 			str := fmt.Sprintf("block Hash of %064x is higher than "+

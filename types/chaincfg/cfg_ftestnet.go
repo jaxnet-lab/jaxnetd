@@ -59,7 +59,7 @@ var FTestNetParams = Params{
 	TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
 	TargetTimePerBlock:       time.Second * 15,           // 15 seconds
 	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
-	ReduceMinDifficulty:      true,
+	ReduceMinDifficulty:      false,
 	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 	GenerateSupported:        true,
 

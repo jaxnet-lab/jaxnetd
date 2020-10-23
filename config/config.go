@@ -84,9 +84,9 @@ var (
 	// defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 )
 
-// runServiceCommand is only set to a real function on Windows.  It is used
+// RunServiceCommand is only set to a real function on Windows.  It is used
 // to parse and execute service commands specified via the -s flag.
-var runServiceCommand func(string) error
+var RunServiceCommand func(string) error
 
 // minUint32 is a helper function to return the minimum of two uint32s.
 // This avoids a math import and the need to cast to floats.
@@ -405,9 +405,9 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Perform service command and exit if specified.  Invalid service
 	// commands show an appropriate error.  Only runs on Windows since
-	// the runServiceCommand function will be nil when not on Windows.
-	if serviceOpts.ServiceCommand != "" && runServiceCommand != nil {
-		err := runServiceCommand(serviceOpts.ServiceCommand)
+	// the RunServiceCommand function will be nil when not on Windows.
+	if serviceOpts.ServiceCommand != "" && RunServiceCommand != nil {
+		err := RunServiceCommand(serviceOpts.ServiceCommand)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
@@ -650,7 +650,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	if cfg.Node.RPC.Disable {
-		BtcdLog.Info("RPC service is disabled")
+		Log.Info("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
@@ -978,7 +978,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		BtcdLog.Warn(configFileError.Error())
+		Log.Warn(configFileError.Error())
 	}
 
 	return &cfg, remainingArgs, nil

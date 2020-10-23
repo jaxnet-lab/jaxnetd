@@ -28,6 +28,7 @@ atlassian-ide-plugin.xml
 vendor/*
 !vendor/vendor.json
 
+/dist
 /tmp
 shard.core
 

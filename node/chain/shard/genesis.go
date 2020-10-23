@@ -11,7 +11,7 @@ import (
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
 var genesisCoinbaseTx = wire.MsgTx{
-	Version: 1,
+	Version: wire.TxVerRegular,
 	TxIn: []*wire.TxIn{
 		{
 			PreviousOutPoint: wire.OutPoint{
