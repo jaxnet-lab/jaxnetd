@@ -4,6 +4,7 @@ services:
 
 stages:
   - build
+  - release
   - deploy
 
 variables:
@@ -59,7 +60,7 @@ deploy:stage:
 
 
 release_build:
-  stage: release_build
+  stage: release
   image:
     name: goreleaser/goreleaser
   script:
