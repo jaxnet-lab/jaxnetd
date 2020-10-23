@@ -13,7 +13,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	metrics2 "gitlab.com/jaxnet/core/shard.core/node/metrics"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"go.uber.org/zap"
 )
@@ -44,7 +43,7 @@ type chainController struct {
 	// -------------------------------
 
 	miner   *cpuminer.MultiMiner
-	metrics metrics2.IMetricManager
+	metrics IMetricManager
 }
 
 func Controller(logger *zap.Logger) *chainController {
@@ -215,8 +214,11 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 		port = 2112
 	}
 
-	chainCtl.metrics = metrics2.Metrics(childCtx, time.Duration(interval)*time.Second)
-	chainCtl.metrics.Add(metrics2.ChainMetrics(chainCtl.beacon.chainProvider.BlockChain(), "beacon", chainCtl.logger))
+	chainCtl.metrics = Metrics(childCtx, time.Duration(interval)*time.Second)
+	chainCtl.metrics.Add(
+		ChainMetrics(chainCtl.beacon.chainProvider.BlockChain(), "beacon", chainCtl.logger),
+		NodeMetrics(chainCtl.cfg, chainCtl.shardsIndex, chainCtl.logger),
+	)
 
 	return chainCtl.metrics.Listen("/metrics", port)
 }
