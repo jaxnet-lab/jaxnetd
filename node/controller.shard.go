@@ -151,14 +151,14 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
-		if chainCtl.cfg.Metrics.Enable {
-			chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
-				shardCtl.chain.Params().Name, chainCtl.logger))
-		}
-
 		if chainCtl.cfg.Node.EnableCPUMiner {
 			chainCtl.runShardMiner(shardCtl.ChainProvider())
 		}
+	}
+	
+	if chainCtl.cfg.Metrics.Enable {
+		chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
+			shardCtl.chain.Params().Name, chainCtl.logger))
 	}
 }
 
