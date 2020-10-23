@@ -11,19 +11,21 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   IMAGE: registry.gitlab.com/jaxnet/core/shard.core/$CI_COMMIT_REF_NAME:latest
 
-before_script:
-  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
-  - eval $(ssh-agent -s)
-  - echo "$JAX_KEY" > ./key.file
-  - chmod 400 ./key.file
-  - ssh-add ./key.file
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-  - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
+.before_script: &before_script
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+    - eval $(ssh-agent -s)
+    - echo "$JAX_KEY" > ./key.file
+    - chmod 400 ./key.file
+    - ssh-add ./key.file
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
 
 build:
   stage: build
+  <<: *before_script
   only:
     - master
     - dev
@@ -35,6 +37,7 @@ build:
 
 .deploy: &deploy
   stage: deploy
+  <<: *before_script
   when: manual
   tags:
     - docker
@@ -63,6 +66,9 @@ release_build:
   stage: release
   image:
     name: goreleaser/goreleaser
+    entrypoint: [""]
+  before_script:
+    - echo Just to replace default
   script:
     - goreleaser release --snapshot --rm-dist
   tags:
@@ -79,12 +85,10 @@ release:
   stage: release
   image:
     name: goreleaser/goreleaser:latest
+    entrypoint: [""]
   variables:
     GITLAB_TOKEN: $CI_JOB_TOKEN
   before_script:
-    - mkdir -p ${GOPATH}/src/${PROJECT_PATH}
-    - cp -r . ${GOPATH}/src/${PROJECT_PATH}
-    - cd ${GOPATH}/src/${PROJECT_PATH}
     - apk add build-base
   script:
     - goreleaser release --rm-dist
