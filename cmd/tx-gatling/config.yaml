@@ -1,0 +1,20 @@
+net: testnet
+shard_id: 2
+
+node_rpc:
+  host: 127.0.0.1:28334
+  user: somerpc
+  pass: somerpc
+
+destinations:
+  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
+    amount: 2500000000
+  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
+    amount: 135_0000_0000
+  - address: n43KSoTrhQRoCBpAM8b7B6eWqB7PT2QpHG
+    amount: 75_0000_0000
+  - address: mpi7Qb6uRREWEzgFTryijxY1AomaJU8gkt
+    amount: 100_0000_0000
+
+
+sender_secret: 9e3f8b9b5e3698fa5a8b4b927eecec88fc36a91c14963d89e41747d1acf89dfb

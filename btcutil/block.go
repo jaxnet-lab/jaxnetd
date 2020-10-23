@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,9 +8,11 @@ package btcutil
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"io"
+
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // OutOfRangeError describes an error due to accessing an element that is out
@@ -200,7 +203,8 @@ func (b *Block) TxLoc() ([]wire.TxLoc, error) {
 	}
 	rbuf := bytes.NewBuffer(rawMsg)
 
-	var mblock wire.MsgBlock
+	var mblock = *b.msgBlock
+
 	txLocs, err := mblock.DeserializeTxLoc(rbuf)
 	if err != nil {
 		return nil, err
@@ -230,9 +234,9 @@ func NewBlock(msgBlock *wire.MsgBlock) *Block {
 
 // NewBlockFromBytes returns a new instance of a bitcoin block given the
 // serialized bytes.  See Block.
-func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
+func NewBlockFromBytes(chain chain.IChainCtx, serializedBlock []byte) (*Block, error) {
 	br := bytes.NewReader(serializedBlock)
-	b, err := NewBlockFromReader(br)
+	b, err := NewBlockFromReader(chain, br)
 	if err != nil {
 		return nil, err
 	}
@@ -242,9 +246,9 @@ func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
 
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
-func NewBlockFromReader(r io.Reader) (*Block, error) {
+func NewBlockFromReader(chain chain.IChainCtx, r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
-	var msgBlock wire.MsgBlock
+	msgBlock := chain.EmptyBlock()
 	err := msgBlock.Deserialize(r)
 	if err != nil {
 		return nil, err

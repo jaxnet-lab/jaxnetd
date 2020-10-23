@@ -1,14 +1,15 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package bloom
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // merkleBlock is used to house intermediate information needed to generate a
@@ -41,7 +42,7 @@ func (m *merkleBlock) calcHash(height, pos uint32) *chainhash.Hash {
 	} else {
 		right = left
 	}
-	return blockchain.HashMerkleBranches(left, right)
+	return chaindata.HashMerkleBranches(left, right)
 }
 
 // traverseAndBuild builds a partial merkle tree using a recursive depth-first

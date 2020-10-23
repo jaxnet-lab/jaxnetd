@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package main
 
 import (
@@ -10,8 +13,8 @@ import (
 	"net"
 	"net/http"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
 	"github.com/btcsuite/go-socks/socks"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the
@@ -72,6 +75,12 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 		protocol = "https"
 	}
 	url := protocol + "://" + cfg.RPCServer
+
+	if cfg.ShardID == 0 {
+		url += "/beacon/"
+	} else {
+		url += fmt.Sprintf("/shard/%d", cfg.ShardID)
+	}
 	bodyReader := bytes.NewReader(marshalledJSON)
 	httpRequest, err := http.NewRequest("POST", url, bodyReader)
 	if err != nil {

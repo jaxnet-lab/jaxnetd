@@ -1,4 +1,5 @@
 // Copyright (c) 2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bech32"
 )
 
 func TestBech32(t *testing.T) {
@@ -21,11 +22,11 @@ func TestBech32(t *testing.T) {
 		{"abcdef1qpzry9x8gf2tvdw0s3jn54khce6mua7lmqqqxw", true},
 		{"11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc8247j", true},
 		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", true},
-		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e2w", false},                                // invalid checksum
-		{"s lit1checkupstagehandshakeupstreamerranterredcaperredp8hs2p", false},                                // invalid character (space) in hrp
-		{"spl" + string(127) + "t1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false},              // invalid character (DEL) in hrp
-		{"split1cheo2y9e2w", false},                                                                            // invalid character (o) in data part
-		{"split1a2y9w", false},                                                                                 // too short data part
+		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e2w", false},                         // invalid checksum
+		{"s lit1checkupstagehandshakeupstreamerranterredcaperredp8hs2p", false},                         // invalid character (space) in hrp
+		{"spl" + string(rune(127)) + "t1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false}, // invalid character (DEL) in hrp
+		{"split1cheo2y9e2w", false}, // invalid character (o) in data part
+		{"split1a2y9w", false},      // too short data part
 		{"1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false},                                     // empty hrp
 		{"11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc8247j", false}, // too long
 	}

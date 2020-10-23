@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,11 +7,12 @@ package bloom_test
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math/rand"
 	"time"
+
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // This example demonstrates how to create a new bloom filter, add a transaction
@@ -30,7 +32,6 @@ func ExampleNewFilter() {
 	txHashStr := "fd611c56ca0d378cdcd16244b45c2ba9588da3adac367c4ef43e808b280b8a45"
 	txHash, err := chainhash.NewHashFromStr(txHashStr)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	filter.AddHash(txHash)

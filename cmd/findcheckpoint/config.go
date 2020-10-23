@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,15 +7,15 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 
-	flags "github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	_ "gitlab.com/jaxnet/core/shard.core.git/database/ffldb"
+	"github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 const (
@@ -62,7 +63,7 @@ func validDbType(dbType string) bool {
 // as "testnet" when the passed active network matches types.TestNet3.
 //
 // A proper upgrade to move the data and log directories for this network to
-// "testnet3" is planned for the future, at which point this function can be
+// "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {

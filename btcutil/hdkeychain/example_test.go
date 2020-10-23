@@ -1,4 +1,5 @@
 // Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,8 +8,8 @@ package hdkeychain_test
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/hdkeychain"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 // This example demonstrates how to generate a cryptographically random seed

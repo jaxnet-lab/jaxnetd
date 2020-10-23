@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database/internal/treap"
 	"github.com/btcsuite/goleveldb/leveldb"
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/util"
+	"gitlab.com/jaxnet/core/shard.core/database/internal/treap"
 )
 
 const (

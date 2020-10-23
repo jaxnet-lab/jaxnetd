@@ -1,5 +1,6 @@
 // Copyright (c) 2013-2018 The btcsuite developers
 // Copyright (c) 2015-2018 The Decred developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,10 +10,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"math/big"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
 )
 
 // ScriptFlags is a bitmask defining additional operations or tests that will be

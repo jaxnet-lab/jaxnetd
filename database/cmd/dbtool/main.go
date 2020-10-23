@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,9 +11,10 @@ import (
 	"runtime"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/database"
 	"github.com/btcsuite/btclog"
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
 const (
@@ -26,13 +28,13 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB() (database.DB, error) {
+func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 
-	log.Infof("Loading block database from '%s'", dbPath)
-	db, err := database.Open(cfg.DbType, dbPath, activeNetParams.Net)
+	log.Infof("Loading block data0base from '%s'", dbPath)
+	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
@@ -47,7 +49,7 @@ func loadBlockDB() (database.DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		db, err = database.Create(cfg.DbType, dbPath, activeNetParams.Net)
+		db, err = database.Create(cfg.DbType, chain, dbPath, activeNetParams.Net)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +68,7 @@ func realMain() error {
 	log = backendLogger.Logger("MAIN")
 	dbLog := backendLogger.Logger("BCDB")
 	dbLog.SetLevel(btclog.LevelDebug)
-	database.UseLogger(dbLog)
+	// database.UseLogger(dbLog)
 
 	// Setup the parser options and commands.
 	appName := filepath.Base(os.Args[0])

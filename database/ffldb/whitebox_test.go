@@ -1,9 +1,11 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 // This file is part of the ffldb package rather than the ffldb_test package as
 // it provides whitebox testing.
+//+build deprecated_tests
 
 package ffldb
 
@@ -11,7 +13,6 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"hash/crc32"
 	"io"
 	"os"
@@ -20,9 +21,10 @@ import (
 
 	"github.com/btcsuite/goleveldb/leveldb"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 var (

@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,14 +7,14 @@ package bloom
 
 import (
 	"encoding/binary"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"math"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/txscript"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // ln2Squared is simply the square of the natural log of 2.
@@ -141,7 +142,7 @@ func (bf *Filter) matches(data []byte) bool {
 	// equivalent of:
 	//   arrayIndex := idx / 8     (idx >> 3)
 	//   bitOffset := idx % 8      (idx & 7)
-	///  if filter[arrayIndex] & 1<<bitOffset == 0 { ... }
+	// /  if filter[arrayIndex] & 1<<bitOffset == 0 { ... }
 	for i := uint32(0); i < bf.msgFilterLoad.HashFuncs; i++ {
 		idx := bf.hash(i, data)
 		if bf.msgFilterLoad.Filter[idx>>3]&(1<<(idx&7)) == 0 {
@@ -200,7 +201,7 @@ func (bf *Filter) add(data []byte) {
 	// of:
 	//   arrayIndex := idx / 8    (idx >> 3)
 	//   bitOffset := idx % 8     (idx & 7)
-	///  filter[arrayIndex] |= 1<<bitOffset
+	// /  filter[arrayIndex] |= 1<<bitOffset
 	for i := uint32(0); i < bf.msgFilterLoad.HashFuncs; i++ {
 		idx := bf.hash(i, data)
 		bf.msgFilterLoad.Filter[idx>>3] |= (1 << (7 & idx))

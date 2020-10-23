@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,10 +8,11 @@ package btcutil
 import (
 	"bytes"
 	"errors"
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private
@@ -68,7 +70,7 @@ func (w *WIF) IsForNet(net *chaincfg.Params) bool {
 // sequence:
 //
 //  * 1 byte to identify the network, must be 0x80 for mainnet or 0xef for
-//    either testnet3 or the regression test network
+//    either "testnet or the regression test network
 //  * 32 bytes of a binary-encoded, big-endian, zero-padded private key
 //  * Optional 1 byte (equal to 0x01) if the address being imported or exported
 //    was created by taking the RIPEMD160 after SHA256 hash of a serialized

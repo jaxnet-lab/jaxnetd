@@ -1,5 +1,6 @@
 // Copyright (c) 2016-2017 The btcsuite developers
 // Copyright (c) 2016-2017 The Lightning Network Developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +9,7 @@ package gcs
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/encoder"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"io"
 	"sort"
 

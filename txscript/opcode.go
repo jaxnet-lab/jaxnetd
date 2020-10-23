@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,11 +13,11 @@ import (
 	"fmt"
 	"hash"
 
-	"golang.org/x/crypto/ripemd160"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"golang.org/x/crypto/ripemd160"
 )
 
 // An opcode defines the information related to a txscript opcode.  opfunc, if
@@ -1246,7 +1247,7 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) error {
 
 	// Transaction version numbers not high enough to trigger CSV rules must
 	// fail.
-	if vm.tx.Version < 2 {
+	if vm.tx.Version != wire.TxVerTimeLock {
 		str := fmt.Sprintf("invalid transaction version: %d",
 			vm.tx.Version)
 		return scriptError(ErrUnsatisfiedLockTime, str)

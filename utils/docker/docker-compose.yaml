@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  core-1:
+    image: shard-core
+    ports:
+      - 18334:18334
+      - 18444:18444
+    volumes:
+      - ./core_1/core:/core
+      - ./core_1/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
+
+  core-2:
+    image: shard-core
+    ports:
+      - 28334:28334
+      - 28444:28444
+    volumes:
+      - ./core_2/core:/core
+      - ./core_2/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
+
+  core-3:
+    image: shard-core
+    ports:
+      - 38334:38334
+      - 38444:38444
+    volumes:
+      - ./core_3/core:/core
+      - ./core_3/shard.yaml:/shard.yaml
+    command: /shard.core -C /shard.yaml
+
+  miner:
+    image: registry.gitlab.com/jaxnet/core/miner/master:latest
+    volumes:
+      - ./node_3/core:/core
+      - ./miner.yaml:/conf.yaml
+    command: /miner

@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,8 +8,9 @@ package main
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // headersCmd defines the configuration options for the loadheaders command.
@@ -31,7 +33,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB()
+	db, err := loadBlockDB(chain.BeaconChain)
 	if err != nil {
 		return err
 	}

@@ -1,3 +1,6 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package main
 
 import (
@@ -10,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 )
 
 const (
@@ -127,7 +130,7 @@ func main() {
 
 	// Marshal the command into a JSON-RPC byte slice in preparation for
 	// sending it to the RPC server.
-	marshalledJSON, err := btcjson.MarshalCmd(1, cmd)
+	marshalledJSON, err := btcjson.MarshalCmd(1, cfg.ShardID, cmd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

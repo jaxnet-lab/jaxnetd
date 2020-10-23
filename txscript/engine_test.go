@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,8 +8,8 @@ package txscript
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestBadPC sets the pc to a deliberately bad result then confirms that Step()
@@ -25,7 +26,7 @@ func TestBadPC(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{
@@ -84,7 +85,7 @@ func TestCheckErrorCondition(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{{
 			PreviousOutPoint: wire.OutPoint{
 				Hash: chainhash.Hash([32]byte{
@@ -156,7 +157,7 @@ func TestInvalidFlagCombinations(t *testing.T) {
 
 	// tx with almost empty scripts.
 	tx := &wire.MsgTx{
-		Version: 1,
+		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
 			{
 				PreviousOutPoint: wire.OutPoint{

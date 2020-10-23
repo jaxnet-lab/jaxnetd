@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,8 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/txsort"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/txsort"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // TestSort ensures the transaction sorting works according to the BIP.

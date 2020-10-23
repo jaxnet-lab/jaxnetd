@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,8 +9,9 @@
 package database
 
 import (
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a
@@ -428,6 +430,8 @@ type DB interface {
 	// Type returns the database driver type the current database instance
 	// was created with.
 	Type() string
+
+	Chain() chain.IChainCtx
 
 	// Begin starts a transaction which is either read-only or read-write
 	// depending on the specified flag.  Multiple read-only transactions

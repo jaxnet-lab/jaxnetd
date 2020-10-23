@@ -4,106 +4,96 @@ services:
 
 stages:
   - build
+  - release
   - deploy
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/core/shard.core:$CI_PIPELINE_ID.$CI_COMMIT_REF_NAME
+  IMAGE: registry.gitlab.com/jaxnet/core/shard.core/$CI_COMMIT_REF_NAME:latest
 
-#before_script:
-#  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN gitlab.com/jaxnet
-
-before_script:
-  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
-  - eval $(ssh-agent -s)
-  - echo "$JAX_KEY" > ./key.file
-  - chmod 400 ./key.file
-  - ssh-add ./key.file
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-  - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
+.before_script: &before_script
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-hub -y )'
+    - eval $(ssh-agent -s)
+    - echo "$JAX_KEY" > ./key.file
+    - chmod 400 ./key.file
+    - ssh-add ./key.file
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
 
 build:
   stage: build
+  <<: *before_script
   only:
     - master
     - dev
   tags:
     - shell
   script:
-    - docker build . --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN  --pull -t $IMAGE
+    - docker build --pull -t $IMAGE .
     - docker push $IMAGE
 
-.shard_core_deploy: &shard_core_deploy
+.deploy: &deploy
   stage: deploy
+  <<: *before_script
   when: manual
   tags:
-    - shell
+    - docker
   script:
     - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-    - ssh ${REMOTE} "(docker stop ${CORE_NAME} || true) && (docker rm ${CORE_NAME} || true)"
-    - ssh ${REMOTE} "docker run -d -v ${CORE_HOME}:/root/.btcd -p ${CORE_PORT_1}:${CORE_PORT_1} -p ${CORE_PORT_2}:${CORE_PORT_2} --restart=always --name ${CORE_NAME} $IMAGE"
+    - ssh ${REMOTE} "cd /opt/shard-core && docker-compose down && docker-compose up -d"
 
-
-dev-shard-cores:
+deploy:dev:
   stage: deploy
-  <<: *shard_core_deploy
+  <<: *deploy
   variables:
     REMOTE: $DEV_REMOTE
-    CORE_HOME: /opt/shard-core/node_1
-    CORE_PORT_1: 18444
-    CORE_PORT_2: 18334
-    CORE_NAME: shard-core-1
   only:
     - master
     - dev
 
-.dev-shard-core-2:
-  <<: *shard_core_deploy
+deploy:stage:
+  <<: *deploy
   variables:
-    REMOTE: $DEV_REMOTE
-    CORE_HOME: /opt/shard-core/node_2
-    CORE_PORT_1: 28444
-    CORE_PORT_2: 28334
-    CORE_NAME: shard-core-2
+    REMOTE: $STAGE_REMOTE
+  only:
+    - stage
+
+
+release_build:
+  stage: release
+  image:
+    name: goreleaser/goreleaser
+    entrypoint: [""]
+  before_script:
+    - echo Just to replace default
+  script:
+    - goreleaser release --snapshot --rm-dist
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - dist
   only:
     - master
     - dev
-
-
-stage-shard-core-1:
-  <<: *shard_core_deploy
-  variables:
-    REMOTE: $STAGE_REMOTE
-    CORE_HOME: /opt/shard-core/node_1
-    CORE_PORT_1: 18444
-    CORE_PORT_2: 18334
-    CORE_NAME: shard-core-1
-  only:
     - stage
 
-stage-shard-core-2:
-  <<: *shard_core_deploy
+release:
+  stage: release
+  image:
+    name: goreleaser/goreleaser:latest
+    entrypoint: [""]
   variables:
-    REMOTE: $STAGE_REMOTE
-    CORE_HOME: /opt/shard-core/node_2
-    CORE_PORT_1: 28444
-    CORE_PORT_2: 28334
-    CORE_NAME: shard-core-2
+    GITLAB_TOKEN: $CI_JOB_TOKEN
+  before_script:
+    - apk add build-base
+  script:
+    - goreleaser release --rm-dist
+  tags:
+    - docker
   only:
-    - stage
-
-
-stage-shard-core-3:
-  <<: *shard_core_deploy
-  variables:
-    REMOTE: $STAGE_REMOTE
-    CORE_HOME: /opt/shard-core/node_3
-    CORE_PORT_1: 38444
-    CORE_PORT_2: 38334
-    CORE_NAME: shard-core-3
-  only:
-    - stage
-
-
+    refs:
+      - tags

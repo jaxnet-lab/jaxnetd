@@ -1,4 +1,5 @@
 // Copyright (c) 2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
 	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // genTestTx creates a random transaction for uses within test cases.

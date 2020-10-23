@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,7 +10,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/base58"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
 )
 
 var stringTests = []struct {

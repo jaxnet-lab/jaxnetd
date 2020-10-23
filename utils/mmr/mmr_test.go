@@ -1,12 +1,16 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package mmr
 
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/sha3"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 )
 
 func TestInitMmr(t *testing.T) {
@@ -289,7 +293,7 @@ func TestAppendNode(t *testing.T) {
 	var i uint64 = 0
 	for i < 20 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 }
@@ -323,7 +327,7 @@ func TestGetProof(t *testing.T) {
 	h := Hash{}
 	for i <= 20 {
 		rand.Read(data[:32])
-		h = mmr.Append(i, big.NewInt(int64(i)), data)
+		h = mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 	h2 := mmr.GetRoot(20)
@@ -366,7 +370,7 @@ func TestGetProof200(t *testing.T) {
 	h := Hash{}
 	for i <= 203 {
 		rand.Read(data[:32])
-		h = mmr.Append(i, big.NewInt(int64(i)), data)
+		h = mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 	h2 := mmr.GetRoot(203)
@@ -413,7 +417,7 @@ func TestGetProofs(t *testing.T) {
 	var i uint64 = 0
 	for i < 21 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 
@@ -454,7 +458,7 @@ func TestGetProofsFileDB(t *testing.T) {
 	var i uint64 = 0
 	for i < 21 {
 		rand.Read(data[:32])
-		mmr.Append(i, big.NewInt(int64(i)), data)
+		mmr.Set(i, big.NewInt(int64(i)), data)
 		i++
 	}
 

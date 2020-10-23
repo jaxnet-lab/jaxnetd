@@ -1,4 +1,5 @@
 // Copyright (c) 2017 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/bech32"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/bech32"
 )
 
 // This example demonstrates how to decode a bech32 encoded string.

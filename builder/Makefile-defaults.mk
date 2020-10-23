@@ -1,5 +1,4 @@
 export GOMODULES11 = on
-export GOFLAGS = -mod=vendor
 export GOPRIVATE = gitlab.com/jaxnet/core/*
 DESTDIR ?= /output/
 PACKAGE ?= $(shell basename $(PWD))

@@ -1,0 +1,15 @@
+net: "fastnet"
+
+rpc_server: "127.0.0.1:18444"
+rpc_user: somerpc
+rpc_password: somerpc
+rpc_cert: ""
+
+no_tls: true
+tls_skip_verify: true
+
+proxy: ""
+proxy_pass: ""
+proxy_user: ""
+
+wallet: false

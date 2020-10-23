@@ -1,4 +1,5 @@
 // Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,7 +8,7 @@ package hdkeychain_test
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil/hdkeychain"
+	"gitlab.com/jaxnet/core/shard.core/btcutil/hdkeychain"
 )
 
 // bip0032MasterPriv1 is the master private extended key from the first set of

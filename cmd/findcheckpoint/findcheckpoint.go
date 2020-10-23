@@ -1,6 +1,8 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+//+build deprecated_tests
 
 package main
 
@@ -9,10 +11,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core.git/blockchain"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 const blockDbNamePrefix = "blocks"
@@ -23,11 +27,13 @@ var (
 
 // loadBlockDB opens the block database and returns a handle to it.
 func loadBlockDB() (database.DB, error) {
+
+	chain := beacon.Chain(&chaincfg.TestNet3Params)
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	fmt.Printf("Loading block database from '%s'\n", dbPath)
-	db, err := database.Open(cfg.DbType, dbPath, activeNetParams.Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +57,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 	if latestCheckpoint == nil {
 		// Set the latest checkpoint to the genesis block if there isn't
 		// already one.
-		latestCheckpoint = &chaincfg.Checkpoint{
+		latestCheckpoint = &chain.Checkpoint{
 			Hash:   activeNetParams.GenesisHash,
 			Height: 0,
 		}
@@ -83,7 +89,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 	defer fmt.Println()
 
 	// Loop backwards through the chain to find checkpoint candidates.
-	candidates := make([]*chaincfg.Checkpoint, 0, cfg.NumCandidates)
+	candidates := make([]*chain.Checkpoint, 0, cfg.NumCandidates)
 	numTested := int32(0)
 	for len(candidates) < cfg.NumCandidates && block.Height() > requiredHeight {
 		// Display progress.
@@ -100,7 +106,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 		// All checks passed, so this node seems like a reasonable
 		// checkpoint candidate.
 		if isCandidate {
-			checkpoint := chaincfg.Checkpoint{
+			checkpoint := chain.Checkpoint{
 				Height: block.Height(),
 				Hash:   block.Hash(),
 			}
@@ -153,7 +159,7 @@ func main() {
 	chain, err := blockchain.New(&blockchain.Config{
 		DB:          db,
 		ChainParams: activeNetParams,
-		TimeSource:  blockchain.NewMedianTime(),
+		TimeSource:  chaindata.NewMedianTime(),
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize chain: %v\n", err)

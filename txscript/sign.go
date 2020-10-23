@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -7,11 +8,11 @@ package txscript
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcec"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // RawTxInWitnessSignature returns the serialized ECDA signature for the input

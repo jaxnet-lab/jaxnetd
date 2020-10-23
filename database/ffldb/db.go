@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,9 +9,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,9 +22,12 @@ import (
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/opt"
 	"github.com/btcsuite/goleveldb/leveldb/util"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/database/internal/treap"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/database/internal/treap"
+	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 const (
@@ -36,7 +37,7 @@ const (
 	// blockHdrSize is the size of a block header.  This is simply the
 	// constant from wire and is only provided here for convenience since
 	// wire.MaxBlockHeaderPayload is quite long.
-	//blockHdrSize = shard.MaxBlockHeaderPayload
+	// blockHdrSize = shard.MaxBlockHeaderPayload
 
 	// blockHdrOffset defines the offsets into a block index row for the
 	// block header.
@@ -954,10 +955,11 @@ type pendingBlock struct {
 // read-write and implements the database.Tx interface.  The transaction
 // provides a root bucket against which all read and writes occur.
 type transaction struct {
-	managed        bool             // Is the transaction managed?
-	closed         bool             // Is the transaction closed?
-	writable       bool             // Is the transaction writable?
-	db             *db              // DB instance the tx was created from.
+	managed        bool // Is the transaction managed?
+	closed         bool // Is the transaction closed?
+	writable       bool // Is the transaction writable?
+	db             *db  // DB instance the tx was created from.
+	chain          chain2.IChainCtx
 	snapshot       *dbCacheSnapshot // Underlying snapshot for txns.
 	metaBucket     *bucket          // The root metadata bucket.
 	blockIdxBucket *bucket          // The block index bucket.
@@ -1259,7 +1261,7 @@ func (tx *transaction) FetchBlockHeader(hash *chainhash.Hash) ([]byte, error) {
 	return tx.FetchBlockRegion(&database.BlockRegion{
 		Hash:   hash,
 		Offset: 0,
-		Len:    uint32(chain.MaxBlockHeaderPayload()),
+		Len:    uint32(tx.chain.MaxBlockHeaderPayload()),
 	})
 }
 
@@ -1283,7 +1285,7 @@ func (tx *transaction) FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, err
 	for i := range hashes {
 		regions[i].Hash = &hashes[i]
 		regions[i].Offset = 0
-		regions[i].Len = uint32(chain.MaxBlockHeaderPayload())
+		regions[i].Len = uint32(tx.chain.MaxBlockHeaderPayload())
 	}
 	return tx.FetchBlockRegions(regions)
 }
@@ -1733,6 +1735,7 @@ type db struct {
 	closed    bool         // Is the database closed?
 	store     *blockStore  // Handles read/writing blocks to flat files.
 	cache     *dbCache     // Cache layer which wraps underlying leveldb DB.
+	chain     chain2.IChainCtx
 }
 
 // Enforce db implements the database.DB interface.
@@ -1813,6 +1816,10 @@ func (db *db) begin(writable bool) (*transaction, error) {
 // This function is part of the database.DB interface implementation.
 func (db *db) Begin(writable bool) (database.Tx, error) {
 	return db.begin(writable)
+}
+
+func (db *db) Chain() chain2.IChainCtx {
+	return db.chain
 }
 
 // rollbackOnPanic rolls the passed transaction back if the code in the calling
@@ -1983,7 +1990,7 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, network types.BitcoinNet, create bool) (database.DB, error) {
+func openDB(dbPath string, chain chain2.IChainCtx, network types.BitcoinNet, create bool) (database.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)
@@ -2019,7 +2026,7 @@ func openDB(dbPath string, network types.BitcoinNet, create bool) (database.DB, 
 	// write caching.
 	store := newBlockStore(dbPath, network)
 	cache := newDbCache(ldb, store, defaultCacheSize, defaultFlushSecs)
-	pdb := &db{store: store, cache: cache}
+	pdb := &db{store: store, cache: cache, chain: chain}
 
 	// Perform any reconciliation needed between the block and metadata as
 	// well as database initialization, if needed.

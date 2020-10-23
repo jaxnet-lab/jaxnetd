@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -17,8 +18,6 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/chain"
-	"gitlab.com/jaxnet/core/shard.core.git/wire/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -27,11 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core.git/btcutil"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core.git/chaincfg/chainhash"
-	"gitlab.com/jaxnet/core/shard.core.git/database"
-	"gitlab.com/jaxnet/core/shard.core.git/wire"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 var (
@@ -65,8 +65,9 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 
 	// Set the first block as the genesis block.
 	blocks := make([]*btcutil.Block, 0, 256)
-	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-	blocks = append(blocks, genesis)
+	// fixme
+	// genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	// blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.
 	for height := 1; ; height++ {
@@ -104,7 +105,7 @@ func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btc
 		}
 
 		// Deserialize and store the block.
-		block, err := btcutil.NewBlockFromBytes(blockBytes)
+		block, err := btcutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
 		if err != nil {
 			t.Errorf("Failed to parse block %v: %v", height, err)
 			return nil, err
@@ -1264,7 +1265,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 
 		// Ensure the block header fetched from the database matches the
 		// expected bytes.
-		wantHeaderBytes := blockBytes[0:chain.MaxBlockHeaderPayload()]
+		wantHeaderBytes := blockBytes[0:chain.BeaconChain.MaxBlockHeaderPayload()]
 		gotHeaderBytes, err := tx.FetchBlockHeader(blockHash)
 		if err != nil {
 			tc.t.Errorf("FetchBlockHeader(%s): unexpected error: %v",
@@ -1406,7 +1407,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	}
 	for i := 0; i < len(blockHeaderData); i++ {
 		blockHash := allBlockHashes[i]
-		wantHeaderBytes := allBlockBytes[i][0:chain.MaxBlockHeaderPayload()]
+		wantHeaderBytes := allBlockBytes[i][0:chain.BeaconChain.MaxBlockHeaderPayload()]
 		gotHeaderBytes := blockHeaderData[i]
 		if !bytes.Equal(gotHeaderBytes, wantHeaderBytes) {
 			tc.t.Errorf("FetchBlockHeaders(%s): bytes mismatch: "+

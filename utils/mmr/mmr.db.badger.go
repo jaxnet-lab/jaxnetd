@@ -1,24 +1,43 @@
+// Copyright (c) 2020 The JaxNetwork developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 package mmr
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	badger "github.com/dgraph-io/badger"
-	"log"
+	"os"
+
+	"github.com/dgraph-io/badger"
 )
 
 type badgerDB struct {
 	db *badger.DB
 }
 
-func BadgerDB(path string) (res *badgerDB, err error) {
-	res = &badgerDB{}
-	res.db, err = badger.Open(badger.DefaultOptions(path))
+func BadgerDB(path string) (*badgerDB, error) {
+	res := &badgerDB{}
+	opts := badger.DefaultOptions(path)
+	opts.Logger = nil
+	err := ensureDir(path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return
+
+	res.db, err = badger.Open(opts)
+	return res, err
+}
+
+func ensureDir(path string) error {
+	_, err := os.Stat(path)
+	if err == nil {
+		return nil
+	}
+	if os.IsNotExist(err) {
+		return os.MkdirAll(path, 0700)
+	}
+	return err
 }
 
 func (b *badgerDB) Close() error {
