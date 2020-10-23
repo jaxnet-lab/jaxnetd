@@ -137,7 +137,7 @@ func upgradeDataPaths() error {
 	// Only migrate if the old path exists and the new one doesn't.
 	if fileExists(oldHomePath) && !fileExists(newHomePath) {
 		// Create the new path.
-		BtcdLog.Info(fmt.Sprintf("Migrating application home path from '%s' to '%s'",
+		Log.Info(fmt.Sprintf("Migrating application home path from '%s' to '%s'",
 			oldHomePath, newHomePath))
 		err := os.MkdirAll(newHomePath, 0700)
 		if err != nil {
@@ -175,7 +175,7 @@ func upgradeDataPaths() error {
 				return err
 			}
 		} else {
-			BtcdLog.Warn(fmt.Sprintf("Not removing '%s' since it contains files "+
+			Log.Warn(fmt.Sprintf("Not removing '%s' since it contains files "+
 				"not created by this application.  You may "+
 				"want to manually move them or delete them.",
 				oldHomePath))

@@ -36,44 +36,38 @@ var elog *eventlog.Log
 
 // logServiceStartOfDay logs information about btcd when the main server has
 // been started to the Windows event log.
-func logServiceStartOfDay(srvr *server) {
+func logServiceStartOfDay() {
 	var message string
 	message += fmt.Sprintf("Version %s\n", version())
-	message += fmt.Sprintf("Configuration directory: %s\n", config.defaultHomeDir)
-	message += fmt.Sprintf("Configuration file: %s\n", config.ConfigFile)
-	message += fmt.Sprintf("Data directory: %s\n", config.DataDir)
-
 	elog.Info(1, message)
 }
 
-// btcdService houses the main service handler which handles all service
-// updates and launching btcdMain.
-type btcdService struct{}
+// shardCoreService houses the main service handler which handles all service
+// updates and launching shardCoreMain.
+type shardCoreService struct{}
 
 // Execute is the main entry point the winsvc package calls when receiving
 // information from the Windows service control manager.  It launches the
-// long-running btcdMain (which is the real meat of btcd), handles service
+// long-running shardCoreMain (which is the real meat of btcd), handles service
 // change requests, and notifies the service control manager of changes.
-func (s *btcdService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
+func (s *shardCoreService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	// Service start is pending.
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 
-	// Start btcdMain in a separate goroutine so the service can start
+	// Start shardCoreMain in a separate goroutine so the service can start
 	// quickly.  Shutdown (along with a potential error) is reported via
 	// doneChan.  serverChan is notified with the main server instance once
 	// it is started so it can be gracefully stopped.
 	doneChan := make(chan error)
-	serverChan := make(chan *server)
 	go func() {
-		err := btcdMain(serverChan)
+		err := shardCoreMain()
 		doneChan <- err
 	}()
 
 	// Service is now started.
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 
-	var mainServer *server
 loop:
 	for {
 		select {
@@ -94,10 +88,6 @@ loop:
 				elog.Error(1, fmt.Sprintf("Unexpected control "+
 					"request #%d.", c))
 			}
-
-		case srvr := <-serverChan:
-			mainServer = srvr
-			logServiceStartOfDay(mainServer)
 
 		case err := <-doneChan:
 			if err != nil {
@@ -293,7 +283,7 @@ func serviceMain() (bool, error) {
 	}
 	defer elog.Close()
 
-	err = svc.Run(svcName, &btcdService{})
+	err = svc.Run(svcName, &shardCoreService{})
 	if err != nil {
 		elog.Error(1, fmt.Sprintf("Service start failed: %v", err))
 		return true, err
@@ -304,6 +294,6 @@ func serviceMain() (bool, error) {
 
 // Set windows specific functions to real functions.
 func init() {
-	config.runServiceCommand = performServiceCommand
+	config.RunServiceCommand = performServiceCommand
 	winServiceMain = serviceMain
 }

@@ -57,3 +57,32 @@ deploy:stage:
   only:
     - stage
 
+
+release_build:
+  stage: release_build
+  image:
+    name: goreleaser/goreleaser
+  script:
+    - goreleaser release --snapshot
+  tags:
+    - docker
+  except:
+    refs:
+      - tags
+
+release:
+  stage: release
+  image:
+    name: goreleaser/goreleaser:latest
+  before_script:
+    - mkdir -p ${GOPATH}/src/${PROJECT_PATH}
+    - cp -r . ${GOPATH}/src/${PROJECT_PATH}
+    - cd ${GOPATH}/src/${PROJECT_PATH}
+    - apk add build-base
+  script:
+    - goreleaser release --rm-dist
+  tags:
+    - docker
+  only:
+    refs:
+      - tags
