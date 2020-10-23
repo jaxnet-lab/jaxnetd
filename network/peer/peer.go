@@ -1722,6 +1722,10 @@ func (peer *Peer) shouldLogWriteError(err error) bool {
 		return false
 	}
 
+	if peer.redirectRequested {
+		return false
+	}
+
 	// No logging when the remote peer has been disconnected.
 	if err == io.EOF {
 		return false
@@ -2224,7 +2228,7 @@ func (peer *Peer) start() error {
 	select {
 	case err := <-negotiateErr:
 		if err != nil {
-			if !peer.redirectRequested {
+			if peer.shouldLogWriteError(err) {
 				peer.log.Error("negotiateErr", zap.String("remote_addr", peer.addr), zap.Error(err))
 			}
 

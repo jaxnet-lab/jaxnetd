@@ -57,22 +57,22 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.EstimateSmartFeeResult)
+	c := cmd.(*btcjson.EstimateSmartFeeCmd)
 
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
 
-	if c.Blocks <= 0 {
+	if c.ConfTarget <= 0 {
 		return -1.0, errors.New("Parameter NumBlocks must be positive")
 	}
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.Blocks))
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.ConfTarget))
 	if err != nil {
 		return -1.0, err
 	}
 	fee := float64(feeRate)
-	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.Blocks}
+	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.ConfTarget}
 	return res, nil
 }
 
