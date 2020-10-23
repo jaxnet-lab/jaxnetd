@@ -41,10 +41,7 @@ func (s *chainMetrics) Read() {
 	}
 	if !block.MsgBlock().ShardBlock {
 		h := block.MsgBlock().Header.(*wire.BeaconHeader)
-		_,_, nBits := h.MergedMiningTreeCodingProof()
-		s.updateGauge(prometheus.BuildFQName("chain", s.name, "shards"), float64(nBits))
-	//} else{
-	//	h := block.MsgBlock().Header.(*wire.ShardHeader)
+		s.updateGauge(prometheus.BuildFQName("chain", s.name, "shards"), float64(h.Shards()))
 	}
 }
 
