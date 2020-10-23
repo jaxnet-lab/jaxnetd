@@ -18,9 +18,9 @@ type chainMetrics struct {
 
 func ChainMetrics(chain *blockchain.BlockChain, name string, logger *zap.Logger) (res IMetric) {
 	res = &chainMetrics{
-		chain:  chain,
-		logger: logger,
-		name:   name,
+		chain:         chain,
+		logger:        logger,
+		name:          name,
 		metricsByName: make(map[string]prometheus.Gauge),
 	}
 	return res
@@ -35,7 +35,7 @@ func (s *chainMetrics) Read() {
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "bits"), float64(snapshot.Bits))
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "total_transactions"), float64(snapshot.TotalTxns))
 	block, err := s.chain.BlockByHeight(snapshot.Height)
-	if err != nil{
+	if err != nil {
 		s.logger.Error("can't get block height", zap.Error(err))
 		return
 	}
@@ -51,7 +51,7 @@ func (s *chainMetrics) updateGauge(name string, value float64) {
 	if !ok {
 		m = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: name,
-			//Help: "Beacon Height",
+			ConstLabels: map[string]string{"chain":s.name},
 		})
 		err := prometheus.Register(m)
 		if err != nil {
