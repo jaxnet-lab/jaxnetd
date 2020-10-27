@@ -38,7 +38,6 @@ build:
 .deploy: &deploy
   stage: deploy
   <<: *before_script
-  when: manual
   tags:
     - docker
   script:
@@ -60,6 +59,7 @@ deploy:stage:
     REMOTE: $STAGE_REMOTE
   only:
     - stage
+  when: manual
 
 
 release_build:
