@@ -30,6 +30,10 @@ import (
 	"go.uber.org/zap"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 const (
 	// MaxProtocolVersion is the max protocol version the peer supports.
 	MaxProtocolVersion = wire.FeeFilterVersion
@@ -493,6 +497,97 @@ type Peer struct {
 
 	redirectRequested bool
 	newAddress        *wire.NetAddress
+
+	AssociatedShardID uint32
+}
+
+// NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
+// processing incoming and outgoing messages.
+func NewInboundPeer(cfg *Config, chainCtx chain.IChainCtx) *Peer {
+	return newPeerBase(cfg, true, chainCtx)
+}
+
+// NewOutboundPeer returns a new outbound bitcoin peer.
+func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer, error) {
+	p := newPeerBase(cfg, false, chainCtx)
+	p.addr = addr
+
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	port, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.HostToNetAddress != nil {
+		na, err := cfg.HostToNetAddress(host, uint16(port), 0)
+		if err != nil {
+			return nil, err
+		}
+		p.na = na
+	} else {
+		p.na = wire.NewNetAddressIPPort(net.ParseIP(host), uint16(port), 0)
+	}
+
+	p.log = p.log.With(
+		zap.String("remote_ip", p.NA().IP.String()),
+		zap.Uint16("remote_port", p.NA().Port),
+	)
+	return p, nil
+}
+
+// newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
+// is used by the NewInboundPeer and NewOutboundPeer functions to perform base
+// setup needed by both types of peers.
+func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer {
+	// Default to the max supported protocol version if not specified by the
+	// caller.
+	cfg := *origCfg // Copy to avoid mutating caller.
+	if cfg.ProtocolVersion == 0 {
+		cfg.ProtocolVersion = MaxProtocolVersion
+	}
+
+	// Set the chainCtx parameters to testnet if the caller did not specify any.
+	if cfg.ChainParams == nil {
+		cfg.ChainParams = &chaincfg.TestNet3Params
+	}
+
+	// Set the trickle interval if a non-positive value is specified.
+	if cfg.TrickleInterval <= 0 {
+		cfg.TrickleInterval = DefaultTrickleInterval
+	}
+	logger := log.(*corelog.LogAdapter)
+
+	p := Peer{
+		inbound:         inbound,
+		chain:           chainCtx,
+		wireEncoding:    wire.BaseEncoding,
+		knownInventory:  newMruInventoryMap(maxKnownInventory),
+		stallControl:    make(chan stallControlMsg, 1), // nonblocking sync
+		outputQueue:     make(chan outMsg, outputBufferSize),
+		sendQueue:       make(chan outMsg, 1),   // nonblocking sync
+		sendDoneQueue:   make(chan struct{}, 1), // nonblocking sync
+		outputInvChan:   make(chan *types.InvVect, outputBufferSize),
+		inQuit:          make(chan struct{}),
+		queueQuit:       make(chan struct{}),
+		outQuit:         make(chan struct{}),
+		quit:            make(chan struct{}),
+		cfg:             cfg, // Copy so caller can't mutate.
+		services:        cfg.Services,
+		protocolVersion: cfg.ProtocolVersion,
+		log: logger.Logger.With(
+			zap.Bool("inbound", inbound),
+			zap.Uint32("shardID", chainCtx.ShardID()),
+		),
+	}
+
+	if !inbound {
+		p.AssociatedShardID = chainCtx.ShardID()
+	}
+	return &p
 }
 
 // String returns the peer's address and directionality as a human-readable
@@ -2198,6 +2293,7 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 	}
 
 	if err := peer.readRemoteVersionMsg(); err != nil {
+		// todo: re-associate chain
 		if peer.redirectRequested && peer.newAddress != nil && peer.cfg.TriggerRedirect != nil {
 			peer.cfg.TriggerRedirect(peer.na, peer.newAddress)
 		}
@@ -2296,93 +2392,4 @@ func (peer *Peer) AssociateConnection(conn net.Conn) {
 // Disconnect.
 func (peer *Peer) WaitForDisconnect() {
 	<-peer.quit
-}
-
-// newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
-// is used by the NewInboundPeer and NewOutboundPeer functions to perform base
-// setup needed by both types of peers.
-func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer {
-	// Default to the max supported protocol version if not specified by the
-	// caller.
-	cfg := *origCfg // Copy to avoid mutating caller.
-	if cfg.ProtocolVersion == 0 {
-		cfg.ProtocolVersion = MaxProtocolVersion
-	}
-
-	// Set the chainCtx parameters to testnet if the caller did not specify any.
-	if cfg.ChainParams == nil {
-		cfg.ChainParams = &chaincfg.TestNet3Params
-	}
-
-	// Set the trickle interval if a non-positive value is specified.
-	if cfg.TrickleInterval <= 0 {
-		cfg.TrickleInterval = DefaultTrickleInterval
-	}
-	logger := log.(*corelog.LogAdapter)
-
-	p := Peer{
-		inbound:         inbound,
-		chain:           chainCtx,
-		wireEncoding:    wire.BaseEncoding,
-		knownInventory:  newMruInventoryMap(maxKnownInventory),
-		stallControl:    make(chan stallControlMsg, 1), // nonblocking sync
-		outputQueue:     make(chan outMsg, outputBufferSize),
-		sendQueue:       make(chan outMsg, 1),   // nonblocking sync
-		sendDoneQueue:   make(chan struct{}, 1), // nonblocking sync
-		outputInvChan:   make(chan *types.InvVect, outputBufferSize),
-		inQuit:          make(chan struct{}),
-		queueQuit:       make(chan struct{}),
-		outQuit:         make(chan struct{}),
-		quit:            make(chan struct{}),
-		cfg:             cfg, // Copy so caller can't mutate.
-		services:        cfg.Services,
-		protocolVersion: cfg.ProtocolVersion,
-		log: logger.Logger.With(
-			zap.Bool("inbound", inbound),
-			zap.Uint32("shardID", chainCtx.ShardID()),
-		),
-	}
-	return &p
-}
-
-// NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
-// processing incoming and outgoing messages.
-func NewInboundPeer(cfg *Config, chainCtx chain.IChainCtx) *Peer {
-	return newPeerBase(cfg, true, chainCtx)
-}
-
-// NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer, error) {
-	p := newPeerBase(cfg, false, chainCtx)
-	p.addr = addr
-
-	host, portStr, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	port, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-
-	if cfg.HostToNetAddress != nil {
-		na, err := cfg.HostToNetAddress(host, uint16(port), 0)
-		if err != nil {
-			return nil, err
-		}
-		p.na = na
-	} else {
-		p.na = wire.NewNetAddressIPPort(net.ParseIP(host), uint16(port), 0)
-	}
-
-	p.log = p.log.With(
-		zap.String("remote_ip", p.NA().IP.String()),
-		zap.Uint16("remote_port", p.NA().Port),
-	)
-	return p, nil
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
 }
