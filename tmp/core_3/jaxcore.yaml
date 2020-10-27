@@ -6,11 +6,11 @@ log_dir: ./core/logs
 node:
   #  net: mainnet
   net: fastnet
-#  net: testnet
   p2p:
     listeners:
-      - 0.0.0.0:18333
-#    peers:
+      - 0.0.0.0:38333
+    peers:
+      - 127.0.0.1:18333
 #      - 127.0.0.1:28333
   rpc:
     disable: false
@@ -18,7 +18,7 @@ node:
     password: somerpc
     maxclients: 10
     listeners:
-      - 0.0.0.0:18444
+      - 0.0.0.0:38444
 
   shards:
     enable: true
@@ -33,5 +33,4 @@ node:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
 metrics:
-  enable: false
-  port: 12112
+  enable: true
