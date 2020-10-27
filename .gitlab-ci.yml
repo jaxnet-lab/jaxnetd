@@ -4,8 +4,8 @@ services:
 
 stages:
   - build
-  - release
   - deploy
+  - release
 
 variables:
   DOCKER_TLS_CERTDIR: ""
@@ -23,7 +23,7 @@ variables:
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
     - ssh-keyscan -t rsa discretemind.com >> ~/.ssh/known_hosts
 
-build:
+build:docker:
   stage: build
   <<: *before_script
   only:
@@ -34,6 +34,25 @@ build:
   script:
     - docker build --pull -t $IMAGE .
     - docker push $IMAGE
+
+build:release:
+  stage: build
+  image:
+    name: goreleaser/goreleaser
+    entrypoint: [""]
+  before_script:
+    - echo Just to replace default
+  script:
+    - goreleaser release --snapshot --rm-dist
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - dist
+  only:
+    - master
+    - dev
+    - stage
 
 .deploy: &deploy
   stage: deploy
@@ -61,25 +80,6 @@ deploy:stage:
     - stage
   when: manual
 
-
-release_build:
-  stage: release
-  image:
-    name: goreleaser/goreleaser
-    entrypoint: [""]
-  before_script:
-    - echo Just to replace default
-  script:
-    - goreleaser release --snapshot --rm-dist
-  tags:
-    - docker
-  artifacts:
-    paths:
-      - dist
-  only:
-    - master
-    - dev
-    - stage
 
 release:
   stage: release
