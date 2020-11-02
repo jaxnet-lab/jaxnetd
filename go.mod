@@ -22,6 +22,7 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/kkdai/bstream v1.0.0
+	github.com/lancer-kit/uwe/v2 v2.2.2
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/minio/sha256-simd v0.1.1
 	github.com/opencontainers/image-spec v1.0.1 // indirect

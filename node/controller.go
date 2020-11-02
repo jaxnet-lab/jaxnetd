@@ -71,6 +71,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
+	// todo: fix flag
 	if cfg.Node.Shards.Enable {
 		go func() {
 			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {

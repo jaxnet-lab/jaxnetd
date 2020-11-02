@@ -17,7 +17,7 @@ import (
 // handleUpdatePeerHeight updates the heights of all peers who were known to
 // announce a block we recently accepted.
 func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerHeightsMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		// The origin peer should already have the updated height.
 		if sp.Peer == umsg.OriginPeer {
 			return
@@ -44,7 +44,7 @@ func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerH
 
 // handleAddPeerMsg deals with adding new peers.  It is invoked from the
 // peerHandler goroutine.
-func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
+func (server *Server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	if sp == nil || !sp.Connected() {
 		return false
 	}
@@ -150,8 +150,8 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 
 // handleDonePeerMsg deals with peers that have signalled they are done.  It is
 // invoked from the peerHandler goroutine.
-func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
-	var list map[int32]*ServerPeer
+func (server *Server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
+	var list map[int32]*serverPeer
 	if sp.persistent {
 		list = state.persistentPeers
 	} else if sp.Inbound() {
@@ -188,7 +188,7 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 
 // handleBanPeerMsg deals with banning peers.  It is invoked from the
 // peerHandler goroutine.
-func (server *Server) handleBanPeerMsg(state *peerState, sp *ServerPeer) {
+func (server *Server) handleBanPeerMsg(state *peerState, sp *serverPeer) {
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
 		server.logger.Debugf("can't split ban peer %s %v", sp.Addr(), err)
@@ -212,7 +212,7 @@ func directionString(inbound bool) string {
 // handleRelayInvMsg deals with relaying inventory to peers that are not already
 // known to have it.  It is invoked from the peerHandler goroutine.
 func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return
 		}
@@ -278,7 +278,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 // handleBroadcastMsg deals with broadcasting messages to peers.  It is invoked
 // from the peerHandler goroutine.
 func (server *Server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return
 		}
