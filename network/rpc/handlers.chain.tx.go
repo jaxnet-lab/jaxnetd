@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -57,22 +58,30 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.EstimateSmartFeeResult)
+	fmt.Println("ddddd ",cmd )
+	fmt.Println(reflect.TypeOf(cmd))
+	//c := cmd.(*btcjson.EstimateSmartFeeCmd)
+
 
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
 
-	if c.Blocks <= 0 {
-		return -1.0, errors.New("Parameter NumBlocks must be positive")
-	}
+	//TODO: implement this
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.Blocks))
-	if err != nil {
-		return -1.0, err
-	}
-	fee := float64(feeRate)
-	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.Blocks}
+	//if c.Blocks <= 0 {
+	//	return -1.0, errors.New("Parameter NumBlocks must be positive")
+	//}
+
+	//
+	//feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(0))
+	//if err != nil {
+	//	return -1.0, err
+	//}
+	//fee := float64(feeRate)
+	//res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.Blocks}
+	fee := float64(0)
+	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee}
 	return res, nil
 }
 

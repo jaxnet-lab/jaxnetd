@@ -5,6 +5,7 @@ package rpc
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -48,20 +49,21 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 	return map[btcjson.MethodName]CommandHandler{
 		btcjson.ScopedMethod("node", "version"):        server.handleVersion,
 		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
-		btcjson.ScopedMethod("node", "getNetworkInfo"): server.handleGetnetworkinfo,
+		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
 		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
+		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
 
 		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
 		btcjson.ScopedMethod("node", "listShards"):   server.handleListShards,
 
 		btcjson.ScopedMethod("node", "generate"):         server.handleGenerate,
 		btcjson.ScopedMethod("node", "getDifficulty"):    server.handleGetDifficulty,
-		btcjson.ScopedMethod("node", "getMiningInfo"):    server.handleGetMiningInfo,
-		btcjson.ScopedMethod("node", "getNetworkHashPS"): server.handleGetNetworkHashPS,
+		btcjson.ScopedMethod("node", "getmininginfo"):    server.handleGetMiningInfo,
+		btcjson.ScopedMethod("node", "getnetworkhashps"): server.handleGetNetworkHashPS,
 
 		btcjson.ScopedMethod("node", "setGenerate"):     server.handleSetGenerate,
-		btcjson.ScopedMethod("node", "getBlockStats"):   server.handleGetBlockStats,
-		btcjson.ScopedMethod("node", "getChainTxStats"): server.handleGetChaintxStats,
+		btcjson.ScopedMethod("node", "getblockstats"):   server.handleGetBlockStats,
+		btcjson.ScopedMethod("node", "getchaintxstats"): server.handleGetChaintxStats,
 		btcjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
 		btcjson.ScopedMethod("node", "stop"):            server.handleStop,
 		btcjson.ScopedMethod("node", "help"):            server.handleHelp,
@@ -84,8 +86,6 @@ func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{})
 }
 
 func (server *NodeRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// result := btcjson.NewGetNetworkInfoCmd()
-	// fmt.Println("NetworkInfo: ", result)
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
@@ -217,32 +217,47 @@ func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct
 func (server *NodeRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Create a default getnetworkhashps command to use defaults and make
 	// use of the existing getnetworkhashps handler.
-	gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
-	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
-	if err != nil {
-		return nil, err
-	}
-	networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
-	if !ok {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
-			Message: "networkHashesPerSec is not an int64",
-		}
-	}
+	//gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
+	//networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
+	//if !ok {
+	//	return nil, &btcjson.RPCError{
+	//		Code:    btcjson.ErrRPCInternal.Code,
+	//		Message: "networkHashesPerSec is not an int64",
+	//	}
+	//}
 
-	best := server.chainProvider.BlockChain().BestSnapshot()
-	diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
-	if err != nil {
-		return nil, err
-	}
+	//TODO: Implement this
+	var networkHashesPerSec int64 = 100
+
+	//best := server.chainProvider.BlockChain().BestSnapshot()
+	//diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//result := btcjson.GetMiningInfoResult{
+	//	Blocks:             int64(best.Height),
+	//	CurrentBlockSize:   best.BlockSize,
+	//	CurrentBlockWeight: best.BlockWeight,
+	//	CurrentBlockTx:     best.NumTxns,
+	//	Difficulty:         diff,
+	//	NetworkHashPS:      networkHashesPerSec,
+	//	PooledTx:           uint64(server.chainProvider.TxMemPool.Count()),
+	//	// TestNet:            server.cfg.TestNet3,
+	//}
+
+
 	result := btcjson.GetMiningInfoResult{
-		Blocks:             int64(best.Height),
-		CurrentBlockSize:   best.BlockSize,
-		CurrentBlockWeight: best.BlockWeight,
-		CurrentBlockTx:     best.NumTxns,
-		Difficulty:         diff,
+		Blocks:             0,
+		CurrentBlockSize:   0,
+		CurrentBlockWeight: 0,
+		CurrentBlockTx:     0,
+		Difficulty:         0,
 		NetworkHashPS:      networkHashesPerSec,
-		PooledTx:           uint64(server.chainProvider.TxMemPool.Count()),
+		PooledTx:           0,
 		// TestNet:            server.cfg.TestNet3,
 	}
 	return &result, nil
@@ -255,6 +270,9 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	// because the return value is an interface{}.
 
 	c := cmd.(*btcjson.GetNetworkHashPSCmd)
+	if server.chainProvider.BlockChain() == nil{
+		return 0, nil
+	}
 
 	// When the passed height is too high or zero, just return 0 now
 	// since we can't reasonably calculate the number of network hashes

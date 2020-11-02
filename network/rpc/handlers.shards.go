@@ -58,6 +58,7 @@ func (server *ShardRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("shard", "getShardHeaders"):       server.handleGetHeaders,
 		btcjson.ScopedMethod("shard", "getShardBlock"):         server.handleGetBlock,
 		btcjson.ScopedMethod("shard", "getShardBlockHeader"):   server.handleGetBlockHeader,
+		btcjson.ScopedMethod("shard", "getblockheader"):   server.handleGetBlockHeader,
 		btcjson.ScopedMethod("shard", "getShardBlockTemplate"): server.handleGetBlockTemplate,
 	}
 }
