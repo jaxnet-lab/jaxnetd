@@ -139,6 +139,7 @@ func (app *App) InitFlags() []cli.Flag {
 		flags[flagConfig],
 		flags[flagDataFile],
 		flags[flagSecretKey],
+		flags[flagShard],
 	}
 }
 
@@ -159,8 +160,13 @@ func (app *App) InitCfg(c *cli.Context) error {
 		app.config.SenderSecret = secret
 	}
 
+	shardID := c.Uint64(flagShard)
+	if dataFile != "" {
+		app.config.SenderSecret = secret
+	}
 	app.Operator, err = txutils.NewOperator(txutils.ManagerCfg{
 		Net:        app.config.Net,
+		ShardID:    uint32(shardID),
 		RPC:        app.config.NodeRPC,
 		PrivateKey: app.config.SenderSecret,
 	})

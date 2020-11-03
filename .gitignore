@@ -30,7 +30,9 @@ vendor/*
 
 /dist
 /tmp
+/spec
 shard.core
+*.csv
 
 !/tmp/core_1/jaxcore.yaml
 !/tmp/core_2/jaxcore.yaml

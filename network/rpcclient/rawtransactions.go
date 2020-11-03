@@ -308,11 +308,11 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 		}
 		txHex = hex.EncodeToString(buf.Bytes())
 	}
-
+	shardID := c.getShardID()
 	// Due to differences in the sendrawtransaction API for different
 	// backends, we'll need to inspect our version and construct the
 	// appropriate request.
-	version, err := c.BackendVersion()
+	version, err := c.ForShard(shardID).BackendVersion()
 	if err != nil {
 		return newFutureError(err)
 	}
@@ -334,7 +334,7 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 		cmd = btcjson.NewSendRawTransactionCmd(txHex, &allowHighFees)
 	}
 
-	return c.sendCmd(cmd)
+	return c.ForShard(shardID).sendCmd(cmd)
 }
 
 // SendRawTransaction submits the encoded transaction to the server which will

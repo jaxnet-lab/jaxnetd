@@ -9,6 +9,7 @@ const (
 	flagAddress      = "address"
 	flagAmount       = "amount"
 	flagConfig       = "config"
+	flagShard        = "shard"
 	flagDataFile     = "data-file"
 	flagFirstPubKey  = "first-pk"
 	flagSecondPubKey = "second-pk"
@@ -28,6 +29,11 @@ func getFlags() map[string]cli.Flag {
 			Aliases: []string{"c"},
 			Value:   "./config.yaml",
 			Usage:   "path to configuration",
+		},
+		flagShard: &cli.Uint64Flag{
+			Name:  flagShard,
+			Value: 0,
+			Usage: "id of shard chain of beacon(if zero)",
 		},
 		flagDataFile: &cli.StringFlag{
 			Name:    flagDataFile,
