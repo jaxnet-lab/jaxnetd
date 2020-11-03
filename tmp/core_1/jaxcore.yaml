@@ -8,17 +8,18 @@ node:
   net: fastnet
 #  net: testnet
   p2p:
+    disable_outbound: true
     listeners:
-      - 0.0.0.0:18333
+      - 0.0.0.0:18444
 #    peers:
-#      - 127.0.0.1:28333
+#      - 127.0.0.1:28444
   rpc:
     disable: false
     user: somerpc
     password: somerpc
     maxclients: 10
     listeners:
-      - 0.0.0.0:18444
+      - 0.0.0.0:18333
 
   shards:
     enable: true
@@ -29,6 +30,7 @@ node:
   beacon_chain:
     auto_expand: true
     expansion_rule: 10
+    max_peers: 1000
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 

@@ -8,16 +8,16 @@ node:
   net: fastnet
   p2p:
     listeners:
-      - 0.0.0.0:28333
+      - 0.0.0.0:28444
     peers:
-      - 127.0.0.1:18333
+      - 127.0.0.1:18444
   rpc:
     disable: false
     user: somerpc
     password: somerpc
     maxclients: 10
     listeners:
-      - 0.0.0.0:28444
+      - 0.0.0.0:28333
 
   shards:
     enable: true
