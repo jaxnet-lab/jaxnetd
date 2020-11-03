@@ -232,6 +232,12 @@ func (server *Server) Run(ctx context.Context) {
 		server.wg.Add(1)
 		go server.upnpUpdateThread()
 	}
+
+	// Start the rebroadcastHandler, which ensures user tx received by
+	// the RPC server are rebroadcast until being included in a block.
+	server.wg.Add(1)
+	go server.rebroadcastHandler()
+
 	<-ctx.Done()
 
 	// Save fee estimator state in the database.
@@ -615,14 +621,18 @@ func (server *Server) inboundPeerConnected(conn net.Conn) {
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
 func (server *Server) outboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) {
+	if server.cfg.DisableOutbound {
+		server.logger.Debugf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
+		return
+	}
 	sp := newServerPeer(newServerPeerHandler(server), connReq.Permanent)
 
 	p, err := peer.NewOutboundPeer(sp.newPeerConfig(), connReq.Addr.String(), server.chain.BlockChain().Chain())
 	if err != nil {
 		server.logger.Debugf("Cannot create outbound peer %s: %v", connReq.Addr, err)
 		if connReq.Permanent {
-			server.ConnManager.Disconnect(connReq.ID())
-		} else {
+			// server.ConnManager.Disconnect(connReq.ID())
+			// } else {
 			server.ConnManager.Remove(connReq.ID())
 			// go server.ConnManager.NewConnReq()
 		}
