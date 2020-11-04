@@ -536,6 +536,7 @@ func (mp *TxPool) RemoveDoubleSpends(tx *btcutil.Tx) {
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) addTransaction(utxoView *chaindata.UtxoViewpoint, tx *btcutil.Tx, height int32, fee int64) *TxDesc {
+	fmt.Println("Add trx", *tx, height)
 	// Add the transaction to the pool and mark the referenced outpoints
 	// as spent by the pool.
 	txD := &TxDesc{

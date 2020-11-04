@@ -5,7 +5,6 @@ package rpc
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -51,7 +50,6 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
 		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
 		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
-		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
 
 		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
 		btcjson.ScopedMethod("node", "listShards"):   server.handleListShards,

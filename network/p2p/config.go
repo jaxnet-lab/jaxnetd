@@ -30,6 +30,7 @@ type Config struct {
 	DisableBanning bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
 	BlocksOnly     bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
 
+	DisableOutbound bool          `yaml:"disable_outbound"`
 	DisableTLS      bool          `yaml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
 	OnionProxy      string        `yaml:"onion_proxy" long:"onion" description:"Connect to tor hidden services via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
 	OnionProxyPass  string        `yaml:"onion_proxy_pass" long:"onionpass" default-mask:"-" description:"Password for onion proxy Server"`

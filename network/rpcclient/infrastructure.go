@@ -915,6 +915,15 @@ func (c *Client) sendRequest(jReq *jsonRequest) {
 	c.sendMessage(jReq.marshalledJSON)
 }
 
+func (c *Client) getShardID() uint32 {
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+		c.oneTimeShardID = nil
+	}
+	return shardID
+}
+
 // sendCmd sends the passed command to the associated server and returns a
 // response channel on which the reply will be delivered at some point in the
 // future.  It handles both websocket and HTTP POST mode depending on the
