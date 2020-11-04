@@ -70,15 +70,6 @@ type Transaction struct {
 	RawTX *wire.MsgTx `json:"-" csv:"-"`
 }
 
-type SwapTransaction struct {
-	TxHash       string         `json:"tx_hash" csv:"tx_hash"`
-	Source       string         `json:"source" csv:"source"`
-	Destinations map[string]int `json:"destinations" csv:"destinations"`
-	SignedTx     string         `json:"signed_tx" csv:"signed_tx"`
-
-	RawTX *wire.MsgTx `json:"-" csv:"-"`
-}
-
 func (t *Transaction) UnmarshalBinary(data []byte) error {
 	var dest = new(gobTx)
 	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
@@ -129,10 +120,74 @@ func (t Transaction) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type SwapTransaction struct {
+	TxHash       string         `json:"tx_hash" csv:"tx_hash"`
+	Source       string         `json:"source" csv:"source"`
+	Destinations map[string]int `json:"destinations" csv:"destinations"`
+	SignedTx     string         `json:"signed_tx" csv:"signed_tx"`
+
+	RawTX *wire.MsgTx `json:"-" csv:"-"`
+}
+
+func (t *SwapTransaction) UnmarshalBinary(data []byte) error {
+	var dest = new(gobSwapTx)
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
+	if err != nil {
+		return err
+	}
+
+	t.TxHash = hex.EncodeToString(dest.TxHash)
+	t.SignedTx = hex.EncodeToString(dest.SignedTx)
+
+	t.Destinations = dest.Destinations
+	t.Source = string(dest.Source)
+
+	t.RawTX = &wire.MsgTx{}
+	err = t.RawTX.Deserialize(bytes.NewBuffer(dest.SignedTx))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t SwapTransaction) MarshalBinary() ([]byte, error) {
+	var err error
+	var dest = new(gobSwapTx)
+
+	dest.Source = []byte(t.Source)
+	dest.Destinations = t.Destinations
+
+	dest.TxHash, err = hex.DecodeString(t.TxHash)
+	if err != nil {
+		return nil, err
+	}
+
+	dest.SignedTx, err = hex.DecodeString(t.SignedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = gob.NewEncoder(buf).Encode(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 type gobTx struct {
 	TxHash      []byte
 	Source      []byte
 	Destination []byte
 	Amount      int64
 	SignedTx    []byte
+}
+
+type gobSwapTx struct {
+	TxHash       []byte
+	Source       []byte
+	Destinations map[string]int
+	SignedTx     []byte
 }

@@ -31,6 +31,8 @@ node:
     auto_expand: true
     expansion_rule: 10
     max_peers: 1000
+    tx_index: true
+    addr_index: true
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 

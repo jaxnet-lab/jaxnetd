@@ -177,10 +177,10 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	}
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
 		Dial:           p2pServer.netDial,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  p2pServer.newAddressHandler(len(cfg.ConnectPeers)),
 	})
