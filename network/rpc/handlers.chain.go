@@ -344,6 +344,12 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	if err != nil {
 		return nil, err
 	}
+
+	shards, err := server.chainProvider.ShardCount()
+	if err != nil {
+		return nil, err
+	}
+
 	chainInfo := &btcjson.GetBlockChainInfoResult{
 		Chain:         params.Name,
 		Blocks:        chainSnapshot.Height,
@@ -352,6 +358,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		Difficulty:    diff,
 		MedianTime:    chainSnapshot.MedianTime.Unix(),
 		Pruned:        false,
+		Shards:        shards,
 		SoftForks: &btcjson.SoftForks{
 			Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
 		},
@@ -442,6 +449,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		}
 	}
 
+	fmt.Printf("%+v\n", chainInfo)
 	return chainInfo, nil
 }
 
@@ -454,6 +462,9 @@ func (server *CommonChainRPC) handleGetBlockCount(cmd interface{}, closeChan <-c
 // handleGetBlockHash implements the getblockhash command.
 func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetBlockHashCmd)
+	snap := server.chainProvider.BlockChain().BestSnapshot()
+	server.Log.Debugf("HandleGetBlockHash Height %d", snap.Height)
+
 	hash, err := server.chainProvider.BlockChain().BlockHashByHeight(int32(c.Index))
 	if err != nil {
 		return nil, &btcjson.RPCError{

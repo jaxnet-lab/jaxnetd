@@ -5,13 +5,12 @@ package rpc
 
 import (
 	"context"
-	"net/http"
-	"sync"
-
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"go.uber.org/zap"
+	"net/http"
+	"sync"
 )
 
 type MultiChainRPC struct {
@@ -89,6 +88,7 @@ func NewRPCMux(logger *zap.Logger) Mux {
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
+	server.Log.Info("Handle command " + cmd.scope + "." + cmd.method)
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
@@ -99,6 +99,7 @@ func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (
 func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {
 	for cmd, handler := range commands {
 		server.handlers[cmd] = handler
+		server.Log.Info("register " + cmd.String())
 	}
 }
 

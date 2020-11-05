@@ -46,6 +46,7 @@ func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("beacon", "getBeaconBlockHeader"):   server.handleGetBlockHeader,
 		btcjson.ScopedMethod("beacon", "getblockheader"):         server.handleGetBlockHeader,
 		btcjson.ScopedMethod("beacon", "getBeaconBlockTemplate"): server.handleGetBlockTemplate,
+		btcjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// btcjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
 	}
 }

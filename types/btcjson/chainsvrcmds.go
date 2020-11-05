@@ -973,13 +973,14 @@ func init() {
 	MustRegisterCmd("beacon", "getblockheader", (*GetBeaconBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBeaconBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------
 	MustRegisterCmd("shard", "getShardBlock", (*GetShardBlockCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardBlockHeader", (*GetShardBlockHeaderCmd)(nil), flags)
-	MustRegisterCmd("shard", "getshardblockheader", (*GetShardBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardBlockTemplate", (*GetShardBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardHeaders", (*GetShardHeadersCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- NOT IMPLEMENTED --------------------------------------------------------------------------------------------
 	MustRegisterCmd("chain", "getchaintips", (*GetChainTipsCmd)(nil), flags)
