@@ -91,7 +91,7 @@ func TestAddrManagerSerialization(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	addrMgr := New(tempDir, nil)
+	addrMgr := New(tempDir,"t", nil)
 
 	// We'll be adding 5 random addresses to the manager.
 	const numAddrs = 5
@@ -110,7 +110,7 @@ func TestAddrManagerSerialization(t *testing.T) {
 	// Then, we'll persist these addresses to disk and restart the address
 	// manager.
 	addrMgr.savePeers()
-	addrMgr = New(tempDir, nil)
+	addrMgr = New(tempDir, "t",nil)
 
 	// Finally, we'll read all of the addresses from disk and ensure they
 	// match as expected.
@@ -131,7 +131,7 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	addrMgr := New(tempDir, nil)
+	addrMgr := New(tempDir, "t",nil)
 
 	// As we're interested in testing the upgrade path from v1 to v2, we'll
 	// override the manager's current version.
@@ -151,7 +151,7 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 	// Then, we'll persist these addresses to disk and restart the address
 	// manager - overriding its version back to v1.
 	addrMgr.savePeers()
-	addrMgr = New(tempDir, nil)
+	addrMgr = New(tempDir, "t",nil)
 	addrMgr.version = 1
 
 	// When we read all of the addresses back from disk, we should expect to
@@ -188,7 +188,7 @@ func TestAddrManagerV1ToV2(t *testing.T) {
 
 	// Finally, we'll recreate the manager and ensure that the services were
 	// persisted correctly.
-	addrMgr = New(tempDir, nil)
+	addrMgr = New(tempDir, "t",nil)
 	addrMgr.loadPeers()
 	assertAddrs(t, addrMgr, expectedAddrs)
 }

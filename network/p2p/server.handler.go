@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
+	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -160,19 +161,31 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 		list = state.outboundPeers
 	}
 
-	// if sp.Peer.RedirectRequested() && sp.Peer.NewAddress() != nil{
-	// 	server.addrManager.Replace(sp.Peer.NA(), sp.Peer.NewAddress())
-	// }
+	if sp.Peer.RedirectRequested() && sp.Peer.NewAddress() != nil {
+		newAddress := sp.Peer.NewAddress()
+		server.addrManager.Replace(sp.Peer.NA(), sp.Peer.NewAddress())
+		server.ConnManager.Remove(sp.connReq.ID())
 
-	// Regardless of whether the peer was found in our list, we'll inform
-	// our connection manager about the disconnection. This can happen if we
-	// process a peer's `done` message before its `add`.
-	if !sp.Inbound() {
-		if sp.persistent {
-			server.ConnManager.Disconnect(sp.connReq.ID())
-		} else {
-			server.ConnManager.Remove(sp.connReq.ID())
-			go server.ConnManager.NewConnReq()
+		netAddr := &net.TCPAddr{
+			IP:   newAddress.IP,
+			Port: int(newAddress.Port),
+		}
+		go server.ConnManager.Connect(&connmgr.ConnReq{
+			Addr:      netAddr,
+			ShardID:   server.chain.ChainCtx.ShardID(),
+			Permanent: sp.persistent,
+		})
+	} else {
+		// Regardless of whether the peer was found in our list, we'll inform
+		// our connection manager about the disconnection. This can happen if we
+		// process a peer's `done` message before its `add`.
+		if !sp.Inbound() {
+			if sp.persistent {
+				server.ConnManager.Disconnect(sp.connReq.ID())
+			} else {
+				server.ConnManager.Remove(sp.connReq.ID())
+				go server.ConnManager.NewConnReq()
+			}
 		}
 	}
 
