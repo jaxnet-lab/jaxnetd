@@ -112,7 +112,6 @@ func (sp *serverPeer) newPeerConfig() *peer.Config {
 		TrickleInterval:  sp.serverPeerHandler.cfg.TrickleInterval,
 
 		ChainsPortsProvider: sp.serverPeerHandler.getChainPort,
-		TriggerRedirect:     sp.serverPeerHandler.handlePeerRedirect,
 	}
 }
 

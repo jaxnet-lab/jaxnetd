@@ -104,7 +104,7 @@ func lookupFunc(host string) ([]net.IP, error) {
 }
 
 func TestStartStop(t *testing.T) {
-	n := addrmgr.New("teststartstop", lookupFunc)
+	n := addrmgr.New("teststartstop","t", lookupFunc)
 	n.Start()
 	err := n.Stop()
 	if err != nil {
@@ -137,7 +137,7 @@ func TestAddAddressByIP(t *testing.T) {
 		},
 	}
 
-	amgr := addrmgr.New("testaddressbyip", nil)
+	amgr := addrmgr.New("testaddressbyip", "t",nil)
 	for i, test := range tests {
 		err := amgr.AddAddressByIP(test.addrIP)
 		if test.err != nil && err == nil {
@@ -193,7 +193,7 @@ func TestAddLocalAddress(t *testing.T) {
 			true,
 		},
 	}
-	amgr := addrmgr.New("testaddlocaladdress", nil)
+	amgr := addrmgr.New("testaddlocaladdress", "t",nil)
 	for x, test := range tests {
 		result := amgr.AddLocalAddress(&test.address, test.priority)
 		if result == nil && !test.valid {
@@ -210,7 +210,7 @@ func TestAddLocalAddress(t *testing.T) {
 }
 
 func TestAttempt(t *testing.T) {
-	n := addrmgr.New("testattempt", lookupFunc)
+	n := addrmgr.New("testattempt","t", lookupFunc)
 
 	// Add a new address and get it
 	err := n.AddAddressByIP(someIP + ":8333")
@@ -232,7 +232,7 @@ func TestAttempt(t *testing.T) {
 }
 
 func TestConnected(t *testing.T) {
-	n := addrmgr.New("testconnected", lookupFunc)
+	n := addrmgr.New("testconnected", "t",lookupFunc)
 
 	// Add a new address and get it
 	err := n.AddAddressByIP(someIP + ":8333")
@@ -252,7 +252,7 @@ func TestConnected(t *testing.T) {
 }
 
 func TestNeedMoreAddresses(t *testing.T) {
-	n := addrmgr.New("testneedmoreaddresses", lookupFunc)
+	n := addrmgr.New("testneedmoreaddresses", "t",lookupFunc)
 	addrsToAdd := 1500
 	b := n.NeedMoreAddresses()
 	if !b {
@@ -284,7 +284,7 @@ func TestNeedMoreAddresses(t *testing.T) {
 }
 
 func TestGood(t *testing.T) {
-	n := addrmgr.New("testgood", lookupFunc)
+	n := addrmgr.New("testgood", "t",lookupFunc)
 	addrsToAdd := 64 * 64
 	addrs := make([]*wire.NetAddress, addrsToAdd)
 
@@ -316,7 +316,7 @@ func TestGood(t *testing.T) {
 }
 
 func TestGetAddress(t *testing.T) {
-	n := addrmgr.New("testgetaddress", lookupFunc)
+	n := addrmgr.New("testgetaddress", "t",lookupFunc)
 
 	// Get an address from an empty set (should error)
 	if rv := n.GetAddress(); rv != nil {
@@ -402,7 +402,7 @@ func TestGetBestLocalAddress(t *testing.T) {
 		*/
 	}
 
-	amgr := addrmgr.New("testgetbestlocaladdress", nil)
+	amgr := addrmgr.New("testgetbestlocaladdress", "t",nil)
 
 	// Test against default when there's no address
 	for x, test := range tests {

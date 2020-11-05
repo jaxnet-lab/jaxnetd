@@ -120,12 +120,13 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 		return err
 	}
 
-	addrManager := addrmgr.New(shardCtl.cfg.DataDir, func(host string) ([]net.IP, error) {
-		if strings.HasSuffix(host, ".onion") {
-			return nil, fmt.Errorf("attempt to resolve tor address %s", host)
-		}
-		return shardCtl.cfg.Node.P2P.Lookup(host)
-	})
+	addrManager := addrmgr.New(shardCtl.cfg.DataDir, shardCtl.chain.Params().Name,
+		func(host string) ([]net.IP, error) {
+			if strings.HasSuffix(host, ".onion") {
+				return nil, fmt.Errorf("attempt to resolve tor address %s", host)
+			}
+			return shardCtl.cfg.Node.P2P.Lookup(host)
+		})
 
 	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
 
