@@ -121,10 +121,9 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 
 	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
 	services := defaultServices
-	// if cfg.NoPeerBloomFilters {
-	//	services &^= wire.SFNodeBloom
-	// }
-
+	if cfg.NoPeerBloomFilters {
+		services &^= wire.SFNodeBloom
+	}
 	if chainCfg.NoCFilters {
 		services &^= wire.SFNodeCF
 	}
@@ -175,12 +174,18 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	if chainCfg.MaxPeers < targetOutbound {
 		targetOutbound = chainCfg.MaxPeers
 	}
+
+	// todo(mike): must be here until dynamic peer discovery disabled
+	if len(cfg.Peers) < targetOutbound {
+		targetOutbound = len(cfg.Peers)
+	}
+
 	cmgr, err := connmgr.New(&connmgr.Config{
 		Listeners:      listeners,
-		OnAccept:       p2pServer.inboundPeerConnected,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
 		Dial:           p2pServer.netDial,
+		OnAccept:       p2pServer.inboundPeerConnected,
 		OnConnection:   p2pServer.outboundPeerConnected,
 		GetNewAddress:  p2pServer.newAddressHandler(len(cfg.ConnectPeers)),
 	})
@@ -213,7 +218,8 @@ func (server *Server) Run(ctx context.Context) {
 	for _, addr := range permanentPeers {
 		netAddr, err := server.addrStringToNetAddr(addr)
 		if err != nil {
-			// return  err
+			server.logger.Errorf("unable to parse netAddr of peer: %s", err.Error())
+			return
 		}
 
 		go server.ConnManager.Connect(&connmgr.ConnReq{
@@ -587,19 +593,6 @@ func disconnectPeer(peerList map[int32]*serverPeer, compareFunc func(*serverPeer
 		}
 	}
 	return false
-}
-
-func (server *Server) handlePeerRedirect(peerAddress, newAddress *wire.NetAddress) {
-	netAddr := &net.TCPAddr{
-		IP:   newAddress.IP,
-		Port: int(newAddress.Port),
-	}
-	server.addrManager.Replace(peerAddress, newAddress)
-	go server.ConnManager.Connect(&connmgr.ConnReq{
-		Addr:      netAddr,
-		ShardID:   server.chain.ChainCtx.ShardID(),
-		Permanent: true,
-	})
 }
 
 // inboundPeerConnected is invoked by the connection manager when a new inbound

@@ -67,7 +67,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 		return err
 	}
 
-	addrManager := addrmgr.New(beaconCtl.cfg.DataDir, func(host string) ([]net.IP, error) {
+	addrManager := addrmgr.New(beaconCtl.cfg.DataDir, chain.Params().Name, func(host string) ([]net.IP, error) {
 		if strings.HasSuffix(host, ".onion") {
 			return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 		}

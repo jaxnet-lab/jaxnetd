@@ -46,7 +46,6 @@ type serverPeerHandler struct {
 
 	logger             corelog.ILogger
 	getChainPort       func(shardID uint32) (int, bool)
-	handlePeerRedirect func(peerAddress, newAddress *wire.NetAddress)
 }
 
 func newServerPeerHandler(server *Server) *serverPeerHandler {
@@ -65,7 +64,6 @@ func newServerPeerHandler(server *Server) *serverPeerHandler {
 		cfCheckptCaches:    make(map[wire.FilterType][]cfHeaderKV),
 		cfCheckptCachesMtx: sync.RWMutex{},
 
-		handlePeerRedirect: server.handlePeerRedirect,
 		getChainPort:       server.cfg.GetChainPort,
 
 		newPeers: server.newPeers,

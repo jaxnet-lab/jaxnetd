@@ -286,7 +286,6 @@ type Config struct {
 
 	// ChainsPortsProvider is a function to get the port of some p2p shard.
 	ChainsPortsProvider func(shardID uint32) (int, bool)
-	TriggerRedirect     func(peerAddress, newAddress *wire.NetAddress)
 }
 
 // minUint32 is a helper function to return the minimum of two uint32s.
@@ -2063,7 +2062,6 @@ func (peer *Peer) readRemoteVersionMsg() error {
 			return err
 		}
 
-		peer.redirectRequested = true
 		reason := "remote peer shardID not match; redirect instruction send"
 		return errors.New(reason)
 	}
@@ -2260,9 +2258,6 @@ func (peer *Peer) writeLocalVersionMsg() error {
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
 	if err := peer.readRemoteVersionMsg(); err != nil {
-		if peer.redirectRequested && peer.newAddress != nil && peer.cfg.TriggerRedirect != nil {
-			peer.cfg.TriggerRedirect(peer.na, peer.newAddress)
-		}
 		return err
 	}
 
@@ -2293,10 +2288,6 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 	}
 
 	if err := peer.readRemoteVersionMsg(); err != nil {
-		// todo: re-associate chain
-		if peer.redirectRequested && peer.newAddress != nil && peer.cfg.TriggerRedirect != nil {
-			peer.cfg.TriggerRedirect(peer.na, peer.newAddress)
-		}
 		return err
 	}
 

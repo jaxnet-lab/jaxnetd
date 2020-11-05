@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 type T testing.T
@@ -235,12 +236,18 @@ func TestMakeSwapTx(ot *testing.T) {
 	}, false)
 	assert.NoError(t, err)
 
-	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
-	swapTxWithMultisig, err := op.TxMan.WithKeys(aliceKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
-	assert.NoError(t, err)
+	var swapTxWithMultisig *wire.MsgTx
 
+	swapTxWithMultisig, err = op.TxMan.WithKeys(aliceKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
+	assert.NoError(t, err)
+	swapTX.RawTX = swapTxWithMultisig
+	swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
+
+	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
 	swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
 	assert.NoError(t, err)
+	swapTX.RawTX = swapTxWithMultisig
+	swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
