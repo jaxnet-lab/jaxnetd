@@ -291,7 +291,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 			context := "Failed to deserialize transaction"
 			return nil, server.InternalRPCError(err.Error(), context)
 		}
-		//mtx = &msgTx
+		mtx = &msgTx
 	} else {
 		// When the verbose flag isn't set, simply return the
 		// network-serialized transaction as a hex-encoded string.
