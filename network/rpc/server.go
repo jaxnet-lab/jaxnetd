@@ -256,6 +256,7 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 	if strings.HasPrefix(data, "[") {
 		data = data[1 : len(data)-1]
 	}
+
 	if err := json.Unmarshal([]byte(data), &request); err != nil {
 		jsonErr = &btcjson.RPCError{
 			Code:    btcjson.ErrRPCParse.Code,

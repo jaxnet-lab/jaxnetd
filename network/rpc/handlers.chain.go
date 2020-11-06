@@ -462,9 +462,6 @@ func (server *CommonChainRPC) handleGetBlockCount(cmd interface{}, closeChan <-c
 // handleGetBlockHash implements the getblockhash command.
 func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.GetBlockHashCmd)
-	snap := server.chainProvider.BlockChain().BestSnapshot()
-	server.Log.Debugf("HandleGetBlockHash Height %d", snap.Height)
-
 	hash, err := server.chainProvider.BlockChain().BlockHashByHeight(int32(c.Index))
 	if err != nil {
 		return nil, &btcjson.RPCError{

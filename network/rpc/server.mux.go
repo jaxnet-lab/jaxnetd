@@ -5,6 +5,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
@@ -56,9 +57,10 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			prcPtr, ok := server.shardRPCs[cmd.shardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
+				server.logger.Error(fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID))
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrShardIDMismatch,
-					Message: "Provided ShardID does not match with any present",
+					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
 				}
 			}
 
@@ -88,7 +90,7 @@ func NewRPCMux(logger *zap.Logger) Mux {
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
-	server.Log.Info("Handle command " + cmd.scope + "." + cmd.method)
+	server.Log.Debug("Handle command " + cmd.scope + "." + cmd.method)
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
@@ -99,7 +101,6 @@ func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (
 func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {
 	for cmd, handler := range commands {
 		server.handlers[cmd] = handler
-		server.Log.Info("register " + cmd.String())
 	}
 }
 
