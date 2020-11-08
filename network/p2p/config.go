@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -100,7 +100,7 @@ func GetFreePort() (port int, err error) {
 // addresses to the address manager. Returns the listeners and a NAT interface,
 // which is non-nil if UPnP is in use.
 func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
-	listenAddrs []string, services wire.ServiceFlag, logger *zap.Logger) ([]net.Listener, NAT, error) {
+	listenAddrs []string, services wire.ServiceFlag, logger zerolog.Logger) ([]net.Listener, NAT, error) {
 	// Listen for TCP connections at the configured addresses
 	netAddrs, err := ParseListeners(listenAddrs)
 	if err != nil {
@@ -111,7 +111,7 @@ func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
 	for _, addr := range netAddrs {
 		listener, err := net.Listen(addr.Network(), addr.String())
 		if err != nil {
-			logger.Warn(fmt.Sprintf("Can't listen on %s: %v", addr, err))
+			logger.Warn().Msgf("Can't listen on %s: %v", addr, err)
 			continue
 		}
 		listeners = append(listeners, listener)
@@ -128,21 +128,20 @@ func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
 			} else {
 				port, err := strconv.ParseUint(portstr, 10, 16)
 				if err != nil {
-					logger.Warn(fmt.Sprintf("Can not parse port from %s for "+
-						"externalip: %v", sip, err))
+					logger.Warn().Msgf("Can not parse port from %s for external ip: %v", sip, err)
 					continue
 				}
 				eport = uint16(port)
 			}
 			na, err := amgr.HostToNetAddress(host, eport, services)
 			if err != nil {
-				logger.Warn(fmt.Sprintf("Not adding %s as externalip: %v", sip, err))
+				logger.Warn().Msgf("Not adding %s as external ip: %v", sip, err)
 				continue
 			}
 
 			err = amgr.AddLocalAddress(na, addrmgr.ManualPrio)
 			if err != nil {
-				logger.Warn(fmt.Sprintf("Skipping specified external IP: %v", err))
+				logger.Warn().Msgf("Skipping specified external IP: %v", err)
 			}
 		}
 	} else {
@@ -150,7 +149,7 @@ func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
 			var err error
 			nat, err = Discover()
 			if err != nil {
-				logger.Warn(fmt.Sprintf("Can't discover upnp: %v", err))
+				logger.Warn().Msgf("Can't discover upnp: %v", err)
 			}
 			// nil nat here is fine, just means no upnp on network.
 		}
@@ -160,7 +159,7 @@ func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
 			addr := listener.Addr().String()
 			err := addLocalAddress(amgr, addr, services)
 			if err != nil {
-				logger.Warn(fmt.Sprintf("Skipping bound address %s: %v", addr, err))
+				logger.Warn().Msgf("Skipping bound address %s: %v", addr, err)
 			}
 		}
 	}

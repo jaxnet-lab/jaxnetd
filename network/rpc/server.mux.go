@@ -8,10 +8,9 @@ import (
 	"net/http"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/corelog"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"go.uber.org/zap"
 )
 
 type MultiChainRPC struct {
@@ -22,7 +21,7 @@ type MultiChainRPC struct {
 	chainsMutex sync.RWMutex
 }
 
-func NewMultiChainRPC(config *Config, logger *zap.Logger,
+func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 	nodeRPC *NodeRPC, beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		ServerCore: NewRPCCore(config, logger),
@@ -72,13 +71,13 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 
 type Mux struct {
 	rpcutli.ToolsXt
-	Log      corelog.ILogger
+	Log      zerolog.Logger
 	handlers map[btcjson.MethodName]CommandHandler
 }
 
-func NewRPCMux(logger *zap.Logger) Mux {
+func NewRPCMux(logger zerolog.Logger) Mux {
 	return Mux{
-		Log:      corelog.Adapter(logger),
+		Log:      logger,
 		handlers: map[btcjson.MethodName]CommandHandler{},
 	}
 }
@@ -112,6 +111,6 @@ func (server *Mux) InternalRPCError(errStr, context string) *btcjson.RPCError {
 	if context != "" {
 		logStr = context + ": " + errStr
 	}
-	server.Log.Error(logStr)
+	server.Log.Error().Msg(logStr)
 	return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, errStr)
 }

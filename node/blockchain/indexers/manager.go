@@ -189,7 +189,7 @@ func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) error {
 			continue
 		}
 
-		log.Infof("Resuming %s drop", indexer.Name())
+		log.Info().Msgf("Resuming %s drop", indexer.Name())
 		err := dropIndex(m.db, indexer.Key(), indexer.Name(), interrupt)
 		if err != nil {
 			return err
@@ -360,7 +360,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		if initialHeight != height {
-			log.Infof("Removed %d orphaned blocks from %s "+
+			log.Info().Msgf("Removed %d orphaned blocks from %s "+
 				"(heights %d to %d)", initialHeight-height,
 				indexer.Name(), height+1, initialHeight)
 		}
@@ -381,7 +381,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				return err
 			}
 
-			log.Debugf("Current %s tip (height %d, hash %v)",
+			log.Debug().Msgf("Current %s tip (height %d, hash %v)",
 				indexer.Name(), height, hash)
 			indexerHeights[i] = height
 			if height < lowestHeight {
@@ -405,7 +405,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	// At this point, one or more indexes are behind the current best chain
 	// tip and need to be caught up, so log the details and loop through
 	// each block that needs to be indexed.
-	log.Infof("Catching up indexes from height %d to %d", lowestHeight,
+	log.Info().Msgf("Catching up indexes from height %d to %d", lowestHeight,
 		bestHeight)
 	for height := lowestHeight + 1; height <= bestHeight; height++ {
 		// Load the block for the height since it is required to index
@@ -457,7 +457,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 	}
 
-	log.Infof("Indexes caught up to height %d", bestHeight)
+	log.Info().Msgf("Indexes caught up to height %d", bestHeight)
 	return nil
 }
 
@@ -568,14 +568,14 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		return err
 	}
 	if !needsDelete {
-		log.Infof("Not dropping %s because it does not exist", idxName)
+		log.Info().Msgf("Not dropping %s because it does not exist", idxName)
 		return nil
 	}
 
 	// Mark that the index is in the process of being dropped so that it
 	// can be resumed on the next start if interrupted before the process is
 	// complete.
-	log.Infof("Dropping all %s entries.  This might take a while...",
+	log.Info().Msgf("Dropping all %s entries.  This might take a while...",
 		idxName)
 	err = db.Update(func(dbTx database.Tx) error {
 		indexesBucket := dbTx.Metadata().Bucket(indexTipsBucketName)
@@ -656,7 +656,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 
 			if numDeleted > 0 {
 				totalDeleted += uint64(numDeleted)
-				log.Infof("Deleted %d keys (%d total) from %s",
+				log.Info().Msgf("Deleted %d keys (%d total) from %s",
 					numDeleted, totalDeleted, idxName)
 			}
 		}
@@ -697,6 +697,6 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		return err
 	}
 
-	log.Infof("Dropped %s", idxName)
+	log.Info().Msgf("Dropped %s", idxName)
 	return nil
 }

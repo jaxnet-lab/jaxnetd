@@ -371,7 +371,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		// so log it as an actual error and return.
 		ruleErr, ok := err.(mempool.RuleError)
 		if !ok {
-			server.Log.Errorf("Failed to process transaction %v %v", tx.Hash(), err)
+			server.Log.Error().Msgf("Failed to process transaction %v %v", tx.Hash(), err)
 
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCTxError,
@@ -379,7 +379,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 			}
 		}
 
-		server.Log.Debugf("Rejected transaction %v: %v", tx.Hash(), err)
+		server.Log.Debug().Msgf("Rejected transaction %v: %v", tx.Hash(), err)
 
 		// We'll then map the rule error to the appropriate RPC error,
 		// matching bitcoind'server behavior.

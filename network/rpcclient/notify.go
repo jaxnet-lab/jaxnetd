@@ -230,7 +230,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		blockHash, blockHeight, blockTime, err := parseChainNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid block connected "+
+			log.Warn().Msgf("Received invalid block connected "+
 				"notification: %v", err)
 			return
 		}
@@ -248,7 +248,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		blockHeight, blockHeader, transactions, err :=
 			parseFilteredBlockConnectedParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid filtered block "+
+			log.Warn().Msgf("Received invalid filtered block "+
 				"connected notification: %v", err)
 			return
 		}
@@ -266,7 +266,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		blockHash, blockHeight, blockTime, err := parseChainNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid block connected "+
+			log.Warn().Msgf("Received invalid block connected "+
 				"notification: %v", err)
 			return
 		}
@@ -284,7 +284,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		blockHeight, blockHeader, err :=
 			parseFilteredBlockDisconnectedParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid filtered block "+
+			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
 			return
 		}
@@ -302,7 +302,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid recvtx notification: %v",
+			log.Warn().Msgf("Received invalid recvtx notification: %v",
 				err)
 			return
 		}
@@ -319,7 +319,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid redeemingtx "+
+			log.Warn().Msgf("Received invalid redeemingtx "+
 				"notification: %v", err)
 			return
 		}
@@ -336,7 +336,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		transaction, err := parseRelevantTxAcceptedParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid relevanttxaccepted "+
+			log.Warn().Msgf("Received invalid relevanttxaccepted "+
 				"notification: %v", err)
 			return
 		}
@@ -353,7 +353,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		hash, height, blkTime, err := parseRescanProgressParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid rescanfinished "+
+			log.Warn().Msgf("Received invalid rescanfinished "+
 				"notification: %v", err)
 			return
 		}
@@ -370,7 +370,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		hash, height, blkTime, err := parseRescanProgressParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid rescanprogress "+
+			log.Warn().Msgf("Received invalid rescanprogress "+
 				"notification: %v", err)
 			return
 		}
@@ -387,7 +387,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		hash, amt, err := parseTxAcceptedNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid tx accepted "+
+			log.Warn().Msgf("Received invalid tx accepted "+
 				"notification: %v", err)
 			return
 		}
@@ -404,7 +404,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		rawTx, err := parseTxAcceptedVerboseNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid tx accepted verbose "+
+			log.Warn().Msgf("Received invalid tx accepted verbose "+
 				"notification: %v", err)
 			return
 		}
@@ -421,7 +421,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		connected, err := parseBtcdConnectedNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid btcd connected "+
+			log.Warn().Msgf("Received invalid btcd connected "+
 				"notification: %v", err)
 			return
 		}
@@ -438,7 +438,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		account, bal, conf, err := parseAccountBalanceNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid account balance "+
+			log.Warn().Msgf("Received invalid account balance "+
 				"notification: %v", err)
 			return
 		}
@@ -457,7 +457,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		// discarded.
 		_, locked, err := parseWalletLockStateNtfnParams(ntfn.Params)
 		if err != nil {
-			log.Warnf("Received invalid wallet lock state "+
+			log.Warn().Msgf("Received invalid wallet lock state "+
 				"notification: %v", err)
 			return
 		}

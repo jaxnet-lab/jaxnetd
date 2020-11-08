@@ -304,7 +304,7 @@ func CheckBlockScripts(block *btcutil.Block, utxoView *UtxoViewpoint,
 	}
 	elapsed := time.Since(start)
 
-	log.Tracef("block %v took %v to verify", block.Hash(), elapsed)
+	log.Trace().Msgf("block %v took %v to verify", block.Hash(), elapsed)
 
 	// If the HashCache is present, once we have validated the block, we no
 	// longer need the cached hashes for these transactions, so we purge

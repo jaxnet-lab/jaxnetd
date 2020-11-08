@@ -290,7 +290,7 @@ func (mp *TxPool) limitNumOrphans() error {
 
 		numOrphans := len(mp.orphans)
 		if numExpired := origNumOrphans - numOrphans; numExpired > 0 {
-			log.Debugf("Expired %d %s (remaining: %d)", numExpired,
+			log.Debug().Msgf("Expired %d %s (remaining: %d)", numExpired,
 				pickNoun(numExpired, "orphan", "orphans"),
 				numOrphans)
 		}
@@ -345,7 +345,7 @@ func (mp *TxPool) addOrphan(tx *btcutil.Tx, tag Tag) {
 		mp.orphansByPrev[txIn.PreviousOutPoint][*tx.Hash()] = tx
 	}
 
-	log.Debugf("Stored orphan transaction %v (total: %d)", tx.Hash(),
+	log.Debug().Msgf("Stored orphan transaction %v (total: %d)", tx.Hash(),
 		len(mp.orphans))
 }
 
@@ -1192,7 +1192,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		oldTotal := mp.pennyTotal
 
 		mp.pennyTotal += float64(serializedSize)
-		log.Tracef("rate limit: curTotal %v, nextTotal: %v, "+
+		log.Trace().Msgf("rate limit: curTotal %v, nextTotal: %v, "+
 			"limit %v", oldTotal, mp.pennyTotal,
 			mp.cfg.Policy.FreeTxRelayLimit*10*1000)
 	}
@@ -1223,7 +1223,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// mempool. If it ended up replacing any transactions, we'll remove them
 	// first.
 	for _, conflict := range conflicts {
-		log.Debugf("Replacing transaction %v (fee_rate=%v sat/kb) "+
+		log.Debug().Msgf("Replacing transaction %v (fee_rate=%v sat/kb) "+
 			"with %v (fee_rate=%v sat/kb)\n", conflict.Hash(),
 			mp.pool[*conflict.Hash()].FeePerKB, tx.Hash(),
 			txFee*1000/serializedSize)
@@ -1235,7 +1235,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	}
 	txD := mp.addTransaction(utxoView, tx, bestHeight, txFee)
 
-	log.Debugf("Accepted transaction %v (pool size: %v)", txHash,
+	log.Debug().Msgf("Accepted transaction %v (pool size: %v)", txHash,
 		len(mp.pool))
 
 	return nil, txD, nil
@@ -1374,7 +1374,7 @@ func (mp *TxPool) ProcessOrphans(acceptedTx *btcutil.Tx) []*TxDesc {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit bool, tag Tag) ([]*TxDesc, error) {
-	log.Tracef("Processing transaction %v", tx.Hash())
+	log.Trace().Msgf("Processing transaction %v", tx.Hash())
 
 	// Protect concurrent access.
 	mp.mtx.Lock()

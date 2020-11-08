@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
-	"go.uber.org/zap"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 )
 
 type chainController struct {
-	logger *zap.Logger
+	logger zerolog.Logger
 	cfg    *Config
 	// -------------------------------
 
@@ -46,7 +46,7 @@ type chainController struct {
 	metrics IMetricManager
 }
 
-func Controller(logger *zap.Logger) *chainController {
+func Controller(logger zerolog.Logger) *chainController {
 	res := &chainController{
 		logger:    logger,
 		shardsCtl: make(map[uint32]shardRO),
@@ -67,7 +67,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	chainCtl.ctx, chainCtl.cancel = context.WithCancel(ctx)
 
 	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
-		chainCtl.logger.Error("Beacon error", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("Beacon error")
 		return err
 	}
 
@@ -75,14 +75,14 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	if cfg.Node.Shards.Enable {
 		go func() {
 			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {
-				chainCtl.logger.Error("listen metrics server", zap.Error(err))
+				chainCtl.logger.Error().Err(err).Msg("listen metrics server")
 			}
 		}()
 	}
 
 	if cfg.Node.Shards.Enable {
 		if err := chainCtl.runShards(); err != nil {
-			chainCtl.logger.Error("Shards error", zap.Error(err))
+			chainCtl.logger.Error().Err(err).Msg("Shards error")
 			return err
 		}
 		defer chainCtl.saveShardsIndex()
@@ -93,7 +93,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if err := chainCtl.runRpc(chainCtl.ctx, cfg); err != nil {
-		chainCtl.logger.Error("RPC ComposeHandlers error", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 		}
 	}
 
-	chainCtl.miner = cpuminer.NewMiner(minerSet, chainCtl.logger.With(zap.String("context", "miner")))
+	chainCtl.miner = cpuminer.NewMiner(minerSet, chainCtl.logger.With().Str("ctx", "miner").Logger())
 	return
 }
 
@@ -158,7 +158,7 @@ func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) err
 
 	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg)
 	if err := chainCtl.beacon.Init(); err != nil {
-		chainCtl.logger.Error("Can't init Beacon chainCtl", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("Can't init Beacon chainCtl")
 		return err
 	}
 
@@ -206,7 +206,7 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 
 func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Config) error {
 	childCtx, _ := context.WithCancel(ctx)
-	chainCtl.logger.Info("Metrics Enabled")
+	chainCtl.logger.Info().Msg("Metrics Enabled")
 	interval := cfg.Metrics.Interval
 	if interval == 0 {
 		interval = 5

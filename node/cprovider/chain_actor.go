@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
@@ -18,7 +19,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"go.uber.org/zap"
 )
 
 const defaultMaxOrphanTxSize = 100000
@@ -92,7 +92,7 @@ type ChainProvider struct {
 	blockChain  *blockchain.BlockChain
 
 	ChainCtx chain.IChainCtx
-	logger   *zap.Logger
+	logger   zerolog.Logger
 	config   *ChainRuntimeConfig
 
 	blockTmplGenerator *mining.BlkTmplGenerator
@@ -100,8 +100,9 @@ type ChainProvider struct {
 }
 
 func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.IChainCtx,
-	blockGen blockchain.ChainBlockGenerator, db database.DB, log *zap.Logger) (*ChainProvider, error) {
+	blockGen blockchain.ChainBlockGenerator, db database.DB, log zerolog.Logger) (*ChainProvider, error) {
 	var err error
+
 	chainProvider := &ChainProvider{
 		ChainCtx:    chainCtx,
 		ChainParams: chainCtx.Params(),
@@ -163,7 +164,7 @@ func (chainProvider *ChainProvider) DBUpdateCallback(tx database.Tx) error {
 		chainProvider.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
 
 		if err != nil {
-			chainProvider.logger.Error("Failed to restore fee estimator", zap.Error(err))
+			chainProvider.logger.Error().Err(err).Msg("Failed to restore fee estimator", )
 		}
 	}
 
@@ -174,7 +175,7 @@ func (chainProvider *ChainProvider) Config() *ChainRuntimeConfig {
 	return chainProvider.config
 }
 
-func (chainProvider *ChainProvider) Log() *zap.Logger {
+func (chainProvider *ChainProvider) Log() zerolog.Logger {
 	return chainProvider.logger
 }
 
@@ -304,23 +305,23 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 		// Enable transaction index if address index is enabled since it
 		// requires it.
 		if !cfg.TxIndex {
-			chainProvider.logger.Info("Transaction index enabled because it " +
+			chainProvider.logger.Info().Msg("Transaction index enabled because it " +
 				"is required by the address index")
 			cfg.TxIndex = true
 		} else {
-			chainProvider.logger.Info("Transaction index is enabled")
+			chainProvider.logger.Info().Msg("Transaction index is enabled")
 		}
 
 		chainProvider.TxIndex = indexers.NewTxIndex(chainProvider.DB)
 		indexes = append(indexes, chainProvider.TxIndex)
 	}
 	if cfg.AddrIndex {
-		chainProvider.logger.Info("Address index is enabled")
+		chainProvider.logger.Info().Msg("Address index is enabled")
 		chainProvider.AddrIndex = indexers.NewAddrIndex(chainProvider.DB, chainProvider.ChainCtx.Params())
 		indexes = append(indexes, chainProvider.AddrIndex)
 	}
 	if !cfg.NoCFilters {
-		chainProvider.logger.Info("Committed filter index is enabled")
+		chainProvider.logger.Info().Msg("Committed filter index is enabled")
 		chainProvider.CfIndex = indexers.NewCfIndex(chainProvider.DB, chainProvider.ChainCtx.Params())
 		indexes = append(indexes, chainProvider.CfIndex)
 	}
