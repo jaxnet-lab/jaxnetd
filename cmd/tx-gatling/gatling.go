@@ -131,6 +131,7 @@ func (app *App) getCommands() cli.Commands {
 type App struct {
 	config Config
 	txutils.Operator
+	shardID uint32
 }
 
 func (app *App) InitFlags() []cli.Flag {
@@ -164,6 +165,10 @@ func (app *App) InitCfg(c *cli.Context) error {
 	if dataFile != "" {
 		app.config.SenderSecret = secret
 	}
+
+	// todo cleanup
+	app.shardID = uint32(shardID)
+	app.config.ShardID = app.shardID
 	app.Operator, err = txutils.NewOperator(txutils.ManagerCfg{
 		Net:        app.config.Net,
 		ShardID:    uint32(shardID),
@@ -227,7 +232,7 @@ func (app *App) SendTxCmd(*cli.Context) error {
 
 		fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC.ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -241,7 +246,7 @@ func (app *App) SendTxCmd(*cli.Context) error {
 
 	for _, tx := range sentTxs {
 		hash, _ := chainhash.NewHashFromStr(tx.TxHash)
-		txResult, err := app.TxMan.RPC.GetTxOut(hash, 0, true)
+		txResult, err := app.TxMan.RPC.ForShard(app.shardID).GetTxOut(hash, 0, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to get tx"), 1)
 		}
@@ -303,7 +308,7 @@ func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC.ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -352,7 +357,7 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 	fmt.Printf("Add signature to Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC.ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -394,7 +399,7 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC.ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
