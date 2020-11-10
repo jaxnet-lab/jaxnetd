@@ -26,7 +26,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
@@ -43,9 +42,9 @@ type ServerCore struct {
 	shutdown int32
 	cfg      *Config
 
-	authSHA      [sha256.Size]byte
-	limitAuthSHA [sha256.Size]byte
-	// ntfnMgr                *wsNotificationManager
+	authSHA                [sha256.Size]byte
+	limitAuthSHA           [sha256.Size]byte
+	//wsManager              *wsManager
 	numClients             int32
 	statusLines            map[int]string
 	statusLock             sync.RWMutex
@@ -83,6 +82,7 @@ func NewRPCCore(config *Config, logger *zap.Logger) *ServerCore {
 		rpc.limitAuthSHA = sha256.Sum256([]byte(auth))
 	}
 
+	//rpc.wsManager = newWsNotificationManager(rpc)
 	return rpc
 }
 
@@ -109,8 +109,6 @@ func (server *ServerCore) StartRPC(ctx context.Context, rpcServeMux *http.ServeM
 		}(listener)
 	}
 
-	// server.ntfnMgr.Start()
-
 	<-ctx.Done()
 
 	server.logger.Info("Shutting down the API Server...")
@@ -136,8 +134,8 @@ func (server *ServerCore) Stop() error {
 			return err
 		}
 	}
-	// server.ntfnMgr.Shutdown()
-	// server.ntfnMgr.WaitForShutdown()
+	//server.wsManager.Shutdown()
+	//server.wsManager.WaitForShutdown()
 	close(server.quit)
 	server.wg.Wait()
 	server.logger.Infof("RPC Server shutdown complete")
@@ -149,35 +147,6 @@ func (server *ServerCore) Stop() error {
 // immediately, it is dropped.
 func (server *ServerCore) RequestedProcessShutdown() <-chan struct{} {
 	return server.requestProcessShutdown
-}
-
-func (server *ServerCore) WSHandleFunc() func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if server.cfg.WSEnable {
-			http.Error(w, "WS is Unavailable", http.StatusServiceUnavailable)
-			return
-		}
-
-		authenticated, isAdmin, err := server.checkAuth(r, false)
-		if err != nil {
-			jsonAuthFail(w)
-			return
-		}
-
-		// Attempt to upgrade the connection to a websocket connection
-		// using the default size for read/write bufferserver.
-		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
-		if err != nil {
-			if _, ok := err.(websocket.HandshakeError); !ok {
-				server.logger.Errorf("Unexpected websocket error: %v",
-					err)
-			}
-			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
-			return
-		}
-		_, _, _ = ws, authenticated, isAdmin
-		// server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
-	}
 }
 
 func (server *ServerCore) HandleFunc(handler commandMux) func(w http.ResponseWriter, r *http.Request) {

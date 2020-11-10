@@ -84,8 +84,6 @@ func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{})
 }
 
 func (server *NodeRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// result := btcjson.NewGetNetworkInfoCmd()
-	// fmt.Println("NetworkInfo: ", result)
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
