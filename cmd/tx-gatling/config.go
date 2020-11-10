@@ -18,6 +18,7 @@ type Destination struct {
 }
 
 type Config struct {
+	ShardID      uint32          `yaml:"shard_id"`
 	Net          string          `yaml:"net"`
 	NodeRPC      txutils.NodeRPC `yaml:"node_rpc"`
 	DataFile     string          `yaml:"data_file"`

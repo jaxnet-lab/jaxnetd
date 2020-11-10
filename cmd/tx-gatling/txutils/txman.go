@@ -85,7 +85,7 @@ func (client *TxMan) ForShard(shardID uint32) *TxMan {
 }
 
 func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORows, int64, error) {
-	maxHeight, err := client.RPC.GetBlockCount()
+	maxHeight, err := client.RPC.ForShard(client.cfg.ShardID).GetBlockCount()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -97,7 +97,7 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 	}
 
 	for height := offset; height <= maxHeight; height++ {
-		hash, err := client.RPC.GetBlockHash(height)
+		hash, err := client.RPC.ForShard(client.cfg.ShardID).GetBlockHash(height)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -215,7 +215,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 // | - | ---------------- | --- | ----------------- | - |
 // | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
 // | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
-func (client *TxMan) NewSwapTx(data map[string]txmodels.UTXO, postVerify bool) (*txmodels.SwapTransaction, error) {
+func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify bool) (*txmodels.SwapTransaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -225,7 +225,7 @@ func (client *TxMan) NewSwapTx(data map[string]txmodels.UTXO, postVerify bool) (
 	ind := 0
 	outIndexes := map[string]int{}
 
-	for destination, utxo := range data {
+	for destination, utxo := range spendingMap {
 		fee, err := client.ForShard(utxo.ShardID).NetworkFee()
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get fee")
@@ -255,7 +255,7 @@ func (client *TxMan) NewSwapTx(data map[string]txmodels.UTXO, postVerify bool) (
 		ind += 1
 	}
 
-	for destination, utxo := range data {
+	for destination, utxo := range spendingMap {
 		txInIndex := outIndexes[destination]
 		utxo := utxo.ToShort()
 
@@ -369,6 +369,79 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 	return msgTx, nil
 }
 
+func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
+	redeemScripts ...string) (*wire.MsgTx, error) {
+	if client.key == nil {
+		return nil, errors.New("keys not set")
+	}
+	type scriptData struct {
+		Type string
+		P2sh string
+		Hex  string
+	}
+
+	scripts := make(map[string]scriptData, len(redeemScripts))
+	for _, redeemScript := range redeemScripts {
+		rawScript, err := hex.DecodeString(redeemScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to decode hex script")
+		}
+
+		script, err := client.DecodeScript(rawScript)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to parse script")
+		}
+
+		scripts[script.P2sh] = scriptData{
+			Type: script.Type,
+			P2sh: script.P2sh,
+			Hex:  redeemScript,
+		}
+	}
+
+	for i := range msgTx.TxIn {
+		txInIndex := i
+		prevOut := msgTx.TxIn[i].PreviousOutPoint
+		var txOut *btcjson.GetTxOutResult
+	shardsLoop:
+		for _, shardID := range shards {
+			out, _ := client.RPC.ForShard(shardID).GetTxOut(&prevOut.Hash, prevOut.Index, false)
+			if out == nil {
+				continue
+			}
+			txOut = out
+			break shardsLoop
+		}
+
+		if txOut == nil {
+			return nil, errors.New("unable to get utxo from node")
+		}
+
+		value, _ := btcutil.NewAmount(txOut.Value)
+		utxo := txmodels.ShortUTXO{
+			Value:      int64(value),
+			PKScript:   txOut.ScriptPubKey.Hex,
+			ScriptType: txOut.ScriptPubKey.Type,
+		}
+
+		for _, address := range txOut.ScriptPubKey.Addresses {
+			if script, ok := scripts[address]; ok {
+				utxo.RedeemScript = script.Hex
+				break
+			}
+		}
+
+		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to sing utxo")
+		}
+	}
+
+	return msgTx, nil
+}
+
+// AddSignatureToTx adds signature(s) to wire.TxIn in wire.MsgTx that spend coins with the txscript.MultiSigTy address.
+// NOTE: this method don't work with SwapTx, use the AddSignatureToSwapTx.
 func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
