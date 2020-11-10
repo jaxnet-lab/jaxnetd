@@ -8,12 +8,12 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"go.uber.org/zap"
 )
 
 type NodeRPC struct {
@@ -30,7 +30,7 @@ type NodeRPC struct {
 	chainProvider cprovider.ChainProvider
 }
 
-func NewNodeRPC(shardsMgr ShardManager, logger *zap.Logger) *NodeRPC {
+func NewNodeRPC(shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
 	rpc := &NodeRPC{
 		Mux:       NewRPCMux(logger),
 		shardsMgr: shardsMgr,
@@ -310,7 +310,7 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	if startHeight < 0 {
 		startHeight = 0
 	}
-	server.Log.Debugf("Calculating network hashes per second %v %v", startHeight, endHeight)
+	server.Log.Debug().Msgf("Calculating network hashes per second %v %v", startHeight, endHeight)
 
 	// Find the min and max block timestamps as well as calculate the total
 	// amount of work that happened between the start and end blocks.

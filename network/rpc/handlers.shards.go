@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
@@ -18,7 +19,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 type ShardRPC struct {
@@ -28,9 +28,11 @@ type ShardRPC struct {
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
 	connMgr netsync.P2PConnManager,
-	logger *zap.Logger) *ShardRPC {
+	logger zerolog.Logger) *ShardRPC {
 	rpc := &ShardRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger.With(zap.String("ctx", "shard_rpc"), zap.Uint32("id", chainProvider.ChainCtx.ShardID()))),
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger.With().
+		Uint32("id", chainProvider.ChainCtx.ShardID()).
+		Str("ctx", "shard_rpc").Logger()),
 	}
 
 	rpc.ComposeHandlers()
@@ -482,14 +484,14 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block); err != nil {
 		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
-			server.Log.Error(errStr)
+			server.Log.Error().Msg(errStr)
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCVerify,
 				Message: errStr,
 			}
 		}
 
-		server.Log.Infof("Rejected block proposal. %s", err.Error())
+		server.Log.Info().Msgf("Rejected block proposal. %s", err.Error())
 		return server.ChainErrToGBTErrString(err), nil
 	}
 

@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
 )
 
 // shutdownRequestChannel is used to initiate shutdown from one of the
@@ -24,7 +24,7 @@ var interruptSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 // interruptListener listens for OS Signals such as SIGINT (Ctrl+C) and shutdown
 // requests from shutdownRequestChannel.  It returns a channel that is closed
 // when either signal is received.
-func interruptListener(log *zap.Logger) <-chan struct{} {
+func interruptListener(log zerolog.Logger) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		interruptChannel := make(chan os.Signal, 1)
@@ -34,10 +34,10 @@ func interruptListener(log *zap.Logger) <-chan struct{} {
 		// channel to notify the caller.
 		select {
 		case sig := <-interruptChannel:
-			log.Info("Received signal " + sig.String() + ". Shutting down...")
+			log.Info().Msg("Received signal " + sig.String() + ". Shutting down...")
 
 		case <-shutdownRequestChannel:
-			log.Info("Shutdown requested. Shutting down...")
+			log.Info().Msg("Shutdown requested. Shutting down...")
 		}
 		close(done)
 
@@ -47,26 +47,13 @@ func interruptListener(log *zap.Logger) <-chan struct{} {
 		for {
 			select {
 			case sig := <-interruptChannel:
-				log.Info("Received signal " + sig.String() + ". Already shutting down...")
+				log.Info().Msg("Received signal " + sig.String() + ". Already shutting down...")
 
 			case <-shutdownRequestChannel:
-				log.Info("Shutdown requested.  Already shutting down...")
+				log.Info().Msg("Shutdown requested.  Already shutting down...")
 			}
 		}
 	}()
 
 	return done
-}
-
-// interruptRequested returns true when the channel returned by
-// interruptListener was closed.  This simplifies early shutdown slightly since
-// the caller can just use an if statement instead of a select.
-func interruptRequested(interrupted <-chan struct{}) bool {
-	select {
-	case <-interrupted:
-		return true
-	default:
-	}
-
-	return false
 }

@@ -49,16 +49,18 @@ func TestOperator_SpendUTXO(t *testing.T) {
 
 func TestMakeMultiSigScript(ot *testing.T) {
 	t := (*T)(ot)
-
+	var shardID uint32 = 1
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	evaAddress := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
 	utxoSearchOffset := 0
 	amount := int64(1000000000) - OneCoin
+
 	// -----------------------------------------------------------------------------------------
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net: "testnet",
+		Net:     "testnet",
+		ShardID: shardID,
 		RPC: NodeRPC{
 			Host: "116.202.107.209:18334",
 			User: "somerpc",
@@ -76,7 +78,8 @@ func TestMakeMultiSigScript(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	aliceUTXO, _, err := op.TxMan.CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
+	aliceUTXO, _, err := op.TxMan.ForShard(shardID).
+		CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
 	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
@@ -94,17 +97,21 @@ func TestMakeMultiSigScript(ot *testing.T) {
 
 	// -----------------------------------------------------------------------------------------
 	// ---/---- SEND COINS TO MULTISIG ADDRESS  ----\----
-	toMultiSigAddrTx, err := op.TxMan.WithKeys(aliceKP).NewTx(multiSigScript.Address, amount, UTXOFromRows(aliceUTXO))
+	toMultiSigAddrTx, err := op.TxMan.
+		ForShard(shardID).
+		WithKeys(aliceKP).
+		NewTx(multiSigScript.Address, amount, UTXOFromRows(aliceUTXO))
 	assert.NoError(t, err)
 
 	// publish created transaction
-	txHash, err := op.TxMan.RPC.SendRawTransaction(toMultiSigAddrTx.RawTX, true)
+
+	txHash, err := op.TxMan.RPC.ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
 	assert.NoError(t, err)
 
 waitLoop:
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 1 {
 			fmt.Println("tx mined into block")
@@ -153,12 +160,12 @@ waitLoop:
 
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
-	txHash, err = op.TxMan.RPC.SendRawTransaction(multiSigSpendTx.RawTX, true)
+	txHash, err = op.TxMan.RPC.ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -172,6 +179,8 @@ waitLoop:
 
 func TestMakeSwapTx(ot *testing.T) {
 	t := (*T)(ot)
+	var shardID1 uint32 = 1
+	var shardID2 uint32 = 2
 
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
@@ -206,9 +215,10 @@ func TestMakeSwapTx(ot *testing.T) {
 	assert.NoError(t, err)
 
 	shard1UTXO := txmodels.UTXO{
-		ShardID:    1,
-		Address:    multiSigScript.Address,
-		Value:      OneCoin,
+		ShardID: shardID1,
+		Address: multiSigScript.Address,
+		Value:   OneCoin,
+		// todo: all fields must be filled in with the corresponding values
 		Height:     0,
 		TxHash:     "",
 		OutIndex:   0,
@@ -216,11 +226,14 @@ func TestMakeSwapTx(ot *testing.T) {
 		PKScript:   "",
 		ScriptType: "",
 	}
+	shard1UTXO, err = SetRedeemScript(shard1UTXO, multiSigScript.RedeemScript, cfg.NetParams())
+	assert.NoError(t, err)
 
 	shard2UTXO := txmodels.UTXO{
-		ShardID:    2,
-		Address:    multiSigScript.Address,
-		Value:      OneCoin,
+		ShardID: shardID2,
+		Address: multiSigScript.Address,
+		Value:   OneCoin,
+		// todo: all fields must be filled in with the corresponding values
 		Height:     0,
 		TxHash:     "",
 		OutIndex:   0,
@@ -228,23 +241,35 @@ func TestMakeSwapTx(ot *testing.T) {
 		PKScript:   "",
 		ScriptType: "",
 	}
-	// -----------------------------------------------------------------------------------------
+	shard2UTXO, err = SetRedeemScript(shard2UTXO, multiSigScript.RedeemScript, cfg.NetParams())
+	assert.NoError(t, err)
 
-	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(map[string]txmodels.UTXO{
-		"address_in_shard_1": shard1UTXO,
-		"address_in_shard_2": shard2UTXO,
-	}, false)
+	// -----------------------------------------------------------------------------------------
+	// todo: must be a valid jax.net addresses
+	destinationAtShard1 := ""
+	destinationAtShard2 := ""
+	spendingMap := map[string]txmodels.UTXO{
+		destinationAtShard1: shard1UTXO,
+		destinationAtShard2: shard2UTXO,
+	}
+	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(spendingMap, false)
 	assert.NoError(t, err)
 
 	var swapTxWithMultisig *wire.MsgTx
 
-	swapTxWithMultisig, err = op.TxMan.WithKeys(aliceKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
+	swapTxWithMultisig, err = op.TxMan.WithKeys(aliceKP).AddSignatureToSwapTx(swapTX.RawTX,
+		[]uint32{shardID1, shardID2},
+		multiSigScript.RedeemScript)
+
 	assert.NoError(t, err)
 	swapTX.RawTX = swapTxWithMultisig
 	swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
 
 	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
-	swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
+	swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToSwapTx(swapTX.RawTX,
+		[]uint32{shardID1, shardID2},
+		multiSigScript.RedeemScript)
+
 	assert.NoError(t, err)
 	swapTX.RawTX = swapTxWithMultisig
 	swapTX.SignedTx = EncodeTx(swapTxWithMultisig)

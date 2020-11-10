@@ -8,7 +8,7 @@ package database
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/corelog"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
 
@@ -30,7 +30,7 @@ type Driver struct {
 	Open func(chain chain.IChainCtx, args ...interface{}) (DB, error)
 
 	// UseLogger uses a specified Logger to output package logging info.
-	UseLogger func(logger corelog.ILogger)
+	UseLogger func(logger zerolog.Logger)
 }
 
 // driverList holds all of the registered database backends.

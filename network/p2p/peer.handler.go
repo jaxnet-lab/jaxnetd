@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
@@ -44,8 +44,8 @@ type serverPeerHandler struct {
 	newPeers chan<- *serverPeer
 	banPeers chan<- *serverPeer
 
-	logger             corelog.ILogger
-	getChainPort       func(shardID uint32) (int, bool)
+	logger       zerolog.Logger
+	getChainPort func(shardID uint32) (int, bool)
 }
 
 func newServerPeerHandler(server *Server) *serverPeerHandler {
@@ -64,7 +64,7 @@ func newServerPeerHandler(server *Server) *serverPeerHandler {
 		cfCheckptCaches:    make(map[wire.FilterType][]cfHeaderKV),
 		cfCheckptCachesMtx: sync.RWMutex{},
 
-		getChainPort:       server.cfg.GetChainPort,
+		getChainPort: server.cfg.GetChainPort,
 
 		newPeers: server.newPeers,
 		banPeers: server.banPeers,
@@ -92,7 +92,7 @@ func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash,
 	// to fetch a missing transaction results in the same behavior.
 	tx, err := server.chain.TxMemPool.FetchTransaction(hash)
 	if err != nil {
-		server.logger.Tracef("Unable to fetch tx %v from transaction "+
+		server.logger.Trace().Msgf("Unable to fetch tx %v from transaction "+
 			"pool: %v", hash, err)
 
 		if doneChan != nil {
@@ -124,7 +124,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 		return err
 	})
 	if err != nil {
-		server.logger.Tracef("Unable to fetch requested block hash %v: %v",
+		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v",
 			hash, err)
 
 		if doneChan != nil {
@@ -138,7 +138,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 
 	err = msgBlock.Deserialize(bytes.NewReader(blockBytes))
 	if err != nil {
-		server.logger.Tracef("Unable to deserialize requested block hash "+
+		server.logger.Trace().Msgf("Unable to deserialize requested block hash "+
 			"%v: %v", hash, err)
 
 		if doneChan != nil {
@@ -196,7 +196,7 @@ func (server *serverPeerHandler) pushMerkleBlockMsg(sp *serverPeer, hash *chainh
 	// Fetch the raw block bytes from the database.
 	blk, err := sp.serverPeerHandler.chain.BlockChain().BlockByHash(hash)
 	if err != nil {
-		server.logger.Tracef("Unable to fetch requested block hash %v: %v",
+		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v",
 			hash, err)
 
 		if doneChan != nil {

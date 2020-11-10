@@ -84,7 +84,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		for i := 0; i < len(b.prevOrphans[*processHash]); i++ {
 			orphan := b.prevOrphans[*processHash][i]
 			if orphan == nil {
-				log.Warnf("Found a nil entry at index %d in the "+
+				log.Warn().Msgf("Found a nil entry at index %d in the "+
 					"orphan dependency list for block %v", i,
 					processHash)
 				continue
@@ -127,7 +127,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 
 	blockHash := block.Hash()
-	log.Tracef("Processing block %v", blockHash)
+	log.Trace().Msgf("Processing block %v", blockHash)
 
 	// The block must not already exist in the main chain or side chains.
 	exists, err := b.blockExists(blockHash)
@@ -201,7 +201,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 	if !prevHashExists {
-		log.Infof("Adding orphan block %v with parent %v", blockHash, prevHash)
+		log.Info().Msgf("Adding orphan block %v with parent %v", blockHash, prevHash)
 		b.addOrphanBlock(block)
 
 		return false, true, nil
@@ -224,7 +224,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 	if err := b.blockGen.AcceptBlock(blockHeader); err != nil {
 		return false, false, err
 	}
-	log.Debugf("Accepted block %v", blockHash)
+	log.Debug().Msgf("Accepted block %v", blockHash)
 
 	return isMainChain, false, nil
 }

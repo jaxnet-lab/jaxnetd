@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
@@ -25,7 +26,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 type CommonChainRPC struct {
@@ -43,7 +43,7 @@ type CommonChainRPC struct {
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	logger *zap.Logger) *CommonChainRPC {
+	logger zerolog.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
@@ -121,7 +121,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 	case blockchain.NTBlockAccepted:
 		block, ok := notification.Data.(*btcutil.Block)
 		if !ok {
-			server.Log.Warnf("Chain accepted notification is not a block.")
+			server.Log.Warn().Msgf("Chain accepted notification is not a block.")
 			break
 		}
 
@@ -133,7 +133,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 	case blockchain.NTBlockConnected:
 		// block, ok := notification.Data.(*btcutil.Block)
 		// if !ok {
-		//	server.Log.Warnf("Chain connected notification is not a block.")
+		//	server.Log.Warn().Msgf("Chain connected notification is not a block.")
 		//	break
 		// }
 
@@ -143,7 +143,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 	case blockchain.NTBlockDisconnected:
 		// block, ok := notification.Data.(*btcutil.Block)
 		// if !ok {
-		//	server.Log.Warnf("Chain disconnected notification is not a block.")
+		//	server.Log.Warn().Msgf("Chain disconnected notification is not a block.")
 		//	break
 		// }
 
@@ -224,14 +224,14 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 	if finishHeight < 0 {
 		finishHeight = 0
 	}
-	server.Log.Infof("Verifying BlockChain for %d blocks at level %d",
+	server.Log.Info().Msgf("Verifying BlockChain for %d blocks at level %d",
 		best.Height-finishHeight, level)
 
 	for height := best.Height; height > finishHeight; height-- {
 		// Level 0 just looks up the block.
 		block, err := server.chainProvider.BlockChain().BlockByHeight(height)
 		if err != nil {
-			server.Log.Errorf("Verify is unable to fetch block at "+
+			server.Log.Error().Msgf("Verify is unable to fetch block at "+
 				"height %d: %v", height, err)
 			return err
 		}
@@ -241,14 +241,14 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 			err := chaindata.CheckBlockSanity(block,
 				server.chainProvider.ChainParams.PowLimit, server.chainProvider.TimeSource)
 			if err != nil {
-				server.Log.Errorf("Verify is unable to validate "+
+				server.Log.Error().Msgf("Verify is unable to validate "+
 					"block at hash %v height %d: %v",
 					block.Hash(), height, err)
 				return err
 			}
 		}
 	}
-	server.Log.Infof("Chain verify completed successfully")
+	server.Log.Info().Msgf("Chain verify completed successfully")
 
 	return nil
 }
@@ -490,14 +490,14 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 
 	filterBytes, err := server.chainProvider.CfIndex.FilterByBlockHash(hash, c.FilterType)
 	if err != nil {
-		server.Log.Debugf("Could not find committed filter for %v %v", hash, err)
+		server.Log.Debug().Msgf("Could not find committed filter for %v %v", hash, err)
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
 
-	server.Log.Debugf("Found committed filter for %s", hash.String())
+	server.Log.Debug().Msgf("Found committed filter for %s", hash.String())
 	return hex.EncodeToString(filterBytes), nil
 }
 
@@ -518,9 +518,9 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 
 	headerBytes, err := server.chainProvider.CfIndex.FilterHeaderByBlockHash(hash, c.FilterType)
 	if len(headerBytes) > 0 {
-		server.Log.Debugf("Found header of committed filter for %s", hash.String())
+		server.Log.Debug().Msgf("Found header of committed filter for %s", hash.String())
 	} else {
-		server.Log.Debugf("Could not find header of committed filter for %v %v", hash, err)
+		server.Log.Debug().Msgf("Could not find header of committed filter for %v %v", hash, err)
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
@@ -722,7 +722,7 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 		return fmt.Sprintf("rejected: %s", err.Error()), nil
 	}
 
-	server.Log.Infof(fmt.Sprintf("Accepted block %s via submitblock", block.Hash().String()))
+	server.Log.Info().Msgf("Accepted block %s via submitblock", block.Hash().String())
 	return nil, nil
 }
 

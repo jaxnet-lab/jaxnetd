@@ -72,7 +72,7 @@ func MigrateBlockIndex(db database.DB) error {
 			return fmt.Errorf("Bucket %s does not exist", v1BucketName)
 		}
 
-		log.Info("Re-indexing block information in the database. This might take a while...")
+		log.Info().Msg("Re-indexing block information in the database. This might take a while...")
 
 		v2BlockIdxBucket, err :=
 			dbTx.Metadata().CreateBucketIfNotExists(v2BucketName)
@@ -144,7 +144,7 @@ func MigrateBlockIndex(db database.DB) error {
 		return err
 	}
 
-	log.Infof("Block database migration complete")
+	log.Info().Msgf("Block database migration complete")
 	return nil
 }
 
@@ -447,7 +447,7 @@ func UpgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 		v2BucketName = []byte("utxosetv2")
 	)
 
-	log.Infof("Upgrading utxo set to v2.  This will take a while...")
+	log.Info().Msgf("Upgrading utxo set to v2.  This will take a while...")
 	start := time.Now()
 
 	// Create the new utxo set bucket as needed.
@@ -554,7 +554,7 @@ func UpgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 		}
 
 		totalUtxos += uint64(numUtxos)
-		log.Infof("Migrated %d utxos (%d total)", numUtxos, totalUtxos)
+		log.Info().Msgf("Migrated %d utxos (%d total)", numUtxos, totalUtxos)
 	}
 
 	// Remove the old bucket and update the utxo set version once it has
@@ -572,7 +572,7 @@ func UpgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 	}
 
 	seconds := int64(time.Since(start) / time.Second)
-	log.Infof("Done upgrading utxo set.  Total utxos: %d in %d seconds",
+	log.Info().Msgf("Done upgrading utxo set.  Total utxos: %d in %d seconds",
 		totalUtxos, seconds)
 	return nil
 }

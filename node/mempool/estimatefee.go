@@ -270,8 +270,8 @@ func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
 		// This shouldn't happen if the fee estimator works correctly,
 		// but return an error if it does.
 		if o.mined != mining.UnminedHeight {
-			log.Error("Estimate fee: transaction " + hash.String() + " has already been mined")
-			return errors.New("Transaction has already been mined")
+			log.Error().Msg("Estimate fee: transaction " + hash.String() + " has already been mined")
+			return errors.New("transaction has already been mined")
 		}
 
 		// This shouldn't happen but check just in case to avoid

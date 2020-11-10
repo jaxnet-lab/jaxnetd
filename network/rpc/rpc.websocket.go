@@ -98,9 +98,9 @@ import "errors"
 //	conn.SetReadDeadline(timeZeroVal)
 //
 //	// Limit max number of websocket clients.
-//	s.Log.Infof("New websocket client %s", remoteAddr)
+//	s.Log.Info().Msgf("New websocket client %s", remoteAddr)
 //	if s.ntfnMgr.NumClients()+1 > main.cfg.RPCMaxWebsockets {
-//		s.Log.Infof("Max websocket clients exceeded [%d] - "+
+//		s.Log.Info().Msgf("Max websocket clients exceeded [%d] - "+
 //			"disconnecting client %s", main.cfg.RPCMaxWebsockets,
 //			remoteAddr)
 //		conn.Close()
@@ -112,7 +112,7 @@ import "errors"
 //	// disconnected), remove it and any notifications it registered for.
 //	client, err := newWebsocketClient(s, conn, remoteAddr, authenticated, isAdmin)
 //	if err != nil {
-//		s.Log.Errorf("Failed to serve client %s: %v", remoteAddr, err)
+//		s.Log.Trace().Msgf("Failed to serve client %s: %v", remoteAddr, err)
 //		conn.Close()
 //		return
 //	}
@@ -120,7 +120,7 @@ import "errors"
 //	client.Start()
 //	client.WaitForShutdown()
 //	s.ntfnMgr.RemoveClient(client)
-//	s.Log.Infof("Disconnected websocket client %s", remoteAddr)
+//	s.Log.Info().Msgf("Disconnected websocket client %s", remoteAddr)
 //}
 //
 //// wsNotificationManager is a connection and notification manager used for
@@ -594,7 +594,7 @@ import "errors"
 //				delete(txNotifications, wsc.quit)
 //
 //			default:
-//				s.Log.Warn("Unhandled notification type")
+//				s.Log.Warn().Msg("Unhandled notification type")
 //			}
 //
 //		case m.numClients <- len(clients):
@@ -704,7 +704,7 @@ import "errors"
 //		block.MsgBlock().Header.Timestamp().Unix())
 //	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //	if err != nil {
-//		s.Log.Errorf("Failed to marshal block connected notification: "+
+//		s.Log.Error().Msgf("Failed to marshal block connected notification: "+
 //			"%v", err)
 //		return
 //	}
@@ -728,7 +728,7 @@ import "errors"
 //		block.Height(), block.MsgBlock().Header.Timestamp().Unix())
 //	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //	if err != nil {
-//		s.Log.Errorf("Failed to marshal block disconnected "+
+//		s.Log.Error().Msgf("Failed to marshal block disconnected "+
 //			"notification: %v", err)
 //		return
 //	}
@@ -747,7 +747,7 @@ import "errors"
 //	var w bytes.Buffer
 //	err := block.MsgBlock().Header.Write(&w)
 //	if err != nil {
-//		s.Log.Errorf("Failed to serialize header for filtered block "+
+//		s.Log.Error().Msgf("Failed to serialize header for filtered block "+
 //			"connected notification: %v", err)
 //		return
 //	}
@@ -774,7 +774,7 @@ import "errors"
 //		// Marshal and queue notification.
 //		marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //		if err != nil {
-//			s.Log.Errorf("Failed to marshal filtered block "+
+//			s.Log.Error().Msgf("Failed to marshal filtered block "+
 //				"connected notification: %v", err)
 //			return
 //		}
@@ -797,7 +797,7 @@ import "errors"
 //	var w bytes.Buffer
 //	err := block.MsgBlock().Header.Write(&w)
 //	if err != nil {
-//		s.Log.Errorf("Failed to serialize header for filtered block "+
+//		s.Log.Error().Msgf("Failed to serialize header for filtered block "+
 //			"disconnected notification: %v", err)
 //		return
 //	}
@@ -805,7 +805,7 @@ import "errors"
 //		hex.EncodeToString(w.Bytes()))
 //	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //	if err != nil {
-//		s.Log.Errorf("Failed to marshal filtered block disconnected "+
+//		s.Log.Error().Msgf("Failed to marshal filtered block disconnected "+
 //			"notification: %v", err)
 //		return
 //	}
@@ -840,7 +840,7 @@ import "errors"
 //	ntfn := btcjson.NewTxAcceptedNtfn(txHashStr, btcutil.Amount(amount).ToBTC())
 //	marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //	if err != nil {
-//		s.Log.Errorf("Failed to marshal tx notification: %s", err.Error())
+//		s.Log.Error().Msgf("Failed to marshal tx notification: %s", err.Error())
 //		return
 //	}
 //
@@ -864,7 +864,7 @@ import "errors"
 //			marshalledJSONVerbose, err = btcjson.MarshalCmd(nil,
 //				verboseNtfn)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal verbose tx "+
+//				s.Log.Error().Msgf("Failed to marshal verbose tx "+
 //					"notification: %s", err.Error())
 //				return
 //			}
@@ -913,7 +913,7 @@ import "errors"
 //	for _, op := range ops {
 //		spend := m.server.cfg.TxMemPool.CheckSpend(*op)
 //		if spend != nil {
-//			s.Log.Debugf("Found existing mempool spend for "+
+//			s.Log.Debug().Msgf("Found existing mempool spend for "+
 //				"outpoint<%v>: %v", op, spend.Hash())
 //			spends[*spend.Hash()] = spend
 //		}
@@ -947,7 +947,7 @@ import "errors"
 //	// Remove the client from the list to notify.
 //	notifyMap, ok := ops[*op]
 //	if !ok {
-//		s.Log.Warnf("Attempt to remove nonexistent spent request "+
+//		s.Log.Warn().Msgf("Attempt to remove nonexistent spent request "+
 //			"for websocket client %s", wsc.addr)
 //		return
 //	}
@@ -1025,7 +1025,7 @@ import "errors"
 //
 //			marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal processedtx notification: %v", err)
+//				s.Log.Error().Msgf("Failed to marshal processedtx notification: %v", err)
 //				continue
 //			}
 //
@@ -1056,7 +1056,7 @@ import "errors"
 //		n := btcjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
 //		marshalled, err := btcjson.MarshalCmd(nil, n)
 //		if err != nil {
-//			s.Log.Errorf("Failed to marshal notification: %v", err)
+//			s.Log.Error().Msgf("Failed to marshal notification: %v", err)
 //			return
 //		}
 //		for quitChan := range clientsToNotify {
@@ -1101,7 +1101,7 @@ import "errors"
 //			}
 //			marshalledJSON, err := newRedeemingTxNotification(txHex, tx.Index(), block)
 //			if err != nil {
-//				s.Log.Warnf("Failed to marshal redeemingtx notification: %v", err)
+//				s.Log.Warn().Msgf("Failed to marshal redeemingtx notification: %v", err)
 //				continue
 //			}
 //			for wscQuit, wsc := range cmap {
@@ -1170,7 +1170,7 @@ import "errors"
 //	// Remove the client from the list to notify.
 //	cmap, ok := addrs[addr]
 //	if !ok {
-//		s.Log.Warnf("Attempt to remove nonexistent addr request "+
+//		s.Log.Warn().Msgf("Attempt to remove nonexistent addr request "+
 //			"<%s> for websocket client %s", addr, wsc.addr)
 //		return
 //	}
@@ -1325,7 +1325,7 @@ import "errors"
 //		if err != nil {
 //			// Log the error if it's not due to disconnecting.
 //			if err != io.EOF {
-//				s.Log.Errorf("Websocket receive error from "+
+//				s.Log.Error().Msgf("Websocket receive error from "+
 //					"%s: %v", c.addr, err)
 //			}
 //			break out
@@ -1344,7 +1344,7 @@ import "errors"
 //			}
 //			reply, err := createMarshalledReply(nil, nil, jsonErr)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal parse failure "+
+//				s.Log.Error().Msgf("Failed to marshal parse failure "+
 //					"reply: %v", err)
 //				continue
 //			}
@@ -1385,14 +1385,14 @@ import "errors"
 //
 //			reply, err := createMarshalledReply(cmd.id, nil, cmd.err)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal parse failure "+
+//				s.Log.Error().Msgf("Failed to marshal parse failure "+
 //					"reply: %v", err)
 //				continue
 //			}
 //			c.SendMessage(reply, nil)
 //			continue
 //		}
-//		s.Log.Debugf("Received command <%s> from %s", cmd.method, c.addr)
+//		s.Log.Debug().Msgf("Received command <%s> from %s", cmd.method, c.addr)
 //
 //		// Check auth.  The client is immediately disconnected if the
 //		// first request of an unauthentiated websocket client is not
@@ -1401,11 +1401,11 @@ import "errors"
 //		// authentication credentials are provided in the request.
 //		switch authCmd, ok := cmd.cmd.(*btcjson.AuthenticateCmd); {
 //		case c.authenticated && ok:
-//			s.Log.Warnf("Websocket client %s is already authenticated",
+//			s.Log.Warn().Msgf("Websocket client %s is already authenticated",
 //				c.addr)
 //			break out
 //		case !c.authenticated && !ok:
-//			s.Log.Warnf("Unauthenticated websocket message " +
+//			s.Log.Warn().Msgf("Unauthenticated websocket message " +
 //				"received")
 //			break out
 //		case !c.authenticated:
@@ -1416,7 +1416,7 @@ import "errors"
 //			cmp := subtle.ConstantTimeCompare(authSha[:], c.server.authSHA[:])
 //			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.server.limitAuthSHA[:])
 //			if cmp != 1 && limitcmp != 1 {
-//				s.Log.Warnf("Auth failure.")
+//				s.Log.Warn().Msgf("Auth failure.")
 //				break out
 //			}
 //			c.authenticated = true
@@ -1425,7 +1425,7 @@ import "errors"
 //			// Marshal and send response.
 //			reply, err := createMarshalledReply(cmd.id, nil, nil)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal authenticate reply: "+
+//				s.Log.Error().Msgf("Failed to marshal authenticate reply: "+
 //					"%v", err.Error())
 //				continue
 //			}
@@ -1444,7 +1444,7 @@ import "errors"
 //				// Marshal and send response.
 //				reply, err := createMarshalledReply(request.ID, nil, jsonErr)
 //				if err != nil {
-//					s.Log.Errorf("Failed to marshal parse failure "+
+//					s.Log.Error().Msgf("Failed to marshal parse failure "+
 //						"reply: %v", err)
 //					continue
 //				}
@@ -1483,7 +1483,7 @@ import "errors"
 //	// Ensure the connection is closed.
 //	c.Disconnect()
 //	c.wg.Done()
-//	s.Log.Tracef("Websocket client input handler done for %s", c.addr)
+//	s.Log.Trace().Msgf("Websocket client input handler done for %s", c.addr)
 //}
 //
 //// serviceRequest services a parsed RPC request by looking up and executing the
@@ -1505,7 +1505,7 @@ import "errors"
 //	}
 //	reply, err := createMarshalledReply(r.id, result, err)
 //	if err != nil {
-//		s.Log.Errorf("Failed to marshal reply for <%s> "+
+//		s.Log.Error().Msgf("Failed to marshal reply for <%s> "+
 //			"command: %v", r.method, err)
 //		return
 //	}
@@ -1581,7 +1581,7 @@ import "errors"
 //		}
 //	}
 //	c.wg.Done()
-//	s.Log.Tracef("Websocket client notification queue handler done "+
+//	s.Log.Trace().Msgf("Websocket client notification queue handler done "+
 //		"for %s", c.addr)
 //}
 //
@@ -1624,7 +1624,7 @@ import "errors"
 //		}
 //	}
 //	c.wg.Done()
-//	s.Log.Tracef("Websocket client output handler done for %s", c.addr)
+//	s.Log.Trace().Msgf("Websocket client output handler done for %s", c.addr)
 //}
 //
 //// SendMessage sends the passed json to the websocket client.  It is backed
@@ -1688,7 +1688,7 @@ var ErrClientQuit = errors.New("client quit")
 //		return
 //	}
 //
-//	s.Log.Tracef("Disconnecting websocket client %s", c.addr)
+//	s.Log.Trace().Msgf("Disconnecting websocket client %s", c.addr)
 //	close(c.quit)
 //	c.conn.Close()
 //	c.disconnected = true
@@ -1696,7 +1696,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //// Start begins processing input and output messages.
 //func (c *wsClient) Start() {
-//	s.Log.Tracef("Starting websocket client %s", c.addr)
+//	s.Log.Trace().Msgf("Starting websocket client %s", c.addr)
 //
 //	// Start processing input and output.
 //	c.wg.Add(3)
@@ -2062,7 +2062,7 @@ var ErrClientQuit = errors.New("client quit")
 //					return
 //				}
 //				if err != nil {
-//					s.Log.Errorf("Unable to notify "+
+//					s.Log.Error().Msgf("Unable to notify "+
 //						"redeeming transaction %v: %v",
 //						tx.Hash(), err)
 //					continue
@@ -2100,7 +2100,7 @@ var ErrClientQuit = errors.New("client quit")
 //					return
 //				}
 //				if err != nil {
-//					s.Log.Errorf("Unable to notify "+
+//					s.Log.Error().Msgf("Unable to notify "+
 //						"redeeming transaction %v: %v",
 //						tx.Hash(), err)
 //					continue
@@ -2137,7 +2137,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //				marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
 //				if err != nil {
-//					s.Log.Errorf("Failed to marshal recvtx notification: %v", err)
+//					s.Log.Error().Msgf("Failed to marshal recvtx notification: %v", err)
 //					return
 //				}
 //
@@ -2293,7 +2293,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	hashList, err := BlockChain.HeightRange(minBlock, maxBlock)
 //	if err != nil {
-//		s.Log.Errorf("Error looking up block range: %v", err)
+//		s.Log.Error().Msgf("Error looking up block range: %v", err)
 //		return nil, &btcjson.RPCError{
 //			Code:    btcjson.ErrRPCDatabase,
 //			Message: "Database error: " + err.Error(),
@@ -2305,7 +2305,7 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	blk, err := BlockChain.BlockByHash(&hashList[0])
 //	if err != nil {
-//		s.Log.Errorf("Error looking up possibly reorged block: %v",
+//		s.Log.Error().Msgf("Error looking up possibly reorged block: %v",
 //			err)
 //		return nil, &btcjson.RPCError{
 //			Code:    btcjson.ErrRPCDatabase,
@@ -2324,7 +2324,7 @@ var ErrClientQuit = errors.New("client quit")
 //func descendantBlock(prevHash *chainhash.Hash, curBlock *btcutil.Block) error {
 //	curHash := curBlock.MsgBlock().Header.PrevBlock()
 //	if !prevHash.IsEqual(&curHash) {
-//		s.Log.Errorf("Stopping rescan for reorged block %v "+
+//		s.Log.Error().Msgf("Stopping rescan for reorged block %v "+
 //			"(replaced by block %v)", prevHash, curHash)
 //		return &ErrRescanReorg
 //	}
@@ -2366,7 +2366,7 @@ var ErrClientQuit = errors.New("client quit")
 //		}
 //		hashList, err := BlockChain.HeightRange(minBlock, maxLoopBlock)
 //		if err != nil {
-//			s.Log.Errorf("Error looking up block range: %v", err)
+//			s.Log.Error().Msgf("Error looking up block range: %v", err)
 //			return nil, nil, &btcjson.RPCError{
 //				Code:    btcjson.ErrRPCDatabase,
 //				Message: "Database error: " + err.Error(),
@@ -2404,7 +2404,7 @@ var ErrClientQuit = errors.New("client quit")
 //			}
 //			close(pauseGuard)
 //			if err != nil {
-//				s.Log.Errorf("Error fetching best block "+
+//				s.Log.Error().Msgf("Error fetching best block "+
 //					"hash: %v", err)
 //				return nil, nil, &btcjson.RPCError{
 //					Code: btcjson.ErrRPCDatabase,
@@ -2427,7 +2427,7 @@ var ErrClientQuit = errors.New("client quit")
 //				if dbErr, ok := err.(database.Error); !ok ||
 //					dbErr.ErrorCode != database.ErrBlockNotFound {
 //
-//					s.Log.Errorf("Error looking up "+
+//					s.Log.Error().Msgf("Error looking up "+
 //						"block: %v", err)
 //					return nil, nil, &btcjson.RPCError{
 //						Code: btcjson.ErrRPCDatabase,
@@ -2439,7 +2439,7 @@ var ErrClientQuit = errors.New("client quit")
 //				// If an absolute max block was specified, don't
 //				// attempt to handle the reorg.
 //				if maxBlock != math.MaxInt32 {
-//					s.Log.Errorf("Stopping rescan for "+
+//					s.Log.Error().Msgf("Stopping rescan for "+
 //						"reorged block %v",
 //						cmd.EndBlock)
 //					return nil, nil, &ErrRescanReorg
@@ -2480,7 +2480,7 @@ var ErrClientQuit = errors.New("client quit")
 //			// client requesting the rescan has disconnected.
 //			select {
 //			case <-wsc.quit:
-//				s.Log.Debugf("Stopped rescan at height %v "+
+//				s.Log.Debug().Msgf("Stopped rescan at height %v "+
 //					"for disconnected client", blk.Height())
 //				return nil, nil, nil
 //			default:
@@ -2504,14 +2504,14 @@ var ErrClientQuit = errors.New("client quit")
 //			)
 //			mn, err := btcjson.MarshalCmd(nil, n)
 //			if err != nil {
-//				s.Log.Errorf("Failed to marshal rescan "+
+//				s.Log.Error().Msgf("Failed to marshal rescan "+
 //					"progress notification: %v", err)
 //				continue
 //			}
 //
 //			if err = wsc.QueueNotification(mn); err == ErrClientQuit {
 //				// Finished if the client disconnected.
-//				s.Log.Debugf("Stopped rescan at height %v "+
+//				s.Log.Debug().Msgf("Stopped rescan at height %v "+
 //					"for disconnected client", blk.Height())
 //				return nil, nil, nil
 //			}
@@ -2552,9 +2552,9 @@ var ErrClientQuit = errors.New("client quit")
 //
 //	numAddrs := len(cmd.Addresses)
 //	if numAddrs == 1 {
-//		s.Log.Info("Beginning rescan for 1 address")
+//		s.Log.Info().Msg("Beginning rescan for 1 address")
 //	} else {
-//		s.Log.Infof("Beginning rescan for %d addresses", numAddrs)
+//		s.Log.Info().Msgf("Beginning rescan for %d addresses", numAddrs)
 //	}
 //
 //	// Build lookup maps.
@@ -2620,7 +2620,7 @@ var ErrClientQuit = errors.New("client quit")
 //			return nil, nil
 //		}
 //	} else {
-//		s.Log.Infof("Skipping rescan as client has no addrs/utxos")
+//		s.Log.Info().Msgf("Skipping rescan as client has no addrs/utxos")
 //
 //		// If we didn't actually do a rescan, then we'll give the
 //		// client our best known block within the final rescan finished
@@ -2648,7 +2648,7 @@ var ErrClientQuit = errors.New("client quit")
 //		lastBlock.MsgBlock().Header.Timestamp().Unix(),
 //	)
 //	if mn, err := btcjson.MarshalCmd(nil, n); err != nil {
-//		s.Log.Errorf("Failed to marshal rescan finished "+
+//		s.Log.Error().Msgf("Failed to marshal rescan finished "+
 //			"notification: %v", err)
 //	} else {
 //		// The rescan is finished, so we don't care whether the client
@@ -2656,7 +2656,7 @@ var ErrClientQuit = errors.New("client quit")
 //		_ = wsc.QueueNotification(mn)
 //	}
 //
-//	s.Log.Info("Finished rescan")
+//	s.Log.Info().Msg("Finished rescan")
 //	return nil, nil
 //}
 //
