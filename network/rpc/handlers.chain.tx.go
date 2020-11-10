@@ -234,9 +234,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	var blkHash *chainhash.Hash
 	var blkHeight int32
 
-	fmt.Println("txHash ", txHash)
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
-	fmt.Println("res... ", tx, err)
 	if err != nil {
 		//return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
@@ -311,7 +309,6 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 		mtx = tx.MsgTx()
 	}
 
-	fmt.Println("blkHash", blkHash)
 	// The verbose flag is set, so generate the JSON object and return it.
 	var blkHeader wire.BlockHeader
 	var blkHashStr string

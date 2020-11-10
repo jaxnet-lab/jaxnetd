@@ -536,7 +536,6 @@ func (mp *TxPool) RemoveDoubleSpends(tx *btcutil.Tx) {
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) addTransaction(utxoView *chaindata.UtxoViewpoint, tx *btcutil.Tx, height int32, fee int64) *TxDesc {
-	fmt.Println("Add trx", *tx, height)
 	// Add the transaction to the pool and mark the referenced outpoints
 	// as spent by the pool.
 	txD := &TxDesc{
@@ -962,7 +961,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		str := fmt.Sprintf("already have transaction %v", txHash)
 		return nil, nil, txRuleError(wire.RejectDuplicate, str)
 	}
-
 
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of blockchain which contains the invariant rules for what

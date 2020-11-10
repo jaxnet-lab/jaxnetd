@@ -215,47 +215,32 @@ func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct
 func (server *NodeRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Create a default getnetworkhashps command to use defaults and make
 	// use of the existing getnetworkhashps handler.
-	//gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
-	//networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
-	//if !ok {
-	//	return nil, &btcjson.RPCError{
-	//		Code:    btcjson.ErrRPCInternal.Code,
-	//		Message: "networkHashesPerSec is not an int64",
-	//	}
-	//}
+	gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
+	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
+	if err != nil {
+		return nil, err
+	}
+	networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
+	if !ok {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCInternal.Code,
+			Message: "networkHashesPerSec is not an int64",
+		}
+	}
 
-	//TODO: Implement this
-	var networkHashesPerSec int64 = 100
-
-	//best := server.chainProvider.BlockChain().BestSnapshot()
-	//diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//result := btcjson.GetMiningInfoResult{
-	//	Blocks:             int64(best.Height),
-	//	CurrentBlockSize:   best.BlockSize,
-	//	CurrentBlockWeight: best.BlockWeight,
-	//	CurrentBlockTx:     best.NumTxns,
-	//	Difficulty:         diff,
-	//	NetworkHashPS:      networkHashesPerSec,
-	//	PooledTx:           uint64(server.chainProvider.TxMemPool.Count()),
-	//	// TestNet:            server.cfg.TestNet3,
-	//}
-
-
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
+	if err != nil {
+		return nil, err
+	}
 	result := btcjson.GetMiningInfoResult{
-		Blocks:             0,
-		CurrentBlockSize:   0,
-		CurrentBlockWeight: 0,
-		CurrentBlockTx:     0,
-		Difficulty:         0,
+		Blocks:             int64(best.Height),
+		CurrentBlockSize:   best.BlockSize,
+		CurrentBlockWeight: best.BlockWeight,
+		CurrentBlockTx:     best.NumTxns,
+		Difficulty:         diff,
 		NetworkHashPS:      networkHashesPerSec,
-		PooledTx:           0,
+		PooledTx:           uint64(server.chainProvider.TxMemPool.Count()),
 		// TestNet:            server.cfg.TestNet3,
 	}
 	return &result, nil
@@ -268,7 +253,7 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	// because the return value is an interface{}.
 
 	c := cmd.(*btcjson.GetNetworkHashPSCmd)
-	if server.chainProvider.BlockChain() == nil{
+	if server.chainProvider.BlockChain() == nil {
 		return 0, nil
 	}
 
@@ -310,7 +295,6 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	if startHeight < 0 {
 		startHeight = 0
 	}
-	server.Log.Debug().Msgf("Calculating network hashes per second %v %v", startHeight, endHeight)
 
 	// Find the min and max block timestamps as well as calculate the total
 	// amount of work that happened between the start and end blocks.
