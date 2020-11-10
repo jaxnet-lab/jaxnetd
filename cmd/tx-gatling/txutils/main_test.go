@@ -226,6 +226,8 @@ func TestMakeSwapTx(ot *testing.T) {
 		PKScript:   "",
 		ScriptType: "",
 	}
+	shard1UTXO, err = SetRedeemScript(shard1UTXO, multiSigScript.RedeemScript, cfg.NetParams())
+	assert.NoError(t, err)
 
 	shard2UTXO := txmodels.UTXO{
 		ShardID: shardID2,
@@ -239,6 +241,9 @@ func TestMakeSwapTx(ot *testing.T) {
 		PKScript:   "",
 		ScriptType: "",
 	}
+	shard2UTXO, err = SetRedeemScript(shard2UTXO, multiSigScript.RedeemScript, cfg.NetParams())
+	assert.NoError(t, err)
+
 	// -----------------------------------------------------------------------------------------
 	// todo: must be a valid jax.net addresses
 	destinationAtShard1 := ""
