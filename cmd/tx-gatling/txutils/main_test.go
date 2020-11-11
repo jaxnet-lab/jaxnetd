@@ -105,13 +105,13 @@ func TestMakeMultiSigScript(ot *testing.T) {
 
 	// publish created transaction
 
-	txHash, err := op.TxMan.RPC.ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
+	txHash, err := op.TxMan.RPC().ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
 	assert.NoError(t, err)
 
 waitLoop:
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 1 {
 			fmt.Println("tx mined into block")
@@ -160,12 +160,12 @@ waitLoop:
 
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
-	txHash, err = op.TxMan.RPC.ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
+	txHash, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -277,12 +277,12 @@ func TestMakeSwapTx(ot *testing.T) {
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
 	// publish created transaction
-	txHash, err := op.TxMan.RPC.ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -293,12 +293,12 @@ func TestMakeSwapTx(ot *testing.T) {
 	}
 
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-	txHash, err = op.TxMan.RPC.ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")

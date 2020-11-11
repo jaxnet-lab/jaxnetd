@@ -27,7 +27,7 @@ type TxMan struct {
 	key *KeyData
 
 	NetParams *chaincfg.Params
-	RPC       *rpcclient.Client
+	rpc       *rpcclient.Client
 
 	testMode bool
 }
@@ -54,7 +54,7 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 	client := &TxMan{
 		cfg:       cfg,
 		NetParams: cfg.NetParams(),
-		RPC:       rpcClient,
+		rpc:       rpcClient,
 	}
 
 	if cfg.PrivateKey != "" {
@@ -81,11 +81,16 @@ func (client *TxMan) WithKeys(key *KeyData) *TxMan {
 func (client *TxMan) ForShard(shardID uint32) *TxMan {
 	clone := *client
 	clone.cfg.ShardID = shardID
+	clone.rpc = clone.rpc.SetShard(shardID)
 	return &clone
 }
 
+func (client *TxMan) RPC() *rpcclient.Client {
+	return client.rpc
+}
+
 func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORows, int64, error) {
-	maxHeight, err := client.RPC.ForShard(client.cfg.ShardID).GetBlockCount()
+	maxHeight, err := client.rpc.ForShard(client.cfg.ShardID).GetBlockCount()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -97,16 +102,16 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 	}
 
 	for height := offset; height <= maxHeight; height++ {
-		hash, err := client.RPC.ForShard(client.cfg.ShardID).GetBlockHash(height)
+		hash, err := client.rpc.ForShard(client.cfg.ShardID).GetBlockHash(height)
 		if err != nil {
 			return nil, 0, err
 		}
 
 		var block *wire.MsgBlock
 		if client.cfg.ShardID == 0 {
-			block, err = client.RPC.GetBeaconBlock(hash)
+			block, err = client.rpc.GetBeaconBlock(hash)
 		} else {
-			block, err = client.RPC.ForShard(client.cfg.ShardID).GetShardBlock(hash)
+			block, err = client.rpc.ForShard(client.cfg.ShardID).GetShardBlock(hash)
 		}
 
 		if err != nil {
@@ -155,7 +160,7 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 }
 
 func (client *TxMan) NetworkFee() (int64, error) {
-	fee, err := client.RPC.ForShard(client.cfg.ShardID).
+	fee, err := client.rpc.ForShard(client.cfg.ShardID).
 		EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
 	if err != nil {
 		return 0, errors.Wrap(err, "unable to get fee")
@@ -405,7 +410,7 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 		var txOut *btcjson.GetTxOutResult
 	shardsLoop:
 		for _, shardID := range shards {
-			out, _ := client.RPC.ForShard(shardID).GetTxOut(&prevOut.Hash, prevOut.Index, false)
+			out, _ := client.rpc.ForShard(shardID).GetTxOut(&prevOut.Hash, prevOut.Index, false)
 			if out == nil {
 				continue
 			}
@@ -475,7 +480,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		txInIndex := i
 		prevOut := msgTx.TxIn[i].PreviousOutPoint
 
-		out, err := client.RPC.ForShard(client.cfg.ShardID).
+		out, err := client.rpc.ForShard(client.cfg.ShardID).
 			GetTxOut(&prevOut.Hash, prevOut.Index, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get utxo from node")
