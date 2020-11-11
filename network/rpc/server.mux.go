@@ -56,9 +56,10 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			prcPtr, ok := server.shardRPCs[cmd.shardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
+				server.logger.Error(fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID))
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrShardIDMismatch,
-					Message: "Provided ShardID does not match with any present",
+					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
 				}
 			}
 
@@ -88,6 +89,7 @@ func NewRPCMux(logger zerolog.Logger) Mux {
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
+	server.Log.Debug("Handle command " + cmd.scope + "." + cmd.method)
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}

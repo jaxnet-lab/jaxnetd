@@ -48,7 +48,7 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 	return map[btcjson.MethodName]CommandHandler{
 		btcjson.ScopedMethod("node", "version"):        server.handleVersion,
 		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
-		btcjson.ScopedMethod("node", "getNetworkInfo"): server.handleGetnetworkinfo,
+		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
 		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
 
 		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
@@ -56,12 +56,12 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 
 		btcjson.ScopedMethod("node", "generate"):         server.handleGenerate,
 		btcjson.ScopedMethod("node", "getDifficulty"):    server.handleGetDifficulty,
-		btcjson.ScopedMethod("node", "getMiningInfo"):    server.handleGetMiningInfo,
-		btcjson.ScopedMethod("node", "getNetworkHashPS"): server.handleGetNetworkHashPS,
+		btcjson.ScopedMethod("node", "getmininginfo"):    server.handleGetMiningInfo,
+		btcjson.ScopedMethod("node", "getnetworkhashps"): server.handleGetNetworkHashPS,
 
 		btcjson.ScopedMethod("node", "setGenerate"):     server.handleSetGenerate,
-		btcjson.ScopedMethod("node", "getBlockStats"):   server.handleGetBlockStats,
-		btcjson.ScopedMethod("node", "getChainTxStats"): server.handleGetChaintxStats,
+		btcjson.ScopedMethod("node", "getblockstats"):   server.handleGetBlockStats,
+		btcjson.ScopedMethod("node", "getchaintxstats"): server.handleGetChaintxStats,
 		btcjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
 		btcjson.ScopedMethod("node", "stop"):            server.handleStop,
 		btcjson.ScopedMethod("node", "help"):            server.handleHelp,
@@ -84,8 +84,6 @@ func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{})
 }
 
 func (server *NodeRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// result := btcjson.NewGetNetworkInfoCmd()
-	// fmt.Println("NetworkInfo: ", result)
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
@@ -255,6 +253,9 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	// because the return value is an interface{}.
 
 	c := cmd.(*btcjson.GetNetworkHashPSCmd)
+	if server.chainProvider.BlockChain() == nil {
+		return 0, nil
+	}
 
 	// When the passed height is too high or zero, just return 0 now
 	// since we can't reasonably calculate the number of network hashes
@@ -294,7 +295,6 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	if startHeight < 0 {
 		startHeight = 0
 	}
-	server.Log.Debug().Msgf("Calculating network hashes per second %v %v", startHeight, endHeight)
 
 	// Find the min and max block timestamps as well as calculate the total
 	// amount of work that happened between the start and end blocks.

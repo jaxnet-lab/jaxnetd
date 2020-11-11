@@ -37,7 +37,6 @@ func (xt ToolsXt) MessageToHex(msg wire.Message) (string, error) {
 		context := errors.Wrapf(err, "Failed to encode msg of type %T", msg)
 		return "", btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, context.Error())
 	}
-
 	return hex.EncodeToString(buf.Bytes()), nil
 }
 

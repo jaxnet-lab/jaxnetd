@@ -58,7 +58,6 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.EstimateSmartFeeCmd)
-
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
@@ -234,8 +233,10 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	var mtx *wire.MsgTx
 	var blkHash *chainhash.Hash
 	var blkHeight int32
+
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
+		//return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCNoTxInfo,

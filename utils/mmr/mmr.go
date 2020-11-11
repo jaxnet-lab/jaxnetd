@@ -122,10 +122,8 @@ func (m *mmr) GetProofs(length uint64, indexes ...uint64) (result *MmrProof, err
 		Nodes: make(map[uint64]*BlockData),
 	}
 	for _, index := range indexes {
-		fmt.Println(index)
 		var currentIndex IBlockIndex = LeafIndex(index)
 		for {
-			fmt.Println(currentIndex.Index())
 			if currentIndex == nil || currentIndex.Index() > length {
 				break
 			}

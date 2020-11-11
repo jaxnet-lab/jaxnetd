@@ -250,11 +250,11 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 	var jsonErr error
 	var result interface{}
 	var request btcjson.Request
-	// data := strings.Replace(string(body), "-0\",\"method\"", "\",\"method\"", 1)
 	data := string(body)
 	if strings.HasPrefix(data, "[") {
 		data = data[1 : len(data)-1]
 	}
+
 	if err := json.Unmarshal([]byte(data), &request); err != nil {
 		jsonErr = &btcjson.RPCError{
 			Code:    btcjson.ErrRPCParse.Code,

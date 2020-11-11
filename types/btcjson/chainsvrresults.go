@@ -285,6 +285,7 @@ type GetBlockChainInfoResult struct {
 	Pruned               bool    `json:"pruned"`
 	PruneHeight          int32   `json:"pruneheight,omitempty"`
 	ChainWork            string  `json:"chainwork,omitempty"`
+	Shards               uint32  `json:"shards"`
 	*SoftForks
 	*UnifiedSoftForks
 }
