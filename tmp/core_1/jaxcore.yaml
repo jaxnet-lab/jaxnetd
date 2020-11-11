@@ -1,7 +1,7 @@
 data_dir: ./core
 log_dir: ./core/logs
 
-#debug_level: debug
+debug_level: debug
 
 node:
   #  net: mainnet
