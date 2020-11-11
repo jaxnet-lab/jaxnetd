@@ -3,9 +3,10 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //metricsManager metrics manager
@@ -44,7 +45,6 @@ func (m *metricsManager) Add(metrics ...IMetric) {
 
 func (m *metricsManager) collector(ctx context.Context) {
 	for {
-
 		select {
 		case <-ctx.Done():
 			return

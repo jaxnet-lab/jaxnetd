@@ -1,5 +1,5 @@
 data_dir: ./core
-log_dir: ./core/logs
+#log_dir: ./core/logs
 
 #debug_level: debug
 

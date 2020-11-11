@@ -372,7 +372,6 @@ func LoadConfig() (*node.Config, []string, error) {
 		ConfigFile: configFile,
 		DebugLevel: defaultLogLevel,
 		DataDir:    dataDir,
-		LogDir:     path.Join(dataDir, "logs"),
 		// RPCKey:               defaultRPCKeyFile,
 		// RPCCert:              defaultRPCCertFile,
 		// Generate:             defaultGenerate,
@@ -497,6 +496,10 @@ func LoadConfig() (*node.Config, []string, error) {
 	// means each individual piece of serialized data does not have to
 	// worry about changing names per network and such.
 	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
+	if cfg.LogDir == "" {
+		cfg.LogDir = path.Join(cfg.DataDir, "logs")
+	}
+
 	cfg.DataDir = filepath.Join(cfg.DataDir, netName(ActiveNetParams))
 
 	// Append the network type to the log directory so it is "namespaced"

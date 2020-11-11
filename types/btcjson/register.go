@@ -113,6 +113,7 @@ func getMethodByType(cmd interface{}) (MethodName, bool) {
 }
 
 func getMethodTypeInfo(method string) (reflect.Type, methodInfo, bool) {
+	method = strings.ToLower(method)
 	registerLock.RLock()
 	defer registerLock.RUnlock()
 	tp, hasType := methodToConcreteType[method]
