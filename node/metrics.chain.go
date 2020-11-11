@@ -1,25 +1,26 @@
 package node
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
-	"sync"
 )
 
 type chainMetrics struct {
 	sync.RWMutex
 	metricsByName map[string]prometheus.Gauge
 	chain         *blockchain.BlockChain
-	logger        *zap.Logger
+	logger        zerolog.Logger
 	name          string
 }
 
-func ChainMetrics(chain *blockchain.BlockChain, name string, logger *zap.Logger) (res IMetric) {
+func ChainMetrics(chain *blockchain.BlockChain, name string, logger zerolog.Logger) (res IMetric) {
 	res = &chainMetrics{
 		chain:         chain,
-		logger:        logger,
+		logger:        logger.With().Str("ctx", "metrics").Str("chain", name).Logger(),
 		name:          name,
 		metricsByName: make(map[string]prometheus.Gauge),
 	}
@@ -36,7 +37,7 @@ func (s *chainMetrics) Read() {
 	s.updateGauge(prometheus.BuildFQName("chain", s.name, "total_transactions"), float64(snapshot.TotalTxns))
 	block, err := s.chain.BlockByHeight(snapshot.Height)
 	if err != nil {
-		s.logger.Error("can't get block height", zap.Error(err))
+		s.logger.Error().Err(err).Msg("can't get block height")
 		return
 	}
 	if !block.MsgBlock().ShardBlock {
@@ -50,12 +51,12 @@ func (s *chainMetrics) updateGauge(name string, value float64) {
 	m, ok := s.metricsByName[name]
 	if !ok {
 		m = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: name,
-			ConstLabels: map[string]string{"chain":s.name},
+			Name:        name,
+			ConstLabels: map[string]string{"chain": s.name},
 		})
 		err := prometheus.Register(m)
 		if err != nil {
-			s.logger.Error("can't register metric", zap.Error(err))
+			s.logger.Error().Err(err).Msg("can't register metric")
 		}
 	}
 	m.Set(value)

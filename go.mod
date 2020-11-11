@@ -20,9 +20,7 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20200827134620-49f5c3fa2b3e
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/jrick/logrotate v1.0.0
 	github.com/kkdai/bstream v1.0.0
-	github.com/lancer-kit/uwe/v2 v2.2.2
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/minio/sha256-simd v0.1.1
 	github.com/opencontainers/image-spec v1.0.1 // indirect
@@ -30,11 +28,11 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
+	github.com/rs/zerolog v1.20.0
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
 	gitlab.com/jaxnet/core/merged-mining-tree v1.0.5
-	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0

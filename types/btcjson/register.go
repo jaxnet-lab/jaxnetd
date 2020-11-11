@@ -89,11 +89,11 @@ type MethodName struct {
 }
 
 func (mn MethodName) String() string {
-	return mn.Scope + "." + mn.Method
+	return strings.ToLower(mn.Scope + "." + mn.Method)
 }
 
 func ScopedMethod(scope, method string) MethodName {
-	return MethodName{scope, method}
+	return MethodName{scope, strings.ToLower(method)}
 }
 
 var (
@@ -186,6 +186,7 @@ func isAcceptableKind(kind reflect.Kind) bool {
 // is recommended to simply pass a nil pointer cast to the appropriate type.
 // For example, (*FooCmd)(nil).
 func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
+	method = strings.ToLower(method)
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
@@ -303,7 +304,7 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 // if there is an error.  This should only be called from package init
 // functions.
 func MustRegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) {
-	if err := RegisterCmd(scope, method, cmd, flags); err != nil {
+	if err := RegisterCmd(scope, strings.ToLower(method), cmd, flags); err != nil {
 		panic(fmt.Sprintf("failed to register type %q: %v\n", method,
 			err))
 	}

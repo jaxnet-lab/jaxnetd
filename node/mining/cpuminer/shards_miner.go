@@ -10,31 +10,31 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
 )
 
 type MultiMiner struct {
 	sync.Mutex
-	log         *zap.Logger
+	log         zerolog.Logger
 	wg          sync.WaitGroup
 	shardMiners map[string]*CPUMiner
 }
 
-func NewMiner(cfgMap map[string]*Config, log *zap.Logger) *MultiMiner {
+func NewMiner(cfgMap map[string]*Config, log zerolog.Logger) *MultiMiner {
 	miner := &MultiMiner{
 		shardMiners: map[string]*CPUMiner{},
 		log:         log,
 	}
 
 	for i, i2 := range cfgMap {
-		miner.shardMiners[i] = New(i2, log.With(zap.String("chain", i)))
+		miner.shardMiners[i] = New(i2, log.With().Str("chain", i).Logger())
 	}
 	return miner
 
 }
 func (miner *MultiMiner) AddChainMiner(name string, config *Config) {
 	miner.Lock()
-	miner.shardMiners[name] = New(config, miner.log.With(zap.String("chain", name)))
+	miner.shardMiners[name] = New(config, miner.log.With().Str("chain", name).Logger())
 	miner.shardMiners[name].Start()
 	miner.Unlock()
 

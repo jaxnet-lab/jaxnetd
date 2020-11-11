@@ -26,10 +26,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -51,16 +51,16 @@ type ServerCore struct {
 	wg                     sync.WaitGroup
 	requestProcessShutdown chan struct{}
 	quit                   chan int
-	logger                 corelog.ILogger
+	logger                 zerolog.Logger
 }
 
-func NewRPCCore(config *Config, logger *zap.Logger) *ServerCore {
+func NewRPCCore(config *Config, logger zerolog.Logger) *ServerCore {
 	rpc := &ServerCore{
 		cfg:                    config,
 		statusLines:            make(map[int]string),
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
-		logger:                 corelog.Adapter(logger),
+		logger:                 logger,
 
 		started:      0,
 		shutdown:     0,
@@ -91,7 +91,7 @@ func (server *ServerCore) StartRPC(ctx context.Context, rpcServeMux *http.ServeM
 		return
 	}
 
-	server.logger.Debug("Starting RPC Server")
+	server.logger.Debug().Msg("Starting RPC Server")
 	httpServer := &http.Server{
 		Handler: rpcServeMux,
 		// Timeout connections which don't complete the initial
@@ -102,35 +102,35 @@ func (server *ServerCore) StartRPC(ctx context.Context, rpcServeMux *http.ServeM
 	for _, listener := range server.cfg.Listeners {
 		server.wg.Add(1)
 		go func(listener net.Listener) {
-			server.logger.Infof("RPC Server listening on %s", listener.Addr())
+			server.logger.Info().Msgf("RPC Server listening on %s", listener.Addr())
 			httpServer.Serve(listener)
-			server.logger.Tracef("RPC listener done for %s", listener.Addr())
+			server.logger.Trace().Msgf("RPC listener done for %s", listener.Addr())
 			server.wg.Done()
 		}(listener)
 	}
 
 	<-ctx.Done()
 
-	server.logger.Info("Shutting down the API Server...")
+	server.logger.Info().Msg("Shutting down the API Server...")
 	if err := server.Stop(); err != nil {
-		server.logger.Error("Can not stop RPC Core gracefully: " + err.Error())
+		server.logger.Error().Err(err).Msg("Can not stop RPC Core gracefully")
 		return
 
 	}
-	server.logger.Info("Api Server gracefully stopped")
+	server.logger.Info().Msg("Api Server gracefully stopped")
 }
 
 // Stop is used by rpc.go to stop the rpc listener.
 func (server *ServerCore) Stop() error {
 	if atomic.AddInt32(&server.shutdown, 1) != 1 {
-		server.logger.Infof("RPC Server is already in the process of shutting down")
+		server.logger.Info().Msgf("RPC Server is already in the process of shutting down")
 		return nil
 	}
-	server.logger.Warnf("RPC Server shutting down")
+	server.logger.Warn().Msgf("RPC Server shutting down")
 	for _, listener := range server.cfg.Listeners {
 		err := listener.Close()
 		if err != nil {
-			server.logger.Errorf("Problem shutting down rpc: %v", err)
+			server.logger.Error().Err(err).Msg("Problem shutting down rpc")
 			return err
 		}
 	}
@@ -138,7 +138,7 @@ func (server *ServerCore) Stop() error {
 	//server.wsManager.WaitForShutdown()
 	close(server.quit)
 	server.wg.Wait()
-	server.logger.Infof("RPC Server shutdown complete")
+	server.logger.Info().Msgf("RPC Server shutdown complete")
 	return nil
 }
 
@@ -147,6 +147,34 @@ func (server *ServerCore) Stop() error {
 // immediately, it is dropped.
 func (server *ServerCore) RequestedProcessShutdown() <-chan struct{} {
 	return server.requestProcessShutdown
+}
+
+func (server *ServerCore) WSHandleFunc() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if server.cfg.WSEnable {
+			http.Error(w, "WS is Unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
+		authenticated, isAdmin, err := server.checkAuth(r, false)
+		if err != nil {
+			jsonAuthFail(w)
+			return
+		}
+
+		// Attempt to upgrade the connection to a websocket connection
+		// using the default size for read/write bufferserver.
+		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				server.logger.Error().Err(err).Msg("Unexpected websocket error")
+			}
+			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+			return
+		}
+		_, _, _ = ws, authenticated, isAdmin
+		// server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
+	}
 }
 
 func (server *ServerCore) HandleFunc(handler commandMux) func(w http.ResponseWriter, r *http.Request) {
@@ -199,14 +227,14 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		errMsg := "webserver doesn't support hijacking"
-		server.logger.Warnf(errMsg)
+		server.logger.Warn().Msgf(errMsg)
 		errCode := http.StatusInternalServerError
 		http.Error(w, strconv.Itoa(errCode)+" "+errMsg, errCode)
 		return
 	}
 	conn, buf, err := hj.Hijack()
 	if err != nil {
-		server.logger.Warnf("Failed to hijack HTTP connection: %v", err)
+		server.logger.Warn().Msgf("Failed to hijack HTTP connection: %v", err)
 		errCode := http.StatusInternalServerError
 		http.Error(w, strconv.Itoa(errCode)+" "+err.Error(), errCode)
 		return
@@ -221,11 +249,11 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 	var jsonErr error
 	var result interface{}
 	var request btcjson.Request
-	// data := strings.Replace(string(body), "-0\",\"method\"", "\",\"method\"", 1)
 	data := string(body)
 	if strings.HasPrefix(data, "[") {
 		data = data[1 : len(data)-1]
 	}
+
 	if err := json.Unmarshal([]byte(data), &request); err != nil {
 		jsonErr = &btcjson.RPCError{
 			Code:    btcjson.ErrRPCParse.Code,
@@ -299,23 +327,23 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 	// Marshal the response.
 	msg, err := server.createMarshalledReply(responseID, result, jsonErr)
 	if err != nil {
-		server.logger.Errorf("Failed to marshal reply: %v", err)
+		server.logger.Error().Err(err).Msg("Failed to marshal reply")
 		return
 	}
 
 	// Write the response.
 	err = server.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
 	if err != nil {
-		server.logger.Error(err.Error())
+		server.logger.Error().Err(err).Msg("write error")
 		return
 	}
 	if _, err := buf.Write(msg); err != nil {
-		server.logger.Errorf("Failed to write marshalled reply: %v", err)
+		server.logger.Error().Err(err).Msg("Failed to write marshalled reply")
 	}
 
 	// Terminate with newline to maintain compatibility with Bitcoin Core.
 	if err := buf.WriteByte('\n'); err != nil {
-		server.logger.Errorf("Failed to append terminating newline to reply: %v", err)
+		server.logger.Error().Err(err).Msg("Failed to append terminating newline to reply")
 	}
 }
 
@@ -380,7 +408,7 @@ func (server *ServerCore) writeHTTPResponseHeaders(req *http.Request, headers ht
 // This function is safe for concurrent access.
 func (server *ServerCore) limitConnections(w http.ResponseWriter, remoteAddr string) bool {
 	if int(atomic.LoadInt32(&server.numClients)+1) > server.cfg.MaxClients {
-		server.logger.Infof("Max RPC clients exceeded [%d] - "+
+		server.logger.Info().Msgf("Max RPC clients exceeded [%d] - "+
 			"disconnecting client %s", server.cfg.MaxClients,
 			remoteAddr)
 		http.Error(w, "503 Too busy.  Try again later.",
@@ -423,7 +451,7 @@ func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, 
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) <= 0 {
 		if require {
-			server.logger.Warnf("RPC authentication failure from %s",
+			server.logger.Warn().Msgf("RPC authentication failure from %s",
 				r.RemoteAddr)
 			return false, false, errors.New("auth failure")
 		}
@@ -447,13 +475,13 @@ func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, 
 	}
 
 	// Request'server auth doesn't match either user
-	server.logger.Warnf("RPC authentication failure from %s", r.RemoteAddr)
+	server.logger.Warn().Msgf("RPC authentication failure from %s", r.RemoteAddr)
 	return false, false, errors.New("auth failure")
 }
 
 // genCertPair generates a key/cert pair to the paths provided.
 func (server *ServerCore) genCertPair(certFile, keyFile string) error {
-	server.logger.Infof("Generating TLS certificates...")
+	server.logger.Info().Msgf("Generating TLS certificates...")
 
 	org := "btcd autogenerated cert"
 	validUntil := time.Now().Add(10 * 365 * 24 * time.Hour)
@@ -471,7 +499,7 @@ func (server *ServerCore) genCertPair(certFile, keyFile string) error {
 		return err
 	}
 
-	server.logger.Infof("Done generating TLS certificates")
+	server.logger.Info().Msgf("Done generating TLS certificates")
 	return nil
 }
 
@@ -501,6 +529,6 @@ func (server *ServerCore) internalRPCError(errStr, context string) *btcjson.RPCE
 	if context != "" {
 		logStr = context + ": " + errStr
 	}
-	server.logger.Error(logStr)
+	server.logger.Error().Msg(logStr)
 	return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, errStr)
 }

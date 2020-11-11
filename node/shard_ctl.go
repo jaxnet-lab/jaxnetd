@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
@@ -21,7 +22,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
-	"go.uber.org/zap"
 )
 
 type ShardInfo struct {
@@ -67,7 +67,7 @@ type shardRO struct {
 }
 
 type ShardCtl struct {
-	log   *zap.Logger
+	log   zerolog.Logger
 	chain chain.IChainCtx
 	cfg   *Config
 	ctx   context.Context
@@ -78,8 +78,9 @@ type ShardCtl struct {
 	listenCfg     p2p.ListenOpts
 }
 
-func NewShardCtl(ctx context.Context, log *zap.Logger, cfg *Config, chain chain.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
-	log = log.With(zap.String("chain", chain.Params().Name))
+func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
+	chain chain.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
+	log = log.With().Str("chain", chain.Params().Name).Logger()
 
 	return &ShardCtl{
 		ctx:       ctx,
@@ -95,14 +96,14 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
-		shardCtl.log.Error("Can't load Block db", zap.Error(err))
+		shardCtl.log.Error().Err(err).Msg("Can't load Block db")
 		return err
 	}
 
 	mmrDb, err := mmr.BadgerDB(path.Join(shardCtl.cfg.DataDir,
 		"shard_"+strconv.FormatUint(uint64(shardCtl.chain.ShardID()), 10), "mmr"))
 	if err != nil {
-		shardCtl.log.Error("Can't init shard mmr DB", zap.Error(err))
+		shardCtl.log.Error().Err(err).Msg("Can't init shard mmr DB")
 		return err
 	}
 
@@ -116,7 +117,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
 	if err != nil {
-		shardCtl.log.Error("unable to init ChainProvider for shard", zap.Error(err))
+		shardCtl.log.Error().Err(err).Msg("unable to init ChainProvider for shard")
 		return err
 	}
 
@@ -128,14 +129,14 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 			return shardCtl.cfg.Node.P2P.Lookup(host)
 		})
 
-	shardCtl.log.Info("Run P2P Listener ", zap.Any("Listeners", shardCtl.cfg.Node.P2P.Listeners))
+	shardCtl.log.Info().Interface("Listeners", shardCtl.cfg.Node.P2P.Listeners).Msg("Run P2P Listener ")
 
 	// Create p2pServer and start it.
 	shardCtl.p2pServer, err = p2p.NewServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider,
 		addrManager, shardCtl.listenCfg)
 	if err != nil {
-		shardCtl.log.Error("Unable to start p2pServer",
-			zap.Any("address", shardCtl.cfg.Node.P2P.Listeners), zap.Error(err))
+		shardCtl.log.Error().Err(err).
+			Msg("Unable to start p2pServer")
 		return err
 	}
 
@@ -149,12 +150,12 @@ func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
 	if cleanIndexes {
-		shardCtl.log.Info("clean db indexes")
+		shardCtl.log.Info().Msg("clean db indexes")
 		return
 	}
 
 	if err != nil {
-		shardCtl.log.Error("failed to clean indexes", zap.Error(err))
+		shardCtl.log.Error().Err(err).Msg("failed to clean indexes")
 		return
 	}
 
@@ -162,10 +163,9 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 
 	<-ctx.Done()
 
-	shardCtl.log.Info("Chain p2p server shutdown complete")
-
-	shardCtl.log.Info("Gracefully shutting down the database...")
+	shardCtl.log.Info().Msg("Chain p2p server shutdown complete")
+	shardCtl.log.Info().Msg("Gracefully shutting down the database...")
 	if err := shardCtl.chainProvider.DB.Close(); err != nil {
-		shardCtl.log.Error("Can't close db", zap.Error(err))
+		shardCtl.log.Error().Err(err).Msg("Can't close db")
 	}
 }

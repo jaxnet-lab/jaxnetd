@@ -6,13 +6,13 @@ package rpc
 import (
 	"context"
 	"github.com/btcsuite/websocket"
+	"fmt"
 	"net/http"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/corelog"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"go.uber.org/zap"
 )
 
 type MultiChainRPC struct {
@@ -25,7 +25,7 @@ type MultiChainRPC struct {
 	wsManager   *wsManager
 }
 
-func NewMultiChainRPC(config *Config, logger *zap.Logger,
+func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 	nodeRPC *NodeRPC, beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		ServerCore: NewRPCCore(config, logger),
@@ -61,8 +61,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
 		if err != nil {
 			if _, ok := err.(websocket.HandshakeError); !ok {
-				server.logger.Errorf("Unexpected websocket error: %v",
-					err)
+				server.logger.Error().Err(err).Msg("Unexpected websocket")
 			}
 			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
 			return
@@ -90,9 +89,10 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			prcPtr, ok := server.shardRPCs[cmd.shardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
+				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.shardID)
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrShardIDMismatch,
-					Message: "Provided ShardID does not match with any present",
+					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
 				}
 			}
 
@@ -105,13 +105,13 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 
 type Mux struct {
 	rpcutli.ToolsXt
-	Log      corelog.ILogger
+	Log      zerolog.Logger
 	handlers map[btcjson.MethodName]CommandHandler
 }
 
-func NewRPCMux(logger *zap.Logger) Mux {
+func NewRPCMux(logger zerolog.Logger) Mux {
 	return Mux{
-		Log:      corelog.Adapter(logger),
+		Log:      logger,
 		handlers: map[btcjson.MethodName]CommandHandler{},
 	}
 }
@@ -122,6 +122,7 @@ func NewRPCMux(logger *zap.Logger) Mux {
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
+	server.Log.Debug().Msg("Handle command " + cmd.scope + "." + cmd.method)
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
@@ -145,6 +146,6 @@ func (server *Mux) InternalRPCError(errStr, context string) *btcjson.RPCError {
 	if context != "" {
 		logStr = context + ": " + errStr
 	}
-	server.Log.Error(logStr)
+	server.Log.Error().Msg(logStr)
 	return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, errStr)
 }

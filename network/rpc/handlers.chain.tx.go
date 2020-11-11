@@ -58,7 +58,6 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.EstimateSmartFeeCmd)
-
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
@@ -234,8 +233,10 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	var mtx *wire.MsgTx
 	var blkHash *chainhash.Hash
 	var blkHeight int32
+
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
+		//return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCNoTxInfo,
@@ -371,7 +372,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		// so log it as an actual error and return.
 		ruleErr, ok := err.(mempool.RuleError)
 		if !ok {
-			server.Log.Errorf("Failed to process transaction %v %v", tx.Hash(), err)
+			server.Log.Error().Msgf("Failed to process transaction %v %v", tx.Hash(), err)
 
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCTxError,
@@ -379,7 +380,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 			}
 		}
 
-		server.Log.Debugf("Rejected transaction %v: %v", tx.Hash(), err)
+		server.Log.Debug().Msgf("Rejected transaction %v: %v", tx.Hash(), err)
 
 		// We'll then map the rule error to the appropriate RPC error,
 		// matching bitcoind'server behavior.

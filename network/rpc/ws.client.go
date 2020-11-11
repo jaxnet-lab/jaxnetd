@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
@@ -110,18 +111,18 @@ func newWebsocketClient(manager *wsManager, conn *websocket.Conn,
 	}
 
 	client := &wsClient{
-		conn:              conn,
-		addr:              remoteAddr,
-		authenticated:     authenticated,
-		isAdmin:           isAdmin,
-		sessionID:         sessionID,
-		manager:           manager,
-		addrRequests:      make(map[string]struct{}),
-		spentRequests:     make(map[wire.OutPoint]struct{}),
+		conn:          conn,
+		addr:          remoteAddr,
+		authenticated: authenticated,
+		isAdmin:       isAdmin,
+		sessionID:     sessionID,
+		manager:       manager,
+		addrRequests:  make(map[string]struct{}),
+		spentRequests: make(map[wire.OutPoint]struct{}),
 		//serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
-		ntfnChan:          make(chan []byte, 1), // nonblocking sync
-		sendChan:          make(chan wsResponse, websocketSendBufferSize),
-		quit:              make(chan struct{}),
+		ntfnChan: make(chan []byte, 1), // nonblocking sync
+		sendChan: make(chan wsResponse, websocketSendBufferSize),
+		quit:     make(chan struct{}),
 	}
 	return client, nil
 }
@@ -143,8 +144,7 @@ out:
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
-				c.manager.logger.Errorf("Websocket receive error from "+
-					"%s: %v", c.addr, err)
+				c.manager.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
 			}
 			break out
 		}
@@ -162,8 +162,7 @@ out:
 			}
 			reply, err := c.manager.server.createMarshalledReply(nil, nil, jsonErr)
 			if err != nil {
-				c.manager.logger.Errorf("Failed to marshal parse failure "+
-					"reply: %v", err)
+				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure")
 				continue
 			}
 			c.SendMessage(reply, nil)
@@ -188,7 +187,7 @@ out:
 		//
 		// RPC quirks can be enabled by the user to avoid compatibility issues
 		// with software relying on Core's behavior.
-		if request.ID == nil /*&& !(c.manager.server.cfg.Quirks && request.JsonRPC == "") */{
+		if request.ID == nil /*&& !(c.manager.server.cfg.Quirks && request.JsonRPC == "") */ {
 			if !c.authenticated {
 				break out
 			}
@@ -203,14 +202,13 @@ out:
 
 			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, cmd.err)
 			if err != nil {
-				c.manager.logger.Errorf("Failed to marshal parse failure "+
-					"reply: %v", err)
+				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
 				continue
 			}
 			c.SendMessage(reply, nil)
 			continue
 		}
-		c.manager.logger.Debugf("Received command <%s> from %s", cmd.method, c.addr)
+		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s", cmd.method, c.addr))
 
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
@@ -219,12 +217,10 @@ out:
 		// authentication credentials are provided in the request.
 		switch authCmd, ok := cmd.cmd.(*btcjson.AuthenticateCmd); {
 		case c.authenticated && ok:
-			c.manager.logger.Warnf("Websocket client %s is already authenticated",
-				c.addr)
+			c.manager.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
 			break out
 		case !c.authenticated && !ok:
-			c.manager.logger.Warnf("Unauthenticated websocket message " +
-				"received")
+			c.manager.logger.Warn().Msg("Unauthenticated websocket message received")
 			break out
 		case !c.authenticated:
 			// Check credentials.
@@ -234,7 +230,7 @@ out:
 			cmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.authSHA[:])
 			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.limitAuthSHA[:])
 			if cmp != 1 && limitcmp != 1 {
-				c.manager.logger.Warnf("Auth failure.")
+				c.manager.logger.Warn().Msg("Auth failure.")
 				break out
 			}
 			c.authenticated = true
@@ -243,8 +239,7 @@ out:
 			// Marshal and send response.
 			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, nil)
 			if err != nil {
-				c.manager.logger.Errorf("Failed to marshal authenticate reply: "+
-					"%v", err.Error())
+				c.manager.logger.Error().Err(err).Msg("Failed to marshal authenticate")
 				continue
 			}
 			c.SendMessage(reply, nil)
@@ -262,8 +257,7 @@ out:
 				// Marshal and send response.
 				reply, err := c.manager.server.createMarshalledReply(request.ID, nil, jsonErr)
 				if err != nil {
-					c.manager.logger.Errorf("Failed to marshal parse failure "+
-						"reply: %v", err)
+					c.manager.logger.Error().Msg("Failed to marshal parse failure ")
 					continue
 				}
 				c.SendMessage(reply, nil)
@@ -301,7 +295,7 @@ out:
 	// Ensure the connection is closed.
 	c.Disconnect()
 	c.wg.Done()
-	c.manager.logger.Tracef("Websocket client input handler done for %s", c.addr)
+	c.manager.logger.Trace().Str("address", c.addr).Msg("Websocket client input handler done for")
 }
 
 // serviceRequest services a parsed RPC request by looking up and executing the
@@ -314,7 +308,7 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	)
 
 	shard, ok := c.manager.server.shardRPCs[r.shardID]
-	if ok{
+	if ok {
 		//result, err = c.manager.server.HandleCommand(r, nil)
 		return
 	}
@@ -330,8 +324,7 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	}
 	reply, err := c.manager.server.createMarshalledReply(r.id, result, err)
 	if err != nil {
-		c.manager.logger.Errorf("Failed to marshal reply for <%s> "+
-			"command: %v", r.method, err)
+		c.manager.logger.Error().Str("command", r.method).Err(err).Msg("Failed to marshal reply command")
 		return
 	}
 	c.SendMessage(reply, nil)
@@ -406,8 +399,7 @@ cleanup:
 		}
 	}
 	c.wg.Done()
-	c.manager.logger.Tracef("Websocket client notification queue handler done "+
-		"for %s", c.addr)
+	c.manager.logger.Trace().Str("address", c.addr).Msg("Websocket client notification queue handler done")
 }
 
 // outHandler handles all outgoing messages for the websocket connection.  It
@@ -449,7 +441,7 @@ cleanup:
 		}
 	}
 	c.wg.Done()
-	c.manager.logger.Tracef("Websocket client output handler done for %s", c.addr)
+	c.manager.logger.Trace().Str("address", c.addr).Msg("Websocket client output handler done for")
 }
 
 // SendMessage sends the passed json to the websocket client.  It is backed
@@ -513,7 +505,7 @@ func (c *wsClient) Disconnect() {
 		return
 	}
 
-	c.manager.logger.Tracef("Disconnecting websocket client %s", c.addr)
+	c.manager.logger.Trace().Str("address", c.addr).Msg("Disconnecting websocket client")
 	close(c.quit)
 	c.conn.Close()
 	c.disconnected = true
@@ -521,7 +513,7 @@ func (c *wsClient) Disconnect() {
 
 // Start begins processing input and output messages.
 func (c *wsClient) Start() {
-	c.manager.logger.Tracef("Starting websocket client %s", c.addr)
+	c.manager.logger.Trace().Str("address", c.addr).Msg("Starting websocket client")
 
 	// Start processing input and output.
 	c.wg.Add(3)

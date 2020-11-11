@@ -10,9 +10,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
@@ -43,11 +44,9 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	conn.SetReadDeadline(timeZeroVal)
 
 	// Limit max number of websocket clients.
-	server.logger.Infof("New websocket client %s", remoteAddr)
+	server.logger.Info().Str("remote", remoteAddr).Msg("New websocket client")
 	if server.wsManager.NumClients()+1 > server.cfg.MaxWebsockets {
-		server.logger.Infof("Max websocket clients exceeded [%d] - "+
-			"disconnecting client %s", server.cfg.MaxWebsockets,
-			remoteAddr)
+		server.logger.Info().Str("remote", remoteAddr).Int("MaxNumber", server.cfg.MaxWebsockets).Msg("Max websocket clients exceeded")
 		conn.Close()
 		return
 	}
@@ -57,7 +56,7 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	// disconnected), remove it and any notifications it registered for.
 	client, err := newWebsocketClient(server.wsManager, conn, remoteAddr, authenticated, isAdmin)
 	if err != nil {
-		server.logger.Errorf("Failed to serve client %s: %v", remoteAddr, err)
+		server.logger.Error().Str("remote", remoteAddr).Err(err).Msg("Failed to serve client")
 		conn.Close()
 		return
 	}
@@ -65,11 +64,10 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	client.Start()
 	client.WaitForShutdown()
 	server.wsManager.RemoveClient(client)
-	server.logger.Infof("Disconnected websocket client %s", remoteAddr)
+	server.logger.Info().Str("remote", remoteAddr).Msg("Disconnected websocket client")
 }
 
 type IWebsocketManager interface {
-
 }
 
 // wsNotificationManager is a connection and notification manager used for
@@ -94,7 +92,7 @@ type wsManager struct {
 
 	handler *wsHandler
 
-	logger     corelog.ILogger
+	logger     zerolog.Logger
 	numClients chan int
 }
 
@@ -401,7 +399,7 @@ out:
 				delete(txNotifications, wsc.quit)
 
 			default:
-				m.logger.Warn("Unhandled notification type")
+				m.logger.Warn().Msg("Unhandled notification type")
 			}
 
 		case m.numClients <- len(clients):
@@ -465,7 +463,7 @@ func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 
 			marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 			if err != nil {
-				m.logger.Errorf("Failed to marshal processedtx notification: %v", err)
+				m.logger.Error().Err(err).Msg("Failed to marshal processedtx notification")
 				continue
 			}
 
@@ -503,7 +501,7 @@ func (m *wsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.
 			}
 			marshalledJSON, err := newRedeemingTxNotification(chain, txHex, tx.Index(), block)
 			if err != nil {
-				m.logger.Warnf("Failed to marshal redeemingtx notification: %v", err)
+				m.logger.Warn().Err(err).Msg("Failed to marshal redeemingtx notification")
 				continue
 			}
 			for wscQuit, wsc := range cmap {
@@ -563,8 +561,7 @@ func (m *wsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*
 	// Remove the client from the list to notify.
 	notifyMap, ok := ops[*op]
 	if !ok {
-		m.logger.Warnf("Attempt to remove nonexistent spent request "+
-			"for websocket client %s", wsc.addr)
+		m.logger.Warn().Str("address", wsc.addr).Msg("Attempt to remove nonexistent spent request for websocket client")
 		return
 	}
 	delete(notifyMap, wsc.quit)
@@ -603,8 +600,7 @@ func (m *wsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 	for _, op := range ops {
 		spend := chain.TxMemPool.CheckSpend(*op)
 		if spend != nil {
-			m.logger.Debugf("Found existing mempool spend for "+
-				"outpoint<%v>: %v", op, spend.Hash())
+			m.logger.Debug().Msg(fmt.Sprintf("Found existing mempool spend for outpoint<%v>: %v", op, spend.Hash()))
 			spends[*spend.Hash()] = spend
 		}
 	}
@@ -628,7 +624,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 	ntfn := btcjson.NewTxAcceptedNtfn(txHashStr, btcutil.Amount(amount).ToBTC())
 	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
-		m.logger.Errorf("Failed to marshal tx notification: %s", err.Error())
+		m.logger.Error().Err(err).Msg("Failed to marshal tx notification")
 		return
 	}
 
@@ -651,7 +647,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 			verboseNtfn = btcjson.NewTxAcceptedVerboseNtfn(*rawTx)
 			marshalledJSONVerbose, err = btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), verboseNtfn)
 			if err != nil {
-				m.logger.Errorf("Failed to marshal verbose tx notification: %s", err.Error())
+				m.logger.Error().Err(err).Msg("Failed to marshal verbose tx notification")
 				return
 			}
 			wsc.QueueNotification(marshalledJSONVerbose)
@@ -671,8 +667,7 @@ func (m *wsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 		block.MsgBlock().Header.Timestamp().Unix())
 	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
-		m.logger.Errorf("Failed to marshal block connected notification: "+
-			"%v", err)
+		m.logger.Error().Err(err).Msg("Failed to marshal block connected notification")
 		return
 	}
 	for _, wsc := range clients {
@@ -690,8 +685,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 	var w bytes.Buffer
 	err := block.MsgBlock().Header.Write(&w)
 	if err != nil {
-		m.logger.Errorf("Failed to serialize header for filtered block "+
-			"connected notification: %v", err)
+		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block")
 		return
 	}
 	ntfn := btcjson.NewFilteredBlockConnectedNtfn(block.Height(),
@@ -717,8 +711,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 		// Marshal and queue notification.
 		marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 		if err != nil {
-			m.logger.Errorf("Failed to marshal filtered block "+
-				"connected notification: %v", err)
+			m.logger.Error().Err(err).Msg("Failed to marshal filtered block connected notification")
 			return
 		}
 		wsc.QueueNotification(marshalledJSON)
@@ -737,8 +730,7 @@ func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clie
 		block.Height(), block.MsgBlock().Header.Timestamp().Unix())
 	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
-		m.logger.Errorf("Failed to marshal block disconnected "+
-			"notification: %v", err)
+		m.logger.Error().Err(err).Msg("Failed to marshal block disconnected notification")
 		return
 	}
 	for _, wsc := range clients {
@@ -829,16 +821,14 @@ func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 	var w bytes.Buffer
 	err := block.MsgBlock().Header.Write(&w)
 	if err != nil {
-		m.logger.Errorf("Failed to serialize header for filtered block "+
-			"disconnected notification: %v", err)
+		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block disconnected notification")
 		return
 	}
 	ntfn := btcjson.NewFilteredBlockDisconnectedNtfn(block.Height(),
 		hex.EncodeToString(w.Bytes()))
 	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
-		m.logger.Errorf("Failed to marshal filtered block disconnected "+
-			"notification: %v", err)
+		m.logger.Error().Err(err).Msg("Failed to marshal filtered block disconnected notification")
 		return
 	}
 	for _, wsc := range clients {
@@ -860,7 +850,7 @@ func (m *wsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx 
 		n := btcjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
 		marshalled, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), n)
 		if err != nil {
-			m.logger.Errorf("Failed to marshal notification: %v", err)
+			m.logger.Error().Err(err).Msg("Failed to marshal notification")
 			return
 		}
 		for quitChan := range clientsToNotify {
@@ -905,8 +895,7 @@ func (m *wsManager) removeAddrRequest(addrs map[string]map[chan struct{}]*wsClie
 	// Remove the client from the list to notify.
 	cmap, ok := addrs[addr]
 	if !ok {
-		m.logger.Warnf("Attempt to remove nonexistent addr request "+
-			"<%s> for websocket client %s", addr, wsc.addr)
+		m.logger.Warn().Msg(fmt.Sprintf("Attempt to remove nonexistent addr request <%s> for websocket client %s", addr, wsc.addr))
 		return
 	}
 	delete(cmap, wsc.quit)

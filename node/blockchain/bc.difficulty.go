@@ -150,10 +150,10 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknode.IBlockNode, n
 	// newTarget since conversion to the compact representation loses
 	// precision.
 	newTargetBits := pow.BigToCompact(newTarget)
-	log.Debugf("Difficulty retarget at block height %d", lastNode.Height()+1)
-	log.Debugf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
-	log.Debugf("New target %08x (%064x)", newTargetBits, pow.CompactToBig(newTargetBits))
-	log.Debugf("Actual timespan %v, adjusted timespan %v, target timespan %v",
+	log.Debug().Msgf("Difficulty retarget at block height %d", lastNode.Height()+1)
+	log.Debug().Msgf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
+	log.Debug().Msgf("New target %08x (%064x)", newTargetBits, pow.CompactToBig(newTargetBits))
+	log.Debug().Msgf("Actual timespan %v, adjusted timespan %v, target timespan %v",
 		time.Duration(actualTimespan)*time.Second,
 		time.Duration(adjustedTimespan)*time.Second,
 		b.chainParams.TargetTimespan)

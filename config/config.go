@@ -139,9 +139,9 @@ func validLogLevel(logLevel string) bool {
 // supportedSubsystems returns a sorted slice of the supported subsystems for
 // logging purposes.
 func supportedSubsystems() []string {
-	// Convert the subsystemLoggers map keys to a slice.
-	subsystems := make([]string, 0, len(subsystemLoggers))
-	for subsysID := range subsystemLoggers {
+	// Convert the unitLogs map keys to a slice.
+	subsystems := make([]string, 0, len(unitLogs))
+	for subsysID := range unitLogs {
 		subsystems = append(subsystems, subsysID)
 	}
 
@@ -153,7 +153,7 @@ func supportedSubsystems() []string {
 // parseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
-func parseAndSetDebugLevels(debugLevel string, logfile string, disableStdOutLog bool) error {
+func parseAndSetDebugLevels(debugLevel string, logConfig corelog.Config) error {
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
@@ -164,7 +164,7 @@ func parseAndSetDebugLevels(debugLevel string, logfile string, disableStdOutLog 
 		}
 
 		// Change the logging level for all subsystems.
-		setLogLevels(debugLevel, logfile, disableStdOutLog)
+		setLogLevels(debugLevel, logConfig)
 		setLoggers()
 		return nil
 	}
@@ -183,7 +183,7 @@ func parseAndSetDebugLevels(debugLevel string, logfile string, disableStdOutLog 
 		subsysID, logLevel := fields[0], fields[1]
 
 		// Validate subsystem.
-		if _, exists := subsystemLoggers[subsysID]; !exists {
+		if _, exists := unitLogs[subsysID]; !exists {
 			str := "The specified subsystem [%v] is invalid -- " +
 				"supported subsytems %v"
 			return fmt.Errorf(str, subsysID, supportedSubsystems())
@@ -195,7 +195,7 @@ func parseAndSetDebugLevels(debugLevel string, logfile string, disableStdOutLog 
 			return fmt.Errorf(str, logLevel)
 		}
 
-		setLogLevel(subsysID, logLevel, logfile, disableStdOutLog)
+		setLogLevel(subsysID, logLevel, logConfig)
 	}
 	setLoggers()
 	return nil
@@ -515,7 +515,9 @@ func LoadConfig() (*node.Config, []string, error) {
 	// initLogRotator(filepath.Join(cfg.LogDir, corelog.DefaultLogFile))
 
 	// Parse, validate, and set debug log level(s).
-	err = parseAndSetDebugLevels(cfg.DebugLevel, filepath.Join(cfg.LogDir, corelog.DefaultLogFile), cfg.DisableStdOutLog)
+	cfg.LogConfig.Directory = cfg.LogDir
+	cfg.LogConfig.Filename = filepath.Join(cfg.LogDir, corelog.DefaultLogFile)
+	err = parseAndSetDebugLevels(cfg.DebugLevel, cfg.LogConfig)
 	if err != nil {
 		err := fmt.Errorf("%s: %v", funcName, err.Error())
 		fmt.Fprintln(os.Stderr, err)
@@ -650,7 +652,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	if cfg.Node.RPC.Disable {
-		Log.Info("RPC service is disabled")
+		Log.Info().Msg("RPC service is disabled")
 	}
 
 	// Default RPC to listen on localhost only.
@@ -978,7 +980,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		Log.Warn(configFileError.Error())
+		Log.Warn().Msg(configFileError.Error())
 	}
 
 	return &cfg, remainingArgs, nil

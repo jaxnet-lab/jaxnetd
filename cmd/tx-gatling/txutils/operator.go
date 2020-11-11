@@ -106,18 +106,10 @@ func (app *Operator) UTXOByHash(txHash string, outIndex uint32, redeemScript str
 	}
 
 	if redeemScript != "" {
-		rawScript, err := hex.DecodeString(redeemScript)
+		*utxo, err = SetRedeemScript(*utxo, redeemScript, app.TxMan.NetParams)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to decode hex script")
+			return nil, err
 		}
-
-		script, err := app.TxMan.DecodeScript(rawScript)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to parse script")
-		}
-
-		utxo.PKScript = redeemScript
-		utxo.ScriptType = script.Type
 	}
 
 	return utxo, nil

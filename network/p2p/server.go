@@ -17,8 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
@@ -29,7 +29,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 type INodeServer interface {
@@ -106,7 +105,7 @@ type Server struct {
 	// whitelisting will be applied if the list is empty or nil.
 	agentWhitelist []string
 
-	logger corelog.ILogger
+	logger zerolog.Logger
 
 	chain *cprovider.ChainProvider
 }
@@ -116,10 +115,10 @@ type Server struct {
 // connections from peers.
 func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	amgr *addrmgr.AddrManager, opts ListenOpts) (*Server, error) {
-	logger := chainProvider.Log().With(zap.String("server", "p2p"))
+	logger := chainProvider.Log().With().Str("server", "p2p").Logger()
 	chainCfg := chainProvider.Config()
 
-	logger.Info("Starting Server", zap.Any("Peers", cfg.Peers))
+	logger.Info().Interface("Peers", cfg.Peers).Msg("Starting Server")
 	services := defaultServices
 	if cfg.NoPeerBloomFilters {
 		services &^= wire.SFNodeBloom
@@ -143,10 +142,10 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	}
 
 	if len(cfg.AgentBlacklist) > 0 {
-		logger.Info(fmt.Sprintf("User-agent blacklist %s", cfg.AgentBlacklist))
+		logger.Info().Msgf("User-agent blacklist %s", cfg.AgentBlacklist)
 	}
 	if len(cfg.AgentWhitelist) > 0 {
-		logger.Info(fmt.Sprintf("User-agent whitelist %s", cfg.AgentWhitelist))
+		logger.Info().Msgf("User-agent whitelist %s", cfg.AgentWhitelist)
 	}
 
 	p2pServer := Server{
@@ -156,7 +155,7 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 		nat:             nat,
 		services:        services,
 		cfCheckptCaches: make(map[wire.FilterType][]cfHeaderKV),
-		logger:          corelog.Adapter(logger),
+		logger:          logger,
 
 		newPeers:             make(chan *serverPeer, chainCfg.MaxPeers),
 		donePeers:            make(chan *serverPeer, chainCfg.MaxPeers),
@@ -204,7 +203,7 @@ func (server *Server) Run(ctx context.Context) {
 		return
 	}
 
-	server.logger.Trace("Starting server")
+	server.logger.Trace().Msg("Starting server")
 
 	// Server startup time. Used for the uptime command for uptime calculation.
 	server.chain.StartupTime = time.Now().Unix()
@@ -218,7 +217,7 @@ func (server *Server) Run(ctx context.Context) {
 	for _, addr := range permanentPeers {
 		netAddr, err := server.addrStringToNetAddr(addr)
 		if err != nil {
-			server.logger.Errorf("unable to parse netAddr of peer: %s", err.Error())
+			server.logger.Error().Err(err).Msg("unable to parse netAddr of peer")
 			return
 		}
 
@@ -267,7 +266,7 @@ func (server *Server) Run(ctx context.Context) {
 func (server *Server) Stop() error {
 	// Make sure this only happens once.
 	if atomic.AddInt32(&server.shutdown, 1) != 1 {
-		server.logger.Infof("Server is already in the process of shutting down")
+		server.logger.Info().Msgf("Server is already in the process of shutting down")
 		return nil
 	}
 
@@ -297,7 +296,7 @@ func (server *Server) ScheduleShutdown(duration time.Duration) {
 	if atomic.AddInt32(&server.shutdownSched, 1) != 1 {
 		return
 	}
-	server.logger.Warnf("Server shutdown in %v", duration)
+	server.logger.Warn().Msgf("Server shutdown in %v", duration)
 	go func() {
 		remaining := duration
 		tickDuration := dynamicTickDuration(remaining)
@@ -323,7 +322,7 @@ func (server *Server) ScheduleShutdown(duration time.Duration) {
 					ticker.Stop()
 					ticker = time.NewTicker(tickDuration)
 				}
-				server.logger.Warnf("Server shutdown in %v", remaining)
+				server.logger.Warn().Msgf("Server shutdown in %v", remaining)
 			}
 		}
 	}()
@@ -615,14 +614,14 @@ func (server *Server) inboundPeerConnected(conn net.Conn) {
 // manager of the attempt.
 func (server *Server) outboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) {
 	if server.cfg.DisableOutbound {
-		server.logger.Debugf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
+		server.logger.Debug().Msgf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
 		return
 	}
 	sp := newServerPeer(newServerPeerHandler(server), connReq.Permanent)
 
 	p, err := peer.NewOutboundPeer(sp.newPeerConfig(), connReq.Addr.String(), server.chain.BlockChain().Chain())
 	if err != nil {
-		server.logger.Debugf("Cannot create outbound peer %s: %v", connReq.Addr, err)
+		server.logger.Debug().Msgf("Cannot create outbound peer %s: %v", connReq.Addr, err)
 		if connReq.Permanent {
 			// server.ConnManager.Disconnect(connReq.ID())
 			// } else {
@@ -652,7 +651,7 @@ func (server *Server) peerDoneHandler(sp *serverPeer) {
 		// Evict any remaining orphans that were sent by the peer.
 		numEvicted := server.chain.TxMemPool.RemoveOrphansByTag(mempool.Tag(sp.ID()))
 		if numEvicted > 0 {
-			server.logger.Debugf("Evicted %d %s from peer %v (id %d)",
+			server.logger.Debug().Msgf("Evicted %d %s from peer %v (id %d)",
 				numEvicted, pickNoun(numEvicted, "orphan",
 					"orphans"), sp, sp.ID())
 		}
@@ -672,7 +671,7 @@ func (server *Server) peerHandler() {
 	server.addrManager.Start()
 	server.chain.SyncManager.Start()
 
-	server.logger.Tracef("Starting peer handler")
+	server.logger.Trace().Msgf("Starting peer handler")
 
 	state := &peerState{
 		inboundPeers:    make(map[int32]*serverPeer),
@@ -730,7 +729,7 @@ out:
 		case <-server.quit:
 			// Disconnect all peers on Server shutdown.
 			state.forAllPeers(func(sp *serverPeer) {
-				server.logger.Tracef("Shutdown peer %s", sp)
+				server.logger.Trace().Msgf("Shutdown peer %s", sp)
 				sp.Disconnect()
 			})
 			break out
@@ -757,7 +756,7 @@ cleanup:
 		}
 	}
 	server.wg.Done()
-	server.logger.Tracef("Peer handler done")
+	server.logger.Trace().Msgf("Peer handler done")
 }
 
 // RelayInventory relays the passed inventory vector to all connected peers
@@ -897,14 +896,14 @@ out:
 			listenPort, err := server.nat.AddPortMapping("tcp", int(lport), int(lport),
 				"shard BlockChain p2p listen port", 20*60)
 			if err != nil {
-				server.logger.Warnf("can't add UPnP port mapping: %v", err)
+				server.logger.Warn().Msgf("can't add UPnP port mapping: %v", err)
 			}
 			if first && err == nil {
 				// TODO: look this up periodically to see if upnp domain changed
 				// and so did ip.
 				externalIP, err := server.nat.GetExternalAddress()
 				if err != nil {
-					server.logger.Warnf("UPnP can't get external address: %v", err)
+					server.logger.Warn().Msgf("UPnP can't get external address: %v", err)
 					continue out
 				}
 				na := wire.NewNetAddressIPPort(externalIP, uint16(listenPort),
@@ -913,7 +912,7 @@ out:
 				if err != nil {
 					// XXX DeletePortMapping?
 				}
-				server.logger.Warnf("Successfully bound via UPnP to %s", addrmgr.NetAddressKey(na))
+				server.logger.Warn().Msgf("Successfully bound via UPnP to %s", addrmgr.NetAddressKey(na))
 				first = false
 			}
 			timer.Reset(time.Minute * 15)
@@ -925,9 +924,9 @@ out:
 	timer.Stop()
 
 	if err := server.nat.DeletePortMapping("tcp", int(lport), int(lport)); err != nil {
-		server.logger.Warnf("unable to remove UPnP port mapping: %v", err)
+		server.logger.Warn().Msgf("unable to remove UPnP port mapping: %v", err)
 	} else {
-		server.logger.Debugf("successfully disestablished UPnP port mapping")
+		server.logger.Debug().Msgf("successfully disestablished UPnP port mapping")
 	}
 
 	server.wg.Done()
@@ -991,12 +990,12 @@ func (server *Server) isWhitelisted(addr net.Addr) bool {
 
 	host, _, err := net.SplitHostPort(addr.String())
 	if err != nil {
-		server.logger.Warnf("Unable to SplitHostPort on '%s': %v", addr, err)
+		server.logger.Warn().Msgf("Unable to SplitHostPort on '%s': %v", addr, err)
 		return false
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
-		server.logger.Warnf("Unable to parse IP '%s'", addr)
+		server.logger.Warn().Msgf("Unable to parse IP '%s'", addr)
 		return false
 	}
 

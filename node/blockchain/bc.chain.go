@@ -233,7 +233,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	bestNode := b.bestChain.Tip()
-	log.Infof("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
+	log.Info().Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
 		bestNode.Height(), bestNode.GetHash(), b.stateSnapshot.TotalTxns,
 		bestNode.WorkSum())
 
@@ -1224,12 +1224,12 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
 	if forkNode != nil {
-		log.Infof("REORGANIZE: ChainCtx forks at %v (height %v)", forkNode.GetHash(),
+		log.Info().Msgf("REORGANIZE: ChainCtx forks at %v (height %v)", forkNode.GetHash(),
 			forkNode.Height())
 	}
-	log.Infof("REORGANIZE: Old best chain head was %v (height %v)",
+	log.Info().Msgf("REORGANIZE: Old best chain head was %v (height %v)",
 		oldBest.GetHash(), oldBest.Height())
-	log.Infof("REORGANIZE: New best chain head is %v (height %v)",
+	log.Info().Msgf("REORGANIZE: New best chain head is %v (height %v)",
 		newBest.GetHash(), newBest.Height())
 
 	return nil
@@ -1258,7 +1258,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 		// valid, we flush in connectBlock and if the block is invalid, the
 		// worst that can happen is we revalidate the block after a restart.
 		if writeErr := b.index.flushToDB(); writeErr != nil {
-			log.Warnf("Error flushing block index changes to disk: %v",
+			log.Warn().Msgf("Error flushing block index changes to disk: %v",
 				writeErr)
 		}
 	}
@@ -1337,7 +1337,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 		return true, nil
 	}
 	if fastAdd {
-		log.Warnf("fastAdd set in the side chain case? %v\n",
+		log.Warn().Msgf("fastAdd set in the side chain case? %v\n",
 			block.Hash())
 	}
 
@@ -1347,11 +1347,11 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 		// Log information about how the block is forking the chain.
 		fork := b.bestChain.FindFork(node)
 		if fork.GetHash() == parentHash {
-			log.Infof("FORK: Block %v forks the chain at height %d"+
+			log.Info().Msgf("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		} else {
-			log.Infof("EXTEND FORK: Block %v extends a side chain "+
+			log.Info().Msgf("EXTEND FORK: Block %v extends a side chain "+
 				"which forks the chain at height %d/block %v",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		}
@@ -1369,7 +1369,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 	detachNodes, attachNodes := b.getReorganizeNodes(node)
 
 	// Reorganize the chain.
-	log.Infof("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
+	log.Info().Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
 	err := b.reorganizeChain(detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
@@ -1377,7 +1377,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
 	if writeErr := b.index.flushToDB(); writeErr != nil {
-		log.Warnf("Error flushing block index changes to disk: %v", writeErr)
+		log.Warn().Msgf("Error flushing block index changes to disk: %v", writeErr)
 	}
 
 	return err == nil, err
