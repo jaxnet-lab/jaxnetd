@@ -21,6 +21,7 @@ type RPCErrorCode int
 type RPCError struct {
 	Code    RPCErrorCode `json:"code,omitempty"`
 	Message string       `json:"message,omitempty"`
+	Method  string       `json:"method,omitempty"`
 }
 
 // Guarantee RPCError satisfies the builtin error interface.
@@ -29,7 +30,11 @@ var _, _ error = RPCError{}, (*RPCError)(nil)
 // Error returns a string describing the RPC error.  This satisfies the
 // builtin error interface.
 func (e RPCError) Error() string {
-	return fmt.Sprintf("%d: %s", e.Code, e.Message)
+	return fmt.Sprintf("%d: %s - %s", e.Code, e.Message, e.Method)
+}
+func (e RPCError) WithMethod(name string) RPCError {
+	e.Method = name
+	return e
 }
 
 // NewRPCError constructs and returns a new JSON-RPC error that is suitable

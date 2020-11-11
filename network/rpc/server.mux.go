@@ -89,13 +89,14 @@ func NewRPCMux(logger zerolog.Logger) Mux {
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
-	server.Log.Debug().Msg("Handle command " + cmd.scope + "." + cmd.method)
+	method := btcjson.ScopedMethod(cmd.scope, cmd.method)
+	handler, ok := server.handlers[method]
+	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
 
-	return nil, btcjson.ErrRPCMethodNotFound
+	return nil, btcjson.ErrRPCMethodNotFound.WithMethod(method.String())
 }
 
 func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {

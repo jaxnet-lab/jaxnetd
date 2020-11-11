@@ -32,6 +32,7 @@ func MethodUsageFlags(method string) (UsageFlag, error) {
 	// Look up details about the provided method and error out if not
 	// registered.
 	registerLock.RLock()
+	method = strings.ToLower(method)
 	info, ok := methodToInfo[method]
 	registerLock.RUnlock()
 	if !ok {
@@ -220,6 +221,8 @@ func methodUsageText(rtp reflect.Type, defaults map[int]reflect.Value, method st
 // provided method must be associated with a registered type.  All commands
 // provided by this package are registered by default.
 func MethodUsageText(method string) (string, error) {
+	method = strings.ToLower(method)
+
 	// Look up details about the provided method and error out if not
 	// registered.
 	rtp, info, ok := getMethodTypeInfo(method)
