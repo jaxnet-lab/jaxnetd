@@ -354,7 +354,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCClientInInitialDownload,
-			Message: "Bitcoin is downloading blocks...",
+			Message: "Shard.Core is downloading blocks...",
 		}
 	}
 
