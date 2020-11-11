@@ -182,7 +182,7 @@ type rpcRO struct {
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
-	nodeRPC := rpc.NewNodeRPC(chainCtl, chainCtl.logger)
+	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger)
 	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
