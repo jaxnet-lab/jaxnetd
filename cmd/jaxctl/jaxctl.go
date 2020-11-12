@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	showHelpMessage = "Specify -h to show available options"
-	listCmdMessage  = "Specify -l to list available commands"
+	shardIDHelpMessage = "Specify -S SHARD_ID to set shard id for method"
+	showHelpMessage    = "Specify -h to show available options"
+	listCmdMessage     = "Specify -l to list available commands"
 )
 
 // commandUsage display the usage for a specific command.
@@ -45,6 +46,7 @@ func usage(errorMessage string) {
 	fmt.Fprintln(os.Stderr, "Usage:")
 	fmt.Fprintf(os.Stderr, "  %s [OPTIONS] <command> <args...>\n\n",
 		appName)
+	fmt.Fprintln(os.Stderr, shardIDHelpMessage)
 	fmt.Fprintln(os.Stderr, showHelpMessage)
 	fmt.Fprintln(os.Stderr, listCmdMessage)
 }
@@ -58,6 +60,7 @@ func main() {
 		usage("No command specified")
 		os.Exit(1)
 	}
+	shardID := cfg.ShardID
 
 	// Ensure the specified method identifies a valid registered command and
 	// is one of the usable types.
@@ -88,13 +91,11 @@ func main() {
 		if arg == "-" {
 			param, err := bio.ReadString('\n')
 			if err != nil && err != io.EOF {
-				fmt.Fprintf(os.Stderr, "Failed to read data "+
-					"from stdin: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Failed to read data from stdin: %v\n", err)
 				os.Exit(1)
 			}
 			if err == io.EOF && len(param) == 0 {
-				fmt.Fprintln(os.Stderr, "Not enough lines "+
-					"provided on stdin")
+				fmt.Fprintln(os.Stderr, "Not enough lines provided on stdin")
 				os.Exit(1)
 			}
 			param = strings.TrimRight(param, "\r\n")
@@ -130,7 +131,7 @@ func main() {
 
 	// Marshal the command into a JSON-RPC byte slice in preparation for
 	// sending it to the RPC server.
-	marshalledJSON, err := btcjson.MarshalCmd(1, cfg.ShardID, cmd)
+	marshalledJSON, err := btcjson.MarshalCmd(1, shardID, cmd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -8,11 +8,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -30,13 +28,13 @@ const (
 )
 
 var (
-	btcdHomeDir           = btcutil.AppDataDir("shard.core", false)
-	btcctlHomeDir         = btcutil.AppDataDir("btcctl", false)
-	btcwalletHomeDir      = btcutil.AppDataDir("btcwallet", false)
-	defaultConfigFile     = "btcctl.yaml"
+	coreHomeDir           = btcutil.AppDataDir("shard.core", false)
+	ctlHomeDir            = btcutil.AppDataDir("jaxctl", false)
+	walletHomeDir         = btcutil.AppDataDir("jaxwallet", false)
+	defaultConfigFile     = "jaxctl.yaml"
 	defaultRPCServer      = "localhost"
-	defaultRPCCertFile    = filepath.Join(btcdHomeDir, "rpc.cert")
-	defaultWalletCertFile = filepath.Join(btcwalletHomeDir, "rpc.cert")
+	defaultRPCCertFile    = filepath.Join(coreHomeDir, "rpc.cert")
+	defaultWalletCertFile = filepath.Join(walletHomeDir, "rpc.cert")
 )
 
 // listCommands categorizes and lists all of the usable commands along with
@@ -74,7 +72,8 @@ func listCommands() {
 		// Categorize the command based on the usage flags.
 		category := categoryChain
 		if flags&btcjson.UFWalletOnly != 0 {
-			category = categoryWallet
+			// category = categoryWallet
+			continue
 		}
 		categorized[category] = append(categorized[category], usage)
 	}
@@ -82,6 +81,7 @@ func listCommands() {
 	// Display the command according to their categories.
 	categoryTitles := make([]string, numCategories)
 	categoryTitles[categoryChain] = "Chain Server Commands:"
+	// wallet is not available now
 	categoryTitles[categoryWallet] = "Wallet Server Commands (--wallet):"
 	for category := uint8(0); category < numCategories; category++ {
 		fmt.Println(categoryTitles[category])
@@ -127,7 +127,7 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 			if useWallet {
 				defaultPort = "18332"
 			} else {
-				defaultPort = "18334"
+				defaultPort = "18333"
 			}
 		case &chaincfg.SimNetParams:
 			if useWallet {
@@ -146,7 +146,7 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 			if useWallet {
 				defaultPort = "8332"
 			} else {
-				defaultPort = "8334"
+				defaultPort = "18333"
 			}
 		}
 
@@ -160,7 +160,7 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 func cleanAndExpandPath(path string) string {
 	// Expand initial ~ to OS specific home directory.
 	if strings.HasPrefix(path, "~") {
-		homeDir := filepath.Dir(btcctlHomeDir)
+		homeDir := filepath.Dir(ctlHomeDir)
 		path = strings.Replace(path, "~", homeDir, 1)
 	}
 
@@ -226,18 +226,8 @@ func loadConfig() (*config, []string, error) {
 
 	stats, err := os.Stat(preCfg.ConfigFile)
 	if os.IsNotExist(err) {
-		// Use config file for RPC server to create default jaxctl config
-		var serverConfigPath string
-		if preCfg.Wallet {
-			serverConfigPath = filepath.Join(btcwalletHomeDir, "btcwallet.conf")
-		} else {
-			serverConfigPath = filepath.Join(btcdHomeDir, "btcd.conf")
-		}
-
-		err := createDefaultConfigFile(preCfg.ConfigFile, serverConfigPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating a default config file: %v\n", err)
-		}
+		fmt.Fprintf(os.Stderr, "Error open a config file: %v\n", err)
+		return nil, nil, err
 	}
 
 	// Load additional config from file.
@@ -251,11 +241,6 @@ func loadConfig() (*config, []string, error) {
 
 	ext := filepath.Ext(stats.Name())
 	switch ext {
-	case ".conf":
-		err = flags.NewIniParser(parser).Parse(cfgFile)
-		if err != nil {
-			return nil, nil, err
-		}
 	case ".yaml":
 		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
 		if err != nil {
@@ -300,64 +285,4 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	return &cfg, remainingArgs, nil
-}
-
-// createDefaultConfig creates a basic config file at the given destination path.
-// For this it tries to read the config file for the RPC server (either btcd or
-// btcwallet), and extract the RPC user and password from it.
-func createDefaultConfigFile(destinationPath, serverConfigPath string) error {
-	// Read the RPC server config
-	serverConfigFile, err := os.Open(serverConfigPath)
-	if err != nil {
-		return err
-	}
-	defer serverConfigFile.Close()
-	content, err := ioutil.ReadAll(serverConfigFile)
-	if err != nil {
-		return err
-	}
-
-	// Extract the rpcuser
-	rpcUserRegexp := regexp.MustCompile(`(?m)^\s*rpcuser=([^\s]+)`)
-	userSubmatches := rpcUserRegexp.FindSubmatch(content)
-	if userSubmatches == nil {
-		// No user found, nothing to do
-		return nil
-	}
-
-	// Extract the rpcpass
-	rpcPassRegexp := regexp.MustCompile(`(?m)^\s*rpcpass=([^\s]+)`)
-	passSubmatches := rpcPassRegexp.FindSubmatch(content)
-	if passSubmatches == nil {
-		// No password found, nothing to do
-		return nil
-	}
-
-	// Extract the notls
-	noTLSRegexp := regexp.MustCompile(`(?m)^\s*notls=(0|1)(?:\s|$)`)
-	noTLSSubmatches := noTLSRegexp.FindSubmatch(content)
-
-	// Create the destination directory if it does not exists
-	err = os.MkdirAll(filepath.Dir(destinationPath), 0700)
-	if err != nil {
-		return err
-	}
-
-	// Create the destination file and write the rpcuser and rpcpass to it
-	dest, err := os.OpenFile(destinationPath,
-		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	defer dest.Close()
-
-	destString := fmt.Sprintf("rpcuser=%s\nrpcpass=%s\n",
-		string(userSubmatches[1]), string(passSubmatches[1]))
-	if noTLSSubmatches != nil {
-		destString += fmt.Sprintf("notls=%s\n", noTLSSubmatches[1])
-	}
-
-	dest.WriteString(destString)
-
-	return nil
 }

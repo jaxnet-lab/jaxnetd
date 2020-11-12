@@ -33,4 +33,4 @@ node:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
 metrics:
-  enable: true
+#  enable: true
