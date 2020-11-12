@@ -612,9 +612,8 @@ mempoolLoop:
 			entry := utxos.LookupEntry(txIn.PreviousOutPoint)
 			if entry == nil || entry.IsSpent() {
 				if !g.txSource.HaveTransaction(originHash) {
-					log.Trace().Msgf("Skipping tx %s because it "+
-						"references unspent output %s "+
-						"which is not available",
+					log.Trace().Msgf(
+						"Skipping tx %s because it references unspent output %s which is not available",
 						tx.Hash(), txIn.PreviousOutPoint)
 					continue mempoolLoop
 				}
@@ -740,8 +739,7 @@ mempoolLoop:
 		if blockPlusTxWeight < blockWeight ||
 			blockPlusTxWeight >= g.policy.BlockMaxWeight {
 
-			log.Trace().Msgf("Skipping tx %s because it would exceed "+
-				"the max block weight", tx.Hash())
+			log.Trace().Msgf("Skipping tx %s because it would exceed the max block weight", tx.Hash())
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -751,15 +749,13 @@ mempoolLoop:
 		sigOpCost, err := chaindata.GetSigOpCost(tx, false,
 			blockUtxos, true, segwitActive)
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in "+
-				"GetSigOpCost: %v", tx.Hash(), err)
+			log.Trace().Msgf("Skipping tx %s due to error in GetSigOpCost: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
 		if blockSigOpCost+int64(sigOpCost) < blockSigOpCost ||
 			blockSigOpCost+int64(sigOpCost) > chaindata.MaxBlockSigOpsCost {
-			log.Trace().Msgf("Skipping tx %s because it would "+
-				"exceed the maximum sigops per block", tx.Hash())
+			log.Trace().Msgf("Skipping tx %s because it would exceed the maximum sigops per block", tx.Hash())
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -770,9 +766,9 @@ mempoolLoop:
 			prioItem.feePerKB < int64(g.policy.TxMinFreeFee) &&
 			blockPlusTxWeight >= g.policy.BlockMinWeight {
 
-			log.Trace().Msgf("Skipping tx %s with feePerKB %d "+
-				"< TxMinFreeFee %d and block weight %d >= "+
-				"minBlockWeight %d", tx.Hash(), prioItem.feePerKB,
+			log.Trace().Msgf(
+				"Skipping tx %s with feePerKB %d < TxMinFreeFee %d and block weight %d >= minBlockWeight %d",
+				tx.Hash(), prioItem.feePerKB,
 				g.policy.TxMinFreeFee, blockPlusTxWeight,
 				g.policy.BlockMinWeight)
 			logSkippedDeps(tx, deps)
@@ -785,9 +781,8 @@ mempoolLoop:
 		if !sortedByFee && (blockPlusTxWeight >= g.policy.BlockPrioritySize ||
 			prioItem.priority <= MinHighPriority) {
 
-			log.Trace().Msgf("Switching to sort by fees per "+
-				"kilobyte blockSize %d >= BlockPrioritySize "+
-				"%d || priority %.2f <= minHighPriority %.2f",
+			log.Trace().Msgf(
+				"Switching to sort by fees per kilobyte blockSize %d >= BlockPrioritySize %d || priority %.2f <= minHighPriority %.2f",
 				blockPlusTxWeight, g.policy.BlockPrioritySize,
 				prioItem.priority, MinHighPriority)
 
@@ -813,8 +808,7 @@ mempoolLoop:
 		_, err = chaindata.CheckTransactionInputs(tx, nextHeight,
 			blockUtxos, g.chainCtx.Params())
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in "+
-				"CheckTransactionInputs: %v", tx.Hash(), err)
+			log.Trace().Msgf("Skipping tx %s due to error in CheckTransactionInputs: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -822,8 +816,7 @@ mempoolLoop:
 			txscript.StandardVerifyFlags, g.blockChain.SigCache,
 			g.blockChain.HashCache)
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in "+
-				"ValidateTransactionScripts: %v", tx.Hash(), err)
+			log.Trace().Msgf("Skipping tx %s due to error in ValidateTransactionScripts: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -957,8 +950,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 		return err
 	}
 	if len(coinbaseScript) > chaindata.MaxCoinbaseScriptLen {
-		return fmt.Errorf("coinbase transaction script length "+
-			"of %d is out of range (min: %d, max: %d)",
+		return fmt.Errorf("coinbase transaction script length of %d is out of range (min: %d, max: %d)",
 			len(coinbaseScript), chaindata.MinCoinbaseScriptLen,
 			chaindata.MaxCoinbaseScriptLen)
 	}

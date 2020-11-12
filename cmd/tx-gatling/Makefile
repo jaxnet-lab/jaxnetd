@@ -31,7 +31,8 @@ sync_miner:
 	go run $(GATLING_PKG) -f data/miner_utxo.csv sync -a $(MINER_ADDR)
 
 sync_miner_for_shard:
-	go run $(GATLING_PKG) -f data/miner_utxo_1.csv --shard 1 sync -a $(MINER_ADDR)
+	go run $(GATLING_PKG) -f data/miner_utxo_1.csv --shard 1 sync
+	go run $(GATLING_PKG) -f data/miner_utxo_2.csv --shard 2 sync
 
 sync_alice:
 	go run $(GATLING_PKG) -f data/alice_utxo.csv sync -a $(ALICE_ADDR)

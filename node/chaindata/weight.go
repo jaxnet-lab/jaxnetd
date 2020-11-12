@@ -95,14 +95,20 @@ func GetSigOpCost(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bi
 
 	if segWit && !isCoinBaseTx {
 		msgTx := tx.MsgTx()
+		missingCount := 0
+		thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
 		for txInIndex, txIn := range msgTx.TxIn {
 			// Ensure the referenced output is available and hasn't
 			// already been spent.
 			utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-			if utxo == nil || utxo.IsSpent() {
-				str := fmt.Sprintf("output %v referenced from "+
-					"transaction %s:%d either does not "+
-					"exist or has already been spent",
+			if utxo == nil && thisIsSwapTx && missingCount < 2 {
+				missingCount += 1
+				continue
+			}
+
+			if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+				str := fmt.Sprintf(
+					"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 					txIn.PreviousOutPoint, tx.Hash(),
 					txInIndex)
 				return 0, NewRuleError(ErrMissingTxOut, str)

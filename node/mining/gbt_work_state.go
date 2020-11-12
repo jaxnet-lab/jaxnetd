@@ -384,8 +384,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
-			Message: fmt.Sprintf("The template time is after the "+
-				"maximum allowed time for a block - template "+
+			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
 		}
@@ -460,8 +459,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
-			Message: fmt.Sprintf("The template time is after the "+
-				"maximum allowed time for a block - template "+
+			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
 		}

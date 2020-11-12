@@ -207,8 +207,7 @@ func (b *BlockChain) initChainState() error {
 				blockHash := header.BlockHash()
 				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
 					return chaindata.AssertError(fmt.Sprintf(
-						"initChainState: Expected first entry in block index to be genesis block:"+
-							" expected %s, found %s",
+						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chainParams.GenesisHash, blockHash))
 				}
 			} else if header.PrevBlock() == lastNode.GetHash() {
@@ -220,8 +219,8 @@ func (b *BlockChain) initChainState() error {
 				prev := header.PrevBlock()
 				parent = b.index.LookupNode(&prev)
 				if parent == nil {
-					return chaindata.AssertError(fmt.Sprintf("initChainState: Could "+
-						"not find parent for block %s", header.BlockHash()))
+					return chaindata.AssertError(fmt.Sprintf(
+						"initChainState: Could not find parent for block %s", header.BlockHash()))
 				}
 			}
 
@@ -239,8 +238,8 @@ func (b *BlockChain) initChainState() error {
 		// Set the best chain view to the stored best state.
 		tip := b.index.LookupNode(&state.Hash)
 		if tip == nil {
-			return chaindata.AssertError(fmt.Sprintf("initChainState: cannot find "+
-				"chain tip %s in block index", state.Hash))
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: cannot find chain tip %s in block index", state.Hash))
 		}
 		b.bestChain.SetTip(tip)
 
@@ -265,9 +264,8 @@ func (b *BlockChain) initChainState() error {
 			// we'll mark it as valid now to ensure consistency once
 			// we're up and running.
 			if !iterNode.Status().KnownValid() {
-				log.Info().Msgf("Block %v (height=%v) ancestor of "+
-					"chain tip not marked as valid, "+
-					"upgrading to valid for consistency",
+				log.Info().Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid," +
+					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 
 				b.index.SetStatusFlags(iterNode, blocknode.StatusValid)

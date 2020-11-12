@@ -60,10 +60,14 @@ out:
 			// Ensure the referenced input utxo is available.
 			txIn := txVI.txIn
 			utxo := v.utxoView.LookupEntry(txIn.PreviousOutPoint)
+			thisIsSwapTx := txVI.tx.MsgTx().Version == wire.TxVerShardsSwap
+			if utxo == nil && thisIsSwapTx {
+				v.sendResult(nil)
+				continue
+			}
+
 			if utxo == nil {
-				str := fmt.Sprintf("unable to find unspent "+
-					"output %v referenced from "+
-					"transaction %s:%d",
+				str := fmt.Sprintf("unable to find unspent output %v referenced from transaction %s:%d",
 					txIn.PreviousOutPoint, txVI.tx.Hash(),
 					txVI.txInIndex)
 				err := NewRuleError(ErrMissingTxOut, str)

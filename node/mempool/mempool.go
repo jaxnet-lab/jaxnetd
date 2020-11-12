@@ -1062,7 +1062,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 			missingParents = append(missingParents, &hashCopy)
 		}
 	}
-	if len(missingParents) > 0 {
+
+	missingParentsCount := len(missingParents)
+	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+	// for the the swap tx allowed only one missing parent
+	if (!thisIsSwapTx && missingParentsCount > 0) || (thisIsSwapTx && missingParentsCount > 1) {
 		return missingParents, nil, nil
 	}
 

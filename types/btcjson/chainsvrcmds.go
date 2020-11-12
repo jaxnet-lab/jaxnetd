@@ -319,8 +319,7 @@ func convertTemplateRequestField(fieldName string, iface interface{}) (interface
 		}
 	}
 
-	str := fmt.Sprintf("the %s field must be unspecified, a boolean, or "+
-		"a 64-bit integer", fieldName)
+	str := fmt.Sprintf("the %s field must be unspecified, a boolean, or a 64-bit integer", fieldName)
 	return nil, makeError(ErrInvalidType, str)
 }
 

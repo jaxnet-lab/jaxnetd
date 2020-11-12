@@ -166,8 +166,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 		if err == nil {
 			txOuts := originTx.MsgTx().TxOut
 			if origin.Index >= uint32(len(txOuts)) {
-				errStr := fmt.Sprintf("unable to find output "+
-					"%v referenced from transaction %s:%d",
+				errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d",
 					origin, tx.TxHash(), txInIndex)
 				return nil, server.InternalRPCError(errStr, "")
 			}
@@ -207,8 +206,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 
 		// Add the referenced output to the map.
 		if origin.Index >= uint32(len(msgTx.TxOut)) {
-			errStr := fmt.Sprintf("unable to find output %v "+
-				"referenced from transaction %s:%d", origin,
+			errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d", origin,
 				tx.TxHash(), txInIndex)
 			return nil, server.InternalRPCError(errStr, "")
 		}
