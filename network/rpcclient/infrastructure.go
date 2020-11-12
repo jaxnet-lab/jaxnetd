@@ -189,6 +189,14 @@ type Client struct {
 	wg              sync.WaitGroup
 }
 
+// SetShard changes permanent shardID config.
+func (c *Client) SetShard(shardID uint32) *Client {
+	c.shardID = shardID
+	return c
+}
+
+// ForBeacon sets temporally shardID to zero.
+// oneTimeShardID will be dropped after first RPC call.
 func (c *Client) ForBeacon() *Client {
 	if c.shardID != 0 || c.oneTimeShardID != nil {
 		return c.ForShard(0)
@@ -197,6 +205,8 @@ func (c *Client) ForBeacon() *Client {
 	return c
 }
 
+// ForShard sets temporally shardID.
+// oneTimeShardID will be dropped after first RPC call.
 func (c *Client) ForShard(shardID uint32) *Client {
 	c.oneTimeShardID = &shardID
 	return c

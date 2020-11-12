@@ -319,8 +319,7 @@ func convertTemplateRequestField(fieldName string, iface interface{}) (interface
 		}
 	}
 
-	str := fmt.Sprintf("the %s field must be unspecified, a boolean, or "+
-		"a 64-bit integer", fieldName)
+	str := fmt.Sprintf("the %s field must be unspecified, a boolean, or a 64-bit integer", fieldName)
 	return nil, makeError(ErrInvalidType, str)
 }
 
@@ -929,19 +928,19 @@ func init() {
 	MustRegisterCmd("chain", "createRawTransaction", (*CreateRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "decodeRawTransaction", (*DecodeRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "estimateFee", (*EstimateFeeCmd)(nil), flags)
-	MustRegisterCmd("chain", "estimatesmartfee", (*EstimateSmartFeeCmd)(nil), flags)
-	MustRegisterCmd("chain", "getmempoolinfo", (*GetMempoolInfoCmd)(nil), flags)
-	MustRegisterCmd("chain", "getrawmempool", (*GetRawMempoolCmd)(nil), flags)
-	MustRegisterCmd("chain", "getrawtransaction", (*GetRawTransactionCmd)(nil), flags)
+	MustRegisterCmd("chain", "estimateSmartFee", (*EstimateSmartFeeCmd)(nil), flags)
+	MustRegisterCmd("chain", "getMempoolInfo", (*GetMempoolInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
+	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)
 	MustRegisterCmd("chain", "sendRawTransaction", (*SendRawTransactionCmd)(nil), flags)
 
 	MustRegisterCmd("chain", "getBestBlock", (*GetBestBlockCmd)(nil), flags)
 	MustRegisterCmd("chain", "getBestBlockHash", (*GetBestBlockHashCmd)(nil), flags)
-	MustRegisterCmd("chain", "getblockchaininfo", (*GetBlockChainInfoCmd)(nil), flags)
-	MustRegisterCmd("chain", "getblockcount", (*GetBlockCountCmd)(nil), flags)
-	MustRegisterCmd("chain", "getblockhash", (*GetBlockHashCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockchainInfo", (*GetBlockChainInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockCount", (*GetBlockCountCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockHash", (*GetBlockHashCmd)(nil), flags)
 	MustRegisterCmd("chain", "getCFilter", (*GetCFilterCmd)(nil), flags)
 	MustRegisterCmd("chain", "getCFilterHeader", (*GetCFilterHeaderCmd)(nil), flags)
 	MustRegisterCmd("chain", "submitBlock", (*SubmitBlockCmd)(nil), flags)
@@ -949,7 +948,7 @@ func init() {
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)
 	MustRegisterCmd("node", "getInfo", (*GetInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getnetworkinfo", (*GetNetworkInfoCmd)(nil), flags)
+	MustRegisterCmd("node", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("node", "uptime", (*UptimeCmd)(nil), flags)
 
 	MustRegisterCmd("node", "manageShards", (*ManageShardsCmd)(nil), flags)
@@ -957,12 +956,12 @@ func init() {
 
 	MustRegisterCmd("node", "generate", (*GenerateCmd)(nil), flags)
 	MustRegisterCmd("node", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
-	MustRegisterCmd("node", "getmininginfo", (*GetMiningInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getnetworkhashps", (*GetNetworkHashPSCmd)(nil), flags)
+	MustRegisterCmd("node", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)
+	MustRegisterCmd("node", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
 
 	MustRegisterCmd("node", "setGenerate", (*SetGenerateCmd)(nil), flags)
 	MustRegisterCmd("node", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
-	MustRegisterCmd("node", "getchaintxstats", (*GetChainStatsCmd)(nil), flags)
+	MustRegisterCmd("node", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
 	MustRegisterCmd("node", "debugLevel", (*DebugLevelCmd)(nil), flags)
 	MustRegisterCmd("node", "help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("node", "stop", (*StopCmd)(nil), flags)
@@ -970,17 +969,17 @@ func init() {
 	// ---- beacon rpc commands ----------------------------------------------------------------------------------------
 	MustRegisterCmd("beacon", "getBeaconBlock", (*GetBeaconBlockCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconBlockHeader", (*GetBeaconBlockHeaderCmd)(nil), flags)
-	MustRegisterCmd("beacon", "getblockheader", (*GetBeaconBlockHeaderCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBlockHeader", (*GetBeaconBlockHeaderCmd)(nil), flags) // todo: must be removed
 	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBeaconBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
-	MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
+	// MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------
 	MustRegisterCmd("shard", "getShardBlock", (*GetShardBlockCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardBlockHeader", (*GetShardBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardBlockTemplate", (*GetShardBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardHeaders", (*GetShardHeadersCmd)(nil), flags)
-	MustRegisterCmd("shard", "getShardBlockHash", (*GetBlockHashCmd)(nil), flags)
+	// MustRegisterCmd("shard", "getShardBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- NOT IMPLEMENTED --------------------------------------------------------------------------------------------
 	MustRegisterCmd("chain", "getchaintips", (*GetChainTipsCmd)(nil), flags)

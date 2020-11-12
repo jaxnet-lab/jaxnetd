@@ -463,8 +463,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 	if c.IncludeMempool != nil {
 		includeMempool = *c.IncludeMempool
 	}
-	// TODO: This is racy.  It should attempt to fetch it directly and check
-	// the error.
+	// TODO: This is racy.  It should attempt to fetch it directly and check the error.
 	if includeMempool && server.chainProvider.TxMemPool.HaveTransaction(txHash) {
 		tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 		if err != nil {

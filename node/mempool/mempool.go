@@ -874,10 +874,9 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 	)
 	for hash, conflict := range conflicts {
 		if txFeeRate <= mp.pool[hash].FeePerKB {
-			str := fmt.Sprintf("replacement transaction %v has an "+
-				"insufficient fee rate: needs more than %v, "+
-				"has %v", tx.Hash(), mp.pool[hash].FeePerKB,
-				txFeeRate)
+			str := fmt.Sprintf(
+				"replacement transaction %v has an insufficient fee rate: needs more than %v, has %v",
+				tx.Hash(), mp.pool[hash].FeePerKB, txFeeRate)
 			return nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 
@@ -895,8 +894,7 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 	// which is determined by our minimum relay fee.
 	minFee := calcMinRequiredTxRelayFee(txSize, mp.cfg.Policy.MinRelayTxFee)
 	if txFee < conflictsFee+minFee {
-		str := fmt.Sprintf("replacement transaction %v has an "+
-			"insufficient absolute fee: needs %v, has %v",
+		str := fmt.Sprintf("replacement transaction %v has an insufficient absolute fee: needs %v, has %v",
 			tx.Hash(), conflictsFee+minFee, txFee)
 		return nil, txRuleError(wire.RejectInsufficientFee, str)
 	}
@@ -1062,7 +1060,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 			missingParents = append(missingParents, &hashCopy)
 		}
 	}
-	if len(missingParents) > 0 {
+
+	missingParentsCount := len(missingParents)
+	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+	// for the the swap tx allowed only one missing parent
+	if (!thisIsSwapTx && missingParentsCount > 0) || (thisIsSwapTx && missingParentsCount > 1) {
 		return missingParents, nil, nil
 	}
 
@@ -1148,12 +1150,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// transaction does not exceeed 1000 less than the reserved space for
 	// high-priority transactions, don't require a fee for it.
 	serializedSize := GetTxVirtualSize(tx)
-	minFee := calcMinRequiredTxRelayFee(serializedSize,
-		mp.cfg.Policy.MinRelayTxFee)
+	minFee := calcMinRequiredTxRelayFee(serializedSize, mp.cfg.Policy.MinRelayTxFee)
 	if serializedSize >= (DefaultBlockPrioritySize-1000) && txFee < minFee {
-		str := fmt.Sprintf("transaction %v has %d fees which is under "+
-			"the required amount of %d", txHash, txFee,
-			minFee)
+		str := fmt.Sprintf("transaction %v has %d fees which is under the required amount of %d",
+			txHash, txFee, minFee)
 		return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 	}
 
@@ -1165,9 +1165,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		currentPriority := mining.CalcPriority(tx.MsgTx(), utxoView,
 			nextBlockHeight)
 		if currentPriority <= mining.MinHighPriority {
-			str := fmt.Sprintf("transaction %v has insufficient "+
-				"priority (%g <= %g)", txHash,
-				currentPriority, mining.MinHighPriority)
+			str := fmt.Sprintf("transaction %v has insufficient priority (%g <= %g)",
+				txHash, currentPriority, mining.MinHighPriority)
 			return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 	}
@@ -1184,8 +1183,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 
 		// Are we still over the limit?
 		if mp.pennyTotal >= mp.cfg.Policy.FreeTxRelayLimit*10*1000 {
-			str := fmt.Sprintf("transaction %v has been rejected "+
-				"by the rate limiter due to low fees", txHash)
+			str := fmt.Sprintf("transaction %v has been rejected by the rate limiter due to low fees", txHash)
 			return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 		oldTotal := mp.pennyTotal

@@ -574,9 +574,9 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 	for txInIndex, txIn := range mTx.TxIn {
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if utxo == nil {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOutPoint,
+			str := fmt.Sprintf(
+				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
+				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return sequenceLock, chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
 		}

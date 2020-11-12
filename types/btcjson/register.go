@@ -199,8 +199,7 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 
 	// Ensure that no unrecognized flag bits were specified.
 	if ^(highestUsageFlagBit-1)&flags != 0 {
-		str := fmt.Sprintf("invalid usage flags specified for method "+
-			"%s.%s: %v", scope, method, flags)
+		str := fmt.Sprintf("invalid usage flags specified for method %s.%s: %v", scope, method, flags)
 		return makeError(ErrInvalidUsageFlags, str)
 	}
 
@@ -225,13 +224,11 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 	for i := 0; i < numFields; i++ {
 		rtf := rt.Field(i)
 		if rtf.Anonymous {
-			str := fmt.Sprintf("embedded fields are not supported "+
-				"(field name: %q)", rtf.Name)
+			str := fmt.Sprintf("embedded fields are not supported (field name: %q)", rtf.Name)
 			return makeError(ErrEmbeddedType, str)
 		}
 		if rtf.PkgPath != "" {
-			str := fmt.Sprintf("unexported fields are not supported "+
-				"(field name: %q)", rtf.Name)
+			str := fmt.Sprintf("unexported fields are not supported (field name: %q)", rtf.Name)
 			return makeError(ErrUnexportedField, str)
 		}
 
@@ -245,8 +242,7 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 			fallthrough
 		default:
 			if !isAcceptableKind(kind) {
-				str := fmt.Sprintf("unsupported field type "+
-					"'%s (%s)' (field name %q)", rtf.Type,
+				str := fmt.Sprintf("unsupported field type '%s (%s)' (field name %q)", rtf.Type,
 					baseKindString(rtf.Type), rtf.Name)
 				return makeError(ErrUnsupportedFieldType, str)
 			}
@@ -258,9 +254,9 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 			numOptFields++
 		} else {
 			if numOptFields > 0 {
-				str := fmt.Sprintf("all fields after the first "+
-					"optional field must also be optional "+
-					"(field name %q)", rtf.Name)
+				str := fmt.Sprintf(
+					"all fields after the first optional field must also be optional (field name %q)",
+					rtf.Name)
 				return makeError(ErrNonOptionalField, str)
 			}
 		}
@@ -269,17 +265,15 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 		// and that defaults are only specified for optional fields.
 		if tag := rtf.Tag.Get("jsonrpcdefault"); tag != "" {
 			if !isOptional {
-				str := fmt.Sprintf("required fields must not "+
-					"have a default specified (field name "+
-					"%q)", rtf.Name)
+				str := fmt.Sprintf("required fields must not have a default specified (field name %q)",
+					rtf.Name)
 				return makeError(ErrNonOptionalDefault, str)
 			}
 
 			rvf := reflect.New(rtf.Type.Elem())
 			err := json.Unmarshal([]byte(tag), rvf.Interface())
 			if err != nil {
-				str := fmt.Sprintf("default value of %q is "+
-					"the wrong type (field name %q)", tag,
+				str := fmt.Sprintf("default value of %q is the wrong type (field name %q)", tag,
 					rtf.Name)
 				return makeError(ErrMismatchedDefault, str)
 			}

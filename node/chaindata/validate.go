@@ -394,13 +394,19 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 	// inputs.
 	msgTx := tx.MsgTx()
 	totalSigOps := 0
+	missingCount := 0
+	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
 	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil || utxo.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOutPoint,
+		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+			missingCount += 1
+			continue
+		}
+
+		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+			str := fmt.Sprintf("output %v referenced from transaction %s:%d either does not exist or has already been spent",
+				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
 		}
@@ -665,15 +671,26 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 
 	txHash := tx.Hash()
 	var totalSatoshiIn int64
+
+	missingCount := 0
+	missedInputs := map[int]struct{}{}
+	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil || utxo.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOutPoint,
+		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+			missingCount += 1
+			missedInputs[txInIndex] = struct{}{}
+			continue
+		}
+
+		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+			str := fmt.Sprintf(
+				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
+				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
+
 		}
 
 		// Ensure the transaction is not spending coins which have not
@@ -732,12 +749,17 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
 	var totalSatoshiOut int64
-	for _, txOut := range tx.MsgTx().TxOut {
+	for outIndex, txOut := range tx.MsgTx().TxOut {
+		// for swap txs, the missed inputs are inputs from another chain,
+		// outputs with matching indices are not added to the current chain and should be ignored
+		if _, ok := missedInputs[outIndex]; ok {
+			continue
+		}
 		totalSatoshiOut += txOut.Value
 	}
 
 	// Ensure the transaction does not spend more than its inputs.
-	if totalSatoshiIn < totalSatoshiOut {
+	if totalSatoshiIn < totalSatoshiOut && !thisIsSwapTx { // todo(mike):
 		str := fmt.Sprintf("total value of all transaction inputs for "+
 			"transaction %v is %v which is less than the amount "+
 			"spent of %v", txHash, totalSatoshiIn, totalSatoshiOut)

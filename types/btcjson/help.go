@@ -527,8 +527,7 @@ func GenerateHelp(method string, descs map[string]string, resultTypes ...interfa
 
 		elemKind := rtp.Elem().Kind()
 		if !isValidResultType(elemKind) {
-			str := fmt.Sprintf("result #%d (%v) is not an allowed "+
-				"type", i, elemKind)
+			str := fmt.Sprintf("result #%d (%v) is not an allowed type", i, elemKind)
 			return "", makeError(ErrInvalidType, str)
 		}
 	}

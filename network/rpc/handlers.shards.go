@@ -31,8 +31,8 @@ func NewShardRPC(chainProvider *cprovider.ChainProvider,
 	logger zerolog.Logger) *ShardRPC {
 	rpc := &ShardRPC{
 		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger.With().
-		Uint32("id", chainProvider.ChainCtx.ShardID()).
-		Str("ctx", "shard_rpc").Logger()),
+			Uint32("id", chainProvider.ChainCtx.ShardID()).
+			Str("ctx", "shard_rpc").Logger()),
 	}
 
 	rpc.ComposeHandlers()
@@ -61,7 +61,7 @@ func (server *ShardRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("shard", "getShardBlock"):         server.handleGetBlock,
 		btcjson.ScopedMethod("shard", "getShardBlockHeader"):   server.handleGetBlockHeader,
 		btcjson.ScopedMethod("shard", "getShardBlockTemplate"): server.handleGetBlockTemplate,
-		btcjson.ScopedMethod("shard", "getShardBlockHash"):     server.handleGetBlockHash,
+		// btcjson.ScopedMethod("shard", "getShardBlockHash"):     server.handleGetBlockHash,
 	}
 }
 

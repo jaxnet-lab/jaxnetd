@@ -84,8 +84,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		for i := 0; i < len(b.prevOrphans[*processHash]); i++ {
 			orphan := b.prevOrphans[*processHash][i]
 			if orphan == nil {
-				log.Warn().Msgf("Found a nil entry at index %d in the "+
-					"orphan dependency list for block %v", i,
+				log.Warn().Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i,
 					processHash)
 				continue
 			}
@@ -166,9 +165,8 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 		// Ensure the block timestamp is after the checkpoint timestamp.
 		checkpointTime := time.Unix(checkpointNode.Timestamp(), 0)
 		if blockHeader.Timestamp().Before(checkpointTime) {
-			str := fmt.Sprintf("block %v has timestamp %v before "+
-				"last checkpoint timestamp %v", blockHash,
-				blockHeader.Timestamp(), checkpointTime)
+			str := fmt.Sprintf("block %v has timestamp %v before last checkpoint timestamp %v",
+				blockHash, blockHeader.Timestamp(), checkpointTime)
 			return false, false, chaindata.NewRuleError(chaindata.ErrCheckpointTimeTooOld, str)
 		}
 		if !fastAdd {
@@ -183,8 +181,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 				checkpointNode.Bits(), duration))
 			currentTarget := pow.CompactToBig(blockHeader.Bits())
 			if currentTarget.Cmp(requiredTarget) > 0 {
-				str := fmt.Sprintf("block target difficulty of %064x "+
-					"is too low when compared to the previous "+
+				str := fmt.Sprintf("block target difficulty of %064x is too low when compared to the previous "+
 					"checkpoint", currentTarget)
 				return false, false, chaindata.NewRuleError(chaindata.ErrDifficultyTooLow, str)
 			}

@@ -216,14 +216,15 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.OutPoint]struct{})
+	txVersions := make(map[wire.OutPoint]int32)
 	for _, tx := range block.Transactions() {
 		prevOut := wire.OutPoint{Hash: *tx.Hash()}
+		txVersions[prevOut] = tx.MsgTx().Version
 		for txOutIdx := range tx.MsgTx().TxOut {
 			prevOut.Index = uint32(txOutIdx)
 			fetchSet[prevOut] = struct{}{}
 		}
 	}
-	// todo: allow swap
 	err := view.FetchUtxos(b.db, fetchSet)
 	if err != nil {
 		return err
@@ -232,10 +233,15 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 	// Duplicate transactions are only allowed if the previous transaction
 	// is fully spent.
 	for outpoint := range fetchSet {
+		thisIsSwapTx := txVersions[outpoint] == wire.TxVerShardsSwap
 		utxo := view.LookupEntry(outpoint)
+		if utxo != nil && thisIsSwapTx {
+			continue
+		}
+
 		if utxo != nil && !utxo.IsSpent() {
-			str := fmt.Sprintf("tried to overwrite transaction %v "+
-				"at block height %d that is not fully spent",
+			str := fmt.Sprintf(
+				"tried to overwrite transaction %v at block height %d that is not fully spent",
 				outpoint.Hash, utxo.BlockHeight())
 			return chaindata.NewRuleError(chaindata.ErrOverwriteTx, str)
 		}

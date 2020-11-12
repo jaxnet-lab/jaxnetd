@@ -217,8 +217,7 @@ tests:
 
 		extKey, err := NewMaster(masterSeed, test.net)
 		if err != nil {
-			t.Errorf("NewMaster #%d (%s): unexpected error when "+
-				"creating new master key: %v", i, test.name,
+			t.Errorf("NewMaster #%d (%s): unexpected error when creating new master key: %v", i, test.name,
 				err)
 			continue
 		}

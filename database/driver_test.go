@@ -56,8 +56,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// detected if the interface allows a duplicate driver to overwrite an
 	// existing one.
 	bogusCreateDB := func(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
-		return nil, fmt.Errorf("duplicate driver allowed for database "+
-			"type [%v]", dbType)
+		return nil, fmt.Errorf("duplicate driver allowed for database type [%v]", dbType)
 	}
 
 	// Create a driver that tries to replace an existing one.  Set its

@@ -62,8 +62,7 @@ func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEnco
 func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
 	size := len(msg.Data)
 	if size > MaxCFilterDataSize {
-		str := fmt.Sprintf("cfilter size too large for message "+
-			"[size %v, max %v]", size, MaxCFilterDataSize)
+		str := fmt.Sprintf("cfilter size too large for message [size %v, max %v]", size, MaxCFilterDataSize)
 		return messageError("MsgCFilter.BtcEncode", str)
 	}
 

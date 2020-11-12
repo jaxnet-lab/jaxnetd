@@ -93,8 +93,8 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "createRawTransaction"):  server.handleCreateRawTransaction,
 		btcjson.ScopedMethod("chain", "decodeRawTransaction"):  server.handleDecodeRawTransaction,
 		btcjson.ScopedMethod("chain", "estimateFee"):           server.handleEstimateFee,
-		btcjson.ScopedMethod("chain", "estimatesmartfee"):      server.handleEstimateSmartFee,
-		btcjson.ScopedMethod("chain", "getmempoolinfo"):        server.handleGetMempoolInfo,
+		btcjson.ScopedMethod("chain", "estimateSmartFee"):      server.handleEstimateSmartFee,
+		btcjson.ScopedMethod("chain", "getMempoolInfo"):        server.handleGetMempoolInfo,
 		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
 		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
 		btcjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
@@ -105,9 +105,9 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		// ---- block-related commands ----------------------------
 		btcjson.ScopedMethod("chain", "getBestBlock"):      server.handleGetBestBlock,
 		btcjson.ScopedMethod("chain", "getBestBlockHash"):  server.handleGetBestBlockHash,
-		btcjson.ScopedMethod("chain", "getblockchaininfo"): server.handleGetBlockChainInfo,
-		btcjson.ScopedMethod("chain", "getblockvount"):     server.handleGetBlockCount,
-		btcjson.ScopedMethod("chain", "getblockhash"):      server.handleGetBlockHash,
+		btcjson.ScopedMethod("chain", "getBlockchainInfo"): server.handleGetBlockChainInfo,
+		btcjson.ScopedMethod("chain", "getBlockCount"):     server.handleGetBlockCount,
+		btcjson.ScopedMethod("chain", "getBlockHash"):      server.handleGetBlockHash,
 		btcjson.ScopedMethod("chain", "getCFilter"):        server.handleGetCFilter,
 		btcjson.ScopedMethod("chain", "getCFilterHeader"):  server.handleGetCFilterHeader,
 		btcjson.ScopedMethod("chain", "submitBlock"):       server.handleSubmitBlock,
@@ -166,8 +166,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 		if err == nil {
 			txOuts := originTx.MsgTx().TxOut
 			if origin.Index >= uint32(len(txOuts)) {
-				errStr := fmt.Sprintf("unable to find output "+
-					"%v referenced from transaction %s:%d",
+				errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d",
 					origin, tx.TxHash(), txInIndex)
 				return nil, server.InternalRPCError(errStr, "")
 			}
@@ -207,8 +206,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 
 		// Add the referenced output to the map.
 		if origin.Index >= uint32(len(msgTx.TxOut)) {
-			errStr := fmt.Sprintf("unable to find output %v "+
-				"referenced from transaction %s:%d", origin,
+			errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d", origin,
 				tx.TxHash(), txInIndex)
 			return nil, server.InternalRPCError(errStr, "")
 		}

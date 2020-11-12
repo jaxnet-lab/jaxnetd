@@ -105,13 +105,13 @@ func TestMakeMultiSigScript(ot *testing.T) {
 
 	// publish created transaction
 
-	txHash, err := op.TxMan.RPC.ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
+	txHash, err := op.TxMan.RPC().ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
 	assert.NoError(t, err)
 
 waitLoop:
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 1 {
 			fmt.Println("tx mined into block")
@@ -160,12 +160,12 @@ waitLoop:
 
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
-	txHash, err = op.TxMan.RPC.ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
+	txHash, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -182,15 +182,114 @@ func TestMakeSwapTx(ot *testing.T) {
 	var shardID1 uint32 = 1
 	var shardID2 uint32 = 2
 
+	aliceSk := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	// -----------------------------------------------------------------------------------------
+
+	// ---/---- PREPARE ----\----
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			// Host: "116.202.107.209:18333",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	assert.NoError(t, err)
+
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	shard1UTXO := txmodels.UTXO{
+		ShardID:    shardID1,
+		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
+		Value:      5000000000,
+		Height:     1,
+		TxHash:     "5569e2f40f6b3e340b0b744951e489d670e391e8a8125a496c1a0978b9b0fdbe",
+		OutIndex:   0,
+		Used:       false,
+		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
+		ScriptType: "pubkeyhash",
+	}
+	assert.NoError(t, err)
+
+	shard2UTXO := txmodels.UTXO{
+		ShardID:    shardID2,
+		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
+		Value:      5000000000,
+		Height:     1,
+		TxHash:     "b9e5fcd51a17cf0d189b1ed86f7f28198cc077f242d9d88cefc0fde207c535d8",
+		OutIndex:   0,
+		Used:       false,
+		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
+		ScriptType: "pubkeyhash",
+	}
+	assert.NoError(t, err)
+
+	// -----------------------------------------------------------------------------------------
+	destinationAtShard1 := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
+	destinationAtShard2 := "mz6Z8dFaxEAMmnR5ha4CVnKykeY6S3dUwi"
+	spendingMap := map[string]txmodels.UTXO{
+		destinationAtShard1: shard1UTXO,
+		destinationAtShard2: shard2UTXO,
+	}
+	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(spendingMap, false)
+	assert.NoError(t, err)
+
+	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
+	// publish created transaction
+	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	assert.NoError(t, err)
+
+	// for {
+	// 	// wait for the transaction to be added to the block
+	// 	out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+	// 	assert.NoError(t, err)
+	// 	if out != nil && out.Confirmations > 2 {
+	// 		println("tx mined into block")
+	// 		break
+	// 	}
+	//
+	// 	time.Sleep(time.Second)
+	// }
+
+	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	assert.NoError(t, err)
+
+	for {
+		// wait for the transaction to be added to the block
+		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		if out != nil && out.Confirmations > 2 {
+			println("tx mined into block")
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+	// -----------------------------------------------------------------------------------------
+
+}
+
+func TestMakeSimpleSwapTx(ot *testing.T) {
+	t := (*T)(ot)
+	var shardID1 uint32 = 1
+	var shardID2 uint32 = 2
+
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net: "testnet",
+		Net: "fastnet",
 		RPC: NodeRPC{
-			Host: "116.202.107.209:18334",
+			// Host: "116.202.107.209:18333",
+			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
 		},
@@ -277,12 +376,12 @@ func TestMakeSwapTx(ot *testing.T) {
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
 	// publish created transaction
-	txHash, err := op.TxMan.RPC.ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -293,12 +392,12 @@ func TestMakeSwapTx(ot *testing.T) {
 	}
 
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-	txHash, err = op.TxMan.RPC.ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
