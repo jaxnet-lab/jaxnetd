@@ -45,12 +45,17 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 
 	// Limit max number of websocket clients.
 	server.logger.Info().Str("remote", remoteAddr).Msg("New websocket client")
+	server.logger.Info().Msg(fmt.Sprintf("%v", server.wsManager))
+
+	server.logger.Info().Msg("Get num Client")
 	if server.wsManager.NumClients()+1 > server.cfg.MaxWebsockets {
+
 		server.logger.Info().Str("remote", remoteAddr).Int("MaxNumber", server.cfg.MaxWebsockets).Msg("Max websocket clients exceeded")
 		conn.Close()
 		return
 	}
 
+	server.logger.Info().Msg("Create new client")
 	// Create a new websocket client to handle the new websocket connection
 	// and wait for it to shutdown.  Once it has shutdown (and hence
 	// disconnected), remove it and any notifications it registered for.
@@ -60,14 +65,19 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 		conn.Close()
 		return
 	}
+	server.logger.Info().Msg("Register client")
 	server.wsManager.AddClient(client)
+	server.logger.Info().Msg("Start client")
 	client.Start()
+	server.logger.Info().Msg("Wait shut down")
 	client.WaitForShutdown()
+	server.logger.Info().Msg("Unregister client")
 	server.wsManager.RemoveClient(client)
 	server.logger.Info().Str("remote", remoteAddr).Msg("Disconnected websocket client")
 }
 
 type IWebsocketManager interface {
+	Start(ctx context.Context)
 }
 
 // wsNotificationManager is a connection and notification manager used for
@@ -98,18 +108,20 @@ type wsManager struct {
 
 // newWsNotificationManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
-func WebSocketManager(server *MultiChainRPC) *wsManager {
+func WebSocketManager(server *MultiChainRPC, logger zerolog.Logger) *wsManager {
 	return &wsManager{
 		handler:           WebSocketHandlers(server),
 		server:            server,
 		queueNotification: make(chan interface{}),
 		notificationMsgs:  make(chan interface{}),
 		numClients:        make(chan int),
+		logger:logger,
 	}
 }
 
 func (m *wsManager) Start(ctx context.Context) {
 	go m.queueHandler(ctx)
+	go m.notificationHandler(ctx)
 }
 
 // AddClient adds the passed websocket client to the notification manager.
@@ -294,6 +306,8 @@ type notificationUnregisterAddr struct {
 // notificationHandler reads notifications and control messages from the queue
 // handler and processes one at a time.
 func (m *wsManager) notificationHandler(ctx context.Context) {
+	fmt.Println("notificationHandler")
+	m.logger.Info().Msg("Run notificationHandler")
 	childCtx, _ := context.WithCancel(ctx)
 	// clients is a map of all currently connected websocket clients.
 	clients := make(map[chan struct{}]*wsClient)

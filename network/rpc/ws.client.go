@@ -141,6 +141,7 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
+		c.manager.logger.Debug().Err(err).Msg("read message")
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
@@ -337,6 +338,7 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 // manager) which are queuing the data.  The data is passed on to outHandler to
 // actually be written.  It must be run as a goroutine.
 func (c *wsClient) notificationQueueHandler() {
+	c.manager.logger.Info().Msg("Run Handler")
 	ntfnSentChan := make(chan bool, 1) // nonblocking sync
 
 	// pendingNtfns is used as a queue for notifications that are ready to
@@ -517,6 +519,7 @@ func (c *wsClient) Start() {
 
 	// Start processing input and output.
 	c.wg.Add(3)
+
 	go c.inHandler()
 	go c.notificationQueueHandler()
 	go c.outHandler()

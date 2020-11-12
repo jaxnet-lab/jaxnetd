@@ -5,14 +5,13 @@ package rpc
 
 import (
 	"context"
-	"github.com/btcsuite/websocket"
 	"fmt"
-	"net/http"
-	"sync"
-
+	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"net/http"
+	"sync"
 )
 
 type MultiChainRPC struct {
@@ -33,6 +32,7 @@ func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
+	rpc.wsManager = WebSocketManager(rpc, logger)
 
 	return rpc
 }
@@ -56,6 +56,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 
+		server.logger.Info().Msg("Upgrade To websocket")
 		// Attempt to upgrade the connection to a websocket connection
 		// using the default size for read/write bufferserver.
 		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
@@ -67,6 +68,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 		_, _, _ = ws, authenticated, isAdmin
+		server.logger.Info().Msg("WebsocketHandler")
 		server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
 	}
 }
@@ -97,9 +99,9 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			}
 
 			return prcPtr.HandleCommand(cmd, closeChan)
-
 		}))
 
+	server.wsManager.Start(ctx)
 	server.StartRPC(ctx, rpcServeMux)
 }
 
