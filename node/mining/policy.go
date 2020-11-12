@@ -118,8 +118,12 @@ func CalcPriority(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBlockHe
 	// Thus 1 + 73 + 1 + 1 + 33 + 1 = 110
 	overhead := 0
 	for _, txIn := range tx.TxIn {
-		// Max inputs + size can't possibly overflow here.
-		overhead += 41 + minInt(110, len(txIn.SignatureScript))
+		//todo: TBD, not sure, that is proper solution for the case with swapTx
+		entry := utxoView.LookupEntry(txIn.PreviousOutPoint)
+		if entry != nil && !entry.IsSpent() {
+			// Max inputs + size can't possibly overflow here.
+			overhead += 41 + minInt(110, len(txIn.SignatureScript))
+		}
 	}
 
 	serializedTxSize := tx.SerializeSize()
