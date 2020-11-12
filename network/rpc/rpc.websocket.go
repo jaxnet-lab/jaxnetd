@@ -6,8 +6,6 @@
 
 package rpc
 
-import "errors"
-
 //
 //import (
 //	"bytes"
@@ -1647,7 +1645,7 @@ import "errors"
 //
 // ErrClientQuit describes the error where a client send is not processed due
 // to the client having already been disconnected or dropped.
-var ErrClientQuit = errors.New("client quit")
+//var ErrClientQuit = errors.New("client quit")
 
 //
 //// QueueNotification queues the passed notification to be sent to the websocket

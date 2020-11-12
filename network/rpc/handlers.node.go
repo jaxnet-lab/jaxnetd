@@ -27,13 +27,14 @@ type NodeRPC struct {
 	StartupTime   int64
 	MiningAddrs   []btcutil.Address
 	CPUMiner      cpuminer.CPUMiner
-	chainProvider cprovider.ChainProvider
+	chainProvider *cprovider.ChainProvider
 }
 
-func NewNodeRPC(shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
+func NewNodeRPC(provider *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
 	rpc := &NodeRPC{
-		Mux:       NewRPCMux(logger),
-		shardsMgr: shardsMgr,
+		Mux:           NewRPCMux(logger),
+		shardsMgr:     shardsMgr,
+		chainProvider: provider,
 	}
 	rpc.ComposeHandlers()
 
@@ -254,7 +255,7 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 
 	c := cmd.(*btcjson.GetNetworkHashPSCmd)
 	if server.chainProvider.BlockChain() == nil {
-		return 0, nil
+		return int64(0), nil
 	}
 
 	// When the passed height is too high or zero, just return 0 now
@@ -304,14 +305,14 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 		hash, err := server.chainProvider.BlockChain().BlockHashByHeight(curHeight)
 		if err != nil {
 			context := "Failed to fetch block hash"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return int64(0), server.InternalRPCError(err.Error(), context)
 		}
 
 		// Fetch the header from BlockChain.
 		header, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 		if err != nil {
 			context := "Failed to fetch block header"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return int64(0), server.InternalRPCError(err.Error(), context)
 		}
 
 		if curHeight == startHeight {

@@ -39,6 +39,7 @@ type CommonChainRPC struct {
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
+	ntfnMgr       *wsChainManager
 	helpCache     *helpCacher
 }
 
@@ -131,24 +132,23 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 		server.gbtWorkState.NotifyBlockConnected(block.Hash())
 
 	case blockchain.NTBlockConnected:
-		// block, ok := notification.Data.(*btcutil.Block)
-		// if !ok {
-		//	server.Log.Warn().Msgf("Chain connected notification is not a block.")
-		//	break
-		// }
-
-		// Notify registered websocket clients of incoming block.
-		// server.ntfnMgr.NotifyBlockConnected(block)
+		block, ok := notification.Data.(*btcutil.Block)
+		if !ok {
+			server.Log.Warn().Msg("Chain connected notification is not a block.")
+			break
+		}
+		//Notify registered websocket clients of incoming block.
+		server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
 
 	case blockchain.NTBlockDisconnected:
-		// block, ok := notification.Data.(*btcutil.Block)
-		// if !ok {
-		//	server.Log.Warn().Msgf("Chain disconnected notification is not a block.")
-		//	break
-		// }
-
-		// Notify registered websocket clients.
-		// server.ntfnMgr.NotifyBlockDisconnected(block)
+		block, ok := notification.Data.(*btcutil.Block)
+		if !ok {
+			server.Log.Warn().Msg("Chain disconnected notification is not a block.")
+			break
+		}
+		//
+		//Notify registered websocket clients.
+		server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
 	}
 }
 
@@ -680,14 +680,10 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
-	// for _, txD := range txns {
-	//	// Notify websocket clients about mempool transactions.
-	//	//server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
-	//
-	//	// Potentially notify any getblocktemplate long poll clients
-	//	// about stale block templates due to the new transaction.
-	//	server.GBTWorkState.NotifyMempoolTx(server.cfg.TxMemPool.LastUpdated())
-	// }
+	for _, txD := range txns {
+		// Notify websocket clients about mempool transactions.
+		server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
+	}
 }
 
 // handleSubmitBlock implements the submitblock command.

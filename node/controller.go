@@ -40,6 +40,7 @@ type chainController struct {
 	shardsMutex sync.RWMutex
 	ports       *p2p.ChainsPortIndex
 	rpc         rpcRO
+
 	// -------------------------------
 
 	miner   *cpuminer.MultiMiner
@@ -175,12 +176,13 @@ type rpcRO struct {
 	beacon  *rpc.BeaconRPC
 	node    *rpc.NodeRPC
 	connMgr netsync.P2PConnManager
+	//wsMgr   rpc.IWebsocketManager
 }
 
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
-	nodeRPC := rpc.NewNodeRPC(chainCtl, chainCtl.logger)
+	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger)
 	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
@@ -191,8 +193,12 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
 		nodeRPC, beaconRPC, shardRPCs)
 
+	chainCtl.logger.Info().Msg("Create WS RPC server")
+	//chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
 	chainCtl.wg.Add(1)
 	go func() {
+
+		chainCtl.logger.Info().Msg("Run RPC server")
 		chainCtl.rpc.server.Run(ctx)
 		chainCtl.wg.Done()
 	}()

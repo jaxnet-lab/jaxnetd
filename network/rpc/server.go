@@ -42,9 +42,9 @@ type ServerCore struct {
 	shutdown int32
 	cfg      *Config
 
-	authSHA      [sha256.Size]byte
-	limitAuthSHA [sha256.Size]byte
-	// ntfnMgr                *wsNotificationManager
+	authSHA                [sha256.Size]byte
+	limitAuthSHA           [sha256.Size]byte
+	//wsManager              *wsManager
 	numClients             int32
 	statusLines            map[int]string
 	statusLock             sync.RWMutex
@@ -82,6 +82,7 @@ func NewRPCCore(config *Config, logger zerolog.Logger) *ServerCore {
 		rpc.limitAuthSHA = sha256.Sum256([]byte(auth))
 	}
 
+	//rpc.wsManager = newWsNotificationManager(rpc)
 	return rpc
 }
 
@@ -108,8 +109,6 @@ func (server *ServerCore) StartRPC(ctx context.Context, rpcServeMux *http.ServeM
 		}(listener)
 	}
 
-	// server.ntfnMgr.Start()
-
 	<-ctx.Done()
 
 	server.logger.Info().Msg("Shutting down the API Server...")
@@ -135,8 +134,8 @@ func (server *ServerCore) Stop() error {
 			return err
 		}
 	}
-	// server.ntfnMgr.Shutdown()
-	// server.ntfnMgr.WaitForShutdown()
+	//server.wsManager.Shutdown()
+	//server.wsManager.WaitForShutdown()
 	close(server.quit)
 	server.wg.Wait()
 	server.logger.Info().Msgf("RPC Server shutdown complete")

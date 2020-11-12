@@ -6,12 +6,12 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"sync"
-
+	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"net/http"
+	"sync"
 )
 
 type MultiChainRPC struct {
@@ -20,6 +20,8 @@ type MultiChainRPC struct {
 	beaconRPC   *BeaconRPC
 	shardRPCs   map[uint32]*ShardRPC
 	chainsMutex sync.RWMutex
+	helpCache   *helpCacher
+	wsManager   *wsManager
 }
 
 func NewMultiChainRPC(config *Config, logger zerolog.Logger,
@@ -30,6 +32,7 @@ func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
+	rpc.wsManager = WebSocketManager(rpc, logger)
 
 	return rpc
 }
@@ -40,10 +43,41 @@ func (server *MultiChainRPC) AddShard(shardID uint32, rpc *ShardRPC) {
 	server.chainsMutex.Unlock()
 }
 
+func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if server.cfg.WSEnable {
+			http.Error(w, "WS is Unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
+		authenticated, isAdmin, err := server.checkAuth(r, false)
+		if err != nil {
+			jsonAuthFail(w)
+			return
+		}
+
+		server.logger.Info().Msg("Upgrade To websocket")
+		// Attempt to upgrade the connection to a websocket connection
+		// using the default size for read/write bufferserver.
+		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				server.logger.Error().Err(err).Msg("Unexpected websocket")
+			}
+			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+			return
+		}
+		_, _, _ = ws, authenticated, isAdmin
+		server.logger.Info().Msg("WebsocketHandler")
+		server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
+	}
+}
+
 func (server *MultiChainRPC) Run(ctx context.Context) {
 	rpcServeMux := http.NewServeMux()
 
-	// rpcServeMux.HandleFunc("/ws", server.WSHandleFunc())
+	rpcServeMux.HandleFunc("/ws", server.WSHandleFunc())
+
 	rpcServeMux.HandleFunc("/",
 		server.HandleFunc(func(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 			if cmd.scope == "node" {
@@ -65,9 +99,9 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			}
 
 			return prcPtr.HandleCommand(cmd, closeChan)
-
 		}))
 
+	server.wsManager.Start(ctx)
 	server.StartRPC(ctx, rpcServeMux)
 }
 
