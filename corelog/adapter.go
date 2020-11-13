@@ -64,7 +64,6 @@ type Logger struct {
 
 func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	var writers []io.Writer
-
 	if !config.DisableConsoleLog {
 		out := zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}
 		out.TimeFormat = time.RFC3339

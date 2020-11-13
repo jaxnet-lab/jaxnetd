@@ -137,8 +137,11 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			server.Log.Warn().Msg("Chain connected notification is not a block.")
 			break
 		}
-		//Notify registered websocket clients of incoming block.
-		server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
+
+		if server.ntfnMgr != nil {
+			//Notify registered websocket clients of incoming block.
+			server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
+		}
 
 	case blockchain.NTBlockDisconnected:
 		block, ok := notification.Data.(*btcutil.Block)
@@ -146,9 +149,10 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			server.Log.Warn().Msg("Chain disconnected notification is not a block.")
 			break
 		}
-		//
-		//Notify registered websocket clients.
-		server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
+		if server.ntfnMgr != nil {
+			//Notify registered websocket clients.
+			server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
+		}
 	}
 }
 
@@ -680,6 +684,9 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
+	if server.ntfnMgr == nil {
+		return
+	}
 	for _, txD := range txns {
 		// Notify websocket clients about mempool transactions.
 		server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)

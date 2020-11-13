@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,9 +43,9 @@ type ServerCore struct {
 	shutdown int32
 	cfg      *Config
 
-	authSHA                [sha256.Size]byte
-	limitAuthSHA           [sha256.Size]byte
-	//wsManager              *wsManager
+	authSHA      [sha256.Size]byte
+	limitAuthSHA [sha256.Size]byte
+	// wsManager              *wsManager
 	numClients             int32
 	statusLines            map[int]string
 	statusLock             sync.RWMutex
@@ -82,7 +83,7 @@ func NewRPCCore(config *Config, logger zerolog.Logger) *ServerCore {
 		rpc.limitAuthSHA = sha256.Sum256([]byte(auth))
 	}
 
-	//rpc.wsManager = newWsNotificationManager(rpc)
+	// rpc.wsManager = newWsNotificationManager(rpc)
 	return rpc
 }
 
@@ -134,8 +135,8 @@ func (server *ServerCore) Stop() error {
 			return err
 		}
 	}
-	//server.wsManager.Shutdown()
-	//server.wsManager.WaitForShutdown()
+	// server.wsManager.Shutdown()
+	// server.wsManager.WaitForShutdown()
 	close(server.quit)
 	server.wg.Wait()
 	server.logger.Info().Msgf("RPC Server shutdown complete")
@@ -179,6 +180,17 @@ func (server *ServerCore) WSHandleFunc() func(w http.ResponseWriter, r *http.Req
 
 func (server *ServerCore) HandleFunc(handler commandMux) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			rec := recover()
+			if rec != nil {
+				debug.PrintStack()
+				err, _ := rec.(error)
+				server.logger.Error().Err(err).Stack().
+					Interface("recover", rec).
+					Msg("caught panic when handling rpc request")
+			}
+		}()
+
 		w.Header().Set("Connection", "close")
 		w.Header().Set("Content-Type", "application/json")
 		r.Close = true

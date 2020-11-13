@@ -337,6 +337,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 // handleSendRawTransaction implements the sendrawtransaction command.
 func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.SendRawTransactionCmd)
+
 	// Deserialize and send off to tx relay
 	hexStr := c.HexTx
 	if len(hexStr)%2 != 0 {

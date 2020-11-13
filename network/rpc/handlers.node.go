@@ -49,7 +49,7 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 	return map[btcjson.MethodName]CommandHandler{
 		btcjson.ScopedMethod("node", "version"):        server.handleVersion,
 		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
-		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo,
+		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo, // todo: remove
 		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
 
 		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
@@ -57,12 +57,12 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 
 		btcjson.ScopedMethod("node", "generate"):         server.handleGenerate,
 		btcjson.ScopedMethod("node", "getDifficulty"):    server.handleGetDifficulty,
-		btcjson.ScopedMethod("node", "getmininginfo"):    server.handleGetMiningInfo,
-		btcjson.ScopedMethod("node", "getnetworkhashps"): server.handleGetNetworkHashPS,
+		btcjson.ScopedMethod("node", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
+		btcjson.ScopedMethod("node", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
 
 		btcjson.ScopedMethod("node", "setGenerate"):     server.handleSetGenerate,
-		btcjson.ScopedMethod("node", "getblockstats"):   server.handleGetBlockStats,
-		btcjson.ScopedMethod("node", "getchaintxstats"): server.handleGetChaintxStats,
+		btcjson.ScopedMethod("node", "getblockstats"):   server.handleGetBlockStats,   // todo: remove
+		btcjson.ScopedMethod("node", "getchaintxstats"): server.handleGetChaintxStats, // todo: remove
 		btcjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
 		btcjson.ScopedMethod("node", "stop"):            server.handleStop,
 		btcjson.ScopedMethod("node", "help"):            server.handleHelp,

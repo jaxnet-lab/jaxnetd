@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 )
