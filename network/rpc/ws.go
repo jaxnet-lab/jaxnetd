@@ -306,7 +306,6 @@ type notificationUnregisterAddr struct {
 // notificationHandler reads notifications and control messages from the queue
 // handler and processes one at a time.
 func (m *wsManager) notificationHandler(ctx context.Context) {
-	fmt.Println("notificationHandler")
 	m.logger.Info().Msg("Run notificationHandler")
 	childCtx, _ := context.WithCancel(ctx)
 	// clients is a map of all currently connected websocket clients.

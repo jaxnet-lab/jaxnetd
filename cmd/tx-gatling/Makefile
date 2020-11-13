@@ -1,5 +1,5 @@
 build:
-	cd .. && go build -o ./tmp/jaxcore && go build -o ./tmp/jaxctl gitlab.com/jaxnet/core/shard.core/cmd/btcctl
+	cd .. && go build -o ./tmp/jaxcore && go build -o ./tmp/jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
 
 
 build_linux:

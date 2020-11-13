@@ -57,6 +57,7 @@ build:release:
 .deploy: &deploy
   stage: deploy
   <<: *before_script
+  needs: ["build:docker"]
   tags:
     - docker
   script:

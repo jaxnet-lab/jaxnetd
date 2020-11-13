@@ -182,7 +182,7 @@ func TestMakeSwapTx(ot *testing.T) {
 	var shardID1 uint32 = 1
 	var shardID2 uint32 = 2
 
-	aliceSk := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- PREPARE ----\----
@@ -197,7 +197,7 @@ func TestMakeSwapTx(ot *testing.T) {
 		PrivateKey: "",
 	}
 
-	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
 
 	op, err := NewOperator(cfg)
@@ -208,7 +208,7 @@ func TestMakeSwapTx(ot *testing.T) {
 		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
 		Value:      5000000000,
 		Height:     1,
-		TxHash:     "5569e2f40f6b3e340b0b744951e489d670e391e8a8125a496c1a0978b9b0fdbe",
+		TxHash:     "5bbf6a3a876add0beddeea39f6d79c63a1fdaeaa147e591543689ebdbc739ec5",
 		OutIndex:   0,
 		Used:       false,
 		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
@@ -221,7 +221,7 @@ func TestMakeSwapTx(ot *testing.T) {
 		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
 		Value:      5000000000,
 		Height:     1,
-		TxHash:     "b9e5fcd51a17cf0d189b1ed86f7f28198cc077f242d9d88cefc0fde207c535d8",
+		TxHash:     "541019173655286cc0249c2a6fc8a7ae02e1f14dc59ae77fe0a26b1a245b8a90",
 		OutIndex:   0,
 		Used:       false,
 		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
@@ -236,13 +236,14 @@ func TestMakeSwapTx(ot *testing.T) {
 		destinationAtShard1: shard1UTXO,
 		destinationAtShard2: shard2UTXO,
 	}
-	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(spendingMap, false)
+	swapTX, err := op.TxMan.WithKeys(minerKP).NewSwapTx(spendingMap, false)
 	assert.NoError(t, err)
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
 	// publish created transaction
 	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
 	assert.NoError(t, err)
+	fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", swapTX.TxHash, swapTX.SignedTx)
 
 	// for {
 	// 	// wait for the transaction to be added to the block
@@ -259,7 +260,7 @@ func TestMakeSwapTx(ot *testing.T) {
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
 	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
 	assert.NoError(t, err)
-
+	return
 	for {
 		// wait for the transaction to be added to the block
 		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
@@ -272,10 +273,9 @@ func TestMakeSwapTx(ot *testing.T) {
 		time.Sleep(time.Second)
 	}
 	// -----------------------------------------------------------------------------------------
-
 }
 
-func TestMakeSimpleSwapTx(ot *testing.T) {
+func TestMakeMultiSigSwapTx(ot *testing.T) {
 	t := (*T)(ot)
 	var shardID1 uint32 = 1
 	var shardID2 uint32 = 2

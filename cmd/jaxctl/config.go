@@ -92,7 +92,7 @@ func listCommands() {
 	}
 }
 
-// config defines the configuration options for btcctl.
+// config defines the configuration options for jaxctl.
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
