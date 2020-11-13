@@ -379,7 +379,11 @@ func CountSpentOutputs(block *btcutil.Block) int {
 	// Exclude the coinbase transaction since it can't spend anything.
 	var numSpent int
 	for _, tx := range block.Transactions()[1:] {
-		numSpent += len(tx.MsgTx().TxIn)
+		if tx.MsgTx().Version == wire.TxVerShardsSwap {
+			numSpent = numSpent + (len(tx.MsgTx().TxIn) / 2)
+		} else {
+			numSpent += len(tx.MsgTx().TxIn)
+		}
 	}
 	return numSpent
 }

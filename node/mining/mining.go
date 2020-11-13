@@ -607,9 +607,15 @@ mempoolLoop:
 		// other transactions in the mempool so they can be properly
 		// ordered below.
 		prioItem := &txPrioItem{tx: tx}
+		thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+
 		for _, txIn := range tx.MsgTx().TxIn {
 			originHash := &txIn.PreviousOutPoint.Hash
 			entry := utxos.LookupEntry(txIn.PreviousOutPoint)
+			if entry == nil && thisIsSwapTx {
+				continue
+			}
+
 			if entry == nil || entry.IsSpent() {
 				if !g.txSource.HaveTransaction(originHash) {
 					log.Trace().Msgf(

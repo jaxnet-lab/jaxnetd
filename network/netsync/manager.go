@@ -607,21 +607,21 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 // still have blocks to check
 func (sm *SyncManager) current() bool {
 	if !sm.chain.IsCurrent() {
-		log.Warn().Msg("SyncManager not current -> !sm.chain.IsCurrent()")
+		log.Trace().Msg("SyncManager not current -> !sm.chain.IsCurrent()")
 		return false
 	}
 
 	// if blockChain thinks we are current and we have no syncPeer it
 	// is probably right.
 	if sm.syncPeer == nil {
-		log.Warn().Msg("SyncManager not current -> sm.syncPeer == nil")
+		log.Trace().Msg("SyncManager not current -> sm.syncPeer == nil")
 		return true
 	}
 
 	// No matter what chain thinks, if we are below the block we are syncing
 	// to we are not current.
 	if sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock() {
-		log.Warn().Msg("SyncManager not current -> sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock()")
+		log.Trace().Msg("SyncManager not current -> sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock()")
 		return false
 	}
 	return true

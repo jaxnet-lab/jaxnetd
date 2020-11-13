@@ -203,31 +203,18 @@ func TestMakeSwapTx(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	shard1UTXO := txmodels.UTXO{
-		ShardID:    shardID1,
-		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
-		Value:      5000000000,
-		Height:     1,
-		TxHash:     "5bbf6a3a876add0beddeea39f6d79c63a1fdaeaa147e591543689ebdbc739ec5",
-		OutIndex:   0,
-		Used:       false,
-		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
-		ScriptType: "pubkeyhash",
-	}
+	utxo, _, err := op.TxMan.ForShard(shardID1).CollectUTXO("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", 2)
 	assert.NoError(t, err)
 
-	shard2UTXO := txmodels.UTXO{
-		ShardID:    shardID2,
-		Address:    "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz",
-		Value:      5000000000,
-		Height:     1,
-		TxHash:     "541019173655286cc0249c2a6fc8a7ae02e1f14dc59ae77fe0a26b1a245b8a90",
-		OutIndex:   0,
-		Used:       false,
-		PKScript:   "76a914b953dad0e79288eea918085c9b72c3ca5482349388ac",
-		ScriptType: "pubkeyhash",
-	}
+	rows := utxo.CollectForAmount(5000000000)
+	assert.Equal(t, 1, len(rows))
+	shard1UTXO := rows[0]
+
+	utxo, _, err = op.TxMan.ForShard(shardID2).CollectUTXO("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", 2)
 	assert.NoError(t, err)
+	rows = utxo.CollectForAmount(5000000000)
+	assert.Equal(t, 1, len(rows))
+	shard2UTXO := rows[0]
 
 	// -----------------------------------------------------------------------------------------
 	destinationAtShard1 := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
