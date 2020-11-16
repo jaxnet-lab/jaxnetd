@@ -125,6 +125,12 @@ func (app *App) getCommands() cli.Commands {
 				},
 			},
 		},
+		// {
+		// 	Name:   "run-simulator",
+		// 	Usage:  "",
+		// 	Flags:  app.RunSimFlags(),
+		// 	Action: app.RunSim,
+		// },
 	}
 }
 
@@ -187,6 +193,8 @@ func (app *App) SyncUTXOFlags() []cli.Flag {
 	return []cli.Flag{
 		flags[flagAddress],
 		flags[flagOffset],
+		flags[flagShards],
+		flags[flagSplitFiles],
 	}
 }
 
@@ -194,19 +202,47 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 	offset := c.Int64(flagOffset)
 	address := c.String(flagAddress)
 	dataFile := c.String(flagDataFile)
+	shards := c.Int64Slice(flagShards)
+	splitFiles := c.Bool(flagSplitFiles)
 
 	fmt.Println("Start collecting...")
 
-	rows, lastBlock, err := app.TxMan.CollectUTXO(address, offset)
+	opts := txutils.UTXOCollectorOpts{
+		Offset:          offset,
+		FilterAddresses: []string{address},
+	}
+	if len(shards) > 0 && shards[0] == -1 {
+		opts.AllChains = true
+	} else {
+		for _, shard := range shards {
+			opts.Shards = append(opts.Shards, uint32(shard))
+		}
+	}
+
+	set, lastBlock, err := app.TxMan.CollectUTXOs(opts)
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to collect UTXO"), 1)
 	}
 
-	fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(rows), address, offset, lastBlock)
+	if splitFiles {
+		for u, rows := range set {
+			err = storage.NewCSVStorage(fmt.Sprintf("chain-%d-%s", u, dataFile)).SaveRows(rows)
+			if err != nil {
+				return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+			}
+			fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(rows), address, offset, lastBlock)
+		}
+	} else {
+		var allRows txmodels.UTXORows
+		for _, rows := range set {
+			allRows = append(allRows, rows...)
+		}
 
-	err = storage.NewCSVStorage(dataFile).SaveRows(rows)
-	if err != nil {
-		return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+		fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(allRows), address, offset, lastBlock)
+		err = storage.NewCSVStorage(dataFile).SaveRows(allRows)
+		if err != nil {
+			return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+		}
 	}
 
 	return nil
@@ -408,3 +444,22 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 
 	return nil
 }
+
+//
+// func (app *App) RunSimFlags() []cli.Flag {
+// 	flags := getFlags()
+// 	return []cli.Flag{
+// 		flags[flagDataDir],
+// 	}
+// }
+//
+// func (app *App) RunSim(c *cli.Context) error {
+// 	dataDir := c.String(flagDataDir)
+//
+// 	core, err := sim.NewCore(dataDir)
+// 	if err != nil {
+// 		return cli.NewExitError(err, 1)
+// 	}
+// 	core.Run()
+// 	return nil
+// }

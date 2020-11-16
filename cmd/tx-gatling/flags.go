@@ -10,7 +10,9 @@ const (
 	flagAmount       = "amount"
 	flagConfig       = "config"
 	flagShard        = "shard"
+	flagShards       = "shards"
 	flagDataFile     = "data-file"
+	flagSplitFiles   = "split-files"
 	flagFirstPubKey  = "first-pk"
 	flagSecondPubKey = "second-pk"
 	flagOffset       = "offset"
@@ -20,6 +22,7 @@ const (
 	flagSendTx       = "send-tx"
 	flagTxHash       = "tx-hash"
 	flagTxBody       = "tx-body"
+	flagDataDir      = "data-dir"
 )
 
 func getFlags() map[string]cli.Flag {
@@ -30,15 +33,26 @@ func getFlags() map[string]cli.Flag {
 			Value:   "./config.yaml",
 			Usage:   "path to configuration",
 		},
+		flagDataDir: &cli.StringFlag{
+			Name:    flagDataDir,
+			Aliases: []string{"d"},
+			Value:   "./data-dir",
+			Usage:   "path to data directory",
+		},
 		flagShard: &cli.Uint64Flag{
 			Name:  flagShard,
 			Value: 0,
 			Usage: "id of shard chain of beacon(if zero)",
 		},
+		flagShards: &cli.Int64SliceFlag{
+			Name:  flagShard,
+			Usage: "comma-separated list of shards ids for sync, -1 for ALL",
+		},
 		flagDataFile: &cli.StringFlag{
 			Name:    flagDataFile,
 			Aliases: []string{"f"},
 			EnvVars: []string{"TX_DATA_FILE"},
+			Value:   "utxo.csv",
 			Usage:   "path to CSV input/output, will override value from config file",
 		},
 		flagSecretKey: &cli.StringFlag{
@@ -109,6 +123,10 @@ func getFlags() map[string]cli.Flag {
 			Aliases: []string{"o"},
 			EnvVars: []string{"TX_BLOCK_OFFSET"},
 			Usage:   "offset for block height",
+		},
+		flagSplitFiles: &cli.BoolFlag{
+			Name:  flagSplitFiles,
+			Usage: "split utxo files by shard ID",
 		},
 	}
 }

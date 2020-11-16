@@ -6,11 +6,13 @@
 package txutils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -177,22 +179,65 @@ waitLoop:
 	// -----------------------------------------------------------------------------------------
 }
 
+func TestSendTx(ot *testing.T) {
+	t := (*T)(ot)
+
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			Host: "116.202.107.209:18333",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+	rawTx := ""
+
+	data, err := hex.DecodeString(rawTx)
+	assert.NoError(t, err)
+	signedTx := &txmodels.SwapTransaction{}
+	err = signedTx.UnmarshalBinary(data)
+	assert.NoError(t, err)
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to first shard: %s\n", signedTx.TxHash)
+
+	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to second shard: %s\n", signedTx.TxHash)
+
+}
+
 func TestMakeSwapTx(ot *testing.T) {
 	t := (*T)(ot)
-	var shardID1 uint32 = 1
-	var shardID2 uint32 = 2
+	var shardID1 uint32 = 18
+	var shardID2 uint32 = 17
 
 	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerAddr := "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz"
+	minerUTXOIndex := storage.NewUTXORepo("", "miner")
+	err := minerUTXOIndex.ReadIndex()
+	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// Host: "116.202.107.209:18333",
-			Host: "127.0.0.1:18333",
-			User: "somerpc",
-			Pass: "somerpc",
+			// Host: "116.203.250.136:18333",
+			Host: "116.202.107.209:18333",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
@@ -203,16 +248,30 @@ func TestMakeSwapTx(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	utxo, _, err := op.TxMan.ForShard(shardID1).CollectUTXO("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", 2)
+	fmt.Printf("Collectiong UTXO from first shard...\n")
+
+	index := minerUTXOIndex.Index()
+	index, _, err = op.TxMan.CollectUTXOIndex(shardID1,
+		index.LastBlock(shardID1),
+		map[string]bool{minerAddr: true}, index)
+	assert.NoError(t, err)
+	minerUTXOIndex.SetIndex(index)
+
+	fmt.Printf("Collectiong UTXO from second shard...\n")
+	index, _, err = op.TxMan.CollectUTXOIndex(shardID2,
+		index.LastBlock(shardID2),
+		map[string]bool{minerAddr: true}, index)
+	assert.NoError(t, err)
+	minerUTXOIndex.SetIndex(index)
+
+	err = minerUTXOIndex.SaveIndex()
 	assert.NoError(t, err)
 
-	rows := utxo.CollectForAmount(5000000000)
+	rows, _ := minerUTXOIndex.SelectForAmount(5000000000, shardID1)
 	assert.Equal(t, 1, len(rows))
 	shard1UTXO := rows[0]
 
-	utxo, _, err = op.TxMan.ForShard(shardID2).CollectUTXO("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", 2)
-	assert.NoError(t, err)
-	rows = utxo.CollectForAmount(5000000000)
+	rows, _ = minerUTXOIndex.SelectForAmount(5000000000, shardID2)
 	assert.Equal(t, 1, len(rows))
 	shard2UTXO := rows[0]
 
@@ -225,40 +284,53 @@ func TestMakeSwapTx(ot *testing.T) {
 	}
 	swapTX, err := op.TxMan.WithKeys(minerKP).NewSwapTx(spendingMap, false)
 	assert.NoError(t, err)
+	fmt.Printf("Send Tx\nHash: %s\nBody: %s\n", swapTX.TxHash, swapTX.SignedTx)
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
 	// publish created transaction
 	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
 	assert.NoError(t, err)
-	fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", swapTX.TxHash, swapTX.SignedTx)
-
-	// for {
-	// 	// wait for the transaction to be added to the block
-	// 	out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
-	// 	assert.NoError(t, err)
-	// 	if out != nil && out.Confirmations > 2 {
-	// 		println("tx mined into block")
-	// 		break
-	// 	}
-	//
-	// 	time.Sleep(time.Second)
-	// }
+	fmt.Printf("Submitted to first shard: %s\n", swapTX.TxHash)
 
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
 	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
 	assert.NoError(t, err)
-	return
+	fmt.Printf("Submitted to second shard: %s\n", swapTX.TxHash)
+
+	err = minerUTXOIndex.SaveIndex()
+	assert.NoError(t, err)
+
+	var firstDone, secondDone bool
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
-		if out != nil && out.Confirmations > 2 {
-			println("tx mined into block")
+		secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false)
+		assert.NoError(t, err)
+
+		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+			fmt.Println("tx mined into block @ first shard")
+			firstDone = true
+		}
+
+		// wait for the transaction to be added to the block
+		firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false)
+		assert.NoError(t, err)
+
+		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+			fmt.Println("tx mined into block @ second shard")
+			secondDone = true
+		}
+
+		if firstDone && secondDone {
 			break
 		}
 
 		time.Sleep(time.Second)
 	}
+
 	// -----------------------------------------------------------------------------------------
 }
 
