@@ -4,17 +4,30 @@
 package txmodels
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/hex"
+	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 )
 
+type IndexKey struct {
+	Shard uint32
+	Hash  string
+}
+
 // UTXOIndex is a storage for UTXO data.
 type UTXOIndex struct {
+	sync.RWMutex
+
 	// map[ tx_id => block_height ]
-	blocks map[string]int64
+	blocks map[IndexKey]int64
 	// map[ tx_id => map[ out_n => UTXO index ] ]
-	txs map[string]map[uint32]uint
+	txs map[IndexKey]map[uint32]uint
+
+	lastUsed  map[uint32]int
+	lastBlock map[uint32]int64
 
 	utxo   []UTXO
 	lastID uint
@@ -22,13 +35,75 @@ type UTXOIndex struct {
 
 func NewUTXOIndex() *UTXOIndex {
 	return &UTXOIndex{
-		blocks: map[string]int64{},
-		txs:    map[string]map[uint32]uint{},
+		blocks:    map[IndexKey]int64{},
+		txs:       map[IndexKey]map[uint32]uint{},
+		lastUsed:  map[uint32]int{},
+		lastBlock: map[uint32]int64{},
 	}
 }
 
-func (index *UTXOIndex) RmUTXO(txHash string, utxoIndexID uint32) {
-	txInd, ok := index.txs[txHash]
+type gobUTXOIndex struct {
+	Blocks           map[IndexKey]int64
+	Txs              map[IndexKey]map[uint32]uint
+	LastUsedByShard  map[uint32]int
+	LastBlockByShard map[uint32]int64
+
+	Utxo   []UTXO
+	LastID uint
+}
+
+func (index *UTXOIndex) UnmarshalBinary(data []byte) error {
+	index.Lock()
+	defer index.Unlock()
+
+	val := gobUTXOIndex{}
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&val)
+	if err != nil {
+		return err
+	}
+
+	index.blocks = val.Blocks
+	index.txs = val.Txs
+	index.utxo = val.Utxo
+	index.lastID = val.LastID
+	index.lastBlock = val.LastBlockByShard
+	index.lastUsed = val.LastUsedByShard
+	return nil
+}
+
+func (index *UTXOIndex) MarshalBinary() (data []byte, err error) {
+	buf := bytes.NewBuffer(nil)
+	err = gob.NewEncoder(buf).Encode(gobUTXOIndex{
+		Blocks:           index.blocks,
+		Txs:              index.txs,
+		Utxo:             index.utxo,
+		LastID:           index.lastID,
+		LastBlockByShard: index.lastBlock,
+		LastUsedByShard:  index.lastUsed,
+	})
+	return buf.Bytes(), err
+}
+
+func (index *UTXOIndex) LastBlock(shardID uint32) int64 {
+	return index.lastBlock[shardID]
+}
+
+func (index *UTXOIndex) ResetUsedFlag() {
+	index.Lock()
+	defer index.Unlock()
+	for i := range index.utxo {
+		u := index.utxo[i]
+		u.Used = false
+		index.utxo[i] = u
+	}
+	index.lastUsed = map[uint32]int{}
+}
+
+func (index *UTXOIndex) RmUTXO(txHash string, utxoIndexID, shardID uint32) {
+	index.Lock()
+	defer index.Unlock()
+	key := IndexKey{Shard: shardID, Hash: txHash}
+	txInd, ok := index.txs[key]
 	if !ok {
 		return
 	}
@@ -36,15 +111,19 @@ func (index *UTXOIndex) RmUTXO(txHash string, utxoIndexID uint32) {
 	delete(txInd, utxoIndexID)
 
 	if len(txInd) == 0 {
-		delete(index.blocks, txHash)
-		delete(index.txs, txHash)
+		delete(index.blocks, key)
+		delete(index.txs, key)
 	} else {
-		index.txs[txHash] = txInd
+		index.txs[key] = txInd
 	}
 }
 
-func (index *UTXOIndex) MarkUsed(txHash string, utxoIndexID uint32) {
-	txUTXOs, ok := index.txs[txHash]
+func (index *UTXOIndex) MarkUsed(txHash string, utxoIndexID, shardID uint32) {
+	index.Lock()
+	defer index.Unlock()
+
+	key := IndexKey{Shard: shardID, Hash: txHash}
+	txUTXOs, ok := index.txs[key]
 	if !ok {
 		return
 	}
@@ -57,7 +136,11 @@ func (index *UTXOIndex) MarkUsed(txHash string, utxoIndexID uint32) {
 }
 
 func (index *UTXOIndex) AddUTXO(utxo UTXO) {
-	txInd, ok := index.txs[utxo.TxHash]
+	index.Lock()
+	defer index.Unlock()
+
+	key := IndexKey{Shard: utxo.ShardID, Hash: utxo.TxHash}
+	txInd, ok := index.txs[key]
 	if !ok {
 		txInd = map[uint32]uint{}
 	}
@@ -66,9 +149,60 @@ func (index *UTXOIndex) AddUTXO(utxo UTXO) {
 	txInd[utxo.OutIndex] = index.lastID
 	index.lastID++
 
-	index.txs[utxo.TxHash] = txInd
-	index.blocks[utxo.TxHash] = utxo.Height
+	index.txs[key] = txInd
+	index.blocks[key] = utxo.Height
 
+	if index.lastBlock[utxo.ShardID] < utxo.Height {
+		index.lastBlock[utxo.ShardID] = utxo.Height
+	}
+}
+
+func (index *UTXOIndex) RowsCopy() UTXORows {
+	index.RLock()
+	defer index.RUnlock()
+
+	rows := make(UTXORows, len(index.utxo))
+	copy(rows, index.utxo)
+	return rows
+}
+
+// CollectForAmount aggregates UTXOs to meet the requested amount. All selected UTXOs will be marked as USED.
+func (index *UTXOIndex) CollectForAmount(amount int64, shardID uint32) (UTXORows, int64) {
+	return index.CollectForAmountFiltered(amount, shardID, nil)
+}
+
+func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
+	filter map[string]struct{}) (UTXORows, int64) {
+	index.RLock()
+	defer index.RUnlock()
+
+	var res UTXORows
+	change := amount
+
+	lastUsed := index.lastUsed[shardID]
+	for i := lastUsed; i < len(index.utxo); i++ {
+		if index.utxo[i].Used || index.utxo[i].ShardID != shardID {
+			continue
+		}
+
+		if filter != nil {
+			if _, ok := filter[index.utxo[i].Address]; !ok {
+				continue
+			}
+		}
+
+		change -= index.utxo[i].Value
+		index.utxo[i].Used = true
+		lastUsed = i
+		res = append(res, index.utxo[i])
+
+		if change <= 0 {
+			break
+		}
+	}
+	index.lastUsed[shardID] = lastUsed
+
+	return res, 0
 }
 
 func (index *UTXOIndex) Rows() UTXORows {
@@ -126,28 +260,22 @@ func (rows UTXORows) GetSum() int64 {
 	return sum
 }
 
-func (rows UTXORows) CollectForAmount(amount int64) UTXORows {
+func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXORows, int64) {
 	var res UTXORows
 	change := amount
 
 	for i, utxo := range rows {
-		if utxo.Used {
+		if utxo.Used || utxo.ShardID != shardID {
 			continue
 		}
 
 		change -= utxo.Value
-		if change > 0 {
-			rows[i].Used = true
-			res = append(res, rows[i])
-			continue
-		}
-
+		rows[i].Used = true
+		res = append(res, rows[i])
 		if change <= 0 {
-			rows[i].Used = true
-			res = append(res, rows[i])
 			break
 		}
 	}
 
-	return res
+	return res, 0
 }
