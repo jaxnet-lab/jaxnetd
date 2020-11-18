@@ -1,48 +1,47 @@
 package node
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
 )
+
+type statsProvider interface {
+	ChainCtx() chain.IChainCtx
+	Stats() map[string]float64
+}
 
 type chainMetrics struct {
 	sync.RWMutex
 	metricsByName map[string]prometheus.Gauge
-	chain         *blockchain.BlockChain
 	logger        zerolog.Logger
-	name          string
+
+	chainID   string
+	chainName string
+	netName   string
+
+	chain statsProvider
 }
 
-func ChainMetrics(chain *blockchain.BlockChain, name string, logger zerolog.Logger) (res IMetric) {
+func ChainMetrics(chain statsProvider, logger zerolog.Logger) (res IMetric) {
 	res = &chainMetrics{
 		chain:         chain,
-		logger:        logger.With().Str("ctx", "metrics").Str("chain", name).Logger(),
-		name:          name,
+		logger:        logger.With().Str("ctx", "metrics").Str("chain", chain.ChainCtx().Name()).Logger(),
+		chainID:       strconv.Itoa(int(chain.ChainCtx().ShardID())),
+		chainName:     chain.ChainCtx().Name(),
+		netName:       chain.ChainCtx().Params().Net.String(),
 		metricsByName: make(map[string]prometheus.Gauge),
 	}
 	return res
 }
 
 func (s *chainMetrics) Read() {
-	snapshot := s.chain.BestSnapshot()
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "height"), float64(snapshot.Height))
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "size"), float64(snapshot.BlockSize))
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "transactions"), float64(snapshot.NumTxns))
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "median_time"), float64(snapshot.MedianTime.Unix()))
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "bits"), float64(snapshot.Bits))
-	s.updateGauge(prometheus.BuildFQName("chain", s.name, "total_transactions"), float64(snapshot.TotalTxns))
-	block, err := s.chain.BlockByHeight(snapshot.Height)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("can't get block height")
-		return
-	}
-	if !block.MsgBlock().ShardBlock {
-		h := block.MsgBlock().Header.(*wire.BeaconHeader)
-		s.updateGauge(prometheus.BuildFQName("chain", s.name, "shards"), float64(h.Shards()))
+	stats := s.chain.Stats()
+	for name, value := range stats {
+		s.updateGauge(prometheus.BuildFQName("jax_core", "chain", name), value)
 	}
 }
 
@@ -51,8 +50,12 @@ func (s *chainMetrics) updateGauge(name string, value float64) {
 	m, ok := s.metricsByName[name]
 	if !ok {
 		m = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name:        name,
-			ConstLabels: map[string]string{"chain": s.name},
+			Name: name,
+			ConstLabels: map[string]string{
+				"chain_name": s.chainName,
+				"chain_id":   s.chainID,
+				"net_name":   s.netName,
+			},
 		})
 		err := prometheus.Register(m)
 		if err != nil {

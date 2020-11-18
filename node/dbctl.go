@@ -35,7 +35,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 		}
 		return db, nil
 	}
-	chainName := chain.Params().Name
+	chainName := chain.Name()
 
 	ctrl.warnMultipleDBs(dataDir, chainName, cfg)
 

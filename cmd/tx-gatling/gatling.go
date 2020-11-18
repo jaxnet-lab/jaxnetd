@@ -125,12 +125,6 @@ func (app *App) getCommands() cli.Commands {
 				},
 			},
 		},
-		// {
-		// 	Name:   "run-simulator",
-		// 	Usage:  "",
-		// 	Flags:  app.RunSimFlags(),
-		// 	Action: app.RunSim,
-		// },
 	}
 }
 
@@ -444,22 +438,3 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 
 	return nil
 }
-
-//
-// func (app *App) RunSimFlags() []cli.Flag {
-// 	flags := getFlags()
-// 	return []cli.Flag{
-// 		flags[flagDataDir],
-// 	}
-// }
-//
-// func (app *App) RunSim(c *cli.Context) error {
-// 	dataDir := c.String(flagDataDir)
-//
-// 	core, err := sim.NewCore(dataDir)
-// 	if err != nil {
-// 		return cli.NewExitError(err, 1)
-// 	}
-// 	core.Run()
-// 	return nil
-// }

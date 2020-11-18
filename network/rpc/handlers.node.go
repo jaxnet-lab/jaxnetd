@@ -14,6 +14,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
+	"gitlab.com/jaxnet/core/shard.core/version"
 )
 
 type NodeRPC struct {
@@ -73,15 +74,15 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 //
 // NOTE: This is a btcsuite extension ported from github.com/decred/dcrd.
 func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	result := map[string]btcjson.VersionResult{
-		"btcdjsonrpcapi": {
+	return btcjson.NodeVersion{
+		Node: version.GetExtendedVersion(),
+		RPC: btcjson.VersionResult{
 			VersionString: jsonrpcSemverString,
 			Major:         jsonrpcSemverMajor,
 			Minor:         jsonrpcSemverMinor,
 			Patch:         jsonrpcSemverPatch,
 		},
-	}
-	return result, nil
+	}, nil
 }
 
 func (server *NodeRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {

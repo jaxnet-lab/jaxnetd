@@ -64,7 +64,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"validateAddress":        {(*btcjson.ValidateAddressChainResult)(nil)},
 	"verifyChain":            {(*bool)(nil)},
 	"verifyMessage":          {(*bool)(nil)},
-	"version":                {(*map[string]btcjson.VersionResult)(nil)},
+	"version":                {(*btcjson.NodeVersion)(nil)},
 
 	// Websocket commands.
 	"loadTxFilter":              nil,

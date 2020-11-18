@@ -32,6 +32,10 @@ type GetConnCountMsg struct {
 	Reply chan int32
 }
 
+type GetPeerStatsMsg struct {
+	Reply chan PeerStateStats
+}
+
 type GetPeersMsg struct {
 	Reply chan []*serverPeer
 }

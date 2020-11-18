@@ -9,7 +9,7 @@ ENV GOPRIVATE=gitlab.com
 
 WORKDIR /shard-core
 ADD . .
-RUN go build -o /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
+RUN ./build.sh /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
 
 # Final stage
 FROM alpine:3.7

@@ -457,6 +457,8 @@ func (server *Server) TransactionConfirmed(tx *btcutil.Tx) {
 // goroutines related to peer state.
 func (server *Server) handleQuery(state *peerState, querymsg interface{}) {
 	switch msg := querymsg.(type) {
+	case GetPeerStatsMsg:
+		msg.Reply <- state.Stats()
 	case GetConnCountMsg:
 		nconnected := int32(0)
 		state.forAllPeers(func(sp *serverPeer) {
@@ -779,6 +781,15 @@ func (server *Server) ConnectedCount() int32 {
 	replyChan := make(chan int32)
 
 	server.query <- GetConnCountMsg{Reply: replyChan}
+
+	return <-replyChan
+}
+
+// ConnectedCount returns the number of currently connected peers.
+func (server *Server) PeerStateStats() PeerStateStats {
+	replyChan := make(chan PeerStateStats)
+
+	server.query <- GetPeerStatsMsg{Reply: replyChan}
 
 	return <-replyChan
 }

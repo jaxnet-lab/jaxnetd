@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/winsvc/mgr"
 	"github.com/btcsuite/winsvc/svc"
 	"gitlab.com/jaxnet/core/shard.core/config"
+	"gitlab.com/jaxnet/core/shard.core/version"
 )
 
 const (
@@ -38,7 +39,7 @@ var elog *eventlog.Log
 // been started to the Windows event log.
 func logServiceStartOfDay() {
 	var message string
-	message += fmt.Sprintf("Version %s\n", getVersion())
+	message += fmt.Sprintf("Version %s\n", version.GetVersion())
 	elog.Info(1, message)
 }
 

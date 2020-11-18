@@ -6,12 +6,13 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"sync"
+
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"net/http"
-	"sync"
 )
 
 type MultiChainRPC struct {

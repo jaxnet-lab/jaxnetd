@@ -41,3 +41,23 @@ func (ps *peerState) forAllPeers(closure func(sp *serverPeer)) {
 	}
 	ps.forAllOutboundPeers(closure)
 }
+
+func (ps *peerState) Stats() PeerStateStats {
+	return PeerStateStats{
+		Total:           len(ps.inboundPeers) + len(ps.outboundPeers) + len(ps.persistentPeers),
+		InboundPeers:    len(ps.inboundPeers),
+		OutboundPeers:   len(ps.outboundPeers),
+		PersistentPeers: len(ps.persistentPeers),
+		Banned:          len(ps.banned),
+		OutboundGroups:  len(ps.outboundGroups),
+	}
+}
+
+type PeerStateStats struct {
+	Total           int
+	InboundPeers    int
+	OutboundPeers   int
+	PersistentPeers int
+	Banned          int
+	OutboundGroups  int
+}

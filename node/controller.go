@@ -126,7 +126,7 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 	}
 
 	for _, ro := range chainCtl.shardsCtl {
-		minerSet[ro.ctl.chain.Params().Name] = &cpuminer.Config{
+		minerSet[ro.ctl.chain.Name()] = &cpuminer.Config{
 			ChainParams:            ro.ctl.chainProvider.ChainParams,
 			BlockTemplateGenerator: ro.ctl.chainProvider.BlkTmplGenerator(),
 			MiningAddrs:            ro.ctl.chainProvider.MiningAddrs,
@@ -141,7 +141,7 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 }
 
 func (chainCtl *chainController) runShardMiner(chainProvider *cprovider.ChainProvider) {
-	chainCtl.miner.AddChainMiner(chainProvider.ChainCtx.Params().Name, &cpuminer.Config{
+	chainCtl.miner.AddChainMiner(chainProvider.ChainCtx.Name(), &cpuminer.Config{
 		ChainParams:            chainProvider.ChainParams,
 		BlockTemplateGenerator: chainProvider.BlkTmplGenerator(),
 		MiningAddrs:            chainProvider.MiningAddrs,
@@ -176,7 +176,7 @@ type rpcRO struct {
 	beacon  *rpc.BeaconRPC
 	node    *rpc.NodeRPC
 	connMgr netsync.P2PConnManager
-	//wsMgr   rpc.IWebsocketManager
+	// wsMgr   rpc.IWebsocketManager
 }
 
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
@@ -194,7 +194,7 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 		nodeRPC, beaconRPC, shardRPCs)
 
 	chainCtl.logger.Info().Msg("Create WS RPC server")
-	//chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
+	// chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
 	chainCtl.wg.Add(1)
 	go func() {
 
@@ -223,9 +223,17 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 
 	chainCtl.metrics = Metrics(childCtx, time.Duration(interval)*time.Second)
 	chainCtl.metrics.Add(
-		ChainMetrics(chainCtl.beacon.chainProvider.BlockChain(), "beacon", chainCtl.logger),
-		NodeMetrics(chainCtl.cfg, chainCtl.shardsIndex, chainCtl.logger),
+		ChainMetrics(&chainCtl.beacon, chainCtl.logger),
+		NodeMetrics(chainCtl.cfg, chainCtl, chainCtl.logger),
 	)
 
 	return chainCtl.metrics.Listen("/metrics", port)
+}
+
+func (chainCtl *chainController) Stats() map[string]float64 {
+	return map[string]float64{
+		"shards_count":        float64(chainCtl.shardsIndex.LastShardID),
+		"active_shards_count": float64(len(chainCtl.shardsIndex.Shards)),
+		"rpc_active_clients":  float64(chainCtl.rpc.server.ActiveClients()),
+	}
 }

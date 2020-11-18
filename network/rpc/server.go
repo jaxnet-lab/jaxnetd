@@ -448,6 +448,10 @@ func (server *ServerCore) decrementClients() {
 	atomic.AddInt32(&server.numClients, -1)
 }
 
+func (server *ServerCore) ActiveClients() int32 {
+	return atomic.LoadInt32(&server.numClients)
+}
+
 // checkAuth checks the HTTP Basic authentication supplied by a wallet
 // or RPC client in the HTTP request r.  If the supplied authentication
 // does not match the username and password expected, a non-nil error is

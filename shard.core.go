@@ -21,6 +21,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/version"
 )
 
 func initChain() bool {
@@ -90,7 +91,7 @@ func shardCoreMain() error {
 	defer config.Log.Info().Msg("Shutdown complete")
 
 	// Show version at startup.
-	config.Log.Info().Msgf("Version %s", getVersion())
+	config.Log.Info().Msgf("Version %s", version.GetVersion())
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {

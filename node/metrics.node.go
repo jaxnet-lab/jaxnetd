@@ -11,37 +11,44 @@ import (
 
 type nodeMetrics struct {
 	sync.RWMutex
-	metricsByName map[string]prometheus.Gauge
-	index         *Index
+	cfg   *Config
+	stats nodeStatsProvider
+	name  string
+
 	logger        zerolog.Logger
-	name          string
-	cfg           *Config
+	metricsByName map[string]prometheus.Gauge
+}
+type nodeStatsProvider interface {
+	Stats() map[string]float64
 }
 
-func NodeMetrics(cfg *Config, index *Index, logger zerolog.Logger) (res IMetric) {
+func NodeMetrics(cfg *Config, stats nodeStatsProvider, logger zerolog.Logger) (res IMetric) {
 	res = &nodeMetrics{
 		logger:        logger,
 		cfg:           cfg,
-		index:         index,
+		stats:         stats,
 		metricsByName: make(map[string]prometheus.Gauge),
 	}
 	return res
 }
 
 func (s *nodeMetrics) Read() {
-	s.updateGauge(prometheus.BuildFQName("node", "status", "shards"), float64(len(s.index.Shards)))
+	for name, value := range s.stats.Stats() {
+		s.updateGauge(prometheus.BuildFQName(metricsNamespace, "node", name), value)
+	}
+
 	dSize, err := dirSize(s.cfg.DataDir)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("can't calculate data dir size")
 		return
 	}
 
-	s.updateGauge(prometheus.BuildFQName("node", "status", "data_size"), float64(dSize))
+	s.updateGauge(prometheus.BuildFQName(metricsNamespace, "node", "data_size"), float64(dSize))
 	logSize, err := dirSize(s.cfg.LogDir)
 	if err != nil && !os.IsNotExist(err) {
 		s.logger.Error().Err(err).Msg("can't calculate log dir size")
 	}
-	s.updateGauge(prometheus.BuildFQName("node", "status", "log_size"), float64(logSize))
+	s.updateGauge(prometheus.BuildFQName(metricsNamespace, "node", "log_size"), float64(logSize))
 }
 
 func (s *nodeMetrics) updateGauge(name string, value float64) {

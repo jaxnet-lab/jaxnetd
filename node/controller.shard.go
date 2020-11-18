@@ -158,8 +158,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	if chainCtl.cfg.Metrics.Enable {
-		chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
-			shardCtl.chain.Params().Name, chainCtl.logger))
+		chainCtl.metrics.Add(ChainMetrics(shardCtl, chainCtl.logger))
 	}
 }
 

@@ -80,7 +80,7 @@ type ShardCtl struct {
 
 func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	chain chain.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
-	log = log.With().Str("chain", chain.Params().Name).Logger()
+	log = log.With().Str("chain", chain.Name()).Logger()
 
 	return &ShardCtl{
 		ctx:       ctx,
@@ -121,7 +121,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 		return err
 	}
 
-	addrManager := addrmgr.New(shardCtl.cfg.DataDir, shardCtl.chain.Params().Name,
+	addrManager := addrmgr.New(shardCtl.cfg.DataDir, shardCtl.chain.Name(),
 		func(host string) ([]net.IP, error) {
 			if strings.HasSuffix(host, ".onion") {
 				return nil, fmt.Errorf("attempt to resolve tor address %s", host)
@@ -168,4 +168,26 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	if err := shardCtl.chainProvider.DB.Close(); err != nil {
 		shardCtl.log.Error().Err(err).Msg("Can't close db")
 	}
+}
+
+func (shardCtl *ShardCtl) ChainCtx() chain.IChainCtx {
+	return shardCtl.ChainProvider().ChainCtx
+}
+
+func (shardCtl *ShardCtl) Stats() map[string]float64 {
+	chainStats := shardCtl.chainProvider.Stats()
+
+	chainStats["p2p_total_connected"] = float64(shardCtl.p2pServer.ConnectedCount())
+	bytesReceived, bytesSent := shardCtl.p2pServer.NetTotals()
+	chainStats["p2p_bytes_received"] = float64(bytesReceived)
+	chainStats["p2p_bytes_sent"] = float64(bytesSent)
+
+	stats := shardCtl.p2pServer.PeerStateStats()
+	chainStats["p2p_peer_state_in"] = float64(stats.InboundPeers)
+	chainStats["p2p_peer_state_out"] = float64(stats.OutboundPeers)
+	chainStats["p2p_peer_state_banned"] = float64(stats.Banned)
+	chainStats["p2p_peer_state_outgroups"] = float64(stats.OutboundGroups)
+	chainStats["p2p_peer_state_total"] = float64(stats.Total)
+
+	return chainStats
 }

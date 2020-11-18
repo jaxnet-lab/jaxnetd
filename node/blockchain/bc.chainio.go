@@ -132,7 +132,7 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
-		log.Info().Msgf("Store new genesis: Chain %s Hash %s", b.chain.Params().Name, genesisBlock.Hash())
+		log.Info().Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
 		// Store the genesis block into the database.
 		return chaindata.DBStoreBlock(dbTx, genesisBlock)
 	})

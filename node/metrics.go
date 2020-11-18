@@ -9,6 +9,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const metricsNamespace = "jax_core"
+
 //metricsManager metrics manager
 type metricsManager struct {
 	metrics  []IMetric

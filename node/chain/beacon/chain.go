@@ -49,6 +49,10 @@ func (c *beaconChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
 
+func (c *beaconChain) Name() string {
+	return c.chainParams.Name
+}
+
 func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
 	return blocknode.NewBeaconBlockNode(blockHeader, parent)
 }

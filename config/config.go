@@ -51,7 +51,7 @@ const (
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 100
 	defaultConnectTimeout        = time.Second * 30
-	defaultMaxRPCClients         = 1000
+	defaultMaxRPCClients         = 100
 	defaultMaxRPCWebsockets      = 25
 	defaultMaxRPCConcurrentReqs  = 20
 	defaultDbType                = "ffldb"
