@@ -44,8 +44,10 @@ type serverPeerHandler struct {
 	newPeers chan<- *serverPeer
 	banPeers chan<- *serverPeer
 
-	logger       zerolog.Logger
-	getChainPort func(shardID uint32) (int, bool)
+	logger           zerolog.Logger
+	getChainPort     func(shardID uint32) (int, bool)
+	AddBytesSent     func(bytesSent uint64)
+	AddBytesReceived func(bytesReceived uint64)
 }
 
 func newServerPeerHandler(server *Server) *serverPeerHandler {
@@ -69,6 +71,9 @@ func newServerPeerHandler(server *Server) *serverPeerHandler {
 		newPeers: server.newPeers,
 		banPeers: server.banPeers,
 		logger:   server.logger,
+
+		AddBytesSent:     server.AddBytesSent,
+		AddBytesReceived: server.AddBytesReceived,
 	}
 }
 
@@ -237,16 +242,4 @@ func (server *serverPeerHandler) pushMerkleBlockMsg(sp *serverPeer, hash *chainh
 	}
 
 	return nil
-}
-
-// AddBytesSent adds the passed number of bytes to the total bytes sent counter
-// for the server.  It is safe for concurrent access.
-func (server *serverPeerHandler) AddBytesSent(bytesSent uint64) {
-	// TODO(mike): incr server runtime stats
-}
-
-// AddBytesReceived adds the passed number of bytes to the total bytes received
-// counter for the server.  It is safe for concurrent access.
-func (server *serverPeerHandler) AddBytesReceived(bytesReceived uint64) {
-	// TODO(mike): incr server runtime stats
 }
