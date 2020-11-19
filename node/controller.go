@@ -231,9 +231,21 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 }
 
 func (chainCtl *chainController) Stats() map[string]float64 {
+	var activeClients int32 = 0
+	if chainCtl.rpc.server != nil {
+		activeClients = chainCtl.rpc.server.ActiveClients()
+	}
+
+	var lastShardID uint32
+	var activeShards int
+	if chainCtl.shardsIndex != nil {
+		lastShardID = chainCtl.shardsIndex.LastShardID
+		activeShards = len(chainCtl.shardsIndex.Shards)
+	}
+
 	return map[string]float64{
-		"shards_count":        float64(chainCtl.shardsIndex.LastShardID),
-		"active_shards_count": float64(len(chainCtl.shardsIndex.Shards)),
-		"rpc_active_clients":  float64(chainCtl.rpc.server.ActiveClients()),
+		"shards_count":        float64(lastShardID),
+		"active_shards_count": float64(activeShards),
+		"rpc_active_clients":  float64(activeClients),
 	}
 }
