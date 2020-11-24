@@ -225,8 +225,8 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 		view.AddTxOuts(tx, blockHeight)
 		return nil
 	}
-	txVersion := tx.MsgTx().Version
-	if txVersion == wire.TxVerShardsSwap {
+
+	if tx.MsgTx().SwapTx() {
 		return view.connectSwapTransaction(tx, blockHeight, stxos)
 	}
 
@@ -267,8 +267,8 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 
 // connectSwapTransaction updates the view by adding all new utxos created by the
 // passed transaction and marking all utxos that the transactions spend as
-// spent. This function handles special case for the wire.TxVerShardsSwap transactions.
-// wire.TxVerShardsSwap transaction is a special tx for atomic swap between chains.
+// spent. This function handles special case for the wire.TxMarkShardSwap transactions.
+// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
 // It can contain only TWO inputs and TWO outputs. TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.
 //
@@ -379,7 +379,7 @@ func CountSpentOutputs(block *btcutil.Block) int {
 	// Exclude the coinbase transaction since it can't spend anything.
 	var numSpent int
 	for _, tx := range block.Transactions()[1:] {
-		if tx.MsgTx().Version == wire.TxVerShardsSwap {
+		if tx.MsgTx().SwapTx() {
 			numSpent = numSpent + (len(tx.MsgTx().TxIn) / 2)
 		} else {
 			numSpent += len(tx.MsgTx().TxIn)

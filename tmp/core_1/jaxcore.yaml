@@ -8,7 +8,7 @@ node:
   net: fastnet
 #  net: testnet
   p2p:
-    disable_outbound: true
+#    disable_outbound: true
     listeners:
       - 0.0.0.0:18444
 #    peers:
@@ -36,6 +36,6 @@ node:
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
-metrics:
-  enable: false
-  port: 12112
+#metrics:
+#  enable: false
+#  port: 12112

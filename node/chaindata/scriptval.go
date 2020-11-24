@@ -60,7 +60,7 @@ out:
 			// Ensure the referenced input utxo is available.
 			txIn := txVI.txIn
 			utxo := v.utxoView.LookupEntry(txIn.PreviousOutPoint)
-			thisIsSwapTx := txVI.tx.MsgTx().Version == wire.TxVerShardsSwap
+			thisIsSwapTx := txVI.tx.MsgTx().SwapTx()
 			if utxo == nil && thisIsSwapTx {
 				v.sendResult(nil)
 				continue

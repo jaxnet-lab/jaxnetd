@@ -283,9 +283,13 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 }
 
 const (
-	TxVerRegular    = 1
-	TxVerTimeLock   = 2
-	TxVerShardsSwap = 3
+	TxVerRegular           = 1 // TxVerRegular is a normal simple transaction
+	TxVerTimeLock          = 2 // TxVerTimeLock
+	TxVerTimeLockAllowance = 3 //
+)
+const (
+	TxMarkNope uint16 = iota
+	TxMarkShardSwap
 )
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -296,6 +300,7 @@ const (
 // inputs and outputs.
 type MsgTx struct {
 	Version  int32
+	Mark     uint16
 	TxIn     []*TxIn
 	TxOut    []*TxOut
 	LockTime uint32
@@ -309,6 +314,15 @@ func (msg *MsgTx) AddTxIn(ti *TxIn) {
 // AddTxOut adds a transaction output to the message.
 func (msg *MsgTx) AddTxOut(to *TxOut) {
 	msg.TxOut = append(msg.TxOut, to)
+}
+
+// SetMark adds a marker to the message.
+func (msg *MsgTx) SetMark(marker uint16) {
+	msg.Mark = marker
+}
+
+func (msg *MsgTx) SwapTx() bool {
+	return msg.Mark == TxMarkShardSwap
 }
 
 // TxHash generates the Hash for the transaction.
@@ -344,6 +358,7 @@ func (msg *MsgTx) Copy() *MsgTx {
 	// for the transaction inputs and outputs.
 	newTx := MsgTx{
 		Version:  msg.Version,
+		Mark:     msg.Mark,
 		TxIn:     make([]*TxIn, 0, len(msg.TxIn)),
 		TxOut:    make([]*TxOut, 0, len(msg.TxOut)),
 		LockTime: msg.LockTime,
@@ -422,6 +437,11 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncodin
 		return err
 	}
 	msg.Version = int32(version)
+
+	msg.Mark, err = encoder.BinarySerializer.Uint16(r, littleEndian)
+	if err != nil {
+		return err
+	}
 
 	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
@@ -688,6 +708,10 @@ func (msg *MsgTx) DeserializeNoWitness(r io.Reader) error {
 // database, as opposed to encoding transactions for the wire.
 func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	err := encoder.BinarySerializer.PutUint32(w, littleEndian, uint32(msg.Version))
+	if err != nil {
+		return err
+	}
+	err = encoder.BinarySerializer.PutUint16(w, littleEndian, msg.Mark)
 	if err != nil {
 		return err
 	}

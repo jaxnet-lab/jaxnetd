@@ -272,6 +272,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	if err != nil {
 		return nil, errors.Wrap(err, "tx not signed")
 	}
+
 	if redeemScripts != nil {
 		var err error
 		msgTx, err = client.AddSignatureToTx(msgTx, redeemScripts...)
@@ -290,7 +291,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}, nil
 }
 
-// NewSwapTx creates new transaction with wire.TxVerShardsSwap version:
+// NewSwapTx creates new transaction with wire.TxMarkShardSwap marker:
 // 	- data is a map of <Destination Address> => <Source txmodels.UTXO>.
 // 	- redeemScripts is optional, it allows to add proper signatures if source UTXO is a multisig address.
 //
@@ -308,7 +309,8 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		return nil, errors.New("keys not set")
 	}
 
-	msgTx := wire.NewMsgTx(wire.TxVerShardsSwap)
+	msgTx := wire.NewMsgTx(wire.TxVerRegular)
+	msgTx.SetMark(wire.TxMarkShardSwap)
 
 	ind := 0
 	outIndexes := map[string]int{}
@@ -381,7 +383,7 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 
 	sum := data.UTXO.GetSum()
 	change := sum - data.Amount - data.NetworkFee
-	if change != 0 {
+	if change > 0 {
 		changeRcvScript, err := txscript.PayToAddrScript(client.key.AddressPubKey.AddressPubKeyHash())
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to create P2A script for change")
@@ -428,11 +430,6 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 	redeemScripts ...string) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
-	}
-	type scriptData struct {
-		Type string
-		P2sh string
-		Hex  string
 	}
 
 	scripts := make(map[string]scriptData, len(redeemScripts))

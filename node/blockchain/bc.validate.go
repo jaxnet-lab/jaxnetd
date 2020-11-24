@@ -216,10 +216,12 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.OutPoint]struct{})
-	txVersions := make(map[wire.OutPoint]int32)
+	txMarkers := make(map[wire.OutPoint]uint16)
+
 	for _, tx := range block.Transactions() {
 		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		txVersions[prevOut] = tx.MsgTx().Version
+		txMarkers[prevOut] = tx.MsgTx().Mark
+
 		for txOutIdx := range tx.MsgTx().TxOut {
 			prevOut.Index = uint32(txOutIdx)
 			fetchSet[prevOut] = struct{}{}
@@ -233,7 +235,7 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 	// Duplicate transactions are only allowed if the previous transaction
 	// is fully spent.
 	for outpoint := range fetchSet {
-		thisIsSwapTx := txVersions[outpoint] == wire.TxVerShardsSwap
+		thisIsSwapTx := txMarkers[outpoint] == wire.TxMarkShardSwap
 		utxo := view.LookupEntry(outpoint)
 		if utxo != nil && thisIsSwapTx {
 			continue
@@ -488,13 +490,25 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 			if err != nil {
 				return err
 			}
-			if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
-				medianTime) {
-				str := fmt.Sprintf("block contains " +
-					"transaction whose input sequence " +
-					"locks are not met")
-				return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
+			switch tx.MsgTx().Version {
+			case wire.TxVerTimeLock:
+				if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
+					medianTime) {
+					str := fmt.Sprintf(
+						"block contains transaction whose input sequence locks are not met")
+					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
+				}
+			case wire.TxVerTimeLockAllowance:
+				if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
+					medianTime) {
+					if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
+						str := fmt.Sprintf(
+							"lock time has expired, transactions is possible only to the original addresses")
+						return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
+					}
+				}
 			}
+
 		}
 	}
 

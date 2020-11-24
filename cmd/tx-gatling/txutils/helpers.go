@@ -88,6 +88,7 @@ func TxToJson(mtx *wire.MsgTx, chainParams *chaincfg.Params) btcjson.TxRawDecode
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
 		Locktime: mtx.LockTime,
+		Marker:   mtx.Mark,
 		Vin:      rpcutli.ToolsXt{}.CreateVinList(mtx),
 		Vout:     rpcutli.ToolsXt{}.CreateVoutList(mtx, chainParams, nil),
 	}

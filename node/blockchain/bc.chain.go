@@ -562,7 +562,8 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 	// can be included within a block at any given height or time.
 	mTx := tx.MsgTx()
 
-	sequenceLockActive := mTx.Version == wire.TxVerTimeLock && csvSoftforkActive
+	sequenceLockActive := (mTx.Version == wire.TxVerTimeLock ||
+		mTx.Version == wire.TxVerTimeLockAllowance) && csvSoftforkActive
 	if !sequenceLockActive || chaindata.IsCoinBase(tx) {
 		return sequenceLock, nil
 	}
@@ -573,6 +574,13 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 
 	for txInIndex, txIn := range mTx.TxIn {
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
+
+		// ignore empty UTXO because this is normal situation for the SwapTx
+		if utxo == nil && mTx.SwapTx() {
+			// todo(mike): need to add more validation
+			continue
+		}
+
 		if utxo == nil {
 			str := fmt.Sprintf(
 				"output %v referenced from transaction %s:%d either does not exist or has already been spent",

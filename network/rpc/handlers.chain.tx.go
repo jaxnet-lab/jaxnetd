@@ -101,6 +101,7 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 	txReply := btcjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
+		Marker:   mtx.Mark,
 		Locktime: mtx.LockTime,
 		Vin:      server.CreateVinList(&mtx),
 		Vout:     server.CreateVoutList(&mtx, server.chainProvider.ChainParams, nil),
@@ -236,7 +237,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
-		//return btcjson.TxRawResult{}, nil
+		// return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCNoTxInfo,
@@ -356,7 +357,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		}
 	}
 
-	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerShardsSwap {
+	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.SwapTx() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCTxError,
 			Message: "Beacon not support ShardSwapTx",
@@ -767,6 +768,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 		result.Vout = server.CreateVoutList(mtx, params, filterAddrMap)
 		result.Version = mtx.Version
 		result.LockTime = mtx.LockTime
+		result.Marker = mtx.Mark
 
 		// Transactions grabbed from the mempool aren't yet in a block,
 		// so conditionally fetch block details here.  This will be
