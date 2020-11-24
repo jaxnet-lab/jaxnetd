@@ -233,14 +233,10 @@ type ShortUTXO struct {
 	Value        int64  `json:"value" csv:"value"`
 	PKScript     string `json:"pk_script" csv:"pk_script"`
 	ScriptType   string `json:"script_type" csv:"script_type"`
-	RedeemScript string
+	RedeemScript string `json:"redeem_script" csv:"redeem_script" `
 }
 
 func (utxo *ShortUTXO) GetScript(btcutil.Address) ([]byte, error) {
-	// if utxo.PKScript != address.String() {
-	// 	return nil, errors.New("nope")
-	// }
-
 	return hex.DecodeString(utxo.RedeemScript)
 }
 

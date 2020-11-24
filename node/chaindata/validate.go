@@ -5,6 +5,7 @@ package chaindata
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -137,13 +138,32 @@ func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
 	return true
 }
 
+func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
+	if len(tx.MsgTx().TxOut) > len(tx.MsgTx().TxIn) {
+		return false
+	}
+	inputAddresses := map[string]struct{}{}
+	for _, in := range tx.MsgTx().TxIn {
+		origUTXO := view.LookupEntry(in.PreviousOutPoint)
+		inputAddresses[hex.EncodeToString(origUTXO.PkScript())] = struct{}{}
+	}
+
+	for _, out := range tx.MsgTx().TxOut {
+		if _, ok := inputAddresses[hex.EncodeToString(out.PkScript)]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
 func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Time) bool {
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
 	lockTime := msgTx.LockTime
-	if lockTime == 0 {
+	if lockTime == 0 || msgTx.CleanVersion() == wire.TxVerTimeLockAllowance {
 		return true
 	}
 
@@ -221,7 +241,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		return NewRuleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
-	if msgTx.Version == wire.TxVerShardsSwap && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
+	if msgTx.SwapTx() && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
 		return NewRuleError(ErrInvalidShardSwapInOuts,
 			"ShardSwap tx with more than 2 inputs and outputs not allowed")
 	}
@@ -298,7 +318,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		// Previous transaction outputs referenced by the inputs to this
 		// transaction must not be null. Null allowed only for ShardsSwapTxs.
 		for _, txIn := range msgTx.TxIn {
-			if isNullOutpoint(&txIn.PreviousOutPoint) && msgTx.Version != wire.TxVerShardsSwap {
+			if isNullOutpoint(&txIn.PreviousOutPoint) && !msgTx.SwapTx() {
 				return NewRuleError(ErrBadTxInput, "transaction "+
 					"input refers to previous output that "+
 					"is null")
@@ -395,7 +415,7 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 	msgTx := tx.MsgTx()
 	totalSigOps := 0
 	missingCount := 0
-	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
@@ -674,7 +694,7 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 
 	missingCount := 0
 	missedInputs := map[int]struct{}{}
-	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)

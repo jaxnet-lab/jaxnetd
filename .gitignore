@@ -33,6 +33,7 @@ vendor/*
 /spec
 shard.core
 *.csv
+*.dat
 
 !/tmp/core_1/jaxcore.yaml
 !/tmp/core_2/jaxcore.yaml

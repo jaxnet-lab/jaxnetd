@@ -19,23 +19,27 @@ type DraftTx struct {
 	NetworkFee     int64
 	UTXO           UTXORows
 	ReceiverScript []byte
-	Address        string
+	DestAddress    string
 }
 
 // SetPayToAddress creates regular pay-to-address script.
 // 	destAddress is hex-encoded btcutil.Address
 func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincfg.Params) error {
+	var err error
+	tx.DestAddress = destAddress
+	tx.ReceiverScript, err = GetPayToAddressScript(destAddress, params)
+	return err
+}
+
+// SetPayToAddress creates regular pay-to-address script.
+// 	destAddress is hex-encoded btcutil.Address
+func GetPayToAddressScript(destAddress string, params *chaincfg.Params) ([]byte, error) {
 	decodedDestAddr, err := btcutil.DecodeAddress(destAddress, params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tx.Address = destAddress
-	tx.ReceiverScript, err = txscript.PayToAddrScript(decodedDestAddr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return txscript.PayToAddrScript(decodedDestAddr)
 }
 
 // SetMultiSig2of2 creates multiSig script, what can be spent only whist 2 of 2 signatures.
@@ -51,7 +55,7 @@ func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPub
 		return err
 	}
 
-	tx.Address = scriptAddr.EncodeAddress()
+	tx.DestAddress = scriptAddr.EncodeAddress()
 	tx.ReceiverScript = pkScript
 	return nil
 }

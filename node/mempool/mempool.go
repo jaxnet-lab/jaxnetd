@@ -1062,7 +1062,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	}
 
 	missingParentsCount := len(missingParents)
-	thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+	thisIsSwapTx := tx.MsgTx().SwapTx()
 	// for the the swap tx allowed only one missing parent
 	if (!thisIsSwapTx && missingParentsCount > 0) || (thisIsSwapTx && missingParentsCount > 1) {
 		return missingParents, nil, nil
@@ -1078,10 +1078,22 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		}
 		return nil, nil, err
 	}
-	if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
-		medianTimePast) {
-		return nil, nil, txRuleError(wire.RejectNonstandard,
-			"transaction's sequence locks on inputs not met")
+
+	switch tx.MsgTx().CleanVersion() {
+	case wire.TxVerTimeLock:
+		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+			medianTimePast) {
+			return nil, nil, txRuleError(wire.RejectNonstandard,
+				"transaction's sequence locks on inputs not met")
+		}
+	case wire.TxVerTimeLockAllowance:
+		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+			medianTimePast) {
+			if !chaindata.ValidMoneyBackAfterExpiration(tx, utxoView) {
+				return nil, nil, txRuleError(wire.RejectNonstandard,
+					"lock time has expired, transactions is possible only to the original addresses")
+			}
+		}
 	}
 
 	// Perform several checks on the transaction inputs using the invariant

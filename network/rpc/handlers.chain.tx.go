@@ -236,7 +236,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
-		//return btcjson.TxRawResult{}, nil
+		// return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCNoTxInfo,
@@ -356,7 +356,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		}
 	}
 
-	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerShardsSwap {
+	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.SwapTx() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCTxError,
 			Message: "Beacon not support ShardSwapTx",

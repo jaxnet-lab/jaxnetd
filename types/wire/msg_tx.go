@@ -283,9 +283,13 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 }
 
 const (
-	TxVerRegular    = 1
-	TxVerTimeLock   = 2
-	TxVerShardsSwap = 3
+	TxVerRegular           = 1 // TxVerRegular is a normal simple transaction
+	TxVerTimeLock          = 2 // TxVerTimeLock
+	TxVerTimeLockAllowance = 3 //
+)
+const (
+	TxMarkNope      int32 = 0
+	TxMarkShardSwap int32 = 1 << 16
 )
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -295,6 +299,9 @@ const (
 // Use the AddTxIn and AddTxOut functions to build up the list of transaction
 // inputs and outputs.
 type MsgTx struct {
+	// version structure 0xOAAABBBB
+	// 0xO000BBBB - Version
+	// 0xOAAA0000 - Mark
 	Version  int32
 	TxIn     []*TxIn
 	TxOut    []*TxOut
@@ -309,6 +316,26 @@ func (msg *MsgTx) AddTxIn(ti *TxIn) {
 // AddTxOut adds a transaction output to the message.
 func (msg *MsgTx) AddTxOut(to *TxOut) {
 	msg.TxOut = append(msg.TxOut, to)
+}
+
+// SetMark adds a marker to the message.
+func (msg *MsgTx) SetMark(mark int32) {
+
+	if msg.Version&mark != mark {
+		msg.Version = msg.Version ^ mark
+	}
+}
+
+func (msg *MsgTx) SwapTx() bool {
+	return msg.Version&TxMarkShardSwap == TxMarkShardSwap
+}
+
+func (msg *MsgTx) CleanVersion() int32 {
+	return msg.Version & 0xFFFF
+}
+
+func (msg *MsgTx) Mark() int32 {
+	return msg.Version & 0x0FFF0000
 }
 
 // TxHash generates the Hash for the transaction.

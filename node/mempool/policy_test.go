@@ -328,7 +328,7 @@ func TestCheckTransactionStandard(t *testing.T) {
 		{
 			name: "Transaction version too high",
 			tx: wire.MsgTx{
-				Version:  wire.TxVerShardsSwap + 1,
+				Version:  wire.TxVerTimeLockAllowance + 1,
 				TxIn:     []*wire.TxIn{&dummyTxIn},
 				TxOut:    []*wire.TxOut{&dummyTxOut},
 				LockTime: 0,

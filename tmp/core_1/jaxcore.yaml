@@ -8,7 +8,7 @@ node:
   net: fastnet
 #  net: testnet
   p2p:
-    disable_outbound: true
+#    disable_outbound: true
     listeners:
       - 0.0.0.0:18444
 #    peers:
@@ -17,7 +17,7 @@ node:
     disable: false
     user: somerpc
     password: somerpc
-    maxclients: 10
+    maxclients: 1000
     listeners:
       - 0.0.0.0:18333
 
@@ -33,9 +33,10 @@ node:
     max_peers: 1000
     tx_index: true
     addr_index: true
+    no_relay_priority: true
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
 
-metrics:
-  enable: false
-  port: 12112
+#metrics:
+#  enable: false
+#  port: 12112

@@ -607,7 +607,7 @@ mempoolLoop:
 		// other transactions in the mempool so they can be properly
 		// ordered below.
 		prioItem := &txPrioItem{tx: tx}
-		thisIsSwapTx := tx.MsgTx().Version == wire.TxVerShardsSwap
+		thisIsSwapTx := tx.MsgTx().SwapTx()
 
 		for _, txIn := range tx.MsgTx().TxIn {
 			originHash := &txIn.PreviousOutPoint.Hash
