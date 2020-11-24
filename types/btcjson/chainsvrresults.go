@@ -737,7 +737,6 @@ type TxRawResult struct {
 	Weight        int32  `json:"weight,omitempty"`
 	Version       int32  `json:"version"`
 	LockTime      uint32 `json:"locktime"`
-	Marker        uint16 `json:"marker"`
 	Vin           []Vin  `json:"vin"`
 	Vout          []Vout `json:"vout"`
 	BlockHash     string `json:"blockhash,omitempty"`
@@ -756,7 +755,6 @@ type SearchRawTransactionsResult struct {
 	Vsize         string       `json:"vsize"`
 	Weight        string       `json:"weight"`
 	Version       int32        `json:"version"`
-	Marker        uint16       `json:"marker"`
 	LockTime      uint32       `json:"locktime"`
 	Vin           []VinPrevOut `json:"vin"`
 	Vout          []Vout       `json:"vout"`
@@ -770,7 +768,6 @@ type SearchRawTransactionsResult struct {
 type TxRawDecodeResult struct {
 	Txid     string `json:"txid"`
 	Version  int32  `json:"version"`
-	Marker   uint16 `json:"marker"`
 	Locktime uint32 `json:"locktime"`
 	Vin      []Vin  `json:"vin"`
 	Vout     []Vout `json:"vout"`

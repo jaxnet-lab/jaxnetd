@@ -167,7 +167,6 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 		Vout:     xt.CreateVoutList(mtx, chainParams, nil),
 		Version:  mtx.Version,
 		LockTime: mtx.LockTime,
-		Marker:   mtx.Mark,
 	}
 
 	if blkHeader != nil {

@@ -288,8 +288,8 @@ const (
 	TxVerTimeLockAllowance = 3 //
 )
 const (
-	TxMarkNope uint16 = iota
-	TxMarkShardSwap
+	TxMarkNope      int32 = 0
+	TxMarkShardSwap int32 = 1 << 16
 )
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -299,8 +299,10 @@ const (
 // Use the AddTxIn and AddTxOut functions to build up the list of transaction
 // inputs and outputs.
 type MsgTx struct {
+	// version structure 0xOAAABBBB
+	// 0xO000BBBB - Version
+	// 0xOAAA0000 - Mark
 	Version  int32
-	Mark     uint16
 	TxIn     []*TxIn
 	TxOut    []*TxOut
 	LockTime uint32
@@ -317,12 +319,23 @@ func (msg *MsgTx) AddTxOut(to *TxOut) {
 }
 
 // SetMark adds a marker to the message.
-func (msg *MsgTx) SetMark(marker uint16) {
-	msg.Mark = marker
+func (msg *MsgTx) SetMark(mark int32) {
+
+	if msg.Version&mark != mark {
+		msg.Version = msg.Version ^ mark
+	}
 }
 
 func (msg *MsgTx) SwapTx() bool {
-	return msg.Mark == TxMarkShardSwap
+	return msg.Version&TxMarkShardSwap == TxMarkShardSwap
+}
+
+func (msg *MsgTx) CleanVersion() int32 {
+	return msg.Version & 0xFFFF
+}
+
+func (msg *MsgTx) Mark() int32 {
+	return msg.Version & 0x0FFF0000
 }
 
 // TxHash generates the Hash for the transaction.
@@ -358,7 +371,6 @@ func (msg *MsgTx) Copy() *MsgTx {
 	// for the transaction inputs and outputs.
 	newTx := MsgTx{
 		Version:  msg.Version,
-		Mark:     msg.Mark,
 		TxIn:     make([]*TxIn, 0, len(msg.TxIn)),
 		TxOut:    make([]*TxOut, 0, len(msg.TxOut)),
 		LockTime: msg.LockTime,
@@ -437,11 +449,6 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncodin
 		return err
 	}
 	msg.Version = int32(version)
-
-	msg.Mark, err = encoder.BinarySerializer.Uint16(r, littleEndian)
-	if err != nil {
-		return err
-	}
 
 	count, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
@@ -708,10 +715,6 @@ func (msg *MsgTx) DeserializeNoWitness(r io.Reader) error {
 // database, as opposed to encoding transactions for the wire.
 func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
 	err := encoder.BinarySerializer.PutUint32(w, littleEndian, uint32(msg.Version))
-	if err != nil {
-		return err
-	}
-	err = encoder.BinarySerializer.PutUint16(w, littleEndian, msg.Mark)
 	if err != nil {
 		return err
 	}

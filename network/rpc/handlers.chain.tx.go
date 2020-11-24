@@ -101,7 +101,6 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 	txReply := btcjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
-		Marker:   mtx.Mark,
 		Locktime: mtx.LockTime,
 		Vin:      server.CreateVinList(&mtx),
 		Vout:     server.CreateVoutList(&mtx, server.chainProvider.ChainParams, nil),
@@ -768,7 +767,6 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 		result.Vout = server.CreateVoutList(mtx, params, filterAddrMap)
 		result.Version = mtx.Version
 		result.LockTime = mtx.LockTime
-		result.Marker = mtx.Mark
 
 		// Transactions grabbed from the mempool aren't yet in a block,
 		// so conditionally fetch block details here.  This will be

@@ -216,11 +216,11 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.OutPoint]struct{})
-	txMarkers := make(map[wire.OutPoint]uint16)
+	txMarkers := make(map[wire.OutPoint]int32)
 
 	for _, tx := range block.Transactions() {
 		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		txMarkers[prevOut] = tx.MsgTx().Mark
+		txMarkers[prevOut] = tx.MsgTx().Mark()
 
 		for txOutIdx := range tx.MsgTx().TxOut {
 			prevOut.Index = uint32(txOutIdx)
@@ -490,7 +490,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 			if err != nil {
 				return err
 			}
-			switch tx.MsgTx().Version {
+			switch tx.MsgTx().CleanVersion() {
 			case wire.TxVerTimeLock:
 				if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
 					medianTime) {

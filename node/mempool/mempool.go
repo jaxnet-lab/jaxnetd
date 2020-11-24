@@ -1079,7 +1079,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		return nil, nil, err
 	}
 
-	switch tx.MsgTx().Version {
+	switch tx.MsgTx().CleanVersion() {
 	case wire.TxVerTimeLock:
 		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
 			medianTimePast) {
