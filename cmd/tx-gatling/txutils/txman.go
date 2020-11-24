@@ -11,6 +11,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -29,6 +30,8 @@ type TxMan struct {
 
 	NetParams *chaincfg.Params
 	rpc       *rpcclient.Client
+	lockTime  uint32
+	txVersion int32
 }
 
 func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
@@ -75,6 +78,15 @@ func (client *TxMan) WithKeys(key *KeyData) *TxMan {
 	*clone = *client
 	clone.key = key
 	return clone
+}
+
+// AddTimeLockAllowance adds the lock time to the new tx,
+// and utxo can only be spent until the lock completes, after the time lock ends - only refunds
+func (client *TxMan) AddTimeLockAllowance(lockTime uint32) *TxMan {
+	client.lockTime = lockTime
+	client.txVersion = wire.TxVerTimeLockAllowance
+
+	return client
 }
 
 func (client *TxMan) ForShard(shardID uint32) *TxMan {
@@ -340,6 +352,10 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
+		if client.lockTime != 0 {
+			msgTx.Version = client.txVersion
+			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
+		}
 		msgTx.AddTxIn(txIn)
 
 		outIndexes[destination] = ind
@@ -403,6 +419,10 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
+		if client.lockTime != 0 {
+
+			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
+		}
 		msgTx.AddTxIn(txIn)
 	}
 
