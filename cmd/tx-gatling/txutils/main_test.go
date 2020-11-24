@@ -373,11 +373,12 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 			lop = lop.AddTimeLockAllowance(timeLock)
 		}
 
-		tx, err := lop.NewTx(destination, amount, &senderUTXOIndex)
+		tx, err := op.TxMan.WithKeys(senderKP).ForShard(shardID).
+			AddTimeLockAllowance(timeLock).
+			NewTx(destination, amount, &senderUTXOIndex)
 		assert.NoError(t, err)
 
-		_, err = op.TxMan.WithKeys(senderKP).
-			RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+		_, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
 
 		assert.NoError(t, err)
 		err = senderUTXOIndex.SaveIndex()
