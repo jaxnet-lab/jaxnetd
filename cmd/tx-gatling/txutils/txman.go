@@ -420,7 +420,7 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 		if client.lockTime != 0 {
-
+			msgTx.Version = client.txVersion
 			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
 		}
 		msgTx.AddTxIn(txIn)
