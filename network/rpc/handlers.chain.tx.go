@@ -557,13 +557,11 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 		return nil, rpcNoTxInfoError(nil)
 	}
 
+	best := server.chainProvider.BlockChain().BestSnapshot()
+
 	var reply = make([]btcjson.ExtendedTxOutResult, 0, len(entries))
 	for out, entry := range entries {
-		// If requested and the tx is available in the mempool try to fetch it
-		// from there, otherwise attempt to fetch from the block database.
-		var bestBlockHash string
 		var confirmations int32
-		var value int64
 		var pkScript []byte
 		var isCoinbase bool
 
@@ -572,14 +570,11 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 		// transaction already in the main BlockChain.  Mined transactions
 		// that are spent by a mempool transaction are not affected by
 		// this.
-		if entry == nil || entry.IsSpent() {
-			return nil, nil
-		}
+		// if entry == nil || entry.IsSpent() {
+		// 	continue
+		// }
 
-		best := server.chainProvider.BlockChain().BestSnapshot()
-		bestBlockHash = best.Hash.String()
 		confirmations = 1 + best.Height - entry.BlockHeight()
-		value = entry.Amount()
 		pkScript = entry.PkScript()
 		isCoinbase = entry.IsCoinBase()
 
@@ -601,9 +596,9 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 		reply = append(reply, btcjson.ExtendedTxOutResult{
 			TxHash:        out.Hash.String(),
 			Index:         out.Index,
-			BestBlock:     bestBlockHash,
+			Used:          entry.IsSpent(),
 			Confirmations: int64(confirmations),
-			Value:         btcutil.Amount(value).ToBTC(),
+			Value:         entry.Amount(),
 			ScriptPubKey: btcjson.ScriptPubKeyResult{
 				Asm:       disbuf,
 				Hex:       hex.EncodeToString(pkScript),

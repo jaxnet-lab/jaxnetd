@@ -528,12 +528,12 @@ type GetTxOutResult struct {
 type ExtendedTxOutResult struct {
 	TxHash        string             `json:"txHash"`
 	Index         uint32             `json:"index"`
-	BestBlock     string             `json:"bestblock"`
 	BlockHeight   int64              `json:"blockHeight"`
 	Confirmations int64              `json:"confirmations"`
-	Value         float64            `json:"value"`
+	Value         int64              `json:"value"`
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
+	Used          bool               `json:"used"`
 }
 
 type ListTxOutResult struct {

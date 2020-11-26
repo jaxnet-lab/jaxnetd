@@ -34,6 +34,9 @@ func (path UTXOFromCSV) SelectForAmount(amount int64, shardID uint32) (txmodels.
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
 	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
 	return collected, nil
 }
 
@@ -44,6 +47,9 @@ func (rows UTXOFromRows) SelectForAmount(amount int64, shardID uint32) (txmodels
 	collected, change := txmodels.UTXORows(rows).CollectForAmount(amount, shardID)
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
 	}
 	return collected, nil
 }

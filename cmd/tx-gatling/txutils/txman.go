@@ -271,7 +271,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}
 
 	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID)
-	if err != nil {
+	if err != nil || draft.UTXO.GetSum() < amount+draft.NetworkFee {
 		return nil, errors.Wrap(err, "unable to get UTXO for amount")
 	}
 

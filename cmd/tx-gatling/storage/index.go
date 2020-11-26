@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 )
 
 type UTXORepo struct {
@@ -41,6 +42,9 @@ func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32) (txmode
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
 	}
 
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
 	return rows, nil
 }
 
@@ -84,6 +88,36 @@ func (collector *UTXORepo) SaveIndex() error {
 	err = ioutil.WriteFile(collector.file, data, 0644)
 	if err != nil {
 		return errors.Wrap(err, "unable to save index")
+	}
+
+	return nil
+}
+
+func (collector *UTXORepo) CollectFromRPC(rpcClient *rpcclient.Client, shardID uint32, filter map[string]bool) error {
+	result, err := rpcClient.ForShard(shardID).ListTxOut()
+	if err != nil {
+		return errors.Wrap(err, "unable to get utxo list")
+	}
+
+	for _, outResult := range result.List {
+
+	addressLookup:
+		for _, skAddress := range outResult.ScriptPubKey.Addresses {
+			if filter[skAddress] {
+				collector.index.AddUTXO(txmodels.UTXO{
+					ShardID:    shardID,
+					Address:    skAddress,
+					Height:     outResult.BlockHeight,
+					TxHash:     outResult.TxHash,
+					OutIndex:   outResult.Index,
+					Value:      outResult.Value,
+					Used:       outResult.Used,
+					PKScript:   outResult.ScriptPubKey.Hex,
+					ScriptType: outResult.ScriptPubKey.Type,
+				})
+				break addressLookup
+			}
+		}
 	}
 
 	return nil
