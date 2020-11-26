@@ -524,6 +524,22 @@ type GetTxOutResult struct {
 	Coinbase      bool               `json:"coinbase"`
 }
 
+// GetTxOutResult models the data from the gettxout command.
+type ExtendedTxOutResult struct {
+	TxHash        string             `json:"txHash"`
+	Index         uint32             `json:"index"`
+	BestBlock     string             `json:"bestblock"`
+	BlockHeight   int64              `json:"blockHeight"`
+	Confirmations int64              `json:"confirmations"`
+	Value         float64            `json:"value"`
+	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
+	Coinbase      bool               `json:"coinbase"`
+}
+
+type ListTxOutResult struct {
+	List []ExtendedTxOutResult
+}
+
 // GetNetTotalsResult models the data returned from the getnettotals command.
 type GetNetTotalsResult struct {
 	TotalBytesRecv uint64 `json:"totalbytesrecv"`

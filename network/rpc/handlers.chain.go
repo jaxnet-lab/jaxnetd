@@ -98,6 +98,7 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
 		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
 		btcjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
+		btcjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
 		btcjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
 		btcjson.ScopedMethod("chain", "searchRawTransactions"): server.handleSearchRawTransactions,
 		// -------------------------------------------------------------------------------------------------------------

@@ -605,6 +605,13 @@ func NewGetTxOutCmd(txHash string, vout uint32, includeMempool *bool) *GetTxOutC
 	}
 }
 
+// ListTxOutCmd defines the listtxout JSON-RPC command.
+type ListTxOutCmd struct{}
+
+func NewListTxOutCmd() *ListTxOutCmd {
+	return &ListTxOutCmd{}
+}
+
 // GetTxOutProofCmd defines the gettxoutproof JSON-RPC command.
 type GetTxOutProofCmd struct {
 	TxIDs     []string
@@ -933,6 +940,7 @@ func init() {
 	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
+	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)
 	MustRegisterCmd("chain", "sendRawTransaction", (*SendRawTransactionCmd)(nil), flags)
 

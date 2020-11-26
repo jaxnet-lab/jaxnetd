@@ -359,12 +359,13 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	var sendTx = func(senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) {
 		senderAddress := senderKP.Address.EncodeAddress()
 		senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+		err := senderUTXOIndex.ReadIndex()
+		assert.NoError(t, err)
 
 		index := senderUTXOIndex.Index()
 
-		index, _, err := op.TxMan.CollectUTXOIndex(shardID,
+		index, _, err = op.TxMan.CollectUTXOIndex(shardID,
 			index.LastBlock(shardID), map[string]bool{senderAddress: true}, index)
-
 		assert.NoError(t, err)
 		senderUTXOIndex.SetIndex(index)
 
@@ -394,7 +395,6 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
 	assert.NoError(t, err)
-
 	{
 		minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 		assert.NoError(t, err)

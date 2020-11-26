@@ -548,6 +548,76 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 	return txOutReply, nil
 }
 
+// handleListTxOut handles listtxout commands.
+func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	_ = cmd.(*btcjson.ListTxOutCmd)
+
+	entries, err := server.chainProvider.BlockChain().ListUtxoEntry()
+	if err != nil {
+		return nil, rpcNoTxInfoError(nil)
+	}
+
+	var reply = make([]btcjson.ExtendedTxOutResult, 0, len(entries))
+	for out, entry := range entries {
+		// If requested and the tx is available in the mempool try to fetch it
+		// from there, otherwise attempt to fetch from the block database.
+		var bestBlockHash string
+		var confirmations int32
+		var value int64
+		var pkScript []byte
+		var isCoinbase bool
+
+		// To match the behavior of the reference client, return nil
+		// (JSON null) if the transaction output is spent by another
+		// transaction already in the main BlockChain.  Mined transactions
+		// that are spent by a mempool transaction are not affected by
+		// this.
+		if entry == nil || entry.IsSpent() {
+			return nil, nil
+		}
+
+		best := server.chainProvider.BlockChain().BestSnapshot()
+		bestBlockHash = best.Hash.String()
+		confirmations = 1 + best.Height - entry.BlockHeight()
+		value = entry.Amount()
+		pkScript = entry.PkScript()
+		isCoinbase = entry.IsCoinBase()
+
+		// Disassemble script into single line printable format.
+		// The disassembled string will contain [error] inline if the script
+		// doesn't fully parse, so ignore the error here.
+		disbuf, _ := txscript.DisasmString(pkScript)
+
+		// Get further info about the script.
+		// Ignore the error here since an error means the script couldn't parse
+		// and there is no additional information about it anyways.
+		scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(pkScript,
+			server.chainProvider.ChainParams)
+		addresses := make([]string, len(addrs))
+		for i, addr := range addrs {
+			addresses[i] = addr.EncodeAddress()
+		}
+
+		reply = append(reply, btcjson.ExtendedTxOutResult{
+			TxHash:        out.Hash.String(),
+			Index:         out.Index,
+			BestBlock:     bestBlockHash,
+			Confirmations: int64(confirmations),
+			Value:         btcutil.Amount(value).ToBTC(),
+			ScriptPubKey: btcjson.ScriptPubKeyResult{
+				Asm:       disbuf,
+				Hex:       hex.EncodeToString(pkScript),
+				ReqSigs:   int32(reqSigs),
+				Type:      scriptClass.String(),
+				Addresses: addresses,
+			},
+			Coinbase: isCoinbase,
+		})
+	}
+
+	return btcjson.ListTxOutResult{List: reply}, nil
+}
+
 // handleSearchRawTransactions implements the searchrawtransactions command.
 func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Respond with an error if the address index is not enabled.

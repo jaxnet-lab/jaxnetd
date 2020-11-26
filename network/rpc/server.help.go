@@ -52,6 +52,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getRawMempool":          {(*[]string)(nil), (*btcjson.GetRawMempoolVerboseResult)(nil)},
 	"getRawTransaction":      {(*string)(nil), (*btcjson.TxRawResult)(nil)},
 	"getTxOut":               {(*btcjson.GetTxOutResult)(nil)},
+	"listTxOut":              {(*[]btcjson.ExtendedTxOutResult)(nil)},
 	"node":                   nil,
 	"help":                   {(*string)(nil), (*string)(nil)},
 	"ping":                   nil,
