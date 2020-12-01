@@ -181,7 +181,7 @@ func (chainCtl *chainController) saveShardsIndex() {
 func (chainCtl *chainController) syncShardsIndex() error {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	chainCtl.shardsIndex = &Index{
-		Shards: []ShardInfo{},
+		Shards: map[uint32]ShardInfo{},
 	}
 
 	if _, err := os.Stat(shardsFile); err == nil {

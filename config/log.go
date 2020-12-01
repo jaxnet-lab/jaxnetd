@@ -38,21 +38,21 @@ var (
 
 	// unitLogs maps each subsystem identifier to its associated logger.
 	unitLogs = map[string]zerolog.Logger{
-		logUnitADXR: backendLog.With().Str("app::unit", logUnitADXR).Logger(),
-		logUnitAMGR: backendLog.With().Str("app::unit", logUnitAMGR).Logger(),
-		logUnitCMGR: backendLog.With().Str("app::unit", logUnitCMGR).Logger(),
-		logUnitBCDB: backendLog.With().Str("app::unit", logUnitBCDB).Logger(),
-		logUnitJXCD: backendLog.With().Str("app::unit", logUnitJXCD).Logger(),
-		logUnitCHAN: backendLog.With().Str("app::unit", logUnitCHAN).Logger(),
-		logUnitDISC: backendLog.With().Str("app::unit", logUnitDISC).Logger(),
-		logUnitINDX: backendLog.With().Str("app::unit", logUnitINDX).Logger(),
-		logUnitMINR: backendLog.With().Str("app::unit", logUnitMINR).Logger(),
-		logUnitPEER: backendLog.With().Str("app::unit", logUnitPEER).Logger(),
-		logUnitRPCS: backendLog.With().Str("app::unit", logUnitRPCS).Logger(),
-		logUnitSCRP: backendLog.With().Str("app::unit", logUnitSCRP).Logger(),
-		logUnitSRVR: backendLog.With().Str("app::unit", logUnitSRVR).Logger(),
-		logUnitSYNC: backendLog.With().Str("app::unit", logUnitSYNC).Logger(),
-		logUnitTXMP: backendLog.With().Str("app::unit", logUnitTXMP).Logger(),
+		logUnitADXR: backendLog.With().Str("app.unit", logUnitADXR).Logger(),
+		logUnitAMGR: backendLog.With().Str("app.unit", logUnitAMGR).Logger(),
+		logUnitCMGR: backendLog.With().Str("app.unit", logUnitCMGR).Logger(),
+		logUnitBCDB: backendLog.With().Str("app.unit", logUnitBCDB).Logger(),
+		logUnitJXCD: backendLog.With().Str("app.unit", logUnitJXCD).Logger(),
+		logUnitCHAN: backendLog.With().Str("app.unit", logUnitCHAN).Logger(),
+		logUnitDISC: backendLog.With().Str("app.unit", logUnitDISC).Logger(),
+		logUnitINDX: backendLog.With().Str("app.unit", logUnitINDX).Logger(),
+		logUnitMINR: backendLog.With().Str("app.unit", logUnitMINR).Logger(),
+		logUnitPEER: backendLog.With().Str("app.unit", logUnitPEER).Logger(),
+		logUnitRPCS: backendLog.With().Str("app.unit", logUnitRPCS).Logger(),
+		logUnitSCRP: backendLog.With().Str("app.unit", logUnitSCRP).Logger(),
+		logUnitSRVR: backendLog.With().Str("app.unit", logUnitSRVR).Logger(),
+		logUnitSYNC: backendLog.With().Str("app.unit", logUnitSYNC).Logger(),
+		logUnitTXMP: backendLog.With().Str("app.unit", logUnitTXMP).Logger(),
 	}
 )
 

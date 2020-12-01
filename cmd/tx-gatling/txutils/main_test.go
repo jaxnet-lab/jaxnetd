@@ -361,13 +361,8 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
 		err := senderUTXOIndex.ReadIndex()
 		assert.NoError(t, err)
-
-		index := senderUTXOIndex.Index()
-
-		index, _, err = op.TxMan.CollectUTXOIndex(shardID,
-			index.LastBlock(shardID), map[string]bool{senderAddress: true}, index)
+		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
 		assert.NoError(t, err)
-		senderUTXOIndex.SetIndex(index)
 
 		lop := op.TxMan.ForShard(shardID)
 		if timeLock > 0 {
@@ -419,14 +414,10 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	multisigUTXOIndex := storage.NewUTXORepo("", "multisig")
 
 	var getMultisigOut = func(shardID uint32) txmodels.UTXO {
-		index := multisigUTXOIndex.Index()
 		fmt.Printf("Collectiong UTXO from %d shard...\n", shardID1)
-
-		index, _, err = op.TxMan.CollectUTXOIndex(shardID,
-			index.LastBlock(shardID),
-			map[string]bool{multiSigScript.Address: true}, index)
+		err = multisigUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{multiSigScript.Address: true})
 		assert.NoError(t, err)
-		multisigUTXOIndex.SetIndex(index)
+
 		rows, _ := multisigUTXOIndex.SelectForAmount(OneCoin, shardID)
 		assert.Equal(t, 1, len(rows))
 
