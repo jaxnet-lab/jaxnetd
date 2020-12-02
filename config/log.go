@@ -108,7 +108,7 @@ func setLogLevel(unit, logLevel string, config corelog.Config) {
 	}
 
 	logger = corelog.New(unit, level, config)
-	unitLogs[unit] = logger.With().Str("app::unit", unit).Logger()
+	unitLogs[unit] = logger.With().Str("app.unit", unit).Logger()
 }
 
 // setLogLevels sets the log level for all subsystem loggers to the passed

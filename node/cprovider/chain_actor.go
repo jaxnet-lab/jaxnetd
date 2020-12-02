@@ -162,7 +162,6 @@ func (chainProvider *ChainProvider) DBUpdateCallback(tx database.Tx) error {
 		// If there is an error, log it and make a new fee estimator.
 		var err error
 		chainProvider.FeeEstimator, err = mempool.RestoreFeeEstimator(feeEstimationData)
-
 		if err != nil {
 			chainProvider.logger.Error().Err(err).Msg("Failed to restore fee estimator")
 		}
