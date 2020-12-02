@@ -177,18 +177,20 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 	} else {
 		blockTimeOrHeight = blockTime.Unix()
 	}
-	if int64(lockTime) < blockTimeOrHeight {
-		return true
-	}
 
+	timeLockTx := tx.MsgTx().Version == wire.TxVerTimeLock
+	if int64(lockTime) < blockTimeOrHeight {
+		return timeLockTx
+	}
 	// At this point, the transaction's lock time hasn't occurred yet, but
 	// the transaction might still be finalized if the sequence number
 	// for all transaction inputs is maxed out.
 	for _, txIn := range msgTx.TxIn {
 		if txIn.Sequence != math.MaxUint32 {
-			return false
+			return !timeLockTx
 		}
 	}
+
 	return true
 }
 

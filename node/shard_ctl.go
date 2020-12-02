@@ -34,9 +34,9 @@ type ShardInfo struct {
 }
 
 type Index struct {
-	LastShardID      uint32      `json:"last_shard_id"`
-	LastBeaconHeight int32       `json:"last_beacon_height"`
-	Shards           []ShardInfo `json:"shards"`
+	LastShardID      uint32               `json:"last_shard_id"`
+	LastBeaconHeight int32                `json:"last_beacon_height"`
+	Shards           map[uint32]ShardInfo `json:"shards"`
 }
 
 func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
@@ -48,14 +48,14 @@ func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
 		index.LastShardID = shardID
 	}
 
-	index.Shards = append(index.Shards, ShardInfo{
+	index.Shards[shardID] = ShardInfo{
 		ID:            shardID,
 		LastVersion:   block.MsgBlock().Header.Version(),
 		GenesisHeight: block.Height(),
 		GenesisHash:   block.Hash().String(),
 		Enabled:       true,
 		P2PInfo:       opts,
-	})
+	}
 
 	return shardID
 }

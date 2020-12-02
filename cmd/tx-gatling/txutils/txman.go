@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -250,8 +251,11 @@ func (client *TxMan) NetworkFee() (int64, error) {
 	}
 
 	amount, _ := btcutil.NewAmount(*fee.FeeRate)
-	return int64(amount), nil
+	if amount < mempool.DefaultMinRelayTxFee {
+		return int64(mempool.DefaultMinRelayTxFee), nil
+	}
 
+	return int64(amount), nil
 }
 
 func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider,

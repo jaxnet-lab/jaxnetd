@@ -54,7 +54,7 @@ func Controller(logger zerolog.Logger) *chainController {
 		shardsIndex: &Index{
 			LastShardID:      0,
 			LastBeaconHeight: 0,
-			Shards:           []ShardInfo{},
+			Shards:           map[uint32]ShardInfo{},
 		},
 		ports: p2p.NewPortsIndex(),
 	}
