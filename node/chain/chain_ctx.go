@@ -12,6 +12,7 @@ import (
 type IChainCtx interface {
 	wire.HeaderConstructor
 
+	Name() string
 	Params() *chaincfg.Params
 	GenesisBlock() *wire.MsgBlock
 	EmptyBlock() wire.MsgBlock

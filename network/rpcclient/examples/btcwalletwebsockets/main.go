@@ -6,9 +6,7 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
-	"path/filepath"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -29,20 +27,21 @@ func main() {
 	}
 
 	// Connect to local btcwallet RPC server using websockets.
-	certHomeDir := btcutil.AppDataDir("btcwallet", false)
-	certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
-	if err != nil {
-		log.Fatal(err)
-	}
+	//certHomeDir := btcutil.AppDataDir("btcwallet", false)
+	//certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	connCfg := &rpcclient.ConnConfig{
 		Endpoint:     "ws",
-		Host:         "0.0.0.0:8334",
+		Host:         "0.0.0.0:18444",
 		User:         "somerpc",
 		Pass:         "somerpc",
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
-		Certificates: certs,
+		//Certificates: certs,
 	}
+
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)
 	if err != nil {
 		log.Fatal(err)

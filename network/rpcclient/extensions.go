@@ -363,21 +363,20 @@ type FutureVersionResult chan *response
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (r FutureVersionResult) Receive() (map[string]btcjson.VersionResult,
-	error) {
+func (r FutureVersionResult) Receive() (*btcjson.NodeVersion, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a version result object.
-	var vr map[string]btcjson.VersionResult
+	var vr btcjson.NodeVersion
 	err = json.Unmarshal(res, &vr)
 	if err != nil {
 		return nil, err
 	}
 
-	return vr, nil
+	return &vr, nil
 }
 
 // VersionAsync returns an instance of a type that can be used to get the result
@@ -397,6 +396,6 @@ func (c *Client) VersionAsync() FutureVersionResult {
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) Version() (map[string]btcjson.VersionResult, error) {
+func (c *Client) Version() (*btcjson.NodeVersion, error) {
 	return c.VersionAsync().Receive()
 }

@@ -132,7 +132,7 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
-		log.Infof("Store new genesis: Chain %s Hash %s", b.chain.Params().Name, genesisBlock.Hash())
+		log.Info().Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
 		// Store the genesis block into the database.
 		return chaindata.DBStoreBlock(dbTx, genesisBlock)
 	})
@@ -175,7 +175,7 @@ func (b *BlockChain) initChainState() error {
 		// initialized for use with chain yet, so break out now to allow
 		// that to happen under a writable database transaction.
 		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
-		log.Tracef("Serialized chain state: %x", serializedData)
+		log.Trace().Msgf("Serialized chain state: %x", serializedData)
 		state, err := chaindata.DeserializeBestChainState(serializedData)
 		if err != nil {
 			return err
@@ -186,7 +186,7 @@ func (b *BlockChain) initChainState() error {
 		// number of nodes are already known, perform a single alloc
 		// for them versus a whole bunch of little ones to reduce
 		// pressure on the GC.
-		log.Infof("Loading block index...")
+		log.Info().Msgf("Loading block index...")
 
 		blockIndexBucket := dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
 
@@ -207,8 +207,7 @@ func (b *BlockChain) initChainState() error {
 				blockHash := header.BlockHash()
 				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
 					return chaindata.AssertError(fmt.Sprintf(
-						"initChainState: Expected first entry in block index to be genesis block:"+
-							" expected %s, found %s",
+						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chainParams.GenesisHash, blockHash))
 				}
 			} else if header.PrevBlock() == lastNode.GetHash() {
@@ -220,8 +219,8 @@ func (b *BlockChain) initChainState() error {
 				prev := header.PrevBlock()
 				parent = b.index.LookupNode(&prev)
 				if parent == nil {
-					return chaindata.AssertError(fmt.Sprintf("initChainState: Could "+
-						"not find parent for block %s", header.BlockHash()))
+					return chaindata.AssertError(fmt.Sprintf(
+						"initChainState: Could not find parent for block %s", header.BlockHash()))
 				}
 			}
 
@@ -239,8 +238,8 @@ func (b *BlockChain) initChainState() error {
 		// Set the best chain view to the stored best state.
 		tip := b.index.LookupNode(&state.Hash)
 		if tip == nil {
-			return chaindata.AssertError(fmt.Sprintf("initChainState: cannot find "+
-				"chain tip %s in block index", state.Hash))
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: cannot find chain tip %s in block index", state.Hash))
 		}
 		b.bestChain.SetTip(tip)
 
@@ -265,9 +264,8 @@ func (b *BlockChain) initChainState() error {
 			// we'll mark it as valid now to ensure consistency once
 			// we're up and running.
 			if !iterNode.Status().KnownValid() {
-				log.Infof("Block %v (height=%v) ancestor of "+
-					"chain tip not marked as valid, "+
-					"upgrading to valid for consistency",
+				log.Info().Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid," +
+					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 
 				b.index.SetStatusFlags(iterNode, blocknode.StatusValid)

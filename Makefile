@@ -4,7 +4,7 @@ all: build
 
 build:
 	go build -o shard.core
-	go build -o jaxctl gitlab.com/jaxnet/core/shard.core/cmd/btcctl
+	go build -o jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
 
 clean:
 	go clean

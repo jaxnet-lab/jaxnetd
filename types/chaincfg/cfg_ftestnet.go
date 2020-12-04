@@ -53,7 +53,7 @@ var FTestNetParams = Params{
 	BIP0034Height:            0,
 	BIP0065Height:            0,
 	BIP0066Height:            0,
-	CoinbaseMaturity:         100,
+	CoinbaseMaturity:         5,
 	SubsidyReductionInterval: 210000,
 
 	TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day

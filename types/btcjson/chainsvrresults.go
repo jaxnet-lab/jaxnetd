@@ -285,6 +285,7 @@ type GetBlockChainInfoResult struct {
 	Pruned               bool    `json:"pruned"`
 	PruneHeight          int32   `json:"pruneheight,omitempty"`
 	ChainWork            string  `json:"chainwork,omitempty"`
+	Shards               uint32  `json:"shards"`
 	*SoftForks
 	*UnifiedSoftForks
 }
@@ -521,6 +522,22 @@ type GetTxOutResult struct {
 	Value         float64            `json:"value"`
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
+}
+
+// GetTxOutResult models the data from the gettxout command.
+type ExtendedTxOutResult struct {
+	TxHash        string             `json:"txHash"`
+	Index         uint32             `json:"index"`
+	BlockHeight   int64              `json:"blockHeight"`
+	Confirmations int64              `json:"confirmations"`
+	Value         int64              `json:"value"`
+	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
+	Coinbase      bool               `json:"coinbase"`
+	Used          bool               `json:"used"`
+}
+
+type ListTxOutResult struct {
+	List []ExtendedTxOutResult
 }
 
 // GetNetTotalsResult models the data returned from the getnettotals command.

@@ -52,6 +52,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"getRawMempool":          {(*[]string)(nil), (*btcjson.GetRawMempoolVerboseResult)(nil)},
 	"getRawTransaction":      {(*string)(nil), (*btcjson.TxRawResult)(nil)},
 	"getTxOut":               {(*btcjson.GetTxOutResult)(nil)},
+	"listTxOut":              {(*[]btcjson.ExtendedTxOutResult)(nil)},
 	"node":                   nil,
 	"help":                   {(*string)(nil), (*string)(nil)},
 	"ping":                   nil,
@@ -64,7 +65,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"validateAddress":        {(*btcjson.ValidateAddressChainResult)(nil)},
 	"verifyChain":            {(*bool)(nil)},
 	"verifyMessage":          {(*bool)(nil)},
-	"version":                {(*map[string]btcjson.VersionResult)(nil)},
+	"version":                {(*btcjson.NodeVersion)(nil)},
 
 	// Websocket commands.
 	"loadTxFilter":              nil,
@@ -172,7 +173,7 @@ var helpDescsEnUS = map[string]string{
 		"The levelspec can either a debug level or of the form:\n" +
 		"<subsystem>=<level>,<subsystem2>=<level2>,...\n" +
 		"The valid debug levels are trace, debug, info, warn, error, and critical.\n" +
-		"The valid subsystems are AMGR, ADXR, BCDB, BMGR, BTCD, CHAN, DISC, PEER, RPCS, SCRP, SRVR, and TXMP.\n" +
+		"The valid subsystems are AMGR, ADXR, BCDB, BMGR, JXCD, CHAN, DISC, PEER, RPCS, SCRP, SRVR, and TXMP.\n" +
 		"Finally the keyword 'show' will return a list of the available subsystems.",
 	"debuglevel-levelspec":   "The debug level(s) to use or the keyword 'show'",
 	"debuglevel--condition0": "levelspec!=show",

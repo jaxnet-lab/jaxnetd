@@ -6,22 +6,25 @@
 package txutils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"golang.org/x/sync/errgroup"
 )
 
 type T testing.T
 
 func (t *T) Errorf(format string, args ...interface{}) { t.Fatalf(format, args...) }
-
-// func TestMain(m *testing.M) {
-//
-// }
 
 func TestOperator_SpendUTXO(t *testing.T) {
 	cfg := ManagerCfg{
@@ -48,16 +51,18 @@ func TestOperator_SpendUTXO(t *testing.T) {
 
 func TestMakeMultiSigScript(ot *testing.T) {
 	t := (*T)(ot)
-
+	var shardID uint32 = 1
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	evaAddress := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
 	utxoSearchOffset := 0
 	amount := int64(1000000000) - OneCoin
+
 	// -----------------------------------------------------------------------------------------
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net: "testnet",
+		Net:     "testnet",
+		ShardID: shardID,
 		RPC: NodeRPC{
 			Host: "116.202.107.209:18334",
 			User: "somerpc",
@@ -75,7 +80,8 @@ func TestMakeMultiSigScript(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	aliceUTXO, _, err := op.TxMan.CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
+	aliceUTXO, _, err := op.TxMan.ForShard(shardID).
+		CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
 	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
@@ -93,17 +99,21 @@ func TestMakeMultiSigScript(ot *testing.T) {
 
 	// -----------------------------------------------------------------------------------------
 	// ---/---- SEND COINS TO MULTISIG ADDRESS  ----\----
-	toMultiSigAddrTx, err := op.TxMan.WithKeys(aliceKP).NewTx(multiSigScript.Address, amount, UTXOFromRows(aliceUTXO))
+	toMultiSigAddrTx, err := op.TxMan.
+		ForShard(shardID).
+		WithKeys(aliceKP).
+		NewTx(multiSigScript.Address, amount, UTXOFromRows(aliceUTXO))
 	assert.NoError(t, err)
 
 	// publish created transaction
-	txHash, err := op.TxMan.RPC.SendRawTransaction(toMultiSigAddrTx.RawTX, true)
+
+	txHash, err := op.TxMan.RPC().ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
 	assert.NoError(t, err)
 
 waitLoop:
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 1 {
 			fmt.Println("tx mined into block")
@@ -152,12 +162,12 @@ waitLoop:
 
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
-	txHash, err = op.TxMan.RPC.SendRawTransaction(multiSigSpendTx.RawTX, true)
+	txHash, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
 	assert.NoError(t, err)
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -169,32 +179,211 @@ waitLoop:
 	// -----------------------------------------------------------------------------------------
 }
 
-func TestMakeSwapTx(ot *testing.T) {
+func TestSendTx(ot *testing.T) {
 	t := (*T)(ot)
 
-	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
-	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			Host: "116.202.107.209:18333",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+	rawTx := ""
+
+	data, err := hex.DecodeString(rawTx)
+	assert.NoError(t, err)
+	signedTx := &txmodels.SwapTransaction{}
+	err = signedTx.UnmarshalBinary(data)
+	assert.NoError(t, err)
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to first shard: %s\n", signedTx.TxHash)
+
+	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to second shard: %s\n", signedTx.TxHash)
+
+}
+
+func TestMakeSwapTx(ot *testing.T) {
+	t := (*T)(ot)
+	var shardID1 uint32 = 18
+	var shardID2 uint32 = 17
+
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerAddr := "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz"
+	minerUTXOIndex := storage.NewUTXORepo("", "miner")
+	err := minerUTXOIndex.ReadIndex()
+	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net: "testnet",
+		Net: "fastnet",
 		RPC: NodeRPC{
-			Host: "116.202.107.209:18334",
+			// Host: "116.203.250.136:18333",
+			Host: "116.202.107.209:18333",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	assert.NoError(t, err)
+
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	fmt.Printf("Collectiong UTXO from first shard...\n")
+
+	index := minerUTXOIndex.Index()
+	index, _, err = op.TxMan.CollectUTXOIndex(shardID1,
+		index.LastBlock(shardID1),
+		map[string]bool{minerAddr: true}, index)
+	assert.NoError(t, err)
+	minerUTXOIndex.SetIndex(index)
+
+	fmt.Printf("Collectiong UTXO from second shard...\n")
+	index, _, err = op.TxMan.CollectUTXOIndex(shardID2,
+		index.LastBlock(shardID2),
+		map[string]bool{minerAddr: true}, index)
+	assert.NoError(t, err)
+	minerUTXOIndex.SetIndex(index)
+
+	err = minerUTXOIndex.SaveIndex()
+	assert.NoError(t, err)
+
+	rows, _ := minerUTXOIndex.SelectForAmount(5000000000, shardID1)
+	assert.Equal(t, 1, len(rows))
+	shard1UTXO := rows[0]
+
+	rows, _ = minerUTXOIndex.SelectForAmount(5000000000, shardID2)
+	assert.Equal(t, 1, len(rows))
+	shard2UTXO := rows[0]
+
+	// -----------------------------------------------------------------------------------------
+	destinationAtShard1 := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
+	destinationAtShard2 := "mz6Z8dFaxEAMmnR5ha4CVnKykeY6S3dUwi"
+	spendingMap := map[string]txmodels.UTXO{
+		destinationAtShard1: shard1UTXO,
+		destinationAtShard2: shard2UTXO,
+	}
+	swapTX, err := op.TxMan.WithKeys(minerKP).NewSwapTx(spendingMap, false)
+	assert.NoError(t, err)
+	fmt.Printf("Send Tx\nHash: %s\nBody: %s\n", swapTX.TxHash, swapTX.SignedTx)
+
+	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
+	// publish created transaction
+	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to first shard: %s\n", swapTX.TxHash)
+
+	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	assert.NoError(t, err)
+	fmt.Printf("Submitted to second shard: %s\n", swapTX.TxHash)
+
+	err = minerUTXOIndex.SaveIndex()
+	assert.NoError(t, err)
+
+	var firstDone, secondDone bool
+	for {
+		// wait for the transaction to be added to the block
+		firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false)
+		assert.NoError(t, err)
+
+		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+			fmt.Println("tx mined into block @ first shard")
+			firstDone = true
+		}
+
+		// wait for the transaction to be added to the block
+		firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		assert.NoError(t, err)
+		secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false)
+		assert.NoError(t, err)
+
+		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+			fmt.Println("tx mined into block @ second shard")
+			secondDone = true
+		}
+
+		if firstDone && secondDone {
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	// -----------------------------------------------------------------------------------------
+}
+
+func TestMakeMultiSigSwapTx(ot *testing.T) {
+	t := (*T)(ot)
+
+	var shardID1 uint32 = 1
+	var shardID2 uint32 = 2
+
+	// -----------------------------------------------------------------------------------------
+
+	// ---/---- PREPARE ----\----
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			// Host: "116.203.250.136:18333",
+			// Host: "116.202.107.209:18333",
+			// User: "jaxnetrpc",
+			// Pass: "AUL6VBjoQnhP3bfFzl",
+			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
 
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+
+	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
 	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
 	assert.NoError(t, err)
 
+	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
 	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
 	assert.NoError(t, err)
+	{
+		minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+		assert.NoError(t, err)
+		txHashAtShard1, err := sendTx(op.TxMan, minerKP, shardID1, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		assert.NoError(t, err)
 
-	op, err := NewOperator(cfg)
-	assert.NoError(t, err)
+		txHashAtShard2, err := sendTx(op.TxMan, minerKP, shardID2, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		assert.NoError(t, err)
+
+		eGroup := errgroup.Group{}
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
+		err = eGroup.Wait()
+		assert.NoError(t, err)
+	}
 
 	signers := []string{
 		aliceKP.AddressPubKey.String(),
@@ -204,77 +393,232 @@ func TestMakeSwapTx(ot *testing.T) {
 	multiSigScript, err := MakeMultiSigScript(signers, len(signers), cfg.NetParams())
 	assert.NoError(t, err)
 
-	shard1UTXO := txmodels.UTXO{
-		ShardID:    1,
-		Address:    multiSigScript.Address,
-		Value:      OneCoin,
-		Height:     0,
-		TxHash:     "",
-		OutIndex:   0,
-		Used:       false,
-		PKScript:   "",
-		ScriptType: "",
+	{
+		txHashAtShard1, err := sendTx(op.TxMan, aliceKP, shardID1, multiSigScript.Address, OneCoin, 100)
+		assert.NoError(t, err)
+
+		txHashAtShard2, err := sendTx(op.TxMan, aliceKP, shardID2, multiSigScript.Address, OneCoin, 100)
+		assert.NoError(t, err)
+
+		eGroup := errgroup.Group{}
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
+		err = eGroup.Wait()
+		assert.NoError(t, err)
 	}
 
-	shard2UTXO := txmodels.UTXO{
-		ShardID:    2,
-		Address:    multiSigScript.Address,
-		Value:      OneCoin,
-		Height:     0,
-		TxHash:     "",
-		OutIndex:   0,
-		Used:       false,
-		PKScript:   "",
-		ScriptType: "",
+	fmt.Printf("Collectiong UTXO from first shard...\n")
+	multisigUTXOIndex := storage.NewUTXORepo("", "multisig")
+
+	var getMultisigOut = func(shardID uint32) txmodels.UTXO {
+		fmt.Printf("Collectiong UTXO from %d shard...\n", shardID1)
+		err = multisigUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{multiSigScript.Address: true})
+		assert.NoError(t, err)
+
+		rows, _ := multisigUTXOIndex.SelectForAmount(OneCoin, shardID)
+		assert.Equal(t, 1, len(rows))
+
+		utxo := rows[0]
+		utxo, err = SetRedeemScript(utxo, multiSigScript.RedeemScript, cfg.NetParams())
+		assert.NoError(t, err)
+
+		// err = multisigUTXOIndex.SaveIndex()
+		// assert.NoError(t, err)
+
+		return utxo
 	}
+
+	shard1UTXO := getMultisigOut(shardID1)
+	shard2UTXO := getMultisigOut(shardID2)
+
 	// -----------------------------------------------------------------------------------------
-
-	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(map[string]txmodels.UTXO{
-		"address_in_shard_1": shard1UTXO,
-		"address_in_shard_2": shard2UTXO,
-	}, false)
+	destinationAtShard1 := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
+	destinationAtShard2 := "mz6Z8dFaxEAMmnR5ha4CVnKykeY6S3dUwi"
+	spendingMap := map[string]txmodels.UTXO{
+		destinationAtShard1: shard1UTXO,
+		destinationAtShard2: shard2UTXO,
+	}
+	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(spendingMap, false, multiSigScript.RedeemScript)
 	assert.NoError(t, err)
 
 	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
-	swapTxWithMultisig, err := op.TxMan.WithKeys(aliceKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
-	assert.NoError(t, err)
+	{
+		var swapTxWithMultisig *wire.MsgTx
+		swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToSwapTx(swapTX.RawTX,
+			[]uint32{shardID1, shardID2},
+			multiSigScript.RedeemScript)
 
-	swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToTx(swapTX.RawTX, multiSigScript.RedeemScript)
-	assert.NoError(t, err)
+		assert.NoError(t, err)
+		swapTX.RawTX = swapTxWithMultisig
+		swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
+	}
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
-	// publish created transaction
-	txHash, err := op.TxMan.RPC.ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
-	assert.NoError(t, err)
-
-	for {
-		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+	{
+		// publish created transaction
+		txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
 		assert.NoError(t, err)
-		if out != nil && out.Confirmations > 2 {
-			println("tx mined into block")
-			break
-		}
+		fmt.Printf("Submitted to first shard: %s\n", swapTX.TxHash)
 
-		time.Sleep(time.Second)
+		// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
+		txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+		assert.NoError(t, err)
+		fmt.Printf("Submitted to second shard: %s\n", swapTX.TxHash)
+
+		var firstDone, secondDone bool
+		for {
+			// wait for the transaction to be added to the block
+			firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false)
+			assert.NoError(t, err)
+			secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false)
+			assert.NoError(t, err)
+
+			if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+				fmt.Println("tx mined into block @ first shard")
+				firstDone = true
+			}
+
+			// wait for the transaction to be added to the block
+			firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+			assert.NoError(t, err)
+			secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false)
+			assert.NoError(t, err)
+
+			if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
+				fmt.Println("tx mined into block @ second shard")
+				secondDone = true
+			}
+
+			if firstDone && secondDone {
+				break
+			}
+
+			time.Sleep(time.Second)
+		}
 	}
 
-	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-	txHash, err = op.TxMan.RPC.ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTxWithMultisig, true)
+}
+
+func TestTimeLockTx(ot *testing.T) {
+	t := (*T)(ot)
+
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			// Host: "116.203.250.136:18333",
+			// Host: "116.202.107.209:18333",
+			// User: "jaxnetrpc",
+			// Pass: "AUL6VBjoQnhP3bfFzl",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+	shardID := uint32(1)
+	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	for {
-		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC.ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	assert.NoError(t, err)
+
+	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	assert.NoError(t, err)
+	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	assert.NoError(t, err)
+
+	{
+		txHashAtShard1, err := sendTx(op.TxMan, minerKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 100)
 		assert.NoError(t, err)
-		if out != nil && out.Confirmations > 2 {
-			println("tx mined into block")
-			break
+
+		eGroup := errgroup.Group{}
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		err = eGroup.Wait()
+		assert.NoError(t, err)
+	}
+
+	{
+		txHashAtShard1, err := sendTx(op.TxMan, aliceKP, shardID, bobKP.Address.EncodeAddress(), OneCoin, 100)
+		assert.NoError(t, err)
+
+		eGroup := errgroup.Group{}
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		err = eGroup.Wait()
+		assert.NoError(t, err)
+	}
+
+	{
+		txHashAtShard1, err := sendTx(op.TxMan, bobKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		assert.NoError(t, err)
+
+		eGroup := errgroup.Group{}
+		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		err = eGroup.Wait()
+		assert.NoError(t, err)
+	}
+
+}
+
+func sendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
+	senderAddress := senderKP.Address.EncodeAddress()
+	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+	// err := senderUTXOIndex.ReadIndex()
+	// assert.NoError(t, err)
+	err := senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
+	if err != nil {
+		return "", errors.Wrap(err, "unable to collect UTXO")
+	}
+
+	lop := txMan.ForShard(shardID)
+	if timeLock > 0 {
+		lop = lop.AddTimeLockAllowance(timeLock)
+	}
+
+	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
+		AddTimeLockAllowance(timeLock).
+		NewTx(destination, amount, &senderUTXOIndex)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to create new tx")
+	}
+
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to publish new tx")
+	}
+	// err = senderUTXOIndex.SaveIndex()
+	// assert.NoError(t, err)
+
+	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+	return tx.TxHash, nil
+}
+
+func waitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index uint32) error {
+	hash, _ := chainhash.NewHashFromStr(txHash)
+	timer := time.NewTimer(30 * time.Second)
+	for {
+		select {
+		case <-timer.C:
+			return errors.New("tx waiting deadline")
+		default:
+			// wait for the transaction to be added to the block
+			firstOut, err := rpcClient.ForShard(shardID).GetTxOut(hash, index, false)
+			if err != nil {
+				timer.Stop()
+				return errors.Wrap(err, "can't get tx out")
+			}
+
+			if firstOut != nil && firstOut.Confirmations > 2 {
+				fmt.Printf("tx %s mined into block @ %d shard\n", txHash, shardID)
+				timer.Stop()
+				return nil
+			}
+
+			time.Sleep(time.Second)
 		}
 
-		time.Sleep(time.Second)
 	}
-	// -----------------------------------------------------------------------------------------
-
 }

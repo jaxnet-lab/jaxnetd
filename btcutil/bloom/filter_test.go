@@ -628,8 +628,7 @@ func TestFilterInsertP2PubKeyOnly(t *testing.T) {
 	}
 	outpoint := wire.NewOutPoint(hash, 0)
 	if !f.MatchesOutPoint(outpoint) {
-		t.Errorf("TestMerkleBlockP2PubKeyOnly didn't match the generation "+
-			"outpoint %s", inputStr)
+		t.Errorf("TestMerkleBlockP2PubKeyOnly didn't match the generation outpoint %s", inputStr)
 		return
 	}
 

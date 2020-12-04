@@ -283,9 +283,9 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32,
 
 	// The transaction must be a currently supported version.
 	msgTx := tx.MsgTx()
-	if msgTx.Version > maxTxVersion || msgTx.Version < wire.TxVerRegular {
+	if msgTx.CleanVersion() > maxTxVersion || msgTx.CleanVersion() < wire.TxVerRegular {
 		str := fmt.Sprintf("transaction version %d is not in the "+
-			"valid range of %d-%d", msgTx.Version, wire.TxVerRegular,
+			"valid range of %d-%d", msgTx.CleanVersion(), wire.TxVerRegular,
 			maxTxVersion)
 		return txRuleError(wire.RejectNonstandard, str)
 	}

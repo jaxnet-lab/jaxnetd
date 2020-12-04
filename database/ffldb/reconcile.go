@@ -87,12 +87,12 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 	if wc.curFileNum > curFileNum || (wc.curFileNum == curFileNum &&
 		wc.curOffset > curOffset) {
 
-		log.Info("Detected unclean shutdown - Repairing...")
-		log.Debugf("Metadata claims file %d, offset %d. Block data is "+
+		log.Info().Msg("Detected unclean shutdown - Repairing...")
+		log.Debug().Msgf("Metadata claims file %d, offset %d. Block data is "+
 			"at file %d, offset %d", curFileNum, curOffset,
 			wc.curFileNum, wc.curOffset)
 		pdb.store.handleRollback(curFileNum, curOffset)
-		log.Infof("Database sync complete")
+		log.Info().Msgf("Database sync complete")
 	}
 
 	// When the write cursor position found by scanning the block files on
@@ -110,7 +110,7 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 		str := fmt.Sprintf("metadata claims file %d, offset %d, but "+
 			"block data is at file %d, offset %d", curFileNum,
 			curOffset, wc.curFileNum, wc.curOffset)
-		log.Warnf("***Database corruption detected***: %v", str)
+		log.Warn().Msgf("***Database corruption detected***: %v", str)
 		return nil, makeDbErr(database.ErrCorruption, str, nil)
 	}
 

@@ -290,7 +290,7 @@ func (mp *TxPool) limitNumOrphans() error {
 
 		numOrphans := len(mp.orphans)
 		if numExpired := origNumOrphans - numOrphans; numExpired > 0 {
-			log.Debugf("Expired %d %s (remaining: %d)", numExpired,
+			log.Debug().Msgf("Expired %d %s (remaining: %d)", numExpired,
 				pickNoun(numExpired, "orphan", "orphans"),
 				numOrphans)
 		}
@@ -345,7 +345,7 @@ func (mp *TxPool) addOrphan(tx *btcutil.Tx, tag Tag) {
 		mp.orphansByPrev[txIn.PreviousOutPoint][*tx.Hash()] = tx
 	}
 
-	log.Debugf("Stored orphan transaction %v (total: %d)", tx.Hash(),
+	log.Debug().Msgf("Stored orphan transaction %v (total: %d)", tx.Hash(),
 		len(mp.orphans))
 }
 
@@ -874,10 +874,9 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 	)
 	for hash, conflict := range conflicts {
 		if txFeeRate <= mp.pool[hash].FeePerKB {
-			str := fmt.Sprintf("replacement transaction %v has an "+
-				"insufficient fee rate: needs more than %v, "+
-				"has %v", tx.Hash(), mp.pool[hash].FeePerKB,
-				txFeeRate)
+			str := fmt.Sprintf(
+				"replacement transaction %v has an insufficient fee rate: needs more than %v, has %v",
+				tx.Hash(), mp.pool[hash].FeePerKB, txFeeRate)
 			return nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 
@@ -895,8 +894,7 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 	// which is determined by our minimum relay fee.
 	minFee := calcMinRequiredTxRelayFee(txSize, mp.cfg.Policy.MinRelayTxFee)
 	if txFee < conflictsFee+minFee {
-		str := fmt.Sprintf("replacement transaction %v has an "+
-			"insufficient absolute fee: needs %v, has %v",
+		str := fmt.Sprintf("replacement transaction %v has an insufficient absolute fee: needs %v, has %v",
 			tx.Hash(), conflictsFee+minFee, txFee)
 		return nil, txRuleError(wire.RejectInsufficientFee, str)
 	}
@@ -961,7 +959,6 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		str := fmt.Sprintf("already have transaction %v", txHash)
 		return nil, nil, txRuleError(wire.RejectDuplicate, str)
 	}
-
 
 	// Perform preliminary sanity checks on the transaction.  This makes
 	// use of blockchain which contains the invariant rules for what
@@ -1063,7 +1060,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 			missingParents = append(missingParents, &hashCopy)
 		}
 	}
-	if len(missingParents) > 0 {
+
+	missingParentsCount := len(missingParents)
+	thisIsSwapTx := tx.MsgTx().SwapTx()
+	// for the the swap tx allowed only one missing parent
+	if (!thisIsSwapTx && missingParentsCount > 0) || (thisIsSwapTx && missingParentsCount > 1) {
 		return missingParents, nil, nil
 	}
 
@@ -1077,10 +1078,22 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		}
 		return nil, nil, err
 	}
-	if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
-		medianTimePast) {
-		return nil, nil, txRuleError(wire.RejectNonstandard,
-			"transaction's sequence locks on inputs not met")
+
+	switch tx.MsgTx().CleanVersion() {
+	case wire.TxVerTimeLock:
+		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+			medianTimePast) {
+			return nil, nil, txRuleError(wire.RejectNonstandard,
+				"transaction's sequence locks on inputs not met")
+		}
+	case wire.TxVerTimeLockAllowance:
+		if chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+			medianTimePast) {
+			if !chaindata.ValidMoneyBackAfterExpiration(tx, utxoView) {
+				return nil, nil, txRuleError(wire.RejectNonstandard,
+					"lock time has expired, transactions is possible only to the original addresses")
+			}
+		}
 	}
 
 	// Perform several checks on the transaction inputs using the invariant
@@ -1149,12 +1162,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// transaction does not exceeed 1000 less than the reserved space for
 	// high-priority transactions, don't require a fee for it.
 	serializedSize := GetTxVirtualSize(tx)
-	minFee := calcMinRequiredTxRelayFee(serializedSize,
-		mp.cfg.Policy.MinRelayTxFee)
+	minFee := calcMinRequiredTxRelayFee(serializedSize, mp.cfg.Policy.MinRelayTxFee)
 	if serializedSize >= (DefaultBlockPrioritySize-1000) && txFee < minFee {
-		str := fmt.Sprintf("transaction %v has %d fees which is under "+
-			"the required amount of %d", txHash, txFee,
-			minFee)
+		str := fmt.Sprintf("transaction %v has %d fees which is under the required amount of %d",
+			txHash, txFee, minFee)
 		return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 	}
 
@@ -1166,9 +1177,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 		currentPriority := mining.CalcPriority(tx.MsgTx(), utxoView,
 			nextBlockHeight)
 		if currentPriority <= mining.MinHighPriority {
-			str := fmt.Sprintf("transaction %v has insufficient "+
-				"priority (%g <= %g)", txHash,
-				currentPriority, mining.MinHighPriority)
+			str := fmt.Sprintf("transaction %v has insufficient priority (%g <= %g)",
+				txHash, currentPriority, mining.MinHighPriority)
 			return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 	}
@@ -1185,14 +1195,13 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 
 		// Are we still over the limit?
 		if mp.pennyTotal >= mp.cfg.Policy.FreeTxRelayLimit*10*1000 {
-			str := fmt.Sprintf("transaction %v has been rejected "+
-				"by the rate limiter due to low fees", txHash)
+			str := fmt.Sprintf("transaction %v has been rejected by the rate limiter due to low fees", txHash)
 			return nil, nil, txRuleError(wire.RejectInsufficientFee, str)
 		}
 		oldTotal := mp.pennyTotal
 
 		mp.pennyTotal += float64(serializedSize)
-		log.Tracef("rate limit: curTotal %v, nextTotal: %v, "+
+		log.Trace().Msgf("rate limit: curTotal %v, nextTotal: %v, "+
 			"limit %v", oldTotal, mp.pennyTotal,
 			mp.cfg.Policy.FreeTxRelayLimit*10*1000)
 	}
@@ -1223,7 +1232,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	// mempool. If it ended up replacing any transactions, we'll remove them
 	// first.
 	for _, conflict := range conflicts {
-		log.Debugf("Replacing transaction %v (fee_rate=%v sat/kb) "+
+		log.Debug().Msgf("Replacing transaction %v (fee_rate=%v sat/kb) "+
 			"with %v (fee_rate=%v sat/kb)\n", conflict.Hash(),
 			mp.pool[*conflict.Hash()].FeePerKB, tx.Hash(),
 			txFee*1000/serializedSize)
@@ -1235,7 +1244,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	}
 	txD := mp.addTransaction(utxoView, tx, bestHeight, txFee)
 
-	log.Debugf("Accepted transaction %v (pool size: %v)", txHash,
+	log.Debug().Msgf("Accepted transaction %v (pool size: %v)", txHash,
 		len(mp.pool))
 
 	return nil, txD, nil
@@ -1374,7 +1383,7 @@ func (mp *TxPool) ProcessOrphans(acceptedTx *btcutil.Tx) []*TxDesc {
 //
 // This function is safe for concurrent access.
 func (mp *TxPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit bool, tag Tag) ([]*TxDesc, error) {
-	log.Tracef("Processing transaction %v", tx.Hash())
+	log.Trace().Msgf("Processing transaction %v", tx.Hash())
 
 	// Protect concurrent access.
 	mp.mtx.Lock()

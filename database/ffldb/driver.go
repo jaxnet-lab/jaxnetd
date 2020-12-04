@@ -8,6 +8,7 @@ package ffldb
 import (
 	"fmt"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/types"
@@ -68,7 +69,7 @@ func createDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, er
 
 // useLogger is the callback provided during driver registration that sets the
 // current logger to the provided one.
-func useLogger(logger corelog.ILogger) {
+func useLogger(logger zerolog.Logger) {
 	log = logger
 }
 

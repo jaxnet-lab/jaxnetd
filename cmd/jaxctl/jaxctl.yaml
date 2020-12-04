@@ -1,15 +1,18 @@
 net: "fastnet"
 
-rpc_server: "127.0.0.1:18444"
+#rpc_server: "116.202.107.209:18333"
+#rpc_user: jaxnetrpc
+#rpc_password: AUL6VBjoQnhP3bfFzl
+rpc_server: "127.0.0.1:18333"
 rpc_user: somerpc
 rpc_password: somerpc
 rpc_cert: ""
 
 no_tls: true
 tls_skip_verify: true
+wallet: false
 
 proxy: ""
 proxy_pass: ""
 proxy_user: ""
 
-wallet: false

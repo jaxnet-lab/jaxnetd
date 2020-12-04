@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
+	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -17,7 +18,7 @@ import (
 // handleUpdatePeerHeight updates the heights of all peers who were known to
 // announce a block we recently accepted.
 func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerHeightsMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		// The origin peer should already have the updated height.
 		if sp.Peer == umsg.OriginPeer {
 			return
@@ -44,7 +45,7 @@ func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerH
 
 // handleAddPeerMsg deals with adding new peers.  It is invoked from the
 // peerHandler goroutine.
-func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
+func (server *Server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	if sp == nil || !sp.Connected() {
 		return false
 	}
@@ -57,7 +58,7 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 
 	// Ignore new peers if we're shutting down.
 	if atomic.LoadInt32(&server.shutdown) != 0 {
-		server.logger.Infof("New peer %s ignored - Server is shutting down", sp)
+		server.logger.Info().Msgf("New peer %s ignored - Server is shutting down", sp)
 		sp.Disconnect()
 		return false
 	}
@@ -65,19 +66,19 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	// Disconnect banned peers.
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
-		server.logger.Debugf("can't split hostport %v", err)
+		server.logger.Debug().Msgf("can't split hostport %v", err)
 		sp.Disconnect()
 		return false
 	}
 	if banEnd, ok := state.banned[host]; ok {
 		if time.Now().Before(banEnd) {
-			server.logger.Debugf("Peer %s is banned for another %v - disconnecting",
+			server.logger.Debug().Msgf("Peer %s is banned for another %v - disconnecting",
 				host, time.Until(banEnd))
 			sp.Disconnect()
 			return false
 		}
 
-		server.logger.Infof("Peer %s is no longer banned", host)
+		server.logger.Info().Msgf("Peer %s is no longer banned", host)
 		delete(state.banned, host)
 	}
 
@@ -85,7 +86,7 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 
 	// Limit max number of total peers.
 	if state.Count() >= server.chain.Config().MaxPeers {
-		server.logger.Infof("Max peers reached [%d] - disconnecting peer %s", server.chain.Config().MaxPeers, sp)
+		server.logger.Info().Msgf("Max peers reached [%d] - disconnecting peer %s", server.chain.Config().MaxPeers, sp)
 		sp.Disconnect()
 		// TODO: how to handle permanent peers here?
 		// they should be rescheduled.
@@ -93,7 +94,7 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 	}
 
 	// Add the new peer and start it.
-	server.logger.Debugf("New peer %s", sp)
+	server.logger.Debug().Msgf("New peer %s", sp)
 	if sp.Inbound() {
 		state.inboundPeers[sp.ID()] = sp
 	} else {
@@ -150,8 +151,8 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *ServerPeer) bool {
 
 // handleDonePeerMsg deals with peers that have signalled they are done.  It is
 // invoked from the peerHandler goroutine.
-func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
-	var list map[int32]*ServerPeer
+func (server *Server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
+	var list map[int32]*serverPeer
 	if sp.persistent {
 		list = state.persistentPeers
 	} else if sp.Inbound() {
@@ -160,19 +161,31 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 		list = state.outboundPeers
 	}
 
-	// if sp.Peer.RedirectRequested() && sp.Peer.NewAddress() != nil{
-	// 	server.addrManager.Replace(sp.Peer.NA(), sp.Peer.NewAddress())
-	// }
+	if sp.Peer.RedirectRequested() && sp.Peer.NewAddress() != nil {
+		newAddress := sp.Peer.NewAddress()
+		server.addrManager.Replace(sp.Peer.NA(), sp.Peer.NewAddress())
+		server.ConnManager.Remove(sp.connReq.ID())
 
-	// Regardless of whether the peer was found in our list, we'll inform
-	// our connection manager about the disconnection. This can happen if we
-	// process a peer's `done` message before its `add`.
-	if !sp.Inbound() {
-		if sp.persistent {
-			server.ConnManager.Disconnect(sp.connReq.ID())
-		} else {
-			server.ConnManager.Remove(sp.connReq.ID())
-			go server.ConnManager.NewConnReq()
+		netAddr := &net.TCPAddr{
+			IP:   newAddress.IP,
+			Port: int(newAddress.Port),
+		}
+		go server.ConnManager.Connect(&connmgr.ConnReq{
+			Addr:      netAddr,
+			ShardID:   server.chain.ChainCtx.ShardID(),
+			Permanent: sp.persistent,
+		})
+	} else {
+		// Regardless of whether the peer was found in our list, we'll inform
+		// our connection manager about the disconnection. This can happen if we
+		// process a peer's `done` message before its `add`.
+		if !sp.Inbound() {
+			if sp.persistent {
+				server.ConnManager.Disconnect(sp.connReq.ID())
+			} else {
+				server.ConnManager.Remove(sp.connReq.ID())
+				go server.ConnManager.NewConnReq()
+			}
 		}
 	}
 
@@ -181,21 +194,21 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *ServerPeer) {
 			state.outboundGroups[addrmgr.GroupKey(sp.NA())]--
 		}
 		delete(list, sp.ID())
-		server.logger.Debugf("Removed peer %s", sp)
+		server.logger.Debug().Msgf("Removed peer %s", sp)
 		return
 	}
 }
 
 // handleBanPeerMsg deals with banning peers.  It is invoked from the
 // peerHandler goroutine.
-func (server *Server) handleBanPeerMsg(state *peerState, sp *ServerPeer) {
+func (server *Server) handleBanPeerMsg(state *peerState, sp *serverPeer) {
 	host, _, err := net.SplitHostPort(sp.Addr())
 	if err != nil {
-		server.logger.Debugf("can't split ban peer %s %v", sp.Addr(), err)
+		server.logger.Debug().Msgf("can't split ban peer %s %v", sp.Addr(), err)
 		return
 	}
 	direction := directionString(sp.Inbound())
-	server.logger.Infof("Banned peer %s (%s) for %v", host, direction,
+	server.logger.Info().Msgf("Banned peer %s (%s) for %v", host, direction,
 		server.cfg.BanDuration)
 	state.banned[host] = time.Now().Add(server.cfg.BanDuration)
 }
@@ -212,7 +225,7 @@ func directionString(inbound bool) string {
 // handleRelayInvMsg deals with relaying inventory to peers that are not already
 // known to have it.  It is invoked from the peerHandler goroutine.
 func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return
 		}
@@ -223,14 +236,13 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 		if msg.InvVect.Type == types.InvTypeBlock && sp.WantsHeaders() {
 			blockHeader, ok := msg.Data.(wire.BlockHeader)
 			if !ok {
-				server.logger.Warnf("Underlying data for headers" +
+				server.logger.Warn().Msgf("Underlying data for headers" +
 					" is not a block header")
 				return
 			}
 			msgHeaders := wire.NewMsgHeaders()
 			if err := msgHeaders.AddBlockHeader(blockHeader); err != nil {
-				server.logger.Errorf("Failed to add block"+
-					" header: %v", err)
+				server.logger.Error().Err(err).Msg("Failed to add block header")
 				return
 			}
 			sp.QueueMessage(msgHeaders, nil)
@@ -246,7 +258,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 
 			txD, ok := msg.Data.(*mempool.TxDesc)
 			if !ok {
-				server.logger.Warnf("Underlying data for tx inv "+
+				server.logger.Warn().Msgf("Underlying data for tx inv "+
 					"relay is not a *mempool.TxDesc: %T",
 					msg.Data)
 				return
@@ -278,7 +290,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 // handleBroadcastMsg deals with broadcasting messages to peers.  It is invoked
 // from the peerHandler goroutine.
 func (server *Server) handleBroadcastMsg(state *peerState, bmsg *broadcastMsg) {
-	state.forAllPeers(func(sp *ServerPeer) {
+	state.forAllPeers(func(sp *serverPeer) {
 		if !sp.Connected() {
 			return
 		}

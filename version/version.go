@@ -1,9 +1,10 @@
-// Copyright (c) 2013-2014 The btcsuite developers
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2020 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
-package main
+package version
 
 import (
 	"bytes"
@@ -27,10 +28,9 @@ const (
 )
 
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-	builtBy = "unknown"
+	tag    = "dev"
+	commit = "none"
+	date   = "unknown"
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -40,7 +40,7 @@ var appBuild string
 
 // version returns the application version as a properly formed string per the
 // semantic versioning 2.0.0 spec (http://semver.org/).
-func getVersion() string {
+func GetVersion() string {
 	// Start with the major, minor, and patch versions.
 	version := fmt.Sprintf("%d.%d.%d", appMajor, appMinor, appPatch)
 
@@ -63,6 +63,22 @@ func getVersion() string {
 	}
 
 	return version
+}
+
+type Ver struct {
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
+	Tag     string `json:"tag"`
+	Date    string `json:"date"`
+}
+
+func GetExtendedVersion() Ver {
+	return Ver{
+		Version: GetVersion(),
+		Commit:  commit,
+		Tag:     tag,
+		Date:    date,
+	}
 }
 
 // normalizeVerString returns the passed string stripped of all characters which

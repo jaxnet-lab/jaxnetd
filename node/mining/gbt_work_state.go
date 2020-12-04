@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
@@ -21,7 +22,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 const (
@@ -91,18 +91,18 @@ type GBTWorkState struct {
 	Template      *BlockTemplate
 	notifyMap     map[chainhash.Hash]map[int64]chan struct{}
 	timeSource    chaindata.MedianTimeSource
-	Log           *zap.Logger
+	Log           zerolog.Logger
 	generator     *BlkTmplGenerator
 }
 
 // NewGbtWorkState returns a new instance of a GBTWorkState with all internal
 // fields initialized and ready to use.
-func NewGbtWorkState(timeSource chaindata.MedianTimeSource, generator *BlkTmplGenerator, log *zap.Logger) *GBTWorkState {
+func NewGbtWorkState(timeSource chaindata.MedianTimeSource, generator *BlkTmplGenerator, log zerolog.Logger) *GBTWorkState {
 	return &GBTWorkState{
 		notifyMap:  make(map[chainhash.Hash]map[int64]chan struct{}),
 		timeSource: timeSource,
 		generator:  generator,
-		Log:        log.With(zap.String("ctx", "gbtWorkState")),
+		Log:        log.With().Str("ctx", "gbtWorkState").Logger(),
 	}
 }
 
@@ -303,11 +303,11 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		state.prevHash = latestHash
 		state.minTimestamp = minTimestamp
 
-		state.Log.Debug("Generated block template",
-			zap.Time("timestamp", msgBlock.Header.Timestamp()),
-			zap.String("target_difficulty", targetDifficulty),
-			zap.Stringer("merkle_root", msgBlock.Header.MerkleRoot()),
-		)
+		state.Log.Debug().
+			Time("block_time", msgBlock.Header.Timestamp()).
+			Str("target_difficulty", targetDifficulty).
+			Stringer("merkle_root", msgBlock.Header.MerkleRoot()).
+			Msg("Generated block template")
 
 		// Notify any clients that are long polling about the new
 		// template.
@@ -356,10 +356,10 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		state.generator.UpdateBlockTime(&msgBlock)
 		msgBlock.Header.SetNonce(0)
 
-		state.Log.Debug("Updated block template",
-			zap.Time("timestamp", msgBlock.Header.Timestamp()),
-			zap.String("target_difficulty", targetDifficulty),
-		)
+		state.Log.Debug().
+			Time("block_time", msgBlock.Header.Timestamp()).
+			Str("target_difficulty", targetDifficulty).
+			Msg("Updated block template")
 	}
 
 	return nil
@@ -384,8 +384,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
-			Message: fmt.Sprintf("The template time is after the "+
-				"maximum allowed time for a block - template "+
+			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
 		}
@@ -460,8 +459,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if header.Timestamp().After(maxTime) {
 		return nil, &btcjson.RPCError{
 			Code: btcjson.ErrRPCOutOfRange,
-			Message: fmt.Sprintf("The template time is after the "+
-				"maximum allowed time for a block - template "+
+			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
 		}

@@ -76,11 +76,6 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 	}
 	url := protocol + "://" + cfg.RPCServer
 
-	if cfg.ShardID == 0 {
-		url += "/beacon/"
-	} else {
-		url += fmt.Sprintf("/shard/%d", cfg.ShardID)
-	}
 	bodyReader := bytes.NewReader(marshalledJSON)
 	httpRequest, err := http.NewRequest("POST", url, bodyReader)
 	if err != nil {

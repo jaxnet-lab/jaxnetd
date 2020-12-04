@@ -5,18 +5,17 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"go.uber.org/zap"
 )
 
 type DBCtl struct {
-	logger *zap.Logger
+	logger zerolog.Logger
 }
 
 // loadBlockDB loads (or creates when needed) the block database taking into
@@ -29,26 +28,26 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
 	if cfg.DbType == "memdb" {
-		ctrl.logger.Info("Creating block database in memory.")
+		ctrl.logger.Info().Msg("Creating block database in memory.")
 		db, err := database.Create(cfg.DbType, chain)
 		if err != nil {
 			return nil, err
 		}
 		return db, nil
 	}
-	chainName := chain.Params().Name
+	chainName := chain.Name()
 
 	ctrl.warnMultipleDBs(dataDir, chainName, cfg)
 
 	// The database name is based on the database type.
 	dbPath := ctrl.blockDbPath(dataDir, chainName, cfg.DbType)
-	ctrl.logger.Debug("dbPath", zap.String("path", dbPath))
+	ctrl.logger.Debug().Str("path", dbPath).Msg("dbPath")
 
 	// The regression test is special in that it needs a clean database for
 	// each run, so remove it now if it already exists.
 	// removeRegressionDB(cfg, dbPath)
 
-	ctrl.logger.Info(fmt.Sprintf("Loading block database from '%s'", dbPath))
+	ctrl.logger.Info().Msgf("Loading block database from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't exist.
@@ -70,7 +69,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 		}
 	}
 
-	ctrl.logger.Info("Block database loaded")
+	ctrl.logger.Info().Msg("Block database loaded")
 	return db, nil
 }
 
@@ -136,11 +135,11 @@ func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig)
 	// Warn if there are extra databases.
 	if len(duplicateDbPaths) > 0 {
 		selectedDbPath := ctrl.blockDbPath(dataDir, chain, cfg.DbType)
-		ctrl.logger.Info(fmt.Sprintf("WARNING: There are multiple block chain databases "+
+		ctrl.logger.Info().Msgf("WARNING: There are multiple block chain databases "+
 			"using different database types.\nYou probably don't "+
 			"want to waste disk space by having more than one.\n"+
 			"Your current database is located at [%v].\nThe "+
 			"additional database is located at %v", selectedDbPath,
-			duplicateDbPaths))
+			duplicateDbPaths)
 	}
 }

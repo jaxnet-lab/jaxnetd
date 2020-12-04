@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
@@ -25,7 +26,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"go.uber.org/zap"
 )
 
 type CommonChainRPC struct {
@@ -39,11 +39,12 @@ type CommonChainRPC struct {
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
+	ntfnMgr       *wsChainManager
 	helpCache     *helpCacher
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	logger *zap.Logger) *CommonChainRPC {
+	logger zerolog.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
@@ -97,6 +98,7 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
 		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
 		btcjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
+		btcjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
 		btcjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
 		btcjson.ScopedMethod("chain", "searchRawTransactions"): server.handleSearchRawTransactions,
 		// -------------------------------------------------------------------------------------------------------------
@@ -121,7 +123,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 	case blockchain.NTBlockAccepted:
 		block, ok := notification.Data.(*btcutil.Block)
 		if !ok {
-			server.Log.Warnf("Chain accepted notification is not a block.")
+			server.Log.Warn().Msgf("Chain accepted notification is not a block.")
 			break
 		}
 
@@ -131,24 +133,27 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 		server.gbtWorkState.NotifyBlockConnected(block.Hash())
 
 	case blockchain.NTBlockConnected:
-		// block, ok := notification.Data.(*btcutil.Block)
-		// if !ok {
-		//	server.Log.Warnf("Chain connected notification is not a block.")
-		//	break
-		// }
+		block, ok := notification.Data.(*btcutil.Block)
+		if !ok {
+			server.Log.Warn().Msg("Chain connected notification is not a block.")
+			break
+		}
 
-		// Notify registered websocket clients of incoming block.
-		// server.ntfnMgr.NotifyBlockConnected(block)
+		if server.ntfnMgr != nil {
+			//Notify registered websocket clients of incoming block.
+			server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
+		}
 
 	case blockchain.NTBlockDisconnected:
-		// block, ok := notification.Data.(*btcutil.Block)
-		// if !ok {
-		//	server.Log.Warnf("Chain disconnected notification is not a block.")
-		//	break
-		// }
-
-		// Notify registered websocket clients.
-		// server.ntfnMgr.NotifyBlockDisconnected(block)
+		block, ok := notification.Data.(*btcutil.Block)
+		if !ok {
+			server.Log.Warn().Msg("Chain disconnected notification is not a block.")
+			break
+		}
+		if server.ntfnMgr != nil {
+			//Notify registered websocket clients.
+			server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
+		}
 	}
 }
 
@@ -166,8 +171,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 		if err == nil {
 			txOuts := originTx.MsgTx().TxOut
 			if origin.Index >= uint32(len(txOuts)) {
-				errStr := fmt.Sprintf("unable to find output "+
-					"%v referenced from transaction %s:%d",
+				errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d",
 					origin, tx.TxHash(), txInIndex)
 				return nil, server.InternalRPCError(errStr, "")
 			}
@@ -207,8 +211,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 
 		// Add the referenced output to the map.
 		if origin.Index >= uint32(len(msgTx.TxOut)) {
-			errStr := fmt.Sprintf("unable to find output %v "+
-				"referenced from transaction %s:%d", origin,
+			errStr := fmt.Sprintf("unable to find output %v referenced from transaction %s:%d", origin,
 				tx.TxHash(), txInIndex)
 			return nil, server.InternalRPCError(errStr, "")
 		}
@@ -224,14 +227,14 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 	if finishHeight < 0 {
 		finishHeight = 0
 	}
-	server.Log.Infof("Verifying BlockChain for %d blocks at level %d",
+	server.Log.Info().Msgf("Verifying BlockChain for %d blocks at level %d",
 		best.Height-finishHeight, level)
 
 	for height := best.Height; height > finishHeight; height-- {
 		// Level 0 just looks up the block.
 		block, err := server.chainProvider.BlockChain().BlockByHeight(height)
 		if err != nil {
-			server.Log.Errorf("Verify is unable to fetch block at "+
+			server.Log.Error().Msgf("Verify is unable to fetch block at "+
 				"height %d: %v", height, err)
 			return err
 		}
@@ -241,14 +244,14 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 			err := chaindata.CheckBlockSanity(block,
 				server.chainProvider.ChainParams.PowLimit, server.chainProvider.TimeSource)
 			if err != nil {
-				server.Log.Errorf("Verify is unable to validate "+
+				server.Log.Error().Msgf("Verify is unable to validate "+
 					"block at hash %v height %d: %v",
 					block.Hash(), height, err)
 				return err
 			}
 		}
 	}
-	server.Log.Infof("Chain verify completed successfully")
+	server.Log.Info().Msgf("Chain verify completed successfully")
 
 	return nil
 }
@@ -344,6 +347,12 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	if err != nil {
 		return nil, err
 	}
+
+	shards, err := server.chainProvider.ShardCount()
+	if err != nil {
+		return nil, err
+	}
+
 	chainInfo := &btcjson.GetBlockChainInfoResult{
 		Chain:         params.Name,
 		Blocks:        chainSnapshot.Height,
@@ -352,6 +361,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		Difficulty:    diff,
 		MedianTime:    chainSnapshot.MedianTime.Unix(),
 		Pruned:        false,
+		Shards:        shards,
 		SoftForks: &btcjson.SoftForks{
 			Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
 		},
@@ -442,6 +452,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		}
 	}
 
+	fmt.Printf("%+v\n", chainInfo)
 	return chainInfo, nil
 }
 
@@ -482,14 +493,14 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 
 	filterBytes, err := server.chainProvider.CfIndex.FilterByBlockHash(hash, c.FilterType)
 	if err != nil {
-		server.Log.Debugf("Could not find committed filter for %v %v", hash, err)
+		server.Log.Debug().Msgf("Could not find committed filter for %v %v", hash, err)
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
 
-	server.Log.Debugf("Found committed filter for %s", hash.String())
+	server.Log.Debug().Msgf("Found committed filter for %s", hash.String())
 	return hex.EncodeToString(filterBytes), nil
 }
 
@@ -510,9 +521,9 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 
 	headerBytes, err := server.chainProvider.CfIndex.FilterHeaderByBlockHash(hash, c.FilterType)
 	if len(headerBytes) > 0 {
-		server.Log.Debugf("Found header of committed filter for %s", hash.String())
+		server.Log.Debug().Msgf("Found header of committed filter for %s", hash.String())
 	} else {
-		server.Log.Debugf("Could not find header of committed filter for %v %v", hash, err)
+		server.Log.Debug().Msgf("Could not find header of committed filter for %v %v", hash, err)
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
@@ -674,14 +685,13 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
-	// for _, txD := range txns {
-	//	// Notify websocket clients about mempool transactions.
-	//	//server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
-	//
-	//	// Potentially notify any getblocktemplate long poll clients
-	//	// about stale block templates due to the new transaction.
-	//	server.GBTWorkState.NotifyMempoolTx(server.cfg.TxMemPool.LastUpdated())
-	// }
+	if server.ntfnMgr == nil {
+		return
+	}
+	for _, txD := range txns {
+		// Notify websocket clients about mempool transactions.
+		server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
+	}
 }
 
 // handleSubmitBlock implements the submitblock command.
@@ -714,7 +724,7 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 		return fmt.Sprintf("rejected: %s", err.Error()), nil
 	}
 
-	server.Log.Infof(fmt.Sprintf("Accepted block %s via submitblock", block.Hash().String()))
+	server.Log.Info().Msgf("Accepted block %s via submitblock", block.Hash().String())
 	return nil, nil
 }
 

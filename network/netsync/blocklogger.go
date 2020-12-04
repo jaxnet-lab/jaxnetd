@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
 )
 
 // blockProgressLogger provides periodic logging for other services in order
@@ -21,7 +21,7 @@ type blockProgressLogger struct {
 	receivedLogTx     int64
 	lastBlockLogTime  time.Time
 
-	subsystemLogger corelog.ILogger
+	subsystemLogger zerolog.Logger
 	progressAction  string
 	sync.Mutex
 }
@@ -30,7 +30,7 @@ type blockProgressLogger struct {
 // The progress message is templated as follows:
 //  {progressAction} {numProcessed} {blocks|block} in the last {timePeriod}
 //  ({numTxs}, height {lastBlockHeight}, {lastBlockTimeStamp})
-func newBlockProgressLogger(progressMessage string, logger corelog.ILogger) *blockProgressLogger {
+func newBlockProgressLogger(progressMessage string, logger zerolog.Logger) *blockProgressLogger {
 	return &blockProgressLogger{
 		lastBlockLogTime: time.Now(),
 		progressAction:   progressMessage,
@@ -67,7 +67,7 @@ func (b *blockProgressLogger) LogBlockHeight(block *btcutil.Block) {
 	if b.receivedLogTx == 1 {
 		txStr = "transaction"
 	}
-	b.subsystemLogger.Infof("%s %d %s in the last %s (%d %s, height %d, %s)",
+	b.subsystemLogger.Info().Msgf("%s %d %s in the last %s (%d %s, height %d, %s)",
 		b.progressAction, b.receivedLogBlocks, blockStr, tDuration, b.receivedLogTx,
 		txStr, block.Height(), block.MsgBlock().Header.Timestamp)
 

@@ -1187,7 +1187,7 @@ func (tx *transaction) StoreBlock(block *btcutil.Block) error {
 		hash:  blockHash,
 		bytes: blockBytes,
 	})
-	log.Tracef("Added block %s to pending blocks", blockHash)
+	log.Trace().Msgf("Added block %s to pending blocks", blockHash)
 
 	return nil
 }
@@ -1641,7 +1641,7 @@ func (tx *transaction) writePendingAndCommit() error {
 
 	// Loop through all of the pending blocks to store and write them.
 	for _, blockData := range tx.pendingBlockData {
-		log.Tracef("Storing block %s", blockData.hash)
+		log.Trace().Msgf("Storing block %s", blockData.hash)
 		location, err := tx.db.store.writeBlock(blockData.bytes)
 		if err != nil {
 			rollback()

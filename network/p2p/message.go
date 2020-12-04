@@ -32,8 +32,12 @@ type GetConnCountMsg struct {
 	Reply chan int32
 }
 
+type GetPeerStatsMsg struct {
+	Reply chan PeerStateStats
+}
+
 type GetPeersMsg struct {
-	Reply chan []*ServerPeer
+	Reply chan []*serverPeer
 }
 
 type GetOutboundGroup struct {
@@ -42,11 +46,11 @@ type GetOutboundGroup struct {
 }
 
 type GetAddedNodesMsg struct {
-	Reply chan []*ServerPeer
+	Reply chan []*serverPeer
 }
 
 type DisconnectNodeMsg struct {
-	Cmp   func(*ServerPeer) bool
+	Cmp   func(*serverPeer) bool
 	Reply chan error
 }
 
@@ -57,6 +61,6 @@ type ConnectNodeMsg struct {
 }
 
 type RemoveNodeMsg struct {
-	Cmp   func(*ServerPeer) bool
+	Cmp   func(*serverPeer) bool
 	Reply chan error
 }

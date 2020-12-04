@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -26,9 +27,8 @@ func GenerateKey(networkCfg *chaincfg.Params) (*KeyData, error) {
 		return nil, errors.Wrap(err, "failed to make privKey")
 	}
 
-	// pk := (*btcec.PublicKey)(&key.PublicKey).SerializeCompressed()
 	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
-	addressPubKey, err := btcutil.NewAddressPubKey(pk, &chaincfg.SimNetParams)
+	addressPubKey, err := btcutil.NewAddressPubKey(pk, networkCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create address pub key")
 	}
@@ -47,7 +47,6 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params) (*KeyData,
 	}
 
 	privateKey, publicKey := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyBytes)
-	// addressPubKey, err := btcutil.NewAddressPubKey(publicKey.SerializeCompressed(), networkCfg)
 	addressPubKey, err := btcutil.NewAddressPubKey(publicKey.SerializeUncompressed(), networkCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to parse address pub key")
@@ -110,6 +109,20 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 		RedeemScript:    hex.EncodeToString(script),
 		RawRedeemScript: script,
 	}, nil
+}
+
+func SetRedeemScript(utxo txmodels.UTXO, redeemScript string, net *chaincfg.Params) (txmodels.UTXO, error) {
+	rawScript, err := hex.DecodeString(redeemScript)
+	if err != nil {
+		return utxo, errors.Wrap(err, "unable to decode hex script")
+	}
+	script, err := DecodeScript(rawScript, net)
+	if err != nil {
+		return utxo, errors.Wrap(err, "unable to parse script")
+	}
+	utxo.PKScript = redeemScript
+	utxo.ScriptType = script.Type
+	return utxo, nil
 }
 
 func DecodeScript(script []byte, net *chaincfg.Params) (*btcjson.DecodeScriptResult, error) {

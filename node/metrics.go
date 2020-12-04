@@ -3,10 +3,13 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+const metricsNamespace = "jax_core"
 
 //metricsManager metrics manager
 type metricsManager struct {
@@ -44,7 +47,6 @@ func (m *metricsManager) Add(metrics ...IMetric) {
 
 func (m *metricsManager) collector(ctx context.Context) {
 	for {
-
 		select {
 		case <-ctx.Done():
 			return

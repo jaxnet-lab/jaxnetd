@@ -5,13 +5,14 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/corelog"
+	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"go.uber.org/zap"
 )
 
 type MultiChainRPC struct {
@@ -20,9 +21,11 @@ type MultiChainRPC struct {
 	beaconRPC   *BeaconRPC
 	shardRPCs   map[uint32]*ShardRPC
 	chainsMutex sync.RWMutex
+	helpCache   *helpCacher
+	wsManager   *wsManager
 }
 
-func NewMultiChainRPC(config *Config, logger *zap.Logger,
+func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 	nodeRPC *NodeRPC, beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		ServerCore: NewRPCCore(config, logger),
@@ -30,6 +33,7 @@ func NewMultiChainRPC(config *Config, logger *zap.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
+	rpc.wsManager = WebSocketManager(rpc, logger)
 
 	return rpc
 }
@@ -40,10 +44,41 @@ func (server *MultiChainRPC) AddShard(shardID uint32, rpc *ShardRPC) {
 	server.chainsMutex.Unlock()
 }
 
+func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if server.cfg.WSEnable {
+			http.Error(w, "WS is Unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
+		authenticated, isAdmin, err := server.checkAuth(r, false)
+		if err != nil {
+			jsonAuthFail(w)
+			return
+		}
+
+		server.logger.Info().Msg("Upgrade To websocket")
+		// Attempt to upgrade the connection to a websocket connection
+		// using the default size for read/write bufferserver.
+		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				server.logger.Error().Err(err).Msg("Unexpected websocket")
+			}
+			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+			return
+		}
+		_, _, _ = ws, authenticated, isAdmin
+		server.logger.Info().Msg("WebsocketHandler")
+		server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
+	}
+}
+
 func (server *MultiChainRPC) Run(ctx context.Context) {
 	rpcServeMux := http.NewServeMux()
 
-	// rpcServeMux.HandleFunc("/ws", server.WSHandleFunc())
+	rpcServeMux.HandleFunc("/ws", server.WSHandleFunc())
+
 	rpcServeMux.HandleFunc("/",
 		server.HandleFunc(func(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 			if cmd.scope == "node" {
@@ -57,28 +92,29 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			prcPtr, ok := server.shardRPCs[cmd.shardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
+				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.shardID)
 				return nil, &btcjson.RPCError{
 					Code:    btcjson.ErrShardIDMismatch,
-					Message: "Provided ShardID does not match with any present",
+					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
 				}
 			}
 
 			return prcPtr.HandleCommand(cmd, closeChan)
-
 		}))
 
+	server.wsManager.Start(ctx)
 	server.StartRPC(ctx, rpcServeMux)
 }
 
 type Mux struct {
 	rpcutli.ToolsXt
-	Log      corelog.ILogger
+	Log      zerolog.Logger
 	handlers map[btcjson.MethodName]CommandHandler
 }
 
-func NewRPCMux(logger *zap.Logger) Mux {
+func NewRPCMux(logger zerolog.Logger) Mux {
 	return Mux{
-		Log:      corelog.Adapter(logger),
+		Log:      logger,
 		handlers: map[btcjson.MethodName]CommandHandler{},
 	}
 }
@@ -88,12 +124,14 @@ func NewRPCMux(logger *zap.Logger) Mux {
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-	handler, ok := server.handlers[btcjson.ScopedMethod(cmd.scope, cmd.method)]
+	method := btcjson.ScopedMethod(cmd.scope, cmd.method)
+	handler, ok := server.handlers[method]
+	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
 
-	return nil, btcjson.ErrRPCMethodNotFound
+	return nil, btcjson.ErrRPCMethodNotFound.WithMethod(method.String())
 }
 
 func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {
@@ -112,6 +150,6 @@ func (server *Mux) InternalRPCError(errStr, context string) *btcjson.RPCError {
 	if context != "" {
 		logStr = context + ": " + errStr
 	}
-	server.Log.Error(logStr)
+	server.Log.Error().Msg(logStr)
 	return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, errStr)
 }

@@ -45,7 +45,7 @@ func (cm *ConnManager) Connect(addr string, permanent bool) error {
 func (cm *ConnManager) RemoveByID(id int32) error {
 	replyChan := make(chan error)
 	cm.server.Query(RemoveNodeMsg{
-		Cmp:   func(sp *ServerPeer) bool { return sp.ID() == id },
+		Cmp:   func(sp *serverPeer) bool { return sp.ID() == id },
 		Reply: replyChan,
 	})
 	return <-replyChan
@@ -60,7 +60,7 @@ func (cm *ConnManager) RemoveByID(id int32) error {
 func (cm *ConnManager) RemoveByAddr(addr string) error {
 	replyChan := make(chan error)
 	cm.server.Query(RemoveNodeMsg{
-		Cmp:   func(sp *ServerPeer) bool { return sp.Addr() == addr },
+		Cmp:   func(sp *serverPeer) bool { return sp.Addr() == addr },
 		Reply: replyChan,
 	})
 	return <-replyChan
@@ -75,7 +75,7 @@ func (cm *ConnManager) RemoveByAddr(addr string) error {
 func (cm *ConnManager) DisconnectByID(id int32) error {
 	replyChan := make(chan error)
 	cm.server.Query(DisconnectNodeMsg{
-		Cmp:   func(sp *ServerPeer) bool { return sp.ID() == id },
+		Cmp:   func(sp *serverPeer) bool { return sp.ID() == id },
 		Reply: replyChan,
 	})
 	return <-replyChan
@@ -90,7 +90,7 @@ func (cm *ConnManager) DisconnectByID(id int32) error {
 func (cm *ConnManager) DisconnectByAddr(addr string) error {
 	replyChan := make(chan error)
 	cm.server.Query(DisconnectNodeMsg{
-		Cmp:   func(sp *ServerPeer) bool { return sp.Addr() == addr },
+		Cmp:   func(sp *serverPeer) bool { return sp.Addr() == addr },
 		Reply: replyChan,
 	})
 	return <-replyChan
@@ -118,7 +118,7 @@ func (cm *ConnManager) NetTotals() (uint64, uint64) {
 // This function is safe for concurrent access and is part of the
 // P2PConnManager interface implementation.
 func (cm *ConnManager) ConnectedPeers() []netsync.ServerPeer {
-	replyChan := make(chan []*ServerPeer)
+	replyChan := make(chan []*serverPeer)
 	cm.server.Query(GetPeersMsg{Reply: replyChan})
 	serverPeers := <-replyChan
 
@@ -136,7 +136,7 @@ func (cm *ConnManager) ConnectedPeers() []netsync.ServerPeer {
 // This function is safe for concurrent access and is part of the
 // P2PConnManager interface implementation.
 func (cm *ConnManager) PersistentPeers() []netsync.ServerPeer {
-	replyChan := make(chan []*ServerPeer)
+	replyChan := make(chan []*serverPeer)
 	cm.server.Query(GetAddedNodesMsg{Reply: replyChan})
 	serverPeers := <-replyChan
 

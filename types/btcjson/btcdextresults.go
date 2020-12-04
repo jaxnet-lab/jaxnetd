@@ -6,6 +6,8 @@
 
 package btcjson
 
+import "gitlab.com/jaxnet/core/shard.core/version"
+
 // VersionResult models objects included in the version response.  In the actual
 // result, these objects are keyed by the program or API name.
 //
@@ -18,4 +20,9 @@ type VersionResult struct {
 	Patch         uint32 `json:"patch"`
 	Prerelease    string `json:"prerelease"`
 	BuildMetadata string `json:"buildmetadata"`
+}
+
+type NodeVersion struct {
+	Node version.Ver   `json:"node"`
+	RPC  VersionResult `json:"rpc"`
 }

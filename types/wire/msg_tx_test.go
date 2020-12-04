@@ -937,7 +937,7 @@ var multiWitnessTx = &MsgTx{
 // tests.
 var multiWitnessTxEncoded = []byte{
 	0x1, 0x0, 0x0, 0x0, // Version
-	0x0, // Marker byte indicating 0 inputs, or a segwit encoded tx
+	0x0, // Mark byte indicating 0 inputs, or a segwit encoded tx
 	0x1, // Flag byte
 	0x1, // Varint for number of inputs
 	0xa5, 0x33, 0x52, 0xd5, 0x13, 0x57, 0x66, 0xf0,
@@ -980,7 +980,7 @@ var multiWitnessTxEncoded = []byte{
 // being set to 0x01, the flag is 0x00, which should trigger a decoding error.
 var multiWitnessTxEncodedNonZeroFlag = []byte{
 	0x1, 0x0, 0x0, 0x0, // Version
-	0x0, // Marker byte indicating 0 inputs, or a segwit encoded tx
+	0x0, // Mark byte indicating 0 inputs, or a segwit encoded tx
 	0x0, // Incorrect flag byte (should be 0x01)
 	0x1, // Varint for number of inputs
 	0xa5, 0x33, 0x52, 0xd5, 0x13, 0x57, 0x66, 0xf0,

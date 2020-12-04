@@ -1247,9 +1247,8 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) error {
 
 	// Transaction version numbers not high enough to trigger CSV rules must
 	// fail.
-	if vm.tx.Version != wire.TxVerTimeLock {
-		str := fmt.Sprintf("invalid transaction version: %d",
-			vm.tx.Version)
+	if vm.tx.CleanVersion() != wire.TxVerTimeLock {
+		str := fmt.Sprintf("invalid transaction version: %d", vm.tx.CleanVersion())
 		return scriptError(ErrUnsatisfiedLockTime, str)
 	}
 
@@ -1259,8 +1258,7 @@ func opcodeCheckSequenceVerify(op *parsedOpcode, vm *Engine) error {
 	// to get around a CHECKSEQUENCEVERIFY check.
 	txSequence := int64(vm.tx.TxIn[vm.txIdx].Sequence)
 	if txSequence&int64(wire.SequenceLockTimeDisabled) != 0 {
-		str := fmt.Sprintf("transaction sequence has sequence "+
-			"locktime disabled bit set: 0x%x", txSequence)
+		str := fmt.Sprintf("transaction sequence has sequence locktime disabled bit set: 0x%x", txSequence)
 		return scriptError(ErrUnsatisfiedLockTime, str)
 	}
 

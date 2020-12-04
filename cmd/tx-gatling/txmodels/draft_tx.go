@@ -19,23 +19,27 @@ type DraftTx struct {
 	NetworkFee     int64
 	UTXO           UTXORows
 	ReceiverScript []byte
-	Address        string
+	DestAddress    string
 }
 
 // SetPayToAddress creates regular pay-to-address script.
 // 	destAddress is hex-encoded btcutil.Address
 func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincfg.Params) error {
+	var err error
+	tx.DestAddress = destAddress
+	tx.ReceiverScript, err = GetPayToAddressScript(destAddress, params)
+	return err
+}
+
+// SetPayToAddress creates regular pay-to-address script.
+// 	destAddress is hex-encoded btcutil.Address
+func GetPayToAddressScript(destAddress string, params *chaincfg.Params) ([]byte, error) {
 	decodedDestAddr, err := btcutil.DecodeAddress(destAddress, params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tx.Address = destAddress
-	tx.ReceiverScript, err = txscript.PayToAddrScript(decodedDestAddr)
-	if err != nil {
-		return err
-	}
-	return nil
+	return txscript.PayToAddrScript(decodedDestAddr)
 }
 
 // SetMultiSig2of2 creates multiSig script, what can be spent only whist 2 of 2 signatures.
@@ -51,7 +55,7 @@ func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *btcutil.AddressPub
 		return err
 	}
 
-	tx.Address = scriptAddr.EncodeAddress()
+	tx.DestAddress = scriptAddr.EncodeAddress()
 	tx.ReceiverScript = pkScript
 	return nil
 }
@@ -66,15 +70,6 @@ type Transaction struct {
 	Destination string `json:"destination" csv:"destination"`
 	Amount      int64  `json:"amount" csv:"amount"`
 	SignedTx    string `json:"signed_tx" csv:"signed_tx"`
-
-	RawTX *wire.MsgTx `json:"-" csv:"-"`
-}
-
-type SwapTransaction struct {
-	TxHash       string         `json:"tx_hash" csv:"tx_hash"`
-	Source       string         `json:"source" csv:"source"`
-	Destinations map[string]int `json:"destinations" csv:"destinations"`
-	SignedTx     string         `json:"signed_tx" csv:"signed_tx"`
 
 	RawTX *wire.MsgTx `json:"-" csv:"-"`
 }
@@ -129,10 +124,74 @@ func (t Transaction) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type SwapTransaction struct {
+	TxHash       string         `json:"tx_hash" csv:"tx_hash"`
+	Source       string         `json:"source" csv:"source"`
+	Destinations map[string]int `json:"destinations" csv:"destinations"`
+	SignedTx     string         `json:"signed_tx" csv:"signed_tx"`
+
+	RawTX *wire.MsgTx `json:"-" csv:"-"`
+}
+
+func (t *SwapTransaction) UnmarshalBinary(data []byte) error {
+	var dest = new(gobSwapTx)
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
+	if err != nil {
+		return err
+	}
+
+	t.TxHash = hex.EncodeToString(dest.TxHash)
+	t.SignedTx = hex.EncodeToString(dest.SignedTx)
+
+	t.Destinations = dest.Destinations
+	t.Source = string(dest.Source)
+
+	t.RawTX = &wire.MsgTx{}
+	err = t.RawTX.Deserialize(bytes.NewBuffer(dest.SignedTx))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t SwapTransaction) MarshalBinary() ([]byte, error) {
+	var err error
+	var dest = new(gobSwapTx)
+
+	dest.Source = []byte(t.Source)
+	dest.Destinations = t.Destinations
+
+	dest.TxHash, err = hex.DecodeString(t.TxHash)
+	if err != nil {
+		return nil, err
+	}
+
+	dest.SignedTx, err = hex.DecodeString(t.SignedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = gob.NewEncoder(buf).Encode(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 type gobTx struct {
 	TxHash      []byte
 	Source      []byte
 	Destination []byte
 	Amount      int64
 	SignedTx    []byte
+}
+
+type gobSwapTx struct {
+	TxHash       []byte
+	Source       []byte
+	Destinations map[string]int
+	SignedTx     []byte
 }

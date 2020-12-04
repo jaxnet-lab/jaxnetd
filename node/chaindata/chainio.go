@@ -581,6 +581,13 @@ func outpointKey(outpoint wire.OutPoint) *[]byte {
 	return key
 }
 
+func keyToOutpoint(key []byte) (outpoint wire.OutPoint) {
+	copy(outpoint.Hash[:], key[:chainhash.HashSize])
+	idx, _ := deserializeVLQ(key[chainhash.HashSize:])
+	outpoint.Index = uint32(idx)
+	return
+}
+
 // recycleOutpointKey puts the provided byte slice, which should have been
 // obtained via the outpointKey function, back on the free list.
 func recycleOutpointKey(key *[]byte) {
@@ -742,6 +749,43 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	}
 
 	return entry, nil
+}
+
+func DBFetchUtxoEntries(dbTx database.Tx) (map[wire.OutPoint]*UtxoEntry, error) {
+	view := map[wire.OutPoint]*UtxoEntry{}
+	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+	err := utxoBucket.ForEach(func(rawKey, serializedUtxo []byte) error {
+		if serializedUtxo == nil {
+			return nil
+		}
+
+		// A non-nil zero-length entry means there is an entry in the database
+		// for a spent transaction output which should never be the case.
+		outpoint := keyToOutpoint(rawKey)
+		if len(serializedUtxo) == 0 {
+			return AssertError(fmt.Sprintf("database contains entry "+
+				"for spent tx output %v", outpoint))
+		}
+
+		// Deserialize the utxo entry and return it.
+		entry, err := deserializeUtxoEntry(serializedUtxo)
+		if err != nil {
+			// Ensure any deserialization errors are returned as database
+			// corruption errors.
+			if IsDeserializeErr(err) {
+				return database.Error{
+					ErrorCode:   database.ErrCorruption,
+					Description: fmt.Sprintf("corrupt utxo entry for %v: %v", outpoint, err),
+				}
+			}
+			return err
+		}
+
+		view[outpoint] = entry
+		return nil
+	})
+
+	return view, err
 }
 
 // DBPutUtxoView uses an existing database transaction to update the utxo set

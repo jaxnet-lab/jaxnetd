@@ -57,22 +57,21 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.EstimateSmartFeeResult)
-
+	c := cmd.(*btcjson.EstimateSmartFeeCmd)
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
 
-	if c.Blocks <= 0 {
+	if c.ConfTarget <= 0 {
 		return -1.0, errors.New("Parameter NumBlocks must be positive")
 	}
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.Blocks))
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.ConfTarget))
 	if err != nil {
 		return -1.0, err
 	}
 	fee := float64(feeRate)
-	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.Blocks}
+	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.ConfTarget}
 	return res, nil
 }
 
@@ -234,8 +233,10 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	var mtx *wire.MsgTx
 	var blkHash *chainhash.Hash
 	var blkHeight int32
+
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err != nil {
+		// return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
 				Code: btcjson.ErrRPCNoTxInfo,
@@ -336,6 +337,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 // handleSendRawTransaction implements the sendrawtransaction command.
 func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.SendRawTransactionCmd)
+
 	// Deserialize and send off to tx relay
 	hexStr := c.HexTx
 	if len(hexStr)%2 != 0 {
@@ -354,7 +356,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		}
 	}
 
-	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerShardsSwap {
+	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.SwapTx() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCTxError,
 			Message: "Beacon not support ShardSwapTx",
@@ -371,7 +373,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		// so log it as an actual error and return.
 		ruleErr, ok := err.(mempool.RuleError)
 		if !ok {
-			server.Log.Errorf("Failed to process transaction %v %v", tx.Hash(), err)
+			server.Log.Error().Msgf("Failed to process transaction %v %v", tx.Hash(), err)
 
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCTxError,
@@ -379,7 +381,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 			}
 		}
 
-		server.Log.Debugf("Rejected transaction %v: %v", tx.Hash(), err)
+		server.Log.Debug().Msgf("Rejected transaction %v: %v", tx.Hash(), err)
 
 		// We'll then map the rule error to the appropriate RPC error,
 		// matching bitcoind'server behavior.
@@ -462,8 +464,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 	if c.IncludeMempool != nil {
 		includeMempool = *c.IncludeMempool
 	}
-	// TODO: This is racy.  It should attempt to fetch it directly and check
-	// the error.
+	// TODO: This is racy.  It should attempt to fetch it directly and check the error.
 	if includeMempool && server.chainProvider.TxMemPool.HaveTransaction(txHash) {
 		tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 		if err != nil {
@@ -545,6 +546,71 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 		Coinbase: isCoinbase,
 	}
 	return txOutReply, nil
+}
+
+// handleListTxOut handles listtxout commands.
+func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	_ = cmd.(*btcjson.ListTxOutCmd)
+
+	entries, err := server.chainProvider.BlockChain().ListUtxoEntry()
+	if err != nil {
+		return nil, rpcNoTxInfoError(nil)
+	}
+
+	best := server.chainProvider.BlockChain().BestSnapshot()
+
+	var reply = make([]btcjson.ExtendedTxOutResult, 0, len(entries))
+	for out, entry := range entries {
+		var confirmations int32
+		var pkScript []byte
+		var isCoinbase bool
+
+		// To match the behavior of the reference client, return nil
+		// (JSON null) if the transaction output is spent by another
+		// transaction already in the main BlockChain.  Mined transactions
+		// that are spent by a mempool transaction are not affected by
+		// this.
+		// if entry == nil || entry.IsSpent() {
+		// 	continue
+		// }
+
+		confirmations = 1 + best.Height - entry.BlockHeight()
+		pkScript = entry.PkScript()
+		isCoinbase = entry.IsCoinBase()
+
+		// Disassemble script into single line printable format.
+		// The disassembled string will contain [error] inline if the script
+		// doesn't fully parse, so ignore the error here.
+		disbuf, _ := txscript.DisasmString(pkScript)
+
+		// Get further info about the script.
+		// Ignore the error here since an error means the script couldn't parse
+		// and there is no additional information about it anyways.
+		scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(pkScript,
+			server.chainProvider.ChainParams)
+		addresses := make([]string, len(addrs))
+		for i, addr := range addrs {
+			addresses[i] = addr.EncodeAddress()
+		}
+
+		reply = append(reply, btcjson.ExtendedTxOutResult{
+			TxHash:        out.Hash.String(),
+			Index:         out.Index,
+			Used:          entry.IsSpent(),
+			Confirmations: int64(confirmations),
+			Value:         entry.Amount(),
+			ScriptPubKey: btcjson.ScriptPubKeyResult{
+				Asm:       disbuf,
+				Hex:       hex.EncodeToString(pkScript),
+				ReqSigs:   int32(reqSigs),
+				Type:      scriptClass.String(),
+				Addresses: addresses,
+			},
+			Coinbase: isCoinbase,
+		})
+	}
+
+	return btcjson.ListTxOutResult{List: reply}, nil
 }
 
 // handleSearchRawTransactions implements the searchrawtransactions command.

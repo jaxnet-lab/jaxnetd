@@ -8,12 +8,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"go.uber.org/zap"
+	"gitlab.com/jaxnet/core/shard.core/version"
 )
 
 type NodeRPC struct {
@@ -27,13 +28,14 @@ type NodeRPC struct {
 	StartupTime   int64
 	MiningAddrs   []btcutil.Address
 	CPUMiner      cpuminer.CPUMiner
-	chainProvider cprovider.ChainProvider
+	chainProvider *cprovider.ChainProvider
 }
 
-func NewNodeRPC(shardsMgr ShardManager, logger *zap.Logger) *NodeRPC {
+func NewNodeRPC(provider *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
 	rpc := &NodeRPC{
-		Mux:       NewRPCMux(logger),
-		shardsMgr: shardsMgr,
+		Mux:           NewRPCMux(logger),
+		shardsMgr:     shardsMgr,
+		chainProvider: provider,
 	}
 	rpc.ComposeHandlers()
 
@@ -48,7 +50,7 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 	return map[btcjson.MethodName]CommandHandler{
 		btcjson.ScopedMethod("node", "version"):        server.handleVersion,
 		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
-		btcjson.ScopedMethod("node", "getNetworkInfo"): server.handleGetnetworkinfo,
+		btcjson.ScopedMethod("node", "getnetworkinfo"): server.handleGetnetworkinfo, // todo: remove
 		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
 
 		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
@@ -56,12 +58,12 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 
 		btcjson.ScopedMethod("node", "generate"):         server.handleGenerate,
 		btcjson.ScopedMethod("node", "getDifficulty"):    server.handleGetDifficulty,
-		btcjson.ScopedMethod("node", "getMiningInfo"):    server.handleGetMiningInfo,
-		btcjson.ScopedMethod("node", "getNetworkHashPS"): server.handleGetNetworkHashPS,
+		btcjson.ScopedMethod("node", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
+		btcjson.ScopedMethod("node", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
 
 		btcjson.ScopedMethod("node", "setGenerate"):     server.handleSetGenerate,
-		btcjson.ScopedMethod("node", "getBlockStats"):   server.handleGetBlockStats,
-		btcjson.ScopedMethod("node", "getChainTxStats"): server.handleGetChaintxStats,
+		btcjson.ScopedMethod("node", "getblockstats"):   server.handleGetBlockStats,   // todo: remove
+		btcjson.ScopedMethod("node", "getchaintxstats"): server.handleGetChaintxStats, // todo: remove
 		btcjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
 		btcjson.ScopedMethod("node", "stop"):            server.handleStop,
 		btcjson.ScopedMethod("node", "help"):            server.handleHelp,
@@ -72,20 +74,18 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 //
 // NOTE: This is a btcsuite extension ported from github.com/decred/dcrd.
 func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	result := map[string]btcjson.VersionResult{
-		"btcdjsonrpcapi": {
+	return btcjson.NodeVersion{
+		Node: version.GetExtendedVersion(),
+		RPC: btcjson.VersionResult{
 			VersionString: jsonrpcSemverString,
 			Major:         jsonrpcSemverMajor,
 			Minor:         jsonrpcSemverMinor,
 			Patch:         jsonrpcSemverPatch,
 		},
-	}
-	return result, nil
+	}, nil
 }
 
 func (server *NodeRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// result := btcjson.NewGetNetworkInfoCmd()
-	// fmt.Println("NetworkInfo: ", result)
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
@@ -255,6 +255,9 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	// because the return value is an interface{}.
 
 	c := cmd.(*btcjson.GetNetworkHashPSCmd)
+	if server.chainProvider.BlockChain() == nil {
+		return int64(0), nil
+	}
 
 	// When the passed height is too high or zero, just return 0 now
 	// since we can't reasonably calculate the number of network hashes
@@ -294,7 +297,6 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 	if startHeight < 0 {
 		startHeight = 0
 	}
-	server.Log.Debugf("Calculating network hashes per second %v %v", startHeight, endHeight)
 
 	// Find the min and max block timestamps as well as calculate the total
 	// amount of work that happened between the start and end blocks.
@@ -304,14 +306,14 @@ func (server *NodeRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan 
 		hash, err := server.chainProvider.BlockChain().BlockHashByHeight(curHeight)
 		if err != nil {
 			context := "Failed to fetch block hash"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return int64(0), server.InternalRPCError(err.Error(), context)
 		}
 
 		// Fetch the header from BlockChain.
 		header, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 		if err != nil {
 			context := "Failed to fetch block header"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return int64(0), server.InternalRPCError(err.Error(), context)
 		}
 
 		if curHeight == startHeight {

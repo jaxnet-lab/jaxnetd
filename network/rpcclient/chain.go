@@ -637,6 +637,50 @@ func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*
 	return c.GetTxOutAsync(txHash, index, mempool).Receive()
 }
 
+// FutureGetTxOutResult is a future promise to deliver the result of a
+// GetTxOutAsync RPC invocation (or an applicable error).
+type FutureListTxOutResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureListTxOutResult) Receive() (*btcjson.ListTxOutResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettxout result object.
+	listTxOut := &btcjson.ListTxOutResult{}
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// GetTxOutAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetTxOut for the blocking version and more details.
+func (c *Client) ListTxOutAsync() FutureListTxOutResult {
+	cmd := btcjson.NewListTxOutCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetTxOut returns the transaction output info if it's unspent and
+// nil, otherwise.
+func (c *Client) ListTxOut() (*btcjson.ListTxOutResult, error) {
+	return c.ListTxOutAsync().Receive()
+}
+
 // FutureRescanBlocksResult is a future promise to deliver the result of a
 // RescanBlocksAsync RPC invocation (or an applicable error).
 //

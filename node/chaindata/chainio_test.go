@@ -496,16 +496,14 @@ func TestUtxoSerialization(t *testing.T) {
 		// The deserialized entry must not be marked spent since unspent
 		// entries are not serialized.
 		if utxoEntry.IsSpent() {
-			t.Errorf("deserializeUtxoEntry #%d (%s) output should "+
-				"not be marked spent", i, test.name)
+			t.Errorf("deserializeUtxoEntry #%d (%s) output should not be marked spent", i, test.name)
 			continue
 		}
 
 		// Ensure the deserialized entry has the same properties as the
 		// ones in the test entry.
 		if utxoEntry.Amount() != test.entry.Amount() {
-			t.Errorf("deserializeUtxoEntry #%d (%s) mismatched "+
-				"amounts: got %d, want %d", i, test.name,
+			t.Errorf("deserializeUtxoEntry #%d (%s) mismatched amounts: got %d, want %d", i, test.name,
 				utxoEntry.Amount(), test.entry.Amount())
 			continue
 		}

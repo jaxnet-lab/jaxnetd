@@ -56,6 +56,9 @@ func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlo
 func (c *shardChain) Params() *chaincfg.Params {
 	return c.chainParams
 }
+func (c *shardChain) Name() string {
+	return c.chainParams.Name
+}
 
 func (c *shardChain) EmptyBlock() wire.MsgBlock {
 	return wire.EmptyShardBlock()

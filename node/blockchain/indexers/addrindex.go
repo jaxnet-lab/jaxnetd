@@ -716,8 +716,10 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *btcutil.Block,
 				// We'll access the slice of all the
 				// transactions spent in this block properly
 				// ordered to fetch the previous input script.
-				pkScript := stxos[stxoIndex].PkScript
-				idx.indexPkScript(data, pkScript, txIdx)
+				if stxoIndex < len(stxos) {
+					pkScript := stxos[stxoIndex].PkScript
+					idx.indexPkScript(data, pkScript, txIdx)
+				}
 
 				// With an input indexed, we'll advance the
 				// stxo coutner.

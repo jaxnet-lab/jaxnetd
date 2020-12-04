@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
@@ -16,7 +17,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"go.uber.org/zap"
 )
 
 type BeaconRPC struct {
@@ -24,11 +24,10 @@ type BeaconRPC struct {
 }
 
 func NewBeaconRPC(chainProvider *cprovider.ChainProvider,
-	connMgr netsync.P2PConnManager,
-	logger *zap.Logger) *BeaconRPC {
+	connMgr netsync.P2PConnManager, logger zerolog.Logger) *BeaconRPC {
 	rpc := &BeaconRPC{
 		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr,
-			logger.With(zap.String("ctx", "beacon_rpc"))),
+			logger.With().Str("ctx", "beacon_rpc").Logger()),
 	}
 	rpc.ComposeHandlers()
 	return rpc
@@ -44,7 +43,9 @@ func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("beacon", "getBeaconHeaders"):       server.handleGetHeaders,
 		btcjson.ScopedMethod("beacon", "getBeaconBlock"):         server.handleGetBlock,
 		btcjson.ScopedMethod("beacon", "getBeaconBlockHeader"):   server.handleGetBlockHeader,
+		btcjson.ScopedMethod("beacon", "getBlockHeader"):         server.handleGetBlockHeader,
 		btcjson.ScopedMethod("beacon", "getBeaconBlockTemplate"): server.handleGetBlockTemplate,
+		// btcjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// btcjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
 	}
 }
@@ -353,7 +354,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCClientInInitialDownload,
-			Message: "Bitcoin is downloading blocks...",
+			Message: "Shard.Core is downloading blocks...",
 		}
 	}
 
@@ -429,14 +430,14 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block); err != nil {
 		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
-			server.Log.Error(errStr)
+			server.Log.Error().Msg(errStr)
 			return nil, &btcjson.RPCError{
 				Code:    btcjson.ErrRPCVerify,
 				Message: errStr,
 			}
 		}
 
-		server.Log.Infof("Rejected block proposal. %s", err.Error())
+		server.Log.Info().Msgf("Rejected block proposal. %s", err.Error())
 		return server.ChainErrToGBTErrString(err), nil
 	}
 

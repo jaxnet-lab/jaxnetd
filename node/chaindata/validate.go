@@ -5,6 +5,7 @@ package chaindata
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -137,13 +138,32 @@ func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
 	return true
 }
 
+func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
+	if len(tx.MsgTx().TxOut) > len(tx.MsgTx().TxIn) {
+		return false
+	}
+	inputAddresses := map[string]struct{}{}
+	for _, in := range tx.MsgTx().TxIn {
+		origUTXO := view.LookupEntry(in.PreviousOutPoint)
+		inputAddresses[hex.EncodeToString(origUTXO.PkScript())] = struct{}{}
+	}
+
+	for _, out := range tx.MsgTx().TxOut {
+		if _, ok := inputAddresses[hex.EncodeToString(out.PkScript)]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
 func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Time) bool {
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
 	lockTime := msgTx.LockTime
-	if lockTime == 0 {
+	if lockTime == 0 || msgTx.CleanVersion() == wire.TxVerTimeLockAllowance {
 		return true
 	}
 
@@ -157,18 +177,20 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 	} else {
 		blockTimeOrHeight = blockTime.Unix()
 	}
-	if int64(lockTime) < blockTimeOrHeight {
-		return true
-	}
 
+	timeLockTx := tx.MsgTx().Version == wire.TxVerTimeLock
+	if int64(lockTime) < blockTimeOrHeight {
+		return timeLockTx
+	}
 	// At this point, the transaction's lock time hasn't occurred yet, but
 	// the transaction might still be finalized if the sequence number
 	// for all transaction inputs is maxed out.
 	for _, txIn := range msgTx.TxIn {
 		if txIn.Sequence != math.MaxUint32 {
-			return false
+			return !timeLockTx
 		}
 	}
+
 	return true
 }
 
@@ -221,7 +243,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		return NewRuleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
-	if msgTx.Version == wire.TxVerShardsSwap && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
+	if msgTx.SwapTx() && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
 		return NewRuleError(ErrInvalidShardSwapInOuts,
 			"ShardSwap tx with more than 2 inputs and outputs not allowed")
 	}
@@ -298,7 +320,7 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		// Previous transaction outputs referenced by the inputs to this
 		// transaction must not be null. Null allowed only for ShardsSwapTxs.
 		for _, txIn := range msgTx.TxIn {
-			if isNullOutpoint(&txIn.PreviousOutPoint) && msgTx.Version != wire.TxVerShardsSwap {
+			if isNullOutpoint(&txIn.PreviousOutPoint) && !msgTx.SwapTx() {
 				return NewRuleError(ErrBadTxInput, "transaction "+
 					"input refers to previous output that "+
 					"is null")
@@ -394,13 +416,19 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 	// inputs.
 	msgTx := tx.MsgTx()
 	totalSigOps := 0
+	missingCount := 0
+	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil || utxo.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOutPoint,
+		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+			missingCount += 1
+			continue
+		}
+
+		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+			str := fmt.Sprintf("output %v referenced from transaction %s:%d either does not exist or has already been spent",
+				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
 		}
@@ -665,15 +693,26 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 
 	txHash := tx.Hash()
 	var totalSatoshiIn int64
+
+	missingCount := 0
+	missedInputs := map[int]struct{}{}
+	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil || utxo.IsSpent() {
-			str := fmt.Sprintf("output %v referenced from "+
-				"transaction %s:%d either does not exist or "+
-				"has already been spent", txIn.PreviousOutPoint,
+		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+			missingCount += 1
+			missedInputs[txInIndex] = struct{}{}
+			continue
+		}
+
+		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+			str := fmt.Sprintf(
+				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
+				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
+
 		}
 
 		// Ensure the transaction is not spending coins which have not
@@ -732,12 +771,17 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 	// to ignore overflow and out of range errors here because those error
 	// conditions would have already been caught by checkTransactionSanity.
 	var totalSatoshiOut int64
-	for _, txOut := range tx.MsgTx().TxOut {
+	for outIndex, txOut := range tx.MsgTx().TxOut {
+		// for swap txs, the missed inputs are inputs from another chain,
+		// outputs with matching indices are not added to the current chain and should be ignored
+		if _, ok := missedInputs[outIndex]; ok {
+			continue
+		}
 		totalSatoshiOut += txOut.Value
 	}
 
 	// Ensure the transaction does not spend more than its inputs.
-	if totalSatoshiIn < totalSatoshiOut {
+	if totalSatoshiIn < totalSatoshiOut && !thisIsSwapTx { // todo(mike):
 		str := fmt.Sprintf("total value of all transaction inputs for "+
 			"transaction %v is %v which is less than the amount "+
 			"spent of %v", txHash, totalSatoshiIn, totalSatoshiOut)

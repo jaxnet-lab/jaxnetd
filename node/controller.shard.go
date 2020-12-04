@@ -17,7 +17,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"go.uber.org/zap"
 )
 
 func (chainCtl *chainController) EnableShard(shardID uint32) error {
@@ -85,7 +84,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 
 	block, ok := not.Data.(*btcutil.Block)
 	if !ok {
-		chainCtl.logger.Warn("block notification data is not a *btcutil.Block")
+		chainCtl.logger.Warn().Msg("block notification data is not a *btcutil.Block")
 		return
 	}
 
@@ -96,7 +95,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 
 	opts := p2p.ListenOpts{}
 	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners); err != nil {
-		chainCtl.logger.Error("unable to get free port", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("unable to get free port")
 	}
 
 	shardID := chainCtl.shardsIndex.AddShard(block, opts)
@@ -105,9 +104,11 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 
 func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, autoInit bool) {
 	if interruptRequested(chainCtl.ctx) {
-		chainCtl.logger.Error("shard run interrupted",
-			zap.Uint32("shard_id", shardID),
-			zap.Error(errors.New("can't create interrupt request")))
+		chainCtl.logger.Error().
+			Uint32("shard_id", shardID).
+			Err(errors.New("can't create interrupt request")).
+			Msg("shard run interrupted")
+
 		return
 	}
 
@@ -124,7 +125,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	if err := shardCtl.Init(beaconBlockGen, autoInit); err != nil {
-		chainCtl.logger.Error("Can't init shard chainCtl", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("Can't init shard chainCtl")
 		return
 	}
 
@@ -151,14 +152,13 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
-		if chainCtl.cfg.Metrics.Enable {
-			chainCtl.metrics.Add(ChainMetrics(shardCtl.ChainProvider().BlockChain(),
-				shardCtl.chain.Params().Name, chainCtl.logger))
-		}
-
 		if chainCtl.cfg.Node.EnableCPUMiner {
 			chainCtl.runShardMiner(shardCtl.ChainProvider())
 		}
+	}
+
+	if chainCtl.cfg.Metrics.Enable {
+		chainCtl.metrics.Add(ChainMetrics(shardCtl, chainCtl.logger))
 	}
 }
 
@@ -166,12 +166,12 @@ func (chainCtl *chainController) saveShardsIndex() {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	content, err := json.Marshal(chainCtl.shardsIndex)
 	if err != nil {
-		chainCtl.logger.Error("unable to marshal shards index", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("unable to marshal shards index")
 		return
 	}
 
 	if err = ioutil.WriteFile(shardsFile, content, 0644); err != nil {
-		chainCtl.logger.Error("unable to write shards index", zap.Error(err))
+		chainCtl.logger.Error().Err(err).Msg("unable to write shards index")
 		return
 	}
 
@@ -181,7 +181,7 @@ func (chainCtl *chainController) saveShardsIndex() {
 func (chainCtl *chainController) syncShardsIndex() error {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	chainCtl.shardsIndex = &Index{
-		Shards: []ShardInfo{},
+		Shards: map[uint32]ShardInfo{},
 	}
 
 	if _, err := os.Stat(shardsFile); err == nil {

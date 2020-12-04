@@ -21,7 +21,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"go.uber.org/zap"
+	"gitlab.com/jaxnet/core/shard.core/version"
 )
 
 func initChain() bool {
@@ -57,7 +57,6 @@ func main() {
 	if runtime.GOOS == "windows" {
 		isService, err := winServiceMain()
 		if err != nil {
-			fmt.Println(err)
 			os.Exit(1)
 		}
 		if isService {
@@ -85,32 +84,26 @@ func shardCoreMain() error {
 		return err
 	}
 
-	defer func() {
-		if config.LogRotator != nil {
-			config.LogRotator.Close()
-		}
-	}()
-
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from
 	// another subsystem such as the RPC server.
 
-	defer config.Log.Info("Shutdown complete")
+	defer config.Log.Info().Msg("Shutdown complete")
 
 	// Show version at startup.
-	config.Log.Info(fmt.Sprintf("Version %s", getVersion()))
+	config.Log.Info().Msgf("Version %s", version.GetVersion())
 
 	// Enable http profiling server if requested.
 	if cfg.Profile != "" {
 		go func() {
 			listenAddr := net.JoinHostPort("", cfg.Profile)
-			config.Log.Info(fmt.Sprintf("Profile server listening on %s", listenAddr))
+			config.Log.Info().Msgf("Profile server listening on %s", listenAddr)
 			profileRedirect := http.RedirectHandler("/debug/pprof",
 				http.StatusSeeOther)
 			http.Handle("/", profileRedirect)
 			err = http.ListenAndServe(listenAddr, nil)
 			if err != nil {
-				config.Log.Error("listen and serve failed", zap.Error(err))
+				config.Log.Error().Err(err).Msg("listen and serve failed")
 			}
 		}()
 	}
@@ -119,7 +112,7 @@ func shardCoreMain() error {
 	if cfg.CPUProfile != "" {
 		f, err := os.Create(cfg.CPUProfile)
 		if err != nil {
-			config.Log.Error("Unable to create cpu profile", zap.Error(err))
+			config.Log.Error().Err(err).Msg("Unable to create cpu profile")
 			return err
 		}
 		pprof.StartCPUProfile(f)
@@ -129,22 +122,25 @@ func shardCoreMain() error {
 
 	// Perform upgrades to btcd as new versions require it.
 	if err := config.DoUpgrades(cfg); err != nil {
-		config.Log.Error("can not do upgrade", zap.Error(err))
+		config.Log.Error().
+			Err(err).
+			Msg("can not do upgrade")
 		return err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sigChan := interruptListener(config.Log)
+	sigChan := interruptListener(config.Log.With().Str("ctx", "interruptListener").Logger())
 	go func() {
 		select {
 		case <-sigChan:
-			config.Log.Info("propagate stop signal")
+			config.Log.Info().Msg("propagate stop signal")
 			cancel()
 		}
 	}()
 
-	if err := node.Controller(config.Log).Run(ctx, cfg); err != nil {
-		config.Log.Error("Can't run Chains", zap.Error(err))
+	controller := node.Controller(config.Log.With().Str("ctx", "ShardController").Logger())
+	if err := controller.Run(ctx, cfg); err != nil {
+		config.Log.Error().Err(err).Msg("Can't run Chains")
 		os.Exit(2)
 	}
 

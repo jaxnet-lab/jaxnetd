@@ -64,3 +64,21 @@ func (b *BlockChain) FetchUtxoEntry(outpoint wire.OutPoint) (*chaindata.UtxoEntr
 
 	return entry, nil
 }
+
+func (b *BlockChain) ListUtxoEntry() (map[wire.OutPoint]*chaindata.UtxoEntry, error) {
+	b.chainLock.RLock()
+	defer b.chainLock.RUnlock()
+
+	var entries map[wire.OutPoint]*chaindata.UtxoEntry
+	err := b.db.View(func(dbTx database.Tx) error {
+		var err error
+		entries, err = chaindata.DBFetchUtxoEntries(dbTx)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}

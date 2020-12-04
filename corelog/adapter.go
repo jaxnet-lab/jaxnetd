@@ -2,128 +2,116 @@ package corelog
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path"
+	"strings"
+	"time"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
-	Disabled    ILogger
-	DisabledZap *zap.Logger
+	Disabled zerolog.Logger
 
-	DefaultLevel   = zap.InfoLevel
+	DefaultLevel   = zerolog.InfoLevel
 	DefaultLogFile = "shard.core.log"
 )
 
 func init() {
-	Disabled = Adapter(zap.NewNop())
-	DisabledZap = zap.NewNop()
+	Disabled = zerolog.Nop()
 }
 
-type ILogger interface {
-	Trace(format string)
-	Debug(format string)
-	Info(format string)
-	Warn(format string)
-	Error(format string)
-	Tracef(format string, params ...interface{})
-	Debugf(format string, params ...interface{})
-	Infof(format string, params ...interface{})
-	Warnf(format string, params ...interface{})
-	Errorf(format string, params ...interface{})
+// Configuration for logging
+type Config struct {
+	// Disable console logging
+	DisableConsoleLog bool `yaml:"disable_console_log"`
+	// LogsAsJson makes the log framework log JSON
+	LogsAsJson bool `yaml:"logs_as_json"`
+	// FileLoggingEnabled makes the framework log to a file
+	// the fields below can be skipped if this value is false!
+	FileLoggingEnabled bool `yaml:"file_logging_enabled"`
+	// Directory to log to to when filelogging is enabled
+	Directory string `yaml:"directory"`
+	// Filename is the name of the logfile which will be placed inside the directory
+	Filename string `yaml:"filename"`
+	// MaxSize the max size in MB of the logfile before it's rolled
+	MaxSize int `yaml:"max_size"`
+	// MaxBackups the max number of rolled files to keep
+	MaxBackups int `yaml:"max_backups"`
+	// MaxAge the max age in days to keep a logfile
+	MaxAge int `yaml:"max_age"`
 }
 
-type LogAdapter struct {
-	Logger *zap.Logger
-}
-
-func New(logLevel zapcore.Level, file string, disableStdOut bool) *zap.Logger {
-	w := zapcore.AddSync(&lumberjack.Logger{
-		Filename:   file,
-		MaxSize:    100, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, // days
-	})
-
-	core := zapcore.NewTee(
-		zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), os.Stdout, logLevel),
-		zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), w, logLevel),
-	)
-
-	if disableStdOut {
-		core = zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), w, logLevel)
-	}
-
-	log := zap.New(core).With(zap.String("app", "shard.core"))
-	return log
-}
-
-func Adapter(logger *zap.Logger) ILogger {
-	res := &LogAdapter{
-		Logger: logger,
-	}
-	return res
-}
-
-func (l *LogAdapter) Tracef(format string, params ...interface{}) {
-	if params != nil {
-		l.Logger.Debug(fmt.Sprintf(format, params...))
-	} else {
-		l.Logger.Debug(format)
+func (Config) Default() Config {
+	return Config{
+		DisableConsoleLog:  false,
+		LogsAsJson:         false,
+		FileLoggingEnabled: true,
+		Directory:          "core",
+		Filename:           "shard.core.log",
+		MaxSize:            150,
+		MaxBackups:         3,
+		MaxAge:             28,
 	}
 }
 
-func (l *LogAdapter) Debugf(format string, params ...interface{}) {
-	if params != nil {
-		l.Logger.Debug(fmt.Sprintf(format, params...))
-	} else {
-		l.Logger.Debug(format)
+type Logger struct {
+	*zerolog.Logger
+}
+
+func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
+	var writers []io.Writer
+	if !config.DisableConsoleLog {
+		out := zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}
+		out.TimeFormat = time.RFC3339
+		out.FormatLevel = func(i interface{}) string {
+			return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
+		}
+		out.FormatMessage = func(i interface{}) string {
+			return fmt.Sprintf("%-6s  |>", i)
+		}
+		writers = append(writers, out)
+	}
+	if config.FileLoggingEnabled {
+		writers = append(writers, newRollingFile(config))
 	}
 
+	mw := io.MultiWriter(writers...)
+	zerolog.SetGlobalLevel(DefaultLevel)
+
+	logger := zerolog.New(mw).
+		Level(logLevel).
+		With().
+		Str("app", "shard.core").
+		Timestamp().
+		Logger()
+
+	logger.Trace().
+		Bool("fileLogging", config.FileLoggingEnabled).
+		Bool("jsonLogOutput", config.LogsAsJson).
+		Str("logDirectory", config.Directory).
+		Str("fileName", config.Filename).
+		Int("maxSizeMB", config.MaxSize).
+		Int("maxBackups", config.MaxBackups).
+		Int("maxAgeInDays", config.MaxAge).
+		Msg("logging configured")
+
+	return logger
 }
 
-func (l *LogAdapter) Infof(format string, params ...interface{}) {
-	if params != nil {
-		l.Logger.Info(fmt.Sprintf(format, params...))
-	} else {
-		l.Logger.Info(format)
+func newRollingFile(config Config) io.Writer {
+	if err := os.MkdirAll(config.Directory, 0744); err != nil {
+		log.Error().Err(err).Str("path", config.Directory).Msg("can't create log directory")
+		return nil
 	}
-}
 
-func (l *LogAdapter) Warnf(format string, params ...interface{}) {
-	if params != nil {
-		l.Logger.Warn(fmt.Sprintf(format, params...))
-	} else {
-		l.Logger.Warn(format)
+	return &lumberjack.Logger{
+		Filename:   path.Join(config.Directory, config.Filename),
+		MaxBackups: config.MaxBackups, // files
+		MaxSize:    config.MaxSize,    // megabytes
+		MaxAge:     config.MaxAge,     // days
 	}
-}
-
-func (l *LogAdapter) Errorf(format string, params ...interface{}) {
-	if params != nil {
-		l.Logger.Error(fmt.Sprintf(format, params...))
-	} else {
-		l.Logger.Error(format)
-	}
-}
-
-func (l *LogAdapter) Trace(format string) {
-	l.Logger.Debug("TRACE: " + format)
-}
-
-func (l *LogAdapter) Debug(format string) {
-	l.Logger.Debug(format)
-}
-
-func (l *LogAdapter) Info(format string) {
-	l.Logger.Info(format)
-}
-
-func (l *LogAdapter) Warn(format string) {
-	l.Logger.Warn(format)
-}
-
-func (l *LogAdapter) Error(format string) {
-	l.Logger.Error(format)
 }

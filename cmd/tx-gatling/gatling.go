@@ -131,6 +131,7 @@ func (app *App) getCommands() cli.Commands {
 type App struct {
 	config Config
 	txutils.Operator
+	shardID uint32
 }
 
 func (app *App) InitFlags() []cli.Flag {
@@ -139,6 +140,7 @@ func (app *App) InitFlags() []cli.Flag {
 		flags[flagConfig],
 		flags[flagDataFile],
 		flags[flagSecretKey],
+		flags[flagShard],
 	}
 }
 
@@ -159,8 +161,17 @@ func (app *App) InitCfg(c *cli.Context) error {
 		app.config.SenderSecret = secret
 	}
 
+	shardID := c.Uint64(flagShard)
+	if dataFile != "" {
+		app.config.SenderSecret = secret
+	}
+
+	// todo cleanup
+	app.shardID = uint32(shardID)
+	app.config.ShardID = app.shardID
 	app.Operator, err = txutils.NewOperator(txutils.ManagerCfg{
 		Net:        app.config.Net,
+		ShardID:    uint32(shardID),
 		RPC:        app.config.NodeRPC,
 		PrivateKey: app.config.SenderSecret,
 	})
@@ -176,6 +187,8 @@ func (app *App) SyncUTXOFlags() []cli.Flag {
 	return []cli.Flag{
 		flags[flagAddress],
 		flags[flagOffset],
+		flags[flagShards],
+		flags[flagSplitFiles],
 	}
 }
 
@@ -183,19 +196,47 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 	offset := c.Int64(flagOffset)
 	address := c.String(flagAddress)
 	dataFile := c.String(flagDataFile)
+	shards := c.Int64Slice(flagShards)
+	splitFiles := c.Bool(flagSplitFiles)
 
-	fmt.Printf("Start collecting...")
+	fmt.Println("Start collecting...")
 
-	rows, lastBlock, err := app.TxMan.CollectUTXO(address, offset)
+	opts := txutils.UTXOCollectorOpts{
+		Offset:          offset,
+		FilterAddresses: []string{address},
+	}
+	if len(shards) > 0 && shards[0] == -1 {
+		opts.AllChains = true
+	} else {
+		for _, shard := range shards {
+			opts.Shards = append(opts.Shards, uint32(shard))
+		}
+	}
+
+	set, lastBlock, err := app.TxMan.CollectUTXOs(opts)
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to collect UTXO"), 1)
 	}
 
-	fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(rows), address, offset, lastBlock)
+	if splitFiles {
+		for u, rows := range set {
+			err = storage.NewCSVStorage(fmt.Sprintf("chain-%d-%s", u, dataFile)).SaveRows(rows)
+			if err != nil {
+				return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+			}
+			fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(rows), address, offset, lastBlock)
+		}
+	} else {
+		var allRows txmodels.UTXORows
+		for _, rows := range set {
+			allRows = append(allRows, rows...)
+		}
 
-	err = storage.NewCSVStorage(dataFile).SaveRows(rows)
-	if err != nil {
-		return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+		fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(allRows), address, offset, lastBlock)
+		err = storage.NewCSVStorage(dataFile).SaveRows(allRows)
+		if err != nil {
+			return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
+		}
 	}
 
 	return nil
@@ -221,7 +262,7 @@ func (app *App) SendTxCmd(*cli.Context) error {
 
 		fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -235,7 +276,7 @@ func (app *App) SendTxCmd(*cli.Context) error {
 
 	for _, tx := range sentTxs {
 		hash, _ := chainhash.NewHashFromStr(tx.TxHash)
-		txResult, err := app.TxMan.RPC.GetTxOut(hash, 0, true)
+		txResult, err := app.TxMan.RPC().ForShard(app.shardID).GetTxOut(hash, 0, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to get tx"), 1)
 		}
@@ -297,7 +338,7 @@ func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -346,7 +387,7 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 	fmt.Printf("Add signature to Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -388,7 +429,7 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC.SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
