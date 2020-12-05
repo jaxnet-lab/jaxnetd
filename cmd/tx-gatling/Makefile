@@ -28,11 +28,13 @@ EVA_ADDR=mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK
 GATLING_PKG=gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling
 
 sync_miner:
+	mkdir -p data || true
 	go run $(GATLING_PKG) -f data/miner_utxo.csv sync -a $(MINER_ADDR)
 
 sync_miner_for_shard:
-	go run $(GATLING_PKG) -f data/miner_utxo_1.csv --shard 1 sync
-	go run $(GATLING_PKG) -f data/miner_utxo_2.csv --shard 2 sync
+	mkdir -p data || true
+	go run $(GATLING_PKG) -f data/miner_utxo_1.csv --shard 1 sync -a $(MINER_ADDR)
+	#go run $(GATLING_PKG) -f data/miner_utxo_2.csv --shard 2 sync -a $(MINER_ADDR)
 
 sync_alice:
 	go run $(GATLING_PKG) -f data/alice_utxo.csv sync -a $(ALICE_ADDR)

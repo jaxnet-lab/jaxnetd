@@ -9,7 +9,7 @@ peer-to-peer port should be forwarded unless you specifically want to allow RPC
 access to your btcd from external sources such as in more advanced network
 configurations.
 
-|Name|Port|
-|----|----|
-|Default Bitcoin peer-to-peer port|TCP 8333|
-|Default RPC port|TCP 8334|
+| Name                              | Port     |
+|-----------------------------------|----------|
+| Default Bitcoin peer-to-peer port | TCP 8444 |
+| Default RPC port                  | TCP 8333 |
