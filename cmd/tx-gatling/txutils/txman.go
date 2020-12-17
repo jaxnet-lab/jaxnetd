@@ -258,6 +258,52 @@ func (client *TxMan) NetworkFee() (int64, error) {
 	return int64(amount), nil
 }
 
+func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvider,
+	destinationsScripts ...[]byte) (*txmodels.Transaction, error) {
+	if client.key == nil {
+		return nil, errors.New("keys not set")
+	}
+
+	msgTx := wire.NewMsgTx(wire.TxVerEADAction)
+	for _, destination := range destinationsScripts {
+		msgTx.AddTxOut(wire.NewTxOut(amountToLock, destination))
+	}
+
+	fee, err := client.ForShard(client.cfg.ShardID).NetworkFee()
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get fee")
+	}
+
+	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID)
+	if err != nil {
+		return nil, err
+	}
+
+	sum := utxo.GetSum()
+	change := sum - amountToSpend - fee
+	if change > 0 {
+		changeRcvScript, err := txscript.PayToAddrScript(client.key.AddressPubKey.AddressPubKeyHash())
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to create P2A script for change")
+		}
+
+		msgTx.AddTxOut(wire.NewTxOut(change, changeRcvScript))
+	}
+
+	msgTx, err = client.addInputsAndSign(msgTx, utxo, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return &txmodels.Transaction{
+		TxHash:   msgTx.TxHash().String(),
+		Source:   client.key.Address.String(),
+		SignedTx: EncodeTx(msgTx),
+		RawTX:    msgTx,
+	}, nil
+}
+
 func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider,
 	redeemScripts ...string) (*txmodels.Transaction, error) {
 	if client.key == nil {
@@ -412,10 +458,13 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 		msgTx.AddTxOut(wire.NewTxOut(change, changeRcvScript))
 	}
 
-	tempSum := data.Amount + change
-	for i := range data.UTXO {
+	return client.addInputsAndSign(msgTx, data.UTXO, postVerify)
+}
+
+func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows, postVerify bool) (*wire.MsgTx, error) {
+	for i := range data {
 		txInIndex := i
-		utxo := data.UTXO[txInIndex]
+		utxo := data[txInIndex]
 		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not decode TxHash")
@@ -430,21 +479,14 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 		msgTx.AddTxIn(txIn)
 	}
 
-	for i := range data.UTXO {
+	for i := range data {
 		txInIndex := i
-		utxo := data.UTXO[txInIndex].ToShort()
-
-		inputAmount := utxo.Value
-		if tempSum < inputAmount {
-			inputAmount = tempSum
-		}
+		utxo := data[txInIndex].ToShort()
 
 		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
-
-		tempSum -= inputAmount
 	}
 
 	return msgTx, nil

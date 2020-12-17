@@ -42,11 +42,10 @@ import (
 )
 
 const (
-	defaultConfigFilename        = "shard.core.yaml"
-	defaultDataDirname           = "data"
-	defaultLogLevel              = "info"
-	defaultLogDirname            = "logs"
-	defaultLogFilename           = "shard.core.log"
+	defaultConfigFilename = "shard.core.yaml"
+	defaultDataDirname    = "data"
+	defaultLogLevel       = "info"
+
 	defaultMaxPeers              = 125
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 100
@@ -435,11 +434,6 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	ext := filepath.Ext(stats.Name())
 	switch ext {
-	case ".conf":
-		err = flags.NewIniParser(parser).Parse(cfgFile)
-		if err != nil {
-			configFileError = err
-		}
 	case ".yaml":
 		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
 		if err != nil {

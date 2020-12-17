@@ -61,6 +61,8 @@ const (
 	CmdCFHeaders    = "cfheaders"
 	CmdCFCheckpt    = "cfcheckpt"
 	CmdPortRedirect = "portredirect"
+	CmdEadAddresses = "eaddresses"
+	CmdEadIp        = "eadip"
 )
 
 const (
@@ -184,7 +186,10 @@ func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) 
 
 	case CmdCFCheckpt:
 		msg = &MsgCFCheckpt{}
-
+	case CmdEadIp:
+		msg = &EADAddress{}
+	case CmdEadAddresses:
+		msg = &EADAddresses{}
 	default:
 		return nil, fmt.Errorf("unhandled command [%s]", command)
 	}

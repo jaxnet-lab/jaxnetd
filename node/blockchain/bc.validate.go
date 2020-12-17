@@ -409,6 +409,10 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 		if err != nil {
 			return err
 		}
+
+		if tx.MsgTx().Version == wire.TxVerEADAction {
+			// return
+		}
 	}
 
 	// The total output values of the coinbase transaction must not exceed

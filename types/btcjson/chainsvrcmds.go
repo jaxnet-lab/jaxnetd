@@ -612,6 +612,19 @@ func NewListTxOutCmd() *ListTxOutCmd {
 	return &ListTxOutCmd{}
 }
 
+// ListEADAddresses defines the ListEADAddresses JSON-RPC command.
+type ListEADAddressesCmd struct {
+	EadPublicKey *string
+	EadID        *uint64
+}
+
+func NewListEADAddressesCmd(eadPublicKey *string, eadID *uint64) *ListEADAddressesCmd {
+	return &ListEADAddressesCmd{
+		EadID:        eadID,
+		EadPublicKey: eadPublicKey,
+	}
+}
+
 // GetTxOutProofCmd defines the gettxoutproof JSON-RPC command.
 type GetTxOutProofCmd struct {
 	TxIDs     []string

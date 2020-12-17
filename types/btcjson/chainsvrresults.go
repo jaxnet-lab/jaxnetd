@@ -7,6 +7,7 @@ package btcjson
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // GetBeaconBlockHeaderVerboseResult models the data from the getBeaconBlockHeader command when
@@ -538,6 +539,29 @@ type ExtendedTxOutResult struct {
 
 type ListTxOutResult struct {
 	List []ExtendedTxOutResult
+}
+
+// EADAddresses models the data from the listeadaddresses command.
+type EADAddresses struct {
+	ID        uint64 `json:"id"`
+	PublicKey string `json:"publicKey"`
+	IPs       []EADAddress
+}
+
+type EADAddress struct {
+	// IP address of the server.
+	IP string
+
+	// Port the server is using.  This is encoded in big endian on the wire
+	// which differs from most everything else.
+	Port uint16
+
+	// ExpiresAt Address expiration time.
+	ExpiresAt time.Time
+}
+
+type ListEADAddresses struct {
+	Agents map[string]EADAddresses
 }
 
 // GetNetTotalsResult models the data returned from the getnettotals command.
