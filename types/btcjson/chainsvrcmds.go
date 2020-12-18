@@ -993,6 +993,7 @@ func init() {
 	MustRegisterCmd("beacon", "getBlockHeader", (*GetBeaconBlockHeaderCmd)(nil), flags) // todo: must be removed
 	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBeaconBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
+	MustRegisterCmd("beacon", "listEADAddresses", (*ListEADAddressesCmd)(nil), flags)
 	// MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------

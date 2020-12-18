@@ -30,7 +30,7 @@ func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc encoder.Message
 	}
 	msg.ID = alias
 
-	msg.OwnerPubKey, err = encoder.ReadVarBytes(r, pver, 64, "OwnerPubKey")
+	msg.OwnerPubKey, err = encoder.ReadVarBytes(r, pver, 65*2, "OwnerPubKey")
 	if err != nil {
 		return err
 	}
@@ -126,15 +126,14 @@ func (msg *EADAddress) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncodin
 }
 
 func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	err := encoder.WriteElement(w, uint32(msg.ExpiresAt.Unix()))
-	if err != nil {
-		return err
-	}
-
 	// Ensure to always write 16 bytes even if the ip is nil.
 	var ip [16]byte
 	if msg.IP != nil {
 		copy(ip[:], msg.IP.To16())
+	}
+	err := encoder.WriteElements(w, uint32(msg.ExpiresAt.Unix()), ip)
+	if err != nil {
+		return err
 	}
 
 	// Sigh.  Bitcoin protocol mixes little and big endian.

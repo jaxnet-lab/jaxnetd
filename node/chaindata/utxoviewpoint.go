@@ -346,29 +346,31 @@ func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
 }
 
 func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentTxOut) error {
-	for _, input := range *stxos {
-		class := txscript.GetScriptClass(input.PkScript)
-		if class != txscript.EADAddress {
-			continue
-		}
-		ip, _, _, ownerKey, err := txscript.EADAddressScriptData(input.PkScript)
-		if err != nil {
-			return err
-		}
-
-		if _, ok := view.eadAddresses[string(ownerKey)]; !ok {
-			continue
-		}
-
-		filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[string(ownerKey)].IPs)-1)
-		for i, p := range view.eadAddresses[string(ownerKey)].IPs {
-			if p.IP.Equal(ip) {
+	if stxos != nil {
+		for _, input := range *stxos {
+			class := txscript.GetScriptClass(input.PkScript)
+			if class != txscript.EADAddress {
 				continue
 			}
-			filtered = append(filtered, view.eadAddresses[string(ownerKey)].IPs[i])
-		}
+			ip, _, _, ownerKey, err := txscript.EADAddressScriptData(input.PkScript)
+			if err != nil {
+				return err
+			}
 
-		view.eadAddresses[string(ownerKey)].IPs = filtered
+			if _, ok := view.eadAddresses[string(ownerKey)]; !ok {
+				continue
+			}
+
+			filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[string(ownerKey)].IPs)-1)
+			for i, p := range view.eadAddresses[string(ownerKey)].IPs {
+				if p.IP.Equal(ip) {
+					continue
+				}
+				filtered = append(filtered, view.eadAddresses[string(ownerKey)].IPs[i])
+			}
+
+			view.eadAddresses[string(ownerKey)].IPs = filtered
+		}
 	}
 
 	outputs := tx.MsgTx().TxOut

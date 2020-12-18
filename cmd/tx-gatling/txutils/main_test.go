@@ -575,19 +575,19 @@ func TestEADRegistration(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			Host: "116.203.250.136:18333",
-			User: "jaxnetrpc",
-			Pass: "ec0bb2575b06bfdf",
+			// Host: "116.203.250.136:18333",
+			// User: "jaxnetrpc",
+			// Pass: "ec0bb2575b06bfdf",
 			// Host: "116.202.107.209:18333",
 			// User: "jaxnetrpc",
 			// Pass: "AUL6VBjoQnhP3bfFzl",
-			// Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
-	shardID := uint32(1)
+	shardID := uint32(0)
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
@@ -596,22 +596,27 @@ func TestEADRegistration(ot *testing.T) {
 	assert.NoError(t, err)
 
 	{
-		ipV4 := net.IPv4(77, 244, 36, 161)
-		expTime := int64(1608157135)
-		port := int64(43801)
+		var scripts [][]byte
+		for i := 10; i < 42; i++ {
+			ipV4 := net.IPv4(77, 244, 36, byte(i))
+			expTime := int64(1608157135)
+			port := int64(43801)
 
-		scriptAddress, err := txscript.EADAddressScript(ipV4, port, expTime, minerKP.AddressPubKey)
-		assert.NoError(t, err)
+			scriptAddress, err := txscript.EADAddressScript(ipV4, port, expTime, minerKP.AddressPubKey)
+			assert.NoError(t, err)
+			scripts = append(scripts, scriptAddress)
+		}
 
 		senderAddress := minerKP.Address.EncodeAddress()
 		senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
 		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
 		assert.NoError(t, err)
 
-		tx, err := op.TxMan.NewEADRegistrationTx(5, nil, scriptAddress)
+		tx, err := op.TxMan.WithKeys(minerKP).ForShard(0).
+			NewEADRegistrationTx(5, &senderUTXOIndex, scripts[0])
 		assert.NoError(t, err)
 
-		_, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+		_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
 		assert.NoError(t, err)
 
 		fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
@@ -620,6 +625,8 @@ func TestEADRegistration(ot *testing.T) {
 		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, tx.TxHash, 0) })
 		err = eGroup.Wait()
 		assert.NoError(t, err)
+
+		op.TxMan.RPC().ListTxOut()
 	}
 
 }

@@ -269,7 +269,7 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 		msgTx.AddTxOut(wire.NewTxOut(amountToLock, destination))
 	}
 
-	fee, err := client.ForShard(client.cfg.ShardID).NetworkFee()
+	fee, err := client.NetworkFee()
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get fee")
 	}

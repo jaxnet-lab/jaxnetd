@@ -618,9 +618,9 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 	return btcjson.ListTxOutResult{List: reply}, nil
 }
 
-// handleListTxOut handles listtxout commands.
+// handleEADAddresses handles handleEADAddresses commands.
 func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*btcjson.ListTxOutCmd)
+	_ = cmd.(*btcjson.ListEADAddressesCmd)
 
 	entries, err := server.chainProvider.BlockChain().ListEADAddresses()
 	if err != nil {
