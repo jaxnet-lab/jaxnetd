@@ -811,6 +811,12 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 			return err
 		}
 
+		// Update the ead addresses set using the state of the utxo view.
+		err = chaindata.DBPutEADAddresses(dbTx, view.EADAddressesSet())
+		if err != nil {
+			return err
+		}
+
 		// Update the transaction spend journal by adding a record for
 		// the block that contains all txos spent by it.
 		err = chaindata.DBPutSpendJournalEntry(dbTx, block.Hash(), stxos)
@@ -921,6 +927,12 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
 		err = chaindata.DBPutUtxoView(dbTx, view)
+		if err != nil {
+			return err
+		}
+
+		// Update the ead addresses set using the state of the utxo view.
+		err = chaindata.DBPutEADAddresses(dbTx, view.EADAddressesSet())
 		if err != nil {
 			return err
 		}

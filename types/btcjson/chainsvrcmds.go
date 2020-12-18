@@ -612,6 +612,19 @@ func NewListTxOutCmd() *ListTxOutCmd {
 	return &ListTxOutCmd{}
 }
 
+// ListEADAddresses defines the ListEADAddresses JSON-RPC command.
+type ListEADAddressesCmd struct {
+	EadPublicKey *string
+	EadID        *uint64
+}
+
+func NewListEADAddressesCmd(eadPublicKey *string, eadID *uint64) *ListEADAddressesCmd {
+	return &ListEADAddressesCmd{
+		EadID:        eadID,
+		EadPublicKey: eadPublicKey,
+	}
+}
+
 // GetTxOutProofCmd defines the gettxoutproof JSON-RPC command.
 type GetTxOutProofCmd struct {
 	TxIDs     []string
@@ -980,6 +993,7 @@ func init() {
 	MustRegisterCmd("beacon", "getBlockHeader", (*GetBeaconBlockHeaderCmd)(nil), flags) // todo: must be removed
 	MustRegisterCmd("beacon", "getBeaconBlockTemplate", (*GetBeaconBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
+	MustRegisterCmd("beacon", "listEADAddresses", (*ListEADAddressesCmd)(nil), flags)
 	// MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------

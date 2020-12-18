@@ -1,7 +1,7 @@
 <br/>
 
 
-![Image of Yaktocat](https://jax.network/wp-content/uploads/2020/10/logo.png)  
+![JAX.Network Logo](https://jax.network/wp-content/uploads/2020/10/logo.png)  
 
 # Shard Core
 

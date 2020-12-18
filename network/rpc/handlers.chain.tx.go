@@ -239,10 +239,8 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 		// return btcjson.TxRawResult{}, nil
 		if server.chainProvider.TxIndex == nil {
 			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCNoTxInfo,
-				Message: "The transaction index must be " +
-					"enabled to query the blockchain " +
-					"(specify --txindex)",
+				Code:    btcjson.ErrRPCNoTxInfo,
+				Message: "The transaction index must be enabled to query the blockchain (specify --txindex)",
 			}
 		}
 
@@ -360,6 +358,13 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		return nil, &btcjson.RPCError{
 			Code:    btcjson.ErrRPCTxError,
 			Message: "Beacon not support ShardSwapTx",
+		}
+	}
+
+	if !server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerEADAction {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCTxError,
+			Message: "ShardChain not support TxVerEADAction",
 		}
 	}
 
@@ -611,6 +616,37 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 	}
 
 	return btcjson.ListTxOutResult{List: reply}, nil
+}
+
+// handleEADAddresses handles handleEADAddresses commands.
+func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	_ = cmd.(*btcjson.ListEADAddressesCmd)
+
+	entries, err := server.chainProvider.BlockChain().ListEADAddresses()
+	if err != nil {
+		return nil, rpcNoTxInfoError(nil)
+	}
+
+	var reply = make(map[string]btcjson.EADAddresses, len(entries))
+	for out, entry := range entries {
+		ips := make([]btcjson.EADAddress, 0, len(entry.IPs))
+		for _, p := range entry.IPs {
+			ips = append(ips, btcjson.EADAddress{
+				IP:        p.IP.String(),
+				Port:      p.Port,
+				ExpiresAt: p.ExpiresAt,
+			})
+		}
+
+		reply[out] = btcjson.EADAddresses{
+			PublicKey: string(entry.OwnerPubKey),
+			ID:        entry.ID,
+			IPs:       ips,
+		}
+
+	}
+
+	return btcjson.ListEADAddresses{Agents: reply}, nil
 }
 
 // handleSearchRawTransactions implements the searchrawtransactions command.

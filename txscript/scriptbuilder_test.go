@@ -115,6 +115,8 @@ func TestScriptBuilderAddInt64(t *testing.T) {
 		{name: "push 256", val: 256, expected: []byte{OP_DATA_2, 0, 0x01}},
 		{name: "push 32767", val: 32767, expected: []byte{OP_DATA_2, 0xff, 0x7f}},
 		{name: "push 32768", val: 32768, expected: []byte{OP_DATA_3, 0, 0x80, 0}},
+		{name: "push 1608157135", val: 1608157135,
+			expected: []byte{OP_DATA_4, 0xCF, 0x87, 0xDA, 0x5F}},
 		{name: "push -2", val: -2, expected: []byte{OP_DATA_1, 0x82}},
 		{name: "push -3", val: -3, expected: []byte{OP_DATA_1, 0x83}},
 		{name: "push -4", val: -4, expected: []byte{OP_DATA_1, 0x84}},
@@ -127,6 +129,8 @@ func TestScriptBuilderAddInt64(t *testing.T) {
 		{name: "push -256", val: -256, expected: []byte{OP_DATA_2, 0x00, 0x81}},
 		{name: "push -32767", val: -32767, expected: []byte{OP_DATA_2, 0xff, 0xff}},
 		{name: "push -32768", val: -32768, expected: []byte{OP_DATA_3, 0x00, 0x80, 0x80}},
+		{name: "push -1608157135", val: -1608157135,
+			expected: []byte{OP_DATA_4, 0xcf, 0x87, 0xda, 0xdf}},
 	}
 
 	builder := NewScriptBuilder()

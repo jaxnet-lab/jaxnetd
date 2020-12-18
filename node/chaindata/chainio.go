@@ -69,6 +69,14 @@ var (
 	// unspent transaction output set.
 	UtxoSetBucketName = []byte("utxosetv2")
 
+	// ShardsMMRBucketName is the name of the db bucket used to house the
+	// MerkleMountainRange for Merged Mining Tree.
+	ShardsMMRBucketName = []byte("shardsmmr")
+
+	// EADAddressesBucketName is the name of the db bucket used to house the
+	// net addresses of Exchange Agents.
+	EADAddressesBucketName = []byte("ead_addresses")
+
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
@@ -829,6 +837,75 @@ func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 	}
 
 	return nil
+}
+
+// DBPutEADAddresses ...
+func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses) error {
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	for owner, entry := range updateSet {
+
+		// Serialize and store the ead address entry.
+		w := bytes.NewBuffer(nil)
+		err := entry.BtcEncode(w, wire.ProtocolVersion, wire.BaseEncoding)
+		if err != nil {
+			return err
+		}
+
+		err = bucket.Put([]byte(owner), w.Bytes())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DBFetchAllEADAddresses ...
+func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, error) {
+	view := map[string]*wire.EADAddresses{}
+	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	err := utxoBucket.ForEach(func(rawKey, serializedData []byte) error {
+		if serializedData == nil {
+			return nil
+		}
+
+		var eadAddress = new(wire.EADAddresses)
+		r := bytes.NewBuffer(serializedData)
+		err := eadAddress.BtcDecode(r, wire.ProtocolVersion, wire.BaseEncoding)
+		if err != nil {
+			return database.Error{
+				ErrorCode:   database.ErrCorruption,
+				Description: fmt.Sprintf("corrupt ead addresses entry for %v: %v", string(rawKey), err),
+			}
+		}
+
+		view[string(rawKey)] = eadAddress
+		return nil
+	})
+
+	return view, err
+}
+
+// DBFetchEADAddresses ...
+func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, error) {
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	serializedData := bucket.Get([]byte(ownerPK))
+
+	if serializedData == nil {
+		return nil, nil
+	}
+
+	var eadAddress = new(wire.EADAddresses)
+	r := bytes.NewBuffer(serializedData)
+	err := eadAddress.BtcDecode(r, wire.ProtocolVersion, wire.BaseEncoding)
+	if err != nil {
+		return nil, database.Error{
+			ErrorCode:   database.ErrCorruption,
+			Description: fmt.Sprintf("corrupt ead addresses entry for %v: %v", ownerPK, err),
+		}
+	}
+
+	return eadAddress, err
 }
 
 // -----------------------------------------------------------------------------
