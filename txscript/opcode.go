@@ -13,10 +13,9 @@ import (
 	"fmt"
 	"hash"
 
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
-
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -225,7 +224,7 @@ const (
 	OP_NOP8                = 0xb7 // 183
 	OP_NOP9                = 0xb8 // 184
 	OP_NOP10               = 0xb9 // 185
-	OP_UNKNOWN186          = 0xba // 186
+	OP_EAD_ADDRESS         = 0xba // 186
 	OP_UNKNOWN187          = 0xbb // 187
 	OP_UNKNOWN188          = 0xbc // 188
 	OP_UNKNOWN189          = 0xbd // 189
@@ -499,6 +498,7 @@ var opcodeArray = [256]opcode{
 	OP_CHECKSIGVERIFY:      {OP_CHECKSIGVERIFY, "OP_CHECKSIGVERIFY", 1, opcodeCheckSigVerify},
 	OP_CHECKMULTISIG:       {OP_CHECKMULTISIG, "OP_CHECKMULTISIG", 1, opcodeCheckMultiSig},
 	OP_CHECKMULTISIGVERIFY: {OP_CHECKMULTISIGVERIFY, "OP_CHECKMULTISIGVERIFY", 1, opcodeCheckMultiSigVerify},
+	OP_EAD_ADDRESS:         {OP_EAD_ADDRESS, "OP_EAD_ADDRESS", 1, opcodeEadAddress},
 
 	// Reserved opcodes.
 	OP_NOP1:  {OP_NOP1, "OP_NOP1", 1, opcodeNop},
@@ -511,7 +511,7 @@ var opcodeArray = [256]opcode{
 	OP_NOP10: {OP_NOP10, "OP_NOP10", 1, opcodeNop},
 
 	// Undefined opcodes.
-	OP_UNKNOWN186: {OP_UNKNOWN186, "OP_UNKNOWN186", 1, opcodeInvalid},
+
 	OP_UNKNOWN187: {OP_UNKNOWN187, "OP_UNKNOWN187", 1, opcodeInvalid},
 	OP_UNKNOWN188: {OP_UNKNOWN188, "OP_UNKNOWN188", 1, opcodeInvalid},
 	OP_UNKNOWN189: {OP_UNKNOWN189, "OP_UNKNOWN189", 1, opcodeInvalid},
@@ -1986,6 +1986,11 @@ func opcodeSha256(op *parsedOpcode, vm *Engine) error {
 
 	hash := sha256.Sum256(buf)
 	vm.dstack.PushByteArray(hash[:])
+	return nil
+}
+
+// opcodeEadAddress ...
+func opcodeEadAddress(op *parsedOpcode, vm *Engine) error {
 	return nil
 }
 

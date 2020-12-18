@@ -204,6 +204,19 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		script, _ := signMultiSig(tx, idx, subScript, hashType,
 			addresses, nrequired, kdb)
 		return script, class, addresses, nrequired, nil
+	case EADAddress:
+		// look up key for address
+		key, _, err := kdb.GetKey(addresses[0])
+		if err != nil {
+			return nil, class, nil, 0, err
+		}
+
+		script, err := p2pkSignatureScript(tx, idx, subScript, hashType, key)
+		if err != nil {
+			return nil, class, nil, 0, err
+		}
+
+		return script, class, addresses, nrequired, nil
 	case NullDataTy:
 		return nil, class, nil, 0,
 			errors.New("can't sign NULLDATA transactions")

@@ -8,6 +8,7 @@ package txscript
 import (
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core/btcec"
@@ -1713,5 +1714,86 @@ nexttest:
 				continue nexttest
 			}
 		}
+	}
+}
+
+func TestEADScript(t *testing.T) {
+	key, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		t.Errorf("failed to make privKey: %v", err)
+		return
+	}
+
+	pk := (*btcec.PublicKey)(&key.PublicKey).
+		SerializeCompressed()
+	address, err := btcutil.NewAddressPubKey(pk,
+		&chaincfg.TestNet3Params)
+	if err != nil {
+		t.Errorf("failed to make address for: %v", err)
+		return
+	}
+
+	ipV4 := net.IPv4(77, 244, 36, 161)
+	expTime := int64(1608157135)
+	port := int64(43801)
+
+	script, err := EADAddressScript(ipV4, port, expTime, address)
+	if err != nil {
+		t.Errorf("failed to craft ead address script: %v", err)
+		return
+	}
+	scriptAsm, err := DisasmString(script)
+	if err != nil {
+		t.Errorf("failed to disasm ead address script: %v", err)
+		return
+	}
+
+	fmt.Printf("scriptAsm: %s\n", scriptAsm)
+	data, err := PushedData(script)
+	if err != nil {
+		t.Errorf("failed to disasm ead address script: %v", err)
+		return
+	}
+
+	fmt.Println(data)
+
+	class, addressees, sigReq, err := ExtractPkScriptAddrs(script, &chaincfg.TestNet3Params)
+	if err != nil {
+		t.Errorf("failed to parse the ead address script: %v", err)
+		return
+	}
+
+	if class != EADAddress {
+		t.Errorf("got invalid script type: %v", class)
+		return
+	}
+	if len(addressees) != 1 || (len(addressees) == 1 && addressees[0].String() != address.String()) {
+		t.Errorf("exctracted invalid address: %v", addressees)
+		return
+	}
+
+	if sigReq != 1 {
+		t.Errorf("expect 1 requirement of the signature, got %v", sigReq)
+		return
+	}
+
+	newIP, newPort, newExpTime, _, err := EADAddressScriptData(script)
+	if err != nil {
+		t.Errorf("failed to parse the ead address script: %v", err)
+		return
+	}
+
+	if newIP.String() != ipV4.String() {
+		t.Errorf("ip mismatch: %v", newIP.String())
+		return
+	}
+
+	if newPort != port {
+		t.Errorf("newPort mismatch: %v", newExpTime)
+		return
+	}
+	if newExpTime != expTime {
+		t.Errorf("newExpTime mismatch: %v", newExpTime)
+		return
 	}
 }

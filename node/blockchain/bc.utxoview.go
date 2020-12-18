@@ -82,3 +82,21 @@ func (b *BlockChain) ListUtxoEntry() (map[wire.OutPoint]*chaindata.UtxoEntry, er
 
 	return entries, nil
 }
+
+func (b *BlockChain) ListEADAddresses() (map[string]*wire.EADAddresses, error) {
+	b.chainLock.RLock()
+	defer b.chainLock.RUnlock()
+
+	var entries map[string]*wire.EADAddresses
+	err := b.db.View(func(dbTx database.Tx) error {
+		var err error
+		entries, err = chaindata.DBFetchAllEADAddresses(dbTx)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}

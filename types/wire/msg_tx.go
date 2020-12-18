@@ -286,9 +286,10 @@ const (
 	TxVerRegular           = 1 // TxVerRegular is a normal simple transaction
 	TxVerTimeLock          = 2 // TxVerTimeLock
 	TxVerTimeLockAllowance = 3 //
+	TxVerEADAction         = 4 //
 )
 const (
-	TxMarkNope      int32 = 0
+	TxMarkNone      int32 = 0
 	TxMarkShardSwap int32 = 1 << 16
 )
 

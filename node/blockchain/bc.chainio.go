@@ -87,6 +87,18 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
+		// Create the bucket that houses the MerkleMountainRange for Merged Mining Tree..
+		_, err = meta.CreateBucket(chaindata.ShardsMMRBucketName)
+		if err != nil {
+			return err
+		}
+
+		// Create the bucket that houses the EAD addresses index.
+		_, err = meta.CreateBucket(chaindata.EADAddressesBucketName)
+		if err != nil {
+			return err
+		}
+
 		// Create the bucket that houses the spend journal data and
 		// store its version.
 		_, err = meta.CreateBucket(chaindata.SpendJournalBucketName)
@@ -264,7 +276,7 @@ func (b *BlockChain) initChainState() error {
 			// we'll mark it as valid now to ensure consistency once
 			// we're up and running.
 			if !iterNode.Status().KnownValid() {
-				log.Info().Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid," +
+				log.Info().Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid,"+
 					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 

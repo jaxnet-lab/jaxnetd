@@ -681,6 +681,45 @@ func (c *Client) ListTxOut() (*btcjson.ListTxOutResult, error) {
 	return c.ListTxOutAsync().Receive()
 }
 
+// FutureListEADAddressesResult is a future promise to deliver the result of a
+// ListEADAddressesAsync RPC invocation (or an applicable error).
+type FutureListEADAddressesResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an ListEADAddresses result object.
+	listTxOut := &btcjson.ListEADAddresses{}
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// EADAddressesAsync ...
+func (c *Client) ListEADAddressesAsync() FutureListEADAddressesResult {
+	cmd := btcjson.NewListEADAddressesCmd(nil, nil)
+	return c.sendCmd(cmd)
+}
+
+// ListEADAddresses ...
+func (c *Client) ListEADAddresses() (*btcjson.ListEADAddresses, error) {
+	return c.ListEADAddressesAsync().Receive()
+}
+
 // FutureRescanBlocksResult is a future promise to deliver the result of a
 // RescanBlocksAsync RPC invocation (or an applicable error).
 //

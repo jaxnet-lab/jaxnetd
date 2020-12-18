@@ -6,7 +6,10 @@
 package txscript
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"net"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
@@ -59,6 +62,7 @@ const (
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
 	NullDataTy                               // Empty data-only (provably prunable).
+	EADAddress                               // Management of the EAD Net Address.
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -72,6 +76,7 @@ var scriptClassToName = []string{
 	WitnessV0ScriptHashTy: "witness_v0_scripthash",
 	MultiSigTy:            "multisig",
 	NullDataTy:            "nulldata",
+	EADAddress:            "ead_address",
 }
 
 // String implements the Stringer interface by returning the name of
@@ -157,6 +162,17 @@ func isNullData(pops []parsedOpcode) bool {
 		len(pops[1].data) <= MaxDataCarrierSize
 }
 
+// isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
+// false otherwise.
+func isEADRegistration(pops []parsedOpcode) bool {
+	return len(pops) == 6 &&
+		pops[0].opcode.value >= OP_DATA_4 &&
+		pops[1].opcode.value >= OP_DATA_2 &&
+		pops[3].opcode.value == OP_EAD_ADDRESS &&
+		(len(pops[4].data) == 33 || len(pops[4].data) == 65) &&
+		pops[5].opcode.value == OP_CHECKSIG
+}
+
 // scriptType returns the type of the script being inspected from the known
 // standard types.
 func typeOfScript(pops []parsedOpcode) ScriptClass {
@@ -172,6 +188,8 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return WitnessV0ScriptHashTy
 	} else if isMultiSig(pops) {
 		return MultiSigTy
+	} else if isEADRegistration(pops) {
+		return EADAddress
 	} else if isNullData(pops) {
 		return NullDataTy
 	}
@@ -222,6 +240,9 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
 		return asSmallInt(pops[0].opcode) + 1
+
+	case EADAddress:
+		return 1
 
 	case NullDataTy:
 		fallthrough
@@ -451,6 +472,7 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 				nilAddrErrStr)
 		}
 		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
+
 	case *btcutil.AddressWitnessScriptHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
@@ -497,6 +519,48 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 	builder.AddOp(OP_CHECKMULTISIG)
 
 	return builder.Script()
+}
+
+// EADAddressScript ...
+func EADAddressScript(ip net.IP, port, expirationDate int64, owner *btcutil.AddressPubKey) ([]byte, error) {
+	return NewScriptBuilder().
+		AddInt64(expirationDate).
+		AddInt64(port).
+		AddData(ip).
+		AddOp(OP_EAD_ADDRESS).
+		AddData(owner.ScriptAddress()).
+		AddOp(OP_CHECKSIG).
+		Script()
+}
+
+// EADAddressScriptData ...
+func EADAddressScriptData(script []byte) (ip net.IP, port, expirationDate int64, rawKey []byte, err error) {
+	var data [][]byte
+	data, err = PushedData(script)
+	if err != nil {
+		return
+	}
+	if len(data) != 4 {
+		err = errors.New("ead script data is invalid")
+	}
+
+	var rawTime scriptNum
+	rawTime, err = makeScriptNum(data[0], true, 5)
+	if err != nil {
+		return
+	}
+	var rawPort scriptNum
+	rawPort, err = makeScriptNum(data[1], true, 5)
+	if err != nil {
+		return
+	}
+
+	expirationDate = int64(rawTime)
+	port = int64(rawPort)
+	ip = data[2]
+	rawKey = make([]byte, hex.EncodedLen(len(data[3])))
+	hex.Encode(rawKey, data[3])
+	return
 }
 
 // PushedData returns an array of byte slices containing any pushed data found
@@ -611,6 +675,18 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			if err == nil {
 				addrs = append(addrs, addr)
 			}
+		}
+
+	case EADAddress:
+		// A pay-to-pubkey-hash script is of the form:
+		//  OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
+		// Therefore the pubkey hash is the 3rd item on the stack.
+		// Skip the pubkey hash if it's invalid for some reason.
+		requiredSigs = 1
+		addr, err := btcutil.NewAddressPubKey(pops[4].data,
+			chainParams)
+		if err == nil {
+			addrs = append(addrs, addr)
 		}
 
 	case NullDataTy:
