@@ -47,7 +47,7 @@ type KeyStoreProvider interface {
 type NewUTXOProvider interface {
 	RedeemScript(address string) (script string)
 
-	SelectForAmount(amount int64, shardID uint32) (txmodels.UTXORows, error)
+	SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error)
 }
 
 type NewTxClient interface {

@@ -36,7 +36,7 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 	}
 }
 
-func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32) (txmodels.UTXORows, error) {
+func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	rows, change := collector.index.CollectForAmount(amount, shardID)
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
