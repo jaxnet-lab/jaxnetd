@@ -275,7 +275,7 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 	}
 
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
-	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID)
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID, client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,8 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		NetworkFee: fee,
 	}
 
-	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID)
+	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID,
+		client.key.Address.EncodeAddress())
 	if err != nil || draft.UTXO.GetSum() < amount+draft.NetworkFee {
 		return nil, errors.Wrap(err, "unable to get UTXO for amount")
 	}
