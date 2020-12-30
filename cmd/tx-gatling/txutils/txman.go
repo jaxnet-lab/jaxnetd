@@ -403,10 +403,12 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
-		if client.lockTime != 0 {
-			msgTx.Version = client.txVersion
-			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
+		if client.lockTime == 0 {
+			client.txVersion = wire.TxVerTimeLockAllowance
+			client.lockTime = 80
 		}
+		msgTx.Version = client.txVersion
+		txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
 		msgTx.AddTxIn(txIn)
 
 		outIndexes[destination] = ind
