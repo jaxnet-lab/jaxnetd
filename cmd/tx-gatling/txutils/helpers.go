@@ -7,12 +7,16 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"time"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -96,5 +100,70 @@ func TxToJson(mtx *wire.MsgTx, chainParams *chaincfg.Params) btcjson.TxRawDecode
 		Locktime: mtx.LockTime,
 		Vin:      rpcutli.ToolsXt{}.CreateVinList(mtx),
 		Vout:     rpcutli.ToolsXt{}.CreateVoutList(mtx, chainParams, nil),
+	}
+}
+
+func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
+	senderAddress := senderKP.Address.EncodeAddress()
+	senderUTXOIndex := storage.NewUTXORepo("/tmp", senderAddress)
+	err := senderUTXOIndex.ReadIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to open UTXO index")
+	}
+
+	err = senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
+	if err != nil {
+		return "", errors.Wrap(err, "unable to collect UTXO")
+	}
+
+	lop := txMan.ForShard(shardID)
+	if timeLock > 0 {
+		lop = lop.AddTimeLockAllowance(timeLock)
+	}
+
+	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
+		AddTimeLockAllowance(timeLock).
+		NewTx(destination, amount, &senderUTXOIndex)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to create new tx")
+	}
+
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to publish new tx")
+	}
+	err = senderUTXOIndex.SaveIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to save UTXO index")
+	}
+	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+	return tx.TxHash, nil
+}
+
+func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index uint32) error {
+	hash, _ := chainhash.NewHashFromStr(txHash)
+	timer := time.NewTimer(time.Minute)
+
+	for {
+		select {
+		case <-timer.C:
+			return errors.New("tx waiting deadline")
+		default:
+			// wait for the transaction to be added to the block
+			firstOut, err := rpcClient.ForShard(shardID).GetTxOut(hash, index, false)
+			if err != nil {
+				timer.Stop()
+				return errors.Wrap(err, "can't get tx out")
+			}
+
+			if firstOut != nil && firstOut.Confirmations > 2 {
+				fmt.Printf("tx %s mined into block @ %d shard\n", txHash, shardID)
+				timer.Stop()
+				return nil
+			}
+
+			time.Sleep(time.Second)
+		}
+
 	}
 }

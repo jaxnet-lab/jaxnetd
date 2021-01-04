@@ -1410,6 +1410,8 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.
 //  - Latest block has a timestamp newer than 24 hours ago
 //
 // This function MUST be called with the chain state lock held (for reads).
+// For a development environment (chaincfg.FastNetParams),
+// we ignore that the timestamp of the highest block is out of date.
 func (b *BlockChain) isCurrent() bool {
 	// Not current if the latest main (best) chain height is before the
 	// latest known good checkpoint (when checkpoints are enabled).
@@ -1418,12 +1420,19 @@ func (b *BlockChain) isCurrent() bool {
 		return false
 	}
 
+	chainName := b.chain.Params().Net
+	developmentEnv := chainName == chaincfg.FastNetParams.Net
+	if developmentEnv {
+		return true
+	}
+
 	// Not current if the latest best block has a timestamp before 24 hours
 	// ago.
 	//
 	// The chain appears to be current if none of the checks reported
 	// otherwise.
 	minus24Hours := b.TimeSource.AdjustedTime().Add(-24 * time.Hour).Unix()
+
 	return b.bestChain.Tip().Timestamp() >= minus24Hours
 }
 

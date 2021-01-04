@@ -350,6 +350,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		Destination: draft.Destination(),
 		Amount:      amount,
 		SignedTx:    EncodeTx(msgTx),
+		ShardID:     client.cfg.ShardID,
 		RawTX:       msgTx,
 	}, nil
 }

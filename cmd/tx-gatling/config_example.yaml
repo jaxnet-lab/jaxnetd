@@ -1,4 +1,4 @@
-net: testnet
+net: fastnet
 
 #node_rpc:
 #  host: 116.202.107.209:18333
@@ -9,38 +9,19 @@ node_rpc:
   user: somerpc
   pass: somerpc
 
-destinations:
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 2500000000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 135_0000_0000
-  - address: n43KSoTrhQRoCBpAM8b7B6eWqB7PT2QpHG
-    amount: 75_0000_0000
-  - address: mpi7Qb6uRREWEzgFTryijxY1AomaJU8gkt
-    amount: 100_0000_0000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 2500000000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 135_0000_0000
-  - address: n43KSoTrhQRoCBpAM8b7B6eWqB7PT2QpHG
-    amount: 75_0000_0000
-  - address: mpi7Qb6uRREWEzgFTryijxY1AomaJU8gkt
-    amount: 100_0000_0000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 2500000000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 135_0000_0000
-  - address: n43KSoTrhQRoCBpAM8b7B6eWqB7PT2QpHG
-    amount: 75_0000_0000
-  - address: mpi7Qb6uRREWEzgFTryijxY1AomaJU8gkt
-    amount: 100_0000_0000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 2500000000
-  - address: n2aB8oW7piSBTeZ8xZhknssnAddV4RVbiM
-    amount: 135_0000_0000
-  - address: n43KSoTrhQRoCBpAM8b7B6eWqB7PT2QpHG
-    amount: 75_0000_0000
-  - address: mpi7Qb6uRREWEzgFTryijxY1AomaJU8gkt
-    amount: 100_0000_0000
-
-sender_secret: 9e3f8b9b5e3698fa5a8b4b927eecec88fc36a91c14963d89e41747d1acf89dfb
+cmd:
+  send_txs:
+    sender_secret: 3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b
+    destinations:
+      - address: minPGY4BWGhNoSofaVow4GvPpMX5bmMTbR
+        amount: 300_0000_0000
+        shard_id: 1
+      - address: mjzVajkZXTLL2RFdcjjcDRAsdEHWPhJNDN
+        amount: 300_0000_0000
+        shard_id: 2
+      - address: msSscKBtjgj7a9dLcfBW5UTrqSyMKCKpf1
+        amount: 300_0000_0000
+        shard_id: 2
+      - address: mqwTzSwf31g5UTp5dou6YkzovGSYjQFmYG
+        amount: 300_0000_0000
+        shard_id: 2

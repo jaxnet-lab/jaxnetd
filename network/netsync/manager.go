@@ -614,7 +614,7 @@ func (sm *SyncManager) current() bool {
 	// if blockChain thinks we are current and we have no syncPeer it
 	// is probably right.
 	if sm.syncPeer == nil {
-		log.Trace().Msg("SyncManager not current -> sm.syncPeer == nil")
+		log.Trace().Msg("SyncManager current -> sm.syncPeer == nil")
 		return true
 	}
 
@@ -624,6 +624,9 @@ func (sm *SyncManager) current() bool {
 		log.Trace().Msg("SyncManager not current -> sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock()")
 		return false
 	}
+
+	log.Trace().Msg("SyncManager current")
+
 	return true
 }
 
