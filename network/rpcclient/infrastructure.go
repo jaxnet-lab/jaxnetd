@@ -189,6 +189,10 @@ type Client struct {
 	wg              sync.WaitGroup
 }
 
+func (c *Client) ChainParams() *chaincfg.Params {
+	return c.chainParams
+}
+
 // SetShard changes permanent shardID config.
 func (c *Client) SetShard(shardID uint32) *Client {
 	c.shardID = shardID

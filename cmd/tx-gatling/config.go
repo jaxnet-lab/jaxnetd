@@ -15,6 +15,16 @@ import (
 type Destination struct {
 	Address string `yaml:"address"`
 	Amount  int64  `yaml:"amount"`
+	ShardID uint32 `yaml:"shard_id"`
+}
+
+type SendTxsCmd struct {
+	SenderSecret string        `yaml:"sender_secret"`
+	Destinations []Destination `yaml:"destinations"`
+}
+
+type CmdSet struct {
+	SendTxs *SendTxsCmd `yaml:"send_txs"`
 }
 
 type Config struct {
@@ -23,7 +33,7 @@ type Config struct {
 	NodeRPC      txutils.NodeRPC `yaml:"node_rpc"`
 	DataFile     string          `yaml:"data_file"`
 	SenderSecret string          `yaml:"sender_secret"`
-	Destinations []Destination   `yaml:"destinations"`
+	Cmd          CmdSet          `yaml:"cmd"`
 }
 
 func (cfg *Config) NetParams() *chaincfg.Params {

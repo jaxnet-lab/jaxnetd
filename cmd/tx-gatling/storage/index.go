@@ -94,15 +94,20 @@ func (collector *UTXORepo) SaveIndex() error {
 }
 
 func (collector *UTXORepo) CollectFromRPC(rpcClient *rpcclient.Client, shardID uint32, filter map[string]bool) error {
+	maturityThreshold := int64(rpcClient.ChainParams().CoinbaseMaturity) + 2
+
 	result, err := rpcClient.ForShard(shardID).ListTxOut()
 	if err != nil {
 		return errors.Wrap(err, "unable to get utxo list")
 	}
 
 	for _, outResult := range result.List {
-
 	addressLookup:
 		for _, skAddress := range outResult.ScriptPubKey.Addresses {
+			if outResult.Coinbase && outResult.Confirmations < maturityThreshold {
+				continue
+			}
+
 			if filter[skAddress] {
 				collector.index.AddUTXO(txmodels.UTXO{
 					ShardID:    shardID,

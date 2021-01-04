@@ -12,13 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"golang.org/x/sync/errgroup"
 )
@@ -376,15 +373,15 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	{
 		minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 		assert.NoError(t, err)
-		txHashAtShard1, err := sendTx(op.TxMan, minerKP, shardID1, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID1, aliceKP.Address.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
-		txHashAtShard2, err := sendTx(op.TxMan, minerKP, shardID2, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard2, err := SendTx(op.TxMan, minerKP, shardID2, aliceKP.Address.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
 		err = eGroup.Wait()
 		// assert.NoError(t, err)
 	}
@@ -398,15 +395,15 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	assert.NoError(t, err)
 
 	{
-		txHashAtShard1, err := sendTx(op.TxMan, aliceKP, shardID1, multiSigScript.Address, OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, aliceKP, shardID1, multiSigScript.Address, OneCoin, 0)
 		assert.NoError(t, err)
 
-		txHashAtShard2, err := sendTx(op.TxMan, aliceKP, shardID2, multiSigScript.Address, OneCoin, 0)
+		txHashAtShard2, err := SendTx(op.TxMan, aliceKP, shardID2, multiSigScript.Address, OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
 		err = eGroup.Wait()
 		// assert.NoError(t, err)
 	}
@@ -538,31 +535,31 @@ func TestTimeLockTx(ot *testing.T) {
 	assert.NoError(t, err)
 
 	{
-		txHashAtShard1, err := sendTx(op.TxMan, minerKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
 		err = eGroup.Wait()
 		assert.NoError(t, err)
 	}
 
 	{
-		txHashAtShard1, err := sendTx(op.TxMan, aliceKP, shardID, bobKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, aliceKP, shardID, bobKP.Address.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
 		err = eGroup.Wait()
 		assert.NoError(t, err)
 	}
 
 	{
-		txHashAtShard1, err := sendTx(op.TxMan, bobKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, bobKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID, txHashAtShard1, 0) })
 		err = eGroup.Wait()
 		assert.NoError(t, err)
 	}
@@ -622,70 +619,11 @@ func TestEADRegistration(ot *testing.T) {
 		fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
 
 		eGroup := errgroup.Group{}
-		eGroup.Go(func() error { return waitForTx(op.TxMan.RPC(), shardID, tx.TxHash, 0) })
+		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID, tx.TxHash, 0) })
 		err = eGroup.Wait()
 		assert.NoError(t, err)
 
 		op.TxMan.RPC().ListTxOut()
 	}
 
-}
-func sendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
-	senderAddress := senderKP.Address.EncodeAddress()
-	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
-	// err := senderUTXOIndex.ReadIndex()
-	// assert.NoError(t, err)
-	err := senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
-	if err != nil {
-		return "", errors.Wrap(err, "unable to collect UTXO")
-	}
-
-	lop := txMan.ForShard(shardID)
-	if timeLock > 0 {
-		lop = lop.AddTimeLockAllowance(timeLock)
-	}
-
-	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
-		AddTimeLockAllowance(timeLock).
-		NewTx(destination, amount, &senderUTXOIndex)
-	if err != nil {
-		return "", errors.Wrap(err, "unable to create new tx")
-	}
-
-	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
-	if err != nil {
-		return "", errors.Wrap(err, "unable to publish new tx")
-	}
-	// err = senderUTXOIndex.SaveIndex()
-	// assert.NoError(t, err)
-
-	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
-	return tx.TxHash, nil
-}
-
-func waitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index uint32) error {
-	hash, _ := chainhash.NewHashFromStr(txHash)
-	timer := time.NewTimer(30 * time.Second)
-	for {
-		select {
-		case <-timer.C:
-			return errors.New("tx waiting deadline")
-		default:
-			// wait for the transaction to be added to the block
-			firstOut, err := rpcClient.ForShard(shardID).GetTxOut(hash, index, false)
-			if err != nil {
-				timer.Stop()
-				return errors.Wrap(err, "can't get tx out")
-			}
-
-			if firstOut != nil && firstOut.Confirmations > 2 {
-				fmt.Printf("tx %s mined into block @ %d shard\n", txHash, shardID)
-				timer.Stop()
-				return nil
-			}
-
-			time.Sleep(time.Second)
-		}
-
-	}
 }

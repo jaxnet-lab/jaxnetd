@@ -69,6 +69,7 @@ type Transaction struct {
 	Source      string `json:"source" csv:"source"`
 	Destination string `json:"destination" csv:"destination"`
 	Amount      int64  `json:"amount" csv:"amount"`
+	ShardID     uint32 `json:"shard_id" csv:"shard_id"`
 	SignedTx    string `json:"signed_tx" csv:"signed_tx"`
 
 	RawTX *wire.MsgTx `json:"-" csv:"-"`
@@ -85,6 +86,7 @@ func (t *Transaction) UnmarshalBinary(data []byte) error {
 	t.SignedTx = hex.EncodeToString(dest.SignedTx)
 
 	t.Amount = dest.Amount
+	t.ShardID = dest.ShardID
 	t.Destination = string(dest.Destination)
 	t.Source = string(dest.Source)
 
@@ -102,6 +104,7 @@ func (t Transaction) MarshalBinary() ([]byte, error) {
 	var dest = new(gobTx)
 
 	dest.Amount = t.Amount
+	dest.ShardID = t.ShardID
 	dest.Source = []byte(t.Source)
 	dest.Destination = []byte(t.Destination)
 
@@ -186,6 +189,7 @@ type gobTx struct {
 	Source      []byte
 	Destination []byte
 	Amount      int64
+	ShardID     uint32
 	SignedTx    []byte
 }
 
