@@ -270,6 +270,10 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 	}
 
 	change := totalSum - amount - t.fee
+	if change > 0 && len(t.changeAddresses) == 0 {
+		return nil, errors.New("changeAddress not set")
+	}
+
 	if change > 0 {
 		chunk := change / int64(len(t.changeAddresses))
 		for _, address := range t.changeAddresses {

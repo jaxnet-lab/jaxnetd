@@ -42,9 +42,13 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 }
 
 func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
-	filter := make(map[string]struct{}, len(addresses))
-	for _, address := range addresses {
-		filter[address] = struct{}{}
+	var filter map[string]struct{} = nil
+	if len(addresses) > 0 {
+		filter = make(map[string]struct{}, len(addresses))
+
+		for _, address := range addresses {
+			filter[address] = struct{}{}
+		}
 	}
 
 	rows, change := collector.index.CollectForAmountFiltered(amount, shardID, filter)
