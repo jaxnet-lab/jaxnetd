@@ -23,6 +23,11 @@ type UTXORepo struct {
 	index *txmodels.UTXOIndex
 }
 
+func (collector *UTXORepo) RedeemScript(address string) (script string) {
+	// todo: implement this
+	return address
+}
+
 func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 	tag := "a"
 	for _, i2 := range additionalKeys {
@@ -37,7 +42,12 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 }
 
 func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
-	rows, change := collector.index.CollectForAmount(amount, shardID)
+	filter := make(map[string]struct{}, len(addresses))
+	for _, address := range addresses {
+		filter[address] = struct{}{}
+	}
+
+	rows, change := collector.index.CollectForAmountFiltered(amount, shardID, filter)
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
 	}
@@ -46,6 +56,35 @@ func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, address
 		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
 	}
 	return rows, nil
+}
+
+func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, error) {
+	filter := make(map[string]struct{}, len(addresses))
+	for _, address := range addresses {
+		filter[address] = struct{}{}
+	}
+
+	var sum int64
+	for _, utxo := range collector.index.Rows() {
+		if _, ok := filter[utxo.Address]; ok && utxo.ShardID == shardId {
+			sum += utxo.Value
+		}
+	}
+
+	return sum, nil
+}
+
+func (collector *UTXORepo) ListUTXOs(skip, take int64, flags map[string]string) (int64, txmodels.UTXORows, error) {
+	total := skip + take
+	max := int64(len(collector.index.Rows()) - 1)
+	if skip > max {
+		return 0, nil, errors.New("can't skip, not enough utxo records")
+	}
+	if total > max {
+		total = max
+	}
+
+	return total, collector.index.Rows()[skip:total], nil
 }
 
 func (collector *UTXORepo) Index() *txmodels.UTXOIndex {

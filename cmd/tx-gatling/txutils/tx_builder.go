@@ -31,8 +31,8 @@ type TxBuilder interface {
 	AddRedeemScripts(redeemScripts ...string) TxBuilder
 
 	SetDestination(destination string, amount int64) TxBuilder
+	SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder
 	SetDestinationAtShard(destination string, amount int64, shardID uint32) TxBuilder
-	SetDestinationPair(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder
 
 	SetChangeDestination(changeAddresses ...string) TxBuilder
 
@@ -154,7 +154,7 @@ func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shar
 	return t
 }
 
-func (t *txBuilder) SetDestinationPair(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
+func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
 	t.destinations[destinationKey{
 		amount:      amount,
 		shardID:     t.defaultShardID,

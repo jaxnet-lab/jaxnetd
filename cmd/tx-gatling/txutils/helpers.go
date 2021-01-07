@@ -105,7 +105,7 @@ func TxToJson(mtx *wire.MsgTx, chainParams *chaincfg.Params) btcjson.TxRawDecode
 
 func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
 	senderAddress := senderKP.Address.EncodeAddress()
-	senderUTXOIndex := storage.NewUTXORepo("/tmp", senderAddress)
+	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
 	err := senderUTXOIndex.ReadIndex()
 	if err != nil {
 		return "", errors.Wrap(err, "unable to open UTXO index")

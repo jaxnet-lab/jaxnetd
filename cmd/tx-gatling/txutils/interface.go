@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -44,8 +45,33 @@ type KeyStoreProvider interface {
 	Address() btcutil.Address
 }
 
+type InMemoryKeystore struct {
+	kd KeyData
+}
+
+func NewInMemoryKeystore(secret string, net chaincfg.NetName) (KeyStoreProvider, error) {
+	kd, err := NewKeyData(secret, net.Params())
+	return &InMemoryKeystore{kd: *kd}, err
+}
+
+func (*InMemoryKeystore) FromKeyData(data *KeyData) KeyStoreProvider {
+	return &InMemoryKeystore{kd: *data}
+}
+
+func (kp *InMemoryKeystore) GetKey(address btcutil.Address) (*btcec.PrivateKey, bool, error) {
+	return kp.kd.GetKey(address)
+}
+
+func (kp *InMemoryKeystore) AddressPubKeyHash() btcutil.Address {
+	return kp.kd.AddressPubKey.AddressPubKeyHash()
+}
+
+func (kp *InMemoryKeystore) Address() btcutil.Address {
+	return kp.kd.Address
+}
+
 type NewUTXOProvider interface {
-	RedeemScript(address string) (script string)
+	// RedeemScript(address string) (script string)
 
 	SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error)
 }
