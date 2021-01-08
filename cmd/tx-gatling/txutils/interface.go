@@ -41,8 +41,10 @@ type TxClient interface {
 
 type KeyStoreProvider interface {
 	GetKey(btcutil.Address) (*btcec.PrivateKey, bool, error)
+	AddressPubKey() btcutil.Address
 	AddressPubKeyHash() btcutil.Address
 	Address() btcutil.Address
+	AddressString() string
 }
 
 type InMemoryKeystore struct {
@@ -66,8 +68,21 @@ func (kp *InMemoryKeystore) AddressPubKeyHash() btcutil.Address {
 	return kp.kd.AddressPubKey.AddressPubKeyHash()
 }
 
+func (kp *InMemoryKeystore) AddressPubKey() btcutil.Address {
+	return kp.kd.AddressPubKey
+}
+
 func (kp *InMemoryKeystore) Address() btcutil.Address {
 	return kp.kd.Address
+}
+
+func (kp *InMemoryKeystore) AddressString() string {
+	return kp.kd.Address.EncodeAddress()
+}
+
+// DEPRECATED
+func (kp *InMemoryKeystore) KeyData() *KeyData {
+	return &kp.kd
 }
 
 type NewUTXOProvider interface {

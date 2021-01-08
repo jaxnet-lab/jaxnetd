@@ -409,6 +409,8 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 			client.lockTime = 80
 		}
 		msgTx.Version = client.txVersion
+		msgTx.SetMark(wire.TxMarkShardSwap)
+
 		txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
 		msgTx.AddTxIn(txIn)
 

@@ -68,9 +68,10 @@ func (kd *KeyData) GetKey(address btcutil.Address) (*btcec.PrivateKey, bool, err
 }
 
 type MultiSigAddress struct {
-	Address         string `json:"address"`
-	RedeemScript    string `json:"redeemScript"`
-	RawRedeemScript []byte `json:"-"`
+	Address            string `json:"address"`
+	RedeemScript       string `json:"redeemScript"`
+	SignaturesRequired int    `json:"signaturesRequired"`
+	RawRedeemScript    []byte `json:"-"`
 }
 
 func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*MultiSigAddress, error) {
@@ -105,9 +106,10 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 	}
 
 	return &MultiSigAddress{
-		Address:         address.EncodeAddress(),
-		RedeemScript:    hex.EncodeToString(script),
-		RawRedeemScript: script,
+		Address:            address.EncodeAddress(),
+		RedeemScript:       hex.EncodeToString(script),
+		SignaturesRequired: nRequired,
+		RawRedeemScript:    script,
 	}, nil
 }
 

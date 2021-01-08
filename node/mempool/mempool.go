@@ -1424,9 +1424,9 @@ func (mp *TxPool) ProcessTransaction(tx *btcutil.Tx, allowOrphan, rateLimit bool
 		// to the limited number of reject codes.  Missing
 		// inputs is assumed to mean they are already spent
 		// which is not really always the case.
-		str := fmt.Sprintf("orphan transaction %v references "+
-			"outputs of unknown or fully-spent "+
-			"transaction %v", tx.Hash(), missingParents[0])
+		str := fmt.Sprintf(
+			"orphan transaction %v references outputs of unknown or fully-spent transaction %v",
+			tx.Hash(), missingParents[0])
 		return nil, txRuleError(wire.RejectDuplicate, str)
 	}
 

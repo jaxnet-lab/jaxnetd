@@ -106,12 +106,12 @@ func TxToJson(mtx *wire.MsgTx, chainParams *chaincfg.Params) btcjson.TxRawDecode
 func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
 	senderAddress := senderKP.Address.EncodeAddress()
 	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
-	err := senderUTXOIndex.ReadIndex()
-	if err != nil {
-		return "", errors.Wrap(err, "unable to open UTXO index")
-	}
+	// err := senderUTXOIndex.ReadIndex()
+	// if err != nil {
+	// 	return "", errors.Wrap(err, "unable to open UTXO index")
+	// }
 
-	err = senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
+	err := senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
 	if err != nil {
 		return "", errors.Wrap(err, "unable to collect UTXO")
 	}
@@ -127,15 +127,17 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 	if err != nil {
 		return "", errors.Wrap(err, "unable to create new tx")
 	}
-
+	if tx == nil || tx.RawTX == nil {
+		return "", errors.New("tx empty")
+	}
 	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to publish new tx")
 	}
-	err = senderUTXOIndex.SaveIndex()
-	if err != nil {
-		return "", errors.Wrap(err, "unable to save UTXO index")
-	}
+	// err = senderUTXOIndex.SaveIndex()
+	// if err != nil {
+	// 	return "", errors.Wrap(err, "unable to save UTXO index")
+	// }
 	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
 	return tx.TxHash, nil
 }
