@@ -34,6 +34,7 @@ type TxBuilder interface {
 	SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder
 	SetDestinationAtShard(destination string, amount int64, shardID uint32) TxBuilder
 
+	SetSenders(addresses ...string) TxBuilder
 	SetChangeDestination(changeAddresses ...string) TxBuilder
 
 	SetUTXOProvider(provider NewUTXOProvider) TxBuilder
@@ -51,6 +52,7 @@ type txBuilder struct {
 	defaultShardID  uint32
 	redeemScripts   map[string]scriptData
 	utxoProvider    NewUTXOProvider
+	senderAddresses []string
 	changeAddresses []string
 	destinations    map[destinationKey]txmodels.UTXORows
 
@@ -67,6 +69,7 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 		net:             net,
 		txVersion:       wire.TxVerRegular,
 		redeemScripts:   map[string]scriptData{},
+		senderAddresses: []string{},
 		changeAddresses: []string{},
 		destinations:    map[destinationKey]txmodels.UTXORows{},
 		feeByShard:      map[uint32]int64{},
@@ -166,6 +169,11 @@ func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utx
 		break
 	}
 
+	return t
+}
+
+func (t *txBuilder) SetSenders(addresses ...string) TxBuilder {
+	t.senderAddresses = addresses
 	return t
 }
 
@@ -405,7 +413,7 @@ func (t *txBuilder) prepareUTXOs() error {
 		// needed := t.feeByShard[key.shardID] + key.amount
 
 		if hasCoins < needed {
-			rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, key.shardID)
+			rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, key.shardID, t.senderAddresses...)
 			if err != nil {
 				return err
 			}
