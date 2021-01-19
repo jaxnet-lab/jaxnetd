@@ -7,12 +7,44 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
 type EADAddresses struct {
 	ID          uint64
 	OwnerPubKey []byte
 	IPs         []EADAddress
+}
+
+func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, shardID uint32,
+	hash *chainhash.Hash, ind int) *EADAddresses {
+
+	var ipExist bool
+	for i, p := range msg.IPs {
+		if p.IP.Equal(ip) {
+			p := p
+			p.TxHash = hash
+			p.TxOutIndex = ind
+			p.Port = port
+			p.ExpiresAt = time.Unix(expiresAt, 0)
+			msg.IPs[i] = p.AddShard(shardID)
+			ipExist = true
+			break
+		}
+	}
+
+	if !ipExist {
+		msg.IPs = append(msg.IPs, EADAddress{
+			IP:         ip,
+			Port:       port,
+			ExpiresAt:  time.Unix(expiresAt, 0),
+			Shards:     []uint32{shardID},
+			TxHash:     hash,
+			TxOutIndex: ind,
+		})
+	}
+
+	return msg
 }
 
 func (msg *EADAddresses) Command() string {
@@ -86,13 +118,44 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 type EADAddress struct {
 	// IP address of the server.
 	IP net.IP
-
 	// Port the server is using.  This is encoded in big endian on the wire
 	// which differs from most everything else.
 	Port uint16
-
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time
+	// Shards shows what shards the agent works with.
+	Shards     []uint32
+	TxHash     *chainhash.Hash
+	TxOutIndex int
+}
+
+// FilterOut returns true if the address has no shards left in which it works.
+func (msg *EADAddress) FilterOut(ip net.IP, shardID uint32) (*EADAddress, bool) {
+	if !msg.IP.Equal(ip) {
+		return msg, false
+	}
+
+	shards := make([]uint32, 0, len(msg.Shards))
+	for _, shard := range msg.Shards {
+		if shard != shardID {
+			shards = append(shards, shard)
+		}
+	}
+
+	clone := *msg
+	clone.Shards = shards
+	return &clone, len(shards) == 0
+}
+
+func (msg *EADAddress) AddShard(shardID uint32) EADAddress {
+	for _, shard := range msg.Shards {
+		if shard == shardID {
+			return *msg
+		}
+	}
+
+	msg.Shards = append(msg.Shards, shardID)
+	return *msg
 }
 
 func (msg *EADAddress) Command() string {
@@ -103,12 +166,24 @@ func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {
 	return 16 + 4 + 8
 }
 
-func (msg *EADAddress) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncoding) error {
+func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
 	var ip [16]byte
 
 	err := encoder.ReadElements(r, (*encoder.Uint32Time)(&msg.ExpiresAt), &ip)
 	if err != nil {
 		return err
+	}
+	count, err := encoder.ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+	msg.Shards = make([]uint32, count)
+	for i := range msg.Shards {
+		id, err := encoder.ReadVarInt(r, pver)
+		if err != nil {
+			return err
+		}
+		msg.Shards[i] = uint32(id)
 	}
 
 	// Sigh. Bitcoin protocol mixes little and big endian.
@@ -116,11 +191,27 @@ func (msg *EADAddress) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncodin
 	if err != nil {
 		return err
 	}
+	rawHash, err := encoder.ReadVarBytes(r, pver, chainhash.HashSize, "TxHash")
+	if err != nil {
+		return err
+	}
 
+	msg.TxHash, err = chainhash.NewHash(rawHash)
+	if err != nil {
+		return err
+	}
+
+	txOutId, err := encoder.ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
 	*msg = EADAddress{
-		ExpiresAt: msg.ExpiresAt,
-		IP:        ip[:],
-		Port:      port,
+		ExpiresAt:  msg.ExpiresAt,
+		IP:         ip[:],
+		Port:       port,
+		Shards:     msg.Shards,
+		TxHash:     msg.TxHash,
+		TxOutIndex: int(txOutId),
 	}
 	return nil
 }
@@ -135,8 +226,32 @@ func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 	if err != nil {
 		return err
 	}
+	shardsCount := len(msg.Shards)
+	err = encoder.WriteVarInt(w, uint64(shardsCount))
+	if err != nil {
+		return err
+	}
 
+	for _, na := range msg.Shards {
+		err := encoder.WriteVarInt(w, uint64(na))
+		if err != nil {
+			return err
+		}
+	}
 	// Sigh.  Bitcoin protocol mixes little and big endian.
-	return binary.Write(w, bigEndian, msg.Port)
+	err = binary.Write(w, bigEndian, msg.Port)
+	if err != nil {
+		return err
+	}
+	err = encoder.WriteVarBytes(w, pver, msg.TxHash.CloneBytes())
+	if err != nil {
+		return err
+	}
 
+	err = encoder.WriteVarInt(w, uint64(msg.TxOutIndex))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

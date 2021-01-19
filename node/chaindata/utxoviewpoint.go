@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -328,7 +327,6 @@ func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight in
 		entry.Spend()
 
 		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		// todo(mike): DESCRIBE THIS WTF!!!
 		// Update existing entries.  All fields are updated because it's
 		// possible (although extremely unlikely) that the existing
 		// entry is being replaced by a different transaction with the
@@ -352,56 +350,62 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 			if class != txscript.EADAddress {
 				continue
 			}
-			ip, _, _, ownerKey, err := txscript.EADAddressScriptData(input.PkScript)
+			scriptData, err := txscript.EADAddressScriptData(input.PkScript)
 			if err != nil {
 				return err
 			}
-
-			if _, ok := view.eadAddresses[string(ownerKey)]; !ok {
+			ownerKey := string(scriptData.RawKey)
+			if _, ok := view.eadAddresses[ownerKey]; !ok {
 				continue
 			}
 
-			filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[string(ownerKey)].IPs)-1)
-			for i, p := range view.eadAddresses[string(ownerKey)].IPs {
-				if p.IP.Equal(ip) {
+			filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[ownerKey].IPs)-1)
+			for _, p := range view.eadAddresses[ownerKey].IPs {
+				addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
+				if removed {
 					continue
 				}
-				filtered = append(filtered, view.eadAddresses[string(ownerKey)].IPs[i])
+
+				filtered = append(filtered, *addr)
 			}
 
-			view.eadAddresses[string(ownerKey)].IPs = filtered
+			view.eadAddresses[ownerKey].IPs = filtered
 		}
 	}
 
 	outputs := tx.MsgTx().TxOut
-	for _, out := range outputs {
+	for outInd, out := range outputs {
 		class := txscript.GetScriptClass(out.PkScript)
 		if class != txscript.EADAddress {
 			continue
 		}
 
-		ip, port, expTime, ownerKey, err := txscript.EADAddressScriptData(out.PkScript)
+		scriptData, err := txscript.EADAddressScriptData(out.PkScript)
 		if err != nil {
 			return err
 		}
+		ownerKey := string(scriptData.RawKey)
 
-		if _, ok := view.eadAddresses[string(ownerKey)]; !ok {
+		addr, ok := view.eadAddresses[ownerKey]
+		if !ok {
 			b := make([]byte, 8)
 			_, _ = rand.Read(b)
 
-			view.eadAddresses[string(ownerKey)] = &wire.EADAddresses{
+			addr = &wire.EADAddresses{
 				ID:          binary.LittleEndian.Uint64(b),
-				OwnerPubKey: ownerKey,
+				OwnerPubKey: []byte(ownerKey),
 				IPs:         []wire.EADAddress{},
 			}
 		}
 
-		addr := wire.EADAddress{
-			IP:        ip,
-			Port:      uint16(port),
-			ExpiresAt: time.Unix(expTime, 0),
-		}
-		view.eadAddresses[string(ownerKey)].IPs = append(view.eadAddresses[string(ownerKey)].IPs, addr)
+		view.eadAddresses[ownerKey] = addr.AddAddress(
+			scriptData.IP,
+			uint16(scriptData.Port),
+			scriptData.ExpirationDate,
+			scriptData.ShardID,
+			tx.Hash(),
+			outInd,
+		)
 	}
 
 	return nil
@@ -430,7 +434,7 @@ func (view *UtxoViewpoint) ConnectTransactions(block *btcutil.Block, stxos *[]Sp
 // searching the entire set of possible outputs for the given Hash.  It checks
 // the view first and then falls back to the database if needed.
 func (view *UtxoViewpoint) fetchEntryByHash(db database.DB, hash *chainhash.Hash) (*UtxoEntry, error) {
-	// First attempt to find a utxo with the provided Hash in the view.
+	// First attempt to find a utxo with the provided TxHash in the view.
 	prevOut := wire.OutPoint{Hash: *hash}
 	for idx := uint32(0); idx < MaxOutputsPerBlock; idx++ {
 		prevOut.Index = idx

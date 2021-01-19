@@ -591,7 +591,13 @@ func TestEADRegistration(ot *testing.T) {
 			expTime := int64(1608157135)
 			port := int64(43801)
 
-			scriptAddress, err := txscript.EADAddressScript(ipV4, port, expTime, minerKP.AddressPubKey)
+			scriptAddress, err := txscript.EADAddressScript(txscript.EADScriptData{
+				ShardID:        12,
+				IP:             ipV4,
+				Port:           port,
+				ExpirationDate: expTime,
+				Owner:          minerKP.AddressPubKey,
+			})
 			assert.NoError(t, err)
 			scripts = append(scripts, scriptAddress)
 		}
@@ -602,7 +608,7 @@ func TestEADRegistration(ot *testing.T) {
 		assert.NoError(t, err)
 
 		tx, err := op.TxMan.WithKeys(minerKP).ForShard(0).
-			NewEADRegistrationTx(5, &senderUTXOIndex, scripts[0])
+			NewEADRegistrationTx(50, &senderUTXOIndex, scripts[0])
 		assert.NoError(t, err)
 
 		_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
@@ -615,7 +621,10 @@ func TestEADRegistration(ot *testing.T) {
 		err = eGroup.Wait()
 		assert.NoError(t, err)
 
-		op.TxMan.RPC().ListTxOut()
+		addresses, err := op.TxMan.RPC().ListEADAddresses(nil, nil)
+		assert.NoError(t, err)
+
+		fmt.Printf("%+v\n", addresses)
 	}
 
 }

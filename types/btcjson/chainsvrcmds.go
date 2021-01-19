@@ -614,13 +614,13 @@ func NewListTxOutCmd() *ListTxOutCmd {
 
 // ListEADAddresses defines the ListEADAddresses JSON-RPC command.
 type ListEADAddressesCmd struct {
+	Shards       []uint32
 	EadPublicKey *string
-	EadID        *uint64
 }
 
-func NewListEADAddressesCmd(eadPublicKey *string, eadID *uint64) *ListEADAddressesCmd {
+func NewListEADAddressesCmd(shards []uint32, eadPublicKey *string) *ListEADAddressesCmd {
 	return &ListEADAddressesCmd{
-		EadID:        eadID,
+		Shards:       shards,
 		EadPublicKey: eadPublicKey,
 	}
 }

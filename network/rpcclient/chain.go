@@ -710,14 +710,14 @@ func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, erro
 }
 
 // EADAddressesAsync ...
-func (c *Client) ListEADAddressesAsync() FutureListEADAddressesResult {
-	cmd := btcjson.NewListEADAddressesCmd(nil, nil)
+func (c *Client) ListEADAddressesAsync(shards []uint32, eadPublicKey *string) FutureListEADAddressesResult {
+	cmd := btcjson.NewListEADAddressesCmd(shards, eadPublicKey,)
 	return c.sendCmd(cmd)
 }
 
 // ListEADAddresses ...
-func (c *Client) ListEADAddresses() (*btcjson.ListEADAddresses, error) {
-	return c.ListEADAddressesAsync().Receive()
+func (c *Client) ListEADAddresses(shards []uint32, eadPublicKey *string) (*btcjson.ListEADAddresses, error) {
+	return c.ListEADAddressesAsync(shards, eadPublicKey).Receive()
 }
 
 // FutureRescanBlocksResult is a future promise to deliver the result of a

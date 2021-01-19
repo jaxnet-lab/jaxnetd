@@ -141,7 +141,7 @@ func TestSignTxOutput(t *testing.T) {
 		LockTime: 0,
 	}
 
-	// Pay to Pubkey Hash (uncompressed)
+	// Pay to Pubkey TxHash (uncompressed)
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -178,7 +178,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (uncompressed) (merging with correct)
+	// Pay to Pubkey TxHash (uncompressed) (merging with correct)
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -238,7 +238,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (compressed)
+	// Pay to Pubkey TxHash (compressed)
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -277,7 +277,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (compressed) with duplicate merge
+	// Pay to Pubkey TxHash (compressed) with duplicate merge
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -541,7 +541,7 @@ func TestSignTxOutput(t *testing.T) {
 	}
 
 	// As before, but with p2sh now.
-	// Pay to Pubkey Hash (uncompressed)
+	// Pay to Pubkey TxHash (uncompressed)
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -598,7 +598,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (uncompressed) with duplicate merge
+	// Pay to Pubkey TxHash (uncompressed) with duplicate merge
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -680,7 +680,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (compressed)
+	// Pay to Pubkey TxHash (compressed)
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -737,7 +737,7 @@ func TestSignTxOutput(t *testing.T) {
 		}
 	}
 
-	// Pay to Pubkey Hash (compressed) with duplicate merge
+	// Pay to Pubkey TxHash (compressed) with duplicate merge
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -1735,9 +1735,16 @@ func TestEADScript(t *testing.T) {
 
 	ipV4 := net.IPv4(77, 244, 36, 161)
 	expTime := int64(1608157135)
-	port := int64(43801)
+	port := int64(80)
+	shardID := uint32(1)
 
-	script, err := EADAddressScript(ipV4, port, expTime, address)
+	script, err := EADAddressScript(EADScriptData{
+		ShardID:        shardID,
+		IP:             ipV4,
+		Port:           port,
+		ExpirationDate: expTime,
+		Owner:          address,
+	})
 	if err != nil {
 		t.Errorf("failed to craft ead address script: %v", err)
 		return
@@ -1777,23 +1784,56 @@ func TestEADScript(t *testing.T) {
 		return
 	}
 
-	newIP, newPort, newExpTime, _, err := EADAddressScriptData(script)
+	scriptData, err := EADAddressScriptData(script)
 	if err != nil {
 		t.Errorf("failed to parse the ead address script: %v", err)
 		return
 	}
 
-	if newIP.String() != ipV4.String() {
-		t.Errorf("ip mismatch: %v", newIP.String())
+	if scriptData.IP.String() != ipV4.String() {
+		t.Errorf("ip mismatch: %v", scriptData.IP.String())
 		return
 	}
 
-	if newPort != port {
-		t.Errorf("newPort mismatch: %v", newExpTime)
+	if scriptData.Port != port {
+		t.Errorf("newPort mismatch: %v", scriptData.Port)
 		return
 	}
-	if newExpTime != expTime {
-		t.Errorf("newExpTime mismatch: %v", newExpTime)
+	if scriptData.ExpirationDate != expTime {
+		t.Errorf("newExpTime mismatch: %v", scriptData.ExpirationDate)
 		return
 	}
+
+	if scriptData.ShardID != shardID {
+		t.Errorf("shardID mismatch: %v", scriptData.ShardID)
+		return
+	}
+}
+
+func TestSmallInt(t *testing.T) {
+	script, err := NewScriptBuilder().
+		AddData(scriptNum(2 + 16).Bytes()).
+		Script()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	parsed, err := parseScript(script)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Println(parsed)
+	//
+	data, err := PushedData(script)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	var rawTime scriptNum
+	rawTime, err = makeScriptNum(data[0], false, 5)
+	if err != nil {
+		return
+	}
+	fmt.Println(rawTime.Int32() - 16)
 }

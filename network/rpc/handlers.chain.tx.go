@@ -632,9 +632,12 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 		ips := make([]btcjson.EADAddress, 0, len(entry.IPs))
 		for _, p := range entry.IPs {
 			ips = append(ips, btcjson.EADAddress{
-				IP:        p.IP.String(),
-				Port:      p.Port,
-				ExpiresAt: p.ExpiresAt,
+				IP:         p.IP.String(),
+				Port:       p.Port,
+				ExpiresAt:  p.ExpiresAt,
+				Shards:     p.Shards,
+				TxHash:     p.TxHash.String(),
+				TxOutIndex: p.TxOutIndex,
 			})
 		}
 

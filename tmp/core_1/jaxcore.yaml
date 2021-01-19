@@ -22,8 +22,8 @@ node:
       - 0.0.0.0:18333
 
   shards:
-    enable: true
-    autorun: true
+#    enable: true
+#    autorun: true
 
 #  enable_cpu_miner: true
 
