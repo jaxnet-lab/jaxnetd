@@ -711,7 +711,7 @@ func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, erro
 
 // EADAddressesAsync ...
 func (c *Client) ListEADAddressesAsync(shards []uint32, eadPublicKey *string) FutureListEADAddressesResult {
-	cmd := btcjson.NewListEADAddressesCmd(shards, eadPublicKey,)
+	cmd := btcjson.NewListEADAddressesCmd(shards, eadPublicKey)
 	return c.sendCmd(cmd)
 }
 

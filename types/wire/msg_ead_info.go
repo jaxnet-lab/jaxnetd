@@ -47,6 +47,20 @@ func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, sha
 	return msg
 }
 
+func (msg *EADAddress) HasShard(shards ...uint32) (allPresent bool, hasOneOf bool) {
+	var matchCount int
+	for _, shard := range shards {
+		for _, u := range msg.Shards {
+			if shard == u {
+				matchCount += 1
+			}
+
+		}
+	}
+
+	return matchCount == len(shards), matchCount > 0
+}
+
 func (msg *EADAddresses) Command() string {
 	return CmdEadAddresses
 }

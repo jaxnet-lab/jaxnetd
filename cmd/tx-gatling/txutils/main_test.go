@@ -13,9 +13,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"golang.org/x/sync/errgroup"
 )
@@ -369,7 +371,7 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID1, txHashAtShard1, 0) })
 		eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID2, txHashAtShard2, 0) })
 		err = eGroup.Wait()
-		// assert.NoError(t, err)
+		assert.NoError(t, err)
 	}
 
 	signers := []string{
@@ -396,7 +398,7 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		assert.NoError(t, err)
 		_, height2, err := op.TxMan.RPC().ForShard(shardID1).GetBestBlock()
 		assert.NoError(t, err)
-		fmt.Printf("Current height @ shard(%d) = %d; @ shard(%d) = %d", shardID1, height1, shardID2, height2)
+		fmt.Printf("Current height @ shard(%d) = %d; @ shard(%d) = %d\n", shardID1, height1, shardID2, height2)
 		// assert.NoError(t, err)
 	}
 
@@ -433,16 +435,18 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	swapTX, err := op.TxMan.WithKeys(aliceKP).NewSwapTx(spendingMap, false, multiSigScript.RedeemScript)
 	assert.NoError(t, err)
 
+	fmt.Println(swapTX.RawTX.TxHash())
 	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
 	{
 		var swapTxWithMultisig *wire.MsgTx
 		swapTxWithMultisig, err = op.TxMan.WithKeys(bobKP).AddSignatureToSwapTx(swapTX.RawTX,
 			[]uint32{shardID1, shardID2},
 			multiSigScript.RedeemScript)
-
 		assert.NoError(t, err)
 		swapTX.RawTX = swapTxWithMultisig
 		swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
+
+		fmt.Println(swapTxWithMultisig.TxHash())
 	}
 	// -----------------------------------------------------------------------------------------
 
@@ -583,20 +587,21 @@ func TestEADRegistration(ot *testing.T) {
 	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
 	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
-
+	//
 	{
 		var scripts [][]byte
-		for i := 10; i < 42; i++ {
-			ipV4 := net.IPv4(77, 244, 36, byte(i))
+		for i := 10; i < 22; i++ {
+			ipV4 := net.IPv4(77, 244, 36, 32)
 			expTime := int64(1608157135)
 			port := int64(43801)
 
 			scriptAddress, err := txscript.EADAddressScript(txscript.EADScriptData{
-				ShardID:        12,
+				ShardID:        uint32(i / 2),
 				IP:             ipV4,
 				Port:           port,
 				ExpirationDate: expTime,
 				Owner:          minerKP.AddressPubKey,
+				OpCode:         txscript.EADAddressDelete,
 			})
 			assert.NoError(t, err)
 			scripts = append(scripts, scriptAddress)
@@ -607,8 +612,9 @@ func TestEADRegistration(ot *testing.T) {
 		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
 		assert.NoError(t, err)
 
-		tx, err := op.TxMan.WithKeys(minerKP).ForShard(0).
-			NewEADRegistrationTx(50, &senderUTXOIndex, scripts[0])
+		tx, err := op.TxMan.WithKeys(minerKP).
+			ForShard(0).
+			NewEADRegistrationTx(5, &senderUTXOIndex, scripts...)
 		assert.NoError(t, err)
 
 		_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
@@ -627,4 +633,61 @@ func TestEADRegistration(ot *testing.T) {
 		fmt.Printf("%+v\n", addresses)
 	}
 
+}
+
+func TestEADSpend(ot *testing.T) {
+	t := (*T)(ot)
+
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			// Host: "116.203.250.136:18333",
+			// User: "jaxnetrpc",
+			// Pass: "ec0bb2575b06bfdf",
+			// Host: "116.202.107.209:18333",
+			// User: "jaxnetrpc",
+			// Pass: "AUL6VBjoQnhP3bfFzl",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+	// shardID := uint32(0)
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	assert.NoError(t, err)
+
+	rawHash := "8cfd9e761fac9e81d308a11d29b66f86e1e46c1e6411291fd8a56a2943b085c6"
+	hash, _ := chainhash.NewHashFromStr("8cfd9e761fac9e81d308a11d29b66f86e1e46c1e6411291fd8a56a2943b085c6")
+	txOut, err := op.TxMan.RPC().GetTxOut(hash, 0, false)
+	assert.NoError(t, err)
+
+	utxo := SingleUTXO{
+		TxHash:     rawHash,
+		OutIndex:   0,
+		Value:      int64(txOut.Value * btcutil.SatoshiPerBitcoin),
+		Used:       false,
+		PKScript:   txOut.ScriptPubKey.Hex,
+		ScriptType: txOut.ScriptPubKey.Type,
+	}
+	// DecodeScript()
+	rawScript, _ := hex.DecodeString(txOut.ScriptPubKey.Hex)
+
+	tx, err := op.TxMan.WithKeys(minerKP).NewTx(minerKP.Address.EncodeAddress(), 0, utxo)
+	assert.NoError(t, err)
+
+	// _, err = op.TxMan.RPC().SendRawTransaction(tx.RawTX, false)
+	// assert.NoError(t, err)
+	// fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+
+	vm, err := txscript.NewEngine(rawScript, tx.RawTX, 0,
+		txscript.StandardVerifyFlags, nil, nil, 0)
+	assert.NoError(t, err)
+
+	err = vm.Execute()
+	assert.NoError(t, err)
 }

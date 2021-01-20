@@ -344,32 +344,43 @@ func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
 }
 
 func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentTxOut) error {
+	var removeEAD = func(pkScript []byte) error {
+		scriptData, err := txscript.EADAddressScriptData(pkScript)
+		if err != nil {
+			return err
+		}
+		ownerKey := string(scriptData.RawKey)
+		if _, ok := view.eadAddresses[ownerKey]; !ok {
+			return nil
+		}
+
+		filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[ownerKey].IPs)-1)
+		for _, p := range view.eadAddresses[ownerKey].IPs {
+			addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
+			if removed {
+				return nil
+			}
+
+			filtered = append(filtered, *addr)
+		}
+		if len(filtered) == 0 {
+			delete(view.eadAddresses, ownerKey)
+			return nil
+		}
+		view.eadAddresses[ownerKey].IPs = filtered
+		return nil
+	}
+
 	if stxos != nil {
 		for _, input := range *stxos {
 			class := txscript.GetScriptClass(input.PkScript)
 			if class != txscript.EADAddress {
 				continue
 			}
-			scriptData, err := txscript.EADAddressScriptData(input.PkScript)
-			if err != nil {
+
+			if err := removeEAD(input.PkScript); err != nil {
 				return err
 			}
-			ownerKey := string(scriptData.RawKey)
-			if _, ok := view.eadAddresses[ownerKey]; !ok {
-				continue
-			}
-
-			filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[ownerKey].IPs)-1)
-			for _, p := range view.eadAddresses[ownerKey].IPs {
-				addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
-				if removed {
-					continue
-				}
-
-				filtered = append(filtered, *addr)
-			}
-
-			view.eadAddresses[ownerKey].IPs = filtered
 		}
 	}
 
@@ -384,8 +395,15 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 		if err != nil {
 			return err
 		}
-		ownerKey := string(scriptData.RawKey)
 
+		if scriptData.OpCode == txscript.EADAddressDelete {
+			if err = removeEAD(out.PkScript); err != nil {
+				return err
+			}
+			continue
+		}
+
+		ownerKey := string(scriptData.RawKey)
 		addr, ok := view.eadAddresses[ownerKey]
 		if !ok {
 			b := make([]byte, 8)

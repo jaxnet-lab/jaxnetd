@@ -169,7 +169,7 @@ func isEADRegistration(pops []parsedOpcode) bool {
 		pops[0].opcode.value >= OP_DATA_4 &&
 		pops[1].opcode.value >= OP_DATA_1 &&
 		pops[2].opcode.value >= OP_DATA_1 &&
-		pops[4].opcode.value == OP_EAD_ADDRESS &&
+		(pops[4].opcode.value == OP_ADD_EAD_ADDRESS || pops[4].opcode.value == OP_RM_EAD_ADDRESS) &&
 		(len(pops[5].data) == 33 || len(pops[5].data) == 65) &&
 		pops[6].opcode.value == OP_CHECKSIG
 }
@@ -522,6 +522,11 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 	return builder.Script()
 }
 
+const (
+	EADAddressCreate = OP_ADD_EAD_ADDRESS
+	EADAddressDelete = OP_RM_EAD_ADDRESS
+)
+
 type EADScriptData struct {
 	ShardID        uint32
 	IP             net.IP
@@ -529,10 +534,13 @@ type EADScriptData struct {
 	ExpirationDate int64
 	Owner          *btcutil.AddressPubKey
 	RawKey         []byte
+	OpCode         byte
 }
 
 func (e EADScriptData) Encode() ([]byte, error) {
-
+	if e.OpCode == 0 {
+		e.OpCode = EADAddressCreate
+	}
 	return NewScriptBuilder().
 		AddData(scriptNum(e.ExpirationDate).Bytes()).
 		AddData(scriptNum(e.Port).Bytes()).
@@ -541,7 +549,7 @@ func (e EADScriptData) Encode() ([]byte, error) {
 		// and won't extract value.
 		AddData(scriptNum(e.ShardID + 16).Bytes()).
 		AddData(e.IP).
-		AddOp(OP_EAD_ADDRESS).
+		AddOp(e.OpCode).
 		AddData(e.Owner.ScriptAddress()).
 		AddOp(OP_CHECKSIG).
 		Script()
@@ -554,6 +562,12 @@ func EADAddressScript(data EADScriptData) ([]byte, error) {
 
 // EADAddressScriptData ...
 func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
+	var pops []parsedOpcode
+	pops, err = parseScript(script)
+	if err != nil {
+		return
+	}
+
 	var data [][]byte
 	data, err = PushedData(script)
 	if err != nil {
@@ -578,7 +592,7 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	if err != nil {
 		return
 	}
-
+	scriptData.OpCode = pops[4].opcode.value
 	scriptData.ExpirationDate = int64(rawTime)
 	scriptData.Port = int64(rawPort)
 	scriptData.ShardID = uint32(rawShardID) - 16

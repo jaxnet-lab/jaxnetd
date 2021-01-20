@@ -543,9 +543,9 @@ type ListTxOutResult struct {
 
 // EADAddresses models the data from the listeadaddresses command.
 type EADAddresses struct {
-	ID        uint64 `json:"id"`
-	PublicKey string `json:"publicKey"`
-	IPs       []EADAddress
+	ID        uint64       `json:"id"`
+	PublicKey string       `json:"publicKey"`
+	IPs       []EADAddress `json:"ips"`
 }
 
 type EADAddress struct {
