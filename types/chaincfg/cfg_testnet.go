@@ -99,6 +99,7 @@ var TestNet3Params = Params{
 	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x03, // starts with QW
 	WitnessScriptHashAddrID: 0x28, // starts with T7n
+	EADAddressID:            0x25, // starts with todo
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics

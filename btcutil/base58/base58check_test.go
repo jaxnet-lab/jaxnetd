@@ -6,6 +6,7 @@
 package base58_test
 
 import (
+	"fmt"
 	"testing"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil/base58"
@@ -63,5 +64,16 @@ func TestBase58Check(t *testing.T) {
 			t.Error("Checkdecode test failed, expected ErrInvalidFormat")
 		}
 	}
+
+}
+func TestBase58Sa(t *testing.T) {
+	data := base58.Decode("J")
+
+	fmt.Printf("%00+x\n", data)
+	data = base58.Decode("j")
+	fmt.Printf("%00+x\n", data)
+	data = base58.Decode("e")
+	fmt.Printf("%00+x\n", data)
+
 
 }
