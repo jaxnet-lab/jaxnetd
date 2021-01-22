@@ -843,6 +843,12 @@ func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses) error {
 	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
 	for owner, entry := range updateSet {
+		if entry == nil {
+			if err := bucket.Delete([]byte(owner)); err != nil {
+				return err
+			}
+			continue
+		}
 
 		// Serialize and store the ead address entry.
 		w := bytes.NewBuffer(nil)

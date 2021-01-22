@@ -358,13 +358,13 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 		for _, p := range view.eadAddresses[ownerKey].IPs {
 			addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
 			if removed {
-				return nil
+				continue
 			}
 
 			filtered = append(filtered, *addr)
 		}
 		if len(filtered) == 0 {
-			delete(view.eadAddresses, ownerKey)
+			view.eadAddresses[ownerKey] = nil
 			return nil
 		}
 		view.eadAddresses[ownerKey].IPs = filtered
