@@ -337,7 +337,6 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}
 
 	if redeemScripts != nil {
-		var err error
 		msgTx, err = client.AddSignatureToTx(msgTx, redeemScripts...)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to add signature to tx")

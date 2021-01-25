@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
 )
 
 type UTXORepo struct {
@@ -70,6 +71,9 @@ func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, 
 
 	var sum int64
 	for _, utxo := range collector.index.Rows() {
+		if utxo.ScriptType == txscript.EADAddress.String() {
+			continue
+		}
 		if _, ok := filter[utxo.Address]; ok && utxo.ShardID == shardId {
 			sum += utxo.Value
 		}
@@ -150,7 +154,6 @@ func (collector *UTXORepo) CollectFromRPC(rpcClient *rpcclient.Client, shardID u
 			if outResult.Coinbase && outResult.Confirmations < maturityThreshold {
 				continue
 			}
-
 			if filter[skAddress] {
 				collector.index.AddUTXO(txmodels.UTXO{
 					ShardID:    shardID,

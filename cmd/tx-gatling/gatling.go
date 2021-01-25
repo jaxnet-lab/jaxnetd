@@ -272,7 +272,7 @@ func (app *App) sendTxCmd(*cli.Context) error {
 	for _, dest := range app.config.Cmd.SendTxs.Destinations {
 		fmt.Println("")
 		fmt.Printf("Try to send %d satoshi to %s ", dest.Amount, dest.Address)
-		txHash, err := txutils.SendTx(app.TxMan, key, dest.ShardID, dest.Address, dest.Amount, 0)
+		txHash, err := sendTx(app.TxMan, key, dest.ShardID, dest.Address, dest.Amount, 0)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to creat and publish tx"), 1)
 		}
@@ -476,4 +476,45 @@ func (*App) genKp(*cli.Context) error {
 	fmt.Printf("MainNet:\t%s\n", mainNetAddress.EncodeAddress())
 
 	return nil
+}
+
+func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
+	senderAddress := senderKP.Address.EncodeAddress()
+	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+
+	var err error
+	err = senderUTXOIndex.ReadIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to open UTXO index")
+	}
+
+	err = senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
+	if err != nil {
+		return "", errors.Wrap(err, "unable to collect UTXO")
+	}
+
+	lop := txMan.ForShard(shardID)
+	if timeLock > 0 {
+		lop = lop.AddTimeLockAllowance(timeLock)
+	}
+
+	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
+		AddTimeLockAllowance(timeLock).
+		NewTx(destination, amount, &senderUTXOIndex)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to create new tx")
+	}
+	if tx == nil || tx.RawTX == nil {
+		return "", errors.New("tx empty")
+	}
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to publish new tx")
+	}
+	err = senderUTXOIndex.SaveIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to save UTXO index")
+	}
+	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+	return tx.TxHash, nil
 }

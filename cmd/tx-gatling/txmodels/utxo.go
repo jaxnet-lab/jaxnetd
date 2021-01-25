@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/txscript"
 )
 
 type IndexKey struct {
@@ -181,6 +182,9 @@ func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
 
 	lastUsed := index.lastUsed[shardID]
 	for i := lastUsed; i < len(index.utxo); i++ {
+		if index.utxo[i].ScriptType == txscript.EADAddress.String() {
+			continue
+		}
 		if index.utxo[i].Used || index.utxo[i].ShardID != shardID {
 			continue
 		}
@@ -251,6 +255,9 @@ func (rows UTXORows) Swap(i, j int) { rows[i], rows[j] = rows[j], rows[i] }
 func (rows UTXORows) GetSum() int64 {
 	var sum int64
 	for _, txOut := range rows {
+		if txOut.ScriptType == txscript.EADAddress.String() {
+			continue
+		}
 		sum += txOut.Value
 	}
 	return sum
@@ -261,6 +268,9 @@ func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXORows, i
 	change := amount
 
 	for i, utxo := range rows {
+		if utxo.ScriptType == txscript.EADAddress.String() {
+			continue
+		}
 		if utxo.Used || utxo.ShardID != shardID {
 			continue
 		}
