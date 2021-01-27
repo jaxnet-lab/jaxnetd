@@ -232,6 +232,7 @@ type Params struct {
 	PrivateKeyID            byte // First byte of a WIF private key
 	WitnessPubKeyHashAddrID byte // First byte of a P2WPKH address
 	WitnessScriptHashAddrID byte // First byte of a P2WSH address
+	EADAddressID            byte // First byte of a P2EAD address
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID [4]byte
@@ -375,8 +376,8 @@ func (net NetName) Params() *Params {
 		return &TestNet3Params
 	case MainNetParams.Name:
 		return &MainNetParams
-	case FTestNetParams.Name:
-		return &FTestNetParams
+	case FastNetParams.Name:
+		return &FastNetParams
 	}
 	return nil
 }
@@ -387,5 +388,5 @@ func init() {
 	mustRegister(&TestNet3Params)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
-	mustRegister(&FTestNetParams)
+	mustRegister(&FastNetParams)
 }

@@ -281,7 +281,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		blkTemplate, err := state.generator.NewBlockTemplate(payAddr)
 		if err != nil {
 			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
-				"ailed to create new block template:"+err.Error())
+				"failed to create new block template:"+err.Error())
 		}
 
 		template = blkTemplate

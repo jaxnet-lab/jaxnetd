@@ -224,8 +224,8 @@ const (
 	OP_NOP8                = 0xb7 // 183
 	OP_NOP9                = 0xb8 // 184
 	OP_NOP10               = 0xb9 // 185
-	OP_EAD_ADDRESS         = 0xba // 186
-	OP_UNKNOWN187          = 0xbb // 187
+	OP_ADD_EAD_ADDRESS     = 0xba // 186
+	OP_RM_EAD_ADDRESS      = 0xbb // 187
 	OP_UNKNOWN188          = 0xbc // 188
 	OP_UNKNOWN189          = 0xbd // 189
 	OP_UNKNOWN190          = 0xbe // 190
@@ -498,7 +498,8 @@ var opcodeArray = [256]opcode{
 	OP_CHECKSIGVERIFY:      {OP_CHECKSIGVERIFY, "OP_CHECKSIGVERIFY", 1, opcodeCheckSigVerify},
 	OP_CHECKMULTISIG:       {OP_CHECKMULTISIG, "OP_CHECKMULTISIG", 1, opcodeCheckMultiSig},
 	OP_CHECKMULTISIGVERIFY: {OP_CHECKMULTISIGVERIFY, "OP_CHECKMULTISIGVERIFY", 1, opcodeCheckMultiSigVerify},
-	OP_EAD_ADDRESS:         {OP_EAD_ADDRESS, "OP_EAD_ADDRESS", 1, opcodeEadAddress},
+	OP_ADD_EAD_ADDRESS:     {OP_ADD_EAD_ADDRESS, "OP_ADD_EAD_ADDRESS", 1, opcodeEadAddress},
+	OP_RM_EAD_ADDRESS:      {OP_RM_EAD_ADDRESS, "OP_RM_EAD_ADDRESS", 1, opcodeEadAddress},
 
 	// Reserved opcodes.
 	OP_NOP1:  {OP_NOP1, "OP_NOP1", 1, opcodeNop},
@@ -512,7 +513,6 @@ var opcodeArray = [256]opcode{
 
 	// Undefined opcodes.
 
-	OP_UNKNOWN187: {OP_UNKNOWN187, "OP_UNKNOWN187", 1, opcodeInvalid},
 	OP_UNKNOWN188: {OP_UNKNOWN188, "OP_UNKNOWN188", 1, opcodeInvalid},
 	OP_UNKNOWN189: {OP_UNKNOWN189, "OP_UNKNOWN189", 1, opcodeInvalid},
 	OP_UNKNOWN190: {OP_UNKNOWN190, "OP_UNKNOWN190", 1, opcodeInvalid},

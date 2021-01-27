@@ -620,27 +620,42 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 
 // handleEADAddresses handles handleEADAddresses commands.
 func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*btcjson.ListEADAddressesCmd)
+	opts := cmd.(*btcjson.ListEADAddressesCmd)
 
-	entries, err := server.chainProvider.BlockChain().ListEADAddresses()
+	listEADAddresses, err := server.chainProvider.BlockChain().ListEADAddresses()
 	if err != nil {
 		return nil, rpcNoTxInfoError(nil)
 	}
 
-	var reply = make(map[string]btcjson.EADAddresses, len(entries))
-	for out, entry := range entries {
-		ips := make([]btcjson.EADAddress, 0, len(entry.IPs))
-		for _, p := range entry.IPs {
-			ips = append(ips, btcjson.EADAddress{
-				IP:        p.IP.String(),
-				Port:      p.Port,
-				ExpiresAt: p.ExpiresAt,
-			})
+	var reply = make(map[string]btcjson.EADAddresses, len(listEADAddresses))
+	for pubKey, eadAddresses := range listEADAddresses {
+		if opts.EadPublicKey != nil && pubKey != *opts.EadPublicKey {
+			continue
 		}
 
-		reply[out] = btcjson.EADAddresses{
-			PublicKey: string(entry.OwnerPubKey),
-			ID:        entry.ID,
+		ips := make([]btcjson.EADAddress, 0, len(eadAddresses.IPs))
+		for _, p := range eadAddresses.IPs {
+			_, hasOneOf := p.HasShard(opts.Shards...)
+			if len(opts.Shards) > 0 && !hasOneOf {
+				continue
+			}
+
+			ips = append(ips, btcjson.EADAddress{
+				IP:         p.IP.String(),
+				Port:       p.Port,
+				ExpiresAt:  p.ExpiresAt,
+				Shards:     p.Shards,
+				TxHash:     p.TxHash.String(),
+				TxOutIndex: p.TxOutIndex,
+			})
+		}
+		if len(ips) == 0 {
+			continue
+		}
+
+		reply[pubKey] = btcjson.EADAddresses{
+			PublicKey: string(eadAddresses.OwnerPubKey),
+			ID:        eadAddresses.ID,
 			IPs:       ips,
 		}
 

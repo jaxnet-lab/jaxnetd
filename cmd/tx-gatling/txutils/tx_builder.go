@@ -19,8 +19,8 @@ import (
 )
 
 type TxBuilder interface {
+	SetType(txVersion int32) TxBuilder
 	SetShardID(shardID uint32) TxBuilder
-
 	SwapTx() TxBuilder
 
 	// utxo can be spent only after lock ended
@@ -31,9 +31,10 @@ type TxBuilder interface {
 	AddRedeemScripts(redeemScripts ...string) TxBuilder
 
 	SetDestination(destination string, amount int64) TxBuilder
+	SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder
 	SetDestinationAtShard(destination string, amount int64, shardID uint32) TxBuilder
-	SetDestinationPair(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder
 
+	SetSenders(addresses ...string) TxBuilder
 	SetChangeDestination(changeAddresses ...string) TxBuilder
 
 	SetUTXOProvider(provider NewUTXOProvider) TxBuilder
@@ -51,6 +52,7 @@ type txBuilder struct {
 	defaultShardID  uint32
 	redeemScripts   map[string]scriptData
 	utxoProvider    NewUTXOProvider
+	senderAddresses []string
 	changeAddresses []string
 	destinations    map[destinationKey]txmodels.UTXORows
 
@@ -67,6 +69,7 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 		net:             net,
 		txVersion:       wire.TxVerRegular,
 		redeemScripts:   map[string]scriptData{},
+		senderAddresses: []string{},
 		changeAddresses: []string{},
 		destinations:    map[destinationKey]txmodels.UTXORows{},
 		feeByShard:      map[uint32]int64{},
@@ -88,6 +91,7 @@ func (t *txBuilder) SwapTx() TxBuilder {
 	t.swapTx = true
 	return t
 }
+
 func (t *txBuilder) SetTimeLock(lockTime uint32) TxBuilder {
 	t.lockTime = lockTime
 	t.txVersion = wire.TxVerTimeLock
@@ -154,7 +158,7 @@ func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shar
 	return t
 }
 
-func (t *txBuilder) SetDestinationPair(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
+func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
 	t.destinations[destinationKey{
 		amount:      amount,
 		shardID:     t.defaultShardID,
@@ -166,6 +170,11 @@ func (t *txBuilder) SetDestinationPair(destination string, amount int64, utxo tx
 		break
 	}
 
+	return t
+}
+
+func (t *txBuilder) SetSenders(addresses ...string) TxBuilder {
+	t.senderAddresses = addresses
 	return t
 }
 
@@ -270,6 +279,10 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 	}
 
 	change := totalSum - amount - t.fee
+	if change > 0 && len(t.changeAddresses) == 0 {
+		return nil, errors.New("changeAddress not set")
+	}
+
 	if change > 0 {
 		chunk := change / int64(len(t.changeAddresses))
 		for _, address := range t.changeAddresses {
@@ -401,7 +414,7 @@ func (t *txBuilder) prepareUTXOs() error {
 		// needed := t.feeByShard[key.shardID] + key.amount
 
 		if hasCoins < needed {
-			rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, key.shardID)
+			rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, key.shardID, t.senderAddresses...)
 			if err != nil {
 				return err
 			}

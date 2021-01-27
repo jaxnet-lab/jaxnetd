@@ -12,10 +12,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txutils"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 func main() {
@@ -26,7 +28,7 @@ func main() {
 		Flags:    app.InitFlags(),
 		Before:   app.InitCfg,
 		Commands: app.getCommands(),
-		// Action: app.DefaultAction,
+		Action:   app.defaultAction,
 	}
 
 	err := cliApp.Run(os.Args)
@@ -44,11 +46,10 @@ func (app *App) getCommands() cli.Commands {
 			Action: app.SyncUTXOCmd,
 			Flags:  app.SyncUTXOFlags(),
 		},
-
 		{
 			Name:   "send-tx",
 			Usage:  "send transactions with values from config file",
-			Action: app.SendTxCmd,
+			Action: app.sendTxCmd,
 		},
 		{
 			Name:   "multisig-tx",
@@ -68,7 +69,6 @@ func (app *App) getCommands() cli.Commands {
 			Flags:  app.AddSignatureToTxFlags(),
 			Action: app.AddSignatureToTxCmd,
 		},
-
 		{
 			Name:   "spend-utxo",
 			Usage:  "create new transaction with single UTXO as input",
@@ -125,6 +125,11 @@ func (app *App) getCommands() cli.Commands {
 				},
 			},
 		},
+		{
+			Name:   "gen-kp",
+			Usage:  "generate new key pair and addresses",
+			Action: app.genKp,
+		},
 	}
 }
 
@@ -141,6 +146,7 @@ func (app *App) InitFlags() []cli.Flag {
 		flags[flagDataFile],
 		flags[flagSecretKey],
 		flags[flagShard],
+		flags[flagRunFromConfig],
 	}
 }
 
@@ -157,14 +163,11 @@ func (app *App) InitCfg(c *cli.Context) error {
 	}
 
 	secret := c.String(flagSecretKey)
-	if dataFile != "" {
+	if secret != "" {
 		app.config.SenderSecret = secret
 	}
 
 	shardID := c.Uint64(flagShard)
-	if dataFile != "" {
-		app.config.SenderSecret = secret
-	}
 
 	// todo cleanup
 	app.shardID = uint32(shardID)
@@ -178,6 +181,20 @@ func (app *App) InitCfg(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to init TxMan"), 1)
 	}
+	return nil
+}
+
+func (app *App) defaultAction(c *cli.Context) error {
+	runCmd := c.Bool(flagRunFromConfig)
+	if !runCmd {
+		fmt.Println("No command provided")
+		return nil
+	}
+
+	if app.config.Cmd.SendTxs != nil {
+		return app.sendTxCmd(nil)
+	}
+
 	return nil
 }
 
@@ -242,55 +259,35 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 	return nil
 }
 
-func (app *App) SendTxCmd(*cli.Context) error {
-	repo := storage.NewCSVStorage(app.config.DataFile)
-	utxo, err := repo.FetchData()
+func (app *App) sendTxCmd(*cli.Context) error {
+	if app.config.Cmd.SendTxs == nil {
+		return cli.NewExitError("invalid configuration - cmd.send_tx is nil", 1)
+	}
+	key, err := txutils.NewKeyData(app.config.Cmd.SendTxs.SenderSecret, app.config.NetParams())
 	if err != nil {
-		return cli.NewExitError(errors.Wrap(err, "unable to fetch UTXO"), 1)
+		return err
 	}
 
-	provider := txutils.UTXOFromRows(utxo)
-	var sentTxs []txmodels.Transaction
-	for _, dest := range app.config.Destinations {
+	sentTxs := make(map[string]uint32, len(app.config.Cmd.SendTxs.Destinations))
+	for _, dest := range app.config.Cmd.SendTxs.Destinations {
 		fmt.Println("")
-
 		fmt.Printf("Try to send %d satoshi to %s ", dest.Amount, dest.Address)
-		tx, err := app.TxMan.NewTx(dest.Address, dest.Amount, provider)
+		txHash, err := sendTx(app.TxMan, key, dest.ShardID, dest.Address, dest.Amount, 0)
 		if err != nil {
-			return cli.NewExitError(errors.Wrap(err, "unable to send tx"), 1)
+			return cli.NewExitError(errors.Wrap(err, "unable to creat and publish tx"), 1)
 		}
-
-		fmt.Printf("Sent Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
-
-		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
-		if err != nil {
-			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
-		}
-
-		sentTxs = append(sentTxs, *tx)
+		sentTxs[txHash] = dest.ShardID
 	}
 
 	fmt.Println("")
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
-	for _, tx := range sentTxs {
-		hash, _ := chainhash.NewHashFromStr(tx.TxHash)
-		txResult, err := app.TxMan.RPC().ForShard(app.shardID).GetTxOut(hash, 0, true)
+	for txHash, shardID := range sentTxs {
+		err := txutils.WaitForTx(app.TxMan.RPC().ForShard(shardID), shardID, txHash, 0)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to get tx"), 1)
 		}
-
-		confirmations := int64(-1)
-		if txResult != nil {
-			confirmations = txResult.Confirmations
-		}
-
-		fmt.Printf("Tx Result: %s | %d |\n", tx.TxHash, confirmations)
-	}
-
-	if err = repo.SaveRows(utxo); err != nil {
-		return cli.NewExitError(errors.Wrap(err, "unable to save updated UTXO"), 1)
 	}
 
 	return nil
@@ -437,4 +434,87 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func (*App) genKp(*cli.Context) error {
+	key, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		fmt.Printf("failed to make privKey for  %v", err)
+		return cli.NewExitError("failed to generate kp", 1)
+	}
+
+	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
+	addressPubKey, err := btcutil.NewAddressPubKey(pk, &chaincfg.FastNetParams)
+	if err != nil {
+		println("[error] " + err.Error())
+		return cli.NewExitError("failed to generate kp", 1)
+
+	}
+
+	fastNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.FastNetParams)
+	if err != nil {
+		println("[error] " + err.Error())
+		return cli.NewExitError("failed to generate kp", 1)
+	}
+
+	mainNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.MainNetParams)
+	if err != nil {
+		println("[error] " + err.Error())
+		return cli.NewExitError("failed to generate kp", 1)
+	}
+
+	testNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.TestNet3Params)
+	if err != nil {
+		println("[error] " + err.Error())
+		return cli.NewExitError("failed to generate kp", 1)
+	}
+
+	fmt.Printf("PrivateKey:\t%x\n", key.Serialize())
+	fmt.Printf("AddressPubKey:\t%s\n", addressPubKey.String())
+	fmt.Printf("FastNet:\t%s\n", fastNetAddress.EncodeAddress())
+	fmt.Printf("TestNet:\t%s\n", testNetAddress.EncodeAddress())
+	fmt.Printf("MainNet:\t%s\n", mainNetAddress.EncodeAddress())
+
+	return nil
+}
+
+func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
+	senderAddress := senderKP.Address.EncodeAddress()
+	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+
+	var err error
+	err = senderUTXOIndex.ReadIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to open UTXO index")
+	}
+
+	err = senderUTXOIndex.CollectFromRPC(txMan.RPC(), shardID, map[string]bool{senderAddress: true})
+	if err != nil {
+		return "", errors.Wrap(err, "unable to collect UTXO")
+	}
+
+	lop := txMan.ForShard(shardID)
+	if timeLock > 0 {
+		lop = lop.AddTimeLockAllowance(timeLock)
+	}
+
+	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
+		AddTimeLockAllowance(timeLock).
+		NewTx(destination, amount, &senderUTXOIndex)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to create new tx")
+	}
+	if tx == nil || tx.RawTX == nil {
+		return "", errors.New("tx empty")
+	}
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	if err != nil {
+		return "", errors.Wrap(err, "unable to publish new tx")
+	}
+	err = senderUTXOIndex.SaveIndex()
+	if err != nil {
+		return "", errors.Wrap(err, "unable to save UTXO index")
+	}
+	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+	return tx.TxHash, nil
 }

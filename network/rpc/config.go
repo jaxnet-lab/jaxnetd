@@ -69,12 +69,17 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 	}
 
 	cfg.Listeners = make([]net.Listener, 0, len(netAddrs))
+
 	for _, addr := range netAddrs {
-		listener, err := listenFunc(addr.Network(), addr.String())
-		if err != nil {
+		listener, lErr := listenFunc(addr.Network(), addr.String())
+		if lErr != nil {
+			err = lErr
 			continue
 		}
 		cfg.Listeners = append(cfg.Listeners, listener)
+	}
+	if len(cfg.Listeners) < len(netAddrs) {
+		return nil, err
 	}
 
 	return cfg.Listeners, nil

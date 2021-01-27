@@ -165,12 +165,13 @@ func isNullData(pops []parsedOpcode) bool {
 // isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
 // false otherwise.
 func isEADRegistration(pops []parsedOpcode) bool {
-	return len(pops) == 6 &&
+	return len(pops) == 7 &&
 		pops[0].opcode.value >= OP_DATA_4 &&
-		pops[1].opcode.value >= OP_DATA_2 &&
-		pops[3].opcode.value == OP_EAD_ADDRESS &&
-		(len(pops[4].data) == 33 || len(pops[4].data) == 65) &&
-		pops[5].opcode.value == OP_CHECKSIG
+		pops[1].opcode.value >= OP_DATA_1 &&
+		pops[2].opcode.value >= OP_DATA_1 &&
+		(pops[4].opcode.value == OP_ADD_EAD_ADDRESS || pops[4].opcode.value == OP_RM_EAD_ADDRESS) &&
+		(len(pops[5].data) == 33 || len(pops[5].data) == 65) &&
+		pops[6].opcode.value == OP_CHECKSIG
 }
 
 // scriptType returns the type of the script being inspected from the known
@@ -521,20 +522,52 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 	return builder.Script()
 }
 
-// EADAddressScript ...
-func EADAddressScript(ip net.IP, port, expirationDate int64, owner *btcutil.AddressPubKey) ([]byte, error) {
+const (
+	EADAddressCreate = OP_ADD_EAD_ADDRESS
+	EADAddressDelete = OP_RM_EAD_ADDRESS
+)
+
+type EADScriptData struct {
+	ShardID        uint32
+	IP             net.IP
+	Port           int64
+	ExpirationDate int64
+	Owner          *btcutil.AddressPubKey
+	RawKey         []byte
+	OpCode         byte
+}
+
+func (e EADScriptData) Encode() ([]byte, error) {
+	if e.OpCode == 0 {
+		e.OpCode = EADAddressCreate
+	}
 	return NewScriptBuilder().
-		AddInt64(expirationDate).
-		AddInt64(port).
-		AddData(ip).
-		AddOp(OP_EAD_ADDRESS).
-		AddData(owner.ScriptAddress()).
+		AddData(scriptNum(e.ExpirationDate).Bytes()).
+		AddData(scriptNum(e.Port).Bytes()).
+		// The scriptNum doing shitty optimization for numbers less than 16,
+		// but the PushedData function and the parseScript do not support this optimization
+		// and won't extract value.
+		AddData(scriptNum(e.ShardID + 16).Bytes()).
+		AddData(e.IP).
+		AddOp(e.OpCode).
+		AddData(e.Owner.ScriptAddress()).
 		AddOp(OP_CHECKSIG).
 		Script()
 }
 
+// EADAddressScript ...
+func EADAddressScript(data EADScriptData) ([]byte, error) {
+	return data.Encode()
+}
+
 // EADAddressScriptData ...
-func EADAddressScriptData(script []byte) (ip net.IP, port, expirationDate int64, rawKey []byte, err error) {
+func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
+	var pops []parsedOpcode
+	pops, err = parseScript(script)
+	if err != nil {
+		return
+	}
+
 	var data [][]byte
 	data, err = PushedData(script)
 	if err != nil {
@@ -545,21 +578,28 @@ func EADAddressScriptData(script []byte) (ip net.IP, port, expirationDate int64,
 	}
 
 	var rawTime scriptNum
-	rawTime, err = makeScriptNum(data[0], true, 5)
+	rawTime, err = makeScriptNum(data[0], false, 5)
 	if err != nil {
 		return
 	}
 	var rawPort scriptNum
-	rawPort, err = makeScriptNum(data[1], true, 5)
+	rawPort, err = makeScriptNum(data[1], false, 5)
 	if err != nil {
 		return
 	}
+	var rawShardID scriptNum
+	rawShardID, err = makeScriptNum(data[2], true, 1)
+	if err != nil {
+		return
+	}
+	scriptData.OpCode = pops[4].opcode.value
+	scriptData.ExpirationDate = int64(rawTime)
+	scriptData.Port = int64(rawPort)
+	scriptData.ShardID = uint32(rawShardID) - 16
+	scriptData.IP = data[3]
+	scriptData.RawKey = make([]byte, hex.EncodedLen(len(data[4])))
+	hex.Encode(scriptData.RawKey, data[4])
 
-	expirationDate = int64(rawTime)
-	port = int64(rawPort)
-	ip = data[2]
-	rawKey = make([]byte, hex.EncodedLen(len(data[3])))
-	hex.Encode(rawKey, data[3])
 	return
 }
 
@@ -683,7 +723,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[4].data,
+		addr, err := btcutil.NewAddressPubKey(pops[5].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)

@@ -6,23 +6,24 @@ package main
 import "github.com/urfave/cli/v2"
 
 const (
-	flagAddress      = "address"
-	flagAmount       = "amount"
-	flagConfig       = "config"
-	flagShard        = "shard"
-	flagShards       = "shards"
-	flagDataFile     = "data-file"
-	flagSplitFiles   = "split-files"
-	flagFirstPubKey  = "first-pk"
-	flagSecondPubKey = "second-pk"
-	flagOffset       = "offset"
-	flagOutIn        = "out-index"
-	flagRedeemScript = "redeem-script"
-	flagSecretKey    = "secret-key"
-	flagSendTx       = "send-tx"
-	flagTxHash       = "tx-hash"
-	flagTxBody       = "tx-body"
-	flagDataDir      = "data-dir"
+	flagAddress       = "address"
+	flagAmount        = "amount"
+	flagConfig        = "config"
+	flagShard         = "shard"
+	flagShards        = "shards"
+	flagDataFile      = "data-file"
+	flagSplitFiles    = "split-files"
+	flagFirstPubKey   = "first-pk"
+	flagSecondPubKey  = "second-pk"
+	flagOffset        = "offset"
+	flagOutIn         = "out-index"
+	flagRedeemScript  = "redeem-script"
+	flagSecretKey     = "secret-key"
+	flagSendTx        = "send-tx"
+	flagTxHash        = "tx-hash"
+	flagTxBody        = "tx-body"
+	flagDataDir       = "data-dir"
+	flagRunFromConfig = "run-cmd"
 )
 
 func getFlags() map[string]cli.Flag {
@@ -127,6 +128,10 @@ func getFlags() map[string]cli.Flag {
 		flagSplitFiles: &cli.BoolFlag{
 			Name:  flagSplitFiles,
 			Usage: "split utxo files by shard ID",
+		},
+		flagRunFromConfig: &cli.BoolFlag{
+			Name:  flagRunFromConfig,
+			Usage: "run commands from config file",
 		},
 	}
 }

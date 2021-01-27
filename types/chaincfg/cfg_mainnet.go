@@ -145,6 +145,7 @@ var MainNetParams = Params{
 	ScriptHashAddrID:        0x05, // starts with 3
 	PrivateKeyID:            0x80, // starts with 5 (uncompressed) or K (compressed)
 	WitnessPubKeyHashAddrID: 0x06, // starts with p2
+	EADAddressID:            0x25, // starts with todo
 	WitnessScriptHashAddrID: 0x0A, // starts with 7Xh
 
 	// BIP32 hierarchical deterministic extended key magics

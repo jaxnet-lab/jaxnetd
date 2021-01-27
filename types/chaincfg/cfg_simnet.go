@@ -102,6 +102,7 @@ var SimNetParams = Params{
 	ScriptHashAddrID:        0x7b, // starts with s
 	PrivateKeyID:            0x64, // starts with 4 (uncompressed) or F (compressed)
 	WitnessPubKeyHashAddrID: 0x19, // starts with Gg
+	EADAddressID:            0x25, // starts with todo
 	WitnessScriptHashAddrID: 0x28, // starts with ?
 
 	// BIP32 hierarchical deterministic extended key magics

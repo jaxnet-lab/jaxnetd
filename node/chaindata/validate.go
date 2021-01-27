@@ -145,6 +145,9 @@ func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
 	inputAddresses := map[string]struct{}{}
 	for _, in := range tx.MsgTx().TxIn {
 		origUTXO := view.LookupEntry(in.PreviousOutPoint)
+		if origUTXO == nil {
+			continue
+		}
 		inputAddresses[hex.EncodeToString(origUTXO.PkScript())] = struct{}{}
 	}
 

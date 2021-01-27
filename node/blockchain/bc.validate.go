@@ -503,7 +503,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
 				}
 			case wire.TxVerTimeLockAllowance:
-				if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
+				if chaindata.SequenceLockActive(sequenceLock, node.Height(),
 					medianTime) {
 					if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
 						str := fmt.Sprintf(

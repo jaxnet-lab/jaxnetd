@@ -275,7 +275,7 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 	}
 
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
-	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID)
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID, client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,8 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		NetworkFee: fee,
 	}
 
-	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID)
+	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID,
+		client.key.Address.EncodeAddress())
 	if err != nil || draft.UTXO.GetSum() < amount+draft.NetworkFee {
 		return nil, errors.Wrap(err, "unable to get UTXO for amount")
 	}
@@ -336,7 +337,6 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}
 
 	if redeemScripts != nil {
-		var err error
 		msgTx, err = client.AddSignatureToTx(msgTx, redeemScripts...)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to add signature to tx")
@@ -349,6 +349,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		Destination: draft.Destination(),
 		Amount:      amount,
 		SignedTx:    EncodeTx(msgTx),
+		ShardID:     client.cfg.ShardID,
 		RawTX:       msgTx,
 	}, nil
 }
@@ -402,10 +403,14 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
-		if client.lockTime != 0 {
-			msgTx.Version = client.txVersion
-			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
+		if client.lockTime == 0 {
+			client.txVersion = wire.TxVerTimeLockAllowance
+			client.lockTime = 80
 		}
+		msgTx.Version = client.txVersion
+		msgTx.SetMark(wire.TxMarkShardSwap)
+
+		txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
 		msgTx.AddTxIn(txIn)
 
 		outIndexes[destination] = ind

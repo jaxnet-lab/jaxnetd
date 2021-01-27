@@ -12,14 +12,14 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
-// fTestNetPowLimit is the highest proof of work value a Bitcoin block
+// fastNetPowLimit is the highest proof of work value a Bitcoin block
 // can have for the test network (version 3).  It is the value
 // 2^255 - 1.
-var fTestNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+var fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
-// fTestNetGenesisHash is the hash of the first block in the block chain for the
+// fastNetGenesisHash is the hash of the first block in the block chain for the
 // test network (version 3).
-var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+var fastNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
 	0x43, 0x49, 0x7f, 0xd7, 0xf8, 0x26, 0x95, 0x71,
 	0x08, 0xf4, 0xa3, 0x0f, 0xd9, 0xce, 0xc3, 0xae,
 	0xba, 0x79, 0x97, 0x20, 0x84, 0xe9, 0x0e, 0xad,
@@ -31,8 +31,12 @@ var fTestNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go ve
 // for the main network.
 var fTestNetGenesisMerkleRoot = genesisMerkleRoot
 
-// FTestNetParams defines the network parameters for the test network but whit low PoW params
-var FTestNetParams = Params{
+// DEPRECATED
+// FTestNetParams is deprecated name use the FastNetParams instead.
+var FTestNetParams = FastNetParams
+
+// FastNetParams defines the network parameters for the development test network but with low PoW params.
+var FastNetParams = Params{
 	Name:        "fastnet",
 	Net:         types.FTestNet,
 	DefaultPort: "18333",
@@ -47,8 +51,8 @@ var FTestNetParams = Params{
 		Bits:       0x1e0fffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
 		Nonce:      0x18aea41a,
 	},
-	GenesisHash:              &fTestNetGenesisHash,
-	PowLimit:                 fTestNetPowLimit,
+	GenesisHash:              &fastNetGenesisHash,
+	PowLimit:                 fastNetPowLimit,
 	PowLimitBits:             0x1e0dffff,
 	BIP0034Height:            0,
 	BIP0065Height:            0,
@@ -99,6 +103,7 @@ var FTestNetParams = Params{
 	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x03, // starts with QW
 	WitnessScriptHashAddrID: 0x28, // starts with T7n
+	EADAddressID:            0x25, // starts with todo
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
