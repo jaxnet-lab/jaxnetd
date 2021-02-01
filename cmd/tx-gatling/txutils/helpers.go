@@ -123,8 +123,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 		lop = lop.AddTimeLockAllowance(timeLock)
 	}
 
-	tx, err := txMan.WithKeys(senderKP).ForShard(shardID).
-		AddTimeLockAllowance(timeLock).
+	tx, err := lop.WithKeys(senderKP).
 		NewTx(destination, amount, &senderUTXOIndex)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to create new tx")

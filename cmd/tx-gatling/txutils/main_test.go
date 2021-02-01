@@ -7,6 +7,7 @@ package txutils
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"testing"
@@ -16,7 +17,9 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
+	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"golang.org/x/sync/errgroup"
@@ -382,7 +385,7 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	multiSigScript, err := MakeMultiSigScript(signers, len(signers), cfg.NetParams())
 	assert.NoError(t, err)
 
-	fmt.Println("Lock funds on multi-sig address")
+	fmt.Println("Lock funds on multi-sig address: ", multiSigScript.Address)
 	{
 		txHashAtShard1, err := SendTx(op.TxMan, aliceKP, shardID1, multiSigScript.Address, OneCoin, 0)
 		assert.NoError(t, err)
@@ -436,6 +439,7 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	assert.NoError(t, err)
 
 	fmt.Println(swapTX.RawTX.TxHash())
+	fmt.Println(EncodeTx(swapTX.RawTX))
 	// ---/---- ADD SECOND SIGNATURE TO SPEND MULTISIG UTXO TX ----\----
 	{
 		var swapTxWithMultisig *wire.MsgTx
@@ -447,6 +451,7 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		swapTX.SignedTx = EncodeTx(swapTxWithMultisig)
 
 		fmt.Println(swapTxWithMultisig.TxHash())
+		fmt.Println(EncodeTx(swapTxWithMultisig))
 	}
 	// -----------------------------------------------------------------------------------------
 
@@ -635,6 +640,90 @@ func TestEADRegistration(ot *testing.T) {
 
 }
 
+func TestEAD(ot *testing.T) {
+	t := (*T)(ot)
+
+	cfg := ManagerCfg{
+		Net: "fastnet",
+		RPC: NodeRPC{
+			// Host: "116.203.250.136:18333",
+			// User: "jaxnetrpc",
+			// Pass: "ec0bb2575b06bfdf",
+			Host: "116.202.107.209:22333",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
+		},
+		PrivateKey: "",
+	}
+	shardID := uint32(0)
+	op, err := NewOperator(cfg)
+	assert.NoError(t, err)
+
+	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	assert.NoError(t, err)
+	//
+	{
+		var scriptsToCreate [][]byte
+		var scriptsToDelete [][]byte
+		for i := 1; i < 12; i++ {
+			ipV4 := net.IPv4(77, 244, 36, 88)
+			expTime := int64(1608157135)
+			port := int64(43801)
+			data := txscript.EADScriptData{
+				ShardID:        uint32(i),
+				IP:             ipV4,
+				Port:           port,
+				ExpirationDate: expTime,
+				Owner:          minerKP.AddressPubKey,
+			}
+
+			scriptAddress, err := txscript.EADAddressScript(data)
+			assert.NoError(t, err)
+			scriptsToCreate = append(scriptsToCreate, scriptAddress)
+
+			data.OpCode = txscript.EADAddressDelete
+			scriptAddress, err = txscript.EADAddressScript(data)
+			assert.NoError(t, err)
+			scriptsToDelete = append(scriptsToDelete, scriptAddress)
+		}
+
+		senderAddress := minerKP.Address.EncodeAddress()
+		senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
+		assert.NoError(t, err)
+
+		sendClosure := func(scripts ...[]byte) {
+
+			tx, err := op.TxMan.WithKeys(minerKP).
+				ForShard(0).
+				NewEADRegistrationTx(5, &senderUTXOIndex, scripts...)
+			assert.NoError(t, err)
+
+			_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
+			assert.NoError(t, err)
+
+			fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+
+			eGroup := errgroup.Group{}
+			eGroup.Go(func() error { return WaitForTx(op.TxMan.RPC(), shardID, tx.TxHash, 0) })
+			err = eGroup.Wait()
+			assert.NoError(t, err)
+
+			addresses, err := op.TxMan.RPC().ListEADAddresses(nil, nil)
+			assert.NoError(t, err)
+			prettyPrint(addresses)
+		}
+
+		sendClosure(scriptsToCreate...)
+		sendClosure(scriptsToDelete...)
+	}
+
+}
+
 func TestEADSpend(ot *testing.T) {
 	t := (*T)(ot)
 
@@ -690,4 +779,68 @@ func TestEADSpend(ot *testing.T) {
 
 	err = vm.Execute()
 	assert.NoError(t, err)
+}
+
+func TestTxValidation(ot *testing.T) {
+	t := (*T)(ot)
+	client, err := rpcclient.New(&rpcclient.ConnConfig{
+		Params:       "fastnet",
+		Host:         "127.0.0.1:18333",
+		User:         "somerpc",
+		Pass:         "somerpc",
+		DisableTLS:   true,
+		HTTPPostMode: true,
+	}, nil)
+	assert.NoError(t, err)
+
+	encodedTx := "0300010002511428b26d2068c69abc4da2dce341b5707ebca6ac3dc4f5f2679835857a591800000000fd1b0100483045022100c1142c35f1fbf84baf1f829fb6152398bbc3425c41587363ffa180cc008c52630220798fd2a55bb64d29c7de75055a5b3943fe1bdb504d773a80b391d3b99aed175d01473044022036c07552b0a1680433931674ecf7f3f3436aa02d7020bea396ce7dacd42d6c2d022040b04a9e9f2e316aa6aa9dbfbb7b9dbafd160fd9ed975b69ca9e020e187f2197014c87524104e7a2fb1f4c1ff3b6da4f756c14e50c375dffb1d9bda1d90ae96e25847341d3ee36ba3fa698be0c07f67622febe229ea8e40e92d1b0b180672be47cd8d45b42994104486596c443d5b00f198474f47a5ce5498968e546114687b9d067e94d2d7d074b3654af29677cec36ce468c84d9612609786b955d13c2265bc28eda1a2d093e6152ae5000000002b870389525192e1a47eefdd85e9d13f51df6e9fc50777a6bad56e7cc4b2ea700000000fd1b0100473044022040e3adfc83b447f5fef9b5409271ea90e9235f0e8e8d00dbf9443c3193a6850a0220537245b66b194f0f20d3fdc4b9c12b077d9eba8ed3613507435ae3ae2223924501483045022100fe045ee09ff754cfa2fef8c4a34c0499c4cdc8a77b8b8f093824be22daaa0f6c022008a0b05f5a13d0608edd96bb85bb753e3d66a424a95087b06c11137ee6b137f3014c87524104e7a2fb1f4c1ff3b6da4f756c14e50c375dffb1d9bda1d90ae96e25847341d3ee36ba3fa698be0c07f67622febe229ea8e40e92d1b0b180672be47cd8d45b42994104486596c443d5b00f198474f47a5ce5498968e546114687b9d067e94d2d7d074b3654af29677cec36ce468c84d9612609786b955d13c2265bc28eda1a2d093e6152ae5000000002dcd1f505000000001976a914b2629111cf79c2f1cd025a7aebc403fc9bb5d48b88acdcd1f505000000001976a914cbcd1259bcd2c1147387e3536becf53d0cdd988188ac00000000"
+	multiSigAddress := "2Mx9kFdzEY9hyR63LutcEfGdB7ypA5ijW1B"
+	net := chaincfg.NetName("fastnet")
+	tx, err := DecodeTx(encodedTx)
+	assert.NoError(t, err)
+	// assert.True(t, tx.LockTime > 0)
+	assert.True(t, tx.SwapTx())
+	assert.True(t, len(tx.TxIn) == 2)
+	assert.True(t, len(tx.TxOut) == 2)
+
+	for _, in := range tx.TxIn {
+		scriptData, err := DecodeScript(in.SignatureScript, net.Params())
+		assert.NoError(t, err)
+		prettyPrint(scriptData)
+		assert.Equal(ot, multiSigAddress, scriptData.P2sh)
+		// timelock value
+		assert.Equal(ot, 80, in.Sequence)
+
+		fmt.Println(in.PreviousOutPoint.Hash.String(), in.PreviousOutPoint.Index)
+		txOut, err := client.ForShard(1).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true)
+		if err != nil || txOut == nil {
+			txOut, err = client.ForShard(2).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true)
+		}
+		assert.NoError(t, err)
+		assert.NotNil(t, txOut)
+		assert.True(t, txOut.Value > 0)
+		prettyPrint(txOut)
+
+		assert.True(t, len(txOut.ScriptPubKey.Addresses) > 0)
+		for _, address := range txOut.ScriptPubKey.Addresses {
+			// validate that all addresses here
+			fmt.Println(address)
+		}
+	}
+
+	for _, out := range tx.TxOut {
+		assert.True(t, out.Value > 0)
+		scriptData, err := DecodeScript(out.PkScript, net.Params())
+		assert.NoError(t, err)
+		prettyPrint(scriptData)
+		for _, address := range scriptData.Addresses {
+			// validate that all addresses here
+			fmt.Println(address)
+		}
+	}
+}
+
+func prettyPrint(val interface{}) {
+	data, _ := json.MarshalIndent(val, "", "  ")
+	fmt.Println(string(data))
 }
