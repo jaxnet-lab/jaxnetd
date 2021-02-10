@@ -4122,9 +4122,9 @@ func TestRemoveOpcodeByData(t *testing.T) {
 		},
 		{
 			name:   "invalid opcode ",
-			before: []byte{OP_UNKNOWN187},
+			before: []byte{OP_UNKNOWN188},
 			remove: []byte{1, 2, 3, 4},
-			after:  []byte{OP_UNKNOWN187},
+			after:  []byte{OP_UNKNOWN188},
 		},
 		{
 			name:   "invalid length (instruction)",

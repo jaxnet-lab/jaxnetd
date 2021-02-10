@@ -110,7 +110,7 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = strconv.Itoa(int(val))
 
 		// OP_NOP1 through OP_NOP10.
-		case opcodeVal >= 0xb0 && opcodeVal <= 0xb9:
+		case opcodeVal >= 0xb0 && opcodeVal <= 0xbb:
 			switch opcodeVal {
 			case 0xb1:
 				// OP_NOP2 is an alias of OP_CHECKLOCKTIMEVERIFY
@@ -118,13 +118,17 @@ func TestOpcodeDisasm(t *testing.T) {
 			case 0xb2:
 				// OP_NOP3 is an alias of OP_CHECKSEQUENCEVERIFY
 				expectedStr = "OP_CHECKSEQUENCEVERIFY"
+			case 0xba:
+				expectedStr = "OP_ADD_EAD_ADDRESS"
+			case 0xbb:
+				expectedStr = "OP_RM_EAD_ADDRESS"
 			default:
 				val := byte(opcodeVal - (0xb0 - 1))
 				expectedStr = "OP_NOP" + strconv.Itoa(int(val))
 			}
 
 		// OP_UNKNOWN#.
-		case opcodeVal >= 0xba && opcodeVal <= 0xf9 || opcodeVal == 0xfc:
+		case opcodeVal >= 0xbc && opcodeVal <= 0xf9 || opcodeVal == 0xfc:
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(opcodeVal)
 		}
 
@@ -176,7 +180,7 @@ func TestOpcodeDisasm(t *testing.T) {
 			expectedStr = "OP_" + strconv.Itoa(int(val))
 
 		// OP_NOP1 through OP_NOP10.
-		case opcodeVal >= 0xb0 && opcodeVal <= 0xb9:
+		case opcodeVal >= 0xb0 && opcodeVal <= 0xbb:
 			switch opcodeVal {
 			case 0xb1:
 				// OP_NOP2 is an alias of OP_CHECKLOCKTIMEVERIFY
@@ -184,13 +188,17 @@ func TestOpcodeDisasm(t *testing.T) {
 			case 0xb2:
 				// OP_NOP3 is an alias of OP_CHECKSEQUENCEVERIFY
 				expectedStr = "OP_CHECKSEQUENCEVERIFY"
+			case 0xba:
+				expectedStr = "OP_ADD_EAD_ADDRESS"
+			case 0xbb:
+				expectedStr = "OP_RM_EAD_ADDRESS"
 			default:
 				val := byte(opcodeVal - (0xb0 - 1))
 				expectedStr = "OP_NOP" + strconv.Itoa(int(val))
 			}
 
 		// OP_UNKNOWN#.
-		case opcodeVal >= 0xba && opcodeVal <= 0xf9 || opcodeVal == 0xfc:
+		case opcodeVal >= 0xbc && opcodeVal <= 0xf9 || opcodeVal == 0xfc:
 			expectedStr = "OP_UNKNOWN" + strconv.Itoa(opcodeVal)
 		}
 
