@@ -288,6 +288,7 @@ const (
 	TxVerTimeLockAllowance = 3 //
 	TxVerEADAction         = 4 //
 )
+
 const (
 	TxMarkNone      int32 = 0
 	TxMarkShardSwap int32 = 1 << 16
@@ -321,10 +322,7 @@ func (msg *MsgTx) AddTxOut(to *TxOut) {
 
 // SetMark adds a marker to the message.
 func (msg *MsgTx) SetMark(mark int32) {
-
-	if msg.Version&mark != mark {
-		msg.Version = msg.Version ^ mark
-	}
+	msg.Version = msg.Version | mark
 }
 
 func (msg *MsgTx) SwapTx() bool {

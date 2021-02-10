@@ -667,7 +667,7 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, i
 
 	if postVerify {
 		vm, err := txscript.NewEngine(pkScript, msgTx, inIndex,
-			txscript.ScriptBip16|txscript.ScriptVerifyDERSignatures, nil, nil, utxo.Value)
+			txscript.StandardVerifyFlags, nil, nil, utxo.Value)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to init txScript engine")
 		}
