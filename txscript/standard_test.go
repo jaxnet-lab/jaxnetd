@@ -855,10 +855,111 @@ func TestCalcMultiSigStats(t *testing.T) {
 
 	for i, test := range tests {
 		script := mustParseShortForm(test.script)
-		_, _, err := CalcMultiSigStats(script)
+		_, _, err := CalcMultiSigStats(script, MultiSigTy)
 		if e := tstCheckScriptError(err, test.err); e != nil {
 			t.Errorf("CalcMultiSigStats #%d (%s): %v", i, test.name,
 				e)
+			continue
+		}
+	}
+}
+
+// TestMultiSigTimeLockScript ensures the MultiSigLockScript function returns the expected
+// scripts and errors.
+func TestMultiSigTimeLockScript(t *testing.T) {
+	t.Parallel()
+
+	//  mainnet p2pk 13CG6SJ3yHUXo4Cr2RY4THLLJrNFuG3gUg
+	p2pkCompressedMain, err := btcutil.NewAddressPubKey(hexToBytes("02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4"),
+		&chaincfg.MainNetParams)
+	if err != nil {
+		t.Fatalf("Unable to create pubkey address (compressed): %v",
+			err)
+	}
+	p2pkCompressed2Main, err := btcutil.NewAddressPubKey(hexToBytes("03b0b"+
+		"d634234abbb1ba1e986e884185c61cf43e001f9137f23c2c409273eb16e65"),
+		&chaincfg.MainNetParams)
+	if err != nil {
+		t.Fatalf("Unable to create pubkey address (compressed 2): %v",
+			err)
+	}
+
+	tests := []struct {
+		refundAddress *btcutil.AddressPubKey
+		keys          []*btcutil.AddressPubKey
+		nrequired     int
+		sequenceLock  int64
+		expected      string
+		err           error
+	}{
+		{
+			p2pkCompressedMain,
+			[]*btcutil.AddressPubKey{
+				p2pkCompressedMain,
+				p2pkCompressed2Main,
+			},
+			1,
+			120,
+			"OP_IF 78 OP_CHECKSEQUENCEVERIFY OP_DROP " +
+				"OP_ELSE " +
+				"1 02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 " +
+				"03b0bd634234abbb1ba1e986e884185c61cf43e001f9137f23c2c409273eb16e65 " +
+				"2 OP_CHECKMULTISIG " +
+				"OP_ENDIF " +
+				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG",
+			nil,
+		},
+		{
+			p2pkCompressedMain,
+			[]*btcutil.AddressPubKey{
+				p2pkCompressedMain,
+				p2pkCompressed2Main,
+			},
+
+			2,
+			120,
+			"OP_IF 78 OP_CHECKSEQUENCEVERIFY OP_DROP " +
+				"OP_ELSE " +
+				"2 02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 " +
+				"03b0bd634234abbb1ba1e986e884185c61cf43e001f9137f23c2c409273eb16e65 " +
+				"2 OP_CHECKMULTISIG " +
+				"OP_ENDIF " +
+				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG",
+			nil,
+		},
+		{
+			p2pkCompressedMain,
+			[]*btcutil.AddressPubKey{
+				p2pkCompressedMain,
+				p2pkCompressed2Main,
+			},
+			3,
+			120,
+			"",
+			scriptError(ErrTooManyRequiredSigs, ""),
+		},
+	}
+
+	t.Logf("Running %d tests", len(tests))
+	for i, test := range tests {
+		script, err := MultiSigLockScript(test.refundAddress, test.keys, test.nrequired, test.sequenceLock)
+		if e := tstCheckScriptError(err, test.err); e != nil {
+			t.Errorf("MultiSigLockScript #%d: %v", i, e)
+			continue
+		}
+		scriptAddr, err := btcutil.NewAddressScriptHash(script, &chaincfg.TestNet3Params)
+		if err != nil {
+			t.Errorf("failed to make p2sh addr for %v", err)
+			break
+		}
+		println(scriptAddr.EncodeAddress())
+
+		println(hex.EncodeToString(script))
+		asm, err := DisasmString(script)
+		println(asm)
+		if asm != test.expected {
+			t.Errorf("MultiSigLockScript #%d got: %x\nwant: %x",
+				i, asm, test.expected)
 			continue
 		}
 	}

@@ -107,8 +107,7 @@ func (s *stack) PopBool() (bool, error) {
 func (s *stack) PeekByteArray(idx int32) ([]byte, error) {
 	sz := int32(len(s.stk))
 	if idx < 0 || idx >= sz {
-		str := fmt.Sprintf("index %d is invalid for stack size %d", idx,
-			sz)
+		str := fmt.Sprintf("index %d is invalid for stack size %d", idx, sz)
 		return nil, scriptError(ErrInvalidStackOperation, str)
 	}
 

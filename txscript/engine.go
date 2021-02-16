@@ -10,8 +10,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
 	"math/big"
+
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 )
@@ -68,7 +69,7 @@ const (
 	ScriptVerifyMinimalData
 
 	// ScriptVerifyNullFail defines that signatures must be empty if
-	// a CHECKSIG or CHECKMULTISIG operation fails.
+	// a OP_CHECKSIG or OP_CHECKMULTISIG operation fails.
 	ScriptVerifyNullFail
 
 	// ScriptVerifySigPushOnly defines that signature scripts must contain
@@ -87,7 +88,7 @@ const (
 	// program with versions 2-16 non-standard.
 	ScriptVerifyDiscourageUpgradeableWitnessProgram
 
-	// ScriptVerifyMinimalIf makes a script with an OP_IF/OP_NOTIF whose
+	// ScriptVerifyMinimalIf makes a script with an OP_IF / OP_NOTIF whose
 	// operand is anything other than empty vector or [0x01] non-standard.
 	ScriptVerifyMinimalIf
 
@@ -427,7 +428,7 @@ func (vm *Engine) CheckErrorCondition(finalScript bool) error {
 			dis1, _ := vm.DisasmScript(1)
 			return fmt.Sprintf("scripts failed: script0: %s\n"+
 				"script1: %s", dis0, dis1)
-		}))
+		})())
 		return scriptError(ErrEvalFalse,
 			"false stack entry at end of script execution")
 	}
@@ -537,7 +538,7 @@ func (vm *Engine) Execute() (err error) {
 				return fmt.Sprintf("stepping (%v)", err)
 			}
 			return fmt.Sprintf("stepping %v", dis)
-		}))
+		})())
 
 		done, err = vm.Step()
 		if err != nil {
@@ -555,7 +556,7 @@ func (vm *Engine) Execute() (err error) {
 			}
 
 			return dstr + astr
-		}))
+		})())
 	}
 
 	return vm.CheckErrorCondition(true)

@@ -201,8 +201,10 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		return script, class, addresses, nrequired, nil
 	case MultiSigTy:
-		script, _ := signMultiSig(tx, idx, subScript, hashType,
-			addresses, nrequired, kdb)
+		script, _ := signMultiSig(tx, idx, subScript, hashType, addresses, nrequired, kdb)
+		return script, class, addresses, nrequired, nil
+	case MultiSigLockTy:
+		script, _ := signMultiSig(tx, idx, subScript, hashType, addresses, nrequired, kdb)
 		return script, class, addresses, nrequired, nil
 	case EADAddress:
 		// look up key for address
@@ -275,9 +277,8 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		builder.AddData(script)
 		finalScript, _ := builder.Script()
 		return finalScript
-	case MultiSigTy:
-		return mergeMultiSig(tx, idx, addresses, nRequired, pkScript,
-			sigScript, prevScript)
+	case MultiSigTy, MultiSigLockTy:
+		return mergeMultiSig(tx, idx, addresses, nRequired, pkScript, sigScript, prevScript)
 
 	// It doesn't actually make sense to merge anything other than multiig
 	// and scripthash (because it could contain multisig). Everything else
@@ -469,10 +470,17 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		sigScript, _ = builder.Script()
 		// TODO keep a copy of the script for merging.
+		asm, _ := DisasmString(sigScript)
+		println("SIG_SCRIPT", asm)
+		println()
 	}
 
 	// Merge scripts. with any previous data, if any.
 	mergedScript := mergeScripts(chainParams, tx, idx, pkScript, class,
 		addresses, nrequired, sigScript, previousScript)
+
+	asm, _ := DisasmString(mergedScript)
+	println("MERGED", asm)
+	println()
 	return mergedScript, nil
 }

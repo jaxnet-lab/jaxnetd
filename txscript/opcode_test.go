@@ -212,3 +212,30 @@ func TestOpcodeDisasm(t *testing.T) {
 		}
 	}
 }
+
+func Test_verifyLockTime(t *testing.T) {
+	tests := []struct {
+		txLockTime int64
+		threshold  int64
+		lockTime   int64
+		wantErr    bool
+		errCode    ErrorCode
+	}{
+		{txLockTime: 0, threshold: 0, lockTime: 0, errCode: 0},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			err := verifyLockTime(tt.txLockTime, tt.threshold, tt.lockTime)
+			if tt.wantErr && (err != nil) {
+				e, ok := err.(*Error)
+				if !ok || (e.ErrorCode != tt.errCode) {
+					t.Errorf("verifyLockTime() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyLockTime() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
