@@ -69,8 +69,9 @@ deploy:dev:
   <<: *deploy
   variables:
     REMOTE: $DEV_REMOTE
+  script:
+    - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
   only:
-    - master
     - dev
 
 deploy:stage:
@@ -78,9 +79,8 @@ deploy:stage:
   variables:
     REMOTE: $STAGE_REMOTE
   only:
+    - master
     - stage
-  when: manual
-
 
 release:
   stage: release

@@ -45,6 +45,7 @@ node:
     mining_addresses: [ ]
     auto_expand: false
     expansion_rule: 10
+    expansion_limit: 10
 
   rpc:
     listeners: [ ]

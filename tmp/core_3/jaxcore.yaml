@@ -29,6 +29,8 @@ node:
   beacon_chain:
     auto_expand: true
     expansion_rule: 10
+    expansion_limit: 10
+
     max_peers: 100
     mining_addresses:
       - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
