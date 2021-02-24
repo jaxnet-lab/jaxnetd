@@ -146,44 +146,6 @@ func isMultiSig(pops []parsedOpcode) bool {
 	return true
 }
 
-const (
-	// mslSequenceOpI is the parsedOpcode with a sequenceLock value for MultiSigLockTy
-	mslSequenceOpI = 1
-	// mslFirstMSigOpI is the index of the first parsedOpcode for MultiSigTy
-	mslFirstMSigOpI = 4
-	// mslTailLen is the len of parsedOpcode set associated with the "refund tail" of the script.
-	mslTailLen = 3
-)
-
-// isMultiSigLock returns true if the passed script is a MultiSigLockTy transaction, false
-// otherwise.
-func isMultiSigLock(pops []parsedOpcode) bool {
-	// The minimal valid MultiSigLockTy:
-	// OP_IF OP_1-OP_16 OP_CHECKSEQUENCEVERIFY OP_DROP
-	// OP_ELSE OP_1-OP_16 <pubkey> OP_1 OP_CHECKMULTISIG
-	// OP_ENDIF <pubkey> OP_CHECKSIG
-
-	l := len(pops)
-	if l < 12 {
-		return false
-	}
-	containsStatements := pops[0].opcode.value == OP_IF &&
-		(isSmallInt(pops[1].opcode) || (pops[1].opcode.value >= OP_DATA_1 && pops[1].opcode.value <= OP_DATA_4)) &&
-		pops[2].opcode.value == OP_CHECKSEQUENCEVERIFY &&
-		// pops[3].opcode.value == OP_DROP &&
-		pops[3].opcode.value == OP_ELSE &&
-		pops[l-3].opcode.value == OP_ENDIF &&
-		(len(pops[l-2].data) == 33 || len(pops[l-2].data) == 65) &&
-		pops[l-1].opcode.value == OP_CHECKSIG
-	if !containsStatements {
-		return false
-	}
-
-	multiSigEnd := l - mslTailLen
-	return isMultiSig(pops[mslFirstMSigOpI:multiSigEnd])
-
-}
-
 // isNullData returns true if the passed script is a null data transaction,
 // false otherwise.
 func isNullData(pops []parsedOpcode) bool {
@@ -435,7 +397,7 @@ func CalcMultiSigStats(script []byte, scriptClass ScriptClass) (int, int, error)
 	case MultiSigTy:
 		numSigsInd, numPubKeysOffset, minLen = 0, 2, 4
 	case MultiSigLockTy:
-		numSigsInd, numPubKeysOffset, minLen = mslFirstMSigOpI, mslTailLen+2, 12
+		numSigsInd, numPubKeysOffset, minLen = mslFirstMSigOpI, mslTailLen+2, 11
 	}
 
 	// A multi-signature script is of the pattern:
@@ -582,9 +544,14 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 }
 
 // MultiSigLockScript is a multi-signature lock script is of the form:
-// OP_IF <sequenceLock> OP_CHECKSEQUENCEVERIFY OP_DROP
-// OP_ELSE <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys> OP_CHECKMULTISIG
-// OP_ENDIF <refund_pubkey> OP_CHECKSIG
+//
+// OP_IF
+//     <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys>
+//     OP_CHECKMULTISIG
+// OP_ELSE
+//     <sequenceLock> OP_CHECKSEQUENCEVERIFY
+//     <refund_pubkey> OP_CHECKSIG
+// OP_ENDIF
 //
 // Can be spent in two ways:
 // 1. as a multi-signature script, if tx.timeLock less than <sequenceLock>.
@@ -609,12 +576,6 @@ func MultiSigLockScript(refundAddress *btcutil.AddressPubKey,
 
 	builder := NewScriptBuilder()
 	builder.AddOp(OP_IF)
-	// lock
-	builder.AddInt64(sequenceLock)
-	builder.AddOp(OP_CHECKSEQUENCEVERIFY)
-	// builder.AddOp(OP_DROP)
-	// ---
-	builder.AddOp(OP_ELSE)
 	// multisig statement
 	builder.AddInt64(int64(nrequired))
 	for _, key := range pubkeys {
@@ -623,13 +584,65 @@ func MultiSigLockScript(refundAddress *btcutil.AddressPubKey,
 	builder.AddInt64(int64(len(pubkeys)))
 	builder.AddOp(OP_CHECKMULTISIG)
 	// ---
-	builder.AddOp(OP_ENDIF)
+	builder.AddOp(OP_ELSE)
+	// lock
+	builder.AddInt64(sequenceLock)
+	builder.AddOp(OP_CHECKSEQUENCEVERIFY)
+	// builder.AddOp(OP_DROP)
+	// ---
 	// refund statement
 	builder.AddData(refundAddress.ScriptAddress())
 	builder.AddOp(OP_CHECKSIG)
 	// ---
+	builder.AddOp(OP_ENDIF)
 
 	return builder.Script()
+}
+
+const (
+	// mslSequenceOpI is the parsedOpcode with a sequenceLock value for MultiSigLockTy
+	mslSequenceOpI = 1
+	// mslFirstMSigOpI is the index of the first parsedOpcode for MultiSigTy
+	mslFirstMSigOpI = 1
+	// mslSequenceI is index of the time lock/sequence value
+	mslSequenceI = 5
+	// mslTailLen is the len of parsedOpcode set associated with the "refund tail" of the script.
+	mslTailLen = 6
+)
+
+// isMultiSigLock returns true if the passed script is a MultiSigLockTy transaction, false
+// otherwise.
+// The minimal valid MultiSigLockTy:
+// [ 0] OP_IF
+// [ 1]    OP_1
+// [..]    <pubkey>
+// [-8]    OP_1
+// [-7]    OP_CHECKMULTISIG
+// [-6] OP_ELSE
+// [-5]    <sequenceLock>
+// [-4]    OP_CHECKSEQUENCEVERIFY
+// [-3]    <refund_pubkey>
+// [-2]    OP_CHECKSIG
+// [-1] OP_ENDIF
+func isMultiSigLock(pops []parsedOpcode) bool {
+	l := len(pops)
+	if l < 11 {
+		return false
+	}
+	containsStatements := pops[0].opcode.value == OP_IF &&
+		pops[l-6].opcode.value == OP_ELSE &&
+		(isSmallInt(pops[l-5].opcode) || (pops[l-5].opcode.value >= OP_DATA_1 && pops[l-5].opcode.value <= OP_DATA_4)) &&
+		pops[l-4].opcode.value == OP_CHECKSEQUENCEVERIFY &&
+		(len(pops[l-3].data) == 33 || len(pops[l-3].data) == 65) &&
+		pops[l-2].opcode.value == OP_CHECKSIG &&
+		pops[l-1].opcode.value == OP_ENDIF
+	if !containsStatements {
+		return false
+	}
+
+	multiSigEnd := l - mslTailLen
+	return isMultiSig(pops[1:multiSigEnd])
+
 }
 
 const (
@@ -829,9 +842,9 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 
 	case MultiSigLockTy:
 		// A multi-signature lock script is of the form:
-		// OP_IF <sequenceLock> OP_CHECKSEQUENCEVERIFY OP_DROP
-		// OP_ELSE <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys> OP_CHECKMULTISIG
-		// OP_ENDIF <pubkey> OP_CHECKSIG
+		// OP_IF <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys> OP_CHECKMULTISIG
+		// OP_ELSE <sequenceLock> OP_CHECKSEQUENCEVERIFY <pubkey> OP_CHECKSIG
+		// OP_ENDIF
 		//
 		// In case of MultiSig activation the number of required signatures is the 5th item
 		// on the stack and the number of public keys is the 5th to last
