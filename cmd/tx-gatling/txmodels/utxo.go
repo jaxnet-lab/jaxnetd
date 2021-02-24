@@ -255,7 +255,7 @@ func (rows UTXORows) Swap(i, j int) { rows[i], rows[j] = rows[j], rows[i] }
 func (rows UTXORows) GetSum() int64 {
 	var sum int64
 	for _, txOut := range rows {
-		if txOut.ScriptType == txscript.EADAddress.String() {
+		if txOut.ScriptType == txscript.EADAddress.String() || txOut.Used {
 			continue
 		}
 		sum += txOut.Value
