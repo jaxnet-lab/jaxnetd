@@ -227,16 +227,14 @@ type UTXO struct {
 
 func (utxo UTXO) ToShort() ShortUTXO {
 	return ShortUTXO{
-		Value:      utxo.Value,
-		PKScript:   utxo.PKScript,
-		ScriptType: utxo.ScriptType,
+		Value:    utxo.Value,
+		PKScript: utxo.PKScript,
 	}
 }
 
 type ShortUTXO struct {
 	Value        int64  `json:"value" csv:"value"`
 	PKScript     string `json:"pk_script" csv:"pk_script"`
-	ScriptType   string `json:"script_type" csv:"script_type"`
 	RedeemScript string `json:"redeem_script" csv:"redeem_script" `
 }
 

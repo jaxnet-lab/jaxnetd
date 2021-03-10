@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -4122,9 +4123,9 @@ func TestRemoveOpcodeByData(t *testing.T) {
 		},
 		{
 			name:   "invalid opcode ",
-			before: []byte{OP_UNKNOWN187},
+			before: []byte{OP_UNKNOWN188},
 			remove: []byte{1, 2, 3, 4},
-			after:  []byte{OP_UNKNOWN187},
+			after:  []byte{OP_UNKNOWN188},
 		},
 		{
 			name:   "invalid length (instruction)",
@@ -4311,5 +4312,34 @@ func TestIsUnspendable(t *testing.T) {
 				i, res, test.expected)
 			continue
 		}
+	}
+}
+
+func TestCheckIsSignedByPubKey(t *testing.T) {
+	type args struct {
+		tx     *wire.MsgTx
+		idx    int
+		pubKey *btcec.PublicKey
+		script []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := CheckIsSignedByPubKey(tt.args.tx, tt.args.idx, tt.args.script, tt.args.pubKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CheckIsSignedByPubKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("CheckIsSignedByPubKey() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

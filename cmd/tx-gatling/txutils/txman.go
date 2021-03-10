@@ -93,7 +93,17 @@ func (client *TxMan) AddTimeLockAllowance(lockTime uint32) *TxMan {
 func (client *TxMan) ForShard(shardID uint32) *TxMan {
 	clone := *client
 	clone.cfg.ShardID = shardID
-	clone.rpc = clone.rpc.SetShard(shardID)
+
+	clone.rpc, _ = rpcclient.New(&rpcclient.ConnConfig{
+		Params:       clone.cfg.Net,
+		Host:         clone.cfg.RPC.Host,
+		User:         clone.cfg.RPC.User,
+		Pass:         clone.cfg.RPC.Pass,
+		ShardID:      shardID,
+		HTTPPostMode: true,
+		DisableTLS:   true,
+	}, nil)
+
 	return &clone
 }
 
@@ -544,9 +554,8 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 
 		value, _ := btcutil.NewAmount(txOut.Value)
 		utxo := txmodels.ShortUTXO{
-			Value:      int64(value),
-			PKScript:   txOut.ScriptPubKey.Hex,
-			ScriptType: txOut.ScriptPubKey.Type,
+			Value:    int64(value),
+			PKScript: txOut.ScriptPubKey.Hex,
 		}
 
 		for _, address := range txOut.ScriptPubKey.Addresses {
@@ -613,9 +622,8 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		value, _ := btcutil.NewAmount(out.Value)
 
 		utxo := txmodels.ShortUTXO{
-			Value:      int64(value),
-			PKScript:   out.ScriptPubKey.Hex,
-			ScriptType: out.ScriptPubKey.Type,
+			Value:    int64(value),
+			PKScript: out.ScriptPubKey.Hex,
 		}
 
 		for _, address := range out.ScriptPubKey.Addresses {

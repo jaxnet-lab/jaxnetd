@@ -9,9 +9,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
+
+	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
@@ -582,6 +584,41 @@ func shallowCopyTx(tx *wire.MsgTx) wire.MsgTx {
 		txCopy.TxOut[i] = &txOuts[i]
 	}
 	return txCopy
+}
+
+// CheckIsSignedByPubKey validates that transaction is already signed by public key or not.
+func CheckIsSignedByPubKey(tx *wire.MsgTx, idx int, script []byte, pubKey *btcec.PublicKey) (bool, error) {
+	input := tx.TxIn[idx]
+
+	parsedSignatureScript, err := parseScript(input.SignatureScript)
+	if err != nil {
+		return false, fmt.Errorf("cannot parse output script: %v", err)
+	}
+
+	sigHash, err := CalcSignatureHash(script, SigHashAll, tx, idx)
+	if err != nil {
+		return false, fmt.Errorf("cannot calc signature hash: %v", err)
+	}
+
+	for _, p := range parsedSignatureScript {
+		var parsedSig *btcec.Signature
+
+		parsedSig, err = btcec.ParseDERSignature(p.data, btcec.S256())
+		if err == nil {
+			if parsedSig.Verify(sigHash, pubKey) {
+				return true, nil
+			}
+		}
+
+		parsedSig, err = btcec.ParseSignature(p.data, btcec.S256())
+		if err == nil {
+			if parsedSig.Verify(sigHash, pubKey) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // CalcSignatureHash will, given a script and hash type for the current script
