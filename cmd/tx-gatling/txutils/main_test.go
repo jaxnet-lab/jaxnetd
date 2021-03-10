@@ -848,12 +848,18 @@ func prettyPrint(val interface{}) {
 func TestCheckIsSignedByPubKey(t *testing.T) {
 	netName := chaincfg.NetName("fastnet")
 	shardID := uint32(0)
-	alice, _ := GenerateKey(netName.Params())
-	bob, _ := GenerateKey(netName.Params())
 
-	multisig, _ := MakeMultiSigScript([]string{alice.AddressPubKey.String(), bob.AddressPubKey.String()}, 2, netName.Params())
+	alice, err := GenerateKey(netName.Params())
+	assert.NoError(t, err)
 
-	script, _ := txmodels.GetPayToAddressScript(multisig.Address, netName.Params())
+	bob, err := GenerateKey(netName.Params())
+	assert.NoError(t, err)
+
+	multisig, err := MakeMultiSigScript([]string{alice.AddressPubKey.String(), bob.AddressPubKey.String()}, 2, netName.Params())
+	assert.NoError(t, err)
+
+	script, err := txmodels.GetPayToAddressScript(multisig.Address, netName.Params())
+	assert.NoError(t, err)
 
 	tx, err := NewTxBuilder("fastnet").
 		SetSenders(multisig.Address).
@@ -878,24 +884,27 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, hasSignature)
 
+	script, err = txmodels.GetPayToAddressScript(alice.Address.EncodeAddress(), netName.Params())
+	assert.NoError(t, err)
+
 	out := tx.TxOut[0]
 	tx, err = NewTxBuilder("fastnet").
 		SetSenders(alice.Address.EncodeAddress()).
 		SetDestinationWithUTXO(bob.Address.EncodeAddress(), 10, txmodels.UTXORows{{
 			ShardID:  shardID,
-			Address:  multisig.Address,
+			Address:  alice.Address.EncodeAddress(),
 			TxHash:   tx.TxHash().String(),
 			Value:    out.Value,
-			PKScript: hex.EncodeToString(out.PkScript),
+			PKScript: hex.EncodeToString(script),
 		}}).
 		IntoTx(func(shardID uint32) (int64, error) { return 0, nil }, alice)
 	assert.NoError(t, err)
 
-	// hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, multisig.RawRedeemScript, alice.AddressPubKey.PubKey())
-	// assert.NoError(t, err)
-	// assert.True(t, hasSignature)
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, script, alice.AddressPubKey.PubKey())
+	assert.NoError(t, err)
+	assert.True(t, hasSignature)
 
-	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, multisig.RawRedeemScript, bob.AddressPubKey.PubKey())
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, script, bob.AddressPubKey.PubKey())
 	assert.NoError(t, err)
 	assert.False(t, hasSignature)
 }
