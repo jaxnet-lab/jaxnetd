@@ -635,8 +635,8 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 
 		ips := make([]btcjson.EADAddress, 0, len(eadAddresses.IPs))
 		for _, p := range eadAddresses.IPs {
-			_, hasOneOf := p.HasShard(opts.Shards...)
-			if len(opts.Shards) > 0 && !hasOneOf {
+			allPresent, _ := p.HasShard(opts.Shards...)
+			if len(opts.Shards) > 0 && !allPresent {
 				continue
 			}
 

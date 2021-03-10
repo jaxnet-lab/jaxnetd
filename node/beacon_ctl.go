@@ -44,6 +44,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 	params := beaconCtl.cfg.Node.ChainParams()
 	params.AutoExpand = params.Net != types.MainNet && beaconCtl.cfg.Node.BeaconChain.AutoExpand
 	params.ExpansionRule = beaconCtl.cfg.Node.BeaconChain.ExpansionRule
+	params.ExpansionLimit = beaconCtl.cfg.Node.BeaconChain.ExpansionLimit
 
 	chain := beacon.Chain(params)
 
