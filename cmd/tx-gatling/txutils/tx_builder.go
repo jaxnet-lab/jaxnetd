@@ -54,7 +54,7 @@ type txBuilder struct {
 	utxoProvider     NewUTXOProvider
 	senderAddresses  []string
 	changeAddresses  []string
-	destinations     map[destinationKey]txmodels.UTXORows
+	destinations     []destinationKey
 	destinationsUtxo txmodels.UTXORows
 
 	fee    int64
@@ -72,7 +72,7 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 		redeemScripts:   map[string]scriptData{},
 		senderAddresses: []string{},
 		changeAddresses: []string{},
-		destinations:    map[destinationKey]txmodels.UTXORows{},
+		destinations:    []destinationKey{},
 		feeByShard:      map[uint32]int64{},
 		changeByShard:   map[uint32]int64{},
 	}
@@ -138,33 +138,36 @@ func (t *txBuilder) AddRedeemScripts(redeemScripts ...string) TxBuilder {
 }
 
 func (t *txBuilder) SetDestination(destination string, amount int64) TxBuilder {
-	t.destinations[destinationKey{
+	t.destinations = append(t.destinations, destinationKey{
 		amount:      amount,
 		shardID:     t.defaultShardID,
 		destination: destination,
-	}] = txmodels.UTXORows{}
+		utxo:        txmodels.UTXORows{},
+	})
 
 	t.feeByShard[t.defaultShardID] = 0
 	return t
 }
 
 func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shardID uint32) TxBuilder {
-	t.destinations[destinationKey{
+	t.destinations = append(t.destinations, destinationKey{
 		amount:      amount,
 		shardID:     shardID,
 		destination: destination,
-	}] = txmodels.UTXORows{}
+		utxo:        txmodels.UTXORows{},
+	})
 
 	t.feeByShard[shardID] = 0
 	return t
 }
 
 func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
-	t.destinations[destinationKey{
+	t.destinations = append(t.destinations, destinationKey{
 		amount:      amount,
 		shardID:     t.defaultShardID,
 		destination: destination,
-	}] = utxo
+		utxo:        utxo,
+	})
 
 	for _, u := range utxo {
 		t.feeByShard[u.ShardID] = 0
@@ -217,20 +220,20 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 	ind := 0
 	outIndexes := map[string]int{}
 
-	for key, utxoRows := range t.destinations {
-		utxo := utxoRows[0]
+	for _, dest := range t.destinations {
+		utxo := dest.utxo[0]
 		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not decode TxHash")
 		}
 
 		draft := txmodels.DraftTx{
-			Amount:     utxo.Value - t.feeByShard[key.shardID],
-			NetworkFee: t.feeByShard[key.shardID],
+			Amount:     utxo.Value - t.feeByShard[dest.shardID],
+			NetworkFee: t.feeByShard[dest.shardID],
 			UTXO:       []txmodels.UTXO{utxo},
 		}
 
-		err = draft.SetPayToAddress(key.destination, t.net.Params())
+		err = draft.SetPayToAddress(dest.destination, t.net.Params())
 		if err != nil {
 			return nil, errors.Wrap(err, "pay to address not set")
 		}
@@ -244,13 +247,13 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 
 		msgTx.AddTxIn(txIn)
 
-		outIndexes[key.destination] = ind
+		outIndexes[dest.destination] = ind
 		ind += 1
 	}
 
-	for key, utxoRows := range t.destinations {
-		txInIndex := outIndexes[key.destination]
-		utxo := utxoRows[0].ToShort()
+	for _, dest := range t.destinations {
+		txInIndex := outIndexes[dest.destination]
+		utxo := dest.utxo[0].ToShort()
 
 		_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
 		if err != nil {
@@ -267,7 +270,7 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 	var amount int64
 	totalSum := t.destinationsUtxo.GetSum()
 
-	for key := range t.destinations {
+	for _, key := range t.destinations {
 		receiverScript, err := txmodels.GetPayToAddressScript(key.destination, t.net.Params())
 		if err != nil {
 			return nil, err
@@ -407,8 +410,8 @@ func (t *txBuilder) prepareUTXOs() error {
 	var hasCoins, needed int64
 	var shardID *uint32
 
-	for key, utxoRows := range t.destinations {
-		utxo := utxoRows
+	for _, key := range t.destinations {
+		utxo := key.utxo
 		if shardID != nil && *shardID != key.shardID {
 			return errors.Errorf("destinations are not in the same shard (%d != %d)", *shardID, key.shardID)
 		}
@@ -451,6 +454,7 @@ type destinationKey struct {
 	amount      int64
 	shardID     uint32
 	destination string
+	utxo        txmodels.UTXORows
 }
 
 type FeeProviderFunc func(shardID uint32) (int64, error)
