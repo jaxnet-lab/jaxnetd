@@ -55,13 +55,13 @@ type ServerCore struct {
 	logger                 zerolog.Logger
 }
 
-func NewRPCCore(config *Config, logger zerolog.Logger) *ServerCore {
+func NewRPCCore(config *Config) *ServerCore {
 	rpc := &ServerCore{
 		cfg:                    config,
 		statusLines:            make(map[int]string),
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
-		logger:                 logger,
+		logger:                 log,
 
 		started:      0,
 		shutdown:     0,

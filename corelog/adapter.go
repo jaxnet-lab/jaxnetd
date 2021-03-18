@@ -80,7 +80,7 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	}
 
 	mw := io.MultiWriter(writers...)
-	zerolog.SetGlobalLevel(DefaultLevel)
+	// zerolog.SetGlobalLevel(DefaultLevel)
 
 	logger := zerolog.New(mw).
 		Level(logLevel).

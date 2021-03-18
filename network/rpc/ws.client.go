@@ -141,7 +141,7 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
-		c.manager.logger.Debug().Err(err).Msg("read message")
+		c.manager.logger.Debug().Err(err).Msg(fmt.Sprintf("read message <%s>", string(msg)))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
@@ -209,7 +209,7 @@ out:
 			c.SendMessage(reply, nil)
 			continue
 		}
-		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s", cmd.method, c.addr))
+		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
 
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
