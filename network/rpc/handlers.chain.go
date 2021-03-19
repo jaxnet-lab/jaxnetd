@@ -35,7 +35,7 @@ type CommonChainRPC struct {
 	// provides the RPC Server with a means to do things such as add,
 	// remove, connect, disconnect, and query peers as well as other
 	// connection-related data and tasks.
-	connMgr netsync.P2PConnManager
+	connMgr       netsync.P2PConnManager
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
@@ -56,6 +56,7 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P
 
 	rpc.gbtWorkState = chainProvider.GbtWorkState()
 	rpc.helpCache = newHelpCacher(rpc)
+	rpc.chainProvider.BlockChain().Subscribe(rpc.handleBlockchainNotification)
 	return rpc
 }
 
