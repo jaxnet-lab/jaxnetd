@@ -465,6 +465,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 	var value int64
 	var pkScript []byte
 	var isCoinbase bool
+	var isSpent bool
 	includeMempool := true
 	if c.IncludeMempool != nil {
 		includeMempool = *c.IncludeMempool
@@ -510,7 +511,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 		// transaction already in the main BlockChain.  Mined transactions
 		// that are spent by a mempool transaction are not affected by
 		// this.
-		if entry == nil || entry.IsSpent() {
+		if entry == nil {
 			return nil, nil
 		}
 
@@ -520,6 +521,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 		value = entry.Amount()
 		pkScript = entry.PkScript()
 		isCoinbase = entry.IsCoinBase()
+		isSpent = entry.IsSpent()
 	}
 
 	// Disassemble script into single line printable format.
@@ -549,6 +551,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 			Addresses: addresses,
 		},
 		Coinbase: isCoinbase,
+		IsSpent:  isSpent,
 	}
 	return txOutReply, nil
 }

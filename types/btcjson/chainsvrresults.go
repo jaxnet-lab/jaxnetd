@@ -523,6 +523,7 @@ type GetTxOutResult struct {
 	Value         float64            `json:"value"`
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
+	IsSpent       bool               `json:"isSpent"`
 }
 
 // GetTxOutResult models the data from the gettxout command.
