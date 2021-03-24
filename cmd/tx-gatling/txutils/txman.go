@@ -253,6 +253,8 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 	return index, maxHeight, nil
 }
 
+// NetworkFee returns SatoshiPerKilobyte.
+// To get size of the tx in bytes use mempool.GetTxVirtualSize(tx).
 func (client *TxMan) NetworkFee() (int64, error) {
 	fee, err := client.rpc.ForShard(client.cfg.ShardID).
 		EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
@@ -364,12 +366,13 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}, nil
 }
 
+// DEPRECATED
 // NewSwapTx creates new transaction with wire.TxMarkShardSwap marker:
 // 	- data is a map of <Destination Address> => <Source txmodels.UTXO>.
 // 	- redeemScripts is optional, it allows to add proper signatures if source UTXO is a multisig address.
 //
 // SwapTx is a special tx for atomic swap between chains.
-// It can contain only TWO inputs and TWO outputs.
+// It can contain only TWO or FOUR inputs and TWO or FOUR  outputs.
 // wire.TxIn and wire.TxOut are strictly associated with each other by index.
 // One pair corresponds to the one chain. The second is for another.
 // | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
@@ -380,6 +383,9 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 	redeemScripts ...string) (*txmodels.SwapTransaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
+	}
+	if len(spendingMap) != 2 && len(spendingMap) != 4 {
+		return nil, errors.New("invalid size of spending map")
 	}
 
 	msgTx := wire.NewMsgTx(wire.TxVerRegular)
@@ -413,10 +419,12 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
+
 		// if client.lockTime == 0 {
 		// 	client.txVersion = wire.TxVerTimeLockAllowance
 		// 	client.lockTime = 80
 		// }
+
 		if client.lockTime != 0 {
 			msgTx.Version = client.txVersion
 			msgTx.SetMark(wire.TxMarkShardSwap)

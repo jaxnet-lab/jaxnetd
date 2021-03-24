@@ -46,23 +46,24 @@ type txBuilder struct {
 	err error
 	net chaincfg.NetName
 
-	txVersion        int32
-	lockTime         uint32
-	swapTx           bool
-	defaultShardID   uint32
-	redeemScripts    map[string]scriptData
-	utxoProvider     NewUTXOProvider
-	senderAddresses  []string
-	changeAddresses  []string
-	destinations     []destinationKey
-	destinationsUtxo txmodels.UTXORows
+	txVersion       int32
+	lockTime        uint32
+	swapTx          bool
+	defaultShardID  uint32
+	redeemScripts   map[string]scriptData
+	utxoProvider    NewUTXOProvider
+	senderAddresses []string
+	changeAddresses []string
+	destinations    []destinationKey
 
-	fee    int64
-	change int64
+	collectedOpts map[uint32]extraOpts
+}
 
-	feeByShard    map[uint32]int64 // this will be used only for wire.TxMarkShardSwap
-	changeByShard map[uint32]int64 // this will be used only for wire.TxMarkShardSwap
-
+type extraOpts struct {
+	fee      int64
+	change   int64
+	needed   int64
+	utxoRows txmodels.UTXORows
 }
 
 func NewTxBuilder(net chaincfg.NetName) TxBuilder {
@@ -73,13 +74,13 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 		senderAddresses: []string{},
 		changeAddresses: []string{},
 		destinations:    []destinationKey{},
-		feeByShard:      map[uint32]int64{},
-		changeByShard:   map[uint32]int64{},
+		collectedOpts:   map[uint32]extraOpts{},
 	}
-
 }
+
 func (t *txBuilder) SetShardID(shardID uint32) TxBuilder {
 	t.defaultShardID = shardID
+	t.collectedOpts[shardID] = extraOpts{fee: 0, change: 0, utxoRows: []txmodels.UTXO{}}
 	return t
 }
 
@@ -145,7 +146,9 @@ func (t *txBuilder) SetDestination(destination string, amount int64) TxBuilder {
 		utxo:        txmodels.UTXORows{},
 	})
 
-	t.feeByShard[t.defaultShardID] = 0
+	opts := t.collectedOpts[t.defaultShardID]
+	opts.fee = 0
+	t.collectedOpts[t.defaultShardID] = opts
 	return t
 }
 
@@ -157,7 +160,9 @@ func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shar
 		utxo:        txmodels.UTXORows{},
 	})
 
-	t.feeByShard[shardID] = 0
+	opts := t.collectedOpts[shardID]
+	opts.fee = 0
+	t.collectedOpts[t.defaultShardID] = opts
 	return t
 }
 
@@ -170,7 +175,9 @@ func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utx
 	})
 
 	for _, u := range utxo {
-		t.feeByShard[u.ShardID] = 0
+		opts := t.collectedOpts[u.ShardID]
+		opts.fee = 0
+		t.collectedOpts[t.defaultShardID] = opts
 		break
 	}
 
@@ -217,47 +224,51 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 	msgTx.SetMark(wire.TxMarkShardSwap)
 	msgTx.LockTime = t.lockTime
 
-	ind := 0
-	outIndexes := map[string]int{}
-
 	for _, dest := range t.destinations {
-		utxo := dest.utxo[0]
-		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
-		if err != nil {
-			return nil, errors.Wrap(err, "can not decode TxHash")
+		opts := t.collectedOpts[dest.shardID]
+
+		for i := range opts.utxoRows {
+			utxo := opts.utxoRows[i]
+			utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
+			if err != nil {
+				return nil, errors.Wrap(err, "can not decode TxHash")
+			}
+
+			outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
+			txIn := wire.NewTxIn(outPoint, nil, nil)
+			if t.lockTime != 0 {
+				txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
+			}
+
+			msgTx.AddTxIn(txIn)
 		}
 
-		draft := txmodels.DraftTx{
-			Amount:     utxo.Value - t.feeByShard[dest.shardID],
-			NetworkFee: t.feeByShard[dest.shardID],
-			UTXO:       []txmodels.UTXO{utxo},
-		}
+		draft := txmodels.DraftTx{Amount: dest.amount, NetworkFee: opts.fee}
 
-		err = draft.SetPayToAddress(dest.destination, t.net.Params())
+		err := draft.SetPayToAddress(dest.destination, t.net.Params())
 		if err != nil {
 			return nil, errors.Wrap(err, "pay to address not set")
 		}
+
 		msgTx.AddTxOut(wire.NewTxOut(draft.Amount, draft.ReceiverScript))
 
-		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
-		txIn := wire.NewTxIn(outPoint, nil, nil)
-		if t.lockTime != 0 {
-			txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
+		change := opts.utxoRows.GetSum() - dest.amount - opts.fee
+		if msgTx, err = t.addChangeOut(msgTx, change); err != nil {
+			return nil, err
 		}
-
-		msgTx.AddTxIn(txIn)
-
-		outIndexes[dest.destination] = ind
-		ind += 1
 	}
 
+	txInIndex := 0
 	for _, dest := range t.destinations {
-		txInIndex := outIndexes[dest.destination]
-		utxo := dest.utxo[0].ToShort()
+		opts := t.collectedOpts[dest.shardID]
 
-		_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to sing utxo")
+		for i := range opts.utxoRows {
+			utxo := opts.utxoRows[i].ToShort()
+			_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+			if err != nil {
+				return nil, errors.Wrap(err, "unable to sing utxo")
+			}
+			txInIndex += 1
 		}
 	}
 
@@ -265,10 +276,14 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 }
 
 func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
-	msgTx := wire.NewMsgTx(t.txVersion)
-
-	var amount int64
-	totalSum := t.destinationsUtxo.GetSum()
+	var (
+		err            error
+		amount         int64
+		msgTx          = wire.NewMsgTx(t.txVersion)
+		fee            = t.collectedOpts[t.defaultShardID].fee
+		additionalUTXO = t.collectedOpts[t.defaultShardID].utxoRows
+		totalSum       = additionalUTXO.GetSum()
+	)
 
 	for _, key := range t.destinations {
 		receiverScript, err := txmodels.GetPayToAddressScript(key.destination, t.net.Params())
@@ -279,7 +294,41 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		msgTx.AddTxOut(wire.NewTxOut(key.amount, receiverScript))
 	}
 
-	change := totalSum - amount - t.fee
+	change := totalSum - amount - fee
+	if msgTx, err = t.addChangeOut(msgTx, change); err != nil {
+		return nil, err
+	}
+
+	for txInIndex := range additionalUTXO {
+		utxo := additionalUTXO[txInIndex]
+		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "can not decode TxHash")
+		}
+
+		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
+		txIn := wire.NewTxIn(outPoint, nil, nil)
+		if t.lockTime != 0 {
+			txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
+		}
+		msgTx.AddTxIn(txIn)
+	}
+
+	for i := range additionalUTXO {
+		txInIndex := i
+		utxo := additionalUTXO[txInIndex].ToShort()
+
+		_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to sing utxo")
+		}
+
+	}
+
+	return msgTx, nil
+}
+
+func (t *txBuilder) addChangeOut(msgTx *wire.MsgTx, change int64) (*wire.MsgTx, error) {
 	if change > 0 && len(t.changeAddresses) == 0 {
 		return nil, errors.New("changeAddress not set")
 	}
@@ -295,34 +344,6 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 			msgTx.AddTxOut(wire.NewTxOut(chunk, changeRcvScript))
 		}
 	}
-
-	for i := range t.destinationsUtxo {
-		txInIndex := i
-		utxo := t.destinationsUtxo[txInIndex]
-		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
-		if err != nil {
-			return nil, errors.Wrap(err, "can not decode TxHash")
-		}
-
-		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
-		txIn := wire.NewTxIn(outPoint, nil, nil)
-		if t.lockTime != 0 {
-			txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
-		}
-		msgTx.AddTxIn(txIn)
-	}
-
-	for i := range t.destinationsUtxo {
-		txInIndex := i
-		utxo := t.destinationsUtxo[txInIndex].ToShort()
-
-		_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to sing utxo")
-		}
-
-	}
-
 	return msgTx, nil
 }
 
@@ -369,77 +390,66 @@ func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, in
 }
 
 func (t *txBuilder) setFees(getFee FeeProviderFunc) error {
-	if !t.swapTx {
-		t.fee, t.err = getFee(t.defaultShardID)
-		if t.err != nil {
-			return errors.Wrapf(t.err, "unable to get fee for shard(%d)", t.defaultShardID)
-		}
-		return nil
-	}
-
-	for shardID := range t.feeByShard {
-		if _, ok := t.feeByShard[shardID]; ok {
-			continue
-		}
-
+	for shardID := range t.collectedOpts {
 		fee, err := getFee(shardID)
 		if err != nil {
 			return errors.Wrapf(err, "unable to get fee for shard(%d)", shardID)
 		}
 
-		t.feeByShard[shardID] = fee
+		opts := t.collectedOpts[shardID]
+		opts.fee = fee
 	}
 
 	return nil
 }
 
 func (t *txBuilder) prepareUTXOs() error {
-	t.change = 0
-	t.changeByShard = map[uint32]int64{}
-
-	// todo: include fe properly
-	// amountByShard := map[uint32]int64{}
-	// for key := range t.destinations {
-	//
-	// }
-
-	if t.swapTx {
-		return nil
+	if len(t.destinations) == 0 {
+		return errors.New("destinations are not set")
 	}
 
-	var hasCoins, needed int64
-	var shardID *uint32
+	var (
+		shardID *uint32
+		shards  = map[uint32]struct{}{}
+	)
 
 	for _, key := range t.destinations {
 		utxo := key.utxo
-		if shardID != nil && *shardID != key.shardID {
+		if !t.swapTx && (shardID != nil && *shardID != key.shardID) {
 			return errors.Errorf("destinations are not in the same shard (%d != %d)", *shardID, key.shardID)
 		}
 
 		shardID = &key.shardID
 
-		hasCoins += utxo.GetSum()
-		needed += key.amount
-		t.destinationsUtxo = append(t.destinationsUtxo, utxo...)
-		// needed := t.feeByShard[key.shardID] + key.amount
+		opts := t.collectedOpts[key.shardID]
+		opts.needed += key.amount
+		opts.utxoRows = append(opts.utxoRows, utxo...)
+
+		t.collectedOpts[key.shardID] = opts
+		shards[key.shardID] = struct{}{}
 	}
 
-	if len(t.destinations) == 0 || shardID == nil {
-		return errors.New("destinations are not set")
+	if shardID != nil && t.defaultShardID != *shardID {
+		t.defaultShardID = *shardID
 	}
 
-	if hasCoins < needed {
-		rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, *shardID, t.senderAddresses...)
-		if err != nil {
-			return err
+	for shardID := range shards {
+		opts := t.collectedOpts[shardID]
+		hasCoins := opts.utxoRows.GetSum()
+		if hasCoins < opts.needed {
+			rows, err := t.utxoProvider.SelectForAmount(opts.needed-hasCoins, shardID, t.senderAddresses...)
+			if err != nil {
+				return err
+			}
+
+			opts.utxoRows = append(opts.utxoRows, rows...)
 		}
 
-		t.destinationsUtxo = append(t.destinationsUtxo, rows...)
-	}
+		change := opts.utxoRows.GetSum() - opts.needed
+		opts.change += change
 
-	change := t.destinationsUtxo.GetSum() - needed
-	t.change += change
-	t.changeByShard[*shardID] += change
+		t.collectedOpts[shardID] = opts
+	}
 
 	return nil
 }
