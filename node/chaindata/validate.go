@@ -246,9 +246,11 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		return NewRuleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
-	if msgTx.SwapTx() && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
-		return NewRuleError(ErrInvalidShardSwapInOuts,
-			"ShardSwap tx with more than 2 inputs and outputs not allowed")
+	if msgTx.SwapTx() {
+		err := ValidateSwapTxStructure(msgTx, -1)
+		if err != nil {
+			return err
+		}
 	}
 
 	// A transaction must not exceed the maximum allowed block payload when
@@ -324,9 +326,8 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		// transaction must not be null. Null allowed only for ShardsSwapTxs.
 		for _, txIn := range msgTx.TxIn {
 			if isNullOutpoint(&txIn.PreviousOutPoint) && !msgTx.SwapTx() {
-				return NewRuleError(ErrBadTxInput, "transaction "+
-					"input refers to previous output that "+
-					"is null")
+				return NewRuleError(ErrBadTxInput,
+					"transaction input refers to previous output that is null")
 			}
 		}
 	}
@@ -424,13 +425,14 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+		if utxo == nil && thisIsSwapTx {
 			missingCount += 1
 			continue
 		}
 
-		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
-			str := fmt.Sprintf("output %v referenced from transaction %s:%d either does not exist or has already been spent",
+		if utxo == nil || utxo.IsSpent() {
+			str := fmt.Sprintf(
+				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
@@ -458,6 +460,13 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 				"%v contains too many signature operations - "+
 				"overflow", txIn.PreviousOutPoint)
 			return 0, NewRuleError(ErrTooManySigOps, str)
+		}
+	}
+
+	if thisIsSwapTx {
+		err := ValidateSwapTxStructure(msgTx, missingCount)
+		if err != nil {
+			return 0, err
 		}
 	}
 
@@ -694,28 +703,27 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		return 0, nil
 	}
 
-	txHash := tx.Hash()
-	var totalSatoshiIn int64
+	var (
+		totalSatoshiIn int64
+		txHash         = tx.Hash()
+		missedInputs   = map[int]struct{}{}
+		thisIsSwapTx   = tx.MsgTx().SwapTx()
+	)
 
-	missingCount := 0
-	missedInputs := map[int]struct{}{}
-	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil && thisIsSwapTx && missingCount < 2 {
-			missingCount += 1
+		if utxo == nil && thisIsSwapTx {
 			missedInputs[txInIndex] = struct{}{}
 			continue
 		}
 
-		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+		if utxo == nil || utxo.IsSpent() {
 			str := fmt.Sprintf(
 				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
-
 		}
 
 		// Ensure the transaction is not spending coins which have not
@@ -732,6 +740,12 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 					originHeight, txHeight,
 					coinbaseMaturity)
 				return 0, NewRuleError(ErrImmatureSpend, str)
+			}
+		}
+		if thisIsSwapTx {
+			err := ValidateSwapTxStructure(tx.MsgTx(), len(missedInputs))
+			if err != nil {
+				return 0, err
 			}
 		}
 
@@ -796,4 +810,42 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 	// the inputs are >= the outputs.
 	txFeeInSatoshi := totalSatoshiIn - totalSatoshiOut
 	return txFeeInSatoshi, nil
+}
+
+// ValidateSwapTxStructure validates formats of the cross shard swap tx.
+// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
+// TxIn and TxOut are strictly associated with each other by index.
+// One pair corresponds to the current chain. The second is for another, unknown chain.
+//
+// | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
+// | - | ---------------- | --- | ----------------- | - |
+// | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
+// | 1 | TxIn_1 ∈ Shard_X | --> | TxOut_1 ∈ Shard_X | 1 |
+// | 2 | TxIn_2 ∈ Shard_Y | --> | TxOut_2 ∈ Shard_Y | 2 |
+// | 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
+//
+// The order is not deterministic.
+func ValidateSwapTxStructure(tx *wire.MsgTx, missedUTXO int) error {
+	inLen := len(tx.TxIn)
+	outLen := len(tx.TxOut)
+	if inLen != outLen || (inLen != 2 && inLen != 4) {
+		str := fmt.Sprintf("cross shard swap tx has invalid format: [%d]TxIn, [%d]TxOut",
+			inLen, outLen)
+		return NewRuleError(ErrInvalidShardSwapInOuts, str)
+	}
+
+	// this is a special case for callers
+	// who have no information about missing UTXOs within their context.
+	if missedUTXO == -1 {
+		return nil
+	}
+
+	if missedUTXO > inLen/2 {
+		str := fmt.Sprintf(
+			"cross shard swap tx contains too many unknown inputs: [%d]TxIn, [%d]TxOut, [%d] missed",
+			inLen, outLen, missedUTXO)
+		return NewRuleError(ErrInvalidShardSwapInOuts, str)
+	}
+	return nil
 }
