@@ -139,7 +139,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 	// if err != nil {
 	// 	return "", errors.Wrap(err, "unable to save UTXO index")
 	// }
-	fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
+	// fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
 	return tx.TxHash, nil
 }
 
@@ -160,7 +160,7 @@ func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index
 			}
 
 			if firstOut != nil && firstOut.Confirmations > 2 {
-				fmt.Printf("tx %s mined into block @ %d shard\n", txHash, shardID)
+				fmt.Printf("...tx %s mined in block @ %d shard\n", txHash, shardID)
 				timer.Stop()
 				return nil
 			}

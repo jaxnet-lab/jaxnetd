@@ -167,19 +167,22 @@ func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shar
 }
 
 func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utxo txmodels.UTXORows) TxBuilder {
-	t.destinations = append(t.destinations, destinationKey{
-		amount:      amount,
-		shardID:     t.defaultShardID,
-		destination: destination,
-		utxo:        utxo,
-	})
-
+	shardID := t.defaultShardID
 	for _, u := range utxo {
 		opts := t.collectedOpts[u.ShardID]
 		opts.fee = 0
-		t.collectedOpts[t.defaultShardID] = opts
+		t.collectedOpts[u.ShardID] = opts
+
+		shardID = u.ShardID
 		break
 	}
+
+	t.destinations = append(t.destinations, destinationKey{
+		amount:      amount,
+		shardID:     shardID,
+		destination: destination,
+		utxo:        utxo,
+	})
 
 	return t
 }

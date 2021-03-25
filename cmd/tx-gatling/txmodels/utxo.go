@@ -195,17 +195,27 @@ func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
 			}
 		}
 
+		res = append(res, UTXO{
+			ShardID:    index.utxo[i].ShardID,
+			Address:    index.utxo[i].Address,
+			Height:     index.utxo[i].Height,
+			TxHash:     index.utxo[i].TxHash,
+			OutIndex:   index.utxo[i].OutIndex,
+			Value:      index.utxo[i].Value,
+			Used:       index.utxo[i].Used,
+			PKScript:   index.utxo[i].PKScript,
+			ScriptType: index.utxo[i].ScriptType,
+		})
+
 		change -= index.utxo[i].Value
 		index.utxo[i].Used = true
 		lastUsed = i
-		res = append(res, index.utxo[i])
-
 		if change <= 0 {
 			break
 		}
 	}
-	index.lastUsed[shardID] = lastUsed
 
+	index.lastUsed[shardID] = lastUsed
 	return res, 0
 }
 
@@ -265,17 +275,27 @@ func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXORows, i
 	var res UTXORows
 	change := amount
 
-	for i, utxo := range rows {
-		if utxo.ScriptType == txscript.EADAddress.String() {
+	for i := range rows {
+		if rows[i].ScriptType == txscript.EADAddress.String() {
 			continue
 		}
-		if utxo.Used || utxo.ShardID != shardID {
+		if rows[i].Used || rows[i].ShardID != shardID {
 			continue
 		}
 
-		change -= utxo.Value
+		change -= rows[i].Value
 		rows[i].Used = true
-		res = append(res, rows[i])
+		res = append(res, UTXO{
+			ShardID:    rows[i].ShardID,
+			Address:    rows[i].Address,
+			Height:     rows[i].Height,
+			TxHash:     rows[i].TxHash,
+			OutIndex:   rows[i].OutIndex,
+			Value:      rows[i].Value,
+			Used:       rows[i].Used,
+			PKScript:   rows[i].PKScript,
+			ScriptType: rows[i].ScriptType,
+		})
 		if change <= 0 {
 			break
 		}
