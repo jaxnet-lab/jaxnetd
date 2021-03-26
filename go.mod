@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/aead/siphash v1.0.1
+	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/btcsuite/goleveldb v1.0.0

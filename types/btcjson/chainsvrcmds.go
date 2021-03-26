@@ -926,6 +926,30 @@ func NewManageShardsCmd(shardID uint32, action string, initialHeight *int32) *Ma
 
 type ListShardsCmd struct{}
 
+type GetLastSerialBlockNumberCmd struct {
+	ShardID uint32
+}
+
+func NewGetLastSerialBlockNumberCmd(shardID uint32) *GetLastSerialBlockNumberCmd {
+	return &GetLastSerialBlockNumberCmd{
+		ShardID: shardID,
+	}
+}
+
+type GetBlockBySerialNumberCmd struct {
+	ShardID      uint32
+	SerialNumber int
+	Verbosity    *int `jsonrpcdefault:"1"`
+}
+
+func NewGetBlockBySerialNumberCmd(shardID uint32, serialNumber int, verbosity *int) *GetBlockBySerialNumberCmd {
+	return &GetBlockBySerialNumberCmd{
+		ShardID:      shardID,
+		SerialNumber: serialNumber,
+		Verbosity:    verbosity,
+	}
+}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -965,6 +989,9 @@ func init() {
 	MustRegisterCmd("chain", "getCFilter", (*GetCFilterCmd)(nil), flags)
 	MustRegisterCmd("chain", "getCFilterHeader", (*GetCFilterHeaderCmd)(nil), flags)
 	MustRegisterCmd("chain", "submitBlock", (*SubmitBlockCmd)(nil), flags)
+
+	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
 
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)

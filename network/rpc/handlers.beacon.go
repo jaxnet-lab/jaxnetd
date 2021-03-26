@@ -48,6 +48,7 @@ func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
 		btcjson.ScopedMethod("beacon", "listEADAddresses"):       server.handleEADAddresses,
 		// btcjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// btcjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
+		btcjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
 	}
 }
 
@@ -540,4 +541,122 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	}
 
 	return result, nil
+}
+
+// handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
+func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+
+	c := cmd.(*btcjson.GetBlockBySerialNumberCmd)
+	serialNumber := c.SerialNumber
+
+	var (
+		hash     *chainhash.Hash
+		blkBytes []byte
+		prevID   int
+	)
+	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		var err error
+		hash, prevID, err = chaindata.DBFetchBlockHashPrevBySerialID(dbTx, serialNumber)
+		if err != nil {
+			return err
+		}
+
+		blkBytes, err = dbTx.FetchBlock(hash)
+		return err
+	})
+
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCBlockNotFound,
+			Message: "Block not found, err: "+ err.Error(),
+		}
+	}
+
+	
+	// If verbosity is 0, return the serialized block as a hex encoded string.
+	if c.Verbosity != nil && *c.Verbosity == 0 {
+		return hex.EncodeToString(blkBytes), nil
+	}
+
+	// Otherwise, generate the JSON object and return it.
+
+	// Deserialize the block.
+	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
+	if err != nil {
+		context := "Failed to deserialize block"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
+
+	// Get the block height from BlockChain.
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
+	if err != nil {
+		context := "Failed to obtain block height"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
+	blk.SetHeight(blockHeight)
+	best := server.chainProvider.BlockChain().BestSnapshot()
+
+	// Get next block hash unless there are none.
+	var nextHashString string
+	if blockHeight < best.Height {
+		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
+		if err != nil {
+			context := "No next block"
+			return nil, server.InternalRPCError(err.Error(), context)
+		}
+		nextHashString = nextHash.String()
+	}
+
+	params := server.chainProvider.ChainParams
+	blockHeader := blk.MsgBlock().Header
+	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	blockReply := btcjson.GetBeaconBlockBySerialNumberVerboseResult{
+		Hash:         hash.String(),
+		Version:      int32(blockHeader.Version()),
+		VersionHex:   fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:   blockHeader.MerkleRoot().String(),
+		PreviousHash: blockHeader.PrevBlock().String(),
+		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
+		Nonce:         blockHeader.Nonce(),
+		Time:          blockHeader.Timestamp().Unix(),
+		Confirmations: int64(1 + best.Height - blockHeight),
+		Height:        int64(blockHeight),
+		Size:          int32(len(blkBytes)),
+		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:        int32(chaindata.GetBlockWeight(blk)),
+		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:    diff,
+		NextHash:      nextHashString,
+		SerialID:      serialNumber,
+		PrevSerialID:  prevID,
+	}
+
+	if *c.Verbosity == 1 {
+		transactions := blk.Transactions()
+		txNames := make([]string, len(transactions))
+		for i, tx := range transactions {
+			txNames[i] = tx.Hash().String()
+		}
+
+		blockReply.Tx = txNames
+	} else {
+		txns := blk.Transactions()
+		rawTxns := make([]btcjson.TxRawResult, len(txns))
+		for i, tx := range txns {
+			rawTxn, err := server.CreateTxRawResult(params, tx.MsgTx(),
+				tx.Hash().String(), blockHeader, hash.String(),
+				blockHeight, best.Height)
+			if err != nil {
+				return nil, err
+			}
+			rawTxns[i] = *rawTxn
+		}
+		blockReply.RawTx = rawTxns
+	}
+
+	return blockReply, nil
 }

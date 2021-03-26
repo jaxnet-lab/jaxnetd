@@ -8,7 +8,9 @@ package blockchain
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -790,11 +792,52 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		// Update best block state.
-		err := chaindata.DBPutBestState(dbTx, state, node.WorkSum())
+		//Get chain last block id from db id bucket. Should not be empty slice or nil
+		chainLastSerialID, err := chaindata.DBFetchLastSerialID(dbTx)
 		if err != nil {
 			return err
 		}
+
+		//Get chain last block id from db hash->id mapping
+		bestChainLastSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &h)
+		if err != nil {
+			return err
+		}
+
+		//should be the same
+		if chainLastSerialID != bestChainLastSerialID {
+			return errors.New("block id inconsistency")
+		}
+
+		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
+		if err != nil {
+			return err
+		}
+
+		// new incoming block
+		if blockSerialID == -1 {
+			chainNewSerialID := chainLastSerialID +1
+			err = chaindata.DBPutLastSerialID(dbTx, strconv.Itoa(chainNewSerialID))
+			if err != nil {
+				return err
+			}
+			err = chaindata.DBPutBlockHashSerialID(dbTx, block.Hash(), strconv.Itoa(chainNewSerialID))
+			if err != nil {
+				return err
+			}
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(chainNewSerialID), strconv.Itoa(bestChainLastSerialID))
+			if err != nil {
+				return err
+			}
+		} else { //existing block for rechaining
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(bestChainLastSerialID))
+			if err != nil {
+				return err
+			}
+		}
+
+		// Update best block state.
+		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
 
 		// Add the block hash and height to the block index which tracks
 		// the main chain.
@@ -870,7 +913,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint) error {
+func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint, forkNode blocknode.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.bestChain.Tip().GetHash()
@@ -910,8 +953,34 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
+		//get block serial id
+		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
+		if err != nil {
+			return err
+		}
+
+		//block is disconnecting without fork
+        if forkNode == nil {
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(-1))
+			if err != nil {
+				return err
+			}
+		} else { //there was fork
+			//get fork block id
+			fHash := forkNode.GetHash()
+			forkBlockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &fHash)
+			if err != nil {
+				return err
+			}
+
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(forkBlockSerialID))
+			if err != nil {
+				return err
+			}
+		}
+
 		// Update best block state.
-		err := chaindata.DBPutBestState(dbTx, state, node.WorkSum())
+		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
 		if err != nil {
 			return err
 		}
@@ -1206,7 +1275,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		}
 
 		// Update the database and chain state.
-		err = b.disconnectBlock(n, block, view)
+		err = b.disconnectBlock(n, block, view, forkNode)
 		if err != nil {
 			return err
 		}

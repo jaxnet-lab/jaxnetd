@@ -845,3 +845,64 @@ type ShardInfo struct {
 	Enabled       bool   `json:"enabled"`
 	P2PPort       int    `json:"p2p_port"`
 }
+
+// GetBestBlockResult models the data from the getbestblock command.
+type GetLastSerialBlockNumberResult struct {
+	LastSerial int `json:"lastserial"`
+}
+
+// GetBeaconBlockBySerialNumberVerboseResult models the data from the getBeaconBlock command when the
+// verbose flag is set to 1.  When the verbose flag is set to 0, getBeaconBlock returns a
+// hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
+// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
+// getBeaconBlock returns an object whose tx field is an array of raw transactions.
+// Use GetBeaconBlockVerboseTxResult to unmarshal data received from passing verbose=2 to getBeaconBlock.
+type GetBeaconBlockBySerialNumberVerboseResult struct {
+	Hash                string        `json:"hash"`
+	Confirmations       int64         `json:"confirmations"`
+	StrippedSize        int32         `json:"strippedsize"`
+	Size                int32         `json:"size"`
+	Weight              int32         `json:"weight"`
+	Height              int64         `json:"height"`
+	Version             int32         `json:"version"`
+	VersionHex          string        `json:"versionHex"`
+	MerkleRoot          string        `json:"merkleroot"`
+	MerkleMountainRange string        `json:"mmr"`
+	Tx                  []string      `json:"tx,omitempty"`
+	RawTx               []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
+	Time                int64         `json:"time"`
+	Nonce               uint32        `json:"nonce"`
+	Bits                string        `json:"bits"`
+	Difficulty          float64       `json:"difficulty"`
+	PreviousHash        string        `json:"previousblockhash"`
+	NextHash            string        `json:"nextblockhash,omitempty"`
+	SerialID            int           `json:"serial_id"`
+	PrevSerialID        int           `json:"prev_serial_id"`
+}
+
+// GetShardBlockVerboseResult models the data from the getShardBlock command when the
+// verbose flag is set to 1.  When the verbose flag is set to 0, getShardBlock returns a
+// hex-encoded string. When the verbose flag is set to 1, getShardBlock returns an object
+// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
+// getShardBlock returns an object whose tx field is an array of raw transactions.
+// Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=2 to getShardBlock.
+type GetShardBlockBySerialNumberVerboseResult struct {
+	Hash          string                      `json:"hash"`
+	ShardHash     string                      `json:"shardhash"`
+	Confirmations int64                       `json:"confirmations"`
+	StrippedSize  int32                       `json:"strippedsize"`
+	Size          int32                       `json:"size"`
+	Weight        int32                       `json:"weight"`
+	Height        int64                       `json:"height"`
+	MerkleRoot    string                      `json:"merkleroot"`
+	Tx            []string                    `json:"tx,omitempty"`
+	RawTx         []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
+	Time          int64                       `json:"time"`
+	Bits          string                      `json:"bits"`
+	Difficulty    float64                     `json:"difficulty"`
+	PreviousHash  string                      `json:"previousblockhash"`
+	NextHash      string                      `json:"nextblockhash,omitempty"`
+	BCBlock       GetBeaconBlockVerboseResult `json:"bcblock"`
+	SerialID      int                         `json:"serial_id"`
+	PrevSerialID  int                         `json:"prev_serial_id"`
+}
