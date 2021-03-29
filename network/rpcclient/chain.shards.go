@@ -400,19 +400,18 @@ func (c *Client) GetShardHeaders(blockLocators []chainhash.Hash, hashStop *chain
 	return c.GetShardHeadersAsync(blockLocators, hashStop).Receive()
 }
 
-
 // FutureGetShardBlockResult is a future promise to deliver the result of a
 // GetShardBlockAsync RPC invocation (or an applicable error).
 type FutureGetShardBlockBySerialNumberResult struct {
 	client   *Client
-	serialID     int
+	serialID int
 	Response chan *response
 }
 
 // Receive waits for the response promised by the future and returns the raw
 // block requested from the server given its hash.
 func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, error) {
-	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response,  "getShardBlockBySerialNumber", r.serialID, false, false)
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getShardBlockBySerialNumber", r.serialID, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +430,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, erro
 	}
 
 	// Deserialize the block and return it.
-	var msgBlock = wire.EmptyBeaconBlock()
+	var msgBlock = wire.EmptyShardBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
 		return nil, err
@@ -445,11 +444,11 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, erro
 //
 // See GetShardBlockBySerialNumber for the blocking version and more details.
 func (c *Client) GetShardBlockBySerialNumberAsync(serialID int) FutureGetShardBlockBySerialNumberResult {
-	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID,  btcjson.Int(0))
+	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID, btcjson.Int(0))
 	return FutureGetShardBlockBySerialNumberResult{
 		client:   c,
-		serialID:     serialID,
-		Response: c.ForBeacon().sendCmd(cmd),
+		serialID: serialID,
+		Response: c.sendCmd(cmd),
 	}
 }
 

@@ -8,14 +8,11 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	// "encoding/json"
-	// "fmt"
 	"log"
 
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
-	// "gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -158,7 +155,7 @@ func main() {
 	}
 	log.Printf("Beacon 2 id block hash: %v", block.BlockHash().String())
 
-	block, err = client.GetShardBlockBySerialNumber(2)
+	block, err = client.ForShard(1).GetShardBlockBySerialNumber(2)
 	if err != nil {
 		log.Fatal(err)
 		return
