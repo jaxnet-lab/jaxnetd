@@ -598,7 +598,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 
-	c := cmd.(*btcjson.GetBlockBySerialNumberCmd)
+	c := cmd.(*btcjson.GetShardBlockBySerialNumberCmd)
 	serialNumber := c.SerialNumber
 
 	var (

@@ -399,3 +399,135 @@ func (c *Client) GetBeaconHeadersAsync(blockLocators []chainhash.Hash, hashStop 
 func (c *Client) GetBeaconHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BeaconHeader, error) {
 	return c.GetBeaconHeadersAsync(blockLocators, hashStop).Receive()
 }
+
+
+// FutureGetBeaconBlockResult is a future promise to deliver the result of a
+// GetBeaconBlockAsync RPC invocation (or an applicable error).
+type FutureGetBeaconBlockBySerialNumberResult struct {
+	client   *Client
+	serialID     int
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the raw
+// block requested from the server given its hash.
+func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*wire.MsgBlock, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response,  "getBeaconBlockBySerialNumber", r.serialID, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a string.
+	var blockHex string
+	err = json.Unmarshal(res, &blockHex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode the serialized block hex to raw bytes.
+	serializedBlock, err := hex.DecodeString(blockHex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deserialize the block and return it.
+	var msgBlock = wire.EmptyBeaconBlock()
+	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
+	if err != nil {
+		return nil, err
+	}
+	return &msgBlock, nil
+}
+
+// GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetBeaconBlockBySerialNumber for the blocking version and more details.
+func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int) FutureGetBeaconBlockBySerialNumberResult {
+	cmd := btcjson.NewGetBeaconBlockBySerialNumberCmd(serialID,  btcjson.Int(0))
+	return FutureGetBeaconBlockBySerialNumberResult{
+		client:   c,
+		serialID:     serialID,
+		Response: c.ForBeacon().sendCmd(cmd),
+	}
+}
+
+// GetBeaconBlockBySerialNumber returns a raw block from the server given its id.
+//
+// See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
+// block instead.
+func (c *Client) GetBeaconBlockBySerialNumber(serialID int) (*wire.MsgBlock, error) {
+	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
+}
+
+// FutureGetBeaconBlockVerboseBySerialNumberResult is a future promise to deliver the result of a
+// GetBeaconBlockBySerialNumberAsync RPC invocation (or an applicable error).
+type FutureGetBeaconBlockVerboseBySerialNumberResult struct {
+	client   *Client
+	serialID     int
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the data
+// structure from the server with information about the requested block.
+func (r FutureGetBeaconBlockVerboseBySerialNumberResult) Receive() (*btcjson.GetBeaconBlockBySerialNumberVerboseResult, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getBeaconBlockBySerialNumber", r.serialID, true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetBeaconBlockBySerialNumberVerboseResult
+	err = json.Unmarshal(res, &blockResult)
+	if err != nil {
+		return nil, err
+	}
+	return &blockResult, nil
+}
+
+// GetBeaconBlockVerboseBySerialNumberAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetBeaconBlockVerboseBySerialNumber for the blocking version and more details.
+func (c *Client) GetBeaconBlockVerboseBySerialNumberAsync(serialID int) FutureGetBeaconBlockVerboseBySerialNumberResult {
+	// From the bitcoin-cli getblock documentation:
+	// "If verbosity is 1, returns an Object with information about block ."
+	cmd := btcjson.NewGetBeaconBlockBySerialNumberCmd(serialID, btcjson.Int(1))
+	return FutureGetBeaconBlockVerboseBySerialNumberResult{
+		client:   c,
+		serialID:     serialID,
+		Response: c.ForBeacon().sendCmd(cmd),
+	}
+}
+
+// GetBeaconBlockVerboseBySerialNumber returns a data structure from the server with information
+// about a block given its hash.
+//
+// See GetBeaconBlockVerboseTx to retrieve transaction data structures as well.
+// See GetBeaconBlockBySerialNumber to retrieve a raw block instead.
+func (c *Client) GetBeaconBlockVerboseBySerialNumber(serialID int) (*btcjson.GetBeaconBlockBySerialNumberVerboseResult, error) {
+	return c.GetBeaconBlockVerboseBySerialNumberAsync(serialID).Receive()
+}
+
+// waitForGetBlockBySerialNumberRes waits for the response of a getblock request. If the
+// response indicates an invalid parameter was provided, a legacy style of the
+// request is resent and its response is returned instead.
+func (c *Client) waitForGetBlockBySerialNumberRes(respChan chan *response, cmd string, serialID int,
+	verbose, verboseTx bool) ([]byte, error) {
+
+	res, err := receiveFuture(respChan)
+
+	// If we receive an invalid parameter error, then we may be
+	// communicating with a btcd node which only understands the legacy
+	// request, so we'll try that.
+	// if err, ok := err.(*btcjson.RPCError); ok &&
+	// 	err.Code == btcjson.ErrRPCInvalidParams.Code {
+	// 	return c.legacyGetBlockRequest(cmd, hash, verbose, verboseTx)
+	// }
+
+	// Otherwise, we can return the response as is.
+	return res, err
+}
+

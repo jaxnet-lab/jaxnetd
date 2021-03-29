@@ -816,7 +816,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 		// new incoming block
 		if blockSerialID == -1 {
-			chainNewSerialID := chainLastSerialID +1
+			chainNewSerialID := chainLastSerialID + 1
 			err = chaindata.DBPutLastSerialID(dbTx, strconv.Itoa(chainNewSerialID))
 			if err != nil {
 				return err
@@ -960,7 +960,7 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 		}
 
 		//block is disconnecting without fork
-        if forkNode == nil {
+		if forkNode == nil {
 			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(-1))
 			if err != nil {
 				return err

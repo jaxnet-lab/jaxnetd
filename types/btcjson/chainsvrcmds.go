@@ -926,25 +926,35 @@ func NewManageShardsCmd(shardID uint32, action string, initialHeight *int32) *Ma
 
 type ListShardsCmd struct{}
 
-type GetLastSerialBlockNumberCmd struct {
-	ShardID uint32
+type GetLastSerialBlockNumberCmd struct {}
+
+func NewGetLastSerialBlockNumberCmd() *GetLastSerialBlockNumberCmd {
+	return &GetLastSerialBlockNumberCmd{}
 }
 
-func NewGetLastSerialBlockNumberCmd(shardID uint32) *GetLastSerialBlockNumberCmd {
-	return &GetLastSerialBlockNumberCmd{
-		ShardID: shardID,
-	}
-}
-
-type GetBlockBySerialNumberCmd struct {
-	ShardID      uint32
+type GetBeaconBlockBySerialNumberCmd struct {
+	// ShardID      uint32
 	SerialNumber int
 	Verbosity    *int `jsonrpcdefault:"1"`
 }
 
-func NewGetBlockBySerialNumberCmd(shardID uint32, serialNumber int, verbosity *int) *GetBlockBySerialNumberCmd {
-	return &GetBlockBySerialNumberCmd{
-		ShardID:      shardID,
+func NewGetBeaconBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetBeaconBlockBySerialNumberCmd {
+	return &GetBeaconBlockBySerialNumberCmd{
+		// ShardID:      shardID,
+		SerialNumber: serialNumber,
+		Verbosity:    verbosity,
+	}
+}
+
+type GetShardBlockBySerialNumberCmd struct {
+	// ShardID      uint32
+	SerialNumber int
+	Verbosity    *int `jsonrpcdefault:"1"`
+}
+
+func NewGetShardBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetShardBlockBySerialNumberCmd {
+	return &GetShardBlockBySerialNumberCmd{
+		// ShardID:      shardID,
 		SerialNumber: serialNumber,
 		Verbosity:    verbosity,
 	}
@@ -991,7 +1001,7 @@ func init() {
 	MustRegisterCmd("chain", "submitBlock", (*SubmitBlockCmd)(nil), flags)
 
 	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
-	MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
+	// MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
 
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)
@@ -1022,6 +1032,7 @@ func init() {
 	MustRegisterCmd("beacon", "getBeaconHeaders", (*GetBeaconHeadersCmd)(nil), flags)
 	MustRegisterCmd("beacon", "listEADAddresses", (*ListEADAddressesCmd)(nil), flags)
 	// MustRegisterCmd("beacon", "getBeaconBlockHash", (*GetBlockHashCmd)(nil), flags)
+	MustRegisterCmd("beacon", "getBeaconBlockBySerialNumber", (*GetBeaconBlockBySerialNumberCmd)(nil), flags)
 
 	// ---- shard rpc commands -----------------------------------------------------------------------------------------
 	MustRegisterCmd("shard", "getShardBlock", (*GetShardBlockCmd)(nil), flags)
@@ -1029,6 +1040,7 @@ func init() {
 	MustRegisterCmd("shard", "getShardBlockTemplate", (*GetShardBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("shard", "getShardHeaders", (*GetShardHeadersCmd)(nil), flags)
 	// MustRegisterCmd("shard", "getShardBlockHash", (*GetBlockHashCmd)(nil), flags)
+	MustRegisterCmd("shard", "getShardBlockBySerialNumber", (*GetShardBlockBySerialNumberCmd)(nil), flags)
 
 	// ---- NOT IMPLEMENTED --------------------------------------------------------------------------------------------
 	MustRegisterCmd("chain", "getchaintips", (*GetChainTipsCmd)(nil), flags)

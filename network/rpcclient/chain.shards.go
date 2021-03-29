@@ -399,3 +399,64 @@ func (c *Client) GetShardHeadersAsync(blockLocators []chainhash.Hash, hashStop *
 func (c *Client) GetShardHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.ShardHeader, error) {
 	return c.GetShardHeadersAsync(blockLocators, hashStop).Receive()
 }
+
+
+// FutureGetShardBlockResult is a future promise to deliver the result of a
+// GetShardBlockAsync RPC invocation (or an applicable error).
+type FutureGetShardBlockBySerialNumberResult struct {
+	client   *Client
+	serialID     int
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the raw
+// block requested from the server given its hash.
+func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response,  "getShardBlockBySerialNumber", r.serialID, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a string.
+	var blockHex string
+	err = json.Unmarshal(res, &blockHex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode the serialized block hex to raw bytes.
+	serializedBlock, err := hex.DecodeString(blockHex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deserialize the block and return it.
+	var msgBlock = wire.EmptyBeaconBlock()
+	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
+	if err != nil {
+		return nil, err
+	}
+	return &msgBlock, nil
+}
+
+// GetShardBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetShardBlockBySerialNumber for the blocking version and more details.
+func (c *Client) GetShardBlockBySerialNumberAsync(serialID int) FutureGetShardBlockBySerialNumberResult {
+	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID,  btcjson.Int(0))
+	return FutureGetShardBlockBySerialNumberResult{
+		client:   c,
+		serialID:     serialID,
+		Response: c.ForBeacon().sendCmd(cmd),
+	}
+}
+
+// GetShardBlockBySerialNumber returns a raw block from the server given its id.
+//
+// See GetShardBlockBySerialNumberVerbose to retrieve a data structure with information about the
+// block instead.
+func (c *Client) GetShardBlockBySerialNumber(serialID int) (*wire.MsgBlock, error) {
+	return c.GetShardBlockBySerialNumberAsync(serialID).Receive()
+}

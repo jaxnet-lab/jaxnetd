@@ -546,7 +546,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 
-	c := cmd.(*btcjson.GetBlockBySerialNumberCmd)
+	c := cmd.(*btcjson.GetBeaconBlockBySerialNumberCmd)
 	serialNumber := c.SerialNumber
 
 	var (
