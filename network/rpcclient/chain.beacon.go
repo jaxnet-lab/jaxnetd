@@ -411,32 +411,31 @@ type FutureGetBeaconBlockBySerialNumberResult struct {
 
 // Receive waits for the response promised by the future and returns the raw
 // block requested from the server given its hash.
-func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*wire.MsgBlock, error) {
+func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*wire.MsgBlock, int, int, error) {
 	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response,  "getBeaconBlockBySerialNumber", r.serialID, false, false)
 	if err != nil {
-		return nil, err
+		return nil, r.serialID, -1, err
 	}
-
-	// Unmarshal result as a string.
-	var blockHex string
-	err = json.Unmarshal(res, &blockHex)
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetBeaconBlockBySerialNumberResult
+	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
-		return nil, err
+		return nil, r.serialID, -1, err
 	}
-
+	
 	// Decode the serialized block hex to raw bytes.
-	serializedBlock, err := hex.DecodeString(blockHex)
+	serializedBlock, err := hex.DecodeString(blockResult.Block)
 	if err != nil {
-		return nil, err
+		return nil, r.serialID, -1, err
 	}
 
 	// Deserialize the block and return it.
 	var msgBlock = wire.EmptyBeaconBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
-		return nil, err
+		return nil, r.serialID, -1, err
 	}
-	return &msgBlock, nil
+	return &msgBlock, blockResult.SerialID, blockResult.PrevSerialID, nil
 }
 
 // GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
@@ -457,7 +456,7 @@ func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int) FutureGetBeacon
 //
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
-func (c *Client) GetBeaconBlockBySerialNumber(serialID int) (*wire.MsgBlock, error) {
+func (c *Client) GetBeaconBlockBySerialNumber(serialID int) (*wire.MsgBlock, int, int, error) {
 	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
 }
 

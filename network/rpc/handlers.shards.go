@@ -626,7 +626,12 @@ func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan 
 
 	// If verbosity is 0, return the serialized block as a hex encoded string.
 	if c.Verbosity != nil && *c.Verbosity == 0 {
-		return hex.EncodeToString(blkBytes), nil
+		blockReply := btcjson.GetBeaconBlockBySerialNumberResult{
+			Block:        hex.EncodeToString(blkBytes),
+			SerialID:     serialNumber,
+			PrevSerialID: prevID,
+		}
+		return blockReply, nil
 	}
 
 	// Otherwise, generate the JSON object and return it.

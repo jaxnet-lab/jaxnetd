@@ -851,6 +851,12 @@ type GetLastSerialBlockNumberResult struct {
 	LastSerial int `json:"lastserial"`
 }
 
+type GetBeaconBlockBySerialNumberResult struct {
+	Block               string        `json:"block"`
+	SerialID            int           `json:"serial_id"`
+	PrevSerialID        int           `json:"prev_serial_id"`
+}
+
 // GetBeaconBlockBySerialNumberVerboseResult models the data from the getBeaconBlock command when the
 // verbose flag is set to 1.  When the verbose flag is set to 0, getBeaconBlock returns a
 // hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
@@ -876,6 +882,12 @@ type GetBeaconBlockBySerialNumberVerboseResult struct {
 	Difficulty          float64       `json:"difficulty"`
 	PreviousHash        string        `json:"previousblockhash"`
 	NextHash            string        `json:"nextblockhash,omitempty"`
+	SerialID            int           `json:"serial_id"`
+	PrevSerialID        int           `json:"prev_serial_id"`
+}
+
+type GetShardBlockBySerialNumberResult struct {
+	Block               string        `json:"block"`
 	SerialID            int           `json:"serial_id"`
 	PrevSerialID        int           `json:"prev_serial_id"`
 }
