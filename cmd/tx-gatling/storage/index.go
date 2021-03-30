@@ -42,6 +42,23 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 	}
 }
 
+func (collector *UTXORepo) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {
+	var filter map[string]struct{} = nil
+	if len(addresses) > 0 {
+		filter = make(map[string]struct{}, len(addresses))
+
+		for _, address := range addresses {
+			filter[address] = struct{}{}
+		}
+	}
+
+	utxo := collector.index.GetForAmountFiltered(amount, shardID, filter)
+	if utxo == nil {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+	return utxo, nil
+}
+
 func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	var filter map[string]struct{} = nil
 	if len(addresses) > 0 {

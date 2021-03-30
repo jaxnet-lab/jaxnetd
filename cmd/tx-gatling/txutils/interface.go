@@ -88,7 +88,10 @@ func (kp *InMemoryKeystore) KeyData() *KeyData {
 type NewUTXOProvider interface {
 	// RedeemScript(address string) (script string)
 
+	// SelectForAmount returns a list of txmodels.UTXO which satisfies the passed amount.
 	SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error)
+	// GetForAmount returns a single txmodels.UTXO with Value GreaterOrEq passed amount.
+	GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error)
 }
 
 type NewTxClient interface {

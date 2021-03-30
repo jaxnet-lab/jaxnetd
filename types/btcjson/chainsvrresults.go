@@ -828,9 +828,10 @@ type ValidateAddressChainResult struct {
 // EstimateSmartFeeResult models the data returned buy the chain server
 // estimatesmartfee command
 type EstimateSmartFeeResult struct {
-	FeeRate *float64 `json:"feerate,omitempty"`
-	Errors  []string `json:"errors,omitempty"`
-	Blocks  int64    `json:"blocks"`
+	BtcPerKB    *float64 `json:"btc_per_kb"`
+	SatoshiPerB *float64 `json:"satoshi_per_b"`
+	Errors      []string `json:"errors,omitempty"`
+	Blocks      int64    `json:"blocks"`
 }
 
 type ShardListResult struct {

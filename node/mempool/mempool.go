@@ -924,7 +924,8 @@ func (mp *TxPool) validateReplacement(tx *btcutil.Tx,
 // more details.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejectDupOrphans bool) ([]*chainhash.Hash, *TxDesc, error) {
+func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx,
+	isNew, rateLimit, rejectDupOrphans bool) ([]*chainhash.Hash, *TxDesc, error) {
 	txHash := tx.Hash()
 
 	// If a transaction has witness data, and segwit isn't active yet, If
@@ -1062,11 +1063,18 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx, isNew, rateLimit, rejec
 	}
 
 	missingParentsCount := len(missingParents)
-	thisIsSwapTx := tx.MsgTx().SwapTx()
-	// for the the swap tx allowed only one missing parent
-	if (!thisIsSwapTx && missingParentsCount > 0) || (thisIsSwapTx && missingParentsCount > 1) {
-		return missingParents, nil, nil
+	if tx.MsgTx().SwapTx() {
+		err = chaindata.ValidateSwapTxStructure(tx.MsgTx(), missingParentsCount)
+		if err != nil {
+			return missingParents, nil, err
+		}
+
+	} else {
+		if missingParentsCount > 0 {
+			return missingParents, nil, nil
+		}
 	}
+	// for the the swap tx allowed only one missing parent
 
 	// Don't allow the transaction into the mempool unless its sequence
 	// lock is active, meaning that it'll be allowed into the next block
