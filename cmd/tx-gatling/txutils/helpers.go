@@ -22,12 +22,27 @@ import (
 
 // UTXOProvider is provider that cat give list of txmodels.UTXO for provided amount.
 type UTXOProvider interface {
+	// SelectForAmount returns a list of txmodels.UTXO which satisfies the passed amount.
 	SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error)
+	// GetForAmount returns a single txmodels.UTXO with Value GreaterOrEq passed amount.
+	GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error)
 }
 
 // UTXOFromCSV is an implementation of UTXOProvider that collects txmodels.UTXORows from CSV file,
 // value of UTXOFromCSV is a path to file.
 type UTXOFromCSV string
+
+func (path UTXOFromCSV) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {
+	rows, err := storage.NewCSVStorage(string(path)).FetchData()
+	if err != nil {
+		return nil, err
+	}
+	collected := rows.GetSingle(amount, shardID)
+	if collected == nil {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+	return collected, nil
+}
 
 func (path UTXOFromCSV) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	rows, err := storage.NewCSVStorage(string(path)).FetchData()
@@ -47,19 +62,40 @@ func (path UTXOFromCSV) SelectForAmount(amount int64, shardID uint32, addresses 
 // UTXOFromRows is a wrapper for txmodels.UTXORows to implement the UTXOProvider.
 type UTXOFromRows txmodels.UTXORows
 
+func (rows UTXOFromRows) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+
+	collected := txmodels.UTXORows(rows).GetSingle(amount, shardID)
+	if collected == nil {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+
+	return collected, nil
+}
 func (rows UTXOFromRows) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+
 	collected, change := txmodels.UTXORows(rows).CollectForAmount(amount, shardID)
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
-	}
-	if len(rows) == 0 {
-		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
 	}
 	return collected, nil
 }
 
 // UTXOFromRows is a wrapper for txmodels.UTXO to implement the UTXOProvider.
 type SingleUTXO txmodels.UTXO
+
+func (row SingleUTXO) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {
+	if row.Value < amount {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+
+	return (*txmodels.UTXO)(&row), nil
+}
 
 func (row SingleUTXO) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	if row.Value < amount {

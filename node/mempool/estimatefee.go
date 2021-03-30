@@ -74,6 +74,17 @@ func (rate SatoshiPerByte) ToBtcPerKb() BtcPerKilobyte {
 	return BtcPerKilobyte(float64(rate) * bytePerKb * btcPerSatoshi)
 }
 
+// ToSatoshiPerByte returns a float value that represents the given
+// BtcPerKilobyte converted to satoshis per byte.
+func (rate BtcPerKilobyte) ToSatoshiPerByte() SatoshiPerByte {
+	// If our rate is the error value, return that.
+	if rate == BtcPerKilobyte(-1.0) {
+		return -1.0
+	}
+
+	return SatoshiPerByte(float64(rate) / (bytePerKb * btcPerSatoshi))
+}
+
 // Fee returns the fee for a transaction of a given size for
 // the given fee rate.
 func (rate SatoshiPerByte) Fee(size uint32) btcutil.Amount {

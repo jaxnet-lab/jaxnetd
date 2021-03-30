@@ -70,8 +70,14 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	if err != nil {
 		return -1.0, err
 	}
-	fee := float64(feeRate)
-	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.ConfTarget}
+
+	btcPerKB := float64(feeRate)
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+
+	res := btcjson.EstimateSmartFeeResult{
+		BtcPerKB:    &btcPerKB,
+		SatoshiPerB: &satoshiPerB,
+		Blocks:      c.ConfTarget}
 	return res, nil
 }
 

@@ -8,15 +8,53 @@ package txutils
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
+
+var (
+	TxInEstWeight  = 180 // size of regular signed utxo
+	TxOutEstWeight = 34  // simple output
+	// RegularTxEstWeight = 1040
+	// SwapTxEstWeight    = 1800
+)
+
+func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool) int64 {
+	size := chaindata.GetTransactionWeight(btcutil.NewTx(tx))
+	if addChange {
+		size += int64(TxInEstWeight + TxOutEstWeight)
+	}
+	return feeRate * (size / 1000) // (Satoshi/bytes) * Byte =  satoshi
+}
+
+func EstimateFee(inCount, outCount int, feeRate int64, addChange bool) int64 {
+	if addChange {
+		inCount += 1
+		outCount += 1
+	}
+
+	// Version 4 bytes + LockTime 4 bytes + Serialized varint size for the
+	// number of transaction inputs and outputs.
+	baseSize := 8 +
+		encoder.VarIntSerializeSize(uint64(inCount)) +
+		encoder.VarIntSerializeSize(uint64(outCount)) +
+		TxInEstWeight*inCount +
+		TxOutEstWeight*outCount
+
+	size := int64(baseSize * chaindata.WitnessScaleFactor)
+
+	return feeRate * size // (Satoshi/bytes) * Byte = satoshi
+}
 
 type TxBuilder interface {
 	SetType(txVersion int32) TxBuilder
@@ -61,9 +99,15 @@ type txBuilder struct {
 
 type extraOpts struct {
 	fee      int64
+	feeRate  int64
 	change   int64
 	needed   int64
+	outs     int
 	utxoRows txmodels.UTXORows
+}
+
+func (e extraOpts) calcFee() int64 {
+	return EstimateFee(len(e.utxoRows), e.outs, e.feeRate, true)
 }
 
 func NewTxBuilder(net chaincfg.NetName) TxBuilder {
@@ -80,7 +124,7 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 
 func (t *txBuilder) SetShardID(shardID uint32) TxBuilder {
 	t.defaultShardID = shardID
-	t.collectedOpts[shardID] = extraOpts{fee: 0, change: 0, utxoRows: []txmodels.UTXO{}}
+	t.collectedOpts[shardID] = extraOpts{feeRate: 0, change: 0, utxoRows: []txmodels.UTXO{}}
 	return t
 }
 
@@ -147,7 +191,7 @@ func (t *txBuilder) SetDestination(destination string, amount int64) TxBuilder {
 	})
 
 	opts := t.collectedOpts[t.defaultShardID]
-	opts.fee = 0
+	opts.feeRate = 0
 	t.collectedOpts[t.defaultShardID] = opts
 	return t
 }
@@ -161,7 +205,7 @@ func (t *txBuilder) SetDestinationAtShard(destination string, amount int64, shar
 	})
 
 	opts := t.collectedOpts[shardID]
-	opts.fee = 0
+	opts.feeRate = 0
 	t.collectedOpts[t.defaultShardID] = opts
 	return t
 }
@@ -170,7 +214,7 @@ func (t *txBuilder) SetDestinationWithUTXO(destination string, amount int64, utx
 	shardID := t.defaultShardID
 	for _, u := range utxo {
 		opts := t.collectedOpts[u.ShardID]
-		opts.fee = 0
+		opts.feeRate = 0
 		t.collectedOpts[u.ShardID] = opts
 
 		shardID = u.ShardID
@@ -247,7 +291,6 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 
 		draft := txmodels.DraftTx{Amount: dest.amount, NetworkFee: opts.fee}
-
 		err := draft.SetPayToAddress(dest.destination, t.net.Params())
 		if err != nil {
 			return nil, errors.Wrap(err, "pay to address not set")
@@ -255,8 +298,9 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 
 		msgTx.AddTxOut(wire.NewTxOut(draft.Amount, draft.ReceiverScript))
 
-		change := opts.utxoRows.GetSum() - dest.amount - opts.fee
-		if msgTx, err = t.addChangeOut(msgTx, change); err != nil {
+		fmt.Println("tx_out:", wire.NewTxOut(draft.Amount, draft.ReceiverScript).SerializeSize())
+
+		if msgTx, err = t.addChangeOut(msgTx, opts.change); err != nil {
 			return nil, err
 		}
 	}
@@ -271,10 +315,12 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "unable to sing utxo")
 			}
+			fmt.Println("signed_utxo:", msgTx.TxIn[txInIndex].SerializeSize())
 			txInIndex += 1
 		}
 	}
 
+	fmt.Println("swap_tx:", chaindata.GetTransactionWeight(btcutil.NewTx(msgTx)))
 	return msgTx, nil
 }
 
@@ -295,6 +341,7 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 		amount += key.amount
 		msgTx.AddTxOut(wire.NewTxOut(key.amount, receiverScript))
+		fmt.Println("tx_out:", wire.NewTxOut(key.amount, receiverScript).SerializeSize())
 	}
 
 	change := totalSum - amount - fee
@@ -325,8 +372,10 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
-
+		fmt.Println("signed_utxo:", msgTx.TxIn[txInIndex].SerializeSize())
 	}
+
+	fmt.Println("regular_tx:", chaindata.GetTransactionWeight(btcutil.NewTx(msgTx)))
 
 	return msgTx, nil
 }
@@ -343,7 +392,6 @@ func (t *txBuilder) addChangeOut(msgTx *wire.MsgTx, change int64) (*wire.MsgTx, 
 			if err != nil {
 				return nil, errors.Wrap(err, "unable to create P2A script for change")
 			}
-
 			msgTx.AddTxOut(wire.NewTxOut(chunk, changeRcvScript))
 		}
 	}
@@ -396,11 +444,12 @@ func (t *txBuilder) setFees(getFee FeeProviderFunc) error {
 	for shardID := range t.collectedOpts {
 		fee, err := getFee(shardID)
 		if err != nil {
-			return errors.Wrapf(err, "unable to get fee for shard(%d)", shardID)
+			return errors.Wrapf(err, "unable to get feeRate for shard(%d)", shardID)
 		}
 
 		opts := t.collectedOpts[shardID]
-		opts.fee = fee
+		opts.feeRate = fee
+		t.collectedOpts[shardID] = opts
 	}
 
 	return nil
@@ -426,6 +475,7 @@ func (t *txBuilder) prepareUTXOs() error {
 
 		opts := t.collectedOpts[key.shardID]
 		opts.needed += key.amount
+		opts.outs += 1
 		opts.utxoRows = append(opts.utxoRows, utxo...)
 
 		t.collectedOpts[key.shardID] = opts
@@ -439,8 +489,20 @@ func (t *txBuilder) prepareUTXOs() error {
 	for shardID := range shards {
 		opts := t.collectedOpts[shardID]
 		hasCoins := opts.utxoRows.GetSum()
-		if hasCoins < opts.needed {
-			rows, err := t.utxoProvider.SelectForAmount(opts.needed-hasCoins, shardID, t.senderAddresses...)
+		fee := opts.calcFee()
+		needed := opts.needed + fee
+
+		if t.swapTx && hasCoins < needed {
+			row, err := t.utxoProvider.GetForAmount(needed-hasCoins, shardID, t.senderAddresses...)
+			if err != nil {
+				return err
+			}
+
+			opts.utxoRows = append(opts.utxoRows, *row)
+		}
+
+		if !t.swapTx && hasCoins < needed {
+			rows, err := t.utxoProvider.SelectForAmount(needed-hasCoins, shardID, t.senderAddresses...)
 			if err != nil {
 				return err
 			}
@@ -448,9 +510,8 @@ func (t *txBuilder) prepareUTXOs() error {
 			opts.utxoRows = append(opts.utxoRows, rows...)
 		}
 
-		change := opts.utxoRows.GetSum() - opts.needed
-		opts.change += change
-
+		opts.fee = fee
+		opts.change = opts.utxoRows.GetSum() - needed
 		t.collectedOpts[shardID] = opts
 	}
 

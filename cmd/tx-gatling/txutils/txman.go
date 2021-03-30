@@ -253,21 +253,21 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 	return index, maxHeight, nil
 }
 
-// NetworkFee returns SatoshiPerKilobyte.
-// To get size of the tx in bytes use mempool.GetTxVirtualSize(tx).
-func (client *TxMan) NetworkFee() (int64, error) {
-	fee, err := client.rpc.ForShard(client.cfg.ShardID).
+// NetworkFee returns Satoshi/bytes.
+// To get size of the tx in bytes use chaindata.GetTransactionWeight(tx).
+func (client *TxMan) NetworkFee(shardID uint32) (int64, error) {
+	fee, err := client.rpc.ForShard(shardID).
 		EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
 	if err != nil {
-		return 0, errors.Wrap(err, "unable to get fee")
+		return 0, errors.Wrap(err, "unable to get feeRate")
 	}
 
-	amount, _ := btcutil.NewAmount(*fee.FeeRate)
-	if amount < mempool.DefaultMinRelayTxFee {
-		return int64(mempool.DefaultMinRelayTxFee), nil
+	amount := int64(*fee.SatoshiPerB)
+	if amount < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
+		return mempool.DefaultMinRelayTxFeeSatoshiPerByte, nil
 	}
 
-	return int64(amount), nil
+	return amount, nil
 }
 
 func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvider,
@@ -281,15 +281,23 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 		msgTx.AddTxOut(wire.NewTxOut(amountToLock, destination))
 	}
 
-	fee, err := client.NetworkFee()
+	feeRate, err := client.NetworkFee(client.cfg.ShardID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get fee")
+		return nil, errors.Wrap(err, "unable to get feeRate")
 	}
+	expectedInCount := 2
 
+prepareUTXO:
+	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true)
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
+
 	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID, client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
+	}
+	if len(utxo) > expectedInCount {
+		expectedInCount = len(utxo) + 1
+		goto prepareUTXO
 	}
 
 	sum := utxo.GetSum()
@@ -322,20 +330,29 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		return nil, errors.New("keys not set")
 	}
 
-	fee, err := client.NetworkFee()
+	feeRate, err := client.NetworkFee(client.cfg.ShardID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get fee")
+		return nil, errors.Wrap(err, "unable to get feeRate")
 	}
+	expectedInCount := 1
+
+prepareUTXO:
+	fee := EstimateFee(expectedInCount, 1, feeRate, true)
 
 	draft := txmodels.DraftTx{
 		Amount:     amount,
 		NetworkFee: fee,
 	}
 
-	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID,
+	draft.UTXO, err = utxoPrv.SelectForAmount(amount+fee, client.cfg.ShardID,
 		client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to select UTXO for amount")
+	}
+
+	if len(draft.UTXO) > expectedInCount {
+		expectedInCount = len(draft.UTXO) + 1
+		goto prepareUTXO
 	}
 
 	if draft.UTXO.GetSum() < amount+draft.NetworkFee {
@@ -400,10 +417,11 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 	shards := make([]uint32, 0, len(spendingMap))
 	for destination, utxo := range spendingMap {
 		shards = append(shards, utxo.ShardID)
-		fee, err := client.ForShard(utxo.ShardID).NetworkFee()
+		fee, err := client.ForShard(utxo.ShardID).NetworkFee(utxo.ShardID)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to get fee")
+			return nil, errors.Wrap(err, "unable to get feeRate")
 		}
+
 		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not decode TxHash")
