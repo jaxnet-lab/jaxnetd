@@ -8,7 +8,6 @@ package txutils
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
@@ -297,9 +296,6 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 
 		msgTx.AddTxOut(wire.NewTxOut(draft.Amount, draft.ReceiverScript))
-
-		fmt.Println("tx_out:", wire.NewTxOut(draft.Amount, draft.ReceiverScript).SerializeSize())
-
 		if msgTx, err = t.addChangeOut(msgTx, opts.change); err != nil {
 			return nil, err
 		}
@@ -315,12 +311,10 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 			if err != nil {
 				return nil, errors.Wrap(err, "unable to sing utxo")
 			}
-			fmt.Println("signed_utxo:", msgTx.TxIn[txInIndex].SerializeSize())
 			txInIndex += 1
 		}
 	}
 
-	fmt.Println("swap_tx:", chaindata.GetTransactionWeight(btcutil.NewTx(msgTx)))
 	return msgTx, nil
 }
 
@@ -341,7 +335,6 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 		amount += key.amount
 		msgTx.AddTxOut(wire.NewTxOut(key.amount, receiverScript))
-		fmt.Println("tx_out:", wire.NewTxOut(key.amount, receiverScript).SerializeSize())
 	}
 
 	change := totalSum - amount - fee
@@ -372,10 +365,7 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
-		fmt.Println("signed_utxo:", msgTx.TxIn[txInIndex].SerializeSize())
 	}
-
-	fmt.Println("regular_tx:", chaindata.GetTransactionWeight(btcutil.NewTx(msgTx)))
 
 	return msgTx, nil
 }
