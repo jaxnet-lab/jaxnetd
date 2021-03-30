@@ -182,10 +182,7 @@ func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
 
 	lastUsed := index.lastUsed[shardID]
 	for i := lastUsed; i < len(index.utxo); i++ {
-		if index.utxo[i].ScriptType == txscript.EADAddress.String() {
-			continue
-		}
-		if index.utxo[i].Used || index.utxo[i].ShardID != shardID {
+		if !index.utxo[i].CanBeSpend(shardID) {
 			continue
 		}
 
@@ -195,18 +192,46 @@ func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
 			}
 		}
 
-		change -= index.utxo[i].Value
+		utxo := index.utxo[i]
+		res = append(res, utxo)
 		index.utxo[i].Used = true
-		lastUsed = i
-		res = append(res, index.utxo[i])
 
+		change -= utxo.Value
+		lastUsed = i
 		if change <= 0 {
 			break
 		}
 	}
-	index.lastUsed[shardID] = lastUsed
 
+	index.lastUsed[shardID] = lastUsed
 	return res, 0
+}
+
+func (index *UTXOIndex) GetForAmountFiltered(amount int64, shardID uint32,
+	filter map[string]struct{}) *UTXO {
+	index.RLock()
+	defer index.RUnlock()
+
+	lastUsed := index.lastUsed[shardID]
+	for i := lastUsed; i < len(index.utxo); i++ {
+		if !index.utxo[i].CanBeSpend(shardID) {
+			continue
+		}
+
+		if filter != nil {
+			if _, ok := filter[index.utxo[i].Address]; !ok {
+				continue
+			}
+		}
+
+		if index.utxo[i].Value >= amount {
+			utxo := index.utxo[i]
+			index.utxo[i].Used = true
+			return &utxo
+		}
+	}
+
+	return nil
 }
 
 func (index *UTXOIndex) Rows() UTXORows {
@@ -223,6 +248,12 @@ type UTXO struct {
 	Used       bool   `json:"used" csv:"used"`
 	PKScript   string `json:"pk_script" csv:"pk_script"`
 	ScriptType string `json:"script_type" csv:"script_type"`
+}
+
+func (utxo *UTXO) CanBeSpend(shardID uint32) bool {
+	return !utxo.Used &&
+		utxo.ShardID == shardID &&
+		utxo.ScriptType != txscript.EADAddress.String()
 }
 
 func (utxo UTXO) ToShort() ShortUTXO {
@@ -265,21 +296,35 @@ func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXORows, i
 	var res UTXORows
 	change := amount
 
-	for i, utxo := range rows {
-		if utxo.ScriptType == txscript.EADAddress.String() {
-			continue
-		}
-		if utxo.Used || utxo.ShardID != shardID {
+	for i := range rows {
+		if !rows[i].CanBeSpend(shardID) {
 			continue
 		}
 
-		change -= utxo.Value
+		utxo := rows[i]
+		res = append(res, utxo)
 		rows[i].Used = true
-		res = append(res, rows[i])
+
+		change -= utxo.Value
 		if change <= 0 {
 			break
 		}
 	}
 
 	return res, 0
+}
+
+func (rows UTXORows) GetSingle(amount int64, shardID uint32) *UTXO {
+	for i := range rows {
+		if !rows[i].CanBeSpend(shardID) {
+			continue
+		}
+		if rows[i].Value >= amount {
+			utxo := rows[i]
+			rows[i].Used = true
+			return &utxo
+		}
+	}
+
+	return nil
 }
