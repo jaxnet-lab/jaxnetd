@@ -588,6 +588,12 @@ func (client *TxMan) AddSignatureToSwapTx(tx *wire.MsgTx, shards []uint32,
 			return nil, errors.New("unable to get utxo from node")
 		}
 
+		if len(txOut.ScriptPubKey.Addresses) < 2 {
+			// TODO: improve this validation
+			//  suppose that this is regular UTXO
+			continue
+		}
+
 		value, _ := btcutil.NewAmount(txOut.Value)
 		utxo := txmodels.ShortUTXO{
 			Value:    int64(value),
