@@ -28,9 +28,10 @@ type ShardRPC struct {
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
 	connMgr netsync.P2PConnManager,
+	wsMgr *WsManager,
 	logger zerolog.Logger) *ShardRPC {
 	rpc := &ShardRPC{
-		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, logger.With().
+		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr, wsMgr, logger.With().
 			Uint32("id", chainProvider.ChainCtx.ShardID()).
 			Str("ctx", "shard_rpc").Logger()),
 	}

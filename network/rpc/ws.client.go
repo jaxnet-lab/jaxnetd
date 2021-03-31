@@ -44,7 +44,7 @@ func (s semaphore) release() { <-s }
 type wsClient struct {
 	sync.Mutex
 
-	manager *wsManager
+	manager *WsManager
 	chain   chain.IChainCtx
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
@@ -102,7 +102,7 @@ type wsClient struct {
 // returned client is ready to start.  Once started, the client will process
 // incoming and outgoing messages in separate goroutines complete with queuing
 // and asynchrous handling for long-running operations.
-func newWebsocketClient(manager *wsManager, conn *websocket.Conn,
+func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
 	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 
 	sessionID, err := encoder.RandomUint64()

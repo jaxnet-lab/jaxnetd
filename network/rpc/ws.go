@@ -88,7 +88,7 @@ type IWebsocketManager interface {
 // figure out which websocket clients need to be notified based on what they
 // have registered for and notifies them accordingly.  It is also used to keep
 // track of all connected websocket clients.
-type wsManager struct {
+type WsManager struct {
 	rpcutli.ToolsXt
 	server *MultiChainRPC
 
@@ -108,48 +108,48 @@ type wsManager struct {
 
 // newWsNotificationManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
-func WebSocketManager(server *MultiChainRPC) *wsManager {
-	return &wsManager{
+func WebSocketManager(server *MultiChainRPC) *WsManager {
+	return &WsManager{
 		handler:           WebSocketHandlers(server),
 		server:            server,
-		queueNotification: make(chan interface{}),
+		queueNotification: make(chan interface{}, 1000),
 		notificationMsgs:  make(chan interface{}),
 		numClients:        make(chan int),
 		logger:            log,
 	}
 }
 
-func (m *wsManager) Start(ctx context.Context) {
+func (m *WsManager) Start(ctx context.Context) {
 	go m.queueHandler(ctx)
 	go m.notificationHandler(ctx)
 }
 
 // AddClient adds the passed websocket client to the notification manager.
-func (m *wsManager) AddClient(wsc *wsClient) {
+func (m *WsManager) AddClient(wsc *wsClient) {
 	m.queueNotification <- (*notificationRegisterClient)(wsc)
 }
 
 // RemoveClient removes the passed websocket client and all notifications
 // registered for it.
-func (m *wsManager) RemoveClient(wsc *wsClient) {
+func (m *WsManager) RemoveClient(wsc *wsClient) {
 	m.queueNotification <- (*notificationUnregisterClient)(wsc)
 }
 
 // RegisterBlockUpdates requests block update notifications to the passed
 // websocket client.
-func (m *wsManager) RegisterBlockUpdates(wsc *wsClient) {
+func (m *WsManager) RegisterBlockUpdates(wsc *wsClient) {
 	m.queueNotification <- (*notificationRegisterBlocks)(wsc)
 }
 
 // UnregisterBlockUpdates removes block update notifications for the passed
 // websocket client.
-func (m *wsManager) UnregisterBlockUpdates(wsc *wsClient) {
+func (m *WsManager) UnregisterBlockUpdates(wsc *wsClient) {
 	m.queueNotification <- (*notificationUnregisterBlocks)(wsc)
 }
 
 // UnregisterTxOutAddressRequest removes a request from the passed websocket
 // client to be notified when a transaction spends to the passed address.
-func (m *wsManager) UnregisterTxOutAddressRequest(chain *cprovider.ChainProvider, wsc *wsClient, addr string) {
+func (m *WsManager) UnregisterTxOutAddressRequest(chain *cprovider.ChainProvider, wsc *wsClient, addr string) {
 	m.queueNotification <- &notificationUnregisterAddr{
 		wsc:   wsc,
 		addr:  addr,
@@ -159,7 +159,7 @@ func (m *wsManager) UnregisterTxOutAddressRequest(chain *cprovider.ChainProvider
 
 // RegisterTxOutAddressRequests requests notifications to the passed websocket
 // client when a transaction output spends to the passed address.
-func (m *wsManager) RegisterTxOutAddressRequests(chain *cprovider.ChainProvider, wsc *wsClient, addrs []string) {
+func (m *WsManager) RegisterTxOutAddressRequests(chain *cprovider.ChainProvider, wsc *wsClient, addrs []string) {
 	m.queueNotification <- &notificationRegisterAddr{
 		wsc:   wsc,
 		addrs: addrs,
@@ -169,13 +169,13 @@ func (m *wsManager) RegisterTxOutAddressRequests(chain *cprovider.ChainProvider,
 
 // RegisterNewMempoolTxsUpdates requests notifications to the passed websocket
 // client when new transactions are added to the memory pool.
-func (m *wsManager) RegisterNewMempoolTxsUpdates(wsc *wsClient) {
+func (m *WsManager) RegisterNewMempoolTxsUpdates(wsc *wsClient) {
 	m.queueNotification <- (*notificationRegisterNewMempoolTxs)(wsc)
 }
 
 // UnregisterNewMempoolTxsUpdates removes notifications to the passed websocket
 // client when new transaction are added to the memory pool.
-func (m *wsManager) UnregisterNewMempoolTxsUpdates(wsc *wsClient) {
+func (m *WsManager) UnregisterNewMempoolTxsUpdates(wsc *wsClient) {
 	m.queueNotification <- (*notificationUnregisterNewMempoolTxs)(wsc)
 }
 
@@ -183,7 +183,7 @@ func (m *wsManager) UnregisterNewMempoolTxsUpdates(wsc *wsClient) {
 // outpoints is confirmed spent (contained in a block connected to the main
 // BlockChain) for the passed websocket client.  The request is automatically
 // removed once the notification has been sent.
-func (m *wsManager) RegisterSpentRequests(chain *cprovider.ChainProvider, wsc *wsClient, ops []*wire.OutPoint) {
+func (m *WsManager) RegisterSpentRequests(chain *cprovider.ChainProvider, wsc *wsClient, ops []*wire.OutPoint) {
 	m.queueNotification <- &notificationRegisterSpent{
 		wsc:   wsc,
 		ops:   ops,
@@ -194,7 +194,7 @@ func (m *wsManager) RegisterSpentRequests(chain *cprovider.ChainProvider, wsc *w
 // UnregisterSpentRequest removes a request from the passed websocket client
 // to be notified when the passed outpoint is confirmed spent (contained in a
 // block connected to the main BlockChain).
-func (m *wsManager) UnregisterSpentRequest(chain *cprovider.ChainProvider, wsc *wsClient, op *wire.OutPoint) {
+func (m *WsManager) UnregisterSpentRequest(chain *cprovider.ChainProvider, wsc *wsClient, op *wire.OutPoint) {
 	m.queueNotification <- &notificationUnregisterSpent{
 		wsc:   wsc,
 		op:    op,
@@ -252,13 +252,13 @@ out:
 
 // queueHandler maintains a queue of notifications and notification handler
 // control messages.
-func (m *wsManager) queueHandler(ctx context.Context) {
+func (m *WsManager) queueHandler(ctx context.Context) {
 	queueCtx, _ := context.WithCancel(ctx)
 	queueHandler(queueCtx, m.queueNotification, m.notificationMsgs)
 }
 
 type wsBlockNotification struct {
-	Client *wsClient
+	// Client *wsClient
 	Block  *btcutil.Block
 	Chain  *cprovider.ChainProvider
 }
@@ -305,7 +305,7 @@ type notificationUnregisterAddr struct {
 
 // notificationHandler reads notifications and control messages from the queue
 // handler and processes one at a time.
-func (m *wsManager) notificationHandler(ctx context.Context) {
+func (m *WsManager) notificationHandler(ctx context.Context) {
 	m.logger.Info().Msg("Run notificationHandler")
 	childCtx, _ := context.WithCancel(ctx)
 	// clients is a map of all currently connected websocket clients.
@@ -431,7 +431,7 @@ out:
 // notifyForTx examines the inputs and outputs of the passed transaction,
 // notifying websocket clients of outputs spending to a watched address
 // and inputs spending a watched outpoint.
-func (m *wsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient,
+func (m *WsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient,
 	addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
 
 	if len(ops) != 0 {
@@ -446,7 +446,7 @@ func (m *wsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.Out
 // websocket clients of the transaction if an output spends to a watched
 // address.  A spent notification request is automatically registered for
 // the client for each matching output.
-func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
 
 	// Nothing to do if nobody is listening for address notifications.
 	if len(addrs) == 0 {
@@ -497,7 +497,7 @@ func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 // interested websocket clients a redeemingtx notification if any inputs
 // spend a watched output.  If block is non-nil, any matching spent
 // requests are removed.
-func (m *wsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
 
 	// Nothing to do if nobody is watching outpoints.
 	if len(ops) == 0 {
@@ -565,7 +565,7 @@ func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
 // websocket client wsc from the set of clients to be notified when a
 // watched outpoint is spent.  If wsc is the last client, the outpoint
 // key is removed from the map.
-func (m *wsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*wsClient,
+func (m *WsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*wsClient,
 	wsc *wsClient, op *wire.OutPoint) {
 
 	// Remove the request tracking from the client.
@@ -589,7 +589,7 @@ func (m *wsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*
 // addSpentRequests modifies a map of watched outpoints to sets of websocket
 // clients to add a new request watch all of the outpoints in ops and create
 // and send a notification when spent to the websocket client wsc.
-func (m *wsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[wire.OutPoint]map[chan struct{}]*wsClient,
+func (m *WsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[wire.OutPoint]map[chan struct{}]*wsClient,
 	wsc *wsClient, ops []*wire.OutPoint) {
 
 	for _, op := range ops {
@@ -625,7 +625,7 @@ func (m *wsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
-func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *btcutil.Tx) {
+func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *btcutil.Tx) {
 	txHashStr := tx.Hash().String()
 	mtx := tx.MsgTx()
 
@@ -672,7 +672,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 
 // notifyBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
-func (m *wsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
+func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
 	block *btcutil.Block) {
 
 	// Notify interested websocket clients about the connected block.
@@ -690,7 +690,7 @@ func (m *wsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 
 // notifyFilteredBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
-func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
+func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
 	block *btcutil.Block) {
 
 	// Create the common portion of the notification that is the same for
@@ -731,7 +731,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 	}
 }
 
-func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -752,7 +752,7 @@ func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clie
 }
 
 // NumClients returns the number of clients actively being served.
-func (m *wsManager) NumClients() (n int) {
+func (m *WsManager) NumClients() (n int) {
 	return <-m.numClients
 }
 
@@ -762,7 +762,7 @@ func (m *wsManager) NumClients() (n int) {
 // spending a watched output or outputting to a watched address.  Matching
 // client's filters are updated based on this transaction's outputs and output
 // addresses that may be relevant for a client.
-func (m *wsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
+func (m *WsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
 
 	// Use a map of client quit channels as keys to prevent duplicates when
 	// multiple inputs and/or outputs are relevant to the client.
@@ -823,7 +823,7 @@ func (m *wsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcuti
 // notifyFilteredBlockDisconnected notifies websocket clients that have registered for
 // block updates when a block is disconnected from the main BlockChain (due to a
 // reorganize).
-func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -855,7 +855,7 @@ func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 // address and inputs spending a watched outpoint.  Any outputs paying to a
 // watched address result in the output being watched as well for future
 // notifications.
-func (m *wsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) {
+func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) {
 
 	clientsToNotify := m.subscribedClients(chain, tx, clients)
 
@@ -876,7 +876,7 @@ func (m *wsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx 
 // addAddrRequests adds the websocket client wsc to the address to client set
 // addrMap so wsc will be notified for any mempool or block transaction outputs
 // spending to any of the addresses in addrs.
-func (m *wsManager) addAddrRequests(addrMap map[string]map[chan struct{}]*wsClient,
+func (m *WsManager) addAddrRequests(addrMap map[string]map[chan struct{}]*wsClient,
 	wsc *wsClient, addrs []string) {
 
 	for _, addr := range addrs {
@@ -899,7 +899,7 @@ func (m *wsManager) addAddrRequests(addrMap map[string]map[chan struct{}]*wsClie
 // removeAddrRequest removes the websocket client wsc from the address to
 // client set addrs so it will no longer receive notification updates for
 // any transaction outputs send to addr.
-func (m *wsManager) removeAddrRequest(addrs map[string]map[chan struct{}]*wsClient,
+func (m *WsManager) removeAddrRequest(addrs map[string]map[chan struct{}]*wsClient,
 	wsc *wsClient, addr string) {
 
 	// Remove the request tracking from the client.

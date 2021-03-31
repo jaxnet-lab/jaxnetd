@@ -22,7 +22,7 @@ type MultiChainRPC struct {
 	shardRPCs   map[uint32]*ShardRPC
 	chainsMutex sync.RWMutex
 	helpCache   *helpCacher
-	wsManager   *wsManager
+	wsManager   *WsManager
 }
 
 func NewMultiChainRPC(config *Config, logger zerolog.Logger,

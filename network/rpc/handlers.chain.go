@@ -39,16 +39,17 @@ type CommonChainRPC struct {
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
-	ntfnMgr       *wsChainManager
+	ntfnMgr       *WsManager
 	helpCache     *helpCacher
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	logger zerolog.Logger) *CommonChainRPC {
+	wsMgr *WsManager, logger zerolog.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
 		chainProvider: chainProvider,
+		ntfnMgr: wsMgr,
 		gbtWorkState:  nil,
 		helpCache:     nil,
 	}
@@ -121,29 +122,17 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 // long polling for changes or subscribed to websockets notifications.
 func (server *CommonChainRPC) handleBlockchainNotification(notification *blockchain.Notification) {
 	switch notification.Type {
-	case blockchain.NTBlockAccepted:
-		block, ok := notification.Data.(*btcutil.Block)
-		if !ok {
-			server.Log.Warn().Msgf("Chain accepted notification is not a block.")
-			break
-		}
-
-		// Allow any clients performing long polling via the
-		// getblocktemplate RPC to be notified when the new block causes
-		// their old block template to become stale.
-		server.gbtWorkState.NotifyBlockConnected(block.Hash())
-
 	case blockchain.NTBlockConnected:
 		block, ok := notification.Data.(*btcutil.Block)
 		if !ok {
 			server.Log.Warn().Msg("Chain connected notification is not a block.")
 			break
 		}
-
-		if server.ntfnMgr != nil {
-			//Notify registered websocket clients of incoming block.
-			server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
+		ntf := &notificationBlockConnected{
+			Block: block,
+			Chain: server.chainProvider,
 		}
+		server.ntfnMgr.queueNotification <- ntf
 
 	case blockchain.NTBlockDisconnected:
 		block, ok := notification.Data.(*btcutil.Block)
@@ -151,10 +140,11 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			server.Log.Warn().Msg("Chain disconnected notification is not a block.")
 			break
 		}
-		if server.ntfnMgr != nil {
-			//Notify registered websocket clients.
-			server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
+		ntf := &notificationBlockDisconnected{
+			Block: block,
+			Chain: server.chainProvider,
 		}
+		server.ntfnMgr.queueNotification <- ntf
 	}
 }
 
@@ -686,13 +676,13 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
-	if server.ntfnMgr == nil {
-		return
-	}
-	for _, txD := range txns {
-		// Notify websocket clients about mempool transactions.
-		server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
-	}
+	// if server.ntfnMgr == nil {
+	// 	return
+	// }
+	// for _, txD := range txns {
+	// 	// Notify websocket clients about mempool transactions.
+	// 	server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
+	// }
 }
 
 // handleSubmitBlock implements the submitblock command.

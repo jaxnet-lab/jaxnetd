@@ -78,6 +78,11 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 				chainCtl.logger.Error().Err(err).Msg("listen metrics server")
 			}
 		}()
+	}	
+
+		if err := chainCtl.runRpc(chainCtl.ctx, cfg); err != nil {
+		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
+		return err
 	}
 
 	if cfg.Node.Shards.Enable {
@@ -90,11 +95,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 
 	if cfg.Node.Shards.Autorun {
 		chainCtl.beacon.chainProvider.BlockChain().Subscribe(chainCtl.shardsAutorunCallback)
-	}
-
-	if err := chainCtl.runRpc(chainCtl.ctx, cfg); err != nil {
-		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
-		return err
 	}
 
 	if chainCtl.cfg.Node.EnableCPUMiner {
@@ -176,25 +176,26 @@ type rpcRO struct {
 	beacon  *rpc.BeaconRPC
 	node    *rpc.NodeRPC
 	connMgr netsync.P2PConnManager
-	wsMgr   rpc.IWebsocketManager
+	wsMgr   *rpc.WsManager
 }
 
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
+	chainCtl.logger.Info().Msg("Create WS RPC server")
+	chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
+
 	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger)
-	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
+	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.rpc.wsMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
 	for shardID, ro := range chainCtl.shardsCtl {
-		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr, chainCtl.logger)
+		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr, chainCtl.rpc.wsMgr, chainCtl.logger)
 	}
 
 	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
 		nodeRPC, beaconRPC, shardRPCs)
 
-	chainCtl.logger.Info().Msg("Create WS RPC server")
-	chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
 	chainCtl.wg.Add(1)
 	go func() {
 
