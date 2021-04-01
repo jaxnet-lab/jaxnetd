@@ -9,7 +9,8 @@ package rpcclient
 import (
 	"encoding/hex"
 	"encoding/json"
-
+	"errors"
+	
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
@@ -1002,4 +1003,42 @@ func (c *Client) ManageShardsAsync(action string, shardID uint32) FutureManageSh
 }
 func (c *Client) ManageShards(action string, shardID uint32) error {
 	return c.ManageShardsAsync(action, shardID).Receive()
+}
+
+// FutureGetLastSerialBlockNumberResult is a future promise to deliver the result of a
+// GetLastSerialBlockNumberAsync RPC invocation (or an applicable error).
+type FutureGetLastSerialBlockNumberResult chan *response
+
+// Receive waits for the response promised by the future and returns the number
+// of blocks in the longest block chain.
+func (r FutureGetLastSerialBlockNumberResult) Receive() (int, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return 0, err
+	}
+
+	// Unmarshal the result as an map.
+	var resmap map[string]int
+	err = json.Unmarshal(res, &resmap)
+	if err != nil {
+		return 0, err
+	}
+	if _, ok := resmap["lastserial"]; !ok {
+		return 0, errors.New("Bad response format")
+	}
+	return resmap["lastserial"], nil
+}
+
+// GetLastSerialBlockNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+func (c *Client) GetLastSerialBlockNumberAsync() FutureGetLastSerialBlockNumberResult {
+	cmd := btcjson.NewGetLastSerialBlockNumberCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetBlockCount returns the number of blocks in the longest block chain.
+func (c *Client) GetLastSerialBlockNumber() (int, error) {
+	return c.GetLastSerialBlockNumberAsync().Receive()
 }

@@ -28,12 +28,12 @@ type MultiChainRPC struct {
 func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 	nodeRPC *NodeRPC, beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
 	rpc := &MultiChainRPC{
-		ServerCore: NewRPCCore(config, logger),
+		ServerCore: NewRPCCore(config),
 		nodeRPC:    nodeRPC,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
-	rpc.wsManager = WebSocketManager(rpc, logger)
+	rpc.wsManager = WebSocketManager(rpc)
 
 	return rpc
 }

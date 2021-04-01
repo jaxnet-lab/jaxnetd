@@ -108,14 +108,14 @@ type wsManager struct {
 
 // newWsNotificationManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
-func WebSocketManager(server *MultiChainRPC, logger zerolog.Logger) *wsManager {
+func WebSocketManager(server *MultiChainRPC) *wsManager {
 	return &wsManager{
 		handler:           WebSocketHandlers(server),
 		server:            server,
 		queueNotification: make(chan interface{}),
 		notificationMsgs:  make(chan interface{}),
 		numClients:        make(chan int),
-		logger:logger,
+		logger:            log,
 	}
 }
 

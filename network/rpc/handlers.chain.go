@@ -56,6 +56,7 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P
 
 	rpc.gbtWorkState = chainProvider.GbtWorkState()
 	rpc.helpCache = newHelpCacher(rpc)
+	rpc.chainProvider.BlockChain().Subscribe(rpc.handleBlockchainNotification)
 	return rpc
 }
 
@@ -104,14 +105,15 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		// -------------------------------------------------------------------------------------------------------------
 
 		// ---- block-related commands ----------------------------
-		btcjson.ScopedMethod("chain", "getBestBlock"):      server.handleGetBestBlock,
-		btcjson.ScopedMethod("chain", "getBestBlockHash"):  server.handleGetBestBlockHash,
-		btcjson.ScopedMethod("chain", "getBlockchainInfo"): server.handleGetBlockChainInfo,
-		btcjson.ScopedMethod("chain", "getBlockCount"):     server.handleGetBlockCount,
-		btcjson.ScopedMethod("chain", "getBlockHash"):      server.handleGetBlockHash,
-		btcjson.ScopedMethod("chain", "getCFilter"):        server.handleGetCFilter,
-		btcjson.ScopedMethod("chain", "getCFilterHeader"):  server.handleGetCFilterHeader,
-		btcjson.ScopedMethod("chain", "submitBlock"):       server.handleSubmitBlock,
+		btcjson.ScopedMethod("chain", "getBestBlock"):             server.handleGetBestBlock,
+		btcjson.ScopedMethod("chain", "getBestBlockHash"):         server.handleGetBestBlockHash,
+		btcjson.ScopedMethod("chain", "getBlockchainInfo"):        server.handleGetBlockChainInfo,
+		btcjson.ScopedMethod("chain", "getBlockCount"):            server.handleGetBlockCount,
+		btcjson.ScopedMethod("chain", "getBlockHash"):             server.handleGetBlockHash,
+		btcjson.ScopedMethod("chain", "getCFilter"):               server.handleGetCFilter,
+		btcjson.ScopedMethod("chain", "getCFilterHeader"):         server.handleGetCFilterHeader,
+		btcjson.ScopedMethod("chain", "submitBlock"):              server.handleSubmitBlock,
+		btcjson.ScopedMethod("chain", "getLastSerialBlockNumber"): server.handleGetLastSerialBlockNumber,
 		// -------------------------------------------------------------------------------------------------------------
 	}
 }
@@ -822,6 +824,30 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 
 	// Return boolean if addresses match.
 	return address.EncodeAddress() == c.Address, nil
+}
+
+
+// handleGetLastSerialBlockNumber implements the getLastSerialBlockNumber command.
+func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	var lastSerial int
+	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		var err error
+		lastSerial, err = chaindata.DBFetchLastSerialID(dbTx)
+		return err
+	})
+
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCBlockNotFound,
+			Message: err.Error(),
+		}
+	}
+
+	result := &btcjson.GetLastSerialBlockNumberResult{
+		LastSerial:   lastSerial,		
+	}	
+
+	return result, nil
 }
 
 // directionString is a helper function that returns a string that represents
