@@ -71,7 +71,7 @@ func (chainCtl *chainController) runShards() error {
 			return err
 		}
 
-		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, false)
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true)
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}()
 
 	if autoInit {
-		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.rpc.wsMgr, chainCtl.logger)
+		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
 		if chainCtl.cfg.Node.EnableCPUMiner {

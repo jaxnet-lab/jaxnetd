@@ -503,6 +503,7 @@ out:
 		// disconnected closed.
 		select {
 		case msg := <-c.sendChan:
+			fmt.Println("####### ws_client write msg", string(msg))
 			err := c.wsConn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				c.Disconnect()

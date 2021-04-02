@@ -31,6 +31,9 @@ const (
 	websocketSendBufferSize = 50
 )
 
+// Should be singleton in the system
+var wsManager *WsManager
+
 // WebsocketHandler handles a new websocket client by creating a new wsClient,
 // starting it, and blocking until the connection closes.  Since it blocks, it
 // must be run in a separate goroutine.  It should be invoked from the websocket
@@ -59,7 +62,7 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	// Create a new websocket client to handle the new websocket connection
 	// and wait for it to shutdown.  Once it has shutdown (and hence
 	// disconnected), remove it and any notifications it registered for.
-	client, err := newWebsocketClient(server.wsManager, conn, remoteAddr, authenticated, isAdmin)
+	client, err := newWebsocketClient(wsManager, conn, remoteAddr, authenticated, isAdmin)
 	if err != nil {
 		server.logger.Error().Str("remote", remoteAddr).Err(err).Msg("Failed to serve client")
 		conn.Close()
@@ -109,7 +112,10 @@ type WsManager struct {
 // newWsNotificationManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
 func WebSocketManager(server *MultiChainRPC) *WsManager {
-	return &WsManager{
+	if wsManager != nil {
+		return wsManager
+	}
+	wsManager = &WsManager{
 		handler:           WebSocketHandlers(server),
 		server:            server,
 		queueNotification: make(chan interface{}, 1000),
@@ -117,6 +123,8 @@ func WebSocketManager(server *MultiChainRPC) *WsManager {
 		numClients:        make(chan int),
 		logger:            log,
 	}
+
+	return wsManager
 }
 
 func (m *WsManager) Start(ctx context.Context) {
@@ -206,7 +214,8 @@ func (m *WsManager) UnregisterSpentRequest(chain *cprovider.ChainProvider, wsc *
 // sending the oldest unsent to out.  This handler stops when either of the
 // in or quit channels are closed, and closes out before returning, without
 // waiting to send any variables still remaining in the queue.
-func queueHandler(ctx context.Context, in <-chan interface{}, out chan<- interface{}) {
+func queueHandler(ctx context.Context, in chan interface{}, out chan<- interface{}) {
+
 	var q []interface{}
 	var dequeue chan<- interface{}
 	skipQueue := out
@@ -258,9 +267,8 @@ func (m *WsManager) queueHandler(ctx context.Context) {
 }
 
 type wsBlockNotification struct {
-	// Client *wsClient
-	Block  *btcutil.Block
-	Chain  *cprovider.ChainProvider
+	Block *btcutil.Block
+	Chain *cprovider.ChainProvider
 }
 
 type wsTransactionNotification struct {
@@ -326,7 +334,7 @@ func (m *WsManager) notificationHandler(ctx context.Context) {
 out:
 	for {
 		select {
-		case n, ok := <-m.notificationMsgs:
+		case n, ok := <-m.notificationMsgs:			
 			if !ok {
 				// queueHandler quit.
 				break out
@@ -334,7 +342,8 @@ out:
 			switch n := n.(type) {
 			case *notificationBlockConnected:
 				block := n.Block
-
+                // fmt.Println("##################################### block connected")
+				
 				// Skip iterating through all txs if no
 				// tx notification requests exist.
 				if len(watchedOutPoints) != 0 || len(watchedAddrs) != 0 {
@@ -351,7 +360,7 @@ out:
 
 			case *notificationBlockDisconnected:
 				block := n.Block
-
+				// fmt.Println("#####################################block disconnected")
 				if len(blockNotifications) != 0 {
 					m.notifyBlockDisconnected(n.Chain, blockNotifications, block)
 					m.notifyFilteredBlockDisconnected(n.Chain, blockNotifications, block)
@@ -365,6 +374,7 @@ out:
 				m.notifyRelevantTxAccepted(n.Chain, n.tx, clients)
 
 			case *notificationRegisterBlocks:
+				// fmt.Println("#####################################notificationRegisterBlocks")
 				wsc := (*wsClient)(n)
 				blockNotifications[wsc.quit] = wsc
 
@@ -373,6 +383,7 @@ out:
 				delete(blockNotifications, wsc.quit)
 
 			case *notificationRegisterClient:
+				// fmt.Println("#####################################notificationRegisterBlocks")
 				wsc := (*wsClient)(n)
 				clients[wsc.quit] = wsc
 

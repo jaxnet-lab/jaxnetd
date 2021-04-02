@@ -8,13 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
+
 	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"io"
-	"sync"
 )
 
 type semaphore chan struct{}
@@ -88,6 +91,8 @@ type wsClient struct {
 	// `rescanblocks` methods.
 	filterData *wsClientFilter
 
+	logger zerolog.Logger
+
 	// Networking infrastructure.
 	serviceRequestSem semaphore
 	ntfnChan          chan []byte
@@ -111,18 +116,19 @@ func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
 	}
 
 	client := &wsClient{
-		conn:          conn,
-		addr:          remoteAddr,
-		authenticated: authenticated,
-		isAdmin:       isAdmin,
-		sessionID:     sessionID,
-		manager:       manager,
-		addrRequests:  make(map[string]struct{}),
-		spentRequests: make(map[wire.OutPoint]struct{}),
-		//serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
-		ntfnChan: make(chan []byte, 1), // nonblocking sync
-		sendChan: make(chan wsResponse, websocketSendBufferSize),
-		quit:     make(chan struct{}),
+		conn:              conn,
+		addr:              remoteAddr,
+		authenticated:     authenticated,
+		isAdmin:           isAdmin,
+		sessionID:         sessionID,
+		manager:           manager,
+		addrRequests:      make(map[string]struct{}),
+		spentRequests:     make(map[wire.OutPoint]struct{}),
+		logger:            log,
+		serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
+		ntfnChan:          make(chan []byte, 1), // nonblocking sync
+		sendChan:          make(chan wsResponse, websocketSendBufferSize),
+		quit:              make(chan struct{}),
 	}
 	return client, nil
 }
@@ -141,14 +147,16 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
-		c.manager.logger.Debug().Err(err).Msg(fmt.Sprintf("read message <%s>", string(msg)))
+		c.logger.Debug().Err(err).Msg(fmt.Sprintf("read message <%s>", string(msg)))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
-				c.manager.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
+				c.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
 			}
 			break out
 		}
+
+		fmt.Println("############## wsClient:inHandler incoming msg ", string(msg))
 
 		var request btcjson.Request
 		err = json.Unmarshal(msg, &request)
@@ -161,9 +169,15 @@ out:
 				Code:    btcjson.ErrRPCParse.Code,
 				Message: "Failed to parse request: " + err.Error(),
 			}
+
+			if c.manager == nil {
+				c.logger.Error().Msg("WsManager is not initialized")
+				continue
+			}
+
 			reply, err := c.manager.server.createMarshalledReply(nil, nil, jsonErr)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure")
+				c.logger.Error().Err(err).Msg("Failed to marshal parse failure")
 				continue
 			}
 			c.SendMessage(reply, nil)
@@ -203,14 +217,15 @@ out:
 
 			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, cmd.err)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
+				c.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
 				continue
 			}
+			fmt.Println("############## wsClient:inHandler:225 send error ", string(reply))
 			c.SendMessage(reply, nil)
 			continue
 		}
-		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
-
+		c.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
+		fmt.Println(fmt.Sprintf("############### Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
@@ -218,10 +233,10 @@ out:
 		// authentication credentials are provided in the request.
 		switch authCmd, ok := cmd.cmd.(*btcjson.AuthenticateCmd); {
 		case c.authenticated && ok:
-			c.manager.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
+			c.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
 			break out
 		case !c.authenticated && !ok:
-			c.manager.logger.Warn().Msg("Unauthenticated websocket message received")
+			c.logger.Warn().Msg("Unauthenticated websocket message received")
 			break out
 		case !c.authenticated:
 			// Check credentials.
@@ -231,7 +246,7 @@ out:
 			cmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.authSHA[:])
 			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.limitAuthSHA[:])
 			if cmp != 1 && limitcmp != 1 {
-				c.manager.logger.Warn().Msg("Auth failure.")
+				c.logger.Warn().Msg("Auth failure.")
 				break out
 			}
 			c.authenticated = true
@@ -240,9 +255,10 @@ out:
 			// Marshal and send response.
 			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, nil)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal authenticate")
+				c.logger.Error().Err(err).Msg("Failed to marshal authenticate")
 				continue
 			}
+			fmt.Println("############## wsClient:inHandler:263 send error ", string(reply))
 			c.SendMessage(reply, nil)
 			continue
 		}
@@ -261,6 +277,7 @@ out:
 					c.manager.logger.Error().Msg("Failed to marshal parse failure ")
 					continue
 				}
+				fmt.Println("############## wsClient:inHandler:282 send error ", string(reply))
 				c.SendMessage(reply, nil)
 				continue
 			}
@@ -308,18 +325,38 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 		err    error
 	)
 
-	shard, ok := c.manager.server.shardRPCs[r.shardID]
-	if ok {
-		//result, err = c.manager.server.HandleCommand(r, nil)
-		return
+	fmt.Println("############## WsClient:serviceRequest: incoming cmd ", r)
+
+	var provider *cprovider.ChainProvider
+	if r.shardID != 0 {
+		shard, ok := c.manager.server.shardRPCs[r.shardID]
+		if !ok {
+			jsonErr := &btcjson.RPCError{
+				Code:    btcjson.ErrRPCInvalidParams.Code,
+				Message: "Shard is not found by provided shard id",
+			}
+			// Marshal and send error response.
+			reply, err := c.manager.server.createMarshalledReply(r.id, nil, jsonErr)
+			if err != nil {
+				c.logger.Error().Msg("Failed to marshal parse failure ")
+				return
+			}
+			c.SendMessage(reply, nil)
+			return
+		}
+		provider = shard.chainProvider
+	} else {
+		provider = c.manager.server.beaconRPC.chainProvider
 	}
 
 	// Lookup the websocket extension for the command and if it doesn't
 	// exist fallback to handling the command as a standard command.
 	wsHandler, ok := c.manager.handler.handlers[r.method]
 	if ok {
-		result, err = wsHandler(shard.chainProvider, c, r.cmd)
+		fmt.Println("############## WsClient:serviceRequest: wsHandler found ")
+		result, err = wsHandler(provider, c, r.cmd)
 	} else {
+		fmt.Println("############## WsClient:serviceRequest: wsHandler not found ")
 		//TODO: implement
 		//result, err = c.manager.server.HandleCommand(r, nil)
 	}
@@ -327,6 +364,9 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	if err != nil {
 		c.manager.logger.Error().Str("command", r.method).Err(err).Msg("Failed to marshal reply command")
 		return
+	}
+	if result == nil{ 
+		fmt.Println("############## wsClient:inHandler:371 send error ", string(reply))
 	}
 	c.SendMessage(reply, nil)
 }
@@ -362,6 +402,7 @@ out:
 		// are sent.
 		case msg := <-c.ntfnChan:
 			if !waiting {
+				// fmt.Println("############## wsClient:inHandler:406 send error ", string(msg))
 				c.SendMessage(msg, ntfnSentChan)
 			} else {
 				pendingNtfns.PushBack(msg)
@@ -382,6 +423,7 @@ out:
 			// Notify the outHandler about the next item to
 			// asynchronously send.
 			msg := pendingNtfns.Remove(next).([]byte)
+			// fmt.Println("############## wsClient:inHandler:427 send error ", string(msg))
 			c.SendMessage(msg, ntfnSentChan)
 
 		case <-c.quit:
@@ -415,6 +457,7 @@ out:
 		// closed.
 		select {
 		case r := <-c.sendChan:
+			// fmt.Println("############## WsClient:outHandler ", string(r.msg))
 			err := c.conn.WriteMessage(websocket.TextMessage, r.msg)
 			if err != nil {
 				c.Disconnect()
@@ -460,8 +503,7 @@ func (c *wsClient) SendMessage(marshalledJSON []byte, doneChan chan bool) {
 		}
 		return
 	}
-
-	c.sendChan <- wsResponse{msg: marshalledJSON, doneChan: doneChan}
+ 	c.sendChan <- wsResponse{msg: marshalledJSON, doneChan: doneChan}
 }
 
 //

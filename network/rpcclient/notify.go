@@ -238,26 +238,27 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		c.ntfnHandlers.OnBlockConnected(blockHash, blockHeight, blockTime)
 
 	// OnFilteredBlockConnected
-	case btcjson.FilteredBlockConnectedNtfnMethod:
-		// Ignore the notification if the client is not interested in
-		// it.
-		if c.ntfnHandlers.OnFilteredBlockConnected == nil {
-			return
-		}
+	// case btcjson.FilteredBlockConnectedNtfnMethod:
+	// 	// Ignore the notification if the client is not interested in
+	// 	// it.
+	// 	if c.ntfnHandlers.OnFilteredBlockConnected == nil {
+	// 		return
+	// 	}
 
-		blockHeight, blockHeader, transactions, err :=
-			parseFilteredBlockConnectedParams(ntfn.Params)
-		if err != nil {
-			log.Warn().Msgf("Received invalid filtered block "+
-				"connected notification: %v", err)
-			return
-		}
+	// 	blockHeight, blockHeader, transactions, err :=
+	// 		parseFilteredBlockConnectedParams(ntfn.Params)
+	// 	if err != nil {
+	// 		log.Warn().Msgf("Received invalid filtered block "+
+	// 			"connected notification: %v", err)
+	// 		return
+	// 	}
 
-		c.ntfnHandlers.OnFilteredBlockConnected(blockHeight,
-			blockHeader, transactions)
+	// 	c.ntfnHandlers.OnFilteredBlockConnected(blockHeight,
+	// 		blockHeader, transactions)
 
 	// OnBlockDisconnected
 	case btcjson.BlockDisconnectedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:265")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnBlockDisconnected == nil {
@@ -266,6 +267,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		blockHash, blockHeight, blockTime, err := parseChainNtfnParams(ntfn.Params)
 		if err != nil {
+			fmt.Println("##################### notify: handleNotification:271 error ")
 			log.Warn().Msgf("Received invalid block connected "+
 				"notification: %v", err)
 			return
@@ -275,15 +277,18 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnFilteredBlockDisconnected
 	case btcjson.FilteredBlockDisconnectedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:284")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnFilteredBlockDisconnected == nil {
+			fmt.Println("##################### notify: handleNotification:284 error ")
 			return
 		}
 
 		blockHeight, blockHeader, err :=
 			parseFilteredBlockDisconnectedParams(ntfn.Params)
 		if err != nil {
+			fmt.Println("##################### notify: handleNotification:291 error ")
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
 			return
@@ -294,14 +299,17 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRecvTx
 	case btcjson.RecvTxNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:306")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRecvTx == nil {
+			fmt.Println("##################### notify: handleNotification:305 error ")
 			return
 		}
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
+			fmt.Println("##################### notify: handleNotification:311 error ")
 			log.Warn().Msgf("Received invalid recvtx notification: %v",
 				err)
 			return
@@ -311,14 +319,17 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRedeemingTx
 	case btcjson.RedeemingTxNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:326")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRedeemingTx == nil {
+			fmt.Println("##################### notify: handleNotification:324 error ")
 			return
 		}
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
+			fmt.Println("##################### notify: handleNotification:330 error ")
 			log.Warn().Msgf("Received invalid redeemingtx "+
 				"notification: %v", err)
 			return
@@ -328,14 +339,17 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRelevantTxAccepted
 	case btcjson.RelevantTxAcceptedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:346")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRelevantTxAccepted == nil {
+			fmt.Println("##################### notify: handleNotification:343 error ")
 			return
 		}
 
 		transaction, err := parseRelevantTxAcceptedParams(ntfn.Params)
 		if err != nil {
+			fmt.Println("##################### notify: handleNotification:349 error ")
 			log.Warn().Msgf("Received invalid relevanttxaccepted "+
 				"notification: %v", err)
 			return
@@ -345,6 +359,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRescanFinished
 	case btcjson.RescanFinishedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:366")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRescanFinished == nil {
@@ -362,6 +377,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRescanProgress
 	case btcjson.RescanProgressNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:384")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRescanProgress == nil {
@@ -379,6 +395,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAccepted
 	case btcjson.TxAcceptedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:402")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAccepted == nil {
@@ -396,6 +413,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAcceptedVerbose
 	case btcjson.TxAcceptedVerboseNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:420")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAcceptedVerbose == nil {
@@ -413,6 +431,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnBtcdConnected
 	case btcjson.BtcdConnectedNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:438")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnBtcdConnected == nil {
@@ -430,6 +449,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnAccountBalance
 	case btcjson.AccountBalanceNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:456")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnAccountBalance == nil {
@@ -447,6 +467,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnWalletLockState
 	case btcjson.WalletLockStateNtfnMethod:
+		fmt.Println("##################### notify:handleNotification:474")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnWalletLockState == nil {
@@ -539,6 +560,10 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		return 0, nil, nil, wrongNumParams(len(params))
 	}
 
+	fmt.Println("parseFilteredBlockConnectedParams: 0 param ", string(params[0]))	
+	fmt.Println("parseFilteredBlockConnectedParams: 1 param ", string(params[1]))
+	fmt.Println("parseFilteredBlockConnectedParams: 2 param ", string(params[2]))
+
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
 	err := json.Unmarshal(params[0], &blockHeight)
@@ -560,6 +585,9 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Unmarshal third parameter as a slice of hex-encoded strings.
+	if params[2] == nil {
+		return 0, nil, nil, errors.New("hexTransactions is null")
+	}
 	var hexTransactions []string
 	err = json.Unmarshal(params[2], &hexTransactions)
 	if err != nil {

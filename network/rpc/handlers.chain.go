@@ -35,7 +35,7 @@ type CommonChainRPC struct {
 	// provides the RPC Server with a means to do things such as add,
 	// remove, connect, disconnect, and query peers as well as other
 	// connection-related data and tasks.
-	connMgr       netsync.P2PConnManager
+	connMgr netsync.P2PConnManager
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
@@ -44,12 +44,11 @@ type CommonChainRPC struct {
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	wsMgr *WsManager, logger zerolog.Logger) *CommonChainRPC {
+	logger zerolog.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,
 		chainProvider: chainProvider,
-		ntfnMgr: wsMgr,
 		gbtWorkState:  nil,
 		helpCache:     nil,
 	}
@@ -132,8 +131,10 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			Block: block,
 			Chain: server.chainProvider,
 		}
-		server.ntfnMgr.queueNotification <- ntf
 
+		if wsManager != nil {
+			wsManager.queueNotification <- ntf
+		} 
 	case blockchain.NTBlockDisconnected:
 		block, ok := notification.Data.(*btcutil.Block)
 		if !ok {
@@ -144,7 +145,9 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			Block: block,
 			Chain: server.chainProvider,
 		}
-		server.ntfnMgr.queueNotification <- ntf
+		if wsManager != nil {
+			wsManager.queueNotification <- ntf
+		}
 	}
 }
 

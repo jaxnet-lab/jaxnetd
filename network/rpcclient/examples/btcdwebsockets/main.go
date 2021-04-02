@@ -12,6 +12,10 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
+	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -21,15 +25,19 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
+		OnBlockConnected: func(hash *chainhash.Hash, height int32, t time.Time) {
+			fmt.Printf("Block connected: : %v (%d) %v \n", hash, height, t)			
+		},
+
 		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*btcutil.Tx) {
-			fmt.Println("Block connected")
-			log.Printf("Block connected: %v (%d) %v",
+			fmt.Println("Filtered Block connected")
+			log.Printf("Filtered Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp())
 		},
-		OnFilteredBlockDisconnected: func(height int32, header wire.BlockHeader) {
-			log.Printf("Block disconnected: %v (%d) %v",
-				header.BlockHash(), height, header.Timestamp())
-		},
+		// OnFilteredBlockDisconnected: func(height int32, header wire.BlockHeader) {
+		// 	log.Printf("Block disconnected: %v (%d) %v",
+		// 		header.BlockHash(), height, header.Timestamp())
+		// },
 	}
 
 	// Connect to local btcd RPC server using websockets.
@@ -48,6 +56,7 @@ func main() {
 	}
 
     connCfg.Params = "fastnet"
+	chain.BeaconChain = beacon.Chain(&chaincfg.Params{})
 
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)
 	if err != nil {

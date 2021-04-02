@@ -33,7 +33,8 @@ func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
-	rpc.wsManager = WebSocketManager(rpc)
+	wsManager = WebSocketManager(rpc)
+	rpc.wsManager = wsManager
 
 	return rpc
 }
@@ -102,7 +103,7 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			return prcPtr.HandleCommand(cmd, closeChan)
 		}))
 
-	server.wsManager.Start(ctx)
+	wsManager.Start(ctx)
 	server.StartRPC(ctx, rpcServeMux)
 }
 
