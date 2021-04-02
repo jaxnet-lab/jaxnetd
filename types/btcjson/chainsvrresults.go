@@ -835,6 +835,19 @@ type EstimateSmartFeeResult struct {
 	Blocks      int64    `json:"blocks"`
 }
 
+type Fee struct {
+	BtcPerKB    float64 `json:"btc_per_kb"`
+	SatoshiPerB float64 `json:"satoshi_per_b"`
+	Blocks      int64   `json:"blocks"`
+	Estimated   bool    `json:"estimated"`
+}
+
+type ExtendedFeeFeeResult struct {
+	Fast     Fee `json:"fast"`
+	Moderate Fee `json:"moderate"`
+	Slow     Fee `json:"slow"`
+}
+
 type ShardListResult struct {
 	Shards map[uint32]ShardInfo `json:"shards"`
 }
@@ -854,9 +867,9 @@ type GetLastSerialBlockNumberResult struct {
 }
 
 type GetBeaconBlockBySerialNumberResult struct {
-	Block               string        `json:"block"`
-	SerialID            int           `json:"serial_id"`
-	PrevSerialID        int           `json:"prev_serial_id"`
+	Block        string `json:"block"`
+	SerialID     int    `json:"serial_id"`
+	PrevSerialID int    `json:"prev_serial_id"`
 }
 
 // GetBeaconBlockBySerialNumberVerboseResult models the data from the getBeaconBlock command when the
@@ -889,9 +902,9 @@ type GetBeaconBlockBySerialNumberVerboseResult struct {
 }
 
 type GetShardBlockBySerialNumberResult struct {
-	Block               string        `json:"block"`
-	SerialID            int           `json:"serial_id"`
-	PrevSerialID        int           `json:"prev_serial_id"`
+	Block        string `json:"block"`
+	SerialID     int    `json:"serial_id"`
+	PrevSerialID int    `json:"prev_serial_id"`
 }
 
 // GetShardBlockVerboseResult models the data from the getShardBlock command when the

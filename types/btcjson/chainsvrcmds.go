@@ -926,7 +926,7 @@ func NewManageShardsCmd(shardID uint32, action string, initialHeight *int32) *Ma
 
 type ListShardsCmd struct{}
 
-type GetLastSerialBlockNumberCmd struct {}
+type GetLastSerialBlockNumberCmd struct{}
 
 func NewGetLastSerialBlockNumberCmd() *GetLastSerialBlockNumberCmd {
 	return &GetLastSerialBlockNumberCmd{}
@@ -979,6 +979,7 @@ func init() {
 	MustRegisterCmd("chain", "decodeRawTransaction", (*DecodeRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "estimateFee", (*EstimateFeeCmd)(nil), flags)
 	MustRegisterCmd("chain", "estimateSmartFee", (*EstimateSmartFeeCmd)(nil), flags)
+	MustRegisterCmd("chain", "getExtendedFee", (*GetExtendedFee)(nil), flags)
 	MustRegisterCmd("chain", "getMempoolInfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
