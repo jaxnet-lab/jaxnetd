@@ -15,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -29,6 +30,10 @@ var (
 )
 
 func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool) int64 {
+	if feeRate < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
+		feeRate = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+	}
+
 	size := chaindata.GetTransactionWeight(btcutil.NewTx(tx))
 	if addChange {
 		size += int64(TxInEstWeight + TxOutEstWeight)
@@ -37,6 +42,10 @@ func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool) int64 {
 }
 
 func EstimateFee(inCount, outCount int, feeRate int64, addChange bool) int64 {
+	if feeRate < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
+		feeRate = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+	}
+
 	if addChange {
 		inCount += 1
 		outCount += 1
