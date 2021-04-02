@@ -86,19 +86,24 @@ func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-
 	var err error
 	result := btcjson.ExtendedFeeFeeResult{}
 
-	result.Fast, err = server.estimateFeeForTarget(2)
+	fast, moderate, slow := 2, 64, 128
+	if server.chainProvider.ChainCtx.IsBeacon() {
+		fast, moderate, slow = 2, 4, 8
+	}
+
+	result.Fast, err = server.estimateFeeForTarget(int64(fast))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
 		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
 	}
 
-	result.Moderate, err = server.estimateFeeForTarget(4)
+	result.Moderate, err = server.estimateFeeForTarget(int64(moderate))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
 		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
 	}
 
-	result.Slow, err = server.estimateFeeForTarget(8)
+	result.Slow, err = server.estimateFeeForTarget(int64(slow))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
 		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
