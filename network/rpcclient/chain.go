@@ -525,13 +525,13 @@ func (r FutureGetExtendedFeeResult) Receive() (*btcjson.ExtendedFeeFeeResult, er
 // returned instance.
 //
 // See EstimateSmartFee for the blocking version and more details.
-func (c *Client) GetExtendedFeeAsync() FutureEstimateSmartFeeResult {
-	cmd := btcjson.GetExtendedFee{}
+func (c *Client) GetExtendedFeeAsync() FutureGetExtendedFeeResult {
+	cmd := &btcjson.GetExtendedFee{}
 	return c.sendCmd(cmd)
 }
 
 // GetExtendedFee requests the server to estimate a fee level based on the given parameters.
-func (c *Client) GetExtendedFee() (*btcjson.EstimateSmartFeeResult, error) {
+func (c *Client) GetExtendedFee() (*btcjson.ExtendedFeeFeeResult, error) {
 	return c.GetExtendedFeeAsync().Receive()
 }
 
