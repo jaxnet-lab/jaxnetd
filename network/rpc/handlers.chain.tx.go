@@ -81,6 +81,55 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	return res, nil
 }
 
+// estimatesmartfee
+func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	var err error
+	result := btcjson.ExtendedFeeFeeResult{}
+
+	result.Fast, err = server.estimateFeeForTarget(2)
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	result.Moderate, err = server.estimateFeeForTarget(4)
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	result.Slow, err = server.estimateFeeForTarget(8)
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	return result, nil
+}
+
+func (server *CommonChainRPC) estimateFeeForTarget(target int64) (btcjson.Fee, error) {
+	if server.chainProvider.FeeEstimator == nil {
+		return btcjson.Fee{}, errors.New("Fee estimation disabled")
+	}
+
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(target))
+	if err != nil {
+		return btcjson.Fee{}, err
+	}
+
+	btcPerKB := float64(feeRate)
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+
+	res := btcjson.Fee{
+		BtcPerKB:    btcPerKB,
+		SatoshiPerB: satoshiPerB,
+		Blocks:      target,
+		Estimated:   true,
+	}
+
+	return res, nil
+}
+
 // handleDecodeRawTransaction handles decoderawtransaction commands.
 func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*btcjson.DecodeRawTransactionCmd)

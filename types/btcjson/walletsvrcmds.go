@@ -132,6 +132,17 @@ func NewEstimatePriorityCmd(numBlocks int64) *EstimatePriorityCmd {
 	}
 }
 
+// GetFeeVariantsCmd defines the getFeeVariants JSON-RPC command.
+type GetFeeVariantsCmd struct {
+	In       int64
+	Out      int64
+	SegWit   bool
+	MultiSig bool
+}
+
+// GetExtendedFee defines the getExtendedFee JSON-RPC command.
+type GetExtendedFee struct{}
+
 // GetAccountCmd defines the getaccount JSON-RPC command.
 type GetAccountCmd struct {
 	Address string

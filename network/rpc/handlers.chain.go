@@ -95,6 +95,7 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "decodeRawTransaction"):  server.handleDecodeRawTransaction,
 		btcjson.ScopedMethod("chain", "estimateFee"):           server.handleEstimateFee,
 		btcjson.ScopedMethod("chain", "estimateSmartFee"):      server.handleEstimateSmartFee,
+		btcjson.ScopedMethod("chain", "getExtendedFee"):        server.handleGetExtendedFee,
 		btcjson.ScopedMethod("chain", "getMempoolInfo"):        server.handleGetMempoolInfo,
 		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
 		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
@@ -826,7 +827,6 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 	return address.EncodeAddress() == c.Address, nil
 }
 
-
 // handleGetLastSerialBlockNumber implements the getLastSerialBlockNumber command.
 func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	var lastSerial int
@@ -844,8 +844,8 @@ func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, cl
 	}
 
 	result := &btcjson.GetLastSerialBlockNumberResult{
-		LastSerial:   lastSerial,		
-	}	
+		LastSerial: lastSerial,
+	}
 
 	return result, nil
 }
