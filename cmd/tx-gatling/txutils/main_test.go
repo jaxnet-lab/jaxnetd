@@ -335,11 +335,11 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		RPC: NodeRPC{
 			// Host: "116.203.250.136:18333",
 			// Host: "116.202.107.209:22333",
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
+			User: "jaxnetrpc",
+			Pass: "AUL6VBjoQnhP3bfFzl",
 			Host: "127.0.0.1:18333",
-			User: "somerpc",
-			Pass: "somerpc",
+			// User: "somerpc",
+			// Pass: "somerpc",
 			// Host: "116.203.250.136:18333",
 			// User: "jaxnetrpc",
 			// Pass: "ec0bb2575b06bfdf",
@@ -843,4 +843,68 @@ func TestTxValidation(ot *testing.T) {
 func prettyPrint(val interface{}) {
 	data, _ := json.MarshalIndent(val, "", "  ")
 	fmt.Println(string(data))
+}
+
+func TestCheckIsSignedByPubKey(t *testing.T) {
+	netName := chaincfg.NetName("fastnet")
+	shardID := uint32(0)
+
+	alice, err := GenerateKey(netName.Params())
+	assert.NoError(t, err)
+
+	bob, err := GenerateKey(netName.Params())
+	assert.NoError(t, err)
+
+	multisig, err := MakeMultiSigScript([]string{alice.AddressPubKey.String(), bob.AddressPubKey.String()}, 2, netName.Params())
+	assert.NoError(t, err)
+
+	script, err := txmodels.GetPayToAddressScript(multisig.Address, netName.Params())
+	assert.NoError(t, err)
+
+	tx, err := NewTxBuilder("fastnet").
+		SetSenders(multisig.Address).
+		AddRedeemScripts(multisig.RedeemScript).
+		SetDestinationWithUTXO(alice.Address.EncodeAddress(), 10, txmodels.UTXORows{{
+			ShardID:  shardID,
+			Address:  multisig.Address,
+			TxHash:   "8e8de99c0bf81f95b010e53f74bfd2c4d608227938f279954f062185be052cd6",
+			Value:    10,
+			PKScript: hex.EncodeToString(script),
+		}}).
+		IntoTx(func(shardID uint32) (int64, error) { return 0, nil }, alice)
+
+	assert.NoError(t, err)
+
+	var hasSignature bool
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, multisig.RawRedeemScript, alice.AddressPubKey.PubKey())
+	assert.NoError(t, err)
+	assert.True(t, hasSignature)
+
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, multisig.RawRedeemScript, bob.AddressPubKey.PubKey())
+	assert.NoError(t, err)
+	assert.False(t, hasSignature)
+
+	script, err = txmodels.GetPayToAddressScript(alice.Address.EncodeAddress(), netName.Params())
+	assert.NoError(t, err)
+
+	out := tx.TxOut[0]
+	tx, err = NewTxBuilder("fastnet").
+		SetSenders(alice.Address.EncodeAddress()).
+		SetDestinationWithUTXO(bob.Address.EncodeAddress(), 10, txmodels.UTXORows{{
+			ShardID:  shardID,
+			Address:  alice.Address.EncodeAddress(),
+			TxHash:   tx.TxHash().String(),
+			Value:    out.Value,
+			PKScript: hex.EncodeToString(script),
+		}}).
+		IntoTx(func(shardID uint32) (int64, error) { return 0, nil }, alice)
+	assert.NoError(t, err)
+
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, script, alice.AddressPubKey.PubKey())
+	assert.NoError(t, err)
+	assert.True(t, hasSignature)
+
+	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, script, bob.AddressPubKey.PubKey())
+	assert.NoError(t, err)
+	assert.False(t, hasSignature)
 }

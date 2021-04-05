@@ -8,8 +8,11 @@ package chaindata
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
@@ -76,6 +79,22 @@ var (
 	// EADAddressesBucketName is the name of the db bucket used to house the
 	// net addresses of Exchange Agents.
 	EADAddressesBucketName = []byte("ead_addresses")
+
+	// BlockLastSerialID is the name of the db bucket used to house the
+	// block last serial id.
+	BlockLastSerialID = []byte("block_last_serial_id")
+
+	// BlockHashSerialID is the name of the db bucket used to house the mapping of
+	// block hash to serial id.
+	BlockHashSerialID = []byte("block_hash_serial_id")
+
+	// BlockHashSerialID is the name of the db bucket used to house the mapping of
+	// serial id to block hash.
+	BlockSerialIDHash = []byte("block_serial_id_hash")
+
+	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the mapping of
+	// block serial id to hash and previous serial id.
+	BlockSerialIDHashPrevSerialID = []byte("block_serial_id_hash_prev_serial_id")
 
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
@@ -1001,6 +1020,120 @@ func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error
 	var hash chainhash.Hash
 	copy(hash[:], hashBytes)
 	return &hash, nil
+}
+
+type SerialValue struct {
+	Hash   *chainhash.Hash `json:"hash"`
+	PrevID string          `json:"prev_id"`
+}
+
+func DBFetchLastSerialID(dbTx database.Tx) (int, error) {
+	meta := dbTx.Metadata()
+	lastSerialIDBucket := meta.Bucket(BlockLastSerialID)
+	res := lastSerialIDBucket.Get(BlockLastSerialID)
+
+	if res == nil {
+		return -1, errors.New("chain last serial id is nil")
+	}
+
+	if len(res) < 0 {
+		return -1, errors.New("chain last serial id is empty")
+	}
+
+	lastSerialID, err := strconv.Atoi(string(res))
+	if err != nil {
+		return -1, err
+	}
+
+	return lastSerialID, nil
+}
+
+func DBFetchBlockHashPrevBySerialID(dbTx database.Tx, serialID int) (*chainhash.Hash, int, error) {
+	meta := dbTx.Metadata()
+	blockSerialIDHashPrevSerialID := meta.Bucket(BlockSerialIDHashPrevSerialID)
+	res := blockSerialIDHashPrevSerialID.Get([]byte(strconv.Itoa(serialID)))
+	if res == nil {
+		return nil, 0, errors.New("chain serial id does not exist")
+	}
+
+	if len(res) < 0 {
+		return nil,0, errors.New("chain serial id is empty")
+	}
+
+	value := &SerialValue{}
+	err := json.Unmarshal(res, value)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	if value.Hash == nil {
+		return nil, 0, errors.New("hash is nil")
+	}
+
+	if value.PrevID == "" {
+		return nil, 0, errors.New("Prev id is empty")
+	}
+
+	prevId, err := strconv.Atoi(value.PrevID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return value.Hash, prevId, nil
+}
+
+func DBFetchBlockSerialID(dbTx database.Tx, hash *chainhash.Hash) (int, error) {
+	meta := dbTx.Metadata()
+	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
+	res := blockSerialIDBucket.Get(hash[:])
+
+	if res == nil {
+		return -1, nil
+	}
+
+	if len(res) < 0 {
+		return -1, errors.New("block last serial id is empty")
+	}
+
+	lastSerialID, err := strconv.Atoi(string(res))
+	if err != nil {
+		return -1, err
+	}
+
+	return lastSerialID, nil
+}
+
+func DBPutLastSerialID(dbTx database.Tx, lastSerialID string) error {
+	meta := dbTx.Metadata()
+	lastSerialIDBucket := meta.Bucket(BlockLastSerialID)
+	return lastSerialIDBucket.Put(BlockLastSerialID, []byte(lastSerialID))
+}
+
+func DBPutBlockHashSerialID(dbTx database.Tx, hash *chainhash.Hash, serialID string) error {
+	meta := dbTx.Metadata()
+	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
+	return blockSerialIDBucket.Put(hash[:], []byte(serialID))
+}
+
+func DBPutBlockSerialIDHash(dbTx database.Tx, hash *chainhash.Hash, serialID string) error {
+	meta := dbTx.Metadata()
+	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
+	return blockSerialIDBucket.Put([]byte(serialID), hash[:])
+}
+
+func DBPutBlockSerialIDHashPrevSerialID(dbTx database.Tx, hash *chainhash.Hash, serialID, lastSerialID string) error {
+	meta := dbTx.Metadata()
+	blockSerialIDHashPrevSerialID := meta.Bucket(BlockSerialIDHashPrevSerialID)
+	value := &SerialValue{
+		hash, 
+		lastSerialID,
+	}
+	valueBytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	return blockSerialIDHashPrevSerialID.Put([]byte(serialID), valueBytes)
 }
 
 // -----------------------------------------------------------------------------

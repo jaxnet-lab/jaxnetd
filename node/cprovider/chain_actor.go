@@ -46,6 +46,7 @@ type ChainRuntimeConfig struct {
 	MiningAddresses     []string       `yaml:"mining_addresses"`
 	AutoExpand          bool           `yaml:"auto_expand"`
 	ExpansionRule       int32          `yaml:"expansion_rule"`
+	ExpansionLimit      int32          `yaml:"expansion_limit"`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {

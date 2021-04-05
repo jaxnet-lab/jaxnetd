@@ -55,13 +55,13 @@ type ServerCore struct {
 	logger                 zerolog.Logger
 }
 
-func NewRPCCore(config *Config, logger zerolog.Logger) *ServerCore {
+func NewRPCCore(config *Config) *ServerCore {
 	rpc := &ServerCore{
 		cfg:                    config,
 		statusLines:            make(map[int]string),
 		requestProcessShutdown: make(chan struct{}),
 		quit:                   make(chan int),
-		logger:                 logger,
+		logger:                 log,
 
 		started:      0,
 		shutdown:     0,
@@ -276,6 +276,8 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 		data = data[1 : len(data)-1]
 	}
 
+	server.logger.Debug().Msgf("RPC request body: %v", data)
+	
 	if err := json.Unmarshal([]byte(data), &request); err != nil {
 		jsonErr = &btcjson.RPCError{
 			Code:    btcjson.ErrRPCParse.Code,

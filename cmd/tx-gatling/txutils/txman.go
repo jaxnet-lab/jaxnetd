@@ -93,7 +93,17 @@ func (client *TxMan) AddTimeLockAllowance(lockTime uint32) *TxMan {
 func (client *TxMan) ForShard(shardID uint32) *TxMan {
 	clone := *client
 	clone.cfg.ShardID = shardID
-	clone.rpc = clone.rpc.SetShard(shardID)
+
+	clone.rpc, _ = rpcclient.New(&rpcclient.ConnConfig{
+		Params:       clone.cfg.Net,
+		Host:         clone.cfg.RPC.Host,
+		User:         clone.cfg.RPC.User,
+		Pass:         clone.cfg.RPC.Pass,
+		ShardID:      shardID,
+		HTTPPostMode: true,
+		DisableTLS:   true,
+	}, nil)
+
 	return &clone
 }
 
@@ -243,19 +253,21 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 	return index, maxHeight, nil
 }
 
-func (client *TxMan) NetworkFee() (int64, error) {
-	fee, err := client.rpc.ForShard(client.cfg.ShardID).
+// NetworkFee returns Satoshi/bytes.
+// To get size of the tx in bytes use chaindata.GetTransactionWeight(tx).
+func (client *TxMan) NetworkFee(shardID uint32) (int64, error) {
+	fee, err := client.rpc.ForShard(shardID).
 		EstimateSmartFee(3, &btcjson.EstimateModeEconomical)
 	if err != nil {
-		return 0, errors.Wrap(err, "unable to get fee")
+		return 0, errors.Wrap(err, "unable to get feeRate")
 	}
 
-	amount, _ := btcutil.NewAmount(*fee.FeeRate)
-	if amount < mempool.DefaultMinRelayTxFee {
-		return int64(mempool.DefaultMinRelayTxFee), nil
+	amount := int64(*fee.SatoshiPerB)
+	if amount < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
+		return mempool.DefaultMinRelayTxFeeSatoshiPerByte, nil
 	}
 
-	return int64(amount), nil
+	return amount, nil
 }
 
 func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvider,
@@ -269,15 +281,23 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 		msgTx.AddTxOut(wire.NewTxOut(amountToLock, destination))
 	}
 
-	fee, err := client.NetworkFee()
+	feeRate, err := client.NetworkFee(client.cfg.ShardID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get fee")
+		return nil, errors.Wrap(err, "unable to get feeRate")
 	}
+	expectedInCount := 2
 
+prepareUTXO:
+	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true)
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
+
 	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID, client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
+	}
+	if len(utxo) > expectedInCount {
+		expectedInCount = len(utxo) + 1
+		goto prepareUTXO
 	}
 
 	sum := utxo.GetSum()
@@ -310,20 +330,33 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 		return nil, errors.New("keys not set")
 	}
 
-	fee, err := client.NetworkFee()
+	feeRate, err := client.NetworkFee(client.cfg.ShardID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get fee")
+		return nil, errors.Wrap(err, "unable to get feeRate")
 	}
+	expectedInCount := 1
+
+prepareUTXO:
+	fee := EstimateFee(expectedInCount, 1, feeRate, true)
 
 	draft := txmodels.DraftTx{
 		Amount:     amount,
 		NetworkFee: fee,
 	}
 
-	draft.UTXO, err = utxoPrv.SelectForAmount(amount+draft.NetworkFee, client.cfg.ShardID,
+	draft.UTXO, err = utxoPrv.SelectForAmount(amount+fee, client.cfg.ShardID,
 		client.key.Address.EncodeAddress())
-	if err != nil || draft.UTXO.GetSum() < amount+draft.NetworkFee {
-		return nil, errors.Wrap(err, "unable to get UTXO for amount")
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to select UTXO for amount")
+	}
+
+	if len(draft.UTXO) > expectedInCount {
+		expectedInCount = len(draft.UTXO) + 1
+		goto prepareUTXO
+	}
+
+	if draft.UTXO.GetSum() < amount+draft.NetworkFee {
+		return nil, errors.New("not enought utxo value")
 	}
 
 	err = draft.SetPayToAddress(destination, client.NetParams)
@@ -354,12 +387,13 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	}, nil
 }
 
+// DEPRECATED
 // NewSwapTx creates new transaction with wire.TxMarkShardSwap marker:
 // 	- data is a map of <Destination Address> => <Source txmodels.UTXO>.
 // 	- redeemScripts is optional, it allows to add proper signatures if source UTXO is a multisig address.
 //
 // SwapTx is a special tx for atomic swap between chains.
-// It can contain only TWO inputs and TWO outputs.
+// It can contain only TWO or FOUR inputs and TWO or FOUR  outputs.
 // wire.TxIn and wire.TxOut are strictly associated with each other by index.
 // One pair corresponds to the one chain. The second is for another.
 // | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
@@ -371,6 +405,9 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
+	if len(spendingMap) != 2 && len(spendingMap) != 4 {
+		return nil, errors.New("invalid size of spending map")
+	}
 
 	msgTx := wire.NewMsgTx(wire.TxVerRegular)
 	msgTx.SetMark(wire.TxMarkShardSwap)
@@ -380,10 +417,11 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 	shards := make([]uint32, 0, len(spendingMap))
 	for destination, utxo := range spendingMap {
 		shards = append(shards, utxo.ShardID)
-		fee, err := client.ForShard(utxo.ShardID).NetworkFee()
+		fee, err := client.ForShard(utxo.ShardID).NetworkFee(utxo.ShardID)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to get fee")
+			return nil, errors.Wrap(err, "unable to get feeRate")
 		}
+
 		utxoTxHash, err := chainhash.NewHashFromStr(utxo.TxHash)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not decode TxHash")
@@ -403,10 +441,12 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
+
 		// if client.lockTime == 0 {
 		// 	client.txVersion = wire.TxVerTimeLockAllowance
 		// 	client.lockTime = 80
 		// }
+
 		if client.lockTime != 0 {
 			msgTx.Version = client.txVersion
 			msgTx.SetMark(wire.TxMarkShardSwap)
@@ -419,11 +459,12 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		ind += 1
 	}
 
+	var err error
 	for destination, utxo := range spendingMap {
 		txInIndex := outIndexes[destination]
 		utxo := utxo.ToShort()
 
-		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
+		msgTx, _, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -468,7 +509,9 @@ func (client *TxMan) DraftToSignedTx(data txmodels.DraftTx, postVerify bool) (*w
 	return client.addInputsAndSign(msgTx, data.UTXO, postVerify)
 }
 
-func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows, postVerify bool) (*wire.MsgTx, error) {
+func (client *TxMan) addInputsAndSign(tx *wire.MsgTx, data txmodels.UTXORows, postVerify bool) (*wire.MsgTx, error) {
+	msgTx := tx.Copy()
+
 	for i := range data {
 		txInIndex := i
 		utxo := data[txInIndex]
@@ -486,11 +529,12 @@ func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows,
 		msgTx.AddTxIn(txIn)
 	}
 
+	var err error
 	for i := range data {
 		txInIndex := i
 		utxo := data[txInIndex].ToShort()
 
-		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
+		msgTx, _, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, postVerify)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -499,8 +543,10 @@ func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows,
 	return msgTx, nil
 }
 
-func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
+func (client *TxMan) AddSignatureToSwapTx(tx *wire.MsgTx, shards []uint32,
 	redeemScripts ...string) (*wire.MsgTx, error) {
+	msgTx := tx.Copy()
+
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -542,11 +588,16 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 			return nil, errors.New("unable to get utxo from node")
 		}
 
+		if len(txOut.ScriptPubKey.Addresses) < 2 {
+			// TODO: improve this validation
+			//  suppose that this is regular UTXO
+			continue
+		}
+
 		value, _ := btcutil.NewAmount(txOut.Value)
 		utxo := txmodels.ShortUTXO{
-			Value:      int64(value),
-			PKScript:   txOut.ScriptPubKey.Hex,
-			ScriptType: txOut.ScriptPubKey.Type,
+			Value:    int64(value),
+			PKScript: txOut.ScriptPubKey.Hex,
 		}
 
 		for _, address := range txOut.ScriptPubKey.Addresses {
@@ -555,8 +606,8 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 				break
 			}
 		}
-
-		_, err := client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
+		var err error
+		msgTx, _, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -567,7 +618,7 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 
 // AddSignatureToTx adds signature(s) to wire.TxIn in wire.MsgTx that spend coins with the txscript.MultiSigTy address.
 // NOTE: this method don't work with SwapTx, use the AddSignatureToSwapTx.
-func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string) (*wire.MsgTx, error) {
+func (client *TxMan) AddSignatureToTx(tx *wire.MsgTx, redeemScripts ...string) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -576,6 +627,8 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		P2sh string
 		Hex  string
 	}
+
+	msgTx := tx.Copy()
 
 	scripts := make(map[string]scriptData, len(redeemScripts))
 	for _, redeemScript := range redeemScripts {
@@ -613,9 +666,8 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		value, _ := btcutil.NewAmount(out.Value)
 
 		utxo := txmodels.ShortUTXO{
-			Value:      int64(value),
-			PKScript:   out.ScriptPubKey.Hex,
-			ScriptType: out.ScriptPubKey.Type,
+			Value:    int64(value),
+			PKScript: out.ScriptPubKey.Hex,
 		}
 
 		for _, address := range out.ScriptPubKey.Addresses {
@@ -625,7 +677,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 			}
 		}
 
-		_, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
+		msgTx, _, err = client.SignUTXOForTx(msgTx, utxo, txInIndex, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -641,14 +693,16 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 // 	- inIndex is an index, where placed this UTXO
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
-func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, postVerify bool) ([]byte, error) {
+func (client *TxMan) SignUTXOForTx(tx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, postVerify bool) (*wire.MsgTx, []byte, error) {
 	if client.key == nil {
-		return nil, errors.New("keys not set")
+		return nil, nil, errors.New("keys not set")
 	}
+
+	msgTx := tx.Copy()
 
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode PK script")
+		return nil, nil, errors.Wrap(err, "failed to decode PK script")
 	}
 
 	var prevScript []byte = nil
@@ -660,7 +714,7 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, i
 	sig, err = txscript.SignTxOutput(client.NetParams, msgTx, inIndex, pkScript,
 		txscript.SigHashAll, client.key, &utxo, prevScript)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign tx output")
+		return nil, nil, errors.Wrap(err, "failed to sign tx output")
 	}
 
 	msgTx.TxIn[inIndex].SignatureScript = sig
@@ -669,15 +723,15 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, i
 		vm, err := txscript.NewEngine(pkScript, msgTx, inIndex,
 			txscript.StandardVerifyFlags, nil, nil, utxo.Value)
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to init txScript engine")
+			return nil, nil, errors.Wrap(err, "unable to init txScript engine")
 		}
 
 		if err = vm.Execute(); err != nil {
-			return nil, errors.Wrap(err, "tx script exec failed")
+			return nil, nil, errors.Wrap(err, "tx script exec failed")
 		}
 	}
 
-	return sig, nil
+	return msgTx, sig, nil
 }
 
 func (client *TxMan) NewMultiSig2of2Address(firstPubKey, second string) (*MultiSigAddress, error) {

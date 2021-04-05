@@ -280,18 +280,22 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 // passed transaction and marking all utxos that the transactions spend as
 // spent. This function handles special case for the wire.TxMarkShardSwap transactions.
 // wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
-// It can contain only TWO inputs and TWO outputs. TxIn and TxOut are strictly associated with each other by index.
+// It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
+// TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.
 //
 // | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
 // | - | ---------------- | --- | ----------------- | - |
 // | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
-// | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
+// | 1 | TxIn_1 ∈ Shard_X | --> | TxOut_1 ∈ Shard_X | 1 |
+// | 2 | TxIn_2 ∈ Shard_Y | --> | TxOut_2 ∈ Shard_Y | 2 |
+// | 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
 //
 // The order is not deterministic.
 func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
-	if len(tx.MsgTx().TxIn) > 2 || len(tx.MsgTx().TxOut) > 2 {
-		return AssertError("ShardSwap tx with more than 2 inputs and outputs not allowed")
+	err := ValidateSwapTxStructure(tx.MsgTx(), -1)
+	if err != nil {
+		return err
 	}
 
 	inputs := tx.MsgTx().TxIn

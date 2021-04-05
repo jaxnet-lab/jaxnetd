@@ -9,9 +9,10 @@ package gcs
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"io"
 	"sort"
+
+	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 
 	"github.com/aead/siphash"
 	"github.com/kkdai/bstream"

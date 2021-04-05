@@ -22,7 +22,7 @@ type Config struct {
 	LimitPass         string   `yaml:"limit_pass"`
 	LimitUser         string   `yaml:"limit_user"`
 	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
-	MaxWebsockets     int      `yaml:"max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+	MaxWebsockets     int      `yaml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
 	WSEnable          bool     `yaml:"ws_enable"`
 
 	// Listeners defines a slice of listeners for which the RPC Server will
