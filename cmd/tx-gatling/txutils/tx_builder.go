@@ -83,6 +83,9 @@ type TxBuilder interface {
 	SetSenders(addresses ...string) TxBuilder
 	SetChangeDestination(changeAddresses ...string) TxBuilder
 
+	// SetFee sets static fee with.
+	// If it set FeeProviderFunc result will be ignored
+	SetFee(shardID uint32, fee int64) TxBuilder
 	SetUTXOProvider(provider NewUTXOProvider) TxBuilder
 
 	IntoTx(getFee FeeProviderFunc, kdb txscript.KeyDB) (*wire.MsgTx, error)
@@ -132,7 +135,22 @@ func NewTxBuilder(net chaincfg.NetName) TxBuilder {
 
 func (t *txBuilder) SetShardID(shardID uint32) TxBuilder {
 	t.defaultShardID = shardID
-	t.collectedOpts[shardID] = extraOpts{feeRate: 0, change: 0, utxoRows: []txmodels.UTXO{}}
+	if _, ok := t.collectedOpts[shardID]; !ok {
+		t.collectedOpts[shardID] = extraOpts{feeRate: 0, change: 0, utxoRows: []txmodels.UTXO{}}
+	}
+
+	return t
+}
+
+func (t *txBuilder) SetFee(shardID uint32, fee int64) TxBuilder {
+	opts, ok := t.collectedOpts[shardID]
+	if !ok {
+		opts = extraOpts{feeRate: 0, change: 0, utxoRows: []txmodels.UTXO{}}
+	}
+
+	opts.fee = fee
+	t.collectedOpts[shardID] = opts
+
 	return t
 }
 
@@ -441,13 +459,17 @@ func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, in
 
 func (t *txBuilder) setFees(getFee FeeProviderFunc) error {
 	for shardID := range t.collectedOpts {
-		fee, err := getFee(shardID)
+		fee, feeRate, err := getFee(shardID)
 		if err != nil {
 			return errors.Wrapf(err, "unable to get feeRate for shard(%d)", shardID)
 		}
 
 		opts := t.collectedOpts[shardID]
-		opts.feeRate = fee
+		if opts.fee < 1 {
+			opts.fee = fee
+		}
+
+		opts.feeRate = feeRate
 		t.collectedOpts[shardID] = opts
 	}
 
@@ -488,9 +510,11 @@ func (t *txBuilder) prepareUTXOs() error {
 	for shardID := range shards {
 		opts := t.collectedOpts[shardID]
 		hasCoins := opts.utxoRows.GetSum()
-		fee := opts.calcFee()
-		needed := opts.needed + fee
+		if opts.fee < 1 {
+			opts.fee = opts.calcFee()
+		}
 
+		needed := opts.needed + opts.fee
 		if t.swapTx && hasCoins < needed {
 			row, err := t.utxoProvider.GetForAmount(needed-hasCoins, shardID, t.senderAddresses...)
 			if err != nil {
@@ -509,7 +533,6 @@ func (t *txBuilder) prepareUTXOs() error {
 			opts.utxoRows = append(opts.utxoRows, rows...)
 		}
 
-		opts.fee = fee
 		opts.change = opts.utxoRows.GetSum() - needed
 		t.collectedOpts[shardID] = opts
 	}
@@ -530,5 +553,7 @@ type destinationKey struct {
 	utxo        txmodels.UTXORows
 }
 
-type FeeProviderFunc func(shardID uint32) (int64, error)
+// FeeProviderFunc should return non-zero value either fee or feeRate rate.
+// Static fee has main priority, otherwise, the fee will be calculated using feeRate.
+type FeeProviderFunc func(shardID uint32) (fee, feeRate int64, err error)
 type GetTxOutFunc func(shardID uint32, txHash *chainhash.Hash, index uint32) (int64, error)
