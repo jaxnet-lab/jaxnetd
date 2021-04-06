@@ -154,49 +154,6 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashTyp
 	return script, signed == nRequired
 }
 
-// signMultiSig signs as many of the outputs in the provided multisig script as
-// possible. It returns the generated script and a boolean if the script fulfils
-// the contract (i.e. nrequired signatures are provided).  Since it is arguably
-// legal to not be able to sign any of the outputs, no error is returned.
-func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
-	addresses []btcutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
-	// pops, _ := parseScript(subScript)
-	//
-	// var sequenceLock int64
-	// if isSmallInt(pops[mslSequenceI].opcode) {
-	// 	sequenceLock = int64(asSmallInt(pops[mslSequenceI].opcode))
-	// } else {
-	// 	rawSequenceLock, _ := makeScriptNum(pops[mslSequenceI].data, true, 1)
-	// 	sequenceLock = int64(rawSequenceLock)
-	// }
-	// if sequenceLock > 0 {
-	// }
-
-	// We start with a single OP_FALSE to work around the (now standard)
-	// but in the reference implementation that causes a spurious pop at
-	// the end of OP_CHECKMULTISIG.
-	builder := NewScriptBuilder().AddOp(OP_FALSE)
-	signed := 0
-	for _, addr := range addresses {
-		key, _, err := kdb.GetKey(addr)
-		if err != nil {
-			continue
-		}
-		sig, err := RawTxInSignature(tx, idx, subScript, hashType, key)
-		if err != nil {
-			continue
-		}
-
-		builder.AddData(sig)
-		signed++
-		if signed == nRequired {
-			break
-		}
-	}
-
-	script, _ := builder.Script()
-	return script, signed == nRequired
-}
 
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
@@ -513,17 +470,10 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		sigScript, _ = builder.Script()
 		// TODO keep a copy of the script for merging.
-		asm, _ := DisasmString(sigScript)
-		println("SIG_SCRIPT", asm)
-		println()
 	}
 
 	// Merge scripts. with any previous data, if any.
 	mergedScript := mergeScripts(chainParams, tx, idx, pkScript, class,
 		addresses, nrequired, sigScript, previousScript)
-
-	asm, _ := DisasmString(mergedScript)
-	println("MERGED", asm)
-	println()
 	return mergedScript, nil
 }

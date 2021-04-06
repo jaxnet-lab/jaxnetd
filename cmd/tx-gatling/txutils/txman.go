@@ -81,11 +81,11 @@ func (client *TxMan) WithKeys(key *KeyData) *TxMan {
 	return clone
 }
 
-// AddTimeLockAllowance adds the lock time to the new tx,
+// AddRefundableTimeLock adds the lock time to the new tx,
 // and utxo can only be spent until the lock completes, after the time lock ends - only refunds
-func (client *TxMan) AddTimeLockAllowance(lockTime uint32) *TxMan {
+func (client *TxMan) AddRefundableTimeLock(lockTime uint32) *TxMan {
 	client.lockTime = lockTime
-	client.txVersion = wire.TxVerTimeLockAllowance
+	client.txVersion = wire.TxVerRefundableTimeLock
 
 	return client
 }
@@ -443,7 +443,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 
 		// if client.lockTime == 0 {
-		// 	client.txVersion = wire.TxVerTimeLockAllowance
+		// 	client.txVersion = wire.TxVerRefundableTimeLock
 		// 	client.lockTime = 80
 		// }
 

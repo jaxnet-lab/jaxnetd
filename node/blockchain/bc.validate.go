@@ -141,8 +141,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode blocknode.
 			if !chaindata.IsFinalizedTransaction(tx, blockHeight,
 				blockTime) {
 
-				str := fmt.Sprintf("block contains unfinalized "+
-					"transaction %v", tx.Hash())
+				str := fmt.Sprintf("block contains unfinalized transaction %v", tx.Hash())
 				return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
 			}
 		}
@@ -190,8 +189,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode blocknode.
 			// consensus parameter.
 			blockWeight := chaindata.GetBlockWeight(block)
 			if blockWeight > chaindata.MaxBlockWeight {
-				str := fmt.Sprintf("block's weight metric is "+
-					"too high - got %v, max %v",
+				str := fmt.Sprintf("block's weight metric is too high - got %v, max %v",
 					blockWeight, chaindata.MaxBlockWeight)
 				return chaindata.NewRuleError(chaindata.ErrBlockWeightTooHigh, str)
 			}
@@ -496,15 +494,13 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 			}
 			switch tx.MsgTx().CleanVersion() {
 			case wire.TxVerTimeLock:
-				if !chaindata.SequenceLockActive(sequenceLock, node.Height(),
-					medianTime) {
+				if !chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
 					str := fmt.Sprintf(
 						"block contains transaction whose input sequence locks are not met")
 					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
 				}
-			case wire.TxVerTimeLockAllowance:
-				if chaindata.SequenceLockActive(sequenceLock, node.Height(),
-					medianTime) {
+			case wire.TxVerRefundableTimeLock:
+				if chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
 					if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
 						str := fmt.Sprintf(
 							"lock time has expired, transactions is possible only to the original addresses")

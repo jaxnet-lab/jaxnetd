@@ -885,12 +885,12 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 	}
 
 	tests := []struct {
-		refundAddress *btcutil.AddressPubKey
-		keys          []*btcutil.AddressPubKey
-		nrequired     int
-		sequenceLock  int64
-		expected      string
-		err           error
+		refundAddress         *btcutil.AddressPubKey
+		keys                  []*btcutil.AddressPubKey
+		nrequired             int
+		refundDeferringPeriod int32
+		expected              string
+		err                   error
 	}{
 		{
 			p2pkCompressedMain,
@@ -900,13 +900,13 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 			},
 			1,
 			120,
-			"OP_IF 78 OP_CHECKSEQUENCEVERIFY OP_DROP " +
-				"OP_ELSE " +
+			"OP_INPUTAGE 78 OP_LESSTHAN OP_IF " +
 				"1 02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 " +
 				"03b0bd634234abbb1ba1e986e884185c61cf43e001f9137f23c2c409273eb16e65 " +
 				"2 OP_CHECKMULTISIG " +
-				"OP_ENDIF " +
-				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG",
+				"OP_ELSE " +
+				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG " +
+				"OP_ENDIF",
 			nil,
 		},
 		{
@@ -918,13 +918,13 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 
 			2,
 			120,
-			"OP_IF 78 OP_CHECKSEQUENCEVERIFY OP_DROP " +
-				"OP_ELSE " +
+			"OP_INPUTAGE 78 OP_LESSTHAN OP_IF " +
 				"2 02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 " +
 				"03b0bd634234abbb1ba1e986e884185c61cf43e001f9137f23c2c409273eb16e65 " +
 				"2 OP_CHECKMULTISIG " +
-				"OP_ENDIF " +
-				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG",
+				"OP_ELSE " +
+				"02192d74d0cb94344c9569c2e77901573d8d7903c3ebec3a957724895dca52c6b4 OP_CHECKSIG " +
+				"OP_ENDIF",
 			nil,
 		},
 		{
@@ -942,7 +942,7 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		script, err := MultiSigLockScript(test.refundAddress, test.keys, test.nrequired, test.sequenceLock)
+		script, err := MultiSigLockScript(test.refundAddress, test.keys, test.nrequired, test.refundDeferringPeriod)
 		if e := tstCheckScriptError(err, test.err); e != nil {
 			t.Errorf("MultiSigLockScript #%d: %v", i, e)
 			continue

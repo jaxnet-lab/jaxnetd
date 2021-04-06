@@ -72,7 +72,7 @@ type TxBuilder interface {
 	// utxo can be spent only after lock ended
 	SetTimeLock(lockTime uint32) TxBuilder
 	// utxo can be spent only before lock ended, after end money back
-	SetTimeLockAllowance(lockTime uint32) TxBuilder
+	SetRefundableTimeLock(lockTime uint32) TxBuilder
 
 	AddRedeemScripts(redeemScripts ...string) TxBuilder
 
@@ -170,9 +170,9 @@ func (t *txBuilder) SetTimeLock(lockTime uint32) TxBuilder {
 	return t
 }
 
-func (t *txBuilder) SetTimeLockAllowance(lockTime uint32) TxBuilder {
+func (t *txBuilder) SetRefundableTimeLock(lockTime uint32) TxBuilder {
 	t.lockTime = lockTime
-	t.txVersion = wire.TxVerTimeLockAllowance
+	t.txVersion = wire.TxVerRefundableTimeLock
 	return t
 }
 

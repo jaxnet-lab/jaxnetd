@@ -1094,7 +1094,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx,
 			return nil, nil, txRuleError(wire.RejectNonstandard,
 				"transaction's sequence locks on inputs not met")
 		}
-	case wire.TxVerTimeLockAllowance:
+	case wire.TxVerRefundableTimeLock:
 		if chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
 			medianTimePast) {
 			if !chaindata.ValidMoneyBackAfterExpiration(tx, utxoView) {

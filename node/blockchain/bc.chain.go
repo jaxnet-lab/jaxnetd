@@ -565,7 +565,7 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 	mTx := tx.MsgTx()
 
 	sequenceLockActive := (mTx.CleanVersion() == wire.TxVerTimeLock ||
-		mTx.CleanVersion() == wire.TxVerTimeLockAllowance) && csvSoftforkActive
+		mTx.CleanVersion() == wire.TxVerRefundableTimeLock) && csvSoftforkActive
 	if !sequenceLockActive || chaindata.IsCoinBase(tx) {
 		return sequenceLock, nil
 	}
@@ -646,6 +646,8 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 				sequenceLock.BlockHeight = blockHeight
 			}
 		}
+
+		mTx.TxIn[txInIndex].Age = nextHeight - inputHeight
 	}
 
 	return sequenceLock, nil

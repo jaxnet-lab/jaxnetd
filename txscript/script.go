@@ -54,6 +54,14 @@ func isSmallInt(op *opcode) bool {
 	return false
 }
 
+func isOpCode(pCode parsedOpcode, expected byte) bool {
+	return pCode.opcode.value == expected
+}
+
+func isNumber(op *opcode) bool {
+	return isSmallInt(op) || (op.value >= OP_DATA_1 && op.value <= OP_DATA_4)
+}
+
 // isScriptHash returns true if the script passed is a pay-to-script-hash
 // transaction, false otherwise.
 func isScriptHash(pops []parsedOpcode) bool {

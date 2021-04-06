@@ -88,17 +88,10 @@ type BlockGenerator struct {
 }
 
 func NewChainBlockGenerator(beacon BeaconBlockProvider, mmr mmr.IMountainRange) *BlockGenerator {
-	return &BlockGenerator{
-		beacon: beacon,
-		mmr:    mmr,
-	}
+	return &BlockGenerator{beacon: beacon, mmr: mmr}
 }
 
 func (c *BlockGenerator) ValidateBlock(header wire.BlockHeader) error {
-	if DisableShardMMRValidation {
-		return nil
-	}
-
 	lastKnownShardsAmount, err := c.beacon.ShardCount()
 	if err != nil {
 		// An error will occur if it is impossible

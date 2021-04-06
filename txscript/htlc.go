@@ -1,140 +1,227 @@
-/*
- * Copyright (c) 2021 The JaxNetwork developers
- * Use of this source code is governed by an ISC
- * license that can be found in the LICENSE file.
- */
-
 package txscript
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"fmt"
+
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
-// HtlcScript is the uniform script that's used as the output for
-// the second-level HTLC transactions. The second level transaction act as a
-// sort of covenant, ensuring that a 2-of-2 multi-sig output can only be
-// spent in a particular way, and to a particular output.
-//
-// Possible Input Scripts:
-//  * To revoke an HTLC output that has been transitioned to the claim+delay
-//    state:
-//    * <revoke sig> 1
-//
-//  * To claim and HTLC output, either with a pre-image or due to a timeout:
-//    * <delay sig> 0
-//
-// OP_IF
-//     <revoke key>
-// OP_ELSE
-//     <delay in blocks>
-//     OP_CHECKSEQUENCEVERIFY
-//     OP_DROP
-//     <delay key>
-// OP_ENDIF
-// OP_CHECKSIG
-//
-// TODO(roasbeef): possible renames for second-level
-//  * transition?
-//  * covenant output
-func HtlcScript(revocationKey, delayKey *btcec.PublicKey, csvDelay uint32) ([]byte, error) {
+// MultiSigScript returns a valid script for a multisignature redemption where
+// nrequired of the keys in pubkeys are required to have signed the transaction
+// for success.  An Error with the error code ErrTooManyRequiredSigs will be
+// returned if nrequired is larger than the number of keys provided.
+func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
+	if len(pubkeys) < nrequired {
+		str := fmt.Sprintf("unable to generate multisig script with "+
+			"%d required signatures when there are only %d public "+
+			"keys available", nrequired, len(pubkeys))
+		return nil, scriptError(ErrTooManyRequiredSigs, str)
+	}
 
-	builder := NewScriptBuilder()
-
-	// If this is the revocation clause for this script is to be executed,
-	// the spender will push a 1, forcing us to hit the true clause of this
-	// if statement.
-	builder.AddOp(OP_IF)
-
-	// If this this is the revocation case, then we'll push the revocation
-	// public key on the stack.
-	builder.AddData(revocationKey.SerializeCompressed())
-
-	// Otherwise, this is either the sender or receiver of the HTLC
-	// attempting to claim the HTLC output.
-	builder.AddOp(OP_ELSE)
-
-	// In order to give the other party time to execute the revocation
-	// clause above, we require a relative timeout to pass before the
-	// output can be spent.
-	builder.AddInt64(int64(csvDelay))
-	builder.AddOp(OP_CHECKSEQUENCEVERIFY)
-	builder.AddOp(OP_DROP)
-
-	// If the relative timelock passes, then we'll add the delay key to the
-	// stack to ensure that we properly authenticate the spending party.
-	builder.AddData(delayKey.SerializeCompressed())
-
-	// Close out the if statement.
-	builder.AddOp(OP_ENDIF)
-
-	// In either case, we'll ensure that only either the party possessing
-	// the revocation private key, or the delay private key is able to
-	// spend this output.
-	builder.AddOp(OP_CHECKSIG)
+	builder := NewScriptBuilder().AddInt64(int64(nrequired))
+	for _, key := range pubkeys {
+		builder.AddData(key.ScriptAddress())
+	}
+	builder.AddInt64(int64(len(pubkeys)))
+	builder.AddOp(OP_CHECKMULTISIG)
 
 	return builder.Script()
 }
 
-// HtlcSpendSuccess spends a second-level HTLC output. This function is to be
-// used by the sender of an HTLC to claim the output after a relative timeout
-// or the receiver of the HTLC to claim on-chain with the pre-image.
-func HtlcSpendSuccess(sweepTx *wire.MsgTx, csvDelay uint32, idx int, witnessScript []byte,
-	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
-
-	// We're required to wait a relative period of time before we can sweep
-	// the output in order to allow the other party to contest our claim of
-	// validity to this version of the commitment transaction.
-	sweepTx.TxIn[0].Sequence = LockTimeToSequence(false, csvDelay)
-
-	// Finally, OP_CSV requires that the version of the transaction
-	// spending a pkscript with OP_CSV within it *must* be >= 2.
-	sweepTx.Version = 2
-
-	// As we mutated the transaction, we'll re-calculate the sighashes for
-	// this instance.
-	// sigHashes := NewTxSigHashes(sweepTx)
-
-	// With the proper sequence and version set, we'll now sign the timeout
-	// transaction using the passed signed descriptor. In order to generate
-	// a valid signature, then signDesc should be using the base delay
-	// public key, and the proper single tweak bytes.
-	// Chop off the sighash flag at the end of the signature.
-	sig, err := RawTxInSignature(sweepTx, idx, witnessScript, hashType, key)
-	if err != nil {
-		return nil, err
+// MultiSigLockScript is a multi-signature lock script is of the form:
+// OP_INPUTAGE <required_age_for_refund>  OP_LESSTHAN
+// OP_IF
+//     <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys>
+//     OP_CHECKMULTISIG
+// OP_ELSE
+//     <refund_pubkey> OP_CHECKSIG
+// OP_ENDIF
+//
+// Can be spent in two ways:
+// 1. as a multi-signature script, if tx.TxIn[i].Age less than <required_age_for_refund>.
+// 2. as pay-to-pubkey ("refund to owner") script, if tx.TxIn[i].Age greater than <required_age_for_refund>.
+//
+// "Refund to owner" can be spend ONLY to address derived from the refund_pubkey:
+// pay-to-pubkey or pay-to-pubkey-hash
+//
+// In case of MultiSig activation the number of required signatures is the 4th item
+// on the stack and the number of public keys is the 5th to last
+// item on the stack.
+// Otherwise, in case of "refund to owner" (pay-to-pubkey), requires one signature
+// and pubkey is the second to last item on the stack.
+func MultiSigLockScript(refundAddress *btcutil.AddressPubKey, pubkeys []*btcutil.AddressPubKey,
+	sigRequired int, refundDeferringPeriod int32) ([]byte, error) {
+	if len(pubkeys) < sigRequired {
+		str := fmt.Sprintf("unable to generate multisig script with "+
+			"%d required signatures when there are only %d public "+
+			"keys available", sigRequired, len(pubkeys))
+		return nil, scriptError(ErrTooManyRequiredSigs, str)
 	}
-	// sweepSig, err := btcec.ParseDERSignature(sig[:len(sig)-1], btcec.S256())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// // We set a zero as the first element the witness stack (ignoring the
-	// // witness script), in order to force execution to the second portion
-	// // of the if clause.
-	// witnessStack := wire.TxWitness(make([][]byte, 3))
-	// witnessStack[0] = append(sweepSig.Serialize(), byte(hashType))
-	// witnessStack[1] = nil
-	// witnessStack[2] = witnessScript
 
-	return sig, nil
+	builder := NewScriptBuilder()
+	// lock
+	builder.AddOp(OP_INPUTAGE)
+	builder.AddInt64(int64(refundDeferringPeriod))
+	builder.AddOp(OP_LESSTHAN)
+	// ---
+
+	builder.AddOp(OP_IF)
+
+	// multisig statement
+	builder.AddInt64(int64(sigRequired))
+	for _, key := range pubkeys {
+		builder.AddData(key.ScriptAddress())
+	}
+	builder.AddInt64(int64(len(pubkeys)))
+	builder.AddOp(OP_CHECKMULTISIG)
+	// ---
+
+	builder.AddOp(OP_ELSE)
+
+	// refund statement
+	builder.AddData(refundAddress.ScriptAddress())
+	builder.AddOp(OP_CHECKSIG)
+	// ---
+	builder.AddOp(OP_ENDIF)
+
+	return builder.Script()
 }
 
-// LockTimeToSequence converts the passed relative locktime to a sequence
-// number in accordance to BIP-68.
-// See: https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
-//  * (Compatibility)
-func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
-	// If we're expressing the relative lock time in blocks, then the
-	// corresponding sequence number is simply the desired input age.
-	if !isSeconds {
-		return locktime
+const (
+
+	// mslFirstMSigOpI is the index of the first parsedOpcode for MultiSigTy
+	mslFirstMSigOpI = 4
+
+	// mslTailLen is the len of parsedOpcode set associated with the "refund tail" of the script.
+	mslTailLen = 4
+)
+
+// isMultiSigLock returns true if the passed script is a MultiSigLockTy transaction, false
+// otherwise.
+// The minimal valid MultiSigLockTy:
+// [ 0] OP_INPUTAGE
+// [ 1] <required_age_for_refund>
+// [ 2] OP_LESSTHAN
+// [ 3] OP_IF
+// [ 4]    OP_1
+// [..]    <pubkey>
+// [-6]    OP_1
+// [-5]    OP_CHECKMULTISIG
+// [-4] OP_ELSE
+// [-3]    <refund_pubkey>
+// [-2]    OP_CHECKSIG
+// [-1] OP_ENDIF
+func isMultiSigLock(pops []parsedOpcode) bool {
+	l := len(pops)
+	if l < 12 {
+		return false
+	}
+	containsStatements :=
+		isOpCode(pops[0], OP_INPUTAGE) &&
+			isNumber(pops[1].opcode) &&
+			isOpCode(pops[2], OP_LESSTHAN) &&
+			isOpCode(pops[3], OP_IF) &&
+			isOpCode(pops[l-4], OP_ELSE) &&
+			(len(pops[l-3].data) == 33 || len(pops[l-3].data) == 65) &&
+			isOpCode(pops[l-2], OP_CHECKSIG) &&
+			isOpCode(pops[l-1], OP_ENDIF)
+	if !containsStatements {
+		return false
 	}
 
-	// Set the 22nd bit which indicates the lock time is in seconds, then
-	// shift the locktime over by 9 since the time granularity is in
-	// 512-second intervals (2^9). This results in a max lock-time of
-	// 33,553,920 seconds, or 1.1 years.
-	return wire.SequenceLockTimeIsSeconds |
-		locktime>>wire.SequenceLockTimeGranularity
+	multiSigEnd := l - mslTailLen
+	return isMultiSig(pops[mslFirstMSigOpI:multiSigEnd])
+}
+
+// extractMultiSigLockAddrs collect all possible addresses from multi sig lock script
+// A multi-signature lock script is of the form:
+// OP_INPUTAGE <required_age_for_refund> OP_LESSTHAN
+// OP_IF <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys> OP_CHECKMULTISIG
+// OP_ELSE <refund_pubkey> OP_CHECKSIG
+// OP_ENDIF
+func extractMultiSigLockAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (addrs []btcutil.Address, requiredSigs int) {
+	// In case of MultiSig activation the number of required signatures is the 5th item
+	// on the stack and the number of public keys is the 5th to last
+	// item on the stack.
+	// Otherwise, in case of refund (pay-to-pubkey),
+	// requires one signature and address is the second to last item on the stack.
+	requiredSigs = asSmallInt(pops[mslFirstMSigOpI].opcode)
+	numPubKeys := asSmallInt(pops[len(pops)-mslTailLen-2].opcode)
+
+	addrIndex := map[string]struct{}{}
+	// Extract the public keys while skipping any that are invalid.
+	addrs = make([]btcutil.Address, 0, numPubKeys+1)
+	for i := 0; i < numPubKeys; i++ {
+		addr, err := btcutil.NewAddressPubKey(pops[mslFirstMSigOpI+1+i].data, chainParams)
+		if err == nil {
+			if _, ok := addrIndex[addr.String()]; !ok {
+				addrs = append(addrs, addr)
+				addrIndex[addr.String()] = struct{}{}
+			}
+		}
+	}
+
+	addr, err := btcutil.NewAddressPubKey(pops[len(pops)-2].data, chainParams)
+	if err == nil {
+		if _, ok := addrIndex[addr.String()]; !ok {
+			addrs = append(addrs, addr)
+		}
+	}
+
+	return
+}
+
+// signMultiSigLock signs as many of the outputs in the provided multisig script as
+// possible. It returns the generated script and a boolean if the script fulfils
+// the contract (i.e. nrequired signatures are provided).  Since it is arguably
+// legal to not be able to sign any of the outputs, no error is returned.
+func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
+	addresses []btcutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
+
+	// here is safe to ignore error, it checked previously.
+	parsed, _ := parseScript(subScript)
+
+	var refundLock int32
+	if isSmallInt(parsed[1].opcode) {
+		refundLock = int32(asSmallInt(parsed[1].opcode))
+	} else {
+		num, _ := makeScriptNum(parsed[1].data, true, 5)
+		refundLock = num.Int32()
+	}
+
+	refund := tx.TxIn[idx].Age >= refundLock
+	if refund {
+		nRequired = 1
+	}
+
+	// We start with a single OP_FALSE to work around the (now standard)
+	// but in the reference implementation that causes a spurious pop at
+	// the end of OP_CHECKMULTISIG.
+	builder := NewScriptBuilder()
+	if !refund {
+		builder.AddOp(OP_FALSE)
+	}
+
+	signed := 0
+	for _, addr := range addresses {
+		key, _, err := kdb.GetKey(addr)
+		if err != nil {
+			continue
+		}
+		sig, err := RawTxInSignature(tx, idx, subScript, hashType, key)
+		if err != nil {
+			continue
+		}
+
+		builder.AddData(sig)
+		signed++
+		if signed == nRequired {
+			break
+		}
+	}
+
+	script, _ := builder.Script()
+	return script, signed == nRequired
 }

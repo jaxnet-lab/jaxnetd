@@ -535,7 +535,7 @@ func (vm *Engine) Execute() (err error) {
 		log.Trace().Msgf("%v", newLogClosure(func() string {
 			dis, err := vm.DisasmPC()
 			if err != nil {
-				return fmt.Sprintf("stepping (%v)", err)
+				return fmt.Sprintf("stepping error (%v)", err)
 			}
 			return fmt.Sprintf("stepping %v", dis)
 		})())

@@ -165,8 +165,9 @@ func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Ti
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
+	// wire.TxVerRefundableTimeLock is always finalized, like a wire.TxVerRegular.
 	lockTime := msgTx.LockTime
-	if lockTime == 0 || msgTx.CleanVersion() == wire.TxVerTimeLockAllowance {
+	if lockTime == 0 || msgTx.CleanVersion() == wire.TxVerRefundableTimeLock {
 		return true
 	}
 

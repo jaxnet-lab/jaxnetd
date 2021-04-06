@@ -156,7 +156,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 
 	lop := txMan.ForShard(shardID)
 	if timeLock > 0 {
-		lop = lop.AddTimeLockAllowance(timeLock)
+		lop = lop.AddRefundableTimeLock(timeLock)
 	}
 
 	tx, err := lop.WithKeys(senderKP).
