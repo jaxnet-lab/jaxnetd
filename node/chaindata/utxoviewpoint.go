@@ -354,11 +354,12 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 			return err
 		}
 		ownerKey := string(scriptData.RawKey)
-		if _, ok := view.eadAddresses[ownerKey]; !ok {
+		address, ok := view.eadAddresses[ownerKey]
+		if !ok || address == nil || len(address.IPs) < 1 {
 			return nil
 		}
 
-		filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[ownerKey].IPs)-1)
+		filtered := make([]wire.EADAddress, 0, len(address.IPs)-1)
 		for _, p := range view.eadAddresses[ownerKey].IPs {
 			addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
 			if removed {
@@ -371,7 +372,8 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 			view.eadAddresses[ownerKey] = nil
 			return nil
 		}
-		view.eadAddresses[ownerKey].IPs = filtered
+		address.IPs = filtered
+		view.eadAddresses[ownerKey] = address
 		return nil
 	}
 
