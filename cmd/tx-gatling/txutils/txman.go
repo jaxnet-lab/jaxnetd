@@ -578,9 +578,10 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 			return nil, errors.New("unable to get utxo from node")
 		}
 
-		if len(txOut.ScriptPubKey.Addresses) < 2 {
-			// TODO: improve this validation
-			//  suppose that this is regular UTXO
+		sType := txOut.ScriptPubKey.Type
+		if sType != txscript.ScriptHashTy.String() &&
+			sType != txscript.MultiSigTy.String() &&
+			sType != txscript.MultiSigLockTy.String() {
 			continue
 		}
 

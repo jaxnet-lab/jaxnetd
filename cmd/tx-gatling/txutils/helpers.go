@@ -174,7 +174,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 	return tx.TxHash, nil
 }
 
-func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index uint32) error {
+func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, _ uint32) error {
 	hash, _ := chainhash.NewHashFromStr(txHash)
 	timer := time.NewTimer(time.Minute)
 
@@ -184,13 +184,13 @@ func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, index
 			return errors.New("tx waiting deadline")
 		default:
 			// wait for the transaction to be added to the block
-			firstOut, err := rpcClient.ForShard(shardID).GetTxOut(hash, index, false)
+			txDetails, err := rpcClient.ForShard(shardID).GetRawTransactionVerbose(hash)
 			if err != nil {
-				timer.Stop()
-				return errors.Wrap(err, "can't get tx out")
+				time.Sleep(time.Second)
+				continue
 			}
 
-			if firstOut != nil && firstOut.Confirmations > 2 {
+			if txDetails != nil && txDetails.Confirmations > 2 {
 				fmt.Printf("...tx %s mined in block @ %d shard\n", txHash, shardID)
 				timer.Stop()
 				return nil
