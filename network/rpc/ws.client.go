@@ -220,7 +220,6 @@ out:
 				c.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
 				continue
 			}
-			fmt.Println("############## wsClient:inHandler:225 send error ", string(reply))
 			c.SendMessage(reply, nil)
 			continue
 		}
@@ -258,7 +257,6 @@ out:
 				c.logger.Error().Err(err).Msg("Failed to marshal authenticate")
 				continue
 			}
-			fmt.Println("############## wsClient:inHandler:263 send error ", string(reply))
 			c.SendMessage(reply, nil)
 			continue
 		}
@@ -277,7 +275,6 @@ out:
 					c.manager.logger.Error().Msg("Failed to marshal parse failure ")
 					continue
 				}
-				fmt.Println("############## wsClient:inHandler:282 send error ", string(reply))
 				c.SendMessage(reply, nil)
 				continue
 			}
@@ -325,7 +322,8 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 		err    error
 	)
 
-	fmt.Println("############## WsClient:serviceRequest: incoming cmd ", r)
+	fmt.Println("############## WsClient:serviceRequest: incoming cmd for shard id ", r.method, " ", r.shardID)
+	fmt.Println("############## WsClient:serviceRequest: known shards", c.manager.server.shardRPCs)
 
 	var provider *cprovider.ChainProvider
 	if r.shardID != 0 {
@@ -353,10 +351,8 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	// exist fallback to handling the command as a standard command.
 	wsHandler, ok := c.manager.handler.handlers[r.method]
 	if ok {
-		fmt.Println("############## WsClient:serviceRequest: wsHandler found ")
 		result, err = wsHandler(provider, c, r.cmd)
 	} else {
-		fmt.Println("############## WsClient:serviceRequest: wsHandler not found ")
 		//TODO: implement
 		//result, err = c.manager.server.HandleCommand(r, nil)
 	}
@@ -364,9 +360,6 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	if err != nil {
 		c.manager.logger.Error().Str("command", r.method).Err(err).Msg("Failed to marshal reply command")
 		return
-	}
-	if result == nil{ 
-		fmt.Println("############## wsClient:inHandler:371 send error ", string(reply))
 	}
 	c.SendMessage(reply, nil)
 }
@@ -402,7 +395,6 @@ out:
 		// are sent.
 		case msg := <-c.ntfnChan:
 			if !waiting {
-				// fmt.Println("############## wsClient:inHandler:406 send error ", string(msg))
 				c.SendMessage(msg, ntfnSentChan)
 			} else {
 				pendingNtfns.PushBack(msg)
@@ -423,7 +415,6 @@ out:
 			// Notify the outHandler about the next item to
 			// asynchronously send.
 			msg := pendingNtfns.Remove(next).([]byte)
-			// fmt.Println("############## wsClient:inHandler:427 send error ", string(msg))
 			c.SendMessage(msg, ntfnSentChan)
 
 		case <-c.quit:
@@ -457,7 +448,6 @@ out:
 		// closed.
 		select {
 		case r := <-c.sendChan:
-			// fmt.Println("############## WsClient:outHandler ", string(r.msg))
 			err := c.conn.WriteMessage(websocket.TextMessage, r.msg)
 			if err != nil {
 				c.Disconnect()

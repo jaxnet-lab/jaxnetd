@@ -98,7 +98,7 @@ type NotificationHandlers struct {
 	// function is non-nil.
 	//
 	// Deprecated: Use OnFilteredBlockConnected instead.
-	OnBlockConnected func(hash *chainhash.Hash, height int32, t time.Time)
+	OnBlockConnected func(shardId uint32, hash *chainhash.Hash, height int32, t time.Time)
 
 	// OnFilteredBlockConnected is invoked when a block is connected to the
 	// longest (best) chain.  It will only be invoked if a preceding call to
@@ -235,7 +235,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnBlockConnected(blockHash, blockHeight, blockTime)
+		c.ntfnHandlers.OnBlockConnected(ntfn.ShardID, blockHash, blockHeight, blockTime)
 
 	// OnFilteredBlockConnected
 	// case btcjson.FilteredBlockConnectedNtfnMethod:
@@ -258,7 +258,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnBlockDisconnected
 	case btcjson.BlockDisconnectedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:265")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnBlockDisconnected == nil {
@@ -267,7 +266,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 		blockHash, blockHeight, blockTime, err := parseChainNtfnParams(ntfn.Params)
 		if err != nil {
-			fmt.Println("##################### notify: handleNotification:271 error ")
 			log.Warn().Msgf("Received invalid block connected "+
 				"notification: %v", err)
 			return
@@ -277,18 +275,15 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnFilteredBlockDisconnected
 	case btcjson.FilteredBlockDisconnectedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:284")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnFilteredBlockDisconnected == nil {
-			fmt.Println("##################### notify: handleNotification:284 error ")
 			return
 		}
 
 		blockHeight, blockHeader, err :=
 			parseFilteredBlockDisconnectedParams(ntfn.Params)
 		if err != nil {
-			fmt.Println("##################### notify: handleNotification:291 error ")
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
 			return
@@ -299,17 +294,14 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRecvTx
 	case btcjson.RecvTxNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:306")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRecvTx == nil {
-			fmt.Println("##################### notify: handleNotification:305 error ")
 			return
 		}
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
-			fmt.Println("##################### notify: handleNotification:311 error ")
 			log.Warn().Msgf("Received invalid recvtx notification: %v",
 				err)
 			return
@@ -319,17 +311,14 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRedeemingTx
 	case btcjson.RedeemingTxNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:326")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRedeemingTx == nil {
-			fmt.Println("##################### notify: handleNotification:324 error ")
 			return
 		}
 
 		tx, block, err := parseChainTxNtfnParams(ntfn.Params)
 		if err != nil {
-			fmt.Println("##################### notify: handleNotification:330 error ")
 			log.Warn().Msgf("Received invalid redeemingtx "+
 				"notification: %v", err)
 			return
@@ -339,17 +328,14 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRelevantTxAccepted
 	case btcjson.RelevantTxAcceptedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:346")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRelevantTxAccepted == nil {
-			fmt.Println("##################### notify: handleNotification:343 error ")
 			return
 		}
 
 		transaction, err := parseRelevantTxAcceptedParams(ntfn.Params)
 		if err != nil {
-			fmt.Println("##################### notify: handleNotification:349 error ")
 			log.Warn().Msgf("Received invalid relevanttxaccepted "+
 				"notification: %v", err)
 			return
@@ -359,7 +345,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRescanFinished
 	case btcjson.RescanFinishedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:366")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRescanFinished == nil {
@@ -377,7 +362,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnRescanProgress
 	case btcjson.RescanProgressNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:384")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnRescanProgress == nil {
@@ -395,7 +379,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAccepted
 	case btcjson.TxAcceptedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:402")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAccepted == nil {
@@ -413,7 +396,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAcceptedVerbose
 	case btcjson.TxAcceptedVerboseNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:420")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAcceptedVerbose == nil {
@@ -431,7 +413,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnBtcdConnected
 	case btcjson.BtcdConnectedNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:438")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnBtcdConnected == nil {
@@ -449,7 +430,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnAccountBalance
 	case btcjson.AccountBalanceNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:456")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnAccountBalance == nil {
@@ -467,7 +447,6 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnWalletLockState
 	case btcjson.WalletLockStateNtfnMethod:
-		fmt.Println("##################### notify:handleNotification:474")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnWalletLockState == nil {
@@ -919,7 +898,8 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 }
 
 // NotifyBlocks registers the client to receive notifications when blocks are
-// connected and disconnected from the main chain.  The notifications are
+// connected and disconnected from the existing chains. Corresponding shard is is taken 
+// from the request context.   The notifications are
 // delivered to the notification handlers associated with the client.  Calling
 // this function has no effect if there are no notification handlers and will
 // result in an error if the client is configured to run in HTTP POST mode.
@@ -930,6 +910,31 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 // NOTE: This is a btcd extension and requires a websocket connection.
 func (c *Client) NotifyBlocks() error {
 	return c.NotifyBlocksAsync().Receive()
+}
+
+func (c *Client) StopNotifyBlocksAsync() FutureNotifyBlocksResult {
+	// Not supported in HTTP POST mode.
+	if c.config.HTTPPostMode {
+		return newFutureError(ErrWebsocketsRequired)
+	}
+
+	// Ignore the notification if the client is not interested in
+	// notifications.
+	if c.ntfnHandlers == nil {
+		return newNilFutureResult()
+	}
+
+	cmd := btcjson.NewStopNotifyBlocksCmd()
+	return c.sendCmd(cmd)
+}
+
+// StopNotifyBlocks stops to receive notifications when blocks are
+// connected and disconnected from the existing chains which were previously subscribed
+// by NotifyBlocks request. Corresponding shard is taken from the request context.
+// Calling this function has no effect if there were no previous subscriptions and will
+// result in an error if the client is configured to run in HTTP POST mode.
+func (c *Client) StopNotifyBlocks() error {
+	return c.StopNotifyBlocksAsync().Receive()
 }
 
 // FutureNotifySpentResult is a future promise to deliver the result of a

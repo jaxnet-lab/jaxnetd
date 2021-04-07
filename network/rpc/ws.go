@@ -145,14 +145,20 @@ func (m *WsManager) RemoveClient(wsc *wsClient) {
 
 // RegisterBlockUpdates requests block update notifications to the passed
 // websocket client.
-func (m *WsManager) RegisterBlockUpdates(wsc *wsClient) {
-	m.queueNotification <- (*notificationRegisterBlocks)(wsc)
+func (m *WsManager) RegisterBlockUpdates(wsc *wsClient, shardID uint32) {
+	m.queueNotification <- &notificationRegisterBlocks{
+		wsc:     wsc,
+		shardID: shardID,
+	}
 }
 
 // UnregisterBlockUpdates removes block update notifications for the passed
 // websocket client.
-func (m *WsManager) UnregisterBlockUpdates(wsc *wsClient) {
-	m.queueNotification <- (*notificationUnregisterBlocks)(wsc)
+func (m *WsManager) UnregisterBlockUpdates(wsc *wsClient, shardID uint32) {
+	m.queueNotification <- &notificationUnregisterBlocks{
+		wsc:     wsc,
+		shardID: shardID,
+	}
 }
 
 // UnregisterTxOutAddressRequest removes a request from the passed websocket
@@ -286,8 +292,14 @@ type notificationTxAcceptedByMempool wsTransactionNotification
 // Notification control requests
 type notificationRegisterClient wsClient
 type notificationUnregisterClient wsClient
-type notificationRegisterBlocks wsClient
-type notificationUnregisterBlocks wsClient
+type notificationRegisterBlocks struct {
+	wsc     *wsClient
+	shardID uint32
+}
+type notificationUnregisterBlocks struct {
+	wsc     *wsClient
+	shardID uint32
+}
 type notificationRegisterNewMempoolTxs wsClient
 type notificationUnregisterNewMempoolTxs wsClient
 type notificationRegisterSpent struct {
@@ -327,6 +339,9 @@ func (m *WsManager) notificationHandler(ctx context.Context) {
 	// Where possible, the quit channel is used as the unique id for a client
 	// since it is quite a bit more efficient than using the entire struct.
 	blockNotifications := make(map[chan struct{}]*wsClient)
+
+	shardIDClients := make(map[chan struct{}]map[uint32]bool)
+	shardIDBlockNotifications := make(map[uint32]map[chan struct{}]*wsClient)
 	txNotifications := make(map[chan struct{}]*wsClient)
 	watchedOutPoints := make(map[wire.OutPoint]map[chan struct{}]*wsClient)
 	watchedAddrs := make(map[string]map[chan struct{}]*wsClient)
@@ -334,7 +349,7 @@ func (m *WsManager) notificationHandler(ctx context.Context) {
 out:
 	for {
 		select {
-		case n, ok := <-m.notificationMsgs:			
+		case n, ok := <-m.notificationMsgs:
 			if !ok {
 				// queueHandler quit.
 				break out
@@ -342,8 +357,7 @@ out:
 			switch n := n.(type) {
 			case *notificationBlockConnected:
 				block := n.Block
-                // fmt.Println("##################################### block connected")
-				
+
 				// Skip iterating through all txs if no
 				// tx notification requests exist.
 				if len(watchedOutPoints) != 0 || len(watchedAddrs) != 0 {
@@ -352,20 +366,23 @@ out:
 							watchedAddrs, tx, block)
 					}
 				}
-
-				if len(blockNotifications) != 0 {
-					m.notifyBlockConnected(n.Chain, blockNotifications, block)
-					m.notifyFilteredBlockConnected(n.Chain, blockNotifications, block)
+				shardID := n.Chain.ChainCtx.ShardID()
+				if clientsMap, ok := shardIDBlockNotifications[shardID]; ok {
+					if len(clientsMap) != 0 {
+						m.notifyBlockConnected(n.Chain, clientsMap, block)
+						m.notifyFilteredBlockConnected(n.Chain, clientsMap, block)
+					}
 				}
 
 			case *notificationBlockDisconnected:
 				block := n.Block
-				// fmt.Println("#####################################block disconnected")
-				if len(blockNotifications) != 0 {
-					m.notifyBlockDisconnected(n.Chain, blockNotifications, block)
-					m.notifyFilteredBlockDisconnected(n.Chain, blockNotifications, block)
+				shardID := n.Chain.ChainCtx.ShardID()
+				if clientsMap, ok := shardIDBlockNotifications[shardID]; ok {
+					if len(blockNotifications) != 0 {
+						m.notifyBlockDisconnected(n.Chain, clientsMap, block)
+						m.notifyFilteredBlockDisconnected(n.Chain, clientsMap, block)
+					}
 				}
-
 			case *notificationTxAcceptedByMempool:
 				if n.isNew && len(txNotifications) != 0 {
 					m.notifyForNewTx(n.Chain, txNotifications, n.tx)
@@ -374,16 +391,33 @@ out:
 				m.notifyRelevantTxAccepted(n.Chain, n.tx, clients)
 
 			case *notificationRegisterBlocks:
-				// fmt.Println("#####################################notificationRegisterBlocks")
-				wsc := (*wsClient)(n)
-				blockNotifications[wsc.quit] = wsc
+				wsc := (*wsClient)(n.wsc)
+				if bnMap, ok := shardIDBlockNotifications[n.shardID]; !ok {
+					shardIDBlockNotifications[n.shardID] = make(map[chan struct{}]*wsClient)
+					shardIDBlockNotifications[n.shardID][wsc.quit] = wsc
+				} else {
+					bnMap[wsc.quit] = wsc
+				}
+
+				//this block optimises unsubscribing of the given client from all subscriptions
+				// in a case when the connection is lost for any reason
+				if shardMap, ok := shardIDClients[wsc.quit]; !ok {
+					shardMap = make(map[uint32]bool)
+					shardMap[n.shardID] = true
+					shardIDClients[wsc.quit] = shardMap
+				} else {
+					if _, okk := shardMap[n.shardID]; !okk {
+						shardMap[n.shardID] = true
+					}
+				}
 
 			case *notificationUnregisterBlocks:
-				wsc := (*wsClient)(n)
-				delete(blockNotifications, wsc.quit)
+				wsc := (*wsClient)(n.wsc)
+				if bnMap, ok := shardIDBlockNotifications[n.shardID]; ok {
+					delete(bnMap, wsc.quit)
+				}
 
 			case *notificationRegisterClient:
-				// fmt.Println("#####################################notificationRegisterBlocks")
 				wsc := (*wsClient)(n)
 				clients[wsc.quit] = wsc
 
@@ -392,6 +426,16 @@ out:
 				// Remove any requests made by the client as well as
 				// the client itself.
 				delete(blockNotifications, wsc.quit)
+
+				if shardMap, ok := shardIDClients[wsc.quit]; ok {
+					for shardID, _ := range shardMap {
+						//unsubscribe from block notifications
+						if bnMap, ok := shardIDBlockNotifications[shardID]; ok {
+							delete(bnMap, wsc.quit)
+						}
+					}
+				}
+
 				delete(txNotifications, wsc.quit)
 				for k := range wsc.spentRequests {
 					op := k

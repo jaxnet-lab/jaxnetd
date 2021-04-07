@@ -333,6 +333,7 @@ type inMessage struct {
 // rawNotification is a partially-unmarshaled JSON-RPC notification.
 type rawNotification struct {
 	Method string            `json:"method"`
+	ShardID uint32           `json:"shard_id"` 
 	Params []json.RawMessage `json:"params"`
 }
 

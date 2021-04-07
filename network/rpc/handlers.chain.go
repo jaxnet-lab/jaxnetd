@@ -679,6 +679,8 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
+
+	fmt.Println("####################### NotifyNewTransaction ######################")
 	// if server.ntfnMgr == nil {
 	// 	return
 	// }
@@ -686,6 +688,10 @@ func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
 	// 	// Notify websocket clients about mempool transactions.
 	// 	server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
 	// }
+
+	// if wsManager != nil {
+	// 	wsManager.queueNotification <- ntf
+	// } 
 }
 
 // handleSubmitBlock implements the submitblock command.

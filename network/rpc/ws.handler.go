@@ -129,7 +129,7 @@ func (h *wsHandler) handleWebsocketHelp(chain *cprovider.ChainProvider, wsc *wsC
 }
 
 func (h *wsHandler) handleNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	wsc.manager.RegisterBlockUpdates(wsc)
+	wsc.manager.RegisterBlockUpdates(wsc, chain.ChainCtx.ShardID())
 	return nil, nil
 }
 
@@ -181,7 +181,7 @@ func (h *wsHandler) handleSession(chain *cprovider.ChainProvider, wsc *wsClient,
 }
 
 func (h *wsHandler) handleStopNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	wsc.manager.UnregisterBlockUpdates(wsc)
+	wsc.manager.UnregisterBlockUpdates(wsc, chain.ChainCtx.ShardID())
 	return nil, nil
 }
 
