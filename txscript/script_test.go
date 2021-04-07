@@ -4359,11 +4359,13 @@ func TestInputAge(t *testing.T) {
 		AddInt64(0x54).
 		AddOp(OP_EQUAL).
 		AddOp(OP_ENDIF).
+		// AddOp(OP_NIP).
 		Script()
 	assertNoErr(t, err)
 
 	getTx := func(age int32, num4Signature int64) *wire.MsgTx {
 		signature, err := NewScriptBuilder().
+			// AddOp(OP_FALSE).
 			AddInt64(num4Signature).
 			Script()
 		assertNoErr(t, err)
@@ -4397,7 +4399,7 @@ func TestInputAge(t *testing.T) {
 		{age: 0x42, num4Signature: 0x54, valid: true},
 		{age: 0x42, num4Signature: 0x55, valid: false},
 	}
-	// activateTraceLogger()
+	activateTraceLogger()
 
 	for i, testCase := range testCases {
 		tx := getTx(testCase.age, testCase.num4Signature)

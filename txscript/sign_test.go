@@ -145,37 +145,22 @@ func TestSignTxOutput(t *testing.T) {
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
 			{
-				PreviousOutPoint: wire.OutPoint{
-					Hash:  chainhash.Hash{},
-					Index: 0,
-				},
-				Sequence: 4294967295,
+				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0},
+				Sequence:         4294967295,
 			},
 			{
-				PreviousOutPoint: wire.OutPoint{
-					Hash:  chainhash.Hash{},
-					Index: 1,
-				},
-				Sequence: 4294967295,
+				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 1},
+				Sequence:         4294967295,
 			},
 			{
-				PreviousOutPoint: wire.OutPoint{
-					Hash:  chainhash.Hash{},
-					Index: 2,
-				},
-				Sequence: 4294967295,
+				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 2},
+				Sequence:         4294967295,
 			},
 		},
 		TxOut: []*wire.TxOut{
-			{
-				Value: 1,
-			},
-			{
-				Value: 2,
-			},
-			{
-				Value: 3,
-			},
+			{Value: 1},
+			{Value: 2},
+			{Value: 3},
 		},
 		LockTime: 0,
 	}
@@ -1174,11 +1159,11 @@ func TestSignTxOutput_multiSigLock(t *testing.T) {
 	hashTypes := []SigHashType{
 		// SigHashOld, // no longer used but should act like all
 		SigHashAll,
-		// SigHashNone,
-		// SigHashSingle,
-		// SigHashAll | SigHashAnyOneCanPay,
-		// SigHashNone | SigHashAnyOneCanPay,
-		// SigHashSingle | SigHashAnyOneCanPay,
+		SigHashNone,
+		SigHashSingle,
+		SigHashAll | SigHashAnyOneCanPay,
+		SigHashNone | SigHashAnyOneCanPay,
+		SigHashSingle | SigHashAnyOneCanPay,
 	}
 	inputAmounts := []int64{5, 10, 15}
 	tx := &wire.MsgTx{
@@ -1189,10 +1174,9 @@ func TestSignTxOutput_multiSigLock(t *testing.T) {
 		LockTime: 0,
 	}
 
-	// TODO
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
-			if !testMultiSigLockTx(t, tx, inputAmounts, hashType, i) {
+			if !testMultiSigLockTx(t, tx.Copy(), inputAmounts, hashType, i) {
 				break
 			}
 		}
@@ -1201,32 +1185,30 @@ func TestSignTxOutput_multiSigLock(t *testing.T) {
 
 func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hashType SigHashType, i int) bool {
 	msg := fmt.Sprintf("%d:%d", hashType, i)
-	refundKey, refundAddress, err := parseKeys(t, "5509233ab69f204b5776dfe490586601abd22b0774acddd71a54abb0e5d87114", msg)
+	refundKey, refundAddress, err := genKeys(t, msg)
 	if err != nil {
 		return false
 	}
 
-	key1, address1, err := parseKeys(t, "7e1abd96e03be5193e86e2de9da078932b3b87fc4cb1d3ea03005c7b8d31ebd4", msg)
+	key1, address1, err := genKeys(t, msg)
 	if err != nil {
 		return false
 	}
 
-	key2, address2, err := parseKeys(t, "492bec4a513cb590fb75430fb19de67eeddf0293dfd58da928034d07f1b69130", msg)
+	key2, address2, err := genKeys(t, msg)
 	if err != nil {
 		return false
 	}
+
+	_, _ = key1, key2
 
 	refundDeferringPeriod := int32(10)
 
-	multiSigLockScript, err := MultiSigLockScript(
-		refundAddress, []*btcutil.AddressPubKey{address1, address2}, 2, refundDeferringPeriod)
+	multiSigLockScript, err := MultiSigLockScript([]*btcutil.AddressPubKey{address1, address2}, 2,
+		refundAddress, refundDeferringPeriod)
 	if err != nil {
 		t.Errorf("failed to make pkscript for %s: %v", msg, err)
 	}
-
-	// asm, _ := DisasmString(multiSigLockScript)
-	// fmt.Println("multiSigLockScript [HEX]: ", hex.EncodeToString(multiSigLockScript))
-	// fmt.Println("multiSigLockScript [ASM]: ", asm)
 
 	scriptAddr, err := btcutil.NewAddressScriptHash(multiSigLockScript, &chaincfg.TestNet3Params)
 	if err != nil {
@@ -1239,8 +1221,6 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 		t.Errorf("failed to make script pkscript for %s: %v", msg, err)
 		return false
 	}
-	// asm, _ = DisasmString(scriptPkScript)
-	// fmt.Println("scriptPkScript [ASM] [signed with key1]: ", asm)
 
 	{ // check the strategy of the multi sig spend
 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
@@ -1254,8 +1234,6 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("failed to sign output %s: %v", msg, err)
 			return false
 		}
-		// asm, _ = DisasmString(sigScript)
-		// fmt.Println("sigScript [ASM] [signed with key1]: ", asm)
 
 		// Only 1 out of 2 signed, this *should* fail.
 		if checkScripts(msg, tx, i, inputAmounts[i], sigScript, scriptPkScript) == nil {
@@ -1275,10 +1253,6 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("failed to sign output %s: %v", msg, err)
 			return false
 		}
-		// asm, _ = DisasmString(sigScript)
-		// fmt.Println("sigScript [ASM] [signed with key2]: ", asm)
-
-		// activateTraceLogger()
 
 		// Now we should pass.
 		err = checkMultiSigLockScripts(msg, tx, i, inputAmounts[i], sigScript, scriptPkScript)
@@ -1289,10 +1263,6 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 	}
 
 	{ // check the strategy of the refund spend
-		in := tx.TxIn[i]
-		in.Age = refundDeferringPeriod + 5
-		in.SignatureScript = nil
-		tx.TxIn[i] = in
 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
 			tx, i, scriptPkScript, hashType,
 			mkGetKey(map[string]addressToKey{
@@ -1304,10 +1274,12 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("failed to sign output %s: %v", msg, err)
 			return false
 		}
-		// asm, _ = DisasmString(sigScript)
-		// fmt.Println("sigScript [ASM] [signed with key1]: ", asm)
 
-		// Only 1 out of 2 signed, this *should not* fail.
+		in := tx.TxIn[i]
+		in.Age = refundDeferringPeriod + 5
+		in.SignatureScript = nil
+		tx.TxIn[i] = in
+		// activateTraceLogger()
 		if err = checkMultiSigLockScripts(msg, tx, i, inputAmounts[i], sigScript, scriptPkScript); err != nil {
 			t.Errorf("fully signed refund script invalid for %s: %v\n", msg, err)
 			return false

@@ -154,12 +154,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 		return "", errors.Wrap(err, "unable to collect UTXO")
 	}
 
-	lop := txMan.ForShard(shardID)
-	if timeLock > 0 {
-		lop = lop.AddRefundableTimeLock(timeLock)
-	}
-
-	tx, err := lop.WithKeys(senderKP).
+	tx, err := txMan.ForShard(shardID).WithKeys(senderKP).
 		NewTx(destination, amount, &senderUTXOIndex)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to create new tx")

@@ -31,12 +31,13 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 }
 
 // MultiSigLockScript is a multi-signature lock script is of the form:
+//
 // OP_INPUTAGE <required_age_for_refund>  OP_LESSTHAN
 // OP_IF
 //     <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys>
 //     OP_CHECKMULTISIG
 // OP_ELSE
-//     <refund_pubkey> OP_CHECKSIG
+//     <refund_pubkey> OP_CHECKSIG OP_NIP
 // OP_ENDIF
 //
 // Can be spent in two ways:
@@ -51,8 +52,8 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 // item on the stack.
 // Otherwise, in case of "refund to owner" (pay-to-pubkey), requires one signature
 // and pubkey is the second to last item on the stack.
-func MultiSigLockScript(refundAddress *btcutil.AddressPubKey, pubkeys []*btcutil.AddressPubKey,
-	sigRequired int, refundDeferringPeriod int32) ([]byte, error) {
+func MultiSigLockScript(pubkeys []*btcutil.AddressPubKey, sigRequired int,
+	refundAddress *btcutil.AddressPubKey, refundDeferringPeriod int32) ([]byte, error) {
 	if len(pubkeys) < sigRequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -83,6 +84,7 @@ func MultiSigLockScript(refundAddress *btcutil.AddressPubKey, pubkeys []*btcutil
 	// refund statement
 	builder.AddData(refundAddress.ScriptAddress())
 	builder.AddOp(OP_CHECKSIG)
+	builder.AddOp(OP_NIP)
 	// ---
 	builder.AddOp(OP_ENDIF)
 
@@ -95,7 +97,7 @@ const (
 	mslFirstMSigOpI = 4
 
 	// mslTailLen is the len of parsedOpcode set associated with the "refund tail" of the script.
-	mslTailLen = 4
+	mslTailLen = 5
 )
 
 // isMultiSigLock returns true if the passed script is a MultiSigLockTy transaction, false
@@ -107,15 +109,16 @@ const (
 // [ 3] OP_IF
 // [ 4]    OP_1
 // [..]    <pubkey>
-// [-6]    OP_1
-// [-5]    OP_CHECKMULTISIG
-// [-4] OP_ELSE
-// [-3]    <refund_pubkey>
-// [-2]    OP_CHECKSIG
+// [-7]    OP_1
+// [-6]    OP_CHECKMULTISIG
+// [-5] OP_ELSE
+// [-4]    <refund_pubkey>
+// [-3]    OP_CHECKSIG
+// [-2]    OP_NIP
 // [-1] OP_ENDIF
 func isMultiSigLock(pops []parsedOpcode) bool {
 	l := len(pops)
-	if l < 12 {
+	if l < 13 {
 		return false
 	}
 	containsStatements :=
@@ -123,9 +126,10 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 			isNumber(pops[1].opcode) &&
 			isOpCode(pops[2], OP_LESSTHAN) &&
 			isOpCode(pops[3], OP_IF) &&
-			isOpCode(pops[l-4], OP_ELSE) &&
-			(len(pops[l-3].data) == 33 || len(pops[l-3].data) == 65) &&
-			isOpCode(pops[l-2], OP_CHECKSIG) &&
+			isOpCode(pops[l-5], OP_ELSE) &&
+			(len(pops[l-4].data) == 33 || len(pops[l-4].data) == 65) &&
+			isOpCode(pops[l-3], OP_CHECKSIG) &&
+			isOpCode(pops[l-2], OP_NIP) &&
 			isOpCode(pops[l-1], OP_ENDIF)
 	if !containsStatements {
 		return false
@@ -139,9 +143,10 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 // A multi-signature lock script is of the form:
 // OP_INPUTAGE <required_age_for_refund> OP_LESSTHAN
 // OP_IF <numsigs> <pubkey> <pubkey> <pubkey>... <numpubkeys> OP_CHECKMULTISIG
-// OP_ELSE <refund_pubkey> OP_CHECKSIG
+// OP_ELSE <refund_pubkey> OP_CHECKSIG OP_NIP
 // OP_ENDIF
-func extractMultiSigLockAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (addrs []btcutil.Address, requiredSigs int) {
+func extractMultiSigLockAddrs(pops []parsedOpcode,
+	chainParams *chaincfg.Params) (addrs []btcutil.Address, requiredSigs int) {
 	// In case of MultiSig activation the number of required signatures is the 5th item
 	// on the stack and the number of public keys is the 5th to last
 	// item on the stack.
@@ -163,7 +168,7 @@ func extractMultiSigLockAddrs(pops []parsedOpcode, chainParams *chaincfg.Params)
 		}
 	}
 
-	addr, err := btcutil.NewAddressPubKey(pops[len(pops)-2].data, chainParams)
+	addr, err := btcutil.NewAddressPubKey(pops[len(pops)-4].data, chainParams)
 	if err == nil {
 		if _, ok := addrIndex[addr.String()]; !ok {
 			addrs = append(addrs, addr)
@@ -191,8 +196,7 @@ func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHas
 		refundLock = num.Int32()
 	}
 
-	refund := tx.TxIn[idx].Age >= refundLock
-	if refund {
+	if tx.TxIn[idx].Age >= refundLock {
 		nRequired = 1
 	}
 
@@ -200,9 +204,7 @@ func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHas
 	// but in the reference implementation that causes a spurious pop at
 	// the end of OP_CHECKMULTISIG.
 	builder := NewScriptBuilder()
-	if !refund {
-		builder.AddOp(OP_FALSE)
-	}
+	builder.AddOp(OP_FALSE)
 
 	signed := 0
 	for _, addr := range addresses {

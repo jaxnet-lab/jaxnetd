@@ -288,9 +288,9 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 const (
 	TxVerRegular            = 1 // TxVerRegular is a simple transaction.
 	TxVerTimeLock           = 2 // TxVerTimeLock - tx will not be accepted until the LockTime expires.
-	TxVerRefundableTimeLock = 3 // TxVerRefundableTimeLock
-	TxVerEADAction          = 4 // TxVerEADAction is a tx for EAD Address Registration/Revoking
-)
+	TxVerEADAction          = 3 // TxVerEADAction is a tx for EAD Address Registration/Revoking
+	// TxVerRefundableTimeLock = 3 // TxVerRefundableTimeLock
+	)
 
 const (
 	TxMarkNone      int32 = 0

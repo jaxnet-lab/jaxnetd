@@ -942,7 +942,7 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		script, err := MultiSigLockScript(test.refundAddress, test.keys, test.nrequired, test.refundDeferringPeriod)
+		script, err := MultiSigLockScript(test.keys, test.nrequired, test.refundAddress, test.refundDeferringPeriod)
 		if e := tstCheckScriptError(err, test.err); e != nil {
 			t.Errorf("MultiSigLockScript #%d: %v", i, e)
 			continue

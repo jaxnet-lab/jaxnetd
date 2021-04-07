@@ -499,14 +499,14 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 						"block contains transaction whose input sequence locks are not met")
 					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
 				}
-			case wire.TxVerRefundableTimeLock:
-				if chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
-					if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
-						str := fmt.Sprintf(
-							"lock time has expired, transactions is possible only to the original addresses")
-						return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
-					}
-				}
+				// case wire.TxVerRefundableTimeLock:
+				// 	if chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
+				// 		if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
+				// 			str := fmt.Sprintf(
+				// 				"lock time has expired, transactions is possible only to the original addresses")
+				// 			return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
+				// 		}
+				// 	}
 			}
 
 		}

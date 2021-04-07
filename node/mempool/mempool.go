@@ -1094,14 +1094,14 @@ func (mp *TxPool) maybeAcceptTransaction(tx *btcutil.Tx,
 			return nil, nil, txRuleError(wire.RejectNonstandard,
 				"transaction's sequence locks on inputs not met")
 		}
-	case wire.TxVerRefundableTimeLock:
-		if chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
-			medianTimePast) {
-			if !chaindata.ValidMoneyBackAfterExpiration(tx, utxoView) {
-				return nil, nil, txRuleError(wire.RejectNonstandard,
-					"lock time has expired, transactions is possible only to the original addresses")
-			}
-		}
+		// case wire.TxVerRefundableTimeLock:
+		// 	if chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+		// 		medianTimePast) {
+		// 		if !chaindata.ValidMoneyBackAfterExpiration(tx, utxoView) {
+		// 			return nil, nil, txRuleError(wire.RejectNonstandard,
+		// 				"lock time has expired, transactions is possible only to the original addresses")
+		// 		}
+		// 	}
 	}
 
 	// Perform several checks on the transaction inputs using the invariant

@@ -564,8 +564,7 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
 	// can be included within a block at any given height or time.
 	mTx := tx.MsgTx()
 
-	sequenceLockActive := (mTx.CleanVersion() == wire.TxVerTimeLock ||
-		mTx.CleanVersion() == wire.TxVerRefundableTimeLock) && csvSoftforkActive
+	sequenceLockActive := mTx.CleanVersion() == wire.TxVerTimeLock && csvSoftforkActive
 	if !sequenceLockActive || chaindata.IsCoinBase(tx) {
 		return sequenceLock, nil
 	}
