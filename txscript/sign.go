@@ -154,12 +154,12 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashTyp
 	return script, signed == nRequired
 }
 
+
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
 	ScriptClass, []btcutil.Address, int, error) {
 
-	class, addresses, nrequired, err := ExtractPkScriptAddrs(subScript,
-		chainParams)
+	class, addresses, nrequired, err := ExtractPkScriptAddrs(subScript, chainParams)
 	if err != nil {
 		return nil, NonStandardTy, nil, 0, err
 	}
@@ -201,8 +201,10 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		return script, class, addresses, nrequired, nil
 	case MultiSigTy:
-		script, _ := signMultiSig(tx, idx, subScript, hashType,
-			addresses, nrequired, kdb)
+		script, _ := signMultiSig(tx, idx, subScript, hashType, addresses, nrequired, kdb)
+		return script, class, addresses, nrequired, nil
+	case MultiSigLockTy:
+		script, _ := signMultiSigLock(tx, idx, subScript, hashType, addresses, nrequired, kdb)
 		return script, class, addresses, nrequired, nil
 	case EADAddress:
 		// look up key for address
@@ -275,9 +277,8 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		builder.AddData(script)
 		finalScript, _ := builder.Script()
 		return finalScript
-	case MultiSigTy:
-		return mergeMultiSig(tx, idx, addresses, nRequired, pkScript,
-			sigScript, prevScript)
+	case MultiSigTy, MultiSigLockTy:
+		return mergeMultiSig(tx, idx, addresses, nRequired, pkScript, sigScript, prevScript)
 
 	// It doesn't actually make sense to merge anything other than multiig
 	// and scripthash (because it could contain multisig). Everything else

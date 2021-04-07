@@ -871,7 +871,7 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 			Value:    10,
 			PKScript: hex.EncodeToString(script),
 		}}).
-		IntoTx(func(shardID uint32) (int64, error) { return 0, nil }, alice)
+		IntoTx(func(shardID uint32) (int64, int64, error) { return 0, 0, nil }, alice)
 
 	assert.NoError(t, err)
 
@@ -897,7 +897,7 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 			Value:    out.Value,
 			PKScript: hex.EncodeToString(script),
 		}}).
-		IntoTx(func(shardID uint32) (int64, error) { return 0, nil }, alice)
+		IntoTx(func(shardID uint32) (int64, int64, error) { return 0, 0, nil }, alice)
 	assert.NoError(t, err)
 
 	hasSignature, err = txscript.CheckIsSignedByPubKey(tx, 0, script, alice.AddressPubKey.PubKey())

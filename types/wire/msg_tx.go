@@ -214,6 +214,9 @@ type TxIn struct {
 	SignatureScript  []byte
 	Witness          TxWitness
 	Sequence         uint32
+	// Age is an internal field that needed for runtime processing,
+	// it will be ignored during serialization and hashing.
+	Age int32
 }
 
 // SerializeSize returns the number of bytes it would take to serialize the
@@ -283,11 +286,12 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 }
 
 const (
-	TxVerRegular           = 1 // TxVerRegular is a normal simple transaction
-	TxVerTimeLock          = 2 // TxVerTimeLock
-	TxVerTimeLockAllowance = 3 //
-	TxVerEADAction         = 4 //
-)
+	TxVerRegular            = 1 // TxVerRegular is a simple transaction.
+	TxVerTimeLock           = 2 // TxVerTimeLock - tx will not be accepted until the LockTime expires.
+	TxVerEADAction          = 3 // TxVerEADAction is a tx for EAD Address Registration/Revoking
+	// TxVerRefundableTimeLock = 3 // TxVerRefundableTimeLock
+	)
+
 const (
 	TxMarkNone      int32 = 0
 	TxMarkShardSwap int32 = 1 << 16
@@ -321,10 +325,7 @@ func (msg *MsgTx) AddTxOut(to *TxOut) {
 
 // SetMark adds a marker to the message.
 func (msg *MsgTx) SetMark(mark int32) {
-
-	if msg.Version&mark != mark {
-		msg.Version = msg.Version ^ mark
-	}
+	msg.Version = msg.Version | mark
 }
 
 func (msg *MsgTx) SwapTx() bool {

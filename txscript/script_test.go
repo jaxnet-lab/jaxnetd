@@ -7,10 +7,13 @@ package txscript
 
 import (
 	"bytes"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -4123,9 +4126,9 @@ func TestRemoveOpcodeByData(t *testing.T) {
 		},
 		{
 			name:   "invalid opcode ",
-			before: []byte{OP_UNKNOWN188},
+			before: []byte{OP_UNKNOWN189},
 			remove: []byte{1, 2, 3, 4},
-			after:  []byte{OP_UNKNOWN188},
+			after:  []byte{OP_UNKNOWN189},
 		},
 		{
 			name:   "invalid length (instruction)",
@@ -4342,4 +4345,85 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInputAge(t *testing.T) {
+	script, err := NewScriptBuilder().
+		AddOp(OP_INPUTAGE).
+		AddInt64(0x32).
+		AddOp(OP_LESSTHAN).
+		AddOp(OP_IF).
+		AddInt64(0x42).
+		AddOp(OP_EQUAL).
+		AddOp(OP_ELSE).
+		AddInt64(0x54).
+		AddOp(OP_EQUAL).
+		AddOp(OP_ENDIF).
+		// AddOp(OP_NIP).
+		Script()
+	assertNoErr(t, err)
+
+	getTx := func(age int32, num4Signature int64) *wire.MsgTx {
+		signature, err := NewScriptBuilder().
+			// AddOp(OP_FALSE).
+			AddInt64(num4Signature).
+			Script()
+		assertNoErr(t, err)
+
+		return &wire.MsgTx{
+			TxIn: []*wire.TxIn{{
+				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0},
+				SignatureScript:  signature,
+				Age:              age,
+			}},
+		}
+	}
+
+	testCases := []struct {
+		age           int32
+		num4Signature int64
+		valid         bool
+	}{
+		{age: 0x22, num4Signature: 0x42, valid: true},
+		{age: 0x22, num4Signature: 0x43, valid: false},
+		{age: 0x22, num4Signature: 0x54, valid: false},
+		{age: 0x22, num4Signature: 0x55, valid: false},
+
+		{age: 0x32, num4Signature: 0x42, valid: false},
+		{age: 0x32, num4Signature: 0x43, valid: false},
+		{age: 0x32, num4Signature: 0x54, valid: true},
+		{age: 0x32, num4Signature: 0x55, valid: false},
+
+		{age: 0x42, num4Signature: 0x42, valid: false},
+		{age: 0x42, num4Signature: 0x43, valid: false},
+		{age: 0x42, num4Signature: 0x54, valid: true},
+		{age: 0x42, num4Signature: 0x55, valid: false},
+	}
+	activateTraceLogger()
+
+	for i, testCase := range testCases {
+		tx := getTx(testCase.age, testCase.num4Signature)
+		vm, err := NewEngine(script, tx, 0, StandardVerifyFlags, nil, nil, 10)
+		assertNoErr(t, err)
+
+		err = vm.Execute()
+
+		if (err == nil) != testCase.valid {
+			t.Errorf("testcase %d failed; err=%v", i, err)
+		}
+	}
+
+}
+
+func activateTraceLogger() {
+	log = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}).Level(zerolog.TraceLevel)
+	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+}
+
+func assertNoErr(t *testing.T, err error) {
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
 }

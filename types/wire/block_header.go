@@ -66,10 +66,7 @@ func (bv BVersion) ExpansionApproved() bool {
 }
 
 func (bv BVersion) SetExpansionApproved() BVersion {
-	if bv&ExpansionApprove != ExpansionApprove {
-		return bv ^ ExpansionApprove
-	}
-	return bv
+	return bv | ExpansionApprove
 }
 
 func (bv BVersion) UnsetExpansionApproved() BVersion {
@@ -84,10 +81,7 @@ func (bv BVersion) ExpansionMade() bool {
 }
 
 func (bv BVersion) SetExpansionMade() BVersion {
-	if bv&ExpansionExec != ExpansionExec {
-		return bv ^ ExpansionExec
-	}
-	return bv
+	return bv | ExpansionExec
 }
 
 func (bv BVersion) UnsetExpansionMade() BVersion {

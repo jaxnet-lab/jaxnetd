@@ -13,9 +13,8 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/btcec"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
-
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // Bip16Activation is the timestamp where BIP0016 is valid to use in the
@@ -53,6 +52,14 @@ func isSmallInt(op *opcode) bool {
 		return true
 	}
 	return false
+}
+
+func isOpCode(pCode parsedOpcode, expected byte) bool {
+	return pCode.opcode.value == expected
+}
+
+func isNumber(op *opcode) bool {
+	return isSmallInt(op) || (op.value >= OP_DATA_1 && op.value <= OP_DATA_4)
 }
 
 // isScriptHash returns true if the script passed is a pay-to-script-hash

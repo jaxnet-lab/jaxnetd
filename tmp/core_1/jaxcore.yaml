@@ -30,7 +30,7 @@ node:
   beacon_chain:
     auto_expand: true
     expansion_rule: 10
-    expansion_limit: 10
+    expansion_limit: 4
 
     max_peers: 1000
     tx_index: true

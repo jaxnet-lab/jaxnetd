@@ -81,7 +81,7 @@ var TestNet3Params = Params{
 			ExpireTime: math.MaxInt64, // Never expires
 		},
 		DeploymentSegwit: {
-			BitNumber:  1,
+			BitNumber:  0,
 			StartTime:  0,             // Always available for vote
 			ExpireTime: math.MaxInt64, // Never expires.
 		},

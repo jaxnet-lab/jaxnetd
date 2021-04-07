@@ -85,13 +85,16 @@ func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, 
 	for _, address := range addresses {
 		filter[address] = struct{}{}
 	}
+	allowAll := len(addresses) == 0
 
 	var sum int64
 	for _, utxo := range collector.index.Rows() {
 		if utxo.ScriptType == txscript.EADAddress.String() {
 			continue
 		}
-		if _, ok := filter[utxo.Address]; ok && utxo.ShardID == shardId {
+		_, ok := filter[utxo.Address]
+
+		if (ok || allowAll) && utxo.ShardID == shardId && !utxo.Used {
 			sum += utxo.Value
 		}
 	}

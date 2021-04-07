@@ -61,6 +61,7 @@ const (
 	ScriptHashTy                             // Pay to script hash.
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
+	MultiSigLockTy                           // Multi signature with time lock (msl).
 	NullDataTy                               // Empty data-only (provably prunable).
 	EADAddress                               // Management of the EAD Net Address.
 )
@@ -75,6 +76,7 @@ var scriptClassToName = []string{
 	ScriptHashTy:          "scripthash",
 	WitnessV0ScriptHashTy: "witness_v0_scripthash",
 	MultiSigTy:            "multisig",
+	MultiSigLockTy:        "multisig_lock",
 	NullDataTy:            "nulldata",
 	EADAddress:            "ead_address",
 }
@@ -166,9 +168,9 @@ func isNullData(pops []parsedOpcode) bool {
 // false otherwise.
 func isEADRegistration(pops []parsedOpcode) bool {
 	return len(pops) == 7 &&
-		pops[0].opcode.value >= OP_DATA_4 &&
-		pops[1].opcode.value >= OP_DATA_1 &&
-		pops[2].opcode.value >= OP_DATA_1 &&
+		pops[0].opcode.value >= OP_DATA_4 && // todo: fix numbers
+		pops[1].opcode.value >= OP_DATA_1 && // todo: fix numbers
+		pops[2].opcode.value >= OP_DATA_1 && // todo: fix numbers
 		(pops[4].opcode.value == OP_ADD_EAD_ADDRESS || pops[4].opcode.value == OP_RM_EAD_ADDRESS) &&
 		(len(pops[5].data) == 33 || len(pops[5].data) == 65) &&
 		pops[6].opcode.value == OP_CHECKSIG
@@ -189,6 +191,8 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return WitnessV0ScriptHashTy
 	} else if isMultiSig(pops) {
 		return MultiSigTy
+	} else if isMultiSigLock(pops) {
+		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
 		return EADAddress
 	} else if isNullData(pops) {
@@ -241,6 +245,8 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
 		return asSmallInt(pops[0].opcode) + 1
+	case MultiSigLockTy:
+		return asSmallInt(pops[mslFirstMSigOpI].opcode) + 1
 
 	case EADAddress:
 		return 1
@@ -275,9 +281,7 @@ type ScriptInfo struct {
 // pair.  It will error if the pair is in someway invalid such that they can not
 // be analysed, i.e. if they do not parse or the pkScript is not a push-only
 // script
-func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
-	bip16, segwit bool) (*ScriptInfo, error) {
-
+func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness, bip16, segwit bool) (*ScriptInfo, error) {
 	sigPops, err := parseScript(sigScript)
 	if err != nil {
 		return nil, err
@@ -381,11 +385,19 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 
 // CalcMultiSigStats returns the number of public keys and signatures from
 // a multi-signature transaction script.  The passed script MUST already be
-// known to be a multi-signature script.
-func CalcMultiSigStats(script []byte) (int, int, error) {
+// known to be a multi-signature script. TODO
+func CalcMultiSigStats(script []byte, scriptClass ScriptClass) (int, int, error) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return 0, 0, err
+	}
+
+	var numSigsInd, numPubKeysOffset, minLen int
+	switch scriptClass {
+	case MultiSigTy:
+		numSigsInd, numPubKeysOffset, minLen = 0, 2, 4
+	case MultiSigLockTy:
+		numSigsInd, numPubKeysOffset, minLen = mslFirstMSigOpI, mslTailLen+2, 11
 	}
 
 	// A multi-signature script is of the pattern:
@@ -395,13 +407,14 @@ func CalcMultiSigStats(script []byte) (int, int, error) {
 	// minimum for a multi-signature script is 1 pubkey, so at least 4
 	// items must be on the stack per:
 	//  OP_1 PUBKEY OP_1 OP_CHECKMULTISIG
-	if len(pops) < 4 {
+
+	if len(pops) < minLen {
 		str := fmt.Sprintf("script %x is not a multisig script", script)
 		return 0, 0, scriptError(ErrNotMultisigScript, str)
 	}
 
-	numSigs := asSmallInt(pops[0].opcode)
-	numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
+	numSigs := asSmallInt(pops[numSigsInd].opcode)
+	numPubKeys := asSmallInt(pops[len(pops)-numPubKeysOffset].opcode)
 	return numPubKeys, numSigs, nil
 }
 
@@ -409,8 +422,12 @@ func CalcMultiSigStats(script []byte) (int, int, error) {
 // output to a 20-byte pubkey hash. It is expected that the input is a valid
 // hash.
 func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).
-		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).
+	return NewScriptBuilder().
+		AddOp(OP_DUP).
+		AddOp(OP_HASH160).
+		AddData(pubKeyHash).
+		AddOp(OP_EQUALVERIFY).
+		AddOp(OP_CHECKSIG).
 		Script()
 }
 
@@ -423,8 +440,11 @@ func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 // payToScriptHashScript creates a new script to pay a transaction output to a
 // script hash. It is expected that the input is a valid hash.
 func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_HASH160).AddData(scriptHash).
-		AddOp(OP_EQUAL).Script()
+	return NewScriptBuilder().
+		AddOp(OP_HASH160).
+		AddData(scriptHash).
+		AddOp(OP_EQUAL).
+		Script()
 }
 
 // payToWitnessPubKeyHashScript creates a new script to pay to a version 0
@@ -436,7 +456,8 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
 // payToPubkeyScript creates a new script to pay a transaction output to a
 // public key. It is expected that the input is a valid pubkey.
 func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
-	return NewScriptBuilder().AddData(serializedPubKey).
+	return NewScriptBuilder().
+		AddData(serializedPubKey).
 		AddOp(OP_CHECKSIG).Script()
 }
 
@@ -498,28 +519,6 @@ func NullDataScript(data []byte) ([]byte, error) {
 	}
 
 	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
-}
-
-// MultiSigScript returns a valid script for a multisignature redemption where
-// nrequired of the keys in pubkeys are required to have signed the transaction
-// for success.  An Error with the error code ErrTooManyRequiredSigs will be
-// returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
-	if len(pubkeys) < nrequired {
-		str := fmt.Sprintf("unable to generate multisig script with "+
-			"%d required signatures when there are only %d public "+
-			"keys available", nrequired, len(pubkeys))
-		return nil, scriptError(ErrTooManyRequiredSigs, str)
-	}
-
-	builder := NewScriptBuilder().AddInt64(int64(nrequired))
-	for _, key := range pubkeys {
-		builder.AddData(key.ScriptAddress())
-	}
-	builder.AddInt64(int64(len(pubkeys)))
-	builder.AddOp(OP_CHECKMULTISIG)
-
-	return builder.Script()
 }
 
 const (
@@ -717,6 +716,8 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			}
 		}
 
+	case MultiSigLockTy:
+		addrs, requiredSigs = extractMultiSigLockAddrs(pops, chainParams)
 	case EADAddress:
 		// A pay-to-pubkey-hash script is of the form:
 		//  OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG

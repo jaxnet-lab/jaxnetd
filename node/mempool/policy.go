@@ -131,11 +131,10 @@ func checkInputsStandard(tx *btcutil.Tx, utxoView *chaindata.UtxoViewpoint) erro
 // public keys.
 func checkPkScriptStandard(pkScript []byte, scriptClass txscript.ScriptClass) error {
 	switch scriptClass {
-	case txscript.MultiSigTy:
-		numPubKeys, numSigs, err := txscript.CalcMultiSigStats(pkScript)
+	case txscript.MultiSigTy, txscript.MultiSigLockTy:
+		numPubKeys, numSigs, err := txscript.CalcMultiSigStats(pkScript, scriptClass)
 		if err != nil {
-			str := fmt.Sprintf("multi-signature script parse "+
-				"failure: %v", err)
+			str := fmt.Sprintf("multi-signature script parse failure: %v", err)
 			return txRuleError(wire.RejectNonstandard, str)
 		}
 
