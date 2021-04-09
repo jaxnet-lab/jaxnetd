@@ -223,11 +223,14 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (int32,
 		UnsetExpansionMade()
 
 	var prevHeight int32
+	var limitExceeded bool
 	if prevNode != nil {
 		prevHeight = prevNode.Height()
+		limitExceeded = b.chain.Params().ExpansionLimit > 0 &&
+			(uint32(b.chain.Params().ExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
 	}
 
-	allowed := prevHeight%b.chain.Params().ExpansionRule == 0 && prevHeight != 0
+	allowed := !limitExceeded && prevHeight%b.chain.Params().ExpansionRule == 0 && prevHeight != 0
 
 	if b.chain.Params().AutoExpand && allowed {
 		version = wire.BVersion(expectedVersion).

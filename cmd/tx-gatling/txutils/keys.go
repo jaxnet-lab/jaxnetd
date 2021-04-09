@@ -77,9 +77,6 @@ type MultiSigAddress struct {
 func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*MultiSigAddress, error) {
 	keysesPrecious := make([]*btcutil.AddressPubKey, len(keys))
 
-	// The address list will made up either of addreseses (pubkey hash), for
-	// which we need to look up the keys in wallet, straight pubkeys, or a
-	// mixture of the two.
 	for i, pubKey := range keys {
 		// try to parse as pubkey address
 		rawPK, err := hex.DecodeString(pubKey)
@@ -110,6 +107,52 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 		RedeemScript:       hex.EncodeToString(script),
 		SignaturesRequired: nRequired,
 		RawRedeemScript:    script,
+	}, nil
+}
+
+type MultiSigLockAddress struct {
+	Address               string `json:"address"`
+	RefundPublicKey       string `json:"refundPublicKey"`
+	RefundDefferingPeriod int32  `json:"refundDefferingPeriod"`
+	RedeemScript          string `json:"redeemScript"`
+	SignaturesRequired    int    `json:"signaturesRequired"`
+	RawRedeemScript       []byte `json:"-"`
+}
+
+func MakeMultiSigLockAddress(keys []string, nRequired int, refundPublicKey string,
+	refundDefferingPeriod int32, net *chaincfg.Params) (*MultiSigLockAddress, error) {
+	refungAddress, err := AddressPubKeyFromString(refundPublicKey, net)
+	if err != nil {
+		return nil, err
+	}
+
+	keysesPrecious := make([]*btcutil.AddressPubKey, len(keys))
+
+	for i, pubKey := range keys {
+		keysesPrecious[i], err = AddressPubKeyFromString(pubKey, net)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	script, err := txscript.MultiSigLockScript(keysesPrecious, nRequired, refungAddress, refundDefferingPeriod)
+	if err != nil {
+		return nil, err
+	}
+	address, err := btcutil.NewAddressScriptHash(script, net)
+	if err != nil {
+		// above is a valid script, shouldn't happen.
+		return nil, err
+	}
+
+	return &MultiSigLockAddress{
+		Address:               address.EncodeAddress(),
+		RefundPublicKey:       refundPublicKey,
+		RefundDefferingPeriod: refundDefferingPeriod,
+		RedeemScript:          hex.EncodeToString(script),
+		SignaturesRequired:    nRequired,
+		RawRedeemScript:       script,
 	}, nil
 }
 
@@ -159,4 +202,14 @@ func DecodeScript(script []byte, net *chaincfg.Params) (*btcjson.DecodeScriptRes
 	}
 
 	return reply, nil
+}
+
+func AddressPubKeyFromString(pubKey string, net *chaincfg.Params) (*btcutil.AddressPubKey, error) {
+	// try to parse as pubkey address
+	rawPK, err := hex.DecodeString(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return btcutil.NewAddressPubKey(rawPK, net)
 }

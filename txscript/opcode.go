@@ -226,7 +226,7 @@ const (
 	OP_NOP10               = 0xb9 // 185
 	OP_ADD_EAD_ADDRESS     = 0xba // 186
 	OP_RM_EAD_ADDRESS      = 0xbb // 187
-	OP_UNKNOWN188          = 0xbc // 188
+	OP_INPUTAGE            = 0xbc // 188
 	OP_UNKNOWN189          = 0xbd // 189
 	OP_UNKNOWN190          = 0xbe // 190
 	OP_UNKNOWN191          = 0xbf // 191
@@ -405,6 +405,7 @@ var opcodeArray = [256]opcode{
 	OP_14:        {OP_14, "OP_14", 1, opcodeN},
 	OP_15:        {OP_15, "OP_15", 1, opcodeN},
 	OP_16:        {OP_16, "OP_16", 1, opcodeN},
+	OP_INPUTAGE:  {OP_INPUTAGE, "OP_INPUTAGE", 1, opcodeInputAge},
 
 	// Control opcodes.
 	OP_NOP:                 {OP_NOP, "OP_NOP", 1, opcodeNop},
@@ -513,7 +514,6 @@ var opcodeArray = [256]opcode{
 
 	// Undefined opcodes.
 
-	OP_UNKNOWN188: {OP_UNKNOWN188, "OP_UNKNOWN188", 1, opcodeInvalid},
 	OP_UNKNOWN189: {OP_UNKNOWN189, "OP_UNKNOWN189", 1, opcodeInvalid},
 	OP_UNKNOWN190: {OP_UNKNOWN190, "OP_UNKNOWN190", 1, opcodeInvalid},
 	OP_UNKNOWN191: {OP_UNKNOWN191, "OP_UNKNOWN191", 1, opcodeInvalid},
@@ -903,6 +903,13 @@ func opcodeN(op *parsedOpcode, vm *Engine) error {
 	return nil
 }
 
+// opcodeInputAge is a handler for OP_INPUTAGE code.
+// It pushes the value of input onto the data stack.
+func opcodeInputAge(op *parsedOpcode, vm *Engine) error {
+	vm.dstack.PushInt(scriptNum(vm.tx.TxIn[vm.txIdx].Age))
+	return nil
+}
+
 // opcodeNop is a common handler for the NOP family of opcodes.  As the name
 // implies it generally does nothing, however, it will return an error when
 // the flag to discourage use of NOPs is set for select opcodes.
@@ -1166,8 +1173,7 @@ func opcodeCheckLockTimeVerify(op *parsedOpcode, vm *Engine) error {
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	err = verifyLockTime(int64(vm.tx.LockTime), LockTimeThreshold,
-		int64(lockTime))
+	err = verifyLockTime(int64(vm.tx.LockTime), LockTimeThreshold, int64(lockTime))
 	if err != nil {
 		return err
 	}

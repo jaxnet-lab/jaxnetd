@@ -176,7 +176,7 @@ type rpcRO struct {
 	beacon  *rpc.BeaconRPC
 	node    *rpc.NodeRPC
 	connMgr netsync.P2PConnManager
-	// wsMgr   rpc.IWebsocketManager
+	wsMgr   rpc.IWebsocketManager
 }
 
 func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
@@ -194,7 +194,7 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 		nodeRPC, beaconRPC, shardRPCs)
 
 	chainCtl.logger.Info().Msg("Create WS RPC server")
-	// chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
+	chainCtl.rpc.wsMgr = rpc.WebSocketManager(chainCtl.rpc.server)
 	chainCtl.wg.Add(1)
 	go func() {
 

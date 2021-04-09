@@ -242,8 +242,9 @@ type Params struct {
 	// address generation.
 	HDCoinType uint32
 
-	AutoExpand    bool
-	ExpansionRule int32
+	AutoExpand     bool
+	ExpansionRule  int32
+	ExpansionLimit int32
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.

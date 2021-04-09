@@ -48,7 +48,8 @@ const (
 	// purposes.  It is also used to help determine if a transaction is
 	// considered dust and as a base for calculating minimum required fees
 	// for larger transactions.  This value is in Satoshi/1000 bytes.
-	DefaultMinRelayTxFee = btcutil.Amount(1000)
+	DefaultMinRelayTxFee               = btcutil.Amount(1000)
+	DefaultMinRelayTxFeeSatoshiPerByte = 1
 
 	// maxStandardMultiSigKeys is the maximum number of public keys allowed
 	// in a multi-signature transaction output script for it to be
@@ -130,11 +131,10 @@ func checkInputsStandard(tx *btcutil.Tx, utxoView *chaindata.UtxoViewpoint) erro
 // public keys.
 func checkPkScriptStandard(pkScript []byte, scriptClass txscript.ScriptClass) error {
 	switch scriptClass {
-	case txscript.MultiSigTy:
-		numPubKeys, numSigs, err := txscript.CalcMultiSigStats(pkScript)
+	case txscript.MultiSigTy, txscript.MultiSigLockTy:
+		numPubKeys, numSigs, err := txscript.CalcMultiSigStats(pkScript, scriptClass)
 		if err != nil {
-			str := fmt.Sprintf("multi-signature script parse "+
-				"failure: %v", err)
+			str := fmt.Sprintf("multi-signature script parse failure: %v", err)
 			return txRuleError(wire.RejectNonstandard, str)
 		}
 

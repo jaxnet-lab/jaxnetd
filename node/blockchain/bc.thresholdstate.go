@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
@@ -158,7 +159,7 @@ func (b *BlockChain) thresholdState(prevNode blocknode.IBlockNode, checker thres
 		// time, so calculate it now.
 		medianTime := prevNode.CalcPastMedianTime()
 
-		//h := prevNode.GetHash()
+		// h := prevNode.GetHash()
 		// The state is simply defined if the start time hasn't been
 		// been reached yet.
 		if uint64(medianTime.Unix()) < checker.BeginTime() {
@@ -307,6 +308,9 @@ func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
 func (b *BlockChain) deploymentState(prevNode blocknode.IBlockNode, deploymentID uint32) (ThresholdState, error) {
 	if deploymentID > uint32(len(b.chainParams.Deployments)) {
 		return ThresholdFailed, chaindata.DeploymentError(deploymentID)
+	}
+	if deploymentID == chaincfg.DeploymentCSV || deploymentID == chaincfg.DeploymentSegwit {
+		return ThresholdActive, nil
 	}
 
 	deployment := &b.chainParams.Deployments[deploymentID]

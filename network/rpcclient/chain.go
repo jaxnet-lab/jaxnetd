@@ -9,6 +9,7 @@ package rpcclient
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
@@ -497,6 +498,41 @@ func (c *Client) EstimateSmartFeeAsync(confTarget int64, mode *btcjson.EstimateS
 // EstimateSmartFee requests the server to estimate a fee level based on the given parameters.
 func (c *Client) EstimateSmartFee(confTarget int64, mode *btcjson.EstimateSmartFeeMode) (*btcjson.EstimateSmartFeeResult, error) {
 	return c.EstimateSmartFeeAsync(confTarget, mode).Receive()
+}
+
+// FutureEstimateFeeResult is a future promise to deliver the result of a
+// EstimateSmartFeeAsync RPC invocation (or an applicable error).
+type FutureGetExtendedFeeResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// estimated fee.
+func (r FutureGetExtendedFeeResult) Receive() (*btcjson.ExtendedFeeFeeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var result btcjson.ExtendedFeeFeeResult
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetExtendedFeeAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See EstimateSmartFee for the blocking version and more details.
+func (c *Client) GetExtendedFeeAsync() FutureGetExtendedFeeResult {
+	cmd := &btcjson.GetExtendedFee{}
+	return c.sendCmd(cmd)
+}
+
+// GetExtendedFee requests the server to estimate a fee level based on the given parameters.
+func (c *Client) GetExtendedFee() (*btcjson.ExtendedFeeFeeResult, error) {
+	return c.GetExtendedFeeAsync().Receive()
 }
 
 // FutureVerifyChainResult is a future promise to deliver the result of a
@@ -1002,4 +1038,42 @@ func (c *Client) ManageShardsAsync(action string, shardID uint32) FutureManageSh
 }
 func (c *Client) ManageShards(action string, shardID uint32) error {
 	return c.ManageShardsAsync(action, shardID).Receive()
+}
+
+// FutureGetLastSerialBlockNumberResult is a future promise to deliver the result of a
+// GetLastSerialBlockNumberAsync RPC invocation (or an applicable error).
+type FutureGetLastSerialBlockNumberResult chan *response
+
+// Receive waits for the response promised by the future and returns the number
+// of blocks in the longest block chain.
+func (r FutureGetLastSerialBlockNumberResult) Receive() (int, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return 0, err
+	}
+
+	// Unmarshal the result as an map.
+	var resmap map[string]int
+	err = json.Unmarshal(res, &resmap)
+	if err != nil {
+		return 0, err
+	}
+	if _, ok := resmap["lastserial"]; !ok {
+		return 0, errors.New("Bad response format")
+	}
+	return resmap["lastserial"], nil
+}
+
+// GetLastSerialBlockNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+func (c *Client) GetLastSerialBlockNumberAsync() FutureGetLastSerialBlockNumberResult {
+	cmd := btcjson.NewGetLastSerialBlockNumberCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetBlockCount returns the number of blocks in the longest block chain.
+func (c *Client) GetLastSerialBlockNumber() (int, error) {
+	return c.GetLastSerialBlockNumberAsync().Receive()
 }

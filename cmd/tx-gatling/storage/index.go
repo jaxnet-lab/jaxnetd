@@ -42,6 +42,23 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 	}
 }
 
+func (collector *UTXORepo) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {
+	var filter map[string]struct{} = nil
+	if len(addresses) > 0 {
+		filter = make(map[string]struct{}, len(addresses))
+
+		for _, address := range addresses {
+			filter[address] = struct{}{}
+		}
+	}
+
+	utxo := collector.index.GetForAmountFiltered(amount, shardID, filter)
+	if utxo == nil {
+		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
+	}
+	return utxo, nil
+}
+
 func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	var filter map[string]struct{} = nil
 	if len(addresses) > 0 {
@@ -68,13 +85,16 @@ func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, 
 	for _, address := range addresses {
 		filter[address] = struct{}{}
 	}
+	allowAll := len(addresses) == 0
 
 	var sum int64
 	for _, utxo := range collector.index.Rows() {
 		if utxo.ScriptType == txscript.EADAddress.String() {
 			continue
 		}
-		if _, ok := filter[utxo.Address]; ok && utxo.ShardID == shardId {
+		_, ok := filter[utxo.Address]
+
+		if (ok || allowAll) && utxo.ShardID == shardId && !utxo.Used {
 			sum += utxo.Value
 		}
 	}

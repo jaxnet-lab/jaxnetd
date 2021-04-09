@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
+	"gitlab.com/jaxnet/core/shard.core/network/rpc"
 	"gitlab.com/jaxnet/core/shard.core/network/peer"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
@@ -90,6 +91,7 @@ func setLoggers() {
 	txscript.UseLogger(unitLogs[logUnitSRVR])
 	netsync.UseLogger(unitLogs[logUnitSYNC])
 	mempool.UseLogger(unitLogs[logUnitTXMP])
+	rpc.UseLogger(unitLogs[logUnitRPCS])
 }
 
 // setLogLevel sets the logging level for provided subsystem.  Invalid

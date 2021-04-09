@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain_test
+package blockchain
 
 import (
 	"fmt"
@@ -11,11 +11,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"gitlab.com/jaxnet/core/shard.core/btcutil"
 	"gitlab.com/jaxnet/core/shard.core/database"
 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
+	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -29,7 +34,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// and creating a new database like this, but it is done here so this is
 	// a complete working example and does not leave temporary files laying
 	// around.
-	dbPath := filepath.Join(os.TempDir(), "exampleprocessblock")
+	dbPath := filepath.Join(os.TempDir(), "my_processblock")
 	_ = os.RemoveAll(dbPath)
 	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
@@ -46,28 +51,70 @@ func ExampleBlockChain_ProcessBlock() {
 	// ordinarily keep a reference to the median time source and add time
 	// values obtained from other peers on the network so the local time is
 	// adjusted to be in agreement with other peers.
-	// chain, err := blockchain.New(&blockchain.Config{
-	// 	DB:          db,
-	// 	ChainParams: &chain2.MainNetParams,
-	// 	TimeSource:  blockchain.NewMedianTime(),
-	// })
-	// if err != nil {
-	// 	fmt.Printf("Failed to create chain instance: %v\n", err)
-	// 	return
-	// }
+
+	hash, _ := chainhash.NewHashFromStr("aaa")
+	testChain, err := New(&Config{
+		DB:          db,
+		ChainParams: &chaincfg.MainNetParams,
+		TimeSource:  chaindata.NewMedianTime(),
+		ChainCtx:    beacon.Chain(&chaincfg.Params{
+			Name:                          "test",
+			Net:                           0,
+			DefaultPort:                   "",
+			DNSSeeds:                      []chaincfg.DNSSeed{},
+			GenesisBlock:                  chaincfg.GenesisBlockOpts{},
+			GenesisHash:                   hash,
+			PowLimit:                      &big.Int{},
+			PowLimitBits:                  0,
+			BIP0034Height:                 0,
+			BIP0065Height:                 0,
+			BIP0066Height:                 0,
+			CoinbaseMaturity:              0,
+			SubsidyReductionInterval:      0,
+			TargetTimespan:                0,
+			TargetTimePerBlock:            0,
+			RetargetAdjustmentFactor:      0,
+			ReduceMinDifficulty:           false,
+			MinDiffReductionTime:          0,
+			GenerateSupported:             false,
+			Checkpoints:                   []chaincfg.Checkpoint{},
+			RuleChangeActivationThreshold: 0,
+			MinerConfirmationWindow:       0,
+			Deployments:                   [2]chaincfg.ConsensusDeployment{},
+			RelayNonStdTxs:                false,
+			Bech32HRPSegwit:               "",
+			PubKeyHashAddrID:              0,
+			ScriptHashAddrID:              0,
+			PrivateKeyID:                  0,
+			WitnessPubKeyHashAddrID:       0,
+			WitnessScriptHashAddrID:       0,
+			EADAddressID:                  0,
+			HDPrivateKeyID:                [4]byte{},
+			HDPublicKeyID:                 [4]byte{},
+			HDCoinType:                    0,
+			AutoExpand:                    false,
+			ExpansionRule:                 0,
+			ExpansionLimit:                0,
+		}),
+	})
+	if err != nil {
+		fmt.Printf("Failed to create chain instance: %v\n", err)
+		return
+	}
 
 	// Process a block.  For this example, we are going to intentionally
 	// cause an error by trying to process the genesis block which already
 	// exists.
-	// genesisBlock := btcutil.NewBlock(chain2.MainNetParams.GenesisBlock)
-	// isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
-	// 	blockchain.BFNone)
-	// if err != nil {
-	// 	fmt.Printf("Failed to process block: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("Block accepted. Is it on the main chain?: %v", isMainChain)
-	// fmt.Printf("Block accepted. Is it an orphan?: %v", isOrphan)
+
+	msgBlock := wire.EmptyBeaconBlock()
+	genesisBlock := btcutil.NewBlock(&msgBlock)
+	isMainChain, isOrphan, err := testChain.ProcessBlock(genesisBlock, 0)
+	if err != nil {
+		fmt.Printf("Failed to process block: %v\n", err)
+		return
+	}
+	fmt.Printf("Block accepted. Is it on the main chain?: %v", isMainChain)
+	fmt.Printf("Block accepted. Is it an orphan?: %v", isOrphan)
 
 	// Output:
 	// Failed to process block: already have block 000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f

@@ -70,8 +70,68 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	if err != nil {
 		return -1.0, err
 	}
-	fee := float64(feeRate)
-	res := btcjson.EstimateSmartFeeResult{FeeRate: &fee, Blocks: c.ConfTarget}
+
+	btcPerKB := float64(feeRate)
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+
+	res := btcjson.EstimateSmartFeeResult{
+		BtcPerKB:    &btcPerKB,
+		SatoshiPerB: &satoshiPerB,
+		Blocks:      c.ConfTarget}
+	return res, nil
+}
+
+// estimatesmartfee
+func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	var err error
+	result := btcjson.ExtendedFeeFeeResult{}
+
+	fast, moderate, slow := 2, 64, 128
+	if server.chainProvider.ChainCtx.IsBeacon() {
+		fast, moderate, slow = 2, 4, 8
+	}
+
+	result.Fast, err = server.estimateFeeForTarget(int64(fast))
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	result.Moderate, err = server.estimateFeeForTarget(int64(moderate))
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	result.Slow, err = server.estimateFeeForTarget(int64(slow))
+	if err != nil {
+		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
+		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+	}
+
+	return result, nil
+}
+
+func (server *CommonChainRPC) estimateFeeForTarget(target int64) (btcjson.Fee, error) {
+	if server.chainProvider.FeeEstimator == nil {
+		return btcjson.Fee{}, errors.New("Fee estimation disabled")
+	}
+
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(target))
+	if err != nil {
+		return btcjson.Fee{}, err
+	}
+
+	btcPerKB := float64(feeRate)
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+
+	res := btcjson.Fee{
+		BtcPerKB:    btcPerKB,
+		SatoshiPerB: satoshiPerB,
+		Blocks:      target,
+		Estimated:   true,
+	}
+
 	return res, nil
 }
 
@@ -465,6 +525,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 	var value int64
 	var pkScript []byte
 	var isCoinbase bool
+	var isSpent bool
 	includeMempool := true
 	if c.IncludeMempool != nil {
 		includeMempool = *c.IncludeMempool
@@ -510,7 +571,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 		// transaction already in the main BlockChain.  Mined transactions
 		// that are spent by a mempool transaction are not affected by
 		// this.
-		if entry == nil || entry.IsSpent() {
+		if entry == nil {
 			return nil, nil
 		}
 
@@ -520,6 +581,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 		value = entry.Amount()
 		pkScript = entry.PkScript()
 		isCoinbase = entry.IsCoinBase()
+		isSpent = entry.IsSpent()
 	}
 
 	// Disassemble script into single line printable format.
@@ -549,6 +611,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 			Addresses: addresses,
 		},
 		Coinbase: isCoinbase,
+		IsSpent:  isSpent,
 	}
 	return txOutReply, nil
 }
@@ -635,8 +698,8 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 
 		ips := make([]btcjson.EADAddress, 0, len(eadAddresses.IPs))
 		for _, p := range eadAddresses.IPs {
-			_, hasOneOf := p.HasShard(opts.Shards...)
-			if len(opts.Shards) > 0 && !hasOneOf {
+			allPresent, _ := p.HasShard(opts.Shards...)
+			if len(opts.Shards) > 0 && !allPresent {
 				continue
 			}
 

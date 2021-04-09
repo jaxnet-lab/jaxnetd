@@ -362,9 +362,9 @@ func LoadConfig() (*node.Config, []string, error) {
 				TrickleInterval: defaultTrickleInterval,
 			},
 			RPC: rpc.Config{
-				MaxClients: defaultMaxRPCClients,
-				// RPCMaxWebsockets:     defaultMaxRPCWebsockets,
-				// RPCMaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+				MaxClients:        defaultMaxRPCClients,
+				MaxWebsockets:     defaultMaxRPCWebsockets,
+				MaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
 			},
 		},
 

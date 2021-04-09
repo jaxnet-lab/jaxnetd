@@ -399,3 +399,116 @@ func (c *Client) GetShardHeadersAsync(blockLocators []chainhash.Hash, hashStop *
 func (c *Client) GetShardHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.ShardHeader, error) {
 	return c.GetShardHeadersAsync(blockLocators, hashStop).Receive()
 }
+
+// FutureGetShardBlockResult is a future promise to deliver the result of a
+// GetShardBlockAsync RPC invocation (or an applicable error).
+type FutureGetShardBlockBySerialNumberResult struct {
+	client   *Client
+	serialID int
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the raw
+// block requested from the server given its hash.
+func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, int, int, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getShardBlockBySerialNumber", r.serialID, false, false)
+	if err != nil {
+		return nil, r.serialID, -1, err
+	}
+
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetShardBlockBySerialNumberResult
+	err = json.Unmarshal(res, &blockResult)
+	if err != nil {
+		return nil, r.serialID, -1, err
+	}
+
+	// Decode the serialized block hex to raw bytes.
+	serializedBlock, err := hex.DecodeString(blockResult.Block)
+	if err != nil {
+		return nil, r.serialID, -1, err
+	}
+
+	// Deserialize the block and return it.
+	var msgBlock = wire.EmptyShardBlock()
+	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
+	if err != nil {
+		return nil, r.serialID, -1, err
+	}
+	return &msgBlock, blockResult.SerialID, blockResult.PrevSerialID, nil
+}
+
+// GetShardBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetShardBlockBySerialNumber for the blocking version and more details.
+func (c *Client) GetShardBlockBySerialNumberAsync(serialID int) FutureGetShardBlockBySerialNumberResult {
+	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID, btcjson.Int(0))
+	return FutureGetShardBlockBySerialNumberResult{
+		client:   c,
+		serialID: serialID,
+		Response: c.sendCmd(cmd),
+	}
+}
+
+// GetShardBlockBySerialNumber returns a raw block from the server given its id.
+//
+// See GetShardBlockBySerialNumberVerbose to retrieve a data structure with information about the
+// block instead.
+func (c *Client) GetShardBlockBySerialNumber(serialID int) (*wire.MsgBlock, int, int, error) {
+	return c.GetShardBlockBySerialNumberAsync(serialID).Receive()
+}
+
+
+// FutureGetShardBlockVerboseBySerialNumberResult is a future promise to deliver the result of a
+// GetShardBlockBySerialNumberAsync RPC invocation (or an applicable error).
+type FutureGetShardBlockVerboseBySerialNumberResult struct {
+	client   *Client
+	serialID     int
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the data
+// structure from the server with information about the requested block.
+func (r FutureGetShardBlockVerboseBySerialNumberResult) Receive() (*btcjson.GetShardBlockBySerialNumberVerboseResult, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getShardBlockBySerialNumber", r.serialID, true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetShardBlockBySerialNumberVerboseResult
+	err = json.Unmarshal(res, &blockResult)
+	if err != nil {
+		return nil, err
+	}
+	return &blockResult, nil
+}
+
+// GetShardBlockVerboseBySerialNumberAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetShardBlockVerboseBySerialNumber for the blocking version and more details.
+func (c *Client) GetShardBlockVerboseBySerialNumberAsync(serialID int) FutureGetShardBlockVerboseBySerialNumberResult {
+	// From the bitcoin-cli getblock documentation:
+	// "If verbosity is 1, returns an Object with information about block ."
+	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID, btcjson.Int(1))
+	return FutureGetShardBlockVerboseBySerialNumberResult{
+		client:   c,
+		serialID:     serialID,
+		Response: c.sendCmd(cmd),
+	}
+}
+
+// GetShardBlockVerboseBySerialNumber returns a data structure from the server with information
+// about a block given its hash.
+//
+// See GetShardBlockVerboseTx to retrieve transaction data structures as well.
+// See GetShardBlockBySerialNumber to retrieve a raw block instead.
+func (c *Client) GetShardBlockVerboseBySerialNumber(serialID int) (*btcjson.GetShardBlockBySerialNumberVerboseResult, error) {
+	return c.GetShardBlockVerboseBySerialNumberAsync(serialID).Receive()
+}
+
+
