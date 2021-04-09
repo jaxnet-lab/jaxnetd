@@ -513,6 +513,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Parse, validate, and set debug log level(s).
 	cfg.LogConfig.Directory = cfg.LogDir
+	cfg.LogConfig.FileLoggingEnabled = cfg.LogDir != ""
 	cfg.LogConfig.Filename = filepath.Join(cfg.LogDir, corelog.DefaultLogFile)
 	err = parseAndSetDebugLevels(cfg.DebugLevel, cfg.LogConfig)
 	if err != nil {
