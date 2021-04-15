@@ -69,9 +69,6 @@ type TxBuilder interface {
 	SetShardID(shardID uint32) TxBuilder
 	SwapTx() TxBuilder
 
-	// utxo can be spent only after lock ended
-	SetTimeLock(lockTime uint32) TxBuilder
-
 	AddRedeemScripts(redeemScripts ...string) TxBuilder
 
 	SetDestination(destination string, amount int64) TxBuilder
@@ -159,12 +156,6 @@ func (t *txBuilder) SetType(txVersion int32) TxBuilder {
 
 func (t *txBuilder) SwapTx() TxBuilder {
 	t.swapTx = true
-	return t
-}
-
-func (t *txBuilder) SetTimeLock(lockTime uint32) TxBuilder {
-	t.lockTime = lockTime
-	t.txVersion = wire.TxVerTimeLock
 	return t
 }
 
