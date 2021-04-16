@@ -59,7 +59,7 @@ func (xt ToolsXt) WitnessToHex(witness wire.TxWitness) []string {
 
 // CreateVinList returns a slice of JSON objects for the inputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
+func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx, age int32) []btcjson.Vin {
 	// Coinbase transactions only have a single txin by definition.
 	vinList := make([]btcjson.Vin, len(mtx.TxIn))
 	if chaindata.IsCoinBaseTx(mtx) {
@@ -83,6 +83,10 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
 		vinEntry.ScriptSig = &btcjson.ScriptSig{
 			Asm: disbuf,
 			Hex: hex.EncodeToString(txIn.SignatureScript),
+		}
+		vinEntry.Age = txIn.Age
+		if txIn.Age == 0 {
+			vinEntry.Age = age
 		}
 
 		if mtx.HasWitness() {
@@ -163,7 +167,7 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 		Size:     int32(mtx.SerializeSize()),
 		Vsize:    int32(GetTxVirtualSize(btcutil.NewTx(mtx))),
 		Weight:   int32(chaindata.GetTransactionWeight(btcutil.NewTx(mtx))),
-		Vin:      xt.CreateVinList(mtx),
+		Vin:      xt.CreateVinList(mtx, 1+chainHeight-blkHeight),
 		Vout:     xt.CreateVoutList(mtx, chainParams, nil),
 		Version:  mtx.Version,
 		LockTime: mtx.LockTime,

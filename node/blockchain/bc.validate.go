@@ -384,8 +384,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 	// bounds.
 	var totalFees int64
 	for _, tx := range transactions {
-		txFee, err := chaindata.CheckTransactionInputs(tx, node.Height(), view,
-			b.chainParams)
+		txFee, err := chaindata.CheckTransactionInputs(tx, node.Height(), view, b.chainParams)
 		if err != nil {
 			return err
 		}
@@ -524,8 +523,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 	// expensive ECDSA signature check scripts.  Doing this last helps
 	// prevent CPU exhaustion attacks.
 	if runScripts {
-		err := chaindata.CheckBlockScripts(block, view, scriptFlags, b.SigCache,
-			b.HashCache)
+		err := chaindata.CheckBlockScripts(block, view, scriptFlags, b.SigCache, b.HashCache)
 		if err != nil {
 			return err
 		}

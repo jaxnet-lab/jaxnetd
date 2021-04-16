@@ -218,6 +218,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 				tx.TxHash(), txInIndex)
 			return nil, server.InternalRPCError(errStr, "")
 		}
+
 		originOutputs[*origin] = *msgTx.TxOut[origin.Index]
 	}
 

@@ -320,6 +320,10 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 	}
 
+	if kdb == nil {
+		return msgTx, nil
+	}
+
 	txInIndex := 0
 	for _, dest := range t.destinations {
 		opts := t.collectedOpts[dest.shardID]
@@ -374,6 +378,10 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 			txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
 		}
 		msgTx.AddTxIn(txIn)
+	}
+
+	if kdb == nil {
+		return msgTx, nil
 	}
 
 	for i := range additionalUTXO {

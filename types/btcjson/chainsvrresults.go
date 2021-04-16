@@ -101,6 +101,7 @@ type GetBeaconBlockVerboseResult struct {
 	StrippedSize        int32         `json:"strippedsize"`
 	Size                int32         `json:"size"`
 	Weight              int32         `json:"weight"`
+	SerialID            int64         `json:"serialID"`
 	Height              int64         `json:"height"`
 	Version             int32         `json:"version"`
 	VersionHex          string        `json:"versionHex"`
@@ -129,6 +130,7 @@ type GetShardBlockVerboseResult struct {
 	StrippedSize  int32                       `json:"strippedsize"`
 	Size          int32                       `json:"size"`
 	Weight        int32                       `json:"weight"`
+	SerialID      int64                       `json:"serialID"`
 	Height        int64                       `json:"height"`
 	MerkleRoot    string                      `json:"merkleroot"`
 	Tx            []string                    `json:"tx,omitempty"`
@@ -595,6 +597,7 @@ type Vin struct {
 	ScriptSig *ScriptSig `json:"scriptSig"`
 	Sequence  uint32     `json:"sequence"`
 	Witness   []string   `json:"txinwitness"`
+	Age       int32      `json:"age"`
 }
 
 // IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.

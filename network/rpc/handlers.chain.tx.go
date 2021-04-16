@@ -162,7 +162,7 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
 		Locktime: mtx.LockTime,
-		Vin:      server.CreateVinList(&mtx),
+		Vin:      server.CreateVinList(&mtx, 0),
 		Vout:     server.CreateVoutList(&mtx, server.chainProvider.ChainParams, nil),
 	}
 	return txReply, nil
