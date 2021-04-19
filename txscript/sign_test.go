@@ -1221,6 +1221,21 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 		t.Errorf("failed to make script pkscript for %s: %v", msg, err)
 		return false
 	}
+	// fmt.Println("refund_key: ", hex.EncodeToString(refundKey.Serialize()))
+	// fmt.Println("refund_pub_key: ", refundAddress.String())
+	//
+	// fmt.Println("key_1: ", hex.EncodeToString(key1.Serialize()))
+	// fmt.Println("pub_key_1: ", address1.String())
+	//
+	// fmt.Println("key_2: ", hex.EncodeToString(key2.Serialize()))
+	// fmt.Println("pub_key_2: ", address2.String())
+	// asm, _ := DisasmString(multiSigLockScript)
+	// fmt.Println("lock_script_asm: ", asm)
+	// fmt.Println("lock_script_hex: ", hex.EncodeToString(multiSigLockScript))
+	// fmt.Println("lock_script_address: ", scriptAddr.EncodeAddress())
+	// asm, _ = DisasmString(scriptPkScript)
+	// fmt.Println("pay_to_lock_script_asm: ", asm)
+	// fmt.Println("pay_to_lock_script_hex: ", hex.EncodeToString(scriptPkScript))
 
 	{ // check the strategy of the multi sig spend
 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
@@ -1235,6 +1250,9 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			return false
 		}
 
+		// asm, _ = DisasmString(sigScript)
+		// fmt.Println("partial_signature_asm: ", asm)
+		// fmt.Println("partial_signature_hex: ", hex.EncodeToString(sigScript))
 		// Only 1 out of 2 signed, this *should* fail.
 		if checkScripts(msg, tx, i, inputAmounts[i], sigScript, scriptPkScript) == nil {
 			t.Errorf("part signed script valid for %s", msg)
@@ -1260,6 +1278,10 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("fully signed script invalid for %s: %v\n", msg, err)
 			return false
 		}
+
+		// asm, _ = DisasmString(sigScript)
+		// fmt.Println("full_signature_asm: ", asm)
+		// fmt.Println("full_signature_hex: ", hex.EncodeToString(sigScript))
 	}
 
 	{ // check the strategy of the refund spend
@@ -1284,6 +1306,9 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("fully signed refund script invalid for %s: %v\n", msg, err)
 			return false
 		}
+		// asm, _ = DisasmString(sigScript)
+		// fmt.Println("refund_signature_asm: ", asm)
+		// fmt.Println("refund_signature_hex: ", hex.EncodeToString(sigScript))
 	}
 	return true
 }

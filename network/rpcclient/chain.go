@@ -673,7 +673,7 @@ func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*
 	return c.GetTxOutAsync(txHash, index, mempool).Receive()
 }
 
-// FutureGetTxOutResult is a future promise to deliver the result of a
+// FutureListTxOutResult is a future promise to deliver the result of a
 // GetTxOutAsync RPC invocation (or an applicable error).
 type FutureListTxOutResult chan *response
 
@@ -701,7 +701,7 @@ func (r FutureListTxOutResult) Receive() (*btcjson.ListTxOutResult, error) {
 	return listTxOut, nil
 }
 
-// GetTxOutAsync returns an instance of a type that can be used to get
+// ListTxOutAsync returns an instance of a type that can be used to get
 // the result of the RPC at some future time by invoking the Receive function on
 // the returned instance.
 //
@@ -711,7 +711,7 @@ func (c *Client) ListTxOutAsync() FutureListTxOutResult {
 	return c.sendCmd(cmd)
 }
 
-// GetTxOut returns the transaction output info if it's unspent and
+// ListTxOut returns the transaction output info if it's unspent and
 // nil, otherwise.
 func (c *Client) ListTxOut() (*btcjson.ListTxOutResult, error) {
 	return c.ListTxOutAsync().Receive()

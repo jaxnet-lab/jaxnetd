@@ -49,7 +49,7 @@ func (Config) Default() Config {
 	return Config{
 		DisableConsoleLog:  false,
 		LogsAsJson:         false,
-		FileLoggingEnabled: true,
+		FileLoggingEnabled: false,
 		Directory:          "core",
 		Filename:           "shard.core.log",
 		MaxSize:            150,
