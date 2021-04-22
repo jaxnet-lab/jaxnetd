@@ -106,7 +106,6 @@ type GetBeaconBlockVerboseResult struct {
 	Version             int32         `json:"version"`
 	VersionHex          string        `json:"versionHex"`
 	MerkleRoot          string        `json:"merkleroot"`
-	MerkleMountainRange string        `json:"mmr"`
 	Tx                  []string      `json:"tx,omitempty"`
 	RawTx               []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
 	Time                int64         `json:"time"`
@@ -115,6 +114,7 @@ type GetBeaconBlockVerboseResult struct {
 	Difficulty          float64       `json:"difficulty"`
 	PreviousHash        string        `json:"previousblockhash"`
 	NextHash            string        `json:"nextblockhash,omitempty"`
+	MerkleMountainRange string        `json:"mmr"`
 }
 
 // GetShardBlockVerboseResult models the data from the getShardBlock command when the
@@ -598,6 +598,7 @@ type Vin struct {
 	Sequence  uint32     `json:"sequence"`
 	Witness   []string   `json:"txinwitness"`
 	Age       int32      `json:"age"`
+	Amount    int64      `json:"amount"`
 }
 
 // IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.
@@ -788,10 +789,14 @@ type TxRawResult struct {
 	LockTime      uint32 `json:"locktime"`
 	Vin           []Vin  `json:"vin"`
 	Vout          []Vout `json:"vout"`
+	InAmount      int64  `json:"in_amount,omitempty"`
+	OutAmount     int64  `json:"out_amount,omitempty"`
+	Fee           int64  `json:"fee,omitempty"`
 	BlockHash     string `json:"blockhash,omitempty"`
 	Confirmations uint64 `json:"confirmations,omitempty"`
 	Time          int64  `json:"time,omitempty"`
 	Blocktime     int64  `json:"blocktime,omitempty"`
+	ChainName     string `json:"chainName"`
 }
 
 // SearchRawTransactionsResult models the data from the searchrawtransaction

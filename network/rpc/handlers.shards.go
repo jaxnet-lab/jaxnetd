@@ -142,24 +142,23 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 
-	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
-	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
-	}
-	blk.SetHeight(blockHeight)
+	var nextHashString string
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
-	// Get next block hash unless there are none.
-	var nextHashString string
-	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
-		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
+	// Get the block height from BlockChain.
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
+	if err == nil {
+
+		blk.SetHeight(blockHeight)
+		// Get next block hash unless there are none.
+		if blockHeight < best.Height {
+			nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
+			if err != nil {
+				context := "No next block"
+				return nil, server.InternalRPCError(err.Error(), context)
+			}
+			nextHashString = nextHash.String()
 		}
-		nextHashString = nextHash.String()
 	}
 
 	params := server.chainProvider.ChainParams
@@ -168,6 +167,11 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 	if err != nil {
 		return nil, err
 	}
+	var serialID int
+	_ = server.chainProvider.DB.View(func(tx database.Tx) error {
+		serialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+		return err
+	})
 
 	beaconHeader := blockHeader.BeaconHeader()
 	blockReply := btcjson.GetShardBlockVerboseResult{
@@ -183,6 +187,7 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		Weight:        int32(chaindata.GetBlockWeight(blk)),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
 		Difficulty:    diff,
+		SerialID:      int64(serialID),
 		NextHash:      nextHashString,
 		BCBlock: btcjson.GetBeaconBlockVerboseResult{
 			Confirmations: 0,

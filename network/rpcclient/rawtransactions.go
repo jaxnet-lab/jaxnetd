@@ -121,6 +121,51 @@ func (c *Client) GetRawTransaction(txHash *chainhash.Hash) (*btcutil.Tx, error) 
 	return c.GetRawTransactionAsync(txHash).Receive()
 }
 
+// FutureGetRawTransactionResult is a future promise to deliver the result of a
+// GetRawTransactionAsync RPC invocation (or an applicable error).
+type FutureGetTxDetails chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetTxDetails) Receive() (*btcjson.TxRawResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a gettrawtransaction result object.
+	var rawTxResult btcjson.TxRawResult
+	err = json.Unmarshal(res, &rawTxResult)
+	if err != nil {
+		return nil, err
+	}
+	return &rawTxResult, nil
+
+}
+
+// GetRawTransactionAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetRawTransaction for the blocking version and more details.
+func (c *Client) GetTxDetailsAsync(txHash *chainhash.Hash) FutureGetTxDetails {
+	hash := ""
+	if txHash != nil {
+		hash = txHash.String()
+	}
+
+	cmd := btcjson.GetTxDetailsCmd{Txid: hash}
+	return c.sendCmd(cmd)
+}
+
+// GetRawTransaction returns a transaction given its hash.
+//
+// See GetRawTransactionVerbose to obtain additional information about the
+// transaction.
+func (c *Client) GetTxDetails(txHash *chainhash.Hash) (*btcjson.TxRawResult, error) {
+	return c.GetTxDetailsAsync(txHash).Receive()
+}
+
 // FutureGetRawTransactionVerboseResult is a future promise to deliver the
 // result of a GetRawTransactionVerboseAsync RPC invocation (or an applicable
 // error).

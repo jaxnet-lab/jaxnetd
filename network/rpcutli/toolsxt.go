@@ -161,16 +161,24 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 	}
 
 	txReply := &btcjson.TxRawResult{
-		Hex:      mtxHex,
-		Txid:     txHash,
-		Hash:     mtx.WitnessHash().String(),
-		Size:     int32(mtx.SerializeSize()),
-		Vsize:    int32(GetTxVirtualSize(btcutil.NewTx(mtx))),
-		Weight:   int32(chaindata.GetTransactionWeight(btcutil.NewTx(mtx))),
-		Vin:      xt.CreateVinList(mtx, 1+chainHeight-blkHeight),
-		Vout:     xt.CreateVoutList(mtx, chainParams, nil),
-		Version:  mtx.Version,
-		LockTime: mtx.LockTime,
+		Hex:       mtxHex,
+		Txid:      txHash,
+		ChainName: chainParams.Name,
+		Hash:      mtx.WitnessHash().String(),
+		Size:      int32(mtx.SerializeSize()),
+		Vsize:     int32(GetTxVirtualSize(btcutil.NewTx(mtx))),
+		Weight:    int32(chaindata.GetTransactionWeight(btcutil.NewTx(mtx))),
+		Vin:       xt.CreateVinList(mtx, 1+chainHeight-blkHeight),
+		Vout:      xt.CreateVoutList(mtx, chainParams, nil),
+		InAmount:  0,
+		OutAmount: 0,
+		Fee:       0,
+		Version:   mtx.Version,
+		LockTime:  mtx.LockTime,
+	}
+
+	for _, vout := range mtx.TxOut {
+		txReply.OutAmount += vout.Value
 	}
 
 	if blkHeader != nil {

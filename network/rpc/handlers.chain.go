@@ -99,6 +99,7 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "getMempoolInfo"):        server.handleGetMempoolInfo,
 		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
 		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
+		btcjson.ScopedMethod("chain", "getTxDetails"):          server.handleGetTxDetails,
 		btcjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
 		btcjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
 		btcjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
@@ -143,7 +144,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 		}
 
 		if server.ntfnMgr != nil {
-			//Notify registered websocket clients of incoming block.
+			// Notify registered websocket clients of incoming block.
 			server.ntfnMgr.NotifyBlockConnected(server.chainProvider, block)
 		}
 
@@ -154,7 +155,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			break
 		}
 		if server.ntfnMgr != nil {
-			//Notify registered websocket clients.
+			// Notify registered websocket clients.
 			server.ntfnMgr.NotifyBlockDisconnected(server.chainProvider, block)
 		}
 	}

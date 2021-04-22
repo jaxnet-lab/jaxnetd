@@ -573,6 +573,10 @@ type GetRawTransactionCmd struct {
 	Verbose *int `jsonrpcdefault:"0"`
 }
 
+type GetTxDetailsCmd struct {
+	Txid string
+}
+
 // NewGetRawTransactionCmd returns a new instance which can be used to issue a
 // getrawtransaction JSON-RPC command.
 //
@@ -983,6 +987,7 @@ func init() {
 	MustRegisterCmd("chain", "getMempoolInfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
+	MustRegisterCmd("chain", "getTxDetails", (*GetTxDetailsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)

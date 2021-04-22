@@ -126,27 +126,27 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get the block height from BlockChain.
 	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
-	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
-	}
-	blk.SetHeight(blockHeight)
-	best := server.chainProvider.BlockChain().BestSnapshot()
-
 	// Get next block hash unless there are none.
 	var nextHashString string
-	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
-		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
-		}
-		nextHashString = nextHash.String()
-	}
 
+	if err == nil {
+		// context := "Failed to obtain block height"
+		// return nil, server.InternalRPCError(err.Error(), context)
+
+		blk.SetHeight(blockHeight)
+		if blockHeight < best.Height {
+			nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
+			if err != nil {
+				context := "No next block"
+				return nil, server.InternalRPCError(err.Error(), context)
+			}
+			nextHashString = nextHash.String()
+		}
+	}
 	params := server.chainProvider.ChainParams
 	blockHeader := blk.MsgBlock().Header
 	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
@@ -154,23 +154,30 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 		return nil, err
 	}
 
+	var serialID int
+	_ = server.chainProvider.DB.View(func(tx database.Tx) error {
+		serialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+		return err
+	})
+
 	blockReply := btcjson.GetBeaconBlockVerboseResult{
-		Hash:         c.Hash,
-		Version:      int32(blockHeader.Version()),
-		VersionHex:   fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:   blockHeader.MerkleRoot().String(),
-		PreviousHash: blockHeader.PrevBlock().String(),
-		// MerkleMountainRange: blockHeader.MergeMiningRoot().String(),
-		Nonce:         blockHeader.Nonce(),
-		Time:          blockHeader.Timestamp().Unix(),
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        int64(blockHeight),
-		Size:          int32(len(blkBytes)),
-		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:        int32(chaindata.GetBlockWeight(blk)),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:    diff,
-		NextHash:      nextHashString,
+		Hash:                c.Hash,
+		Version:             int32(blockHeader.Version()),
+		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
+		MerkleRoot:          blockHeader.MerkleRoot().String(),
+		PreviousHash:        blockHeader.PrevBlock().String(),
+		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
+		Nonce:               blockHeader.Nonce(),
+		Time:                blockHeader.Timestamp().Unix(),
+		Confirmations:       int64(1 + best.Height - blockHeight),
+		SerialID:            int64(serialID),
+		Height:              int64(blockHeight),
+		Size:                int32(len(blkBytes)),
+		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:              int32(chaindata.GetBlockWeight(blk)),
+		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		Difficulty:          diff,
+		NextHash:            nextHashString,
 	}
 
 	if *c.Verbosity == 1 {
