@@ -597,8 +597,9 @@ type Vin struct {
 	ScriptSig *ScriptSig `json:"scriptSig"`
 	Sequence  uint32     `json:"sequence"`
 	Witness   []string   `json:"txinwitness"`
-	Age       int32      `json:"age"`
-	Amount    int64      `json:"amount"`
+
+	Age    int32 `json:"age"`
+	Amount int64 `json:"amount"`
 }
 
 // IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.
@@ -797,6 +798,7 @@ type TxRawResult struct {
 	Time          int64  `json:"time,omitempty"`
 	Blocktime     int64  `json:"blocktime,omitempty"`
 	ChainName     string `json:"chainName"`
+	CoinbaseTx    bool   `json:"coinbase_tx"`
 }
 
 // SearchRawTransactionsResult models the data from the searchrawtransaction

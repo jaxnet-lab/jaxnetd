@@ -8,7 +8,6 @@ package blockchain
 
 import (
 	"container/list"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -793,21 +792,22 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		//Get chain last block id from db id bucket. Should not be empty slice or nil
+		// Get chain last block id from db id bucket. Should not be empty slice or nil
 		chainLastSerialID, err := chaindata.DBFetchLastSerialID(dbTx)
 		if err != nil {
 			return err
 		}
 
-		//Get chain last block id from db hash->id mapping
+		// Get chain last block id from db hash->id mapping
 		bestChainLastSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &h)
 		if err != nil {
 			return err
 		}
 
-		//should be the same
+		// should be the same
 		if chainLastSerialID != bestChainLastSerialID {
-			return errors.New("block id inconsistency")
+			return fmt.Errorf("block id inconsistency: chainLastSerialID=%d,bestChainLastSerialID=%d ",
+				chainLastSerialID, bestChainLastSerialID)
 		}
 
 		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
@@ -826,12 +826,14 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 			if err != nil {
 				return err
 			}
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(chainNewSerialID), strconv.Itoa(bestChainLastSerialID))
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
+				strconv.Itoa(chainNewSerialID), strconv.Itoa(bestChainLastSerialID))
 			if err != nil {
 				return err
 			}
-		} else { //existing block for rechaining
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(bestChainLastSerialID))
+		} else { // existing block for rechaining
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
+				strconv.Itoa(blockSerialID), strconv.Itoa(bestChainLastSerialID))
 			if err != nil {
 				return err
 			}
@@ -954,20 +956,20 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
-		//get block serial id
+		// get block serial id
 		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
 		if err != nil {
 			return err
 		}
 
-		//block is disconnecting without fork
+		// block is disconnecting without fork
 		if forkNode == nil {
 			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(-1))
 			if err != nil {
 				return err
 			}
-		} else { //there was fork
-			//get fork block id
+		} else { // there was fork
+			// get fork block id
 			fHash := forkNode.GetHash()
 			forkBlockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &fHash)
 			if err != nil {

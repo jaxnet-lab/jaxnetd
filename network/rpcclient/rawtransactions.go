@@ -154,7 +154,7 @@ func (c *Client) GetTxDetailsAsync(txHash *chainhash.Hash) FutureGetTxDetails {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.GetTxDetailsCmd{Txid: hash}
+	cmd := &btcjson.GetTxDetailsCmd{Txid: hash}
 	return c.sendCmd(cmd)
 }
 

@@ -329,104 +329,128 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 }
 
 // handleSendRawTransaction implements the sendrawtransaction command.
-func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool) (*btcjson.TxRawResult, *wire.MsgTx, error) {
-
-	// Try to fetch the transaction from the memory pool and if that fails,
-	// try the block database.
-	var mtx *wire.MsgTx
-	var blkHash *chainhash.Hash
-	var blkHeight int32
-
+func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, detailedIn bool) (*txInfo, error) {
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
+	if err == nil {
+		return &txInfo{
+			tx:        tx.MsgTx(),
+			blkHash:   nil,
+			blkHeight: 0,
+		}, err
+	}
+
+	// return btcjson.TxRawResult{}, nil
+	if server.chainProvider.TxIndex == nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCNoTxInfo,
+			Message: "The transaction index must be enabled to query the blockchain (specify --txindex)",
+		}
+	}
+
+	// Look up the location of the transaction.
+	blockRegion, err := server.chainProvider.TxIndex.TxBlockRegion(txHash)
 	if err != nil {
-		// return btcjson.TxRawResult{}, nil
-		if server.chainProvider.TxIndex == nil {
-			return nil, nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCNoTxInfo,
-				Message: "The transaction index must be enabled to query the blockchain (specify --txindex)",
-			}
-		}
+		context := "Failed to retrieve transaction location"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
+	if blockRegion == nil {
+		return nil, rpcNoTxInfoError(txHash)
+	}
 
-		// Look up the location of the transaction.
-		blockRegion, err := server.chainProvider.TxIndex.TxBlockRegion(txHash)
-		if err != nil {
-			context := "Failed to retrieve transaction location"
-			return nil, nil, server.InternalRPCError(err.Error(), context)
-		}
-		if blockRegion == nil {
-			return nil, nil, rpcNoTxInfoError(txHash)
-		}
+	// Load the raw transaction bytes from the database.
+	var txBytes []byte
+	err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		var err error
+		txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+		return err
+	})
+	if err != nil {
+		return nil, rpcNoTxInfoError(txHash)
+	}
 
-		// Load the raw transaction bytes from the database.
-		var txBytes []byte
-		err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
-			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
-			return err
-		})
-		if err != nil {
-			return nil, nil, rpcNoTxInfoError(txHash)
-		}
+	// Grab the block height.
+	blkHash := blockRegion.Hash
+	blkHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
+	if err != nil {
+		context := "Failed to retrieve block height"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
 
-		// Grab the block height.
-		blkHash = blockRegion.Hash
-		blkHeight, err = server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
-		if err != nil {
-			context := "Failed to retrieve block height"
-			return nil, nil, server.InternalRPCError(err.Error(), context)
-		}
+	// Deserialize the transaction
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(txBytes))
+	if err != nil {
+		context := "Failed to deserialize transaction"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
 
-		// Deserialize the transaction
-		var msgTx wire.MsgTx
-		err = msgTx.Deserialize(bytes.NewReader(txBytes))
-		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, nil, server.InternalRPCError(err.Error(), context)
-		}
-		mtx = &msgTx
-	} else {
-		mtx = tx.MsgTx()
+	return &txInfo{
+		tx:        &msgTx,
+		blkHash:   blkHash,
+		blkHeight: blkHeight,
+	}, nil
+}
+
+type txInfo struct {
+	tx        *wire.MsgTx
+	blkHash   *chainhash.Hash
+	blkHeight int32
+}
+
+func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool) (*btcjson.TxRawResult, *wire.MsgTx, error) {
+	txInfo, err := server.getTx(txHash, true)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// The verbose flag is set, so generate the JSON object and return it.
 	var blkHeader wire.BlockHeader
 	var blkHashStr string
 	var chainHeight int32
-	if blkHash != nil {
+	if txInfo.blkHash != nil {
 		// Fetch the header from BlockChain.
-		header, err := server.chainProvider.BlockChain().HeaderByHash(blkHash)
+		header, err := server.chainProvider.BlockChain().HeaderByHash(txInfo.blkHash)
 		if err != nil {
 			context := "Failed to fetch block header"
 			return nil, nil, server.InternalRPCError(err.Error(), context)
 		}
 
 		blkHeader = header
-		blkHashStr = blkHash.String()
+		blkHashStr = txInfo.blkHash.String()
 		chainHeight = server.chainProvider.BlockChain().BestSnapshot().Height
 	}
 
-	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainParams, mtx, txHash.String(),
-		blkHeader, blkHashStr, blkHeight, chainHeight)
+	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainParams, txInfo.tx, txHash.String(),
+		blkHeader, blkHashStr, txInfo.blkHeight, chainHeight)
 	if err != nil {
 		context := "Failed to create TxRawResult"
 		return nil, nil, server.InternalRPCError(err.Error(), context)
 	}
 
-	if detailedIn {
-		for i, in := range mtx.TxIn {
-			out, err := server.getTxOut(&in.PreviousOutPoint.Hash, uint32(i), false)
-			if err != nil {
-				context := "Failed to fetch tx out"
-				return nil, nil, server.InternalRPCError(err.Error(), context)
+	if detailedIn && !rawTxn.CoinbaseTx {
+		for i, in := range rawTxn.Vin {
+			hashStr := in.Coinbase
+			if in.Txid != "" {
+				hashStr = in.Txid
 			}
-			value, _ := btcutil.NewAmount(out.Value)
-			rawTxn.InAmount += int64(value)
-			rawTxn.Vin[i].Amount = int64(value)
+			hash, _ := chainhash.NewHashFromStr(hashStr)
+			txInfo, err := server.getTx(hash, true)
+			if err != nil {
+				return nil, nil, err
+			}
+			out := txInfo.tx.TxOut[in.Vout]
+			if out == nil {
+				continue
+			}
+
+			rawTxn.InAmount += out.Value
+			rawTxn.Vin[i].Amount = out.Value
 		}
+
 		rawTxn.Fee = rawTxn.InAmount - rawTxn.OutAmount
 	}
 
-	return rawTxn, mtx, err
+	return rawTxn, txInfo.tx, err
 }
 
 func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
