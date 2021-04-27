@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package mmr
 
 type leafIndex uint64
@@ -47,8 +48,8 @@ func (x *leafIndex) Index() uint64 {
 	return uint64(*x)
 }
 
-// Calculates Peaks
-// Algorythm:
+// GetPeaks calculates Peaks
+// Algorithm:
 //  1. Get to from current. Take it.
 //  2. Go to the left branch.
 //     - if no any left brnaches - return
@@ -64,6 +65,7 @@ func (x *leafIndex) GetPeaks() (res []IBlockIndex) {
 	}
 }
 
+// GetHeight return leaf height
 // Leaf is always on the Zero height
 func (x *leafIndex) GetHeight() uint64 {
 	return 0
@@ -89,7 +91,6 @@ func (x *leafIndex) AppendValue(mmr *mmr, data *BlockData) {
 		if parent := node.RightUp(); parent != nil {
 			leftData, _ := sibling.Value(mmr)
 			aggregated := mmr.aggregate(leftData, data)
-			//fmt.Printf("Aggregate: %d [%d:%x]+ %d [%d:%x] = %d [%d:%x]\n", sibling.Index(), leftData.Weight,leftData.Hash, node.Index(), data.Weight,data.Hash, parent.Index(), aggregated.Weight, aggregated.Hash)
 			parent.SetValue(mmr, aggregated)
 			data = aggregated
 			node = parent

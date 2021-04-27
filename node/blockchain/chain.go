@@ -9,7 +9,6 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -745,8 +744,8 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 	// Make sure it's extending the end of the best chain.
 	prevHash := block.MsgBlock().Header.PrevBlock()
-	h := b.bestChain.Tip().GetHash()
-	if !prevHash.IsEqual(&h) {
+	bestBlockHash := b.bestChain.Tip().GetHash()
+	if !prevHash.IsEqual(&bestBlockHash) {
 		return chaindata.AssertError("connectBlock must be called with a block " +
 			"that extends the main chain")
 	}
@@ -792,48 +791,48 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		// Get chain last block id from db id bucket. Should not be empty slice or nil
-		chainLastSerialID, err := chaindata.DBFetchLastSerialID(dbTx)
-		if err != nil {
-			return err
-		}
+		// // Get chain last block id from db id bucket. Should not be empty slice or nil
+		// chainLastSerialID, err := chaindata.DBFetchLastSerialID(dbTx)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// Get chain last block id from db hash->id mapping
-		bestChainLastSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &h)
+		bestChainLastSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, &bestBlockHash)
 		if err != nil {
 			return err
 		}
 
-		// should be the same
-		if chainLastSerialID != bestChainLastSerialID {
-			return fmt.Errorf("block id inconsistency: chainLastSerialID=%d,bestChainLastSerialID=%d ",
-				chainLastSerialID, bestChainLastSerialID)
-		}
+		// // should be the same
+		// if chainLastSerialID != bestChainLastSerialID {
+		// 	return fmt.Errorf("block id inconsistency: chainLastSerialID=%d,bestChainLastSerialID=%d ",
+		// 		chainLastSerialID, bestChainLastSerialID)
+		// }
 
-		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
+		blockSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
 		if err != nil {
 			return err
 		}
 
 		// new incoming block
 		if blockSerialID == -1 {
-			chainNewSerialID := chainLastSerialID + 1
-			err = chaindata.DBPutLastSerialID(dbTx, strconv.Itoa(chainNewSerialID))
+			chainNewSerialID := bestChainLastSerialID + 1
+			err = chaindata.DBPutLastSerialID(dbTx, chainNewSerialID)
 			if err != nil {
 				return err
 			}
-			err = chaindata.DBPutBlockHashSerialID(dbTx, block.Hash(), strconv.Itoa(chainNewSerialID))
+			err = chaindata.DBPutBlockHashSerialID(dbTx, block.Hash(), chainNewSerialID)
 			if err != nil {
 				return err
 			}
 			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
-				strconv.Itoa(chainNewSerialID), strconv.Itoa(bestChainLastSerialID))
+				chainNewSerialID, bestChainLastSerialID)
 			if err != nil {
 				return err
 			}
-		} else { // existing block for rechaining
+		} else { // existing block for re-chaining
 			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
-				strconv.Itoa(blockSerialID), strconv.Itoa(bestChainLastSerialID))
+				blockSerialID, bestChainLastSerialID)
 			if err != nil {
 				return err
 			}
@@ -957,26 +956,26 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// get block serial id
-		blockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
+		blockSerialID, blockPrevSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
 		if err != nil {
 			return err
 		}
 
 		// block is disconnecting without fork
 		if forkNode == nil {
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(-1))
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), blockSerialID, blockPrevSerialID)
 			if err != nil {
 				return err
 			}
 		} else { // there was fork
 			// get fork block id
 			fHash := forkNode.GetHash()
-			forkBlockSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, &fHash)
+			forkBlockSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, &fHash)
 			if err != nil {
 				return err
 			}
 
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), strconv.Itoa(blockSerialID), strconv.Itoa(forkBlockSerialID))
+			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), blockSerialID, forkBlockSerialID)
 			if err != nil {
 				return err
 			}
@@ -1923,4 +1922,48 @@ func (b *BlockChain) maybeUpgradeDbBuckets(interrupt <-chan struct{}) error {
 	}
 
 	return nil
+}
+
+// BlockSerialIDByHash returns the serialID and previous serialID of the block with the given hash.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockSerialIDByHash(block *chainhash.Hash) (int64, int64, error) {
+	var serialID, prevSerialID int64
+
+	err := b.db.View(func(tx database.Tx) error {
+		var err error
+		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, block)
+		return err
+	})
+
+	return serialID, prevSerialID, err
+}
+
+// BlockIDsByHash returns the height, serialID and previous serialID of the block with the given hash.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) BlockIDsByHash(hash *chainhash.Hash) (int32, int64, int64, error) {
+	var height int32
+	var serialID, prevSerialID int64
+	var err error
+	node := b.index.LookupNode(hash)
+	if node == nil || !b.bestChain.Contains(node) {
+		// block %s is not in the main chain
+		height = -1
+
+		err = b.db.View(func(tx database.Tx) error {
+			var err error
+			serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+			return err
+		})
+		return height, serialID, prevSerialID, err
+	}
+
+	height = node.Height()
+	serialID = node.SerialID()
+	if node.Parent() != nil {
+		prevSerialID = node.Parent().SerialID()
+	}
+
+	return height, serialID, prevSerialID, err
 }

@@ -937,11 +937,11 @@ func NewGetLastSerialBlockNumberCmd() *GetLastSerialBlockNumberCmd {
 }
 
 type GetBeaconBlockBySerialNumberCmd struct {
-	SerialNumber int
+	SerialNumber int64
 	Verbosity    *int `jsonrpcdefault:"1"`
 }
 
-func NewGetBeaconBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetBeaconBlockBySerialNumberCmd {
+func NewGetBeaconBlockBySerialNumberCmd(serialNumber int64, verbosity *int) *GetBeaconBlockBySerialNumberCmd {
 	return &GetBeaconBlockBySerialNumberCmd{
 		SerialNumber: serialNumber,
 		Verbosity:    verbosity,
@@ -949,11 +949,11 @@ func NewGetBeaconBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetBe
 }
 
 type GetShardBlockBySerialNumberCmd struct {
-	SerialNumber int
+	SerialNumber int64
 	Verbosity    *int `jsonrpcdefault:"1"`
 }
 
-func NewGetShardBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetShardBlockBySerialNumberCmd {
+func NewGetShardBlockBySerialNumberCmd(serialNumber int64, verbosity *int) *GetShardBlockBySerialNumberCmd {
 	return &GetShardBlockBySerialNumberCmd{
 		SerialNumber: serialNumber,
 		Verbosity:    verbosity,

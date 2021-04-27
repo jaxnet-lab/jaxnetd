@@ -20,8 +20,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	mmr2 "gitlab.com/jaxnet/core/shard.core/types/mmr"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 )
 
 type ShardInfo struct {
@@ -100,14 +100,14 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 		return err
 	}
 
-	mmrDb, err := mmr.BadgerDB(path.Join(shardCtl.cfg.DataDir,
+	mmrDb, err := mmr2.BadgerDB(path.Join(shardCtl.cfg.DataDir,
 		"shard_"+strconv.FormatUint(uint64(shardCtl.chain.ShardID()), 10), "mmr"))
 	if err != nil {
 		shardCtl.log.Error().Err(err).Msg("Can't init shard mmr DB")
 		return err
 	}
 
-	mountainRange := mmr.Mmr(sha256.New, mmrDb)
+	mountainRange := mmr2.Mmr(sha256.New, mmrDb)
 	if firstRun {
 		hash := shardCtl.chain.GenesisBlock().BlockHash()
 		mountainRange.Set(0, big.NewInt(0), hash.CloneBytes())

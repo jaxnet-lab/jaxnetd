@@ -831,7 +831,7 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 
 // handleGetLastSerialBlockNumber implements the getLastSerialBlockNumber command.
 func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	var lastSerial int
+	var lastSerial int64
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
 		lastSerial, err = chaindata.DBFetchLastSerialID(dbTx)

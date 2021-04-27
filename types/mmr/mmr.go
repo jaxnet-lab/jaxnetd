@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package mmr
 
 import (
@@ -131,7 +132,7 @@ func (m *mmr) GetProofs(length uint64, indexes ...uint64) (result *MmrProof, err
 			value, ok := currentIndex.Value(m)
 			if !ok {
 				break
-				//return nil, errors.New(fmt.Sprintf("Can't construct the Proof. Node not found for index %d", currentIndex.Index()))
+				// return nil, errors.New(fmt.Sprintf("Can't construct the Proof. Node not found for index %d", currentIndex.Index()))
 			}
 
 			sib := currentIndex.GetSibling()
@@ -140,7 +141,7 @@ func (m *mmr) GetProofs(length uint64, indexes ...uint64) (result *MmrProof, err
 			}
 
 			result.Nodes[sib.Index()] = value
-			//fmt.Printf("currentIndex %d is Right %t\n", currentIndex.Index(), currentIndex.IsRight())
+			// fmt.Printf("currentIndex %d is Right %t\n", currentIndex.Index(), currentIndex.IsRight())
 			if currentIndex.IsRight() {
 				currentIndex = currentIndex.RightUp()
 			} else {
@@ -148,7 +149,7 @@ func (m *mmr) GetProofs(length uint64, indexes ...uint64) (result *MmrProof, err
 			}
 		}
 
-		//Go by Tops
+		// Go by Tops
 		last := LeafIndex(length)
 		peaks := last.GetPeaks()
 		for _, peak := range peaks {
@@ -168,7 +169,7 @@ func (m *mmr) Proofs(length uint64, indexes ...uint64) (result *mmr, err error) 
 	for _, index := range indexes {
 		var currentIndex IBlockIndex = LeafIndex(index)
 
-		//Go By current branch
+		// Go By current branch
 		for {
 			if currentIndex == nil || currentIndex.Index() > length {
 				break
@@ -190,7 +191,7 @@ func (m *mmr) Proofs(length uint64, indexes ...uint64) (result *mmr, err error) 
 			}
 		}
 
-		//Go by Tops
+		// Go by Tops
 		last := LeafIndex(length)
 		peaks := last.GetPeaks()
 		for _, peak := range peaks {
@@ -221,11 +222,11 @@ func (m *mmr) Proof(index uint64, length uint64) (result *mmr, err error) {
 	// про Merkle Tree и Merkle Proof. Идея здесь и там абсолютна идентичная.
 	// Но про Merkle Tree написано в разы больше чем про ммр.
 
-	//if value, ok := current.Value(m); ok {
+	// if value, ok := current.Value(m); ok {
 	//	current.SetValue(result, value)
-	//}
+	// }
 
-	//Go By current branch
+	// Go By current branch
 	for {
 		if current == nil || current.Index() > length {
 			break
@@ -248,7 +249,7 @@ func (m *mmr) Proof(index uint64, length uint64) (result *mmr, err error) {
 		}
 	}
 
-	//Go by Tops
+	// Go by Tops
 	// Надо добавить только те "пики" которые идут на пути к "руту".
 	// Тоесть если считать что ММР это "цепь маунтингов" и наш куррент индекс находится маунтинге номер m,
 	// то необходимо добавить топы только тех маунтингов которые находятся слева от m.

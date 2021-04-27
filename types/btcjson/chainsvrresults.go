@@ -17,6 +17,8 @@ type GetBeaconBlockHeaderVerboseResult struct {
 	Hash                string  `json:"hash"`
 	Confirmations       int64   `json:"confirmations"`
 	Height              int32   `json:"height"`
+	SerialID            int64   `json:"serialID"`
+	PrevSerialID        int64   `json:"prevSerialID"`
 	Version             int32   `json:"version"`
 	VersionHex          string  `json:"versionHex"`
 	MerkleRoot          string  `json:"merkleroot"`
@@ -37,6 +39,8 @@ type GetShardBlockHeaderVerboseResult struct {
 	ShardHash     string                            `json:"shardhash"`
 	Confirmations int64                             `json:"confirmations"`
 	Height        int32                             `json:"height"`
+	SerialID      int64                             `json:"serialID"`
+	PrevSerialID  int64                             `json:"prevSerialID"`
 	MerkleRoot    string                            `json:"merkleroot"`
 	Time          int64                             `json:"time"`
 	Bits          string                            `json:"bits"`
@@ -64,29 +68,31 @@ type GetBlockStatsResult struct {
 	AverageTxSize      int64   `json:"avgtxsize"`
 	FeeratePercentiles []int64 `json:"feerate_percentiles"`
 	Hash               string  `json:"blockhash"`
-	Height             int64   `json:"height"`
-	Ins                int64   `json:"ins"`
-	MaxFee             int64   `json:"maxfee"`
-	MaxFeeRate         int64   `json:"maxfeerate"`
-	MaxTxSize          int64   `json:"maxtxsize"`
-	MedianFee          int64   `json:"medianfee"`
-	MedianTime         int64   `json:"mediantime"`
-	MedianTxSize       int64   `json:"mediantxsize"`
-	MinFee             int64   `json:"minfee"`
-	MinFeeRate         int64   `json:"minfeerate"`
-	MinTxSize          int64   `json:"mintxsize"`
-	Outs               int64   `json:"outs"`
-	SegWitTotalSize    int64   `json:"swtotal_size"`
-	SegWitTotalWeight  int64   `json:"swtotal_weight"`
-	SegWitTxs          int64   `json:"swtxs"`
-	Subsidy            int64   `json:"subsidy"`
-	Time               int64   `json:"time"`
-	TotalOut           int64   `json:"total_out"`
-	TotalSize          int64   `json:"total_size"`
-	TotalWeight        int64   `json:"total_weight"`
-	Txs                int64   `json:"txs"`
-	UTXOIncrease       int64   `json:"utxo_increase"`
-	UTXOSizeIncrease   int64   `json:"utxo_size_inc"`
+	// Height             int64   `json:"height"`
+	SerialID          int64 `json:"serialID"`
+	PrevSerialID      int64 `json:"prevSerialID"`
+	Ins               int64 `json:"ins"`
+	MaxFee            int64 `json:"maxfee"`
+	MaxFeeRate        int64 `json:"maxfeerate"`
+	MaxTxSize         int64 `json:"maxtxsize"`
+	MedianFee         int64 `json:"medianfee"`
+	MedianTime        int64 `json:"mediantime"`
+	MedianTxSize      int64 `json:"mediantxsize"`
+	MinFee            int64 `json:"minfee"`
+	MinFeeRate        int64 `json:"minfeerate"`
+	MinTxSize         int64 `json:"mintxsize"`
+	Outs              int64 `json:"outs"`
+	SegWitTotalSize   int64 `json:"swtotal_size"`
+	SegWitTotalWeight int64 `json:"swtotal_weight"`
+	SegWitTxs         int64 `json:"swtxs"`
+	Subsidy           int64 `json:"subsidy"`
+	Time              int64 `json:"time"`
+	TotalOut          int64 `json:"total_out"`
+	TotalSize         int64 `json:"total_size"`
+	TotalWeight       int64 `json:"total_weight"`
+	Txs               int64 `json:"txs"`
+	UTXOIncrease      int64 `json:"utxo_increase"`
+	UTXOSizeIncrease  int64 `json:"utxo_size_inc"`
 }
 
 // GetBeaconBlockVerboseResult models the data from the getBeaconBlock command when the
@@ -101,8 +107,9 @@ type GetBeaconBlockVerboseResult struct {
 	StrippedSize        int32         `json:"strippedsize"`
 	Size                int32         `json:"size"`
 	Weight              int32         `json:"weight"`
-	SerialID            int64         `json:"serialID"`
 	Height              int64         `json:"height"`
+	SerialID            int64         `json:"serialID"`
+	PrevSerialID        int64         `json:"prevSerialID"`
 	Version             int32         `json:"version"`
 	VersionHex          string        `json:"versionHex"`
 	MerkleRoot          string        `json:"merkleroot"`
@@ -130,8 +137,9 @@ type GetShardBlockVerboseResult struct {
 	StrippedSize  int32                       `json:"strippedsize"`
 	Size          int32                       `json:"size"`
 	Weight        int32                       `json:"weight"`
-	SerialID      int64                       `json:"serialID"`
 	Height        int64                       `json:"height"`
+	SerialID      int64                       `json:"serialID"`
+	PrevSerialID  int64                       `json:"prevSerialID"`
 	MerkleRoot    string                      `json:"merkleroot"`
 	Tx            []string                    `json:"tx,omitempty"`
 	RawTx         []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
@@ -150,22 +158,24 @@ type GetShardBlockVerboseResult struct {
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetBeaconBlockVerboseResult to unmarshal data received from passing verbose=1 to getBeaconBlock.
 type GetBeaconBlockVerboseTxResult struct {
-	Hash          string        `json:"hash"`
-	Confirmations int64         `json:"confirmations"`
-	StrippedSize  int32         `json:"strippedsize"`
-	Size          int32         `json:"size"`
-	Weight        int32         `json:"weight"`
-	Height        int64         `json:"height"`
-	Version       int32         `json:"version"`
-	VersionHex    string        `json:"versionHex"`
-	MerkleRoot    string        `json:"merkleroot"`
-	Tx            []TxRawResult `json:"tx,omitempty"`
-	Time          int64         `json:"time"`
-	Nonce         uint32        `json:"nonce"`
-	Bits          string        `json:"bits"`
-	Difficulty    float64       `json:"difficulty"`
-	PreviousHash  string        `json:"previousblockhash"`
-	NextHash      string        `json:"nextblockhash,omitempty"`
+	Hash          string `json:"hash"`
+	Confirmations int64  `json:"confirmations"`
+	StrippedSize  int32  `json:"strippedsize"`
+	Size          int32  `json:"size"`
+	Weight        int32  `json:"weight"`
+	// Height        int64         `json:"height"`
+	SerialID     int64         `json:"serialID"`
+	PrevSerialID int64         `json:"prevSerialID"`
+	Version      int32         `json:"version"`
+	VersionHex   string        `json:"versionHex"`
+	MerkleRoot   string        `json:"merkleroot"`
+	Tx           []TxRawResult `json:"tx,omitempty"`
+	Time         int64         `json:"time"`
+	Nonce        uint32        `json:"nonce"`
+	Bits         string        `json:"bits"`
+	Difficulty   float64       `json:"difficulty"`
+	PreviousHash string        `json:"previousblockhash"`
+	NextHash     string        `json:"nextblockhash,omitempty"`
 }
 
 // GetShardBlockVerboseTxResult models the data from the getBeaconBlock command when the
@@ -175,21 +185,23 @@ type GetBeaconBlockVerboseTxResult struct {
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=1 to getShardBlock.
 type GetShardBlockVerboseTxResult struct {
-	Hash          string                        `json:"hash"`
-	Confirmations int64                         `json:"confirmations"`
-	StrippedSize  int32                         `json:"strippedsize"`
-	Size          int32                         `json:"size"`
-	Weight        int32                         `json:"weight"`
-	Height        int64                         `json:"height"`
-	MerkleRoot    string                        `json:"merkleroot"`
-	Tx            []TxRawResult                 `json:"tx,omitempty"`
-	Time          int64                         `json:"time"`
-	Nonce         uint32                        `json:"nonce"`
-	Bits          string                        `json:"bits"`
-	Difficulty    float64                       `json:"difficulty"`
-	PreviousHash  string                        `json:"previousblockhash"`
-	NextHash      string                        `json:"nextblockhash,omitempty"`
-	BCBlock       GetBeaconBlockVerboseTxResult `json:"bcblock"`
+	Hash          string `json:"hash"`
+	Confirmations int64  `json:"confirmations"`
+	StrippedSize  int32  `json:"strippedsize"`
+	Size          int32  `json:"size"`
+	Weight        int32  `json:"weight"`
+	// Height        int64                         `json:"height"`
+	SerialID     int64                         `json:"serialID"`
+	PrevSerialID int64                         `json:"prevSerialID"`
+	MerkleRoot   string                        `json:"merkleroot"`
+	Tx           []TxRawResult                 `json:"tx,omitempty"`
+	Time         int64                         `json:"time"`
+	Nonce        uint32                        `json:"nonce"`
+	Bits         string                        `json:"bits"`
+	Difficulty   float64                       `json:"difficulty"`
+	PreviousHash string                        `json:"previousblockhash"`
+	NextHash     string                        `json:"nextblockhash,omitempty"`
+	BCBlock      GetBeaconBlockVerboseTxResult `json:"bcblock"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig
@@ -319,6 +331,8 @@ type GetBeaconBlockTemplateResult struct {
 	CurTime       int64                      `json:"curtime"`
 	Height        int64                      `json:"height"`
 	PreviousHash  string                     `json:"previousblockhash"`
+	SerialID      int64                      `json:"serialID"`
+	PrevSerialID  int64                      `json:"prevSerialID"`
 	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
 	SizeLimit     int64                      `json:"sizelimit,omitempty"`
 	WeightLimit   int64                      `json:"weightlimit,omitempty"`
@@ -353,7 +367,7 @@ type GetBeaconBlockTemplateResult struct {
 	RejectReason string   `json:"reject-reason,omitempty"`
 }
 
-// GetBeaconBlockTemplateResult models the data returned from the getblocktemplate
+// GetShardBlockTemplateResult models the data returned from the getblocktemplate
 // command.
 type GetShardBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
@@ -361,6 +375,8 @@ type GetShardBlockTemplateResult struct {
 	Bits          string                     `json:"bits"`
 	CurTime       int64                      `json:"curtime"`
 	Height        int64                      `json:"height"`
+	SerialID      int64                      `json:"serialID"`
+	PrevSerialID  int64                      `json:"prevSerialID"`
 	PreviousHash  string                     `json:"previousblockhash"`
 	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
 	SizeLimit     int64                      `json:"sizelimit,omitempty"`
@@ -408,13 +424,15 @@ type MempoolFees struct {
 // GetMempoolEntryResult models the data returned from the getmempoolentry
 // command.
 type GetMempoolEntryResult struct {
-	VSize           int32       `json:"vsize"`
-	Size            int32       `json:"size"`
-	Weight          int64       `json:"weight"`
-	Fee             float64     `json:"fee"`
-	ModifiedFee     float64     `json:"modifiedfee"`
-	Time            int64       `json:"time"`
-	Height          int64       `json:"height"`
+	VSize       int32   `json:"vsize"`
+	Size        int32   `json:"size"`
+	Weight      int64   `json:"weight"`
+	Fee         float64 `json:"fee"`
+	ModifiedFee float64 `json:"modifiedfee"`
+	Time        int64   `json:"time"`
+	// Height          int64       `json:"height"`
+	SerialID        int64       `json:"serialID"`
+	PrevSerialID    int64       `json:"prevSerialID"`
 	DescendantCount int64       `json:"descendantcount"`
 	DescendantSize  int64       `json:"descendantsize"`
 	DescendantFees  float64     `json:"descendantfees"`
@@ -871,75 +889,19 @@ type ShardInfo struct {
 	P2PPort       int    `json:"p2p_port"`
 }
 
-// GetBestBlockResult models the data from the getbestblock command.
+// GetLastSerialBlockNumberResult ...
 type GetLastSerialBlockNumberResult struct {
-	LastSerial int `json:"lastserial"`
+	LastSerial int64 `json:"lastserial"`
 }
 
 type GetBeaconBlockBySerialNumberResult struct {
 	Block        string `json:"block"`
-	SerialID     int    `json:"serial_id"`
-	PrevSerialID int    `json:"prev_serial_id"`
-}
-
-// GetBeaconBlockBySerialNumberVerboseResult models the data from the getBeaconBlock command when the
-// verbose flag is set to 1.  When the verbose flag is set to 0, getBeaconBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getBeaconBlock returns an object whose tx field is an array of raw transactions.
-// Use GetBeaconBlockVerboseTxResult to unmarshal data received from passing verbose=2 to getBeaconBlock.
-type GetBeaconBlockBySerialNumberVerboseResult struct {
-	Hash                string        `json:"hash"`
-	Confirmations       int64         `json:"confirmations"`
-	StrippedSize        int32         `json:"strippedsize"`
-	Size                int32         `json:"size"`
-	Weight              int32         `json:"weight"`
-	Height              int64         `json:"height"`
-	Version             int32         `json:"version"`
-	VersionHex          string        `json:"versionHex"`
-	MerkleRoot          string        `json:"merkleroot"`
-	MerkleMountainRange string        `json:"mmr"`
-	Tx                  []string      `json:"tx,omitempty"`
-	RawTx               []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time                int64         `json:"time"`
-	Nonce               uint32        `json:"nonce"`
-	Bits                string        `json:"bits"`
-	Difficulty          float64       `json:"difficulty"`
-	PreviousHash        string        `json:"previousblockhash"`
-	NextHash            string        `json:"nextblockhash,omitempty"`
-	SerialID            int           `json:"serial_id"`
-	PrevSerialID        int           `json:"prev_serial_id"`
+	SerialID     int64  `json:"serial_id"`
+	PrevSerialID int64  `json:"prev_serial_id"`
 }
 
 type GetShardBlockBySerialNumberResult struct {
 	Block        string `json:"block"`
 	SerialID     int    `json:"serial_id"`
 	PrevSerialID int    `json:"prev_serial_id"`
-}
-
-// GetShardBlockVerboseResult models the data from the getShardBlock command when the
-// verbose flag is set to 1.  When the verbose flag is set to 0, getShardBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getShardBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getShardBlock returns an object whose tx field is an array of raw transactions.
-// Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=2 to getShardBlock.
-type GetShardBlockBySerialNumberVerboseResult struct {
-	Hash          string                      `json:"hash"`
-	ShardHash     string                      `json:"shardhash"`
-	Confirmations int64                       `json:"confirmations"`
-	StrippedSize  int32                       `json:"strippedsize"`
-	Size          int32                       `json:"size"`
-	Weight        int32                       `json:"weight"`
-	Height        int64                       `json:"height"`
-	MerkleRoot    string                      `json:"merkleroot"`
-	Tx            []string                    `json:"tx,omitempty"`
-	RawTx         []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time          int64                       `json:"time"`
-	Bits          string                      `json:"bits"`
-	Difficulty    float64                     `json:"difficulty"`
-	PreviousHash  string                      `json:"previousblockhash"`
-	NextHash      string                      `json:"nextblockhash,omitempty"`
-	BCBlock       GetBeaconBlockVerboseResult `json:"bcblock"`
-	SerialID      int                         `json:"serial_id"`
-	PrevSerialID  int                         `json:"prev_serial_id"`
 }

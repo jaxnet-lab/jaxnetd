@@ -8,11 +8,8 @@ package chaindata
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"sync"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
@@ -88,9 +85,9 @@ var (
 	// block hash to serial id.
 	BlockHashSerialID = []byte("block_hash_serial_id")
 
-	// BlockHashSerialID is the name of the db bucket used to house the mapping of
-	// serial id to block hash.
-	BlockSerialIDHash = []byte("block_serial_id_hash")
+	// // BlockSerialIDHash is the name of the db bucket used to house the mapping of
+	// // serial id to block hash.
+	// BlockSerialIDHash = []byte("block_serial_id_hash")
 
 	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the mapping of
 	// block serial id to hash and previous serial id.
@@ -1022,120 +1019,6 @@ func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error
 	return &hash, nil
 }
 
-type SerialValue struct {
-	Hash   *chainhash.Hash `json:"hash"`
-	PrevID string          `json:"prev_id"`
-}
-
-func DBFetchLastSerialID(dbTx database.Tx) (int, error) {
-	meta := dbTx.Metadata()
-	lastSerialIDBucket := meta.Bucket(BlockLastSerialID)
-	res := lastSerialIDBucket.Get(BlockLastSerialID)
-
-	if res == nil {
-		return -1, errors.New("chain last serial id is nil")
-	}
-
-	if len(res) < 0 {
-		return -1, errors.New("chain last serial id is empty")
-	}
-
-	lastSerialID, err := strconv.Atoi(string(res))
-	if err != nil {
-		return -1, err
-	}
-
-	return lastSerialID, nil
-}
-
-func DBFetchBlockHashPrevBySerialID(dbTx database.Tx, serialID int) (*chainhash.Hash, int, error) {
-	meta := dbTx.Metadata()
-	blockSerialIDHashPrevSerialID := meta.Bucket(BlockSerialIDHashPrevSerialID)
-	res := blockSerialIDHashPrevSerialID.Get([]byte(strconv.Itoa(serialID)))
-	if res == nil {
-		return nil, 0, errors.New("chain serial id does not exist")
-	}
-
-	if len(res) < 0 {
-		return nil,0, errors.New("chain serial id is empty")
-	}
-
-	value := &SerialValue{}
-	err := json.Unmarshal(res, value)
-	if err != nil {
-		return nil, 0, err
-	}
-	
-	if value.Hash == nil {
-		return nil, 0, errors.New("hash is nil")
-	}
-
-	if value.PrevID == "" {
-		return nil, 0, errors.New("Prev id is empty")
-	}
-
-	prevId, err := strconv.Atoi(value.PrevID)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return value.Hash, prevId, nil
-}
-
-func DBFetchBlockSerialID(dbTx database.Tx, hash *chainhash.Hash) (int, error) {
-	meta := dbTx.Metadata()
-	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
-	res := blockSerialIDBucket.Get(hash[:])
-
-	if res == nil {
-		return -1, nil
-	}
-
-	if len(res) < 0 {
-		return -1, errors.New("block last serial id is empty")
-	}
-
-	lastSerialID, err := strconv.Atoi(string(res))
-	if err != nil {
-		return -1, err
-	}
-
-	return lastSerialID, nil
-}
-
-func DBPutLastSerialID(dbTx database.Tx, lastSerialID string) error {
-	meta := dbTx.Metadata()
-	lastSerialIDBucket := meta.Bucket(BlockLastSerialID)
-	return lastSerialIDBucket.Put(BlockLastSerialID, []byte(lastSerialID))
-}
-
-func DBPutBlockHashSerialID(dbTx database.Tx, hash *chainhash.Hash, serialID string) error {
-	meta := dbTx.Metadata()
-	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
-	return blockSerialIDBucket.Put(hash[:], []byte(serialID))
-}
-
-func DBPutBlockSerialIDHash(dbTx database.Tx, hash *chainhash.Hash, serialID string) error {
-	meta := dbTx.Metadata()
-	blockSerialIDBucket := meta.Bucket(BlockHashSerialID)
-	return blockSerialIDBucket.Put([]byte(serialID), hash[:])
-}
-
-func DBPutBlockSerialIDHashPrevSerialID(dbTx database.Tx, hash *chainhash.Hash, serialID, lastSerialID string) error {
-	meta := dbTx.Metadata()
-	blockSerialIDHashPrevSerialID := meta.Bucket(BlockSerialIDHashPrevSerialID)
-	value := &SerialValue{
-		hash, 
-		lastSerialID,
-	}
-	valueBytes, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-
-	return blockSerialIDHashPrevSerialID.Put([]byte(serialID), valueBytes)
-}
-
 // -----------------------------------------------------------------------------
 // The best chain state consists of the best block hash and height, the total
 // number of transactions up to and including those in the best block, and the
@@ -1153,9 +1036,9 @@ func DBPutBlockSerialIDHashPrevSerialID(dbTx database.Tx, hash *chainhash.Hash, 
 //   work sum          big.Int          work sum length
 // -----------------------------------------------------------------------------
 
-// bestChainState represents the data to be stored the database for the current
+// BestChainState represents the data to be stored the database for the current
 // best chain state.
-type bestChainState struct {
+type BestChainState struct {
 	Hash      chainhash.Hash
 	height    uint32
 	TotalTxns uint64
@@ -1164,7 +1047,7 @@ type bestChainState struct {
 
 // serializeBestChainState returns the serialization of the passed block best
 // chain state.  This is data to be stored in the chain state bucket.
-func serializeBestChainState(state bestChainState) []byte {
+func serializeBestChainState(state BestChainState) []byte {
 	// Calculate the full size needed to serialize the chain state.
 	workSumBytes := state.workSum.Bytes()
 	workSumBytesLen := uint32(len(workSumBytes))
@@ -1188,17 +1071,17 @@ func serializeBestChainState(state bestChainState) []byte {
 // state.  This is data stored in the chain state bucket and is updated after
 // every block is connected or disconnected form the main chain.
 // block.
-func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
+func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	// Ensure the serialized data has enough bytes to properly deserialize
 	// the Hash, height, total transactions, and work sum length.
 	if len(serializedData) < chainhash.HashSize+16 {
-		return bestChainState{}, database.Error{
+		return BestChainState{}, database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
 		}
 	}
 
-	state := bestChainState{}
+	state := BestChainState{}
 	copy(state.Hash[:], serializedData[0:chainhash.HashSize])
 	offset := uint32(chainhash.HashSize)
 	state.height = byteOrder.Uint32(serializedData[offset : offset+4])
@@ -1211,7 +1094,7 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 	// Ensure the serialized data has enough bytes to deserialize the work
 	// sum.
 	if uint32(len(serializedData[offset:])) < workSumBytesLen {
-		return bestChainState{}, database.Error{
+		return BestChainState{}, database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
 		}
@@ -1226,7 +1109,7 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 // state with the given parameters.
 func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
-	serializedData := serializeBestChainState(bestChainState{
+	serializedData := serializeBestChainState(BestChainState{
 		Hash:      snapshot.Hash,
 		height:    uint32(snapshot.Height),
 		TotalTxns: snapshot.TotalTxns,
@@ -1349,4 +1232,15 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	binary.BigEndian.PutUint32(indexKey[0:4], blockHeight)
 	copy(indexKey[4:chainhash.HashSize+4], blockHash[:])
 	return indexKey
+}
+
+func i64ToBytes(val int64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(val))
+	return buf
+}
+
+func bytesToI64(val []byte) int64 {
+	num := binary.LittleEndian.Uint64(val)
+	return int64(num)
 }
