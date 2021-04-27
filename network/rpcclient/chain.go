@@ -1010,11 +1010,11 @@ func (r FutureListShards) Receive() (*btcjson.ShardListResult, error) {
 	return &list, nil
 }
 
-// todo(mike)
 func (c *Client) ListShardsAsync() FutureListShards {
 	cmd := &btcjson.ListShardsCmd{}
 	return c.sendCmd(cmd)
 }
+
 func (c *Client) ListShards() (*btcjson.ShardListResult, error) {
 	return c.ListShardsAsync().Receive()
 }
@@ -1031,11 +1031,11 @@ func (r FutureManageShards) Receive() error {
 	return err
 }
 
-// todo(mike)
 func (c *Client) ManageShardsAsync(action string, shardID uint32) FutureManageShards {
 	cmd := btcjson.NewManageShardsCmd(shardID, action, nil)
 	return c.sendCmd(cmd)
 }
+
 func (c *Client) ManageShards(action string, shardID uint32) error {
 	return c.ManageShardsAsync(action, shardID).Receive()
 }
@@ -1046,20 +1046,20 @@ type FutureGetLastSerialBlockNumberResult chan *response
 
 // Receive waits for the response promised by the future and returns the number
 // of blocks in the longest block chain.
-func (r FutureGetLastSerialBlockNumberResult) Receive() (int, error) {
+func (r FutureGetLastSerialBlockNumberResult) Receive() (int64, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
 	}
 
 	// Unmarshal the result as an map.
-	var resmap map[string]int
+	var resmap map[string]int64
 	err = json.Unmarshal(res, &resmap)
 	if err != nil {
 		return 0, err
 	}
 	if _, ok := resmap["lastserial"]; !ok {
-		return 0, errors.New("Bad response format")
+		return 0, errors.New("bad response format")
 	}
 	return resmap["lastserial"], nil
 }
@@ -1073,7 +1073,7 @@ func (c *Client) GetLastSerialBlockNumberAsync() FutureGetLastSerialBlockNumberR
 	return c.sendCmd(cmd)
 }
 
-// GetBlockCount returns the number of blocks in the longest block chain.
-func (c *Client) GetLastSerialBlockNumber() (int, error) {
+// GetLastSerialBlockNumber returns the number of blocks in the longest block chain.
+func (c *Client) GetLastSerialBlockNumber() (int64, error) {
 	return c.GetLastSerialBlockNumberAsync().Receive()
 }

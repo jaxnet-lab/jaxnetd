@@ -80,10 +80,6 @@ func DBFetchBlockHashBySerialID(dbTx database.Tx, serialID int64) (*chainhash.Ha
 	if value.Hash == nil {
 		return nil, 0, errors.New("hash is nil")
 	}
-	if value.PrevID == -1 {
-		return nil, 0, errors.New("prev id is empty")
-	}
-
 	return value.Hash, value.PrevID, nil
 }
 

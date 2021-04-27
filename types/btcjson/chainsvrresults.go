@@ -902,6 +902,6 @@ type GetBeaconBlockBySerialNumberResult struct {
 
 type GetShardBlockBySerialNumberResult struct {
 	Block        string `json:"block"`
-	SerialID     int    `json:"serial_id"`
-	PrevSerialID int    `json:"prev_serial_id"`
+	SerialID     int64  `json:"serial_id"`
+	PrevSerialID int64  `json:"prev_serial_id"`
 }
