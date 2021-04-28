@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package txutils
 
 import (
@@ -193,7 +194,7 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 			return nil, 0, err
 		}
 
-		var block *wire.MsgBlock
+		var block *rpcclient.BlockResult
 		if shardID == 0 {
 			block, err = client.rpc.GetBeaconBlock(hash)
 		} else {
@@ -204,7 +205,7 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 			return nil, 0, err
 		}
 
-		for _, msgTx := range block.Transactions {
+		for _, msgTx := range block.Block.Transactions {
 			for _, in := range msgTx.TxIn {
 				if in.PreviousOutPoint.Hash.String() == zeroHash {
 					continue
