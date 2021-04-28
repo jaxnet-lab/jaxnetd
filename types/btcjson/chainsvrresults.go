@@ -185,23 +185,23 @@ type GetBeaconBlockVerboseTxResult struct {
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=1 to getShardBlock.
 type GetShardBlockVerboseTxResult struct {
-	Hash          string `json:"hash"`
-	Confirmations int64  `json:"confirmations"`
-	StrippedSize  int32  `json:"strippedsize"`
-	Size          int32  `json:"size"`
-	Weight        int32  `json:"weight"`
-	// Height        int64                         `json:"height"`
-	SerialID     int64                         `json:"serialID"`
-	PrevSerialID int64                         `json:"prevSerialID"`
-	MerkleRoot   string                        `json:"merkleroot"`
-	Tx           []TxRawResult                 `json:"tx,omitempty"`
-	Time         int64                         `json:"time"`
-	Nonce        uint32                        `json:"nonce"`
-	Bits         string                        `json:"bits"`
-	Difficulty   float64                       `json:"difficulty"`
-	PreviousHash string                        `json:"previousblockhash"`
-	NextHash     string                        `json:"nextblockhash,omitempty"`
-	BCBlock      GetBeaconBlockVerboseTxResult `json:"bcblock"`
+	Hash          string                        `json:"hash"`
+	Confirmations int64                         `json:"confirmations"`
+	StrippedSize  int32                         `json:"strippedsize"`
+	Size          int32                         `json:"size"`
+	Weight        int32                         `json:"weight"`
+	Height        int64                         `json:"height"`
+	SerialID      int64                         `json:"serialID"`
+	PrevSerialID  int64                         `json:"prevSerialID"`
+	MerkleRoot    string                        `json:"merkleroot"`
+	Tx            []TxRawResult                 `json:"tx,omitempty"`
+	Time          int64                         `json:"time"`
+	Nonce         uint32                        `json:"nonce"`
+	Bits          string                        `json:"bits"`
+	Difficulty    float64                       `json:"difficulty"`
+	PreviousHash  string                        `json:"previousblockhash"`
+	NextHash      string                        `json:"nextblockhash,omitempty"`
+	BCBlock       GetBeaconBlockVerboseTxResult `json:"bcblock"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig
@@ -894,14 +894,16 @@ type GetLastSerialBlockNumberResult struct {
 	LastSerial int64 `json:"lastserial"`
 }
 
-type GetBeaconBlockBySerialNumberResult struct {
+type GetBeaconBlockResult struct {
 	Block        string `json:"block"`
+	Height       int32  `json:"height"`
 	SerialID     int64  `json:"serial_id"`
 	PrevSerialID int64  `json:"prev_serial_id"`
 }
 
-type GetShardBlockBySerialNumberResult struct {
+type GetShardBlockResult struct {
 	Block        string `json:"block"`
+	Height       int32  `json:"height"`
 	SerialID     int64  `json:"serial_id"`
 	PrevSerialID int64  `json:"prev_serial_id"`
 }

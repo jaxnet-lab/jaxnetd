@@ -278,12 +278,6 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 			Message: "Block not found",
 		}
 	}
-	// If verbosity is 0, return the serialized block as a hex encoded string.
-	if verbosity != nil && *verbosity == 0 {
-		return hex.EncodeToString(blkBytes), nil
-	}
-
-	// Otherwise, generate the JSON object and return it.
 
 	// Deserialize the block.
 	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
@@ -310,7 +304,17 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 			nextHashString = nextHash.String()
 		}
 	}
+	// If verbosity is 0, return the serialized block as a hex encoded string.
+	if verbosity != nil && *verbosity == 0 {
+		return btcjson.GetShardBlockResult{
+			Block:        hex.EncodeToString(blkBytes),
+			Height:       blockHeight,
+			SerialID:     serialID,
+			PrevSerialID: prevSerialID,
+		}, nil
+	}
 
+	// Otherwise, generate the JSON object and return it.
 	params := server.chainProvider.ChainParams
 	blockHeader := blk.MsgBlock().Header.(*wire.ShardHeader)
 	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)

@@ -139,10 +139,6 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 			Message: "Block not found",
 		}
 	}
-	// If verbosity is 0, return the serialized block as a hex encoded string.
-	if verbosity != nil && *verbosity == 0 {
-		return hex.EncodeToString(blkBytes), nil
-	}
 
 	// Otherwise, generate the JSON object and return it.
 
@@ -152,9 +148,9 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
-	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	var nextHashString string
+	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	// Get the block height from BlockChain.
 	blockHeight, serialID, prevSerialID, err := server.chainProvider.BlockChain().BlockIDsByHash(hash)
@@ -171,6 +167,17 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 			nextHashString = nextHash.String()
 		}
 	}
+
+	// If verbosity is 0, return the serialized block as a hex encoded string.
+	if verbosity != nil && *verbosity == 0 {
+		return btcjson.GetBeaconBlockResult{
+			Block:        hex.EncodeToString(blkBytes),
+			Height:       blockHeight,
+			SerialID:     serialID,
+			PrevSerialID: prevSerialID,
+		}, nil
+	}
+
 	params := server.chainProvider.ChainParams
 	blockHeader := blk.MsgBlock().Header
 	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)

@@ -24,21 +24,21 @@ type FutureGetShardBlockResult struct {
 
 // Receive waits for the response promised by the future and returns the raw
 // block requested from the server given its hash.
-func (r FutureGetShardBlockResult) Receive() (*wire.MsgBlock, error) {
+func (r FutureGetShardBlockResult) Receive() (*BlockResult, error) {
 	res, err := r.client.waitForGetBlockRes(r.Response, r.hash, "getShardBlock", false, false)
 	if err != nil {
 		return nil, err
 	}
 
-	// Unmarshal result as a string.
-	var blockHex string
-	err = json.Unmarshal(res, &blockHex)
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetShardBlockResult
+	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode the serialized block hex to raw bytes.
-	serializedBlock, err := hex.DecodeString(blockHex)
+	serializedBlock, err := hex.DecodeString(blockResult.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,12 @@ func (r FutureGetShardBlockResult) Receive() (*wire.MsgBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &msgBlock, nil
+	return &BlockResult{
+		Block:        &msgBlock,
+		Height:       blockResult.Height,
+		SerialID:     blockResult.SerialID,
+		PrevSerialID: blockResult.PrevSerialID,
+	}, nil
 }
 
 // GetShardBlockAsync returns an instance of a type that can be used to get the
@@ -75,7 +80,7 @@ func (c *Client) GetShardBlockAsync(blockHash *chainhash.Hash) FutureGetShardBlo
 //
 // See GetShardBlockVerbose to retrieve a data structure with information about the
 // block instead.
-func (c *Client) GetShardBlock(blockHash *chainhash.Hash) (*wire.MsgBlock, error) {
+func (c *Client) GetShardBlock(blockHash *chainhash.Hash) (*BlockResult, error) {
 	return c.GetShardBlockAsync(blockHash).Receive()
 }
 
@@ -409,34 +414,46 @@ type FutureGetShardBlockBySerialNumberResult struct {
 	Response chan *response
 }
 
+type BlockResult struct {
+	Block        *wire.MsgBlock
+	Height       int32
+	SerialID     int64
+	PrevSerialID int64
+}
+
 // Receive waits for the response promised by the future and returns the raw
 // block requested from the server given its hash.
-func (r FutureGetShardBlockBySerialNumberResult) Receive() (*wire.MsgBlock, int64, int64, error) {
+func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error) {
 	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getShardBlockBySerialNumber", r.serialID, false, false)
 	if err != nil {
-		return nil, r.serialID, -1, err
+		return nil, err
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult btcjson.GetShardBlockBySerialNumberResult
+	var blockResult btcjson.GetShardBlockResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
-		return nil, r.serialID, -1, err
+		return nil, err
 	}
 
 	// Decode the serialized block hex to raw bytes.
 	serializedBlock, err := hex.DecodeString(blockResult.Block)
 	if err != nil {
-		return nil, r.serialID, -1, err
+		return nil, err
 	}
 
 	// Deserialize the block and return it.
 	var msgBlock = wire.EmptyShardBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
-		return nil, r.serialID, -1, err
+		return nil, err
 	}
-	return &msgBlock, blockResult.SerialID, blockResult.PrevSerialID, nil
+	return &BlockResult{
+		Block:        &msgBlock,
+		Height:       blockResult.Height,
+		SerialID:     blockResult.SerialID,
+		PrevSerialID: blockResult.PrevSerialID,
+	}, nil
 }
 
 // GetShardBlockBySerialNumberAsync returns an instance of a type that can be used to get the
@@ -457,7 +474,7 @@ func (c *Client) GetShardBlockBySerialNumberAsync(serialID int64) FutureGetShard
 //
 // See GetShardBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
-func (c *Client) GetShardBlockBySerialNumber(serialID int64) (*wire.MsgBlock, int64, int64, error) {
+func (c *Client) GetShardBlockBySerialNumber(serialID int64) (*BlockResult, error) {
 	return c.GetShardBlockBySerialNumberAsync(serialID).Receive()
 }
 

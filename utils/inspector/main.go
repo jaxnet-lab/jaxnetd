@@ -33,8 +33,8 @@ func main() {
 		// Host: "159.69.117.159:12333",
 		// Host: "198.199.125.197:18333",
 		// Host: "116.202.107.209:22333",
-		// User:         "jaxnetrpc",
-		// Pass:         "AUL6VBjoQnhP3bfFzl",
+		// User: "jaxnetrpc",
+		// Pass: "AUL6VBjoQnhP3bfFzl",
 		HTTPPostMode: true,
 		DisableTLS:   true,
 	}
@@ -47,25 +47,25 @@ func main() {
 	interruptOnError(err)
 
 	for i := int64(0); ; i++ {
-		block, err := rpcClient.ForBeacon().GetBeaconBlockVerboseBySerialNumber(i)
+		block, err := rpcClient.ForBeacon().GetBeaconBlockBySerialNumber(i)
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
 		fmt.Printf("Beacon Block: Hash=%s Height=%d SerialID=%d PrevSerialID=%d \n",
-			block.Hash, block.Height, block.SerialID, block.PrevSerialID)
+			"", block.Height, block.SerialID, block.PrevSerialID)
 	}
 
 	for _, info := range resp.Shards {
 		fmt.Println("Shard #", info.ID)
 		for i := int64(0); ; i++ {
-			block, err := rpcClient.ForShard(info.ID).GetShardBlockVerboseBySerialNumber(i)
+			block, err := rpcClient.ForShard(info.ID).GetShardBlockBySerialNumber(i)
 			if err != nil {
 				fmt.Println(err)
 				break
 			}
 			fmt.Printf("Shard %d Block: Hash=%s Height=%d SerialID=%d PrevSerialID=%d \n",
-				info.ID, block.Hash, block.Height, block.SerialID, block.PrevSerialID)
+				info.ID, "", block.Height, block.SerialID, block.PrevSerialID)
 		}
 	}
 }
