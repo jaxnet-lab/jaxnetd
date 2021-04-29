@@ -1,12 +1,8 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-package mmr
 
-//type nodeData struct {
-//	Weight *big.Int
-//	Hash   Hash
-//}
+package mmr
 
 type IStore interface {
 	GetNode(index uint64) (res *BlockData, ok bool)

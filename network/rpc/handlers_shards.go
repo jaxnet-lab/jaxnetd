@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpc
 
 import (
@@ -116,8 +117,37 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
 	}
+	return server.getBlock(hash, c.Verbosity)
+}
+
+// handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
+func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+
+	c := cmd.(*btcjson.GetShardBlockBySerialNumberCmd)
+
+	var hash *chainhash.Hash
+
+	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		var err error
+		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, c.SerialNumber)
+		return err
+	})
+
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCBlockNotFound,
+			Message: "Block not found",
+		}
+	}
+
+	return server.getBlock(hash, c.Verbosity)
+}
+
+// handleGetBlock implements the getblock command.
+func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interface{}, error) {
+
 	var blkBytes []byte
-	err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
+	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
 		blkBytes, err = dbTx.FetchBlock(hash)
 		return err
@@ -128,12 +158,6 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 			Message: "Block not found",
 		}
 	}
-	// If verbosity is 0, return the serialized block as a hex encoded string.
-	if c.Verbosity != nil && *c.Verbosity == 0 {
-		return hex.EncodeToString(blkBytes), nil
-	}
-
-	// Otherwise, generate the JSON object and return it.
 
 	// Deserialize the block.
 	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
@@ -142,26 +166,35 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 
-	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
-	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
-	}
-	blk.SetHeight(blockHeight)
+	var nextHashString string
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
-	// Get next block hash unless there are none.
-	var nextHashString string
-	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
-		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
+	// Get the block height from BlockChain.
+	blockHeight, serialID, prevSerialID, err := server.chainProvider.BlockChain().BlockIDsByHash(hash)
+	if err == nil {
+		blk.SetHeight(blockHeight)
+		// Get next block hash unless there are none.
+		// TODO: resolve next block from main chain
+		if blockHeight != -1 && blockHeight < best.Height {
+			nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
+			if err != nil {
+				context := "No next block"
+				return nil, server.InternalRPCError(err.Error(), context)
+			}
+			nextHashString = nextHash.String()
 		}
-		nextHashString = nextHash.String()
+	}
+	// If verbosity is 0, return the serialized block as a hex encoded string.
+	if verbosity != nil && *verbosity == 0 {
+		return btcjson.GetShardBlockResult{
+			Block:        hex.EncodeToString(blkBytes),
+			Height:       blockHeight,
+			SerialID:     serialID,
+			PrevSerialID: prevSerialID,
+		}, nil
 	}
 
+	// Otherwise, generate the JSON object and return it.
 	params := server.chainProvider.ChainParams
 	blockHeader := blk.MsgBlock().Header.(*wire.ShardHeader)
 	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
@@ -171,7 +204,7 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 
 	beaconHeader := blockHeader.BeaconHeader()
 	blockReply := btcjson.GetShardBlockVerboseResult{
-		Hash:          c.Hash,
+		Hash:          hash.String(),
 		ShardHash:     blockHeader.ShardBlockHash().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		PreviousHash:  blockHeader.PrevBlock().String(),
@@ -183,6 +216,8 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		Weight:        int32(chaindata.GetBlockWeight(blk)),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
 		Difficulty:    diff,
+		SerialID:      serialID,
+		PrevSerialID:  prevSerialID,
 		NextHash:      nextHashString,
 		BCBlock: btcjson.GetBeaconBlockVerboseResult{
 			Confirmations: 0,
@@ -207,7 +242,7 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 		},
 	}
 
-	if *c.Verbosity == 1 {
+	if verbosity != nil && *verbosity == 1 {
 		transactions := blk.Transactions()
 		txNames := make([]string, len(transactions))
 		for i, tx := range transactions {
@@ -593,145 +628,4 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	}
 
 	return result, nil
-}
-
-// handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
-func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-
-	c := cmd.(*btcjson.GetShardBlockBySerialNumberCmd)
-	serialNumber := c.SerialNumber
-
-	var (
-		hash     *chainhash.Hash
-		blkBytes []byte
-		prevID   int
-	)
-	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
-		var err error
-		hash, prevID, err = chaindata.DBFetchBlockHashPrevBySerialID(dbTx, serialNumber)
-		if err != nil {
-			return err
-		}
-
-		blkBytes, err = dbTx.FetchBlock(hash)
-		return err
-	})
-
-	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
-			Message: "Block not found",
-		}
-	}
-
-	// If verbosity is 0, return the serialized block as a hex encoded string.
-	if c.Verbosity != nil && *c.Verbosity == 0 {
-		blockReply := btcjson.GetBeaconBlockBySerialNumberResult{
-			Block:        hex.EncodeToString(blkBytes),
-			SerialID:     serialNumber,
-			PrevSerialID: prevID,
-		}
-		return blockReply, nil
-	}
-
-	// Otherwise, generate the JSON object and return it.
-
-	// Deserialize the block.
-	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
-	if err != nil {
-		context := "Failed to deserialize block"
-		return nil, server.InternalRPCError(err.Error(), context)
-	}
-
-	// Get the block height from BlockChain.
-	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
-	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
-	}
-	blk.SetHeight(blockHeight)
-	best := server.chainProvider.BlockChain().BestSnapshot()
-
-	// Get next block hash unless there are none.
-	var nextHashString string
-	if blockHeight < best.Height {
-		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
-		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
-		}
-		nextHashString = nextHash.String()
-	}
-
-	params := server.chainProvider.ChainParams
-	blockHeader := blk.MsgBlock().Header.(*wire.ShardHeader)
-	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
-	if err != nil {
-		return nil, err
-	}
-
-	beaconHeader := blockHeader.BeaconHeader()
-	blockReply := btcjson.GetShardBlockBySerialNumberVerboseResult{
-		Hash:          hash.String(),
-		ShardHash:     blockHeader.ShardBlockHash().String(),
-		MerkleRoot:    blockHeader.MerkleRoot().String(),
-		PreviousHash:  blockHeader.PrevBlock().String(),
-		Time:          blockHeader.Timestamp().Unix(),
-		Confirmations: int64(1 + best.Height - blockHeight),
-		Height:        int64(blockHeight),
-		Size:          int32(len(blkBytes)),
-		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:        int32(chaindata.GetBlockWeight(blk)),
-		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		Difficulty:    diff,
-		NextHash:      nextHashString,
-		BCBlock: btcjson.GetBeaconBlockVerboseResult{
-			Confirmations: 0,
-			StrippedSize:  0,
-			Size:          0,
-			Weight:        0,
-			Height:        0,
-			Tx:            nil,
-			RawTx:         nil,
-			Time:          0,
-			Difficulty:    0,
-			PreviousHash:  "",
-			NextHash:      "",
-
-			Bits:                strconv.FormatInt(int64(beaconHeader.Bits()), 16),
-			Hash:                beaconHeader.BlockHash().String(),
-			MerkleRoot:          beaconHeader.MerkleRoot().String(),
-			MerkleMountainRange: beaconHeader.MergeMiningRoot().String(),
-			Version:             int32(blockHeader.Version()),
-			VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-			Nonce:               blockHeader.Nonce(),
-		},
-		SerialID:     serialNumber,
-		PrevSerialID: prevID,
-	}
-
-	if *c.Verbosity == 1 {
-		transactions := blk.Transactions()
-		txNames := make([]string, len(transactions))
-		for i, tx := range transactions {
-			txNames[i] = tx.Hash().String()
-		}
-
-		blockReply.Tx = txNames
-	} else {
-		txns := blk.Transactions()
-		rawTxns := make([]btcjson.TxRawResult, len(txns))
-		for i, tx := range txns {
-			rawTxn, err := server.CreateTxRawResult(params, tx.MsgTx(),
-				tx.Hash().String(), blockHeader, hash.String(),
-				blockHeight, best.Height)
-			if err != nil {
-				return nil, err
-			}
-			rawTxns[i] = *rawTxn
-		}
-		blockReply.RawTx = rawTxns
-	}
-
-	return blockReply, nil
 }

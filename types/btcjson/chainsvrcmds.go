@@ -573,6 +573,10 @@ type GetRawTransactionCmd struct {
 	Verbose *int `jsonrpcdefault:"0"`
 }
 
+type GetTxDetailsCmd struct {
+	Txid string
+}
+
 // NewGetRawTransactionCmd returns a new instance which can be used to issue a
 // getrawtransaction JSON-RPC command.
 //
@@ -933,11 +937,11 @@ func NewGetLastSerialBlockNumberCmd() *GetLastSerialBlockNumberCmd {
 }
 
 type GetBeaconBlockBySerialNumberCmd struct {
-	SerialNumber int
+	SerialNumber int64
 	Verbosity    *int `jsonrpcdefault:"1"`
 }
 
-func NewGetBeaconBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetBeaconBlockBySerialNumberCmd {
+func NewGetBeaconBlockBySerialNumberCmd(serialNumber int64, verbosity *int) *GetBeaconBlockBySerialNumberCmd {
 	return &GetBeaconBlockBySerialNumberCmd{
 		SerialNumber: serialNumber,
 		Verbosity:    verbosity,
@@ -945,11 +949,11 @@ func NewGetBeaconBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetBe
 }
 
 type GetShardBlockBySerialNumberCmd struct {
-	SerialNumber int
+	SerialNumber int64
 	Verbosity    *int `jsonrpcdefault:"1"`
 }
 
-func NewGetShardBlockBySerialNumberCmd(serialNumber int, verbosity *int) *GetShardBlockBySerialNumberCmd {
+func NewGetShardBlockBySerialNumberCmd(serialNumber int64, verbosity *int) *GetShardBlockBySerialNumberCmd {
 	return &GetShardBlockBySerialNumberCmd{
 		SerialNumber: serialNumber,
 		Verbosity:    verbosity,
@@ -983,6 +987,7 @@ func init() {
 	MustRegisterCmd("chain", "getMempoolInfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
+	MustRegisterCmd("chain", "getTxDetails", (*GetTxDetailsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)
@@ -1000,23 +1005,24 @@ func init() {
 	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
 	// MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
 
+	MustRegisterCmd("chain", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
+	MustRegisterCmd("chain", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
+	MustRegisterCmd("chain", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
+
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)
 	MustRegisterCmd("node", "getInfo", (*GetInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("node", "uptime", (*UptimeCmd)(nil), flags)
 
 	MustRegisterCmd("node", "manageShards", (*ManageShardsCmd)(nil), flags)
 	MustRegisterCmd("node", "listShards", (*ListShardsCmd)(nil), flags)
 
 	MustRegisterCmd("node", "generate", (*GenerateCmd)(nil), flags)
-	MustRegisterCmd("node", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
-	MustRegisterCmd("node", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
-
 	MustRegisterCmd("node", "setGenerate", (*SetGenerateCmd)(nil), flags)
-	MustRegisterCmd("node", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
-	MustRegisterCmd("node", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
+
 	MustRegisterCmd("node", "debugLevel", (*DebugLevelCmd)(nil), flags)
 	MustRegisterCmd("node", "help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("node", "stop", (*StopCmd)(nil), flags)

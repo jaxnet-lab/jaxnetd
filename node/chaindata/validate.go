@@ -743,6 +743,9 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 				return 0, NewRuleError(ErrImmatureSpend, str)
 			}
 		}
+
+		txIn.Age = txHeight - utxo.BlockHeight()
+
 		if thisIsSwapTx {
 			err := ValidateSwapTxStructure(tx.MsgTx(), len(missedInputs))
 			if err != nil {

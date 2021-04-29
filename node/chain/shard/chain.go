@@ -13,8 +13,8 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	mmr2 "gitlab.com/jaxnet/core/shard.core/types/mmr"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
 )
 
 type shardChain struct {
@@ -84,10 +84,10 @@ type BeaconBlockProvider struct {
 
 type BlockGenerator struct {
 	beacon BeaconBlockProvider
-	mmr    mmr.IMountainRange
+	mmr    mmr2.IMountainRange
 }
 
-func NewChainBlockGenerator(beacon BeaconBlockProvider, mmr mmr.IMountainRange) *BlockGenerator {
+func NewChainBlockGenerator(beacon BeaconBlockProvider, mmr mmr2.IMountainRange) *BlockGenerator {
 	return &BlockGenerator{beacon: beacon, mmr: mmr}
 }
 

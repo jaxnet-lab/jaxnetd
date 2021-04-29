@@ -6,7 +6,6 @@ package blockchain
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 	"time"
 
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
@@ -121,7 +120,7 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
-        // Create the bucket that houses block last_serial_id
+		// Create the bucket that houses block last_serial_id
 		_, err = meta.CreateBucket(chaindata.BlockLastSerialID)
 		if err != nil {
 			return err
@@ -133,11 +132,11 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
-		// Create the bucket that houses the mapping of block serial id to hash and serial id
-		_, err = meta.CreateBucket(chaindata.BlockSerialIDHash)
-		if err != nil {
-			return err
-		}
+		// // Create the bucket that houses the mapping of block serial id to hash and serial id
+		// _, err = meta.CreateBucket(chaindata.BlockSerialIDHash)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
 		_, err = meta.CreateBucket(chaindata.BlockSerialIDHashPrevSerialID)
@@ -145,22 +144,22 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
-		err = chaindata.DBPutLastSerialID(dbTx, strconv.Itoa(0))
+		err = chaindata.DBPutLastSerialID(dbTx, 0)
 		if err != nil {
 			return err
 		}
 
-		err = chaindata.DBPutBlockHashSerialID(dbTx, genesisBlock.Hash(), strconv.Itoa(0))
+		err = chaindata.DBPutBlockHashSerialID(dbTx, genesisBlock.Hash(), 0)
 		if err != nil {
 			return err
 		}
 
-		err = chaindata.DBPutBlockSerialIDHash(dbTx, genesisBlock.Hash(), strconv.Itoa(0))
+		err = chaindata.DBPutBlockSerialIDHash(dbTx, genesisBlock.Hash(), 0)
 		if err != nil {
 			return err
 		}
 
-		err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, genesisBlock.Hash(), strconv.Itoa(0), strconv.Itoa(-1))
+		err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, genesisBlock.Hash(), 0, -1)
 		if err != nil {
 			return err
 		}

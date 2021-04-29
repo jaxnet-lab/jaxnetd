@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blocknode
 
 import (
@@ -43,6 +44,9 @@ type ShardBlockNode struct {
 
 	// height is the position in the block chain.
 	height int32
+
+	// serialID is the absolute unique id of current block.
+	serialID int64
 
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
@@ -125,6 +129,7 @@ func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardB
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
+		node.serialID = parent.SerialID() + 1
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
 
@@ -135,29 +140,20 @@ func (node *ShardBlockNode) NewNode() IBlockNode {
 	return new(ShardBlockNode)
 }
 
-func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
-
-func (node *ShardBlockNode) GetHeight() int32 { return node.height }
-
-func (node *ShardBlockNode) Version() int32 { return node.version }
-
-func (node *ShardBlockNode) Height() int32 { return node.height }
-
-func (node *ShardBlockNode) Bits() uint32 { return node.bits }
-
-func (node *ShardBlockNode) Parent() IBlockNode { return node.parent }
-
-func (node *ShardBlockNode) WorkSum() *big.Int { return node.workSum }
-
-func (node *ShardBlockNode) Timestamp() int64 { return node.timestamp }
-
-func (node *ShardBlockNode) Status() BlockStatus { return node.status }
-
+func (node *ShardBlockNode) GetHash() chainhash.Hash      { return node.hash }
+func (node *ShardBlockNode) GetHeight() int32             { return node.height }
+func (node *ShardBlockNode) Version() int32               { return node.version }
+func (node *ShardBlockNode) Height() int32                { return node.height }
+func (node *ShardBlockNode) SerialID() int64              { return node.serialID }
+func (node *ShardBlockNode) Bits() uint32                 { return node.bits }
+func (node *ShardBlockNode) Parent() IBlockNode           { return node.parent }
+func (node *ShardBlockNode) WorkSum() *big.Int            { return node.workSum }
+func (node *ShardBlockNode) Timestamp() int64             { return node.timestamp }
+func (node *ShardBlockNode) Status() BlockStatus          { return node.status }
 func (node *ShardBlockNode) SetStatus(status BlockStatus) { node.status = status }
+func (node *ShardBlockNode) NewHeader() wire.BlockHeader  { return wire.EmptyShardHeader() }
 
-func (node *ShardBlockNode) NewHeader() wire.BlockHeader { return wire.EmptyShardHeader() }
-
-// ShardHeader constructs a block ShardHeader from the node and returns it.
+// Header constructs a block ShardHeader from the node and returns it.
 //
 // This function is safe for concurrent access.
 func (node *ShardBlockNode) Header() wire.BlockHeader {

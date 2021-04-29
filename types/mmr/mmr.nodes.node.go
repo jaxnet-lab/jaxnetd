@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package mmr
 
 import (
@@ -72,10 +73,6 @@ func (x *nodeIndex) Index() uint64 {
 func (x *nodeIndex) SetValue(mmr *mmr, data *BlockData) {
 	mmr.db.SetNode(x.Index(), data)
 }
-
-//func (x *nodeIndex) AppendValue(mmr *mmr, data *BlockData) {
-//	mmr.db.SetNode(x.Index(), data)
-//}
 
 func (x *nodeIndex) Value(mmr *mmr) (*BlockData, bool) {
 	return mmr.db.GetNode(x.Index())

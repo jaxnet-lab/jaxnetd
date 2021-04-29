@@ -57,6 +57,7 @@ func main() {
 	if runtime.GOOS == "windows" {
 		isService, err := winServiceMain()
 		if err != nil {
+			fmt.Println("FATAL:", err)
 			os.Exit(1)
 		}
 		if isService {
@@ -66,6 +67,7 @@ func main() {
 
 	// Work around defer not working after os.Exit()
 	if err := shardCoreMain(); err != nil {
+		fmt.Println("FATAL:", err)
 		os.Exit(1)
 	}
 }

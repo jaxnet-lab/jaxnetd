@@ -395,6 +395,12 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
+	prevHash := header.PrevBlock()
+	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate the block template reply.  Note that following mutations are
 	// implied by the included or omission of fields:
 	//  Including MinTime -> time/decrement
@@ -406,6 +412,8 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.PrevBlock().String(),
 		Height:       int64(template.Height),
+		SerialID:     prevSerialID + 1,
+		PrevSerialID: prevSerialID,
 		Version:      int32(header.Version()),
 		Shards:       header.BeaconHeader().Shards(),
 		WeightLimit:  chaindata.MaxBlockWeight,
@@ -469,6 +477,11 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if err != nil {
 		return nil, err
 	}
+	prevHash := header.PrevBlock()
+	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
+	if err != nil {
+		return nil, err
+	}
 
 	// Generate the block template reply.  Note that following mutations are
 	// implied by the included or omission of fields:
@@ -481,6 +494,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.PrevBlock().String(),
 		Height:       int64(template.Height),
+		SerialID:     prevSerialID + 1,
+		PrevSerialID: prevSerialID,
 		Version:      int32(header.Version()),
 		WeightLimit:  chaindata.MaxBlockWeight,
 		SigOpLimit:   chaindata.MaxBlockSigOpsCost,

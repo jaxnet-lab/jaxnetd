@@ -24,11 +24,9 @@ const (
 	beaconBlockHeaderLen = 80
 )
 
-// BlockHeader defines information about a block and is used in the bitcoin
+// BeaconHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
 type BeaconHeader struct {
-	// todo: suggest to add kind flag like ShardID/ChainID to identify is this beacon header or not
-
 	// Version of the block.  This is not the same as the protocol version.
 	version BVersion
 
@@ -37,9 +35,6 @@ type BeaconHeader struct {
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
-
-	// Root of Merge-mining tree
-	mergeMiningRoot chainhash.Hash
 
 	// Time the block was created.  This is, unfortunately, encoded as a
 	// uint32 on the wire and therefore is limited to 2106.
@@ -51,9 +46,13 @@ type BeaconHeader struct {
 	// Nonce used to generate the block.
 	nonce uint32
 
+	// Root of Merge-mining tree
+	mergeMiningRoot chainhash.Hash
+
 	// Encoding of the Merge-mining tree
 	treeEncoding []uint8
 
+	// shards uint32
 	shards uint32
 }
 
@@ -226,7 +225,7 @@ func ReadBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 	return err
 }
 
-// WriteBlockHeader writes a bitcoin block BeaconHeader to w.  See Serialize for
+// WriteBeaconBlockHeader writes a bitcoin block BeaconHeader to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func WriteBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {

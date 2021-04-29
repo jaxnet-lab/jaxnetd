@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blocknode
 
 import (
@@ -41,6 +42,9 @@ type BeaconBlockNode struct {
 
 	// height is the position in the block chain.
 	height int32
+
+	// serialID is the absolute unique id of current block.
+	serialID int64
 
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
@@ -87,12 +91,13 @@ func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *Beaco
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
+		node.serialID = parent.SerialID() + 1
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
 	return node
 }
 
-// newBlockNode returns a new block node for the given block header and parent
+// NewBeaconBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
 func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
@@ -108,6 +113,7 @@ func (node *BeaconBlockNode) GetHeight() int32             { return node.height 
 func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
 func (node *BeaconBlockNode) Version() int32               { return node.version }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
+func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
 func (node *BeaconBlockNode) SetBits(value uint32)         { node.bits = value }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
@@ -115,12 +121,9 @@ func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum
 func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }
 func (node *BeaconBlockNode) Status() BlockStatus          { return node.status }
 func (node *BeaconBlockNode) SetStatus(status BlockStatus) { node.status = status }
+func (node *BeaconBlockNode) NewHeader() wire.BlockHeader  { return new(wire.BeaconHeader) }
 
-func (node *BeaconBlockNode) NewHeader() wire.BlockHeader {
-	return new(wire.BeaconHeader)
-}
-
-// header constructs a block header from the node and returns it.
+// Header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) Header() wire.BlockHeader {

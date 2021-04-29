@@ -39,7 +39,7 @@ build:release:
   stage: build
   image:
     name: goreleaser/goreleaser
-    entrypoint: [""]
+    entrypoint: [ "" ]
   before_script:
     - echo Just to replace default
   script:
@@ -57,12 +57,13 @@ build:release:
 .deploy: &deploy
   stage: deploy
   <<: *before_script
-  needs: ["build:docker"]
+  needs: [ "build:docker" ]
   tags:
     - docker
   script:
     - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
     - ssh ${REMOTE} "cd /opt/shard-core && docker-compose down && docker-compose up -d"
+  when: manual
 
 deploy:dev:
   stage: deploy
@@ -86,7 +87,7 @@ release:
   stage: release
   image:
     name: goreleaser/goreleaser:latest
-    entrypoint: [""]
+    entrypoint: [ "" ]
   variables:
     GITLAB_TOKEN: $CI_ACCESS_TOKEN
   before_script:

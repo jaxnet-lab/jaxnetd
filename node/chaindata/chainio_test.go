@@ -612,12 +612,12 @@ func TestBestChainStateSerialization(t *testing.T) {
 	workSum := new(big.Int)
 	tests := []struct {
 		name       string
-		state      bestChainState
+		state      BestChainState
 		serialized []byte
 	}{
 		{
 			name: "genesis",
-			state: bestChainState{
+			state: BestChainState{
 				Hash:      *newHashFromStr("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"),
 				height:    0,
 				TotalTxns: 1,
@@ -630,7 +630,7 @@ func TestBestChainStateSerialization(t *testing.T) {
 		},
 		{
 			name: "block 1",
-			state: bestChainState{
+			state: BestChainState{
 				Hash:      *newHashFromStr("00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048"),
 				height:    1,
 				TotalTxns: 2,

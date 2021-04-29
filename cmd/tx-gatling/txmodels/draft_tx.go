@@ -31,7 +31,7 @@ func (tx *DraftTx) SetPayToAddress(destAddress string, params *chaincfg.Params) 
 	return err
 }
 
-// SetPayToAddress creates regular pay-to-address script.
+// GetPayToAddressScript creates regular pay-to-address script.
 // 	destAddress is hex-encoded btcutil.Address
 func GetPayToAddressScript(destAddress string, params *chaincfg.Params) ([]byte, error) {
 	decodedDestAddr, err := btcutil.DecodeAddress(destAddress, params)
