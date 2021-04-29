@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpc
 
 import (
@@ -8,7 +9,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/btcec"
@@ -25,6 +28,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/core/shard.core/types/pow"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -117,6 +121,14 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 		btcjson.ScopedMethod("chain", "submitBlock"):              server.handleSubmitBlock,
 		btcjson.ScopedMethod("chain", "getLastSerialBlockNumber"): server.handleGetLastSerialBlockNumber,
 		// -------------------------------------------------------------------------------------------------------------
+
+		btcjson.ScopedMethod("chain", "getnetworkinfo"):   server.handleGetnetworkinfo, // todo: remove
+		btcjson.ScopedMethod("chain", "getDifficulty"):    server.handleGetDifficulty,
+		btcjson.ScopedMethod("chain", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
+		btcjson.ScopedMethod("chain", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
+		btcjson.ScopedMethod("chain", "getblockstats"):    server.handleGetBlockStats,    // todo: remove
+		btcjson.ScopedMethod("chain", "getchaintxstats"):  server.handleGetChaintxStats,  // todo: remove
+
 	}
 }
 
@@ -859,4 +871,161 @@ func directionString(inbound bool) string {
 		return "inbound"
 	}
 	return "outbound"
+}
+
+// handleGetMiningInfo implements the getmininginfo command. We only return the
+// fields that are not related to wallet functionality.
+func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	// Create a default getnetworkhashps command to use defaults and make
+	// use of the existing getnetworkhashps handler.
+	gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
+	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
+	if err != nil {
+		return nil, err
+	}
+	networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
+	if !ok {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCInternal.Code,
+			Message: "networkHashesPerSec is not an int64",
+		}
+	}
+
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	diff, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
+	if err != nil {
+		return nil, err
+	}
+	result := btcjson.GetMiningInfoResult{
+		Blocks:             int64(best.Height),
+		CurrentBlockSize:   best.BlockSize,
+		CurrentBlockWeight: best.BlockWeight,
+		CurrentBlockTx:     best.NumTxns,
+		Difficulty:         diff,
+		NetworkHashPS:      networkHashesPerSec,
+		PooledTx:           uint64(server.chainProvider.TxMemPool.Count()),
+		// TestNet:            server.cfg.TestNet3,
+	}
+	return &result, nil
+}
+
+// handleGetNetworkHashPS implements the getnetworkhashps command.
+func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	// Note: All valid error return paths should return an int64.
+	// Literal zeros are inferred as int, and won't coerce to int64
+	// because the return value is an interface{}.
+
+	c := cmd.(*btcjson.GetNetworkHashPSCmd)
+	if server.chainProvider.BlockChain() == nil {
+		return int64(0), nil
+	}
+
+	// When the passed height is too high or zero, just return 0 now
+	// since we can't reasonably calculate the number of network hashes
+	// per second from invalid values.  When it'server negative, use the current
+	// best block height.
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	endHeight := int32(-1)
+	if c.Height != nil {
+		endHeight = int32(*c.Height)
+	}
+	if endHeight > best.Height || endHeight == 0 {
+		return int64(0), nil
+	}
+	if endHeight < 0 {
+		endHeight = best.Height
+	}
+
+	// Calculate the number of blocks per retarget interval based on the
+	// BlockChain parameters.
+	blocksPerRetarget := int32(server.chainProvider.ChainParams.TargetTimespan /
+		server.chainProvider.ChainParams.TargetTimePerBlock)
+
+	// Calculate the starting block height based on the passed number of
+	// blocks.  When the passed value is negative, use the last block the
+	// difficulty changed as the starting height.  Also make sure the
+	// starting height is not before the beginning of the BlockChain.
+	numBlocks := int32(120)
+	if c.Blocks != nil {
+		numBlocks = int32(*c.Blocks)
+	}
+	var startHeight int32
+	if numBlocks <= 0 {
+		startHeight = endHeight - ((endHeight % blocksPerRetarget) + 1)
+	} else {
+		startHeight = endHeight - numBlocks
+	}
+	if startHeight < 0 {
+		startHeight = 0
+	}
+
+	// Find the min and max block timestamps as well as calculate the total
+	// amount of work that happened between the start and end blocks.
+	var minTimestamp, maxTimestamp time.Time
+	totalWork := big.NewInt(0)
+	for curHeight := startHeight; curHeight <= endHeight; curHeight++ {
+		hash, err := server.chainProvider.BlockChain().BlockHashByHeight(curHeight)
+		if err != nil {
+			context := "Failed to fetch block hash"
+			return int64(0), server.InternalRPCError(err.Error(), context)
+		}
+
+		// Fetch the header from BlockChain.
+		header, err := server.chainProvider.BlockChain().HeaderByHash(hash)
+		if err != nil {
+			context := "Failed to fetch block header"
+			return int64(0), server.InternalRPCError(err.Error(), context)
+		}
+
+		if curHeight == startHeight {
+			minTimestamp = header.Timestamp()
+			maxTimestamp = minTimestamp
+		} else {
+			totalWork.Add(totalWork, pow.CalcWork(header.Bits()))
+
+			if minTimestamp.After(header.Timestamp()) {
+				minTimestamp = header.Timestamp()
+			}
+			if maxTimestamp.Before(header.Timestamp()) {
+				maxTimestamp = header.Timestamp()
+			}
+		}
+	}
+
+	// Calculate the difference in seconds between the min and max block
+	// timestamps and avoid division by zero in the case where there is no
+	// time difference.
+	timeDiff := int64(maxTimestamp.Sub(minTimestamp) / time.Second)
+	if timeDiff == 0 {
+		return int64(0), nil
+	}
+
+	hashesPerSec := new(big.Int).Div(totalWork, big.NewInt(timeDiff))
+	return hashesPerSec.Int64(), nil
+}
+
+func (server *CommonChainRPC) handleGetBlockStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	// c := cmd.(*btcjson.GetBlockStatsCmd)
+	res := btcjson.GetBlockStatsResult{}
+	return res, nil
+}
+
+func (server *CommonChainRPC) handleGetChaintxStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	_ = cmd.(*btcjson.GetChainStatsCmd)
+	res := btcjson.GetChainStatsResult{}
+	return res, nil
+}
+
+func (server *CommonChainRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	return struct {
+		Subversion string `json:"subversion"`
+	}{
+		Subversion: "/Satoshi:0.18.0/",
+	}, nil
+}
+
+// handleGetDifficulty implements the getdifficulty command.
+func (server *CommonChainRPC) handleGetDifficulty(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	return server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
 }

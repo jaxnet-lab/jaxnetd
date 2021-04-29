@@ -1005,23 +1005,24 @@ func init() {
 	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
 	// MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
 
+	MustRegisterCmd("chain", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
+	MustRegisterCmd("chain", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)
+	MustRegisterCmd("chain", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
+	MustRegisterCmd("chain", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
+
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)
 	MustRegisterCmd("node", "getInfo", (*GetInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("node", "uptime", (*UptimeCmd)(nil), flags)
 
 	MustRegisterCmd("node", "manageShards", (*ManageShardsCmd)(nil), flags)
 	MustRegisterCmd("node", "listShards", (*ListShardsCmd)(nil), flags)
 
 	MustRegisterCmd("node", "generate", (*GenerateCmd)(nil), flags)
-	MustRegisterCmd("node", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
-	MustRegisterCmd("node", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)
-	MustRegisterCmd("node", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
-
 	MustRegisterCmd("node", "setGenerate", (*SetGenerateCmd)(nil), flags)
-	MustRegisterCmd("node", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
-	MustRegisterCmd("node", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
+
 	MustRegisterCmd("node", "debugLevel", (*DebugLevelCmd)(nil), flags)
 	MustRegisterCmd("node", "help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("node", "stop", (*StopCmd)(nil), flags)
