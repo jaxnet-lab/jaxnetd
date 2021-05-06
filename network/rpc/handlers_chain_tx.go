@@ -408,7 +408,7 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, orphan bool) (*txInf
 		tx:        &msgTx,
 		blkHash:   blkHash,
 		blkHeight: blkHeight,
-		isOrphan:  orphan,
+		isOrphan:  blkHeight == -1,
 	}, nil
 }
 
@@ -472,6 +472,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 
 		rawTxn.Fee = rawTxn.InAmount - rawTxn.OutAmount
 	}
+	rawTxn.OrphanTx = txInfo.isOrphan
 
 	return rawTxn, txInfo.tx, err
 }
