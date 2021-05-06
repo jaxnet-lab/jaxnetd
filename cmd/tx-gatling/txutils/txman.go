@@ -567,7 +567,7 @@ func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
 		var txOut *btcjson.GetTxOutResult
 	shardsLoop:
 		for _, shardID := range shards {
-			out, _ := client.rpc.ForShard(shardID).GetTxOut(&prevOut.Hash, prevOut.Index, false)
+			out, _ := client.rpc.ForShard(shardID).GetTxOut(&prevOut.Hash, prevOut.Index, false, false)
 			if out == nil {
 				continue
 			}
@@ -647,7 +647,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 		prevOut := msgTx.TxIn[i].PreviousOutPoint
 
 		out, err := client.rpc.ForShard(client.cfg.ShardID).
-			GetTxOut(&prevOut.Hash, prevOut.Index, false)
+			GetTxOut(&prevOut.Hash, prevOut.Index, false, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get utxo from node")
 		}

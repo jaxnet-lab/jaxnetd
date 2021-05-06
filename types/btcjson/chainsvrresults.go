@@ -817,6 +817,7 @@ type TxRawResult struct {
 	Blocktime     int64  `json:"blocktime,omitempty"`
 	ChainName     string `json:"chainName"`
 	CoinbaseTx    bool   `json:"coinbase_tx"`
+	OrphanTx      bool   `json:"orphan_tx"`
 }
 
 // SearchRawTransactionsResult models the data from the searchrawtransaction

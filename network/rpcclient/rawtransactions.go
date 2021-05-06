@@ -103,13 +103,13 @@ func (r FutureGetRawTransactionResult) Receive() (*btcutil.Tx, error) {
 // the returned instance.
 //
 // See GetRawTransaction for the blocking version and more details.
-func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash) FutureGetRawTransactionResult {
+func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash, includeOrphan bool) FutureGetRawTransactionResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.NewGetRawTransactionCmd(hash, btcjson.Int(0))
+	cmd := btcjson.NewGetRawTransactionCmd(hash, btcjson.Int(0), includeOrphan)
 	return c.sendCmd(cmd)
 }
 
@@ -117,11 +117,11 @@ func (c *Client) GetRawTransactionAsync(txHash *chainhash.Hash) FutureGetRawTran
 //
 // See GetRawTransactionVerbose to obtain additional information about the
 // transaction.
-func (c *Client) GetRawTransaction(txHash *chainhash.Hash) (*btcutil.Tx, error) {
-	return c.GetRawTransactionAsync(txHash).Receive()
+func (c *Client) GetRawTransaction(txHash *chainhash.Hash, includeOrphan bool) (*btcutil.Tx, error) {
+	return c.GetRawTransactionAsync(txHash, includeOrphan).Receive()
 }
 
-// FutureGetRawTransactionResult is a future promise to deliver the result of a
+// FutureGetTxDetails is a future promise to deliver the result of a
 // GetRawTransactionAsync RPC invocation (or an applicable error).
 type FutureGetTxDetails chan *response
 
@@ -143,27 +143,27 @@ func (r FutureGetTxDetails) Receive() (*btcjson.TxRawResult, error) {
 
 }
 
-// GetRawTransactionAsync returns an instance of a type that can be used to get
+// GetTxDetailsAsync returns an instance of a type that can be used to get
 // the result of the RPC at some future time by invoking the Receive function on
 // the returned instance.
 //
 // See GetRawTransaction for the blocking version and more details.
-func (c *Client) GetTxDetailsAsync(txHash *chainhash.Hash) FutureGetTxDetails {
+func (c *Client) GetTxDetailsAsync(txHash *chainhash.Hash, includeOrphan bool) FutureGetTxDetails {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := &btcjson.GetTxDetailsCmd{Txid: hash}
+	cmd := &btcjson.GetTxDetailsCmd{Txid: hash, IncludeOrphan: &includeOrphan}
 	return c.sendCmd(cmd)
 }
 
-// GetRawTransaction returns a transaction given its hash.
+// GetTxDetails returns a transaction given its hash.
 //
 // See GetRawTransactionVerbose to obtain additional information about the
 // transaction.
-func (c *Client) GetTxDetails(txHash *chainhash.Hash) (*btcjson.TxRawResult, error) {
-	return c.GetTxDetailsAsync(txHash).Receive()
+func (c *Client) GetTxDetails(txHash *chainhash.Hash, includeOrphan bool) (*btcjson.TxRawResult, error) {
+	return c.GetTxDetailsAsync(txHash, includeOrphan).Receive()
 }
 
 // FutureGetRawTransactionVerboseResult is a future promise to deliver the
@@ -194,13 +194,13 @@ func (r FutureGetRawTransactionVerboseResult) Receive() (*btcjson.TxRawResult, e
 // function on the returned instance.
 //
 // See GetRawTransactionVerbose for the blocking version and more details.
-func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash) FutureGetRawTransactionVerboseResult {
+func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash, includeOrphan bool) FutureGetRawTransactionVerboseResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.NewGetRawTransactionCmd(hash, btcjson.Int(1))
+	cmd := btcjson.NewGetRawTransactionCmd(hash, btcjson.Int(1), includeOrphan)
 	return c.sendCmd(cmd)
 }
 
@@ -208,8 +208,8 @@ func (c *Client) GetRawTransactionVerboseAsync(txHash *chainhash.Hash) FutureGet
 // its hash.
 //
 // See GetRawTransaction to obtain only the transaction already deserialized.
-func (c *Client) GetRawTransactionVerbose(txHash *chainhash.Hash) (*btcjson.TxRawResult, error) {
-	return c.GetRawTransactionVerboseAsync(txHash).Receive()
+func (c *Client) GetRawTransactionVerbose(txHash *chainhash.Hash, includeOrphan bool) (*btcjson.TxRawResult, error) {
+	return c.GetRawTransactionVerboseAsync(txHash, includeOrphan).Receive()
 }
 
 // FutureDecodeRawTransactionResult is a future promise to deliver the result

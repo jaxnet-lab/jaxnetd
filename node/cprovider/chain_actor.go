@@ -79,9 +79,10 @@ type ChainProvider struct {
 
 	// These fields define any optional indexes the RPC Server can make use
 	// of to provide additional data when queried.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
+	TxIndex       *indexers.TxIndex
+	AddrIndex     *indexers.AddrIndex
+	CfIndex       *indexers.CfIndex
+	OrphanTxIndex *indexers.OrphanTxIndex
 
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
@@ -329,13 +330,15 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 		}
 
 		chainProvider.TxIndex = indexers.NewTxIndex(chainProvider.DB)
-		indexes = append(indexes, chainProvider.TxIndex)
+		chainProvider.OrphanTxIndex = indexers.NewOrphanTxIndex(chainProvider.DB)
+		indexes = append(indexes, chainProvider.TxIndex, chainProvider.OrphanTxIndex)
 	}
 	if cfg.AddrIndex {
 		chainProvider.logger.Info().Msg("Address index is enabled")
 		chainProvider.AddrIndex = indexers.NewAddrIndex(chainProvider.DB, chainProvider.ChainCtx.Params())
 		indexes = append(indexes, chainProvider.AddrIndex)
 	}
+
 	if !cfg.NoCFilters {
 		chainProvider.logger.Info().Msg("Committed filter index is enabled")
 		chainProvider.CfIndex = indexers.NewCfIndex(chainProvider.DB, chainProvider.ChainCtx.Params())
