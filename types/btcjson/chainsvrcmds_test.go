@@ -635,7 +635,7 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("getrawtransaction", "123")
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetRawTransactionCmd("123", nil)
+				return btcjson.NewGetRawTransactionCmd("123", nil, false)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getrawtransaction","params":["123"],"id":1}`,
 			unmarshalled: &btcjson.GetRawTransactionCmd{
@@ -646,10 +646,10 @@ func TestChainSvrCmds(t *testing.T) {
 		{
 			name: "getrawtransaction optional",
 			newCmd: func() (interface{}, error) {
-				return btcjson.NewCmd("getrawtransaction", "123", 1)
+				return btcjson.NewCmd("getrawtransaction", "123", 1, false)
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetRawTransactionCmd("123", btcjson.Int(1))
+				return btcjson.NewGetRawTransactionCmd("123", btcjson.Int(1), false)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getrawtransaction","params":["123",1],"id":1}`,
 			unmarshalled: &btcjson.GetRawTransactionCmd{
@@ -663,7 +663,7 @@ func TestChainSvrCmds(t *testing.T) {
 				return btcjson.NewCmd("gettxout", "123", 1)
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetTxOutCmd("123", 1, nil)
+				return btcjson.NewGetTxOutCmd("123", 1, nil, nil)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"gettxout","params":["123",1],"id":1}`,
 			unmarshalled: &btcjson.GetTxOutCmd{
@@ -675,10 +675,10 @@ func TestChainSvrCmds(t *testing.T) {
 		{
 			name: "gettxout optional",
 			newCmd: func() (interface{}, error) {
-				return btcjson.NewCmd("gettxout", "123", 1, true)
+				return btcjson.NewCmd("gettxout", "123", 1, true, true)
 			},
 			staticCmd: func() interface{} {
-				return btcjson.NewGetTxOutCmd("123", 1, btcjson.Bool(true))
+				return btcjson.NewGetTxOutCmd("123", 1, btcjson.Bool(true), btcjson.Bool(true))
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"gettxout","params":["123",1,true],"id":1}`,
 			unmarshalled: &btcjson.GetTxOutCmd{

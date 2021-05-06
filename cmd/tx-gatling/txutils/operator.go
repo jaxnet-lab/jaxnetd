@@ -82,7 +82,7 @@ func (app *Operator) UTXOByHash(txHash string, outIndex uint32, redeemScript str
 	}
 	rawTx, err := app.TxMan.RPC().
 		ForShard(app.TxMan.cfg.ShardID).
-		GetRawTransaction(hash)
+		GetRawTransaction(hash, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get raw tx")
 	}

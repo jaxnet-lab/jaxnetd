@@ -465,7 +465,7 @@ func (c *Client) EstimateFee(numBlocks int64) (float64, error) {
 	return c.EstimateFeeAsync(numBlocks).Receive()
 }
 
-// FutureEstimateFeeResult is a future promise to deliver the result of a
+// FutureEstimateSmartFeeResult is a future promise to deliver the result of a
 // EstimateSmartFeeAsync RPC invocation (or an applicable error).
 type FutureEstimateSmartFeeResult chan *response
 
@@ -500,7 +500,7 @@ func (c *Client) EstimateSmartFee(confTarget int64, mode *btcjson.EstimateSmartF
 	return c.EstimateSmartFeeAsync(confTarget, mode).Receive()
 }
 
-// FutureEstimateFeeResult is a future promise to deliver the result of a
+// FutureGetExtendedFeeResult is a future promise to deliver the result of a
 // EstimateSmartFeeAsync RPC invocation (or an applicable error).
 type FutureGetExtendedFeeResult chan *response
 
@@ -657,20 +657,20 @@ func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, error) {
 // the returned instance.
 //
 // See GetTxOut for the blocking version and more details.
-func (c *Client) GetTxOutAsync(txHash *chainhash.Hash, index uint32, mempool bool) FutureGetTxOutResult {
+func (c *Client) GetTxOutAsync(txHash *chainhash.Hash, index uint32, mempool, orphan bool) FutureGetTxOutResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.NewGetTxOutCmd(hash, index, &mempool)
+	cmd := btcjson.NewGetTxOutCmd(hash, index, &mempool, &orphan)
 	return c.sendCmd(cmd)
 }
 
 // GetTxOut returns the transaction output info if it's unspent and
 // nil, otherwise.
-func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, error) {
-	return c.GetTxOutAsync(txHash, index, mempool).Receive()
+func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool, orphan bool) (*btcjson.GetTxOutResult, error) {
+	return c.GetTxOutAsync(txHash, index, mempool, orphan).Receive()
 }
 
 // FutureListTxOutResult is a future promise to deliver the result of a

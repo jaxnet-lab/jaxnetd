@@ -287,8 +287,12 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	if c.Verbose != nil {
 		verbose = *c.Verbose != 0
 	}
+	includeOrphan := false
+	if c.IncludeOrphan != nil {
+		includeOrphan = *c.IncludeOrphan
+	}
 
-	rawTxn, mtx, err := server.getTxVerbose(txHash, false)
+	rawTxn, mtx, err := server.getTxVerbose(txHash, false, includeOrphan)
 	if err != nil {
 		return nil, err
 	}
@@ -319,8 +323,12 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Txid)
 	}
+	includeOrphan := false
+	if c.IncludeOrphan != nil {
+		includeOrphan = *c.IncludeOrphan
+	}
 
-	rawTxn, _, err := server.getTxVerbose(txHash, true)
+	rawTxn, _, err := server.getTxVerbose(txHash, true, includeOrphan)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +337,7 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 }
 
 // handleSendRawTransaction implements the sendrawtransaction command.
-func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, detailedIn bool) (*txInfo, error) {
+func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, orphan bool) (*txInfo, error) {
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err == nil {
 		return &txInfo{
@@ -349,12 +357,21 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, detailedIn bool) (*t
 
 	// Look up the location of the transaction.
 	blockRegion, err := server.chainProvider.TxIndex.TxBlockRegion(txHash)
-	if err != nil {
+	switch {
+	case err != nil:
 		context := "Failed to retrieve transaction location"
 		return nil, server.InternalRPCError(err.Error(), context)
-	}
-	if blockRegion == nil {
+	case blockRegion == nil && !orphan:
 		return nil, rpcNoTxInfoError(txHash)
+	case blockRegion == nil && orphan:
+		blockRegion, err = server.chainProvider.OrphanTxIndex.TxBlockRegion(txHash)
+		switch {
+		case err != nil:
+			context := "Failed to retrieve orphan transaction location"
+			return nil, server.InternalRPCError(err.Error(), context)
+		case blockRegion == nil:
+			return nil, rpcNoTxInfoError(txHash)
+		}
 	}
 
 	// Load the raw transaction bytes from the database.
@@ -371,9 +388,12 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, detailedIn bool) (*t
 	// Grab the block height.
 	blkHash := blockRegion.Hash
 	blkHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
-	if err != nil {
+	switch {
+	case err != nil && !orphan:
 		context := "Failed to retrieve block height"
 		return nil, server.InternalRPCError(err.Error(), context)
+	case err != nil && orphan:
+		blkHeight = -1
 	}
 
 	// Deserialize the transaction
@@ -388,6 +408,7 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, detailedIn bool) (*t
 		tx:        &msgTx,
 		blkHash:   blkHash,
 		blkHeight: blkHeight,
+		isOrphan:  orphan,
 	}, nil
 }
 
@@ -395,10 +416,12 @@ type txInfo struct {
 	tx        *wire.MsgTx
 	blkHash   *chainhash.Hash
 	blkHeight int32
+	isOrphan  bool
 }
 
-func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool) (*btcjson.TxRawResult, *wire.MsgTx, error) {
-	txInfo, err := server.getTx(txHash, true)
+func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool,
+	includeOrphan bool) (*btcjson.TxRawResult, *wire.MsgTx, error) {
+	txInfo, err := server.getTx(txHash, includeOrphan)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -407,7 +430,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 	var blkHeader wire.BlockHeader
 	var blkHashStr string
 	var chainHeight int32
-	if txInfo.blkHash != nil {
+	if txInfo.blkHash != nil && !txInfo.isOrphan {
 		// Fetch the header from BlockChain.
 		header, err := server.chainProvider.BlockChain().HeaderByHash(txInfo.blkHash)
 		if err != nil {
@@ -434,7 +457,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				hashStr = in.Txid
 			}
 			hash, _ := chainhash.NewHashFromStr(hashStr)
-			txInfo, err := server.getTx(hash, true)
+			txInfo, err := server.getTx(hash, includeOrphan)
 			if err != nil {
 				return nil, nil, err
 			}
