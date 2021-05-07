@@ -110,7 +110,7 @@ func TestMakeMultiSigScript(ot *testing.T) {
 
 	// publish created transaction
 
-	txHash, err := op.TxMan.RPC().ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX, true)
+	txHash, err := op.TxMan.RPC().ForShard(shardID).SendRawTransaction(toMultiSigAddrTx.RawTX)
 	assert.NoError(t, err)
 	// 49ca5764af92b2f744ac5d8b10fdb349b5d7f8c8351cfa1bd27163fffcb0571c
 waitLoop:
@@ -165,7 +165,7 @@ waitLoop:
 
 	// ---/---- SUBMIT MULTI SIG UTXO TX ----\----
 	// publish created transaction
-	txHash, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX, true)
+	txHash, err = op.TxMan.RPC().ForShard(shardID).SendRawTransaction(multiSigSpendTx.RawTX)
 	assert.NoError(t, err)
 
 	for {
@@ -207,12 +207,12 @@ func TestSendTx(ot *testing.T) {
 	signedTx := &txmodels.SwapTransaction{}
 	err = signedTx.UnmarshalBinary(data)
 	assert.NoError(t, err)
-	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX)
 	assert.NoError(t, err)
 	fmt.Printf("Submitted to first shard: %s\n", signedTx.TxHash)
 
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX, true)
+	_, err = op.TxMan.RPC().ForShard(1).SendRawTransaction(signedTx.RawTX)
 	assert.NoError(t, err)
 	fmt.Printf("Submitted to second shard: %s\n", signedTx.TxHash)
 
@@ -278,12 +278,12 @@ func TestMakeSwapTx(ot *testing.T) {
 
 	// ---/---- SUBMIT Shards Swap TX to 1st Shard ----\----
 	// publish created transaction
-	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX)
 	assert.NoError(t, err)
 	fmt.Printf("Submitted to first shard: %s\n", swapTX.TxHash)
 
 	// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+	txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX)
 	assert.NoError(t, err)
 	fmt.Printf("Submitted to second shard: %s\n", swapTX.TxHash)
 
@@ -459,12 +459,12 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	fmt.Println(" SUBMIT Shards Swap TX")
 	{
 		// publish created transaction
-		txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+		txHash, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).SendRawTransaction(swapTX.RawTX)
 		assert.NoError(t, err)
 		fmt.Printf("Submitted to first shard: %s\n", swapTX.TxHash)
 
 		// ---/---- SUBMIT Shards Swap TX to 2nd Shard ----\----
-		txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX, true)
+		txHash, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).SendRawTransaction(swapTX.RawTX)
 		assert.NoError(t, err)
 		fmt.Printf("Submitted to second shard: %s\n", swapTX.TxHash)
 
@@ -622,7 +622,7 @@ func TestEADRegistration(ot *testing.T) {
 			NewEADRegistrationTx(5, &senderUTXOIndex, scripts...)
 		assert.NoError(t, err)
 
-		_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
+		_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX)
 		assert.NoError(t, err)
 
 		fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)
@@ -703,7 +703,7 @@ func TestEAD(ot *testing.T) {
 				NewEADRegistrationTx(5, &senderUTXOIndex, scripts...)
 			assert.NoError(t, err)
 
-			_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX, true)
+			_, err = op.TxMan.RPC().ForBeacon().SendRawTransaction(tx.RawTX)
 			assert.NoError(t, err)
 
 			fmt.Printf("Sent tx %s at shard %d\n", tx.TxHash, shardID)

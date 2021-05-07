@@ -343,7 +343,7 @@ func (r FutureSendRawTransactionResult) Receive() (*chainhash.Hash, error) {
 // the returned instance.
 //
 // See SendRawTransaction for the blocking version and more details.
-func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) FutureSendRawTransactionResult {
+func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx) FutureSendRawTransactionResult {
 	txHex := ""
 	if tx != nil {
 		// Serialize the transaction and convert to hex string.
@@ -357,35 +357,35 @@ func (c *Client) SendRawTransactionAsync(tx *wire.MsgTx, allowHighFees bool) Fut
 	// Due to differences in the sendrawtransaction API for different
 	// backends, we'll need to inspect our version and construct the
 	// appropriate request.
-	version, err := c.ForShard(shardID).BackendVersion()
-	if err != nil {
-		return newFutureError(err)
-	}
-
-	var cmd *btcjson.SendRawTransactionCmd
-	switch version {
-	// Starting from bitcoind v0.19.0, the MaxFeeRate field should be used.
-	case BitcoindPost19:
-		// Using a 0 MaxFeeRate is interpreted as a maximum fee rate not
-		// being enforced by bitcoind.
-		var maxFeeRate int32
-		if !allowHighFees {
-			maxFeeRate = defaultMaxFeeRate
-		}
-		cmd = btcjson.NewBitcoindSendRawTransactionCmd(txHex, maxFeeRate)
-
-	// Otherwise, use the AllowHighFees field.
-	default:
-		cmd = btcjson.NewSendRawTransactionCmd(txHex, &allowHighFees)
-	}
+	// version, err := c.ForShard(shardID).BackendVersion()
+	// if err != nil {
+	// 	return newFutureError(err)
+	// }
+	//
+	// var cmd *btcjson.SendRawTransactionCmd
+	// switch version {
+	// // Starting from bitcoind v0.19.0, the MaxFeeRate field should be used.
+	// case BitcoindPost19:
+	// 	// Using a 0 MaxFeeRate is interpreted as a maximum fee rate not
+	// 	// being enforced by bitcoind.
+	// 	var maxFeeRate int32
+	// 	if !allowHighFees {
+	// 		maxFeeRate = defaultMaxFeeRate
+	// 	}
+	// 	cmd = btcjson.NewBitcoindSendRawTransactionCmd(txHex, maxFeeRate)
+	//
+	// // Otherwise, use the AllowHighFees field.
+	// default:
+	cmd := btcjson.NewSendRawTransactionCmd(txHex, btcjson.Bool(true))
+	// }
 
 	return c.ForShard(shardID).sendCmd(cmd)
 }
 
 // SendRawTransaction submits the encoded transaction to the server which will
 // then relay it to the network.
-func (c *Client) SendRawTransaction(tx *wire.MsgTx, allowHighFees bool) (*chainhash.Hash, error) {
-	return c.SendRawTransactionAsync(tx, allowHighFees).Receive()
+func (c *Client) SendRawTransaction(tx *wire.MsgTx) (*chainhash.Hash, error) {
+	return c.SendRawTransactionAsync(tx).Receive()
 }
 
 // FutureSignRawTransactionResult is a future promise to deliver the result

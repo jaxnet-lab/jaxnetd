@@ -162,7 +162,7 @@ func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string,
 	if tx == nil || tx.RawTX == nil {
 		return "", errors.New("tx empty")
 	}
-	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to publish new tx")
 	}
