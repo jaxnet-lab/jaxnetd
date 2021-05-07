@@ -116,7 +116,7 @@ func TestMakeMultiSigScript(ot *testing.T) {
 waitLoop:
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 1 {
 			fmt.Println("tx mined into block")
@@ -170,7 +170,7 @@ waitLoop:
 
 	for {
 		// wait for the transaction to be added to the block
-		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false)
+		out, err := op.TxMan.RPC().ForShard(shardID).GetTxOut(txHash, 0, false, false)
 		assert.NoError(t, err)
 		if out != nil && out.Confirmations > 2 {
 			println("tx mined into block")
@@ -290,9 +290,9 @@ func TestMakeSwapTx(ot *testing.T) {
 	var firstDone, secondDone bool
 	for {
 		// wait for the transaction to be added to the block
-		firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false)
+		firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false, false)
 		assert.NoError(t, err)
-		secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false)
+		secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false, false)
 		assert.NoError(t, err)
 
 		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
@@ -301,9 +301,9 @@ func TestMakeSwapTx(ot *testing.T) {
 		}
 
 		// wait for the transaction to be added to the block
-		firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+		firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false, false)
 		assert.NoError(t, err)
-		secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false)
+		secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false, false)
 		assert.NoError(t, err)
 
 		if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
@@ -471,9 +471,9 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 		var firstDone, secondDone bool
 		for {
 			// wait for the transaction to be added to the block
-			firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false)
+			firstOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 0, false, false)
 			assert.NoError(t, err)
-			secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false)
+			secondOut, err := op.TxMan.RPC().ForShard(shard1UTXO.ShardID).GetTxOut(txHash, 1, false, false)
 			assert.NoError(t, err)
 
 			if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
@@ -482,9 +482,9 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 			}
 
 			// wait for the transaction to be added to the block
-			firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false)
+			firstOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 0, false, false)
 			assert.NoError(t, err)
-			secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false)
+			secondOut, err = op.TxMan.RPC().ForShard(shard2UTXO.ShardID).GetTxOut(txHash, 1, false, false)
 			assert.NoError(t, err)
 
 			if (firstOut != nil && firstOut.Confirmations > 2) || (secondOut != nil && secondOut.Confirmations > 2) {
@@ -752,7 +752,7 @@ func TestEADSpend(ot *testing.T) {
 
 	rawHash := "8cfd9e761fac9e81d308a11d29b66f86e1e46c1e6411291fd8a56a2943b085c6"
 	hash, _ := chainhash.NewHashFromStr("8cfd9e761fac9e81d308a11d29b66f86e1e46c1e6411291fd8a56a2943b085c6")
-	txOut, err := op.TxMan.RPC().GetTxOut(hash, 0, false)
+	txOut, err := op.TxMan.RPC().GetTxOut(hash, 0, false, false)
 	assert.NoError(t, err)
 
 	utxo := SingleUTXO{
@@ -812,9 +812,9 @@ func TestTxValidation(ot *testing.T) {
 		assert.Equal(ot, 80, in.Sequence)
 
 		fmt.Println(in.PreviousOutPoint.Hash.String(), in.PreviousOutPoint.Index)
-		txOut, err := client.ForShard(1).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true)
+		txOut, err := client.ForShard(1).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true, false)
 		if err != nil || txOut == nil {
-			txOut, err = client.ForShard(2).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true)
+			txOut, err = client.ForShard(2).GetTxOut(&in.PreviousOutPoint.Hash, in.PreviousOutPoint.Index, true, false)
 		}
 		assert.NoError(t, err)
 		assert.NotNil(t, txOut)

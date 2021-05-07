@@ -89,6 +89,9 @@ func (ctrl *DBCtl) cleanIndexes(ctx context.Context, cfg *Config, db database.DB
 		if err := indexers.DropTxIndex(db, ctx.Done()); err != nil {
 			return cleanPerformed, err
 		}
+		if err := indexers.DropOrphanTxIndex(db, ctx.Done()); err != nil {
+			return cleanPerformed, err
+		}
 	}
 
 	if cfg.DropCfIndex {

@@ -569,12 +569,14 @@ func NewGetRawMempoolCmd(verbose *bool) *GetRawMempoolCmd {
 // NOTE: This field is an int versus a bool to remain compatible with Bitcoin
 // Core even though it really should be a bool.
 type GetRawTransactionCmd struct {
-	Txid    string
-	Verbose *int `jsonrpcdefault:"0"`
+	Txid          string
+	Verbose       *int  `jsonrpcdefault:"0"`
+	IncludeOrphan *bool `jsonrpcdefault:"false"`
 }
 
 type GetTxDetailsCmd struct {
-	Txid string
+	Txid          string
+	IncludeOrphan *bool `jsonrpcdefault:"true"`
 }
 
 // NewGetRawTransactionCmd returns a new instance which can be used to issue a
@@ -582,10 +584,11 @@ type GetTxDetailsCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewGetRawTransactionCmd(txHash string, verbose *int) *GetRawTransactionCmd {
+func NewGetRawTransactionCmd(txHash string, verbose *int, includeOrphan bool) *GetRawTransactionCmd {
 	return &GetRawTransactionCmd{
-		Txid:    txHash,
-		Verbose: verbose,
+		Txid:          txHash,
+		Verbose:       verbose,
+		IncludeOrphan: &includeOrphan,
 	}
 }
 
@@ -594,6 +597,7 @@ type GetTxOutCmd struct {
 	Txid           string
 	Vout           uint32
 	IncludeMempool *bool `jsonrpcdefault:"true"`
+	IncludeOrphan  *bool `jsonrpcdefault:"false"`
 }
 
 // NewGetTxOutCmd returns a new instance which can be used to issue a gettxout
@@ -601,11 +605,12 @@ type GetTxOutCmd struct {
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
-func NewGetTxOutCmd(txHash string, vout uint32, includeMempool *bool) *GetTxOutCmd {
+func NewGetTxOutCmd(txHash string, vout uint32, includeMempool, includeOrphan *bool) *GetTxOutCmd {
 	return &GetTxOutCmd{
 		Txid:           txHash,
 		Vout:           vout,
 		IncludeMempool: includeMempool,
+		IncludeOrphan:  includeOrphan,
 	}
 }
 
@@ -616,7 +621,7 @@ func NewListTxOutCmd() *ListTxOutCmd {
 	return &ListTxOutCmd{}
 }
 
-// ListEADAddresses defines the ListEADAddresses JSON-RPC command.
+// ListEADAddressesCmd defines the ListEADAddresses JSON-RPC command.
 type ListEADAddressesCmd struct {
 	Shards       []uint32
 	EadPublicKey *string

@@ -184,7 +184,7 @@ func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, _ uin
 			return errors.New("tx waiting deadline")
 		default:
 			// wait for the transaction to be added to the block
-			txDetails, err := rpcClient.ForShard(shardID).GetRawTransactionVerbose(hash)
+			txDetails, err := rpcClient.ForShard(shardID).GetRawTransactionVerbose(hash, false)
 			if err != nil {
 				time.Sleep(time.Second)
 				continue
