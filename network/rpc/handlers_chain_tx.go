@@ -457,11 +457,17 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				hashStr = in.Txid
 			}
 			hash, _ := chainhash.NewHashFromStr(hashStr)
-			txInfo, err := server.getTx(hash, includeOrphan)
-			if err != nil {
-				return nil, nil, err
+			parentTx, err := server.getTx(hash, includeOrphan)
+			switch {
+			case err != nil && !txInfo.tx.SwapTx():
+				context := fmt.Sprintf("missing details of parent for tx(%s)", txInfo.tx.TxHash().String())
+				return nil, nil, server.InternalRPCError(err.Error(), context)
+			case err != nil && txInfo.tx.SwapTx():
+				// ingore missed parent for for swap tx
+				continue
 			}
-			out := txInfo.tx.TxOut[in.Vout]
+
+			out := parentTx.tx.TxOut[in.Vout]
 			if out == nil {
 				continue
 			}
