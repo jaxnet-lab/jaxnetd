@@ -789,7 +789,7 @@ func NewSendRawTransactionCmd(hexTx string, allowHighFees *bool) *SendRawTransac
 	}
 }
 
-// NewSendRawTransactionCmd returns a new instance which can be used to issue a
+// NewBitcoindSendRawTransactionCmd returns a new instance which can be used to issue a
 // sendrawtransaction JSON-RPC command to a bitcoind node.
 //
 // A 0 maxFeeRate indicates that a maximum fee rate won't be enforced.
@@ -994,6 +994,7 @@ func init() {
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxDetails", (*GetTxDetailsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
+	MustRegisterCmd("chain", "getTxOutsStatus", (*GetTxOutStatus)(nil), flags)
 	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)
 	MustRegisterCmd("chain", "sendRawTransaction", (*SendRawTransactionCmd)(nil), flags)

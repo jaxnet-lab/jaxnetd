@@ -335,7 +335,7 @@ func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -384,7 +384,7 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 	fmt.Printf("Add signature to Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -426,7 +426,7 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	fmt.Printf("Craft new Tx\nHash: %s\nBody: %s\n", tx.TxHash, tx.SignedTx)
 
 	if send {
-		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX, true)
+		_, err = app.TxMan.RPC().ForShard(app.shardID).SendRawTransaction(tx.RawTX)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "tx not sent"), 1)
 		}
@@ -501,7 +501,7 @@ func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, des
 	if tx == nil || tx.RawTX == nil {
 		return "", errors.New("tx empty")
 	}
-	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX, true)
+	_, err = txMan.RPC().ForShard(shardID).SendRawTransaction(tx.RawTX)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to publish new tx")
 	}

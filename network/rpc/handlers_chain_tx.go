@@ -708,6 +708,104 @@ func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, incl
 	return txOutReply, nil
 }
 
+type txOut struct {
+	txHash chainhash.Hash
+	vout   uint32
+}
+
+// handleGetTxOut handles gettxout commands.
+func (server *CommonChainRPC) handleGetTxOutsStatus(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*btcjson.GetTxOutStatus)
+	onlyMempool := true
+	if c.OnlyMempool != nil {
+		onlyMempool = *c.OnlyMempool
+	}
+
+	filter := map[txOut]bool{}
+	for _, out := range c.Outs {
+		// Convert the provided transaction hash hex to a Hash.
+		txHash, err := chainhash.NewHashFromStr(out.TxHash)
+		if err != nil {
+			return nil, rpcDecodeHexError(out.TxHash)
+		}
+
+		filter[txOut{txHash: *txHash, vout: out.Index}] = false
+	}
+
+	return server.getTxOutStatus(filter, onlyMempool)
+}
+
+// getTxOutStatus handles getTxOutStatus commands.
+func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool bool) ([]btcjson.TxOutStatus, error) {
+	result := make([]btcjson.TxOutStatus, 0, len(filter))
+	for _, txDesc := range server.chainProvider.TxMemPool.MiningDescs() {
+		for _, in := range txDesc.Tx.MsgTx().TxIn {
+			_, ok := filter[txOut{
+				txHash: in.PreviousOutPoint.Hash,
+				vout:   in.PreviousOutPoint.Index,
+			}]
+			if !ok {
+				continue
+			}
+
+			result = append(result, btcjson.TxOutStatus{
+				OutTxHash: in.PreviousOutPoint.Hash.String(),
+				OutIndex:  in.PreviousOutPoint.Index,
+				IsSpent:   true,
+				InMempool: true,
+			})
+
+			filter[txOut{txHash: in.PreviousOutPoint.Hash, vout: in.PreviousOutPoint.Index}] = true
+		}
+	}
+
+	if onlyMempool {
+		for out, found := range filter {
+			if found {
+				continue
+			}
+
+			result = append(result, btcjson.TxOutStatus{
+				OutTxHash: out.txHash.String(),
+				OutIndex:  out.vout,
+				Found:     false,
+				IsSpent:   false,
+				InMempool: false,
+			})
+		}
+		return result, nil
+	}
+
+	for out, found := range filter {
+		if found {
+			continue
+		}
+
+		entry, err := server.chainProvider.BlockChain().
+			FetchUtxoEntry(wire.OutPoint{Hash: out.txHash, Index: out.vout})
+		if err != nil || entry == nil {
+			result = append(result, btcjson.TxOutStatus{
+				OutTxHash: out.txHash.String(),
+				OutIndex:  out.vout,
+				Found:     false,
+				IsSpent:   false,
+				InMempool: false,
+			})
+			continue
+		}
+
+		result = append(result, btcjson.TxOutStatus{
+			OutTxHash: out.txHash.String(),
+			OutIndex:  out.vout,
+			Found:     true,
+			InMempool: false,
+			IsSpent:   entry.IsSpent(),
+		})
+	}
+
+	return result, nil
+}
+
 // handleListTxOut handles listtxout commands.
 func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	_ = cmd.(*btcjson.ListTxOutCmd)

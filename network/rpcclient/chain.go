@@ -673,6 +673,41 @@ func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool, orphan 
 	return c.GetTxOutAsync(txHash, index, mempool, orphan).Receive()
 }
 
+type FutureGetTxOutStatusResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetTxOutStatusResult) Receive() ([]btcjson.TxOutStatus, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettxout result object.
+	var result = make([]btcjson.TxOutStatus, 0)
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *Client) GetTxOutStatusAsync(outs []btcjson.TxOutKey, onlyMempool bool) FutureGetTxOutStatusResult {
+	cmd := &btcjson.GetTxOutStatus{Outs: outs, OnlyMempool: &onlyMempool}
+	return c.sendCmd(cmd)
+}
+
+func (c *Client) GetTxOutStatus(outs []btcjson.TxOutKey, onlyMempool bool) ([]btcjson.TxOutStatus, error) {
+	return c.GetTxOutStatusAsync(outs, onlyMempool).Receive()
+}
+
 // FutureListTxOutResult is a future promise to deliver the result of a
 // GetTxOutAsync RPC invocation (or an applicable error).
 type FutureListTxOutResult chan *response

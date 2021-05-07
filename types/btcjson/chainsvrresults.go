@@ -546,7 +546,25 @@ type GetTxOutResult struct {
 	IsSpent       bool               `json:"isSpent"`
 }
 
-// GetTxOutResult models the data from the gettxout command.
+type GetTxOutStatus struct {
+	Outs        []TxOutKey
+	OnlyMempool *bool `jsonrpcdefault:"true"`
+}
+
+type TxOutKey struct {
+	TxHash string `json:"outTxHash"`
+	Index  uint32 `json:"outIndex"`
+}
+
+type TxOutStatus struct {
+	OutTxHash string `json:"outTxHash"`
+	OutIndex  uint32 `json:"outIndex"`
+	Found     bool   `json:"found"`
+	IsSpent   bool   `json:"isSpent"`
+	InMempool bool   `json:"isMempool"`
+}
+
+// ExtendedTxOutResult models the data from the gettxout command.
 type ExtendedTxOutResult struct {
 	TxHash        string             `json:"txHash"`
 	Index         uint32             `json:"index"`
