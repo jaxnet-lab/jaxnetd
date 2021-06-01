@@ -1112,3 +1112,40 @@ func (c *Client) GetLastSerialBlockNumberAsync() FutureGetLastSerialBlockNumberR
 func (c *Client) GetLastSerialBlockNumber() (int64, error) {
 	return c.GetLastSerialBlockNumberAsync().Receive()
 }
+
+// FutureGetBlockTxOpsResult is a future promise to deliver the result of a
+// GetBlockTxOps RPC invocation (or an applicable error).
+type FutureGetBlockTxOpsResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetBlockTxOpsResult) Receive() (*btcjson.BlockTxOperations, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as an getblocktxops result object.
+	listTxOut := &btcjson.BlockTxOperations{}
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// GetBlockTxOperationsAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetBlockTxOperations for the blocking version and more details.
+func (c *Client) GetBlockTxOperationsAsync(blockHash *chainhash.Hash) FutureGetBlockTxOpsResult {
+	return c.sendCmd(&btcjson.GetBlockTxOpsCmd{BlockHash: blockHash.String()})
+}
+
+// GetBlockTxOperations returns the transaction output info if it's unspent and
+// nil, otherwise.
+func (c *Client) GetBlockTxOperations(blockHash *chainhash.Hash) (*btcjson.BlockTxOperations, error) {
+	return c.GetBlockTxOperationsAsync(blockHash).Receive()
+}

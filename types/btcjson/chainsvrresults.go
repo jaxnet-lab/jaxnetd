@@ -926,3 +926,28 @@ type GetShardBlockResult struct {
 	SerialID     int64  `json:"serial_id"`
 	PrevSerialID int64  `json:"prev_serial_id"`
 }
+
+type TxOperation struct {
+	Input        bool     `json:"input"`        // indicates is this tx input or output
+	PkScript     string   `json:"pkScript"`     // hex encoded pkScript
+	Addresses    []string `json:"addresses"`    // list of addresses extracted from pkScript
+	Idx          uint32   `json:"idx"`          // serial number of input in tx or output if !input
+	Amount       int64    `json:"amount"`       // amount of coins in satoshi
+	TxHash       string   `json:"txHash"`       // hash of this tx
+	TxIndex      uint32   `json:"txIndex"`      // serial number of tx in block
+	Coinbase     bool     `json:"coinbase"`     // indicates is this coinbase tx
+	OriginTxHash string   `json:"originTxHash"` // not empty if input; tx hash of parent utxo
+	OriginIdx    uint32   `json:"originIdx"`    // not empty if input; serial number of output in tx if input
+}
+
+type BlockTxOperations struct {
+	BlockHash     string        `json:"blockHash"`
+	BlockHeight   int64         `json:"blockHeight"`
+	Confirmations int64         `json:"confirmations"`
+	Ops           []TxOperation `json:"ops"`
+}
+
+// GetBlockTxOpsCmd defines the getblocktxops JSON-RPC command.
+type GetBlockTxOpsCmd struct {
+	BlockHash string `json:"blockHash"`
+}

@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpc
 
 import (
@@ -81,7 +82,6 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	return res, nil
 }
 
-// estimatesmartfee
 func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	var err error
 	result := btcjson.ExtendedFeeFeeResult{}
@@ -807,6 +807,122 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 			InMempool: false,
 			IsSpent:   entry.IsSpent(),
 		})
+	}
+
+	return result, nil
+}
+
+// handleGetBlockTxOps handles getblocktxops commands.
+func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan struct{}) (interface{}, error) {
+	c := cmd.(*btcjson.GetBlockTxOpsCmd)
+
+	// Convert the provided block hash hex to a Hash.
+	hash, err := chainhash.NewHashFromStr(c.BlockHash)
+	if err != nil {
+		return nil, rpcDecodeHexError(c.BlockHash)
+	}
+
+	var blkBytes []byte
+	err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		var err error
+		blkBytes, err = dbTx.FetchBlock(hash)
+		return err
+	})
+	if err != nil {
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCBlockNotFound,
+			Message: "Block not found",
+		}
+	}
+
+	// Deserialize the block.
+	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.ChainCtx, blkBytes)
+	if err != nil {
+		context := "Failed to deserialize block"
+		return nil, server.InternalRPCError(err.Error(), context)
+	}
+
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	var confirmations int64
+	// Get the block height from BlockChain.
+	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
+	if err != nil {
+		blockHeight = -1
+		confirmations = -1
+	} else {
+		confirmations = int64(best.Height - blockHeight)
+	}
+
+	blk.SetHeight(blockHeight)
+	txs := blk.Transactions()
+	result := btcjson.BlockTxOperations{
+		BlockHash:     c.BlockHash,
+		BlockHeight:   int64(blockHeight),
+		Confirmations: confirmations,
+		Ops:           make([]btcjson.TxOperation, 0, len(txs)*2),
+	}
+
+	for txId, tx := range txs {
+		coinbase := chaindata.IsCoinBase(tx)
+
+		for outId, out := range tx.MsgTx().TxOut {
+			_, addrr, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, server.chainProvider.ChainParams)
+			addresses := make([]string, 0, len(addrr))
+			for _, adr := range addrr {
+				addresses = append(addresses, adr.EncodeAddress())
+			}
+
+			op := btcjson.TxOperation{
+				Input:        false,
+				PkScript:     hex.EncodeToString(out.PkScript),
+				Addresses:    addresses,
+				Idx:          uint32(outId),
+				Amount:       out.Value,
+				TxHash:       tx.Hash().String(),
+				TxIndex:      uint32(txId),
+				Coinbase:     coinbase,
+				OriginTxHash: tx.Hash().String(),
+				OriginIdx:    uint32(outId),
+			}
+
+			result.Ops = append(result.Ops, op)
+		}
+
+		if chaindata.IsCoinBase(tx) {
+			continue
+		}
+
+		for inId, in := range tx.MsgTx().TxIn {
+			parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true)
+			if err != nil {
+				context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, tx.Hash().String())
+				err = rpcNoTxInfoError(&in.PreviousOutPoint.Hash)
+				return nil, server.InternalRPCError(err.Error(), context)
+			}
+
+			out := parentTx.tx.TxOut[in.PreviousOutPoint.Index]
+			_, addrr, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, server.chainProvider.ChainParams)
+			addresses := make([]string, 0, len(addrr))
+			for _, adr := range addrr {
+				addresses = append(addresses, adr.EncodeAddress())
+			}
+			op := btcjson.TxOperation{
+				Input:        true,
+				PkScript:     hex.EncodeToString(out.PkScript),
+				Addresses:    addresses,
+				Idx:          uint32(inId),
+				Amount:       out.Value,
+				TxHash:       tx.Hash().String(),
+				TxIndex:      uint32(txId),
+				Coinbase:     false,
+				OriginTxHash: in.PreviousOutPoint.Hash.String(),
+				OriginIdx:    in.PreviousOutPoint.Index,
+			}
+
+			result.Ops = append(result.Ops, op)
+
+		}
+
 	}
 
 	return result, nil

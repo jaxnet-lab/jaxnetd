@@ -996,6 +996,7 @@ func init() {
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOutsStatus", (*GetTxOutStatus)(nil), flags)
 	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
+	MustRegisterCmd("chain", "getBlockTxOps", (*GetBlockTxOpsCmd)(nil), flags)
 	MustRegisterCmd("chain", "searchRawTransactions", (*SearchRawTransactionsCmd)(nil), flags)
 	MustRegisterCmd("chain", "sendRawTransaction", (*SendRawTransactionCmd)(nil), flags)
 
