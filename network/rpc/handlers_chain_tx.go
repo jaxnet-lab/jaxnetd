@@ -463,7 +463,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				context := fmt.Sprintf("missing details of parent for tx(%s)", txInfo.tx.TxHash().String())
 				return nil, nil, server.InternalRPCError(err.Error(), context)
 			case err != nil && txInfo.tx.SwapTx():
-				// ingore missed parent for for swap tx
+				// ignore missed parent for for swap tx
 				continue
 			}
 
@@ -894,10 +894,14 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 
 		for inId, in := range tx.MsgTx().TxIn {
 			parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true)
-			if err != nil {
+			switch {
+			case err != nil && !tx.MsgTx().SwapTx():
 				context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, tx.Hash().String())
 				err = rpcNoTxInfoError(&in.PreviousOutPoint.Hash)
 				return nil, server.InternalRPCError(err.Error(), context)
+			case err != nil && tx.MsgTx().SwapTx():
+				// ignore missed parent for for swap tx
+				continue
 			}
 
 			out := parentTx.tx.TxOut[in.PreviousOutPoint.Index]
