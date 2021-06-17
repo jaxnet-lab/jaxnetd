@@ -17,6 +17,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/encoder"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
@@ -220,10 +221,11 @@ type BlockTemplate struct {
 	WitnessCommitment []byte
 }
 
-type BlockTxsCollection struct {
+type blockTxsCollection struct {
 	BlockTxns         []*btcutil.Tx
 	BlockWeight       uint32
 	TotalFees         int64
+	Reward            int64
 	BlockSigOpCost    int64
 	WitnessCommitment []byte
 	TxFees            []int64
@@ -245,23 +247,29 @@ func mergeUtxoView(viewA *chaindata.UtxoViewpoint, viewB *chaindata.UtxoViewpoin
 	}
 }
 
-// standardCoinbaseScript returns a standard script suitable for use as the
+// StandardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
-func standardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, error) {
+func StandardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, error) {
 	return txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
 		AddInt64(int64(extraNonce)).AddData([]byte(CoinbaseFlags)).
 		Script()
 }
 
-// createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
+// CreateCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
+func CreateCoinbaseTx(value int64, nextHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
+	extraNonce := uint64(0)
+	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create the script to pay to the provided payment address if one was
 	// specified.  Otherwise create a script that allows the coinbase to be
 	// redeemable by anyone.
@@ -285,15 +293,47 @@ func createCoinbaseTx(params *chaincfg.Params, coinbaseScript []byte, nextBlockH
 	tx.AddTxIn(&wire.TxIn{
 		// Coinbase transactions have no inputs, so previous outpoint is
 		// zero hash and max index.
-		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{},
-			wire.MaxPrevOutIndex),
-		SignatureScript: coinbaseScript,
-		Sequence:        wire.MaxTxInSequenceNum,
+		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{}, wire.MaxPrevOutIndex),
+		SignatureScript:  coinbaseScript,
+		Sequence:         wire.MaxTxInSequenceNum,
 	})
-	tx.AddTxOut(&wire.TxOut{
-		Value:    chaindata.CalcBlockSubsidy(nextBlockHeight, params),
-		PkScript: pkScript,
+
+	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
+	return btcutil.NewTx(tx), nil
+}
+
+func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32, addr btcutil.Address, burnReward bool) (*btcutil.Tx, error) {
+	extraNonce := uint64(0)
+	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
+	if err != nil {
+		return nil, err
+	}
+
+	feeAddress, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		feeAddress, _ = txscript.NewScriptBuilder().AddOp(txscript.OP_TRUE).Script()
+	}
+
+	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
+	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
+
+	var pkScript = feeAddress
+	if burnReward {
+		pkScript = jaxBurn
+	}
+
+	tx := wire.NewMsgTx(wire.TxVersion)
+	tx.AddTxIn(&wire.TxIn{
+		// Coinbase transactions have no inputs, so previous outpoint is
+		// zero hash and max index.
+		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{}, wire.MaxPrevOutIndex),
+		SignatureScript:  coinbaseScript,
+		Sequence:         wire.MaxTxInSequenceNum,
 	})
+
+	tx.AddTxOut(&wire.TxOut{Value: 0, PkScript: jaxNetLink})
+	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
+	tx.AddTxOut(&wire.TxOut{Value: fee, PkScript: feeAddress})
 	return btcutil.NewTx(tx), nil
 }
 
@@ -445,12 +485,12 @@ func NewBlkTmplGenerator(policy *Policy,
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
 
-func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*BlockTemplate, error) {
+func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, burnReward int) (*BlockTemplate, error) {
 	// fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
 	best := g.blockChain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
-	txsCollection, err := g.CollectTxsForBlock(payToAddress, nextBlockHeight)
+	txsCollection, err := g.collectTxsForBlock(payToAddress, nextBlockHeight, burnReward)
 	if err != nil {
 		return nil, err
 	}
@@ -475,15 +515,11 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
 	var msgBlock = g.chainCtx.EmptyBlock()
-
-	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(
-		nextBlockVersion,
-		best.Hash,
-		*merkles[len(merkles)-1],
-		ts,
-		reqDifficulty,
-		0,
-	)
+	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(nextBlockVersion,
+		best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, tx := range txsCollection.BlockTxns {
 		if err := msgBlock.AddTransaction(tx.MsgTx()); err != nil {
@@ -515,7 +551,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	}, nil
 }
 
-func (g *BlkTmplGenerator) CollectTxsForBlock(payToAddress btcutil.Address, nextHeight int32) (*BlockTxsCollection, error) {
+func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress btcutil.Address, nextHeight int32, burnRewardFlags int) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -524,13 +560,18 @@ func (g *BlkTmplGenerator) CollectTxsForBlock(payToAddress btcutil.Address, next
 	// ensure the transaction is not a duplicate transaction (paying the
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
-	extraNonce := uint64(0)
-	coinbaseScript, err := standardCoinbaseScript(nextHeight, extraNonce)
-	if err != nil {
-		return nil, err
+
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, nil) // TODO
+
+	burnReward := false
+	switch g.chainCtx.IsBeacon() {
+	case true:
+		burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
+	case false:
+		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
 	}
-	coinbaseTx, err := createCoinbaseTx(g.chainCtx.Params(), coinbaseScript,
-		nextHeight, payToAddress)
+
+	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, payToAddress, burnReward)
 	if err != nil {
 		return nil, err
 	}
@@ -843,7 +884,7 @@ mempoolLoop:
 		txFees = append(txFees, prioItem.fee)
 		txSigOpCosts = append(txSigOpCosts, int64(sigOpCost))
 
-		log.Trace().Msgf("Adding tx %s (priority %.2f, feePerKB %.2f)",
+		log.Trace().Msgf("Adding tx %s (priority %.2f, feePerKB %d)",
 			prioItem.tx.Hash(), prioItem.priority, prioItem.feePerKB)
 
 		// Add transactions which depend on this one (and also do not
@@ -863,9 +904,9 @@ mempoolLoop:
 	// block weight for the real transaction count and coinbase value with
 	// the total fees accordingly.
 	blockWeight -= encoder.MaxVarIntPayload -
-		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) *
-			chaindata.WitnessScaleFactor)
-	coinbaseTx.MsgTx().TxOut[0].Value += totalFees
+		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) * chaindata.WitnessScaleFactor)
+
+	coinbaseTx.MsgTx().TxOut[2].Value += totalFees
 	txFees[0] = -totalFees
 
 	// If segwit is active and we included transactions with witness data,
@@ -905,15 +946,15 @@ mempoolLoop:
 			Value:    0,
 			PkScript: witnessScript,
 		}
-		coinbaseTx.MsgTx().TxOut = append(coinbaseTx.MsgTx().TxOut,
-			commitmentOutput)
+		coinbaseTx.MsgTx().TxOut = append(coinbaseTx.MsgTx().TxOut, commitmentOutput)
 	}
 
-	return &BlockTxsCollection{
+	return &blockTxsCollection{
 		BlockTxns:         blockTxns,
 		BlockWeight:       blockWeight,
 		TxFees:            txFees,
 		TotalFees:         totalFees,
+		Reward:            reward,
 		TxSigOpCosts:      txSigOpCosts,
 		BlockSigOpCost:    blockSigOpCost,
 		WitnessCommitment: witnessCommitment,
@@ -950,26 +991,24 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 // block by regenerating the coinbase script with the passed value and block
 // height.  It also recalculates and updates the new merkle root that results
 // from changing the coinbase script.
-func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32, extraNonce uint64) error {
-	coinbaseScript, err := standardCoinbaseScript(blockHeight, extraNonce)
+func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32,
+	extraNonce uint64) error {
+	coinbaseScript, err := StandardCoinbaseScript(blockHeight, extraNonce)
 	if err != nil {
 		return err
 	}
+
 	if len(coinbaseScript) > chaindata.MaxCoinbaseScriptLen {
 		return fmt.Errorf("coinbase transaction script length of %d is out of range (min: %d, max: %d)",
 			len(coinbaseScript), chaindata.MinCoinbaseScriptLen,
 			chaindata.MaxCoinbaseScriptLen)
 	}
-	msgBlock.Transactions[0].TxIn[0].SignatureScript = coinbaseScript
+
+	msgBlock.Header.UpdateCoinbaseScript(coinbaseScript)
 
 	// TODO(davec): A btcutil.Block should use saved in the state to avoid
 	// recalculating all of the other transaction hashes.
 	// block.Transactions[0].InvalidateCache()
-
-	// Recalculate the merkle root with the updated extra nonce.
-	block := btcutil.NewBlock(msgBlock)
-	merkles := chaindata.BuildMerkleTreeStore(block.Transactions(), false)
-	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
 	return nil
 }
 

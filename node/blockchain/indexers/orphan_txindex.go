@@ -72,13 +72,13 @@ func (idx *OrphanTxIndex) Name() string {
 // This is part of the Indexer interface.
 func (idx *OrphanTxIndex) Create(dbTx database.Tx) error {
 	meta := dbTx.Metadata()
-	if _, err := meta.CreateBucket(idByHashOrphanTxIndexBucketName); err != nil {
+	if _, err := meta.CreateBucketIfNotExists(idByHashOrphanTxIndexBucketName); err != nil {
 		return err
 	}
-	if _, err := meta.CreateBucket(hashByIDOrphanTxIndexBucketName); err != nil {
+	if _, err := meta.CreateBucketIfNotExists(hashByIDOrphanTxIndexBucketName); err != nil {
 		return err
 	}
-	_, err := meta.CreateBucket(orphanTxIndexKey)
+	_, err := meta.CreateBucketIfNotExists(orphanTxIndexKey)
 	return err
 }
 

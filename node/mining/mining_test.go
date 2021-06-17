@@ -10,7 +10,9 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
 
 // TestTxFeePrioHeap ensures the priority queue for transaction fees and
@@ -108,4 +110,20 @@ func TestTxFeePrioHeap(t *testing.T) {
 		}
 		highest = prioItem
 	}
+}
+
+func TestCreateJaxCoinbaseTx(t *testing.T) {
+	address, err := btcutil.DecodeAddress("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", &chaincfg.FastNetParams)
+	if err != nil {
+		t.Errorf("DecodeAddress() error = %v", err)
+		return
+	}
+
+	got, err := CreateJaxCoinbaseTx(100_0000, 100, 43, address, true)
+	if err != nil {
+		t.Errorf("CreateJaxCoinbaseTx() error = %v", err)
+		return
+	}
+
+	spew.Dump(got)
 }

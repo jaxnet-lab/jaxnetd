@@ -37,7 +37,7 @@ var regTestGenesisMerkleRoot = genesisMerkleRoot
 // 3), this network is sometimes simply called "testnet".
 var RegressionNetParams = Params{
 	Name:        "regtest",
-	Net:         types.TestNet,
+	Net:         types.RegTest,
 	DefaultPort: "18444",
 	DNSSeeds:    []DNSSeed{},
 

@@ -5,12 +5,11 @@
 package mmr
 
 import (
+	"errors"
 	"fmt"
-	"sync"
 )
 
 type blockDb struct {
-	sync.RWMutex
 	nodes  map[uint64]*BlockData
 	blocks map[uint64]*BlockData
 }
@@ -23,35 +22,45 @@ func MemoryDb() (res *blockDb) {
 	return
 }
 
-func (d *blockDb) Nodes() (res []uint64) {
+func (d *blockDb) Nodes() (res []uint64, err error) {
 	for index := range d.nodes {
 		res = append(res, index)
 	}
 	return
 }
 
-func (d *blockDb) Blocks() (res []uint64) {
+func (d *blockDb) Blocks() (res []uint64, err error) {
 	for index := range d.blocks {
 		res = append(res, index)
 	}
 	return
 }
 
-func (d *blockDb) SetNode(index uint64, data *BlockData) {
+func (d *blockDb) SetNode(index uint64, data *BlockData) error {
 	d.nodes[index] = data
+	return nil
 }
 
-func (d *blockDb) SetBlock(index uint64, data *BlockData) {
+func (d *blockDb) SetBlock(index uint64, data *BlockData) error {
 	d.blocks[index] = data
+	return nil
 }
 
-func (d *blockDb) GetNode(index uint64) (res *BlockData, ok bool) {
+func (d *blockDb) GetNode(index uint64) (res *BlockData, err error) {
+	var ok bool
 	res, ok = d.nodes[index]
+	if !ok {
+		err = errors.New("node not exist")
+	}
 	return
 }
 
-func (d *blockDb) GetBlock(index uint64) (res *BlockData, ok bool) {
+func (d *blockDb) GetBlock(index uint64) (res *BlockData, err error) {
+	var ok bool
 	res, ok = d.blocks[index]
+	if !ok {
+		err = errors.New("node not exist")
+	}
 	return
 }
 

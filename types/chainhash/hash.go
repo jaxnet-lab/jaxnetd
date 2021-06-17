@@ -25,6 +25,11 @@ var ErrHashStrSize = fmt.Errorf("max hash string length is %v bytes", MaxHashStr
 // typically represents the double sha256 of data.
 type Hash [HashSize]byte
 
+// ZeroHash is the zero value for a chainhash.Hash and is defined as
+// a package level variable to avoid the need to create a new instance
+// every time a check is needed.
+var ZeroHash Hash
+
 // String returns the Hash as the hexadecimal string of the byte-reversed
 // hash.
 func (hash Hash) String() string {

@@ -32,21 +32,11 @@ type ShardBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	// parent is the parent block for this node.
-	parent IBlockNode
-
-	// hash is the double sha 256 of the block.
-	hash chainhash.Hash
-
-	// workSum is the total amount of work in the chain up to and including
-	// this node.
-	workSum *big.Int
-
-	// height is the position in the block chain.
-	height int32
-
-	// serialID is the absolute unique id of current block.
-	serialID int64
+	parent   IBlockNode     // parent is the parent block for this node.
+	hash     chainhash.Hash // hash is the double sha 256 of the block.
+	workSum  *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	height   int32          // height is the position in the block chain.
+	serialID int64          // serialID is the absolute unique id of current block.
 
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
@@ -58,6 +48,7 @@ type ShardBlockNode struct {
 	merkleRoot        chainhash.Hash
 	mergeMiningNumber uint32
 	bcHeader          beaconBlockNodeFields
+
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -66,27 +57,25 @@ type ShardBlockNode struct {
 }
 
 type beaconBlockNodeFields struct {
-	// hash is the double sha 256 of the block.
-	hash chainhash.Hash
-	// workSum is the total amount of work in the chain up to and including
-	// this node.
-	workSum *big.Int
+	hash    chainhash.Hash // hash is the double sha 256 of the block.
+	workSum *big.Int       // workSum is the total amount of work in the chain up to and including this node.
 
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
 	// immutable and are intentionally ordered to avoid padding on 64-bit
 	// platforms.
-	version    int32
-	bits       uint32
-	nonce      uint32
-	timestamp  int64
-	merkleRoot chainhash.Hash
-	mmrRoot    chainhash.Hash
-	// Encoding of the Merge-mining tree
-	treeEncoding []uint8
-
-	shards   uint32
-	prevHash chainhash.Hash
+	version       int32
+	bits          uint32
+	timestamp     int64
+	prevHash      chainhash.Hash
+	merkleRoot    chainhash.Hash
+	mmrRoot       chainhash.Hash
+	treeEncoding  []uint8          // Encoding of the Merge-mining tree
+	shards        uint32           // A number of shards at moment, when block was mined.
+	k             uint32           // k is inflation-fix coefficient for current mining epoch.
+	voteK         uint32           // voteK is a proposed inflation-fix coefficient for next mining epoch.
+	btcAux        wire.BTCBlockAux // A bitcoin header auxiliary, required by merge mining protocol.
+	bcCoinbaseAux wire.CoinbaseAux // A beacon coinbase tx auxiliary, required by merge mining protocol.
 }
 
 // NewShardBlockNode returns a new block node for the given block ShardHeader and parent
@@ -113,17 +102,20 @@ func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardB
 		mergeMiningNumber: shardHeader.MergeMiningNumber(),
 
 		bcHeader: beaconBlockNodeFields{
-			hash:         beaconHeader.BlockHash(),
-			workSum:      pow.CalcWork(beaconHeader.Bits()),
-			version:      int32(beaconHeader.Version()),
-			bits:         beaconHeader.Bits(),
-			nonce:        beaconHeader.Nonce(),
-			timestamp:    beaconHeader.Timestamp().Unix(),
-			merkleRoot:   beaconHeader.MerkleRoot(),
-			mmrRoot:      beaconHeader.MergeMiningRoot(),
-			shards:       beaconHeader.Shards(),
-			treeEncoding: beaconHeader.MergedMiningTree(),
-			prevHash:     beaconHeader.PrevBlock(),
+			hash:          beaconHeader.BlockHash(),
+			workSum:       pow.CalcWork(beaconHeader.Bits()),
+			version:       int32(beaconHeader.Version()),
+			bits:          beaconHeader.Bits(),
+			timestamp:     beaconHeader.Timestamp().Unix(),
+			merkleRoot:    beaconHeader.MerkleRoot(),
+			mmrRoot:       beaconHeader.MergeMiningRoot(),
+			shards:        beaconHeader.Shards(),
+			treeEncoding:  beaconHeader.MergedMiningTree(),
+			prevHash:      beaconHeader.PrevBlock(),
+			k:             beaconHeader.K(),
+			voteK:         beaconHeader.VoteK(),
+			btcAux:        *beaconHeader.BTCAux().Copy(),
+			bcCoinbaseAux: *shardHeader.CoinbaseAux.Copy(),
 		},
 	}
 	if parent != nil {
@@ -163,6 +155,7 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 		h := node.parent.GetHash()
 		prevHash = &h
 	}
+
 	beaconHeader := wire.NewBeaconBlockHeader(
 		wire.BVersion(node.bcHeader.version),
 		node.bcHeader.prevHash,
@@ -170,7 +163,13 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 		node.bcHeader.mmrRoot,
 		time.Unix(node.bcHeader.timestamp, 0),
 		node.bcHeader.bits,
-		node.bcHeader.nonce)
+		node.bcHeader.btcAux.Nonce)
+
+	beaconHeader.SetMergedMiningTree(node.bcHeader.treeEncoding)
+	beaconHeader.SetK(node.bcHeader.k)
+	beaconHeader.SetVoteK(node.bcHeader.voteK)
+	beaconHeader.BeaconHeader().SetBTCAux(node.bcHeader.btcAux)
+
 	beaconHeader.SetShards(node.bcHeader.shards)
 	beaconHeader.SetMergedMiningTree(node.bcHeader.treeEncoding)
 
@@ -180,8 +179,8 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 		time.Unix(node.timestamp, 0),
 		node.bits,
 		*beaconHeader,
+		node.bcHeader.bcCoinbaseAux,
 	)
-
 	header.SetMergeMiningNumber(node.mergeMiningNumber)
 	return header
 }

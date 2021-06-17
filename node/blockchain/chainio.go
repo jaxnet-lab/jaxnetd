@@ -87,16 +87,19 @@ func (b *BlockChain) createChainState() error {
 			return err
 		}
 
-		// Create the bucket that houses the MerkleMountainRange for Merged Mining Tree..
-		_, err = meta.CreateBucket(chaindata.ShardsMMRBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the EAD addresses index.
-		_, err = meta.CreateBucket(chaindata.EADAddressesBucketName)
-		if err != nil {
-			return err
+		// EAD registration is possible only at beacon
+		if b.chain.IsBeacon() {
+			// Create the bucket that houses the EAD addresses index.
+			_, err = meta.CreateBucket(chaindata.EADAddressesBucketName)
+			if err != nil {
+				return err
+			}
+		} else { // for shard chain MMR bucket is required.
+			// Create the bucket that houses the MerkleMountainRange for Merged Mining Tree..
+			_, err = meta.CreateBucket(chaindata.ShardsMMRBucketName)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Create the bucket that houses the spend journal data and
@@ -131,12 +134,6 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
-
-		// // Create the bucket that houses the mapping of block serial id to hash and serial id
-		// _, err = meta.CreateBucket(chaindata.BlockSerialIDHash)
-		// if err != nil {
-		// 	return err
-		// }
 
 		// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
 		_, err = meta.CreateBucket(chaindata.BlockSerialIDHashPrevSerialID)
@@ -263,6 +260,7 @@ func (b *BlockChain) initChainState() error {
 			if lastNode == nil {
 				blockHash := header.BlockHash()
 				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
+
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chainParams.GenesisHash, blockHash))

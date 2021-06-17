@@ -64,8 +64,8 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P
 	return rpc
 }
 
-func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool) (mining.BlockTemplate, error) {
-	return server.gbtWorkState.BlockTemplate(server.chainProvider, useCoinbaseValue)
+func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
+	return server.gbtWorkState.BlockTemplate(server.chainProvider, useCoinbaseValue, burnReward)
 }
 
 func (server *CommonChainRPC) Handlers() map[btcjson.MethodName]CommandHandler {
@@ -367,7 +367,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		return nil, err
 	}
 
-	shards, err := server.chainProvider.ShardCount()
+	shards, err := blockChain.ShardCount()
 	if err != nil {
 		return nil, err
 	}

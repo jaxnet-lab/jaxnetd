@@ -663,7 +663,7 @@ func (idx *AddrIndex) Name() string {
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) Create(dbTx database.Tx) error {
-	_, err := dbTx.Metadata().CreateBucket(addrIndexKey)
+	_, err := dbTx.Metadata().CreateBucketIfNotExists(addrIndexKey)
 	return err
 }
 

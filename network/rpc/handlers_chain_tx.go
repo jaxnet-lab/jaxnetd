@@ -336,7 +336,6 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 	return *rawTxn, nil
 }
 
-// handleSendRawTransaction implements the sendrawtransaction command.
 func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, orphan bool) (*txInfo, error) {
 	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
 	if err == nil {

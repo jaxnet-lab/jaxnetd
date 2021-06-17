@@ -33,7 +33,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure that attempting to open a database that doesn't exist returns
 	// the expected error.
 	wantErrCode := database.ErrDbDoesNotExist
-	_, err := database.Open(dbType, chain.BeaconChain, "noexist", blockDataNet)
+	_, err := database.Open(dbType, chain.BeaconChain, "noexist")
 	if !checkDbError(t, "Open", err, wantErrCode) {
 		return
 	}
@@ -53,7 +53,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the first parameter returns the expected error.
 	wantErr = fmt.Errorf("first argument to %s.Open is invalid -- "+
 		"expected database path string", dbType)
-	_, err = database.Open(dbType, chain.BeaconChain, 1, blockDataNet)
+	_, err = database.Open(dbType, chain.BeaconChain, 1)
 	if err.Error() != wantErr.Error() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
@@ -211,7 +211,7 @@ func TestPersistence(t *testing.T) {
 
 	// Close and reopen the database to ensure the values persist.
 	db.Close()
-	db, err = database.Open(dbType, chain.BeaconChain, dbPath, blockDataNet)
+	db, err = database.Open(dbType, chain.BeaconChain, dbPath)
 	if err != nil {
 		t.Errorf("Failed to open test database (%s) %v", dbType, err)
 		return

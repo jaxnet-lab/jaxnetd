@@ -130,3 +130,14 @@ func DBPutBlockSerialIDHashPrevSerialID(dbTx database.Tx, hash *chainhash.Hash, 
 
 	return blockSerialIDHashPrevSerialID.Put(i64ToBytes(serialID), valueBytes)
 }
+
+func i64ToBytes(val int64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(val))
+	return buf
+}
+
+func bytesToI64(val []byte) int64 {
+	num := binary.LittleEndian.Uint64(val)
+	return int64(num)
+}

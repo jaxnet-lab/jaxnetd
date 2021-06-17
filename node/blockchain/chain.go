@@ -242,11 +242,14 @@ func New(config *Config) (*BlockChain, error) {
 
 type ChainBlockGenerator interface {
 	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits, nonce uint32) (wire.BlockHeader, error)
+		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
 	AcceptBlock(blockHeader wire.BlockHeader) error
 
-	ValidateBlock(blockHeader wire.BlockHeader) error
+	ValidateBlockHeader(blockHeader wire.BlockHeader) error
+	ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error
+
+	CalcBlockSubsidy(height int32, header wire.BlockHeader) int64
 }
 
 // BlockChain provides functions for working with the bitcoin block chain.
@@ -791,23 +794,11 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		// // Get chain last block id from db id bucket. Should not be empty slice or nil
-		// chainLastSerialID, err := chaindata.DBFetchLastSerialID(dbTx)
-		// if err != nil {
-		// 	return err
-		// }
-
 		// Get chain last block id from db hash->id mapping
 		bestChainLastSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, &bestBlockHash)
 		if err != nil {
 			return err
 		}
-
-		// // should be the same
-		// if chainLastSerialID != bestChainLastSerialID {
-		// 	return fmt.Errorf("block id inconsistency: chainLastSerialID=%d,bestChainLastSerialID=%d ",
-		// 		chainLastSerialID, bestChainLastSerialID)
-		// }
 
 		blockSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
 		if err != nil {
@@ -915,7 +906,8 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint, forkNode blocknode.IBlockNode) error {
+func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint,
+	forkNode blocknode.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.bestChain.Tip().GetHash()
@@ -1531,6 +1523,23 @@ func (b *BlockChain) BestSnapshot() *chaindata.BestState {
 	snapshot := b.stateSnapshot
 	b.stateLock.RUnlock()
 	return snapshot
+}
+
+// ShardCount returns the actual number of shards in network,
+// based on information form latest beacon header.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) ShardCount() (uint32, error) {
+	b.stateLock.RLock()
+	snapshot := b.stateSnapshot
+	b.stateLock.RUnlock()
+
+	bestBlock, err := b.BlockByHash(&snapshot.Hash)
+	if err != nil {
+		return 0, err
+	}
+
+	return bestBlock.MsgBlock().Header.BeaconHeader().Shards(), nil
 }
 
 // HeaderByHash returns the block header identified by the given hash or an

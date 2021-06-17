@@ -44,7 +44,7 @@ var (
 )
 
 var (
-	registeredNets       = make(map[types.BitcoinNet]struct{})
+	registeredNets       = make(map[types.JaxNet]struct{})
 	pubKeyHashAddrIDs    = make(map[byte]struct{})
 	scriptHashAddrIDs    = make(map[byte]struct{})
 	bech32SegwitPrefixes = make(map[string]struct{})
@@ -122,7 +122,7 @@ type GenesisBlockOpts struct {
 	Timestamp  time.Time
 	Bits       uint32
 	Nonce      uint32
-	BCHeader   *wire.BeaconHeader
+	BCHeader   wire.BeaconHeader
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be
@@ -133,7 +133,7 @@ type Params struct {
 	Name string
 
 	// Net defines the magic bytes used to identify the network.
-	Net types.BitcoinNet
+	Net types.JaxNet
 
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string
@@ -258,9 +258,6 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 
 	cfg.PowLimit = shardChainPowLimit
 	cfg.PowLimitBits = shardPoWBits
-
-	cfg.ReduceMinDifficulty = true
-	cfg.MinDiffReductionTime = cfg.TargetTimePerBlock * 2
 
 	return &cfg
 }

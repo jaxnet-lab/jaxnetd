@@ -41,7 +41,7 @@ var (
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network types.BitcoinNet) ([]*btcutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*btcutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/netsync"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
@@ -202,6 +203,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
 		Weight:              int32(chaindata.GetBlockWeight(blk)),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		PoWHash:             blockHeader.PoWHash().String(),
 		Difficulty:          diff,
 		NextHash:            nextHashString,
 	}
@@ -352,6 +354,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// either a coinbase value or a coinbase transaction object depending on
 	// the request.  Default to only providing a coinbase value.
 	useCoinbaseValue := true
+	burnReward := 0
 	if request != nil {
 		var hasCoinbaseValue, hasCoinbaseTxn bool
 		for _, capability := range request.Capabilities {
@@ -360,6 +363,12 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 				hasCoinbaseTxn = true
 			case "coinbasevalue":
 				hasCoinbaseValue = true
+			case "burnbtcreward":
+				burnReward |= types.BurnBtcReward
+			case "burnjaxnetreward":
+				burnReward |= types.BurnJaxNetReward
+			case "burnjaxreward":
+				burnReward |= types.BurnJaxReward
 			}
 		}
 
@@ -368,29 +377,30 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 		}
 	}
 
-	// // When a coinbase transaction has been requested, respond with an error
-	// // if there are no addresses to pay the created block template to.
-	// if !useCoinbaseValue && len(server.cfg.MiningAddrs) == 0 {
-	//	return nil, &btcjson.RPCError{
-	//		Code: btcjson.ErrRPCInternal.Code,
-	//		Message: "A coinbase transaction has been requested, " +
-	//			"but the Server has not been configured with " +
-	//			"any payment addresses via --miningaddr",
-	//	}
-	// }
+	// When a coinbase transaction has been requested, respond with an error
+	// if there are no addresses to pay the created block template to.
+	if !useCoinbaseValue && len(server.chainProvider.MiningAddrs) == 0 {
+		return nil, &btcjson.RPCError{
+			Code: btcjson.ErrRPCInternal.Code,
+			Message: "A coinbase transaction has been requested, " +
+				"but the Server has not been configured with " +
+				"any payment addresses via --miningaddr",
+		}
+	}
 
-	// // Return an error if there are no peers connected since there is no
-	// // way to relay a found block or receive transactions to work on.
-	// // However, allow this state when running in the regression test or
-	// // simulation test mode.
-	// if !(cfg.RegressionTest || cfg.SimNet) &&
-	//	server.cfg.connMgr.ConnectedCount() == 0 {
-	//
-	//	return nil, &btcjson.RPCError{
-	//		Code:    btcjson.ErrRPCClientNotConnected,
-	//		Message: "Bitcoin is not connected",
-	//	}
-	// }
+	// Return an error if there are no peers connected since there is no
+	// way to relay a found block or receive transactions to work on.
+	// However, allow this state when running in the regression test or
+	// simulation test mode.
+	netType := server.chainProvider.ChainParams.Net
+	if !(netType == types.FastTestNet || netType == types.SimNet || netType == types.RegTest) &&
+		server.connMgr.ConnectedCount() == 0 {
+
+		return nil, &btcjson.RPCError{
+			Code:    btcjson.ErrRPCClientNotConnected,
+			Message: "Bitcoin is not connected",
+		}
+	}
 
 	// No point in generating or accepting work before the BlockChain is synced.
 	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
@@ -405,7 +415,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// client to be notified when block template referenced by the ID should
 	// be replaced with a new one.
 	if request != nil && request.LongPollID != "" {
-		return server.handleGetBlockTemplateLongPoll(request.LongPollID, useCoinbaseValue, closeChan)
+		return server.handleGetBlockTemplateLongPoll(request.LongPollID, useCoinbaseValue, burnReward, closeChan)
 	}
 
 	// Protect concurrent access when updating block templates.
@@ -419,7 +429,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// seconds since the last template was generated.  Otherwise, the
 	// timestamp for the existing block template is updated (and possibly
 	// the difficulty on testnet per the consesus rules).
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
 		return nil, err
 	}
 	return state.BeaconBlockTemplateResult(useCoinbaseValue, nil)
@@ -497,14 +507,14 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 // has passed without finding a solution.
 //
 // See https://en.bitcoin.it/wiki/BIP_0022 for more details.
-func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoinbaseValue bool, closeChan <-chan struct{}) (interface{}, error) {
+func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoinbaseValue bool, burnReward int, closeChan <-chan struct{}) (interface{}, error) {
 	state := server.gbtWorkState
 	state.Lock()
 	// The state unlock is intentionally not deferred here since it needs to
 	// be manually unlocked before waiting for a notification about block
 	// template changes.
 
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
 		state.Unlock()
 		return nil, err
 	}
@@ -567,7 +577,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	state.Lock()
 	defer state.Unlock()
 
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue); err != nil {
+	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
 		return nil, err
 	}
 

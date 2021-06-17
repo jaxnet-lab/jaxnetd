@@ -49,7 +49,6 @@ const (
 	defaultMaxPeers              = 125
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 100
-	defaultConnectTimeout        = time.Second * 30
 	defaultMaxRPCClients         = 100
 	defaultMaxRPCWebsockets      = 25
 	defaultMaxRPCConcurrentReqs  = 20
@@ -64,9 +63,7 @@ const (
 	blockMaxSizeMax              = chaindata.MaxBlockBaseSize - 1000
 	blockMaxWeightMin            = 4000
 	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
-	defaultGenerate              = false
 	defaultMaxOrphanTransactions = 100
-	defaultMaxOrphanTxSize       = 100000
 	defaultSigCacheMaxSize       = 100000
 	sampleConfigFilename         = "sample-shard.core.yaml"
 	defaultTxIndex               = false
@@ -417,7 +414,8 @@ func LoadConfig() (*node.Config, []string, error) {
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
 
 	stats, err := os.Stat(preCfg.ConfigFile)
-	if os.IsNotExist(err) {
+	if stats == nil || os.IsNotExist(err) {
+		// todo(mike): fix the default cfg.
 		err := createDefaultConfigFile(preCfg.ConfigFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating a "+
@@ -432,16 +430,14 @@ func LoadConfig() (*node.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	ext := filepath.Ext(stats.Name())
-	switch ext {
-	case ".yaml":
-		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-		if err != nil {
-			configFileError = err
-		}
-	default:
-		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
-		return nil, nil, errors.New("Invalid file extension: " + ext)
+	if !strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .yaml")
+		return nil, nil, errors.New("Invalid file extension, must be .yaml ")
+	}
+
+	err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+	if err != nil {
+		configFileError = err
 	}
 
 	// Parse command line options again to ensure they take precedence.

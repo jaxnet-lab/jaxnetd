@@ -43,14 +43,14 @@ func TestServiceFlagStringer(t *testing.T) {
 // TestBitcoinNetStringer tests the stringized output for bitcoin net types.
 func TestBitcoinNetStringer(t *testing.T) {
 	tests := []struct {
-		in   types.BitcoinNet
+		in   types.JaxNet
 		want string
 	}{
 		{types.MainNet, "MainNet"},
-		{types.TestNet, "TestNet"},
+		{types.RegTest, "RegTest"},
 		{types.TestNet3, "TestNet3"},
 		{types.SimNet, "SimNet"},
-		{0xffffffff, "Unknown BitcoinNet (4294967295)"},
+		{0xffffffff, "Unknown JaxNet (4294967295)"},
 	}
 
 	t.Logf("Running %d tests", len(tests))

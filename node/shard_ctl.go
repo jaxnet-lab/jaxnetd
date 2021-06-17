@@ -1,16 +1,13 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"math/big"
 	"net"
-	"path"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -20,7 +17,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	mmr2 "gitlab.com/jaxnet/core/shard.core/types/mmr"
 	"gitlab.com/jaxnet/core/shard.core/types/wire"
 )
 
@@ -92,7 +88,7 @@ func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	}
 }
 
-func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRun bool) error {
+func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider) error {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
@@ -100,20 +96,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 		return err
 	}
 
-	mmrDb, err := mmr2.BadgerDB(path.Join(shardCtl.cfg.DataDir,
-		"shard_"+strconv.FormatUint(uint64(shardCtl.chain.ShardID()), 10), "mmr"))
-	if err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't init shard mmr DB")
-		return err
-	}
-
-	mountainRange := mmr2.Mmr(sha256.New, mmrDb)
-	if firstRun {
-		hash := shardCtl.chain.GenesisBlock().BlockHash()
-		mountainRange.Set(0, big.NewInt(0), hash.CloneBytes())
-	}
-
-	blockGen := shard.NewChainBlockGenerator(beaconBlockGen, mountainRange)
+	blockGen := shard.NewChainBlockGenerator(beaconBlockGen, db, shardCtl.chain.GenesisBlock().BlockHash())
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
 	if err != nil {

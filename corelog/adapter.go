@@ -24,7 +24,7 @@ func init() {
 	Disabled = zerolog.Nop()
 }
 
-// Configuration for logging
+// Config for logging
 type Config struct {
 	// Disable console logging
 	DisableConsoleLog bool `yaml:"disable_console_log"`
@@ -71,7 +71,7 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 			return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
 		}
 		out.FormatMessage = func(i interface{}) string {
-			return fmt.Sprintf("%-6s  |>", i)
+			return fmt.Sprintf("%-6s  ", i)
 		}
 		writers = append(writers, out)
 	}

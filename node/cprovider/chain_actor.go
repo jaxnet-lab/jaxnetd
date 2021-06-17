@@ -14,6 +14,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
 	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/node/mempool"
 	"gitlab.com/jaxnet/core/shard.core/node/mining"
@@ -180,10 +181,6 @@ func (chainProvider *ChainProvider) Log() zerolog.Logger {
 	return chainProvider.logger
 }
 
-func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
-	return chainProvider.blockChain
-}
-
 func (chainProvider *ChainProvider) initBlkTmplGenerator() {
 	// Create the mining policy and block template generator based on the
 	// configuration options.
@@ -212,10 +209,6 @@ func (chainProvider *ChainProvider) GbtWorkState() *mining.GBTWorkState {
 	return chainProvider.gbtWorkState
 }
 
-func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool) (mining.BlockTemplate, error) {
-	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue)
-}
-
 func (chainProvider *ChainProvider) Stats() map[string]float64 {
 	shards, _ := chainProvider.ShardCount()
 	snapshot := chainProvider.blockChain.BestSnapshot()
@@ -232,22 +225,24 @@ func (chainProvider *ChainProvider) Stats() map[string]float64 {
 	}
 }
 
-func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
-	snap := chainProvider.BlockChain().BestSnapshot()
-	if snap == nil {
-		return 0, nil
-	}
-
-	bestBlock, err := chainProvider.BlockChain().BlockByHash(&snap.Hash)
-	if err != nil {
-		return 0, err
-	}
-
-	return bestBlock.MsgBlock().Header.BeaconHeader().Shards(), nil
+func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
+	return chainProvider.blockChain
 }
-
 func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
 	return chainProvider.MiningAddrs
+}
+
+func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
+	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue, burnReward)
+}
+
+func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
+	return chainProvider.BlockChain().ShardCount()
+}
+
+func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
+	// todo
+	return nil
 }
 
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,

@@ -150,6 +150,11 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 
+	// Perform checks of the coinbase tx structure according to merge mining spec.
+	err = b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
+	if err != nil {
+		return false, false, err
+	}
 	// Find the previous checkpoint and perform some additional checks based
 	// on the checkpoint.  This provides a few nice properties such as
 	// preventing old side chain blocks before the last checkpoint,
@@ -190,7 +195,7 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags chaindata.Behavior
 
 	// Handle orphan blocks.
 	prevHash := blockHeader.PrevBlock()
-	if err := b.blockGen.ValidateBlock(blockHeader); err != nil {
+	if err := b.blockGen.ValidateBlockHeader(blockHeader); err != nil {
 		return false, false, err
 	}
 	prevHashExists, err := b.blockExists(&prevHash)

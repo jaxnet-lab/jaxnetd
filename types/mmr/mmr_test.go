@@ -10,15 +10,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/sha3"
 )
 
 func TestInitMmr(t *testing.T) {
-	m := Mmr(sha3.New256, nil)
+	m := MergedMiningTree(nil, nil)
 	assert.NotNil(t, m)
 
-	m = Mmr(sha3.New512, nil)
-	assert.Nil(t, m)
 }
 
 func TestGetTop(t *testing.T) {
@@ -286,7 +283,7 @@ func TestGetPeaks(t *testing.T) {
 }
 
 func TestAppendNode(t *testing.T) {
-	mmr := Mmr(sha3.New256, MemoryDb())
+	mmr := MergedMiningTree(MemoryDb(), make([]byte, 32))
 	data := make([]byte, 32)
 	rand.Read(data[:32])
 
@@ -320,14 +317,17 @@ func validateNodes(nodes []uint64, expected ...uint64) bool {
 
 func TestGetProof(t *testing.T) {
 	db := MemoryDb()
-	mmr := Mmr(sha3.New256, db)
+	mmr := MergedMiningTree(db, make([]byte, 32))
 	data := make([]byte, 32)
 	rand.Read(data[:32])
 	var i uint64 = 0
+	var err error
 	h := Hash{}
+
 	for i <= 20 {
 		rand.Read(data[:32])
-		h = mmr.Set(i, big.NewInt(int64(i)), data)
+		h, err = mmr.Set(i, big.NewInt(int64(i)), data)
+		assert.NoError(t, err)
 		i++
 	}
 	h2 := mmr.GetRoot(20)
@@ -340,9 +340,16 @@ func TestGetProof(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, mmrP)
 	//
-	assert.True(t, validateNodes(mmrP.db.Blocks(), 6, 8))
-	assert.True(t, validateNodes(mmrP.db.Nodes(), 5, 2, 4))
-	assert.False(t, validateNodes(mmrP.db.Blocks(), 5, 8))
+
+	var try = func(f func() ([]uint64, error)) []uint64 {
+		d, e := f()
+		assert.NoError(t, e)
+		return d
+	}
+
+	assert.True(t, validateNodes(try(mmrP.db.Blocks), 6, 8))
+	assert.True(t, validateNodes(try(mmrP.db.Nodes), 5, 2, 4))
+	assert.False(t, validateNodes(try(mmrP.db.Blocks), 5, 8))
 
 	mmr.db.Debug()
 	mmrP, err = mmr.Proof(7, 18)
@@ -350,9 +357,9 @@ func TestGetProof(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, mmrP)
 
-	assert.True(t, validateNodes(mmrP.db.Blocks(), 6, 18))
-	//assert.True(t, validateNodes(mmrP.db.Nodes(), 5, 2, 4))
-	assert.False(t, validateNodes(mmrP.db.Blocks(), 5, 2, 12, 17, 8))
+	assert.True(t, validateNodes(try(mmrP.db.Blocks), 6, 18))
+	//assert.True(t, validateNodes(try(mmrP.db.Nodes), 5, 2, 4))
+	assert.False(t, validateNodes(try(mmrP.db.Blocks), 5, 2, 12, 17, 8))
 
 	h = mmr.GetRoot(18)
 	h2 = mmrP.GetRoot(18)
@@ -363,14 +370,18 @@ func TestGetProof(t *testing.T) {
 
 func TestGetProof200(t *testing.T) {
 	db := MemoryDb()
-	mmr := Mmr(sha3.New256, db)
+	mmr := MergedMiningTree(db, make([]byte, 32))
 	data := make([]byte, 32)
 	rand.Read(data[:32])
+
 	var i uint64 = 0
+	var err error
+
 	h := Hash{}
 	for i <= 203 {
 		rand.Read(data[:32])
-		h = mmr.Set(i, big.NewInt(int64(i)), data)
+		h, err = mmr.Set(i, big.NewInt(int64(i)), data)
+		assert.NoError(t, err)
 		i++
 	}
 	h2 := mmr.GetRoot(203)
@@ -382,7 +393,7 @@ func TestGetProof200(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Println(pf)
 
-	//mmrP, err := mmr.Proof(7, 8)
+	//mmrP, err := ShardsMergedMiningTree.Proof(7, 8)
 	//mmrP.db.Debug()
 	//
 	//assert.NoError(t, err)
@@ -392,8 +403,8 @@ func TestGetProof200(t *testing.T) {
 	//assert.True(t, validateNodes(mmrP.db.Nodes(), 5, 2, 4))
 	//assert.False(t, validateNodes(mmrP.db.Blocks(), 5, 8))
 	//
-	//mmr.db.Debug()
-	//mmrP, err = mmr.Proof(7, 18)
+	//ShardsMergedMiningTree.db.Debug()
+	//mmrP, err = ShardsMergedMiningTree.Proof(7, 18)
 	//mmrP.db.Debug()
 	//assert.NoError(t, err)
 	//assert.NotNil(t, mmrP)
@@ -402,16 +413,16 @@ func TestGetProof200(t *testing.T) {
 	////assert.True(t, validateNodes(mmrP.db.Nodes(), 5, 2, 4))
 	//assert.False(t, validateNodes(mmrP.db.Blocks(), 5, 2, 12, 17, 8))
 	//
-	//h = mmr.GetRoot(18)
+	//h = ShardsMergedMiningTree.GetRoot(18)
 	//h2 = mmrP.GetRoot(18)
 	//assert.Equal(t, h2, h)
 	//
 	//
-	//assert.True(t, mmrP.ValidateProof(7, 18, mmr))
+	//assert.True(t, mmrP.ValidateProof(7, 18, ShardsMergedMiningTree))
 }
 
 func TestGetProofs(t *testing.T) {
-	mmr := Mmr(sha3.New256, MemoryDb())
+	mmr := MergedMiningTree(MemoryDb(), make([]byte, 32))
 	data := make([]byte, 32)
 	rand.Read(data[:32])
 	var i uint64 = 0
@@ -426,10 +437,10 @@ func TestGetProofs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, mmrP)
 
-	//assert.True(t, mmrP.ValidateProof(4,  mmr.GetRoot(4)))
-	//assert.True(t, mmrP.ValidateProof(8, mmr.GetRoot(8)))
+	//assert.True(t, mmrP.ValidateProof(4,  ShardsMergedMiningTree.GetRoot(4)))
+	//assert.True(t, mmrP.ValidateProof(8, ShardsMergedMiningTree.GetRoot(8)))
 	//
-	//mmrP, err = mmr.Proofs(3, 1, 2)
+	//mmrP, err = ShardsMergedMiningTree.Proofs(3, 1, 2)
 	//
 	//assert.True(t, validateNodes(mmrP.db.Blocks(), 0, 1, 2, 3))
 	//assert.True(t, validateNodes(mmrP.db.Nodes(), 3, 2, 1))
@@ -437,10 +448,10 @@ func TestGetProofs(t *testing.T) {
 	//assert.NoError(t, err)
 	//assert.NotNil(t, mmrP)
 	//
-	////assert.True(t, mmrP.ValidateProof(4,  mmr.GetRoot(4)))
-	//assert.True(t, mmrP.ValidateProof(3, mmr.GetRoot(3)))
+	////assert.True(t, mmrP.ValidateProof(4,  ShardsMergedMiningTree.GetRoot(4)))
+	//assert.True(t, mmrP.ValidateProof(3, ShardsMergedMiningTree.GetRoot(3)))
 	//
-	//mmrP, err = mmr.Proofs(20, 5, 10)
+	//mmrP, err = ShardsMergedMiningTree.Proofs(20, 5, 10)
 	//
 	//assert.True(t, validateNodes(mmrP.db.Blocks(), 5, 4, 10, 11, 20))
 	//assert.True(t, validateNodes(mmrP.db.Nodes(),  7, 2, 12, 18, 8, 9, 14,4 ))
@@ -449,21 +460,22 @@ func TestGetProofs(t *testing.T) {
 	//assert.NotNil(t, mmrP)
 }
 
-func TestGetProofsFileDB(t *testing.T) {
-	db, err := BadgerDB("./data")
-	assert.NoError(t, err)
-	mmr := Mmr(sha3.New256, db)
-	data := make([]byte, 32)
-	rand.Read(data[:32])
-	var i uint64 = 0
-	for i < 21 {
-		rand.Read(data[:32])
-		mmr.Set(i, big.NewInt(int64(i)), data)
-		i++
-	}
-
-	mmrP, err := mmr.Proofs(8, 4, 7)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, mmrP)
-}
+//
+// func TestGetProofsFileDB(t *testing.T) {
+// 	db, err := BadgerDB("./data")
+// 	assert.NoError(t, err)
+// 	mmr := MergedMiningTree(sha3.New256, db)
+// 	data := make([]byte, 32)
+// 	rand.Read(data[:32])
+// 	var i uint64 = 0
+// 	for i < 21 {
+// 		rand.Read(data[:32])
+// 		mmr.Set(i, big.NewInt(int64(i)), data)
+// 		i++
+// 	}
+//
+// 	mmrP, err := mmr.Proofs(8, 4, 7)
+//
+// 	assert.NoError(t, err)
+// 	assert.NotNil(t, mmrP)
+// }

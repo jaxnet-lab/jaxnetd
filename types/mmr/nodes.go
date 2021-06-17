@@ -54,10 +54,10 @@ type IBlockIndex interface {
 	Index() uint64
 
 	// Value returns Block data
-	Value(mmr *mmr) (*BlockData, bool)
+	Value(mmr *ShardsMergedMiningTree) (*BlockData, bool)
 
 	// SetValue Set block value
-	SetValue(mmr *mmr, data *BlockData)
+	SetValue(mmr *ShardsMergedMiningTree, data *BlockData) error
 }
 
 func getHeight(value uint64) (height uint64) {
