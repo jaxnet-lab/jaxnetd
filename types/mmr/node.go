@@ -70,10 +70,11 @@ func (x *nodeIndex) Index() uint64 {
 	return uint64(*x)
 }
 
-func (x *nodeIndex) SetValue(mmr *mmr, data *BlockData) {
-	mmr.db.SetNode(x.Index(), data)
+func (x *nodeIndex) SetValue(mmr *ShardsMergedMiningTree, data *BlockData) error {
+	return mmr.db.SetNode(x.Index(), data)
 }
 
-func (x *nodeIndex) Value(mmr *mmr) (*BlockData, bool) {
-	return mmr.db.GetNode(x.Index())
+func (x *nodeIndex) Value(mmr *ShardsMergedMiningTree) (*BlockData, bool) {
+	block, err := mmr.db.GetNode(x.Index())
+	return block, err != nil
 }

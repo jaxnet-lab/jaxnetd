@@ -134,48 +134,48 @@ func main() {
 	}
 	log.Printf("Block count: %d", blockCountNumber)
 
-	block, serialID, prevSerialID, err := client.GetBeaconBlockBySerialNumber(0)
+	block, err := client.GetBeaconBlockBySerialNumber(0)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	log.Printf("Beacon id:0 block hash: %v, serial_id: %v, prev_serial_id: %v ",
-		block.BlockHash().String(),
-		serialID,
-		prevSerialID,
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
 	)
 
-	block, serialID, prevSerialID, err = client.GetBeaconBlockBySerialNumber(1)
+	block, err = client.GetBeaconBlockBySerialNumber(1)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	log.Printf("Beacon id:1 block hash: %v, serial_id: %v, prev_serial_id: %v ",
-		block.BlockHash().String(),
-		serialID,
-		prevSerialID,
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
 	)
 
-	block, serialID, prevSerialID, err = client.GetBeaconBlockBySerialNumber(2)
+	block, err = client.GetBeaconBlockBySerialNumber(2)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	log.Printf("Beacon id:2 block hash: %v, serial_id: %v, prev_serial_id: %v ",
-		block.BlockHash().String(),
-		serialID,
-		prevSerialID,
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
 	)
 
-	block, serialID, prevSerialID, err = client.ForShard(1).GetShardBlockBySerialNumber(0)
+	block, err = client.ForShard(1).GetShardBlockBySerialNumber(0)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	log.Printf("Shard:1 id:0 block hash: %v, serial_id: %v, prev_serial_id: %v ",
-		block.BlockHash().String(),
-		serialID,
-		prevSerialID,
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
 	)
 
 	// secret, err := btcec.NewPrivateKey(btcec.S256())

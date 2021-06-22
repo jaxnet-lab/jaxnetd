@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -9,6 +10,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/network/rpc"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
 )
@@ -17,9 +19,10 @@ type Config struct {
 	ConfigFile  string `yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
 	ShowVersion bool   `yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
 
-	Node      NodeConfig     `yaml:"node"`
-	LogConfig corelog.Config `yaml:"log_config" `
-	Metrics   MetricsConfig  `yaml:"metrics"`
+	Node      NodeConfig         `yaml:"node"`
+	LogConfig corelog.Config     `yaml:"log_config" `
+	Metrics   MetricsConfig      `yaml:"metrics"`
+	BTCD      btcd.Configuration `yaml:"btcd"`
 
 	DataDir       string   `yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
 	LogDir        string   `yaml:"log_dir" long:"logdir" description:"Directory to log output."`
@@ -34,8 +37,6 @@ type Config struct {
 
 	// NoPeerBloomFilters bool     `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	// UserAgentComments  []string `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
-	// addCheckpoints     []chaincfg.Checkpoint
-	// whitelists         []*net.IPNet
 }
 
 type MetricsConfig struct {
@@ -49,9 +50,8 @@ type NodeConfig struct {
 	RPC             rpc.Config                   `yaml:"rpc"`
 	P2P             p2p.Config                   `yaml:"p2p"`
 	Shards          ShardConfig                  `yaml:"shards"`
-	DbType          string                       `yaml:"db_type" long:"dbtype" description:"Database backend to use for the Block Chain"`
+	DbType          string                       `yaml:"db_type" description:"Database backend to use for the Block Chain"`
 	Net             string                       `yaml:"net"`
-	MiningAddresses []string                     `yaml:"mining_addresses"`
 	EnableCPUMiner  bool                         `yaml:"enable_cpu_miner"`
 }
 

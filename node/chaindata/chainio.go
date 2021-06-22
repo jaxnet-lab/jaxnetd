@@ -85,10 +85,6 @@ var (
 	// block hash to serial id.
 	BlockHashSerialID = []byte("block_hash_serial_id")
 
-	// // BlockSerialIDHash is the name of the db bucket used to house the mapping of
-	// // serial id to block hash.
-	// BlockSerialIDHash = []byte("block_serial_id_hash")
-
 	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the mapping of
 	// block serial id to hash and previous serial id.
 	BlockSerialIDHashPrevSerialID = []byte("block_serial_id_hash_prev_serial_id")
@@ -1232,15 +1228,4 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	binary.BigEndian.PutUint32(indexKey[0:4], blockHeight)
 	copy(indexKey[4:chainhash.HashSize+4], blockHash[:])
 	return indexKey
-}
-
-func i64ToBytes(val int64) []byte {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, uint64(val))
-	return buf
-}
-
-func bytesToI64(val []byte) int64 {
-	num := binary.LittleEndian.Uint64(val)
-	return int64(num)
 }

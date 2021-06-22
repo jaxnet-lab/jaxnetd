@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -48,7 +49,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 	// removeRegressionDB(cfg, dbPath)
 
 	ctrl.logger.Info().Msgf("Loading block database from '%s'", dbPath)
-	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't exist.
 		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
@@ -63,7 +64,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 			return nil, err
 		}
 
-		db, err = database.Create(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
+		db, err = database.Create(cfg.DbType, chain, dbPath)
 		if err != nil {
 			return nil, err
 		}

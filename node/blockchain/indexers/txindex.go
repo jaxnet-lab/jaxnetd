@@ -374,13 +374,13 @@ func (idx *TxIndex) Name() string {
 // This is part of the Indexer interface.
 func (idx *TxIndex) Create(dbTx database.Tx) error {
 	meta := dbTx.Metadata()
-	if _, err := meta.CreateBucket(idByHashIndexBucketName); err != nil {
+	if _, err := meta.CreateBucketIfNotExists(idByHashIndexBucketName); err != nil {
 		return err
 	}
-	if _, err := meta.CreateBucket(hashByIDIndexBucketName); err != nil {
+	if _, err := meta.CreateBucketIfNotExists(hashByIDIndexBucketName); err != nil {
 		return err
 	}
-	_, err := meta.CreateBucket(txIndexKey)
+	_, err := meta.CreateBucketIfNotExists(txIndexKey)
 	return err
 }
 

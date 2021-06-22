@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package wire
 
 import (
@@ -35,12 +36,24 @@ type BlockHeader interface {
 
 	Bits() uint32
 	SetBits(uint32)
+
 	Nonce() uint32
 	SetNonce(uint32)
-	MaxLength() int
 
-	BlockData() []byte
+	K() uint32
+	SetK(value uint32)
+
+	VoteK() uint32
+	SetVoteK(value uint32)
+
 	BlockHash() chainhash.Hash
+
+	// PoWHash computes the hash for block that will be used to check ProofOfWork.
+	PoWHash() chainhash.Hash
+
+	// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+	// and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
+	UpdateCoinbaseScript(coinbaseScript []byte)
 
 	Read(r io.Reader) error
 	Write(r io.Writer) error
@@ -49,6 +62,7 @@ type BlockHeader interface {
 	// Copy creates a deep copy of a BlockHeader so that the original does not get
 	// modified when the copy is manipulated.
 	Copy() BlockHeader
+	MaxLength() int
 }
 
 type BVersion int32
@@ -91,8 +105,6 @@ func (bv BVersion) UnsetExpansionMade() BVersion {
 	return bv
 }
 
-const BlockHeaderLen = 80
-
 type HeaderConstructor interface {
 	EmptyHeader() BlockHeader
 	BlockHeaderOverhead() int
@@ -114,7 +126,7 @@ func (b BeaconHeaderConstructor) BlockHeaderOverhead() int {
 type ShardHeaderConstructor struct{ ID uint32 }
 
 func (b ShardHeaderConstructor) EmptyHeader() BlockHeader {
-	return &ShardHeader{BCHeader: BeaconHeader{}}
+	return &ShardHeader{bCHeader: BeaconHeader{}}
 }
 func (b ShardHeaderConstructor) IsBeacon() bool             { return false }
 func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }

@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -113,19 +114,14 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
-		block.MsgBlock().Header.BeaconHeader())
-
+		block.MsgBlock().Header.Copy().BeaconHeader())
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
 
-	beaconBlockGen := shard.BeaconBlockProvider{
-		// gbt worker state was initialized in cprovider.NewChainProvider
-		BlockGenerator: chainCtl.beacon.chainProvider.BlockTemplate,
-		ShardCount:     chainCtl.beacon.chainProvider.ShardCount,
-	}
-
-	if err := shardCtl.Init(beaconBlockGen, autoInit); err != nil {
+	// gbt worker state was initialized in cprovider.NewChainProvider
+	if err := shardCtl.Init(chainCtl.beacon.chainProvider); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Can't init shard chainCtl")
+		cancel()
 		return
 	}
 
@@ -153,7 +149,8 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
 		if chainCtl.cfg.Node.EnableCPUMiner {
-			chainCtl.runShardMiner(shardCtl.ChainProvider())
+			chainCtl.logger.Warn().Msg("CPUMiner is not available.")
+			// chainCtl.runShardMiner(shardCtl.ChainProvider())
 		}
 	}
 

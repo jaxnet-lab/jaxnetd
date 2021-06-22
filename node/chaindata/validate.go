@@ -42,11 +42,6 @@ const (
 )
 
 var (
-	// zeroHash is the zero value for a chainhash.Hash and is defined as
-	// a package level variable to avoid the need to create a new instance
-	// every time a check is needed.
-	zeroHash chainhash.Hash
-
 	// block91842Hash is one of the two nodes which violate the rules
 	// set forth in BIP0030.  It is defined as a package level variable to
 	// avoid the need to create a new instance every time a check is needed.
@@ -61,7 +56,7 @@ var (
 // isNullOutpoint determines whether or not a previous transaction output point
 // is set.
 func isNullOutpoint(outpoint *wire.OutPoint) bool {
-	if outpoint.Index == math.MaxUint32 && outpoint.Hash == zeroHash {
+	if outpoint.Index == math.MaxUint32 && outpoint.Hash == chainhash.ZeroHash {
 		return true
 	}
 	return false
@@ -102,7 +97,7 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 	// The previous output of a coin base must have a max value index and
 	// a zero Hash.
 	prevOut := &msgTx.TxIn[0].PreviousOutPoint
-	if prevOut.Index != math.MaxUint32 || prevOut.Hash != zeroHash {
+	if prevOut.Index != math.MaxUint32 || prevOut.Hash != chainhash.ZeroHash {
 		return false
 	}
 
@@ -347,27 +342,26 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	// The target difficulty must be larger than zero.
 	target := pow.CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is too low",
-			target)
+		str := fmt.Sprintf("block target difficulty of %064x is too low", target)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The target difficulty must be less than the maximum allowed.
 	if target.Cmp(powLimit) > 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is "+
-			"higher than max of %064x", target, powLimit)
+		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target, powLimit)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The block Hash must be less than the claimed target unless the flag
 	// to avoid proof of work checks is set.
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
+		// according to merge-mining scheme,
+		// we are checking the difficulty of the BTC-container
+		hash := header.PoWHash()
 		// The block Hash must be less than the claimed target.
-		hash := header.BeaconHeader().BlockHash()
 		hashNum := pow.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
-			str := fmt.Sprintf("block Hash of %064x is higher than "+
-				"expected max of %064x", hashNum, target)
+			str := fmt.Sprintf("block Hash of %064x is higher than expected max of %064x", hashNum, target)
 			return NewRuleError(ErrHighHash, str)
 		}
 	}
@@ -495,17 +489,14 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 	// seconds and it's much nicer to deal with standard Go time values
 	// instead of converting to seconds everywhere.
 	if !header.Timestamp().Equal(time.Unix(header.Timestamp().Unix(), 0)) {
-		str := fmt.Sprintf("block timestamp of %v has a higher "+
-			"precision than one second", header.Timestamp())
+		str := fmt.Sprintf("block timestamp of %v has a higher precision than one second", header.Timestamp())
 		return NewRuleError(ErrInvalidTime, str)
 	}
 
 	// Ensure the block time is not too far in the future.
-	maxTimestamp := timeSource.AdjustedTime().Add(time.Second *
-		MaxTimeOffsetSeconds)
+	maxTimestamp := timeSource.AdjustedTime().Add(time.Second * MaxTimeOffsetSeconds)
 	if header.Timestamp().After(maxTimestamp) {
-		str := fmt.Sprintf("block timestamp of %v is too far in the "+
-			"future", header.Timestamp())
+		str := fmt.Sprintf("block timestamp of %v is too far in the future", header.Timestamp())
 		return NewRuleError(ErrTimeTooNew, str)
 	}
 
@@ -528,15 +519,14 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// A block must have at least one transaction.
 	numTx := len(msgBlock.Transactions)
 	if numTx == 0 {
-		return NewRuleError(ErrNoTransactions, "block does not contain "+
-			"any transactions")
+		return NewRuleError(ErrNoTransactions, "block does not contain any transactions")
 	}
 
 	// A block must not have more transactions than the max block payload or
 	// else it is certainly over the weight limit.
 	if numTx > MaxBlockBaseSize {
-		str := fmt.Sprintf("block contains too many transactions - "+
-			"got %d, max %d", numTx, MaxBlockBaseSize)
+		str := fmt.Sprintf("block contains too many transactions - got %d, max %d",
+			numTx, MaxBlockBaseSize)
 		return NewRuleError(ErrBlockTooBig, str)
 	}
 
@@ -544,23 +534,20 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// serialized.
 	serializedSize := msgBlock.SerializeSizeStripped()
 	if serializedSize > MaxBlockBaseSize {
-		str := fmt.Sprintf("serialized block is too big - got %d, "+
-			"max %d", serializedSize, MaxBlockBaseSize)
+		str := fmt.Sprintf("serialized block is too big - got %d, max %d", serializedSize, MaxBlockBaseSize)
 		return NewRuleError(ErrBlockTooBig, str)
 	}
 
 	// The first transaction in a block must be a coinbase.
 	transactions := block.Transactions()
 	if !IsCoinBase(transactions[0]) {
-		return NewRuleError(ErrFirstTxNotCoinbase, "first transaction in "+
-			"block is not a coinbase")
+		return NewRuleError(ErrFirstTxNotCoinbase, "first transaction in block is not a coinbase")
 	}
 
 	// A block must not have more than one coinbase.
 	for i, tx := range transactions[1:] {
 		if IsCoinBase(tx) {
-			str := fmt.Sprintf("block contains second coinbase at "+
-				"index %d", i+1)
+			str := fmt.Sprintf("block contains second coinbase at index %d", i+1)
 			return NewRuleError(ErrMultipleCoinbases, str)
 		}
 	}
@@ -584,8 +571,7 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	calculatedMerkleRoot := merkles[len(merkles)-1]
 	root := header.MerkleRoot()
 	if !root.IsEqual(calculatedMerkleRoot) {
-		str := fmt.Sprintf("block merkle root is invalid - block "+
-			"header indicates %v, but calculated value is %v",
+		str := fmt.Sprintf("block merkle root is invalid - block header indicates %v, but calculated value is %v",
 			header.MerkleRoot(), calculatedMerkleRoot)
 		return NewRuleError(ErrBadMerkleRoot, str)
 	}
@@ -597,8 +583,7 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	for _, tx := range transactions {
 		hash := tx.Hash()
 		if _, exists := existingTxHashes[*hash]; exists {
-			str := fmt.Sprintf("block contains duplicate "+
-				"transaction %v", hash)
+			str := fmt.Sprintf("block contains duplicate transaction %v", hash)
 			return NewRuleError(ErrDuplicateTx, str)
 		}
 		existingTxHashes[*hash] = struct{}{}
@@ -612,10 +597,10 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 		// overflow.
 		lastSigOps := totalSigOps
 		totalSigOps += (CountSigOps(tx) * WitnessScaleFactor)
+
 		if totalSigOps < lastSigOps || totalSigOps > MaxBlockSigOpsCost {
-			str := fmt.Sprintf("block contains too many signature "+
-				"operations - got %v, max %v", totalSigOps,
-				MaxBlockSigOpsCost)
+			str := fmt.Sprintf("block contains too many signature operations - got %v, max %v",
+				totalSigOps, MaxBlockSigOpsCost)
 			return NewRuleError(ErrTooManySigOps, str)
 		}
 	}

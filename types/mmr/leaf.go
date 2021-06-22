@@ -6,7 +6,7 @@ package mmr
 
 type leafIndex uint64
 
-func LeafIndex(value uint64) (res *leafIndex) {
+func LeafIndex(value uint64) *leafIndex {
 	v := leafIndex(value)
 	return &v
 }
@@ -75,27 +75,39 @@ func (x *leafIndex) IsRight() bool {
 	return x.Index()&1 == 1
 }
 
-func (x *leafIndex) SetValue(mmr *mmr, data *BlockData) {
-	mmr.db.SetBlock(x.Index(), data)
+func (x *leafIndex) SetValue(mmr *ShardsMergedMiningTree, data *BlockData) error {
+	return mmr.db.SetBlock(x.Index(), data)
 }
 
-func (x *leafIndex) Value(mmr *mmr) (*BlockData, bool) {
-	return mmr.db.GetBlock(x.Index())
+func (x *leafIndex) Value(mmr *ShardsMergedMiningTree) (*BlockData, bool) {
+	block, err := mmr.db.GetBlock(x.Index())
+	return block, err != nil
 }
 
-func (x *leafIndex) AppendValue(mmr *mmr, data *BlockData) {
-	mmr.db.SetBlock(x.Index(), data)
+func (x *leafIndex) AppendValue(mmr *ShardsMergedMiningTree, data *BlockData) error {
+	err := mmr.db.SetBlock(x.Index(), data)
+	if err != nil {
+		return err
+	}
+
 	var node IBlockIndex = x
 	for node.IsRight() {
 		sibling := node.GetSibling()
 		if parent := node.RightUp(); parent != nil {
 			leftData, _ := sibling.Value(mmr)
 			aggregated := mmr.aggregate(leftData, data)
-			parent.SetValue(mmr, aggregated)
+
+			if err = parent.SetValue(mmr, aggregated); err != nil {
+				return err
+			}
+
 			data = aggregated
 			node = parent
 			continue
 		}
-		return
+
+		return nil
 	}
+
+	return nil
 }

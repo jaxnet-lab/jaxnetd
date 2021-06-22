@@ -139,45 +139,45 @@ func (f ServiceFlag) String() string {
 	return s
 }
 
-// BitcoinNet represents which bitcoin network a message belongs to.
-type BitcoinNet uint32
+// JaxNet represents which bitcoin network a message belongs to.
+type JaxNet uint32
 
 // Constants used to indicate the message bitcoin network.  They can also be
 // used to seek to the next message when a stream's state is unknown, but
 // this package does not provide that functionality since it's generally a
 // better idea to simply disconnect clients that are misbehaving over TCP.
 const (
-	// MainNet represents the main bitcoin network.
-	MainNet BitcoinNet = 0xd9b4bef9
+	// MainNet represents the main jax network.
+	MainNet JaxNet = 0xd9b4bef9
 
-	// TestNet represents the regression test network.
-	TestNet BitcoinNet = 0xdab5bffa
+	// RegTest represents the regression test network.
+	RegTest JaxNet = 0xdab5bffa
 
 	// TestNet3 represents the test network (version 3).
-	TestNet3 BitcoinNet = 0x0709110b
+	TestNet3 JaxNet = 0x0709110b
 
 	// SimNet represents the simulation test network.
-	SimNet BitcoinNet = 0x12141c16
+	SimNet JaxNet = 0x12141c16
 
-	// MainNet represents the main bitcoin network.
-	FTestNet BitcoinNet = 0x12121212
+	// FastTestNet represents the development jax network.
+	FastTestNet JaxNet = 0x12121212
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for
 // pretty printing.
-var bnStrings = map[BitcoinNet]string{
-	MainNet:  "MainNet",
-	TestNet:  "TestNet",
-	TestNet3: "TestNet3",
-	SimNet:   "SimNet",
-	FTestNet: "FTestNet",
+var bnStrings = map[JaxNet]string{
+	MainNet:     "MainNet",
+	RegTest:     "RegTest",
+	TestNet3:    "TestNet3",
+	SimNet:      "SimNet",
+	FastTestNet: "FastTestNet",
 }
 
-// String returns the BitcoinNet in human-readable form.
-func (n BitcoinNet) String() string {
+// String returns the JaxNet in human-readable form.
+func (n JaxNet) String() string {
 	if s, ok := bnStrings[n]; ok {
 		return s
 	}
 
-	return fmt.Sprintf("Unknown BitcoinNet (%d)", uint32(n))
+	return fmt.Sprintf("Unknown JaxNet (%d)", uint32(n))
 }

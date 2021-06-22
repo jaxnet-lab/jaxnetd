@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/corelog"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types"
 
 	"gitlab.com/jaxnet/core/shard.core/database"
 )
@@ -23,48 +22,42 @@ const (
 )
 
 // parseArgs parses the arguments from the database Open/Create methods.
-func parseArgs(funcName string, args ...interface{}) (string, types.BitcoinNet, error) {
-	if len(args) != 2 {
-		return "", 0, fmt.Errorf("invalid arguments to %s.%s -- "+
+func parseArgs(funcName string, args ...interface{}) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("invalid arguments to %s.%s -- "+
 			"expected database path and block network", dbType,
 			funcName)
 	}
 
 	dbPath, ok := args[0].(string)
 	if !ok {
-		return "", 0, fmt.Errorf("first argument to %s.%s is invalid -- "+
+		return "", fmt.Errorf("first argument to %s.%s is invalid -- "+
 			"expected database path string", dbType, funcName)
 	}
 
-	network, ok := args[1].(types.BitcoinNet)
-	if !ok {
-		return "", 0, fmt.Errorf("second argument to %s.%s is invalid -- "+
-			"expected block network", dbType, funcName)
-	}
-
-	return dbPath, network, nil
+	return dbPath, nil
 }
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
 func openDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
-	dbPath, network, err := parseArgs("Open", args...)
+	dbPath, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return openDB(dbPath, chain, network, false)
+	return openDB(dbPath, chain, false)
 }
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
 func createDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
-	dbPath, network, err := parseArgs("Create", args...)
+	dbPath, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return openDB(dbPath, chain, network, true)
+	return openDB(dbPath, chain, true)
 }
 
 // useLogger is the callback provided during driver registration that sets the

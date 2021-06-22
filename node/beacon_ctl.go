@@ -1,20 +1,19 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
 	"context"
-	"fmt"
-	"net"
 	"strconv"
-	"strings"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
 	"gitlab.com/jaxnet/core/shard.core/network/p2p"
 	"gitlab.com/jaxnet/core/shard.core/node/chain"
 	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
+	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
 	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
 	"gitlab.com/jaxnet/core/shard.core/types"
 )
@@ -41,51 +40,76 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 
 }
 func (beaconCtl *BeaconCtl) Init() error {
-	params := beaconCtl.cfg.Node.ChainParams()
-	params.AutoExpand = params.Net != types.MainNet && beaconCtl.cfg.Node.BeaconChain.AutoExpand
-	params.ExpansionRule = beaconCtl.cfg.Node.BeaconChain.ExpansionRule
-	params.ExpansionLimit = beaconCtl.cfg.Node.BeaconChain.ExpansionLimit
+	cfg := beaconCtl.cfg
+	params := cfg.Node.ChainParams()
+	params.AutoExpand = params.Net != types.MainNet && cfg.Node.BeaconChain.AutoExpand
+	params.ExpansionRule = cfg.Node.BeaconChain.ExpansionRule
+	params.ExpansionLimit = cfg.Node.BeaconChain.ExpansionLimit
+	beaconChain := beacon.Chain(params)
 
-	chain := beacon.Chain(params)
-
-	// Load the block database.
-	db, err := beaconCtl.dbCtl.loadBlockDB(beaconCtl.cfg.DataDir, chain, beaconCtl.cfg.Node)
-	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("Can't load Block db")
-		return err
-	}
-
-	blockGen := beacon.NewChainBlockGenerator(beacon.StateProvider{ShardCount: func() (uint32, error) {
-		if beaconCtl.chainProvider != nil && beaconCtl.chainProvider.BlockChain() != nil {
-			return beaconCtl.chainProvider.ShardCount()
-		}
-		return 0, nil
-	}})
-
-	beaconCtl.chainProvider, err = cprovider.NewChainProvider(beaconCtl.ctx,
-		beaconCtl.cfg.Node.BeaconChain, chain, blockGen, db, beaconCtl.log)
-	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("unable to init ChainProvider for beacon")
-		return err
-	}
-
-	addrManager := addrmgr.New(beaconCtl.cfg.DataDir, chain.Params().Name, func(host string) ([]net.IP, error) {
-		if strings.HasSuffix(host, ".onion") {
-			return nil, fmt.Errorf("attempt to resolve tor address %s", host)
+	// initialize chainProvider instance
+	{
+		// Load the block database.
+		db, err := beaconCtl.dbCtl.loadBlockDB(cfg.DataDir, beaconChain, cfg.Node)
+		if err != nil {
+			beaconCtl.log.Error().Err(err).Msg("Can't load Block db")
+			return err
 		}
 
-		return beaconCtl.cfg.Node.P2P.Lookup(host)
-	})
+		mAddreses, err := cfg.Node.BeaconChain.ParseMiningAddresses(params)
+		if err != nil {
+			beaconCtl.log.Error().Err(err).Msg("Can't parse mining addresses")
+			return err
+		}
 
-	port, _ := strconv.ParseInt(chain.Params().DefaultPort, 10, 16)
-	// Create p2pServer.
-	beaconCtl.p2pServer, err = p2p.NewServer(&beaconCtl.cfg.Node.P2P, beaconCtl.chainProvider, addrManager,
-		p2p.ListenOpts{DefaultPort: int(port),
-			Listeners: beaconCtl.cfg.Node.P2P.Listeners,
-		})
-	if err != nil {
-		beaconCtl.log.Error().Msgf("Unable to start p2pServer on %v: %v", beaconCtl.cfg.Node.P2P.Listeners, err)
-		return err
+		btcdProvider, err := btcd.NewBlockProvider(beaconCtl.cfg.BTCD, mAddreses[0])
+		if err != nil {
+			beaconCtl.log.Error().Err(err).Msg("Can't init btcdProvider")
+			return err
+		}
+
+		bsp := beacon.StateProvider{
+			ShardCount: func() (uint32, error) {
+				if beaconCtl.chainProvider != nil && beaconCtl.chainProvider.BlockChain() != nil {
+					return beaconCtl.chainProvider.ShardCount()
+				}
+				return 0, nil
+			},
+			BTCGen: btcdProvider,
+		}
+
+		blockGen := beacon.NewChainBlockGenerator(bsp)
+
+		chainProvider, err := cprovider.NewChainProvider(beaconCtl.ctx,
+			cfg.Node.BeaconChain, beaconChain, blockGen, db, beaconCtl.log)
+		if err != nil {
+			beaconCtl.log.Error().Err(err).Msg("unable to init ChainProvider for beacon")
+			return err
+		}
+
+		beaconCtl.chainProvider = chainProvider
+	}
+
+	// initialize p2pServer instance
+	{
+		addrManager := addrmgr.New(cfg.DataDir, beaconChain.Params().Name, cfg.Node.P2P.Lookup)
+		port, _ := strconv.ParseInt(beaconChain.Params().DefaultPort, 10, 16)
+
+		// Create p2pServer.
+		p2pServer, err := p2p.NewServer(&cfg.Node.P2P,
+			beaconCtl.chainProvider,
+			addrManager,
+			p2p.ListenOpts{
+				DefaultPort: int(port),
+				Listeners:   beaconCtl.cfg.Node.P2P.Listeners,
+			},
+		)
+		if err != nil {
+			beaconCtl.log.Error().Msgf("Unable to start p2pServer on %v: %v", beaconCtl.cfg.Node.P2P.Listeners, err)
+			return err
+		}
+
+		beaconCtl.p2pServer = p2pServer
 	}
 
 	// todo: improve

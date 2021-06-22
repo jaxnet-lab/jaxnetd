@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package wire
 
 import (
@@ -22,7 +23,7 @@ const (
 	ShardBlockHeaderLen = 80
 )
 
-// BlockHeader defines information about a block and is used in the bitcoin
+// ShardHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
 type ShardHeader struct {
 	// Hash of the previous block ShardHeader in the block chain.
@@ -42,25 +43,28 @@ type ShardHeader struct {
 	// many shards he was mining
 	mergeMiningNumber uint32
 
-	BCHeader BeaconHeader
+	bCHeader BeaconHeader
+
+	CoinbaseAux
 }
 
-func EmptyShardHeader() *ShardHeader { return &ShardHeader{BCHeader: *EmptyBeaconHeader()} }
+func EmptyShardHeader() *ShardHeader { return &ShardHeader{bCHeader: *EmptyBeaconHeader()} }
 
 // NewShardBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
 func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time.Time, bits uint32,
-	bcHeader BeaconHeader) *ShardHeader {
+	bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &ShardHeader{
-		prevBlock:  prevHash,
-		merkleRoot: merkleRootHash,
-		timestamp:  timestamp,
-		bits:       bits,
-		BCHeader:   bcHeader,
+		prevBlock:   prevHash,
+		merkleRoot:  merkleRootHash,
+		timestamp:   timestamp,
+		bits:        bits,
+		bCHeader:    bcHeader,
+		CoinbaseAux: aux,
 	}
 }
 
@@ -71,13 +75,13 @@ func (h *ShardHeader) Copy() BlockHeader {
 
 	// all fields except this are passed by value
 	// so we manually copy the following fields to prevent side effects
-	bc := h.BCHeader.Copy().BeaconHeader()
-	clone.BCHeader = *bc
+	bc := h.bCHeader.Copy().BeaconHeader()
+	clone.bCHeader = *bc
 	return &clone
 }
 
-func (h *ShardHeader) BeaconHeader() *BeaconHeader      { return &h.BCHeader }
-func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader) { h.BCHeader = *bh }
+func (h *ShardHeader) BeaconHeader() *BeaconHeader      { return &h.bCHeader }
+func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader) { h.bCHeader = *bh }
 
 func (h *ShardHeader) Bits() uint32        { return h.bits }
 func (h *ShardHeader) SetBits(bits uint32) { h.bits = bits }
@@ -91,29 +95,29 @@ func (h *ShardHeader) SetPrevBlock(prevBlock chainhash.Hash) { h.prevBlock = pre
 func (h *ShardHeader) Timestamp() time.Time     { return h.timestamp }
 func (h *ShardHeader) SetTimestamp(t time.Time) { h.timestamp = t }
 
-func (h *ShardHeader) Version() BVersion { return h.BCHeader.version }
+func (h *ShardHeader) Version() BVersion { return h.bCHeader.version }
 
-func (h *ShardHeader) Nonce() uint32     { return h.BCHeader.nonce }
-func (h *ShardHeader) SetNonce(n uint32) { h.BCHeader.SetNonce(n) }
+func (h *ShardHeader) Nonce() uint32     { return h.bCHeader.btcAux.Nonce }
+func (h *ShardHeader) SetNonce(n uint32) { h.bCHeader.SetNonce(n) }
+
+func (h *ShardHeader) K() uint32         { return h.bCHeader.k }
+func (h *ShardHeader) SetK(value uint32) { h.bCHeader.k = value }
+
+func (h *ShardHeader) VoteK() uint32         { return h.bCHeader.voteK }
+func (h *ShardHeader) SetVoteK(value uint32) { h.bCHeader.voteK = value }
 
 func (h *ShardHeader) MaxLength() int { return MaxShardBlockHeaderPayload }
 
 func (h *ShardHeader) MergeMiningNumber() uint32     { return h.mergeMiningNumber }
 func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n }
 
-func (h *ShardHeader) MergeMiningRoot() chainhash.Hash         { return h.BCHeader.MergeMiningRoot() }
-func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) { h.BCHeader.SetMergeMiningRoot(value) }
-
-func (h *ShardHeader) BlockData() []byte {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteShardBlockHeader(buf, h)
-	return buf.Bytes()
-}
+func (h *ShardHeader) MergeMiningRoot() chainhash.Hash         { return h.bCHeader.MergeMiningRoot() }
+func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) { h.bCHeader.SetMergeMiningRoot(value) }
 
 // ShardBlockHash computes the block identifier hash for the given block ShardHeader.
 func (h *ShardHeader) ShardBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteShardBlockHeaderNoBC(buf, h)
+	_ = writeShardBlockHeaderNoBC(buf, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -125,12 +129,23 @@ func (h *ShardHeader) BlockHash() chainhash.Hash {
 	return chainhash.DoubleHashH(buf.Bytes())
 }
 
+// PoWHash computes the hash for block that will be used to check ProofOfWork.
+func (h *ShardHeader) PoWHash() chainhash.Hash {
+	return h.bCHeader.btcAux.BlockHash()
+}
+
+// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+// and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
+func (h *ShardHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
+	h.bCHeader.UpdateCoinbaseScript(coinbaseScript)
+}
+
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
 func (h *ShardHeader) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	return ReadShardBlockHeader(r, h)
+	return readShardBlockHeader(r, h)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
@@ -147,8 +162,8 @@ func (h *ShardHeader) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEnc
 func (h *ShardHeader) Read(r io.Reader) error {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
-	// a result, make use of ReadBeaconBlockHeader.
-	return ReadShardBlockHeader(r, h)
+	// a result, make use of readBeaconBlockHeader.
+	return readShardBlockHeader(r, h)
 }
 
 // Serialize encodes a block ShardHeader from r into the receiver using a format
@@ -171,10 +186,10 @@ func (h *ShardHeader) Write(w io.Writer) error {
 	return WriteShardBlockHeader(w, h)
 }
 
-// ReadBeaconBlockHeader reads a bitcoin block ShardHeader from r.  See Deserialize for
+// readBeaconBlockHeader reads a bitcoin block ShardHeader from r.  See Deserialize for
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
-func ReadShardBlockHeader(r io.Reader, bh *ShardHeader) error {
+func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 	err := encoder.ReadElements(r,
 		&bh.prevBlock,
 		&bh.merkleRoot,
@@ -185,7 +200,11 @@ func ReadShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 	if err != nil {
 		return err
 	}
-	return ReadBeaconBlockHeader(r, &bh.BCHeader)
+	if err = bh.bCHeader.Read(r); err != nil {
+		return err
+	}
+
+	return bh.CoinbaseAux.Deserialize(r)
 }
 
 // WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
@@ -203,13 +222,19 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 	if err != nil {
 		return err
 	}
-	return bh.BCHeader.Write(w)
+
+	err = bh.bCHeader.Write(w)
+	if err != nil {
+		return err
+	}
+
+	return bh.CoinbaseAux.Serialize(w)
 }
 
 // WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
-func WriteShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
+func writeShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
 	sec := uint32(bh.timestamp.Unix())
 	return encoder.WriteElements(w,
 		&bh.prevBlock,

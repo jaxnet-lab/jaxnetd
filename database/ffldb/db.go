@@ -26,7 +26,6 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/database"
 	"gitlab.com/jaxnet/core/shard.core/database/internal/treap"
 	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 )
 
@@ -1990,7 +1989,7 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, chain chain2.IChainCtx, network types.BitcoinNet, create bool) (database.DB, error) {
+func openDB(dbPath string, chainCtx chain2.IChainCtx, create bool) (database.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)
@@ -2024,9 +2023,9 @@ func openDB(dbPath string, chain chain2.IChainCtx, network types.BitcoinNet, cre
 	// according to the data that is actually on disk.  Also create the
 	// database cache which wraps the underlying leveldb database to provide
 	// write caching.
-	store := newBlockStore(dbPath, network)
+	store := newBlockStore(dbPath, chainCtx.Params().Net)
 	cache := newDbCache(ldb, store, defaultCacheSize, defaultFlushSecs)
-	pdb := &db{store: store, cache: cache, chain: chain}
+	pdb := &db{store: store, cache: cache, chain: chainCtx}
 
 	// Perform any reconciliation needed between the block and metadata as
 	// well as database initialization, if needed.

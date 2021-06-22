@@ -177,6 +177,7 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 		Version:    mtx.Version,
 		LockTime:   mtx.LockTime,
 		CoinbaseTx: chaindata.IsCoinBaseTx(mtx),
+		OrphanTx:   blkHeight == -1,
 	}
 
 	for _, vout := range mtx.TxOut {

@@ -199,7 +199,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
+func (r FutureGetCurrentNetResult) Receive() (types.JaxNet, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -212,7 +212,7 @@ func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
 		return 0, err
 	}
 
-	return types.BitcoinNet(net), nil
+	return types.JaxNet(net), nil
 }
 
 // GetCurrentNetAsync returns an instance of a type that can be used to get the
@@ -230,7 +230,7 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // GetCurrentNet returns the network the server is running on.
 //
 // NOTE: This is a btcd extension.
-func (c *Client) GetCurrentNet() (types.BitcoinNet, error) {
+func (c *Client) GetCurrentNet() (types.JaxNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
 

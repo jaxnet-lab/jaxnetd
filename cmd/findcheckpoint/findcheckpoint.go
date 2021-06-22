@@ -33,7 +33,7 @@ func loadBlockDB() (database.DB, error) {
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	fmt.Printf("Loading block database from '%s'\n", dbPath)
-	db, err := database.Open(cfg.DbType, chain, dbPath, activeNetParams.Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
 		return nil, err
 	}

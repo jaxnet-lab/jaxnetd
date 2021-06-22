@@ -198,9 +198,18 @@ func TestBeaconBlockHeaderSerialize(t *testing.T) {
 		mergeMiningRoot: chainhash.Hash{},
 		timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 		bits:            bits,
-		nonce:           nonce,
 		shards:          0,
 		treeEncoding:    nil,
+		btcAux: BTCBlockAux{
+			Version:    0,
+			PrevBlock:  chainhash.Hash{},
+			MerkleRoot: chainhash.Hash{},
+			Timestamp:  time.Time{},
+			Bits:       0,
+			Nonce:      nonce,
+			Tx:         MsgTx{},
+			TxMerkle:   nil,
+		},
 	}
 
 	// baseBlockHdrEncoded is the wire encoded bytes of baseBlockHdr.
@@ -283,16 +292,25 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 		timestamp:         time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 		bits:              bits,
 		mergeMiningNumber: 0,
-		BCHeader: BeaconHeader{
+		bCHeader: BeaconHeader{
 			version:         1,
 			prevBlock:       mainNetGenesisHash,
 			merkleRoot:      mainNetGenesisMerkleRoot,
 			mergeMiningRoot: chainhash.Hash{},
 			timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 			bits:            bits,
-			nonce:           nonce,
 			shards:          0,
 			treeEncoding:    nil,
+			btcAux: BTCBlockAux{
+				Version:    0,
+				PrevBlock:  chainhash.Hash{},
+				MerkleRoot: chainhash.Hash{},
+				Timestamp:  time.Time{},
+				Bits:       0,
+				Nonce:      nonce,
+				Tx:         MsgTx{},
+				TxMerkle:   nil,
+			},
 		},
 	}
 
@@ -312,7 +330,7 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 		0xff, 0xff, 0x00, 0x1d, // Bits
 		0x00, 0x00, 0x00, 0x00, // mergeMiningNumber
 
-		// BCHeader
+		// bCHeader
 		0x01, 0x00, 0x00, 0x00, // Version 1
 		0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 		0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,

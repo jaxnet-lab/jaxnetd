@@ -357,7 +357,7 @@ out:
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.generator.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr, 7)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			miner.log.Error().Err(err).Msg("Failed to create new block template")
@@ -615,7 +615,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.generator.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr, 7)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			miner.log.Error().Err(err).Msg("Failed to create new block template")

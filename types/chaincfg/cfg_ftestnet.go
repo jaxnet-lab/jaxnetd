@@ -31,14 +31,10 @@ var fastNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet
 // for the main network.
 var fTestNetGenesisMerkleRoot = genesisMerkleRoot
 
-// DEPRECATED
-// FTestNetParams is deprecated name use the FastNetParams instead.
-var FTestNetParams = FastNetParams
-
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
 	Name:        "fastnet",
-	Net:         types.FTestNet,
+	Net:         types.FastTestNet,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},
 

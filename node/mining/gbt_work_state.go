@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
 	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
 	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/core/shard.core/types"
 	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
 	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
 	"gitlab.com/jaxnet/core/shard.core/types/pow"
@@ -217,8 +218,8 @@ func (state *GBTWorkState) TemplateUpdateChan(prevHash *chainhash.Hash, lastGene
 	return c
 }
 
-func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbaseValue bool) (BlockTemplate, error) {
-	err := state.UpdateBlockTemplate(chainProvider, useCoinbaseValue)
+func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbaseValue bool, burnReward int) (BlockTemplate, error) {
+	err := state.UpdateBlockTemplate(chainProvider, useCoinbaseValue, burnReward)
 	if err != nil {
 		return BlockTemplate{}, err
 	}
@@ -237,7 +238,7 @@ func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbas
 // addresses.
 //
 // This function MUST be called with the state locked.
-func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useCoinbaseValue bool) error {
+func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useCoinbaseValue bool, burnRewardFlags int) error {
 	lastTxUpdate := state.generator.TxSource().LastUpdated()
 	if lastTxUpdate.IsZero() {
 		lastTxUpdate = time.Now()
@@ -269,6 +270,9 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr btcutil.Address
+		if !useCoinbaseValue && len(miningAddrs) == 0 {
+			payAddr = miningAddrs[0]
+		}
 		if !useCoinbaseValue && len(miningAddrs) > 0 {
 			payAddr = miningAddrs[rand.Intn(len(miningAddrs))]
 		}
@@ -278,10 +282,10 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// block template doesn't include the coinbase, so the caller
 		// will ultimately create their own coinbase which pays to the
 		// appropriate address(es).
-		blkTemplate, err := state.generator.NewBlockTemplate(payAddr)
+		blkTemplate, err := state.generator.NewBlockTemplate(payAddr, burnRewardFlags)
 		if err != nil {
 			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
-				"failed to create new block template:"+err.Error())
+				"failed to create new block template: "+err.Error())
 		}
 
 		template = blkTemplate
@@ -336,7 +340,18 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 				return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
 					"Failed to create pay-to-addr script:"+err.Error())
 			}
-			template.Block.Transactions[0].TxOut[0].PkScript = pkScript
+			burnReward := false
+			switch state.generator.chainCtx.IsBeacon() {
+			case true:
+				burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
+			case false:
+				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
+			}
+
+			if len(template.Block.Transactions[0].TxOut) < 2 && !burnReward {
+				template.Block.Transactions[0].TxOut[0].PkScript = pkScript
+			}
+
 			template.ValidPayAddress = true
 
 			// Update the merkle root.
@@ -353,7 +368,11 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// Update the time of the block template to the current time
 		// while accounting for the median time of the past several
 		// blocks per the BlockChain consensus rules.
-		state.generator.UpdateBlockTime(&msgBlock)
+		err := state.generator.UpdateBlockTime(&msgBlock)
+		if err != nil {
+			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+				"Failed to update block time:"+err.Error())
+		}
 		msgBlock.Header.SetNonce(0)
 
 		state.Log.Debug().
@@ -401,6 +420,12 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
+	btcAuxBuf := bytes.NewBuffer(nil)
+	err = header.BeaconHeader().BTCAux().Serialize(btcAuxBuf)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate the block template reply.  Note that following mutations are
 	// implied by the included or omission of fields:
 	//  Including MinTime -> time/decrement
@@ -428,6 +453,10 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		Mutable:      gbtMutableFields,
 		NonceRange:   gbtNonceRange,
 		Capabilities: gbtCapabilities,
+
+		K:      header.K(),
+		VoteK:  header.VoteK(),
+		BTCAux: hex.EncodeToString(btcAuxBuf.Bytes()),
 	}
 
 	// If the generated block template includes transactions with witness
@@ -483,6 +512,12 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 		return nil, err
 	}
 
+	btcAuxBuf := bytes.NewBuffer(nil)
+	err = header.BeaconHeader().BTCAux().Serialize(btcAuxBuf)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate the block template reply.  Note that following mutations are
 	// implied by the included or omission of fields:
 	//  Including MinTime -> time/decrement
@@ -509,6 +544,10 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 		Mutable:      gbtMutableFields,
 		NonceRange:   gbtNonceRange,
 		Capabilities: gbtCapabilities,
+
+		K:      header.K(),
+		VoteK:  header.VoteK(),
+		BTCAux: hex.EncodeToString(btcAuxBuf.Bytes()),
 	}
 
 	// If the generated block template includes transactions with witness

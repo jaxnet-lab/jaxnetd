@@ -88,7 +88,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		header.Version() < 4 && blockHeight >= params.BIP0065Height {
 
 		str := "new blocks with version %d are no longer valid"
-		str = fmt.Sprintf(str, header.Version)
+		str = fmt.Sprintf(str, header.Version())
 		return chaindata.NewRuleError(chaindata.ErrBlockVersionTooOld, str)
 	}
 
@@ -408,7 +408,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 		}
 
 		if tx.MsgTx().Version == wire.TxVerEADAction {
-			// return
+			// todo(mike)
 		}
 	}
 
@@ -421,8 +421,11 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 	for _, txOut := range transactions[0].MsgTx().TxOut {
 		totalSatoshiOut += txOut.Value
 	}
-	expectedSatoshiOut := chaindata.CalcBlockSubsidy(node.Height(), b.chainParams) +
-		totalFees
+
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header())
+	// chaindata.CalcBlockSubsidy(node.Height(), b.chainParams)
+
+	expectedSatoshiOut := reward + totalFees
 	if totalSatoshiOut > expectedSatoshiOut {
 		str := fmt.Sprintf("coinbase transaction for block pays %v "+
 			"which is more than expected value of %v",
@@ -498,14 +501,6 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 						"block contains transaction whose input sequence locks are not met")
 					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
 				}
-				// case wire.TxVerRefundableTimeLock:
-				// 	if chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
-				// 		if !chaindata.ValidMoneyBackAfterExpiration(tx, view) {
-				// 			str := fmt.Sprintf(
-				// 				"lock time has expired, transactions is possible only to the original addresses")
-				// 			return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
-				// 		}
-				// 	}
 			}
 
 		}
@@ -563,6 +558,12 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	if err != nil {
 		return err
 	}
+	//
+	// // Perform checks of the coinbase tx structure according to merge mining spec.
+	// err = b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
+	// if err != nil {
+	// 	return err
+	// }
 
 	err = b.checkBlockContext(block, tip, flags)
 	if err != nil {

@@ -119,6 +119,7 @@ type GetBeaconBlockVerboseResult struct {
 	Nonce               uint32        `json:"nonce"`
 	Bits                string        `json:"bits"`
 	Difficulty          float64       `json:"difficulty"`
+	PoWHash             string        `json:"powhash"`
 	PreviousHash        string        `json:"previousblockhash"`
 	NextHash            string        `json:"nextblockhash,omitempty"`
 	MerkleMountainRange string        `json:"mmr"`
@@ -365,6 +366,10 @@ type GetBeaconBlockTemplateResult struct {
 	// Block proposal from BIP 0023.
 	Capabilities []string `json:"capabilities,omitempty"`
 	RejectReason string   `json:"reject-reason,omitempty"`
+
+	BTCAux string `json:"btcAux"`
+	K      uint32 `json:"k"`
+	VoteK  uint32 `json:"vote_k"`
 }
 
 // GetShardBlockTemplateResult models the data returned from the getblocktemplate
@@ -409,6 +414,10 @@ type GetShardBlockTemplateResult struct {
 	// Block proposal from BIP 0023.
 	Capabilities []string `json:"capabilities,omitempty"`
 	RejectReason string   `json:"reject-reason,omitempty"`
+
+	BTCAux string `json:"btcAux"`
+	K      uint32 `json:"k"`
+	VoteK  uint32 `json:"vote_k"`
 }
 
 // GetMempoolEntryResult models the data returned from the getmempoolentry's
@@ -826,9 +835,9 @@ type TxRawResult struct {
 	LockTime      uint32 `json:"locktime"`
 	Vin           []Vin  `json:"vin"`
 	Vout          []Vout `json:"vout"`
-	InAmount      int64  `json:"in_amount,omitempty"`
+	InAmount      int64  `json:"in_amount,omitempty"` // will be not empty only when GetTxDetails
 	OutAmount     int64  `json:"out_amount,omitempty"`
-	Fee           int64  `json:"fee,omitempty"`
+	Fee           int64  `json:"fee,omitempty"` // will be not empty only when GetTxDetails
 	BlockHash     string `json:"blockhash,omitempty"`
 	Confirmations uint64 `json:"confirmations,omitempty"`
 	Time          int64  `json:"time,omitempty"`

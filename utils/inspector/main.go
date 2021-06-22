@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
 )
 
@@ -24,17 +25,24 @@ func prettyPrint(val interface{}) {
 }
 
 func main() {
+
+	// 64.225.64.8 alias=node-ams3 net=testnet
+	// 128.199.31.83 alias=node-blr1 net=testnet
+	// 161.35.220.11 alias=node-fra1 net=testnet
+	// 138.68.152.77 alias=node-lon1 net=testnet
+	// 159.89.89.207 alias=node-nyc1 net=testnet
+	// 164.90.150.0 alias=node-sfo3 net=testnet
+	// 128.199.64.36 alias=node-sgp1 net=testnet
+
 	connCfg := &rpcclient.ConnConfig{
 		// shardID: 42,
 		Params: "fastnet",
 		Pass:   "somerpc",
 		User:   "somerpc",
 		Host:   "127.0.0.1:18333",
-		// Host: "159.69.117.159:12333",
-		// Host: "198.199.125.197:18333",
-		// Host: "116.202.107.209:22333",
-		// User: "jaxnetrpc",
-		// Pass: "AUL6VBjoQnhP3bfFzl",
+		// Host:         "128.199.64.36:18333",
+		// User:         "jaxnetrpc",
+		// Pass:         "AUL6VBjoQnhP3bfFzl",
 		HTTPPostMode: true,
 		DisableTLS:   true,
 	}
@@ -46,14 +54,14 @@ func main() {
 	resp, err := rpcClient.ListShards()
 	interruptOnError(err)
 
-	for i := int64(0); ; i++ {
+	for i := int64(0); i < 10; i++ {
 		block, err := rpcClient.ForBeacon().GetBeaconBlockBySerialNumber(i)
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
-		fmt.Printf("Beacon Block: Hash=%s Height=%d SerialID=%d PrevSerialID=%d \n",
-			"", block.Height, block.SerialID, block.PrevSerialID)
+
+		spew.Dump(block)
 	}
 
 	for _, info := range resp.Shards {
@@ -64,8 +72,7 @@ func main() {
 				fmt.Println(err)
 				break
 			}
-			fmt.Printf("Shard %d Block: Hash=%s Height=%d SerialID=%d PrevSerialID=%d \n",
-				info.ID, "", block.Height, block.SerialID, block.PrevSerialID)
+			spew.Dump(block)
 		}
 	}
 }
