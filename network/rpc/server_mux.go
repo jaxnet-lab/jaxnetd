@@ -11,8 +11,8 @@ import (
 
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 type MultiChainRPC struct {
@@ -93,8 +93,8 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			server.chainsMutex.RUnlock()
 			if !ok {
 				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.shardID)
-				return nil, &btcjson.RPCError{
-					Code:    btcjson.ErrShardIDMismatch,
+				return nil, &jaxjson.RPCError{
+					Code:    jaxjson.ErrShardIDMismatch,
 					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
 				}
 			}
@@ -109,13 +109,13 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 type Mux struct {
 	rpcutli.ToolsXt
 	Log      zerolog.Logger
-	handlers map[btcjson.MethodName]CommandHandler
+	handlers map[jaxjson.MethodName]CommandHandler
 }
 
 func NewRPCMux(logger zerolog.Logger) Mux {
 	return Mux{
 		Log:      logger,
-		handlers: map[btcjson.MethodName]CommandHandler{},
+		handlers: map[jaxjson.MethodName]CommandHandler{},
 	}
 }
 
@@ -124,17 +124,17 @@ func NewRPCMux(logger zerolog.Logger) Mux {
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
 func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-	method := btcjson.ScopedMethod(cmd.scope, cmd.method)
+	method := jaxjson.ScopedMethod(cmd.scope, cmd.method)
 	handler, ok := server.handlers[method]
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
 		return handler(cmd.cmd, closeChan)
 	}
 
-	return nil, btcjson.ErrRPCMethodNotFound.WithMethod(method.String())
+	return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())
 }
 
-func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {
+func (server *Mux) SetCommands(commands map[jaxjson.MethodName]CommandHandler) {
 	for cmd, handler := range commands {
 		server.handlers[cmd] = handler
 	}
@@ -145,11 +145,11 @@ func (server *Mux) SetCommands(commands map[btcjson.MethodName]CommandHandler) {
 // RPC server subsystem since internal errors really should not occur.  The
 // context parameter is only used in the log message and may be empty if it's
 // not needed.
-func (server *Mux) InternalRPCError(errStr, context string) *btcjson.RPCError {
+func (server *Mux) InternalRPCError(errStr, context string) *jaxjson.RPCError {
 	logStr := errStr
 	if context != "" {
 		logStr = context + ": " + errStr
 	}
 	server.Log.Error().Msg(logStr)
-	return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, errStr)
+	return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code, errStr)
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 )
 
 type statsProvider interface {

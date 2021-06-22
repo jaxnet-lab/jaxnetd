@@ -12,12 +12,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 func (chainCtl *chainController) EnableShard(shardID uint32) error {
@@ -30,13 +30,13 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 	return nil
 }
 
-func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
+func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 	chainCtl.shardsMutex.RLock()
 	defer chainCtl.shardsMutex.RUnlock()
-	list := make(map[uint32]btcjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
+	list := make(map[uint32]jaxjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
 
 	for _, shardInfo := range chainCtl.shardsIndex.Shards {
-		list[shardInfo.ID] = btcjson.ShardInfo{
+		list[shardInfo.ID] = jaxjson.ShardInfo{
 			ID:            shardInfo.ID,
 			LastVersion:   int32(shardInfo.LastVersion),
 			GenesisHeight: shardInfo.GenesisHeight,
@@ -46,7 +46,7 @@ func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
 		}
 	}
 
-	return btcjson.ShardListResult{
+	return jaxjson.ShardListResult{
 		Shards: list,
 	}
 }
@@ -83,9 +83,9 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	block, ok := not.Data.(*btcutil.Block)
+	block, ok := not.Data.(*jaxutil.Block)
 	if !ok {
-		chainCtl.logger.Warn().Msg("block notification data is not a *btcutil.Block")
+		chainCtl.logger.Warn().Msg("block notification data is not a *jaxutil.Block")
 		return
 	}
 
@@ -103,7 +103,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	chainCtl.runShardRoutine(shardID, opts, block, true)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, autoInit bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *jaxutil.Block, autoInit bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error().
 			Uint32("shard_id", shardID).

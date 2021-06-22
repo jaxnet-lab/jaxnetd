@@ -1,9 +1,9 @@
 package rpc
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"golang.org/x/crypto/ripemd160"
 	"sync"
 )
@@ -58,15 +58,15 @@ func newWSClientFilter(addresses []string, unspentOutPoints []wire.OutPoint, par
 // on the type of address passed as an argument.
 //
 // NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) addAddress(a btcutil.Address) {
+func (f *wsClientFilter) addAddress(a jaxutil.Address) {
 	switch a := a.(type) {
-	case *btcutil.AddressPubKeyHash:
+	case *jaxutil.AddressPubKeyHash:
 		f.pubKeyHashes[*a.Hash160()] = struct{}{}
 		return
-	case *btcutil.AddressScriptHash:
+	case *jaxutil.AddressScriptHash:
 		f.scriptHashes[*a.Hash160()] = struct{}{}
 		return
-	case *btcutil.AddressPubKey:
+	case *jaxutil.AddressPubKey:
 		serializedPubKey := a.ScriptAddress()
 		switch len(serializedPubKey) {
 		case 33: // compressed
@@ -93,7 +93,7 @@ func (f *wsClientFilter) addAddressStr(s string, params *chaincfg.Params) {
 	// If address can't be decoded, no point in saving it since it should also
 	// impossible to create the address from an inspected transaction output
 	// script.
-	a, err := btcutil.DecodeAddress(s, params)
+	a, err := jaxutil.DecodeAddress(s, params)
 	if err != nil {
 		return
 	}
@@ -104,15 +104,15 @@ func (f *wsClientFilter) addAddressStr(s string, params *chaincfg.Params) {
 // wsClientFilter.
 //
 // NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) existsAddress(a btcutil.Address) bool {
+func (f *wsClientFilter) existsAddress(a jaxutil.Address) bool {
 	switch a := a.(type) {
-	case *btcutil.AddressPubKeyHash:
+	case *jaxutil.AddressPubKeyHash:
 		_, ok := f.pubKeyHashes[*a.Hash160()]
 		return ok
-	case *btcutil.AddressScriptHash:
+	case *jaxutil.AddressScriptHash:
 		_, ok := f.scriptHashes[*a.Hash160()]
 		return ok
-	case *btcutil.AddressPubKey:
+	case *jaxutil.AddressPubKey:
 		serializedPubKey := a.ScriptAddress()
 		switch len(serializedPubKey) {
 		case 33: // compressed
@@ -142,15 +142,15 @@ func (f *wsClientFilter) existsAddress(a btcutil.Address) bool {
 // wsClientFilter.
 //
 // NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeAddress(a btcutil.Address) {
+func (f *wsClientFilter) removeAddress(a jaxutil.Address) {
 	switch a := a.(type) {
-	case *btcutil.AddressPubKeyHash:
+	case *jaxutil.AddressPubKeyHash:
 		delete(f.pubKeyHashes, *a.Hash160())
 		return
-	case *btcutil.AddressScriptHash:
+	case *jaxutil.AddressScriptHash:
 		delete(f.scriptHashes, *a.Hash160())
 		return
-	case *btcutil.AddressPubKey:
+	case *jaxutil.AddressPubKey:
 		serializedPubKey := a.ScriptAddress()
 		switch len(serializedPubKey) {
 		case 33: // compressed
@@ -174,7 +174,7 @@ func (f *wsClientFilter) removeAddress(a btcutil.Address) {
 //
 // NOTE: This extension was ported from github.com/decred/dcrd
 func (f *wsClientFilter) removeAddressStr(s string, params *chaincfg.Params) {
-	a, err := btcutil.DecodeAddress(s, params)
+	a, err := jaxutil.DecodeAddress(s, params)
 	if err == nil {
 		f.removeAddress(a)
 	} else {

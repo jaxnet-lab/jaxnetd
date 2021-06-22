@@ -10,13 +10,13 @@ import (
 	"encoding/hex"
 	"log"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type Transaction struct {
@@ -37,12 +37,12 @@ func CreateTransaction(destination string, amount int64, txHash string, netParam
 	}
 	privKey, pb := btcec.PrivKeyFromBytes(btcec.S256(), pkBytes)
 
-	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), netParams)
+	addresspubkey, _ := jaxutil.NewAddressPubKey(pb.SerializeUncompressed(), netParams)
 
 	sourceUtxoHash, _ := chainhash.NewHashFromStr(txHash)
 
-	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.MainNetParams)
-	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
+	destinationAddress, err := jaxutil.DecodeAddress(destination, &chaincfg.MainNetParams)
+	sourceAddress, err := jaxutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
 	if err != nil {
 		return nil, Transaction{}, err
 	}
@@ -182,17 +182,17 @@ func main() {
 	// if err != nil {
 	//	return
 	// }
-	// wif, err := btcutil.NewWIF(secret, &chaincfg.JaxNetParams, true)
+	// wif, err := jaxutil.NewWIF(secret, &chaincfg.JaxNetParams, true)
 	// fmt.Println()
 	// fmt.Println(string(wif.SerializePubKey()))
 
 	//
 	//
-	// addr, err := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), &chaincfg.JaxNetParams)
+	// addr, err := jaxutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), &chaincfg.JaxNetParams)
 	// fmt.Println(addr.String(), addr.AddressPubKeyHash())
 	//
 
-	// btcutil.
+	// jaxutil.
 
 	// params := &chaincfg.JaxNetParams
 	// params.Name = "jaxnet"
@@ -205,7 +205,7 @@ func main() {
 	// fmt.Println(params.PubKeyHashAddrID, activeNetParams.PubKeyHashAddrID)
 	// fmt.Println(params.PrivateKeyID, activeNetParams.PrivateKeyID)
 	// 1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh
-	// jaxAddres, err := btcutil.DecodeAddress("15VS71vPzPMxY5fXwJUVkqyHge94g4Uub4", &chaincfg.JaxNetParams)
+	// jaxAddres, err := jaxutil.DecodeAddress("15VS71vPzPMxY5fXwJUVkqyHge94g4Uub4", &chaincfg.JaxNetParams)
 	//
 	// //fmt.Println("ImportAddress")
 	// //if err := client.ImportAddress("1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh"); err != nil{
@@ -266,7 +266,7 @@ func main() {
 	//
 	// toAddr, _ := client.GetAccountAddress("MainAccount")
 	//
-	// amount, _ := btcutil.NewAmount(0.0001)
+	// amount, _ := jaxutil.NewAmount(0.0001)
 	// h, err := client.SendFrom("JaxMiner", toAddr, amount)
 	// fmt.Println("Send result: ", h, err)
 	// //

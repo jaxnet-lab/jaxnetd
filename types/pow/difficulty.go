@@ -7,7 +7,7 @@ package pow
 import (
 	"math/big"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 var (
@@ -55,7 +55,7 @@ func HashToBig(hash *chainhash.Hash) *big.Int {
 //
 // This compact form is only used in bitcoin to encode unsigned 256-bit numbers
 // which represent difficulty targets, thus there really is not a need for a
-// sign bit, but it is implemented here to stay consistent with bitcoind.
+// sign bit, but it is implemented here to stay consistent with jaxnetd.
 func CompactToBig(compact uint32) *big.Int {
 	// Extract the mantissa, sign bit, and exponent.
 	mantissa := compact & 0x007fffff

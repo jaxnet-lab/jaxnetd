@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
@@ -48,7 +48,7 @@ var (
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*btcutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*jaxutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {
@@ -64,9 +64,9 @@ func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*btcutil
 	dr := bzip2.NewReader(fi)
 
 	// Set the first block as the genesis block.
-	blocks := make([]*btcutil.Block, 0, 256)
+	blocks := make([]*jaxutil.Block, 0, 256)
 	// fixme
-	// genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	// genesis := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
 	// blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.
@@ -105,7 +105,7 @@ func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*btcutil
 		}
 
 		// Deserialize and store the block.
-		block, err := btcutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
+		block, err := jaxutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
 		if err != nil {
 			t.Errorf("Failed to parse block %v: %v", height, err)
 			return nil, err
@@ -142,7 +142,7 @@ type testContext struct {
 	db          database.DB
 	bucketDepth int
 	isWritable  bool
-	blocks      []*btcutil.Block
+	blocks      []*jaxutil.Block
 }
 
 // keyPair houses a key/value pair.  It is used over maps so ordering can be

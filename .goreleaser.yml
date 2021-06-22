@@ -36,10 +36,10 @@ release:
   # Note: it can only be one: either github, gitlab or gitea
   gitlab:
     owner: jaxnet/core
-    name: shard.core
+    name: jaxnetd
 
 #gitlab_urls:
 #  api: https://gitlab.com/api/v4/
-#  download: https://gitlab.com/jaxnet/core/shard.core
+#  download: https://gitlab.com/jaxnet/jaxnetd
 #  # set to true if you use a self-signed certificate
 #  skip_tls_verify: false

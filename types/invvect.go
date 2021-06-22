@@ -8,7 +8,7 @@ package types
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (

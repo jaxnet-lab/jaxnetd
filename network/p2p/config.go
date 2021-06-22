@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type Config struct {

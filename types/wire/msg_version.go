@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a

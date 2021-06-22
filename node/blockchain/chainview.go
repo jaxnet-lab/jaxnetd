@@ -8,7 +8,7 @@ package blockchain
 import (
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 )
 
 // approxNodesPerWeek is an approximation of the number of new blocks there are

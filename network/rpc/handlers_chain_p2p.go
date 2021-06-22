@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // handleGetNetTotals implements the getnettotals command.
 func (server *CommonChainRPC) handleGetNetTotals(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	totalBytesRecv, totalBytesSent := server.connMgr.NetTotals()
-	reply := &btcjson.GetNetTotalsResult{
+	reply := &jaxjson.GetNetTotalsResult{
 		TotalBytesRecv: totalBytesRecv,
 		TotalBytesSent: totalBytesSent,
 		TimeMillis:     time.Now().UTC().UnixNano() / int64(time.Millisecond),
@@ -33,7 +33,7 @@ func (server *CommonChainRPC) handleGetConnectionCount(cmd interface{}, closeCha
 
 // handleAddNode handles addnode commands.
 func (server *CommonChainRPC) handleAddNode(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.AddNodeCmd)
+	c := cmd.(*jaxjson.AddNodeCmd)
 
 	addr := normalizeAddress(c.Addr, server.chainProvider.ChainParams.DefaultPort)
 	var err error
@@ -45,15 +45,15 @@ func (server *CommonChainRPC) handleAddNode(cmd interface{}, closeChan <-chan st
 	case "onetry":
 		err = server.connMgr.Connect(addr, false)
 	default:
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: "invalid subcommand for addnode",
 		}
 	}
 
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: err.Error(),
 		}
 	}
@@ -64,7 +64,7 @@ func (server *CommonChainRPC) handleAddNode(cmd interface{}, closeChan <-chan st
 
 // handleGetAddedNodeInfo handles getaddednodeinfo commands.
 func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetAddedNodeInfoCmd)
+	c := cmd.(*jaxjson.GetAddedNodeInfoCmd)
 
 	// Retrieve a list of persistent (added) peers from the Server and
 	// filter the list of peers per the specified address (if any).
@@ -79,8 +79,8 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 			}
 		}
 		if !found {
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCClientNodeNotAdded,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCClientNodeNotAdded,
 				Message: "Node has not been added",
 			}
 		}
@@ -98,14 +98,14 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 
 	// With the dns flag, the result is an array of JSON objects which
 	// include the result of DNS lookups for each Server.
-	results := make([]*btcjson.GetAddedNodeInfoResult, 0, len(peers))
+	results := make([]*jaxjson.GetAddedNodeInfoResult, 0, len(peers))
 	for _, rpcPeer := range peers {
 		// Set the "address" of the Server which could be an ip address
 		// or a domain name.
 		peer := rpcPeer.ToPeer()
-		var result btcjson.GetAddedNodeInfoResult
+		var result jaxjson.GetAddedNodeInfoResult
 		result.AddedNode = peer.Addr()
-		result.Connected = btcjson.Bool(peer.Connected())
+		result.Connected = jaxjson.Bool(peer.Connected())
 
 		// Split the address into host and port portions so we can do
 		// a DNS lookup against the host.  When no port is specified in
@@ -123,7 +123,7 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 		default:
 			// Do a DNS lookup for the address.  If the lookup fails, just
 			// use the host.
-			// ips, err := btcdLookup(host)
+			// ips, err := jaxnetdLookup(host)
 			// if err != nil {
 			//	ipList = make([]string, 1)
 			//	ipList[0] = host
@@ -136,9 +136,9 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 		}
 
 		// Add the addresses and connection info to the result.
-		addrs := make([]btcjson.GetAddedNodeInfoResultAddr, 0, len(ipList))
+		addrs := make([]jaxjson.GetAddedNodeInfoResultAddr, 0, len(ipList))
 		for _, ip := range ipList {
-			var addr btcjson.GetAddedNodeInfoResultAddr
+			var addr jaxjson.GetAddedNodeInfoResultAddr
 			addr.Address = ip
 			addr.Connected = "false"
 			if ip == host && peer.Connected() {
@@ -156,10 +156,10 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	peers := server.connMgr.ConnectedPeers()
 	syncPeerID := server.chainProvider.SyncManager.SyncPeerID()
-	infos := make([]*btcjson.GetPeerInfoResult, 0, len(peers))
+	infos := make([]*jaxjson.GetPeerInfoResult, 0, len(peers))
 	for _, p := range peers {
 		statsSnap := p.ToPeer().StatsSnapshot()
-		info := &btcjson.GetPeerInfoResult{
+		info := &jaxjson.GetPeerInfoResult{
 			ID:             statsSnap.ID,
 			Addr:           statsSnap.Addr,
 			AddrLocal:      p.ToPeer().LocalAddr().String(),
@@ -193,7 +193,7 @@ func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-cha
 
 // handleNode handles chainProvider commands.
 func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.NodeCmd)
+	c := cmd.(*jaxjson.NodeCmd)
 
 	var addr string
 	var nodeID uint64
@@ -211,16 +211,16 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 				addr = normalizeAddress(c.Target, params.DefaultPort)
 				err = server.connMgr.DisconnectByAddr(addr)
 			} else {
-				return nil, &btcjson.RPCError{
-					Code:    btcjson.ErrRPCInvalidParameter,
+				return nil, &jaxjson.RPCError{
+					Code:    jaxjson.ErrRPCInvalidParameter,
 					Message: "invalid address or chainProvider ID",
 				}
 			}
 		}
 		if err != nil && peerExists(server.connMgr, addr, int32(nodeID)) {
 
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCMisc,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCMisc,
 				Message: "can't disconnect a permanent Server, use remove",
 			}
 		}
@@ -236,15 +236,15 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 				addr = normalizeAddress(c.Target, params.DefaultPort)
 				err = server.connMgr.RemoveByAddr(addr)
 			} else {
-				return nil, &btcjson.RPCError{
-					Code:    btcjson.ErrRPCInvalidParameter,
+				return nil, &jaxjson.RPCError{
+					Code:    jaxjson.ErrRPCInvalidParameter,
 					Message: "invalid address or chainProvider ID",
 				}
 			}
 		}
 		if err != nil && peerExists(server.connMgr, addr, int32(nodeID)) {
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCMisc,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCMisc,
 				Message: "can't remove a temporary Server, use disconnect",
 			}
 		}
@@ -262,21 +262,21 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 		case "perm", "temp":
 			err = server.connMgr.Connect(addr, subCmd == "perm")
 		default:
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidParameter,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidParameter,
 				Message: "invalid subcommand for chainProvider connect",
 			}
 		}
 	default:
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: "invalid subcommand for chainProvider",
 		}
 	}
 
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: err.Error(),
 		}
 	}

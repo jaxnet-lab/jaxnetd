@@ -10,7 +10,7 @@ import (
 	"sort"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 // checkpointSorter implements sort.Interface to allow a slice of checkpoints to

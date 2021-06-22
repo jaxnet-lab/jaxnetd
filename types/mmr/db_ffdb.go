@@ -10,8 +10,8 @@ import (
 	"errors"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 )
 
 var merkleMountainRangeBucket = chaindata.ShardsMMRBucketName

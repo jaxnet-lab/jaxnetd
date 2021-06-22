@@ -5,8 +5,8 @@
 package shard
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for

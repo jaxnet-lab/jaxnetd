@@ -9,9 +9,9 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
 
 // calcEasiestDifficulty calculates the easiest possible difficulty that a block
@@ -133,7 +133,7 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknode.IBlockNode, n
 	// Calculate new target difficulty as:
 	//  currentDifficulty * (adjustedTimespan / targetTimespan)
 	// The result uses integer division which means it will be slightly
-	// rounded down.  Bitcoind also uses integer division to calculate this
+	// rounded down.  Jaxnetd also uses integer division to calculate this
 	// result.
 	oldTarget := pow.CompactToBig(lastNode.Bits())
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(adjustedTimespan))

@@ -25,8 +25,8 @@
 //          "fmt"
 //          "log"
 //
-//          "gitlab.com/jaxnet/core/shard.core/btcutil"
-//          "gitlab.com/jaxnet/core/shard.core/chaincfg"
+//          "gitlab.com/jaxnet/jaxnetd/jaxutil"
+//          "gitlab.com/jaxnet/jaxnetd/chaincfg"
 //  )
 //
 //  var testnet = flag.Bool("testnet", false, "operate on the testnet Bitcoin network")
@@ -46,7 +46,7 @@
 //
 //          // Create and print new payment address, specific to the active network.
 //          pubKeyHash := make([]byte, 20)
-//          addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash, chainParams)
+//          addr, err := jaxutil.NewAddressPubKeyHash(pubKeyHash, chainParams)
 //          if err != nil {
 //                  log.Fatal(err)
 //          }

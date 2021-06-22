@@ -10,7 +10,7 @@ import (
 	"io"
 	"net"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxAddrPerMsg is the maximum number of addresses that can be in a single

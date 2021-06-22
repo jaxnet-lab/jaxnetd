@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in

@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // serverPeer extends the peer to maintain state shared by the server and
@@ -353,9 +353,9 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 	}
 
 	// Add the transaction to the known inventory for the peer.
-	// Convert the raw MsgTx to a btcutil.Tx which provides some convenience
+	// Convert the raw MsgTx to a jaxutil.Tx which provides some convenience
 	// methods and things such as hash caching.
-	tx := btcutil.NewTx(msg)
+	tx := jaxutil.NewTx(msg)
 	iv := types.NewInvVect(types.InvTypeTx, tx.Hash())
 	sp.AddKnownInventory(iv)
 
@@ -371,9 +371,9 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 // OnBlock is invoked when a peer receives a block bitcoin message.  It
 // blocks until the bitcoin block has been fully processed.
 func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
-	// Convert the raw MsgBlock to a btcutil.Block which provides some
+	// Convert the raw MsgBlock to a jaxutil.Block which provides some
 	// convenience methods and things such as hash caching.
-	block := btcutil.NewBlockFromBlockAndBytes(msg, buf)
+	block := jaxutil.NewBlockFromBlockAndBytes(msg, buf)
 
 	// Add the block to the known inventory for the peer.
 	iv := types.NewInvVect(types.InvTypeBlock, block.Hash())
@@ -947,9 +947,9 @@ func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
 // disconnected if an invalid fee filter value is provided.
 func (sp *serverPeer) OnFeeFilter(_ *peer.Peer, msg *wire.MsgFeeFilter) {
 	// Check that the passed minimum fee is a valid amount.
-	if msg.MinFee < 0 || msg.MinFee > btcutil.MaxSatoshi {
+	if msg.MinFee < 0 || msg.MinFee > jaxutil.MaxSatoshi {
 		sp.logger.Debug().Msgf("Peer %v sent an invalid feefilter '%v' -- "+
-			"disconnecting", sp, btcutil.Amount(msg.MinFee))
+			"disconnecting", sp, jaxutil.Amount(msg.MinFee))
 		sp.Disconnect()
 		return
 	}
@@ -1086,7 +1086,7 @@ func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	// Add addresses to Server address manager.  The address manager handles
 	// the details of things such as preventing duplicate addresses, max
 	// addresses, and last seen updates.
-	// XXX bitcoind gives a 2 hour time penalty here, do we want to do the
+	// XXX jaxnetd gives a 2 hour time penalty here, do we want to do the
 	// same?
 	sp.serverPeerHandler.addrManager.AddAddresses(msg.AddrList, sp.NA())
 }

@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // TestFilterCLearLatest tests the MsgFilterLoad API against the latest protocol

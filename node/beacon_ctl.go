@@ -9,13 +9,13 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 type BeaconCtl struct {
@@ -64,7 +64,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 
 		btcdProvider, err := btcd.NewBlockProvider(beaconCtl.cfg.BTCD, mAddreses[0])
 		if err != nil {
-			beaconCtl.log.Error().Err(err).Msg("Can't init btcdProvider")
+			beaconCtl.log.Error().Err(err).Msg("Can't init jaxnetdProvider")
 			return err
 		}
 

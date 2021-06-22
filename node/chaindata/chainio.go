@@ -12,12 +12,12 @@ import (
 	"math/big"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -451,7 +451,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 // NOTE: Legacy entries will not have the coinbase flag or height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
-func DBFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTxOut, error) {
+func DBFetchSpendJournalEntry(dbTx database.Tx, block *jaxutil.Block) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(SpendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -1164,9 +1164,9 @@ func dbFetchHeaderByHeight(chain chain.IChainCtx, dbTx database.Tx, height int32
 }
 
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
-// raw block for the provided node, deserialize it, and return a btcutil.Block
+// raw block for the provided node, deserialize it, and return a jaxutil.Block
 // with the height set.
-func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) (*btcutil.Block, error) {
+func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
 	blockBytes, err := dbTx.FetchBlock(&h)
@@ -1175,7 +1175,7 @@ func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.
 	}
 
 	// Create the encapsulated block and set the height appropriately.
-	block, err := btcutil.NewBlockFromBytes(chain, blockBytes)
+	block, err := jaxutil.NewBlockFromBytes(chain, blockBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1209,7 +1209,7 @@ func DBStoreBlockNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IB
 
 // DBStoreBlock stores the provided block in the database if it is not already
 // there. The full block data is written to ffldb.
-func DBStoreBlock(dbTx database.Tx, block *btcutil.Block) error {
+func DBStoreBlock(dbTx database.Tx, block *jaxutil.Block) error {
 	hasBlock, err := dbTx.HasBlock(block.Hash())
 	if err != nil {
 		return err

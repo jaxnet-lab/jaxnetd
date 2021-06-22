@@ -8,12 +8,12 @@ package blockchain
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // checkBlockHeaderContext performs several validation checks on the block header
@@ -106,7 +106,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode blocknode.IBlockNode, flags chaindata.BehaviorFlags) error {
+func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.IBlockNode, flags chaindata.BehaviorFlags) error {
 	// Perform all block header related validation checks.
 	header := block.MsgBlock().Header
 	err := b.checkBlockHeaderContext(header, prevNode, flags)
@@ -210,7 +210,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode blocknode.
 // http://r6.ca/blog/20120206T005236Z.html.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint) error {
+func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint) error {
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.OutPoint]struct{})
@@ -271,7 +271,7 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *btcutil.Bloc
 // with that node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut) error {
+func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -537,7 +537,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *btcutil
 // work requirement. The block must connect to the current tip of the main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
+func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 

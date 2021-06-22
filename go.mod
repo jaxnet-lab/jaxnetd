@@ -1,4 +1,4 @@
-module gitlab.com/jaxnet/core/shard.core
+module gitlab.com/jaxnet/jaxnetd
 
 go 1.14
 

@@ -9,7 +9,7 @@ ENV GOPRIVATE=gitlab.com
 
 WORKDIR /shard-core
 ADD . .
-RUN ./build.sh /shard.core && go build -o /jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
+RUN ./build.sh /jaxnetd && go build -o /jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
 
 # Final stage
 FROM alpine:3.7
@@ -19,8 +19,8 @@ RUN apk add --no-cache ca-certificates bash
 
 WORKDIR /
 
-COPY --from=build-env /shard.core /
+COPY --from=build-env /jaxnetd /
 COPY --from=build-env /jaxctl /
 
 # Run app
-CMD ./shard.core
+CMD ./jaxnetd

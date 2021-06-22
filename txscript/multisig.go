@@ -3,16 +3,16 @@ package txscript
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // MultiSigScript returns a valid script for a multisignature redemption where
 // nrequired of the keys in pubkeys are required to have signed the transaction
 // for success.  An Error with the error code ErrTooManyRequiredSigs will be
 // returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
+func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int) ([]byte, error) {
 	if len(pubkeys) < nrequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -52,8 +52,8 @@ func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, er
 // item on the stack.
 // Otherwise, in case of "refund to owner" (pay-to-pubkey), requires one signature
 // and pubkey is the second to last item on the stack.
-func MultiSigLockScript(pubkeys []*btcutil.AddressPubKey, sigRequired int,
-	refundAddress *btcutil.AddressPubKey, refundDeferringPeriod int32) ([]byte, error) {
+func MultiSigLockScript(pubkeys []*jaxutil.AddressPubKey, sigRequired int,
+	refundAddress *jaxutil.AddressPubKey, refundDeferringPeriod int32) ([]byte, error) {
 	if len(pubkeys) < sigRequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -146,7 +146,7 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 // OP_ELSE <refund_pubkey> OP_CHECKSIG OP_NIP
 // OP_ENDIF
 func extractMultiSigLockAddrs(pops []parsedOpcode,
-	chainParams *chaincfg.Params) (addrs []btcutil.Address, requiredSigs int) {
+	chainParams *chaincfg.Params) (addrs []jaxutil.Address, requiredSigs int) {
 	// In case of MultiSig activation the number of required signatures is the 5th item
 	// on the stack and the number of public keys is the 5th to last
 	// item on the stack.
@@ -157,9 +157,9 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 
 	addrIndex := map[string]struct{}{}
 	// Extract the public keys while skipping any that are invalid.
-	addrs = make([]btcutil.Address, 0, numPubKeys+1)
+	addrs = make([]jaxutil.Address, 0, numPubKeys+1)
 	for i := 0; i < numPubKeys; i++ {
-		addr, err := btcutil.NewAddressPubKey(pops[mslFirstMSigOpI+1+i].data, chainParams)
+		addr, err := jaxutil.NewAddressPubKey(pops[mslFirstMSigOpI+1+i].data, chainParams)
 		if err == nil {
 			if _, ok := addrIndex[addr.String()]; !ok {
 				addrs = append(addrs, addr)
@@ -168,7 +168,7 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 		}
 	}
 
-	addr, err := btcutil.NewAddressPubKey(pops[len(pops)-4].data, chainParams)
+	addr, err := jaxutil.NewAddressPubKey(pops[len(pops)-4].data, chainParams)
 	if err == nil {
 		if _, ok := addrIndex[addr.String()]; !ok {
 			addrs = append(addrs, addr)
@@ -183,7 +183,7 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 // the contract (i.e. nrequired signatures are provided).  Since it is arguably
 // legal to not be able to sign any of the outputs, no error is returned.
 func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
-	addresses []btcutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
+	addresses []jaxutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
 
 	// here is safe to ignore error, it checked previously.
 	parsed, _ := parseScript(subScript)

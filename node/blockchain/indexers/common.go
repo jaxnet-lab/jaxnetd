@@ -12,9 +12,9 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 )
 
 var (
@@ -55,13 +55,13 @@ type Indexer interface {
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the pevious output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *btcutil.Block, []chaindata.SpentTxOut) error
+	ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block
-	DisconnectBlock(database.Tx, *btcutil.Block, []chaindata.SpentTxOut) error
+	DisconnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
 }
 
 // AssertError identifies an error that indicates an internal code consistency

@@ -15,26 +15,26 @@ func TestUnmarshalGetBlockChainInfoResultSoftForks(t *testing.T) {
 		compatible bool
 	}{
 		{
-			name:       "bitcoind < 0.19.0 with separate softforks",
-			version:    BitcoindPre19,
+			name:       "jaxnetd < 0.19.0 with separate softforks",
+			version:    JaxnetdPre19,
 			res:        []byte(`{"softforks": [{"version": 2}]}`),
 			compatible: true,
 		},
 		{
-			name:       "bitcoind >= 0.19.0 with separate softforks",
-			version:    BitcoindPost19,
+			name:       "jaxnetd >= 0.19.0 with separate softforks",
+			version:    JaxnetdPost19,
 			res:        []byte(`{"softforks": [{"version": 2}]}`),
 			compatible: false,
 		},
 		{
-			name:       "bitcoind < 0.19.0 with unified softforks",
-			version:    BitcoindPre19,
+			name:       "jaxnetd < 0.19.0 with unified softforks",
+			version:    JaxnetdPre19,
 			res:        []byte(`{"softforks": {"segwit": {"type": "bip9"}}}`),
 			compatible: false,
 		},
 		{
-			name:       "bitcoind >= 0.19.0 with unified softforks",
-			version:    BitcoindPost19,
+			name:       "jaxnetd >= 0.19.0 with unified softforks",
+			version:    JaxnetdPost19,
 			res:        []byte(`{"softforks": {"segwit": {"type": "bip9"}}}`),
 			compatible: true,
 		},
@@ -76,11 +76,11 @@ func TestUnmarshalGetBlockChainInfoResultSoftForks(t *testing.T) {
 
 			// If the version is compatible with the response, we
 			// should expect to see the proper softforks field set.
-			if test.version == BitcoindPost19 &&
+			if test.version == JaxnetdPost19 &&
 				info.SoftForks != nil {
 				t.Fatal("expected SoftForks to be empty")
 			}
-			if test.version == BitcoindPre19 &&
+			if test.version == JaxnetdPre19 &&
 				info.UnifiedSoftForks != nil {
 				t.Fatal("expected UnifiedSoftForks to be empty")
 			}

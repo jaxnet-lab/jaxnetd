@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 		method  string
 		shardID uint32
 		cmd     interface{}
-		err     *btcjson.RPCError
+		err     *jaxjson.RPCError
 	}
 )
 
@@ -55,15 +55,15 @@ var (
 var (
 	// ErrRPCUnimplemented is an error returned to RPC clients when the
 	// provided command is recognized, but not implemented.
-	ErrRPCUnimplemented = &btcjson.RPCError{
-		Code:    btcjson.ErrRPCUnimplemented,
+	ErrRPCUnimplemented = &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCUnimplemented,
 		Message: "Command unimplemented",
 	}
 
 	// ErrRPCNoWallet is an error returned to RPC clients when the provided
 	// command is recognized as a wallet command.
-	ErrRPCNoWallet = &btcjson.RPCError{
-		Code:    btcjson.ErrRPCNoWallet,
+	ErrRPCNoWallet = &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCNoWallet,
 		Message: "This implementation does not implement wallet commands",
 	}
 )
@@ -72,7 +72,7 @@ var (
 // err field of the returned parsedRPCCmd struct will contain an RPC error that
 // is suitable for use in replies if the command is invalid in some way such as
 // an unregistered command or invalid parameters.
-func parseCmd(request *btcjson.Request) *parsedRPCCmd {
+func parseCmd(request *jaxjson.Request) *parsedRPCCmd {
 	parsedCmd := parsedRPCCmd{
 		id:      request.ID,
 		method:  request.Method,
@@ -80,21 +80,21 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 		shardID: request.ShardID,
 	}
 
-	cmd, err := btcjson.UnmarshalCmd(request)
+	cmd, err := jaxjson.UnmarshalCmd(request)
 	if err != nil {
 		// When the error is because the method is not registered,
 		// produce a method not found RPC error.
-		if jerr, ok := err.(btcjson.Error); ok &&
-			jerr.ErrorCode == btcjson.ErrUnregisteredMethod {
+		if jerr, ok := err.(jaxjson.Error); ok &&
+			jerr.ErrorCode == jaxjson.ErrUnregisteredMethod {
 
-			parsedCmd.err = btcjson.ErrRPCMethodNotFound
+			parsedCmd.err = jaxjson.ErrRPCMethodNotFound
 			return &parsedCmd
 		}
 
 		// Otherwise, some type of invalid parameters is the
 		// cause, so produce the equivalent RPC error.
-		parsedCmd.err = btcjson.NewRPCError(
-			btcjson.ErrRPCInvalidParams.Code, err.Error())
+		parsedCmd.err = jaxjson.NewRPCError(
+			jaxjson.ErrRPCInvalidParams.Code, err.Error())
 		return &parsedCmd
 	}
 	parsedCmd.cmd = cmd
@@ -103,14 +103,14 @@ func parseCmd(request *btcjson.Request) *parsedRPCCmd {
 
 // jsonAuthFail sends a message back to the client if the http auth is rejected.
 func jsonAuthFail(w http.ResponseWriter) {
-	w.Header().Add("WWW-Authenticate", `Basic realm="btcd RPC"`)
+	w.Header().Add("WWW-Authenticate", `Basic realm="jaxnetd RPC"`)
 	http.Error(w, "401 Unauthorized.", http.StatusUnauthorized)
 }
 
 // rpcDecodeHexError is a convenience function for returning a nicely formatted
 // RPC error which indicates the provided hex string failed to decode.
-func rpcDecodeHexError(gotHex string) *btcjson.RPCError {
-	return btcjson.NewRPCError(btcjson.ErrRPCDecodeHexString,
+func rpcDecodeHexError(gotHex string) *jaxjson.RPCError {
+	return jaxjson.NewRPCError(jaxjson.ErrRPCDecodeHexString,
 		fmt.Sprintf("Argument must be hexadecimal string (not %q)",
 			gotHex))
 }
@@ -118,8 +118,8 @@ func rpcDecodeHexError(gotHex string) *btcjson.RPCError {
 // rpcNoTxInfoError is a convenience function for returning a nicely formatted
 // RPC error which indicates there is no information available for the provided
 // transaction hash.
-func rpcNoTxInfoError(txHash *chainhash.Hash) *btcjson.RPCError {
-	return btcjson.NewRPCError(btcjson.ErrRPCNoTxInfo,
+func rpcNoTxInfoError(txHash *chainhash.Hash) *jaxjson.RPCError {
+	return jaxjson.NewRPCError(jaxjson.ErrRPCNoTxInfo,
 		fmt.Sprintf("No information available about transaction %v",
 			txHash))
 }

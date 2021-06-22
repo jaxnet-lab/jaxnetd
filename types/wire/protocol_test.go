@@ -6,7 +6,7 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/types"
 
 	"testing"
 )

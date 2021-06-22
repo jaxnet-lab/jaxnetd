@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/version"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/version"
 )
 
 type NodeRPC struct {
@@ -25,7 +25,7 @@ type NodeRPC struct {
 	// fixme: this fields are empty
 	helpCache     *helpCacher
 	StartupTime   int64
-	MiningAddrs   []btcutil.Address
+	MiningAddrs   []jaxutil.Address
 	CPUMiner      cpuminer.CPUMiner
 	chainProvider *cprovider.ChainProvider
 }
@@ -45,21 +45,21 @@ func (server *NodeRPC) ComposeHandlers() {
 	server.SetCommands(server.OwnHandlers())
 }
 
-func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
-	return map[btcjson.MethodName]CommandHandler{
-		btcjson.ScopedMethod("node", "version"):        server.handleVersion,
-		btcjson.ScopedMethod("node", "getInfo"):        server.handleGetInfo,
-		btcjson.ScopedMethod("node", "uptime"):         server.handleUptime,
+func (server *NodeRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
+	return map[jaxjson.MethodName]CommandHandler{
+		jaxjson.ScopedMethod("node", "version"): server.handleVersion,
+		jaxjson.ScopedMethod("node", "getInfo"): server.handleGetInfo,
+		jaxjson.ScopedMethod("node", "uptime"):  server.handleUptime,
 
-		btcjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
-		btcjson.ScopedMethod("node", "listShards"):   server.handleListShards,
+		jaxjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
+		jaxjson.ScopedMethod("node", "listShards"):   server.handleListShards,
 
-		btcjson.ScopedMethod("node", "generate"):         server.handleGenerate,
-		btcjson.ScopedMethod("node", "setGenerate"):     server.handleSetGenerate,
+		jaxjson.ScopedMethod("node", "generate"):    server.handleGenerate,
+		jaxjson.ScopedMethod("node", "setGenerate"): server.handleSetGenerate,
 
-		btcjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
-		btcjson.ScopedMethod("node", "stop"):            server.handleStop,
-		btcjson.ScopedMethod("node", "help"):            server.handleHelp,
+		jaxjson.ScopedMethod("node", "debugLevel"): server.handleDebugLevel,
+		jaxjson.ScopedMethod("node", "stop"):       server.handleStop,
+		jaxjson.ScopedMethod("node", "help"):       server.handleHelp,
 	}
 }
 
@@ -67,9 +67,9 @@ func (server *NodeRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 //
 // NOTE: This is a btcsuite extension ported from github.com/decred/dcrd.
 func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return btcjson.NodeVersion{
+	return jaxjson.NodeVersion{
 		Node: version.GetExtendedVersion(),
-		RPC: btcjson.VersionResult{
+		RPC: jaxjson.VersionResult{
 			VersionString: jsonrpcSemverString,
 			Major:         jsonrpcSemverMajor,
 			Minor:         jsonrpcSemverMinor,
@@ -93,7 +93,7 @@ func (server *NodeRPC) handleGetInfo(cmd interface{}, closeChan <-chan struct{})
 	//
 	// }
 	//
-	// ret := &btcjson.InfoChainResult{
+	// ret := &jaxjson.InfoChainResult{
 	// 	// Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
 	// 	ProtocolVersion: int32(maxProtocolVersion),
 	// 	Blocks:          best.Height,
@@ -114,8 +114,8 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	// Respond with an error if there are no addresses to pay the
 	// created blocks to.
 	if len(server.MiningAddrs) == 0 {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCInternal.Code,
 			Message: "No payment addresses specified " +
 				"via --miningaddr",
 		}
@@ -124,8 +124,8 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	// Respond with an error if there's virtually 0 chance of mining a block
 	// with the CPU.
 	// if !s.cfg.ChainParams.GenerateSupported {
-	// 	return nil, &btcjson.RPCError{
-	// 		Code: btcjson.ErrRPCDifficulty,
+	// 	return nil, &jaxjson.RPCError{
+	// 		Code: jaxjson.ErrRPCDifficulty,
 	// 		Message: fmt.Sprintf("No support for `generate` on "+
 	// 			"the current network, %s, as it's unlikely to "+
 	// 			"be possible to mine a block with the CPU.",
@@ -133,12 +133,12 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	// 	}
 	// }
 
-	c := cmd.(*btcjson.GenerateCmd)
+	c := cmd.(*jaxjson.GenerateCmd)
 
 	// Respond with an error if the client is requesting 0 blocks to be generated.
 	if c.NumBlocks == 0 {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInternal.Code,
 			Message: "Please request a nonzero number of blocks to generate.",
 		}
 	}
@@ -148,8 +148,8 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 
 	blockHashes, err := server.CPUMiner.GenerateNBlocks(c.NumBlocks)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInternal.Code,
 			Message: err.Error(),
 		}
 	}
@@ -165,7 +165,7 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 
 
 func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.ManageShardsCmd)
+	c := cmd.(*jaxjson.ManageShardsCmd)
 
 	var err error
 	switch c.Action {
@@ -178,8 +178,8 @@ func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan stru
 	}
 
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: err.Error(),
 		}
 	}
@@ -194,7 +194,7 @@ func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct
 
 // handleSetGenerate implements the setgenerate command.
 func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	//	c := cmd.(*btcjson.SetGenerateCmd)
+	//	c := cmd.(*jaxjson.SetGenerateCmd)
 	//
 	//	// Disable generation regardless of the provided generate flag if the
 	//	// maximum number of threads (goroutines for our purposes) is 0.
@@ -214,8 +214,8 @@ func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struc
 	//		// Respond with an error if there are no addresses to pay the
 	//		// created blocks to.
 	//		if len(s.cfg.MiningAddrs) == 0 {
-	//			return nil, &btcjson.RPCError{
-	//				Code: btcjson.ErrRPCInternal.Code,
+	//			return nil, &jaxjson.RPCError{
+	//				Code: jaxjson.ErrRPCInternal.Code,
 	//				Message: "No payment addresses specified " +
 	//					"via --miningaddr",
 	//			}
@@ -230,7 +230,7 @@ func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struc
 
 // handleDebugLevel handles debuglevel commands.
 func (server *NodeRPC) handleDebugLevel(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// c := cmd.(*btcjson.DebugLevelCmd)
+	// c := cmd.(*jaxjson.DebugLevelCmd)
 
 	// Special show command to list supported subsystems.
 	// if c.LevelSpec == "show" {
@@ -240,8 +240,8 @@ func (server *NodeRPC) handleDebugLevel(cmd interface{}, closeChan <-chan struct
 
 	// err := parseAndSetDebugLevels(c.LevelSpec)
 	// if err != nil {
-	//	return nil, &btcjson.RPCError{
-	//		Code:    btcjson.ErrRPCInvalidParams.Code,
+	//	return nil, &jaxjson.RPCError{
+	//		Code:    jaxjson.ErrRPCInvalidParams.Code,
 	//		Message: err.Error(),
 	//	}
 	// }
@@ -255,12 +255,12 @@ func (server *NodeRPC) handleStop(cmd interface{}, closeChan <-chan struct{}) (i
 	// case server.requestProcessShutdown <- struct{}{}:
 	// default:
 	// }
-	return "btcd stopping.", nil
+	return "jaxnetd stopping.", nil
 }
 
 // handleHelp implements the help command.
 func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.HelpCmd)
+	c := cmd.(*jaxjson.HelpCmd)
 
 	// Provide a usage overview of all commands when no specific command
 	// was specified.
@@ -279,15 +279,15 @@ func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (i
 		}
 		return usage, nil
 	}
-	method := btcjson.ScopedMethod(scope, command)
+	method := jaxjson.ScopedMethod(scope, command)
 
 	// Check that the command asked for is supported and implemented.  Only
 	// search the main list of handlers since help should not be provided
 	// for commands that are unimplemented or related to wallet
 	// functionality.
 	if _, ok := server.handlers[method]; !ok {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: "Unknown command: " + command,
 		}
 	}

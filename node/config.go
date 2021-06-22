@@ -7,12 +7,12 @@ package node
 import (
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core/corelog"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/corelog"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 type Config struct {
@@ -46,13 +46,13 @@ type MetricsConfig struct {
 }
 
 type NodeConfig struct {
-	BeaconChain     cprovider.ChainRuntimeConfig `yaml:"beacon_chain"`
-	RPC             rpc.Config                   `yaml:"rpc"`
-	P2P             p2p.Config                   `yaml:"p2p"`
-	Shards          ShardConfig                  `yaml:"shards"`
-	DbType          string                       `yaml:"db_type" description:"Database backend to use for the Block Chain"`
-	Net             string                       `yaml:"net"`
-	EnableCPUMiner  bool                         `yaml:"enable_cpu_miner"`
+	BeaconChain    cprovider.ChainRuntimeConfig `yaml:"beacon_chain"`
+	RPC            rpc.Config                   `yaml:"rpc"`
+	P2P            p2p.Config                   `yaml:"p2p"`
+	Shards         ShardConfig                  `yaml:"shards"`
+	DbType         string                       `yaml:"db_type" description:"Database backend to use for the Block Chain"`
+	Net            string                       `yaml:"net"`
+	EnableCPUMiner bool                         `yaml:"enable_cpu_miner"`
 }
 
 type ShardConfig struct {

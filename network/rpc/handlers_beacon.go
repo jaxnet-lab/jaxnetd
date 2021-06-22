@@ -11,14 +11,14 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 type BeaconRPC struct {
@@ -40,17 +40,17 @@ func (server *BeaconRPC) ComposeHandlers() {
 	server.SetCommands(server.Handlers())
 }
 
-func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
-	return map[btcjson.MethodName]CommandHandler{
-		btcjson.ScopedMethod("beacon", "getBeaconHeaders"):             server.handleGetHeaders,
-		btcjson.ScopedMethod("beacon", "getBeaconBlock"):               server.handleGetBlock,
-		btcjson.ScopedMethod("beacon", "getBeaconBlockHeader"):         server.handleGetBlockHeader,
-		btcjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
-		btcjson.ScopedMethod("beacon", "getBlockHeader"):               server.handleGetBlockHeader,
-		btcjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):       server.handleGetBlockTemplate,
-		btcjson.ScopedMethod("beacon", "listEADAddresses"):             server.handleEADAddresses,
-		// btcjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
-		// btcjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
+func (server *BeaconRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
+	return map[jaxjson.MethodName]CommandHandler{
+		jaxjson.ScopedMethod("beacon", "getBeaconHeaders"):             server.handleGetHeaders,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlock"):               server.handleGetBlock,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockHeader"):         server.handleGetBlockHeader,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
+		jaxjson.ScopedMethod("beacon", "getBlockHeader"):               server.handleGetBlockHeader,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):       server.handleGetBlockTemplate,
+		jaxjson.ScopedMethod("beacon", "listEADAddresses"):             server.handleEADAddresses,
+		// jaxjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
+		// jaxjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
 
 	}
 }
@@ -60,7 +60,7 @@ func (server *BeaconRPC) Handlers() map[btcjson.MethodName]CommandHandler {
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
 func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBeaconHeadersCmd)
+	c := cmd.(*jaxjson.GetBeaconHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -98,7 +98,7 @@ func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan stru
 
 // handleGetBlock implements the getblock command.
 func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBeaconBlockCmd)
+	c := cmd.(*jaxjson.GetBeaconBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -109,7 +109,7 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBeaconBlockBySerialNumberCmd)
+	c := cmd.(*jaxjson.GetBeaconBlockBySerialNumberCmd)
 
 	var hash *chainhash.Hash
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
@@ -135,8 +135,8 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		return err
 	})
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -144,7 +144,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	// Otherwise, generate the JSON object and return it.
 
 	// Deserialize the block.
-	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
+	blk, err := jaxutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
 	if err != nil {
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
@@ -171,7 +171,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 
 	// If verbosity is 0, return the serialized block as a hex encoded string.
 	if verbosity != nil && *verbosity == 0 {
-		return btcjson.GetBeaconBlockResult{
+		return jaxjson.GetBeaconBlockResult{
 			Block:        hex.EncodeToString(blkBytes),
 			Height:       blockHeight,
 			SerialID:     serialID,
@@ -186,7 +186,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		return nil, err
 	}
 
-	blockReply := btcjson.GetBeaconBlockVerboseResult{
+	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
 		Version:             int32(blockHeader.Version()),
 		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
@@ -218,7 +218,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		blockReply.Tx = txNames
 	} else {
 		txns := blk.Transactions()
-		rawTxns := make([]btcjson.TxRawResult, len(txns))
+		rawTxns := make([]jaxjson.TxRawResult, len(txns))
 		for i, tx := range txns {
 			rawTxn, err := server.CreateTxRawResult(params, tx.MsgTx(),
 				tx.Hash().String(), blockHeader, hash.String(),
@@ -236,7 +236,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 
 // handleGetBlockHeader implements the getblockheader command.
 func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBeaconBlockHeaderCmd)
+	c := cmd.(*jaxjson.GetBeaconBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -245,8 +245,8 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	}
 	blockHeader, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -295,7 +295,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		return err
 	})
 
-	blockHeaderReply := btcjson.GetBeaconBlockHeaderVerboseResult{
+	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:                c.Hash,
 		Confirmations:       int64(1 + best.Height - blockHeight),
 		Height:              blockHeight,
@@ -320,7 +320,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
 func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBeaconBlockTemplateCmd)
+	c := cmd.(*jaxjson.GetBeaconBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -336,8 +336,8 @@ func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-cha
 		return server.handleGetBlockTemplateProposal(request)
 	}
 
-	return nil, &btcjson.RPCError{
-		Code:    btcjson.ErrRPCInvalidParameter,
+	return nil, &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCInvalidParameter,
 		Message: "Invalid mode",
 	}
 }
@@ -349,7 +349,7 @@ func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-cha
 // in regards to whether or not it supports creating its own coinbase (the
 // coinbasetxn and coinbasevalue capabilities) and modifies the returned block
 // template accordingly.
-func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateRequest, closeChan <-chan struct{}) (interface{}, error) {
+func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateRequest, closeChan <-chan struct{}) (interface{}, error) {
 	// Extract the relevant passed capabilities and restrict the result to
 	// either a coinbase value or a coinbase transaction object depending on
 	// the request.  Default to only providing a coinbase value.
@@ -380,8 +380,8 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	// When a coinbase transaction has been requested, respond with an error
 	// if there are no addresses to pay the created block template to.
 	if !useCoinbaseValue && len(server.chainProvider.MiningAddrs) == 0 {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCInternal.Code,
 			Message: "A coinbase transaction has been requested, " +
 				"but the Server has not been configured with " +
 				"any payment addresses via --miningaddr",
@@ -396,18 +396,18 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 	if !(netType == types.FastTestNet || netType == types.SimNet || netType == types.RegTest) &&
 		server.connMgr.ConnectedCount() == 0 {
 
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCClientNotConnected,
-			Message: "Bitcoin is not connected",
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCClientNotConnected,
+			Message: "JaxNetD is not connected",
 		}
 	}
 
 	// No point in generating or accepting work before the BlockChain is synced.
 	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCClientInInitialDownload,
-			Message: "Shard.Core is downloading blocks...",
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCClientInInitialDownload,
+			Message: "JaxNetD is downloading blocks...",
 		}
 	}
 
@@ -439,11 +439,11 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *btcjson.Template
 // deals with block proposals.
 //
 // See https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.TemplateRequest) (interface{}, error) {
+func (server *BeaconRPC) handleGetBlockTemplateProposal(request *jaxjson.TemplateRequest) (interface{}, error) {
 	hexData := request.Data
 	if hexData == "" {
-		return false, &btcjson.RPCError{
-			Code: btcjson.ErrRPCType,
+		return false, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCType,
 			Message: fmt.Sprintf("Data must contain the " +
 				"hex-encoded serialized block that is being " +
 				"proposed"),
@@ -456,8 +456,8 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 	}
 	dataBytes, err := hex.DecodeString(hexData)
 	if err != nil {
-		return false, &btcjson.RPCError{
-			Code: btcjson.ErrRPCDeserialization,
+		return false, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCDeserialization,
 			Message: fmt.Sprintf("Data must be "+
 				"hexadecimal string (not %q)", hexData),
 		}
@@ -466,12 +466,12 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 	var msgBlock = server.chainProvider.ChainCtx.EmptyBlock()
 
 	if err := msgBlock.Deserialize(bytes.NewReader(dataBytes)); err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCDeserialization,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "Block decode failed: " + err.Error(),
 		}
 	}
-	block := btcutil.NewBlock(&msgBlock)
+	block := jaxutil.NewBlock(&msgBlock)
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
@@ -484,8 +484,8 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *btcjson.Templat
 		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			server.Log.Error().Msg(errStr)
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCVerify,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCVerify,
 				Message: errStr,
 			}
 		}

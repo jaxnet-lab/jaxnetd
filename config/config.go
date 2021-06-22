@@ -24,25 +24,25 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/corelog"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	defaultConfigFilename = "shard.core.yaml"
+	defaultConfigFilename = "jaxnetd.yaml"
 	defaultDataDirname    = "data"
 	defaultLogLevel       = "info"
 
@@ -65,13 +65,13 @@ const (
 	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
 	defaultMaxOrphanTransactions = 100
 	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-shard.core.yaml"
+	sampleConfigFilename         = "sample-jaxnetd.yaml"
 	defaultTxIndex               = false
 	defaultAddrIndex             = false
 )
 
 var (
-	defaultHomeDir = btcutil.AppDataDir("shard.core", false)
+	defaultHomeDir = jaxutil.AppDataDir("jaxnetd", false)
 	// defaultConfigFile  =  defaultConfigFilename
 	// defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	knownDbTypes = database.SupportedDrivers()
@@ -318,7 +318,7 @@ func newConfigParser(cfg *node.Config, so *serviceOptions, options flags.Options
 // 	3) Load configuration file overwriting defaults with any specified options
 // 	4) Parse CLI options and overwrite/add any specified options
 //
-// The above results in btcd functioning properly without any config settings
+// The above results in jaxnetd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
 func LoadConfig() (*node.Config, []string, error) {
@@ -678,7 +678,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	// Validate the the minrelaytxfee.
-	cfg.Node.BeaconChain.MinRelayTxFeeValues, err = btcutil.NewAmount(cfg.Node.BeaconChain.MinRelayTxFee)
+	cfg.Node.BeaconChain.MinRelayTxFeeValues, err = jaxutil.NewAmount(cfg.Node.BeaconChain.MinRelayTxFee)
 	if err != nil {
 		str := "%s: invalid minrelaytxfee: %v"
 		err := fmt.Errorf(str, funcName, err)
@@ -980,7 +980,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	return &cfg, remainingArgs, nil
 }
 
-// createDefaultConfig copies the file sample-btcd.conf to the given destination path,
+// createDefaultConfig copies the file sample-jaxnetd.conf to the given destination path,
 // and populates it with some randomly generated RPC username and password.
 func createDefaultConfigFile(destinationPath string) error {
 	// Create the destination directory if it does not exists

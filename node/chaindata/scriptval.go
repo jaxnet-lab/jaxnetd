@@ -11,17 +11,17 @@ import (
 	"runtime"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 )
 
 // txValidateItem holds a transaction along with which input to validate.
 type txValidateItem struct {
 	txInIndex int
 	txIn      *wire.TxIn
-	tx        *btcutil.Tx
+	tx        *jaxutil.Tx
 	sigHashes *txscript.TxSigHashes
 }
 
@@ -194,7 +194,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
+func ValidateTransactionScripts(tx *jaxutil.Tx, utxoView *UtxoViewpoint,
 	flags txscript.ScriptFlags, sigCache *txscript.SigCache,
 	hashCache *txscript.HashCache) error {
 
@@ -246,7 +246,7 @@ func ValidateTransactionScripts(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 
 // CheckBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
-func CheckBlockScripts(block *btcutil.Block, utxoView *UtxoViewpoint,
+func CheckBlockScripts(block *jaxutil.Block, utxoView *UtxoViewpoint,
 	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache,
 	hashCache *txscript.HashCache) error {
 

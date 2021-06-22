@@ -1,13 +1,14 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpc
 
 import (
 	"net"
 
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 // Config is a descriptor containing the RPC Server configuration.
@@ -86,7 +87,7 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 }
 
 type ShardManager interface {
-	ListShards() btcjson.ShardListResult
+	ListShards() jaxjson.ShardListResult
 
 	EnableShard(shardID uint32) error
 

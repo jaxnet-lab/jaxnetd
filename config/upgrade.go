@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core/node"
+	"gitlab.com/jaxnet/jaxnetd/node"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 	blockDbNamePrefix = "blocks"
 )
 
-// DoUpgrades performs upgrades to btcd as new versions require it.
+// DoUpgrades performs upgrades to jaxnetd as new versions require it.
 func DoUpgrades(cfg *node.Config) error {
 	err := upgradeDBPaths(cfg)
 	if err != nil {
@@ -47,20 +47,20 @@ func dirEmpty(dirPath string) (bool, error) {
 	return len(names) == 0, nil
 }
 
-// oldBtcdHomeDir returns the OS specific home directory btcd used prior to
-// version 0.3.3.  This has since been replaced with btcutil.AppDataDir, but
+// oldBtcdHomeDir returns the OS specific home directory jaxnetd used prior to
+// version 0.3.3.  This has since been replaced with jaxutil.AppDataDir, but
 // this function is still provided for the automatic upgrade path.
 func oldBtcdHomeDir() string {
 	// Search for Windows APPDATA first.  This won't exist on POSIX OSes.
 	appData := os.Getenv("APPDATA")
 	if appData != "" {
-		return filepath.Join(appData, "btcd")
+		return filepath.Join(appData, "jaxnetd")
 	}
 
 	// Fall back to standard HOME directory that works for most POSIX OSes.
 	home := os.Getenv("HOME")
 	if home != "" {
-		return filepath.Join(home, ".btcd")
+		return filepath.Join(home, ".jaxnetd")
 	}
 
 	// In the worst case, use the current directory.
@@ -68,7 +68,7 @@ func oldBtcdHomeDir() string {
 }
 
 // upgradeDBPathNet moves the database for a specific network from its
-// location prior to btcd version 0.2.0 and uses heuristics to ascertain the old
+// location prior to jaxnetd version 0.2.0 and uses heuristics to ascertain the old
 // database type to rename to the new format.
 func upgradeDBPathNet(cfg *node.Config, oldDbPath, netName string) error {
 	// Prior to version 0.2.0, the database was named the same thing for
@@ -107,7 +107,7 @@ func upgradeDBPathNet(cfg *node.Config, oldDbPath, netName string) error {
 	return nil
 }
 
-// upgradeDBPaths moves the databases from their locations prior to btcd
+// upgradeDBPaths moves the databases from their locations prior to jaxnetd
 // version 0.2.0 to their new locations.
 func upgradeDBPaths(cfg *node.Config) error {
 	// Prior to version 0.2.0, the databases were in the "db" directory and
@@ -115,15 +115,15 @@ func upgradeDBPaths(cfg *node.Config) error {
 	// respective networks.  Check for the old database and update it to the
 	// new path introduced with version 0.2.0 accordingly.
 	oldDbRoot := filepath.Join(oldBtcdHomeDir(), "db")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd.db"), "mainnet")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd_testnet.db"), "testnet")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "btcd_regtest.db"), "regtest")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd.db"), "mainnet")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd_testnet.db"), "testnet")
+	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd_regtest.db"), "regtest")
 
 	// Remove the old db directory.
 	return os.RemoveAll(oldDbRoot)
 }
 
-// upgradeDataPaths moves the application data from its location prior to btcd
+// upgradeDataPaths moves the application data from its location prior to jaxnetd
 // version 0.3.3 to its new location.
 func upgradeDataPaths() error {
 	// No need to migrate if the old and new home paths are the same.
@@ -143,7 +143,7 @@ func upgradeDataPaths() error {
 			return err
 		}
 
-		// Move old btcd.conf into new location if needed.
+		// Move old jaxnetd.conf into new location if needed.
 		oldConfPath := filepath.Join(oldHomePath, defaultConfigFilename)
 		newConfPath := filepath.Join(newHomePath, defaultConfigFilename)
 		if fileExists(oldConfPath) && !fileExists(newConfPath) {

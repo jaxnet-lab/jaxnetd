@@ -18,7 +18,7 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
 )
 
 func main() {

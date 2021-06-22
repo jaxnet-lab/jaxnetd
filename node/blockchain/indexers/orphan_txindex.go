@@ -9,10 +9,10 @@ package indexers
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
@@ -143,11 +143,11 @@ func (idx *OrphanTxIndex) Init() error {
 	return nil
 }
 
-func (idx *OrphanTxIndex) ConnectBlock(database.Tx, *btcutil.Block, []chaindata.SpentTxOut) error {
+func (idx *OrphanTxIndex) ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error {
 	return nil
 }
 
-func (idx *OrphanTxIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block, _ []chaindata.SpentTxOut) error {
+func (idx *OrphanTxIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block, _ []chaindata.SpentTxOut) error {
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
 	newBlockID := idx.curBlockID + 1
@@ -178,7 +178,7 @@ func (idx *OrphanTxIndex) TxBlockRegion(hash *chainhash.Hash) (*database.BlockRe
 
 // dbAddOrphanTxIndexEntries uses an existing database transaction to add a
 // transaction index entry for every transaction in the passed block.
-func dbAddOrphanTxIndexEntries(dbTx database.Tx, block *btcutil.Block, blockID uint32) error {
+func dbAddOrphanTxIndexEntries(dbTx database.Tx, block *jaxutil.Block, blockID uint32) error {
 	// The offset and length of the transactions within the serialized
 	// block.
 	txLocs, err := block.TxLoc()

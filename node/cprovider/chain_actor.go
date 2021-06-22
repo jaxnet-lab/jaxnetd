@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/btcd"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 const defaultMaxOrphanTxSize = 100000
@@ -41,7 +41,7 @@ type ChainRuntimeConfig struct {
 	FreeTxRelayLimit    float64        `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
 	MaxOrphanTxs        int            `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
 	MinRelayTxFee       float64        `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
-	MinRelayTxFeeValues btcutil.Amount `yaml:"-"`
+	MinRelayTxFeeValues jaxutil.Amount `yaml:"-"`
 	NoCFilters          bool           `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
 	DisableCheckpoints  bool           `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	MiningAddresses     []string       `yaml:"mining_addresses"`
@@ -50,10 +50,10 @@ type ChainRuntimeConfig struct {
 	ExpansionLimit      int32          `yaml:"expansion_limit"`
 }
 
-func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {
-	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
+func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]jaxutil.Address, error) {
+	miningAddrs := make([]jaxutil.Address, 0, len(cfg.MiningAddresses))
 	for _, address := range cfg.MiningAddresses {
-		addr, err := btcutil.DecodeAddress(address, params)
+		addr, err := jaxutil.DecodeAddress(address, params)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,7 @@ type ChainProvider struct {
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
-	MiningAddrs  []btcutil.Address
+	MiningAddrs  []jaxutil.Address
 
 	SigCache    *txscript.SigCache
 	HashCache   *txscript.HashCache
@@ -228,7 +228,7 @@ func (chainProvider *ChainProvider) Stats() map[string]float64 {
 func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
 	return chainProvider.blockChain
 }
-func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
+func (chainProvider *ChainProvider) MiningAddresses() []jaxutil.Address {
 	return chainProvider.MiningAddrs
 }
 
@@ -291,7 +291,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 		FetchUtxoView:  chainProvider.blockChain.FetchUtxoView,
 		BestHeight:     func() int32 { return chainProvider.blockChain.BestSnapshot().Height },
 		MedianTimePast: func() time.Time { return chainProvider.blockChain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
+		CalcSequenceLock: func(tx *jaxutil.Tx, view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
 			return chainProvider.blockChain.CalcSequenceLock(tx, view, true)
 		},
 		IsDeploymentActive: chainProvider.blockChain.IsDeploymentActive,

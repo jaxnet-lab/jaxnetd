@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MsgGetAddr implements the Message interface and represents a bitcoin

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 // rpcResultTypes specifies the result types that each RPC command can return.
@@ -22,19 +22,19 @@ var rpcResultTypes = map[string][]interface{}{
 	"addNode":                nil,
 	"createRawTransaction":   {(*string)(nil)},
 	"debugLevel":             {(*string)(nil), (*string)(nil)},
-	"decodeRawTransaction":   {(*btcjson.TxRawDecodeResult)(nil)},
-	"decodeScript":           {(*btcjson.DecodeScriptResult)(nil)},
+	"decodeRawTransaction":   {(*jaxjson.TxRawDecodeResult)(nil)},
+	"decodeScript":           {(*jaxjson.DecodeScriptResult)(nil)},
 	"estimateFee":            {(*float64)(nil)},
 	"generate":               {(*[]string)(nil)},
-	"getAddedNodeInfo":       {(*[]string)(nil), (*[]btcjson.GetAddedNodeInfoResult)(nil)},
-	"getBestBlock":           {(*btcjson.GetBestBlockResult)(nil)},
+	"getAddedNodeInfo":       {(*[]string)(nil), (*[]jaxjson.GetAddedNodeInfoResult)(nil)},
+	"getBestBlock":           {(*jaxjson.GetBestBlockResult)(nil)},
 	"getNestBlockHash":       {(*string)(nil)},
-	"getBlock":               {(*string)(nil), (*btcjson.GetBeaconBlockVerboseResult)(nil)},
+	"getBlock":               {(*string)(nil), (*jaxjson.GetBeaconBlockVerboseResult)(nil)},
 	"getBlockCount":          {(*int64)(nil)},
 	"getBlockHash":           {(*string)(nil)},
-	"getBlockHeader":         {(*string)(nil), (*btcjson.GetBeaconBlockHeaderVerboseResult)(nil)},
-	"getBeaconBlockTemplate": {(*btcjson.GetBeaconBlockTemplateResult)(nil), (*string)(nil), nil},
-	"getBlockchainInfo":      {(*btcjson.GetBlockChainInfoResult)(nil)},
+	"getBlockHeader":         {(*string)(nil), (*jaxjson.GetBeaconBlockHeaderVerboseResult)(nil)},
+	"getBeaconBlockTemplate": {(*jaxjson.GetBeaconBlockTemplateResult)(nil), (*string)(nil), nil},
+	"getBlockchainInfo":      {(*jaxjson.GetBlockChainInfoResult)(nil)},
 	"getCFilter":             {(*string)(nil)},
 	"getCFilterHeader":       {(*string)(nil)},
 	"getConnectionCount":     {(*int32)(nil)},
@@ -43,33 +43,33 @@ var rpcResultTypes = map[string][]interface{}{
 	"getGenerate":            {(*bool)(nil)},
 	"getHashesPerSec":        {(*float64)(nil)},
 	"getHeaders":             {(*[]string)(nil)},
-	"getInfo":                {(*btcjson.InfoChainResult)(nil)},
-	"getMempoolInfo":         {(*btcjson.GetMempoolInfoResult)(nil)},
-	"getMiningInfo":          {(*btcjson.GetMiningInfoResult)(nil)},
-	"getNetTotals":           {(*btcjson.GetNetTotalsResult)(nil)},
+	"getInfo":                {(*jaxjson.InfoChainResult)(nil)},
+	"getMempoolInfo":         {(*jaxjson.GetMempoolInfoResult)(nil)},
+	"getMiningInfo":          {(*jaxjson.GetMiningInfoResult)(nil)},
+	"getNetTotals":           {(*jaxjson.GetNetTotalsResult)(nil)},
 	"getNetworkHashPs":       {(*int64)(nil)},
-	"getPeerInfo":            {(*[]btcjson.GetPeerInfoResult)(nil)},
-	"getRawMempool":          {(*[]string)(nil), (*btcjson.GetRawMempoolVerboseResult)(nil)},
-	"getRawTransaction":      {(*string)(nil), (*btcjson.TxRawResult)(nil)},
-	"getTxOut":               {(*btcjson.GetTxOutResult)(nil)},
-	"listTxOut":              {(*[]btcjson.ExtendedTxOutResult)(nil)},
+	"getPeerInfo":            {(*[]jaxjson.GetPeerInfoResult)(nil)},
+	"getRawMempool":          {(*[]string)(nil), (*jaxjson.GetRawMempoolVerboseResult)(nil)},
+	"getRawTransaction":      {(*string)(nil), (*jaxjson.TxRawResult)(nil)},
+	"getTxOut":               {(*jaxjson.GetTxOutResult)(nil)},
+	"listTxOut":              {(*[]jaxjson.ExtendedTxOutResult)(nil)},
 	"node":                   nil,
 	"help":                   {(*string)(nil), (*string)(nil)},
 	"ping":                   nil,
-	"searchRawTransactions":  {(*string)(nil), (*[]btcjson.SearchRawTransactionsResult)(nil)},
+	"searchRawTransactions":  {(*string)(nil), (*[]jaxjson.SearchRawTransactionsResult)(nil)},
 	"sendRawTransaction":     {(*string)(nil)},
 	"setGenerate":            nil,
 	"stop":                   {(*string)(nil)},
 	"submitBlock":            {nil, (*string)(nil)},
 	"uptime":                 {(*int64)(nil)},
-	"validateAddress":        {(*btcjson.ValidateAddressChainResult)(nil)},
+	"validateAddress":        {(*jaxjson.ValidateAddressChainResult)(nil)},
 	"verifyChain":            {(*bool)(nil)},
 	"verifyMessage":          {(*bool)(nil)},
-	"version":                {(*btcjson.NodeVersion)(nil)},
+	"version":                {(*jaxjson.NodeVersion)(nil)},
 
 	// Websocket commands.
 	"loadTxFilter":              nil,
-	"session":                   {(*btcjson.SessionResult)(nil)},
+	"session":                   {(*jaxjson.SessionResult)(nil)},
 	"notifyBlocks":              nil,
 	"stopNotifyNlocks":          nil,
 	"notifyNewTransactions":     nil,
@@ -79,7 +79,7 @@ var rpcResultTypes = map[string][]interface{}{
 	"notifySpent":               nil,
 	"stopNotifySpent":           nil,
 	"rescan":                    nil,
-	"rescanBlocks":              {(*[]btcjson.RescannedBlock)(nil)},
+	"rescanBlocks":              {(*[]jaxjson.RescannedBlock)(nil)},
 }
 
 // helpCacher provides a concurrent safe type that provides help and usage for
@@ -111,7 +111,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
 	}
 
 	// Generate, cache, and return the help.
-	help, err := btcjson.GenerateHelp(method, helpDescsEnUS, resultTypes...)
+	help, err := jaxjson.GenerateHelp(method, helpDescsEnUS, resultTypes...)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +134,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 	// Generate a list of one-line usage for every command.
 	usageTexts := make([]string, 0, len(c.server.handlers))
 	for k := range c.server.handlers {
-		usage, err := btcjson.MethodUsageText(k.Method)
+		usage, err := jaxjson.MethodUsageText(k.Method)
 		if err != nil {
 			return "", err
 		}
@@ -144,7 +144,7 @@ func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
 	// Include websockets commands if requested.
 	// if includeWebsockets {
 	// for k := range wsHandlers {
-	//	usage, err := btcjson.MethodUsageText(k)
+	//	usage, err := jaxjson.MethodUsageText(k)
 	//	if err != nil {
 	//		return "", err
 	//	}
@@ -334,7 +334,7 @@ var helpDescsEnUS = map[string]string{
 	"getblockchaininforesult-pruneheight":          "The lowest block retained in the current pruned BlockChain",
 	"getblockchaininforesult-chainwork":            "The total cumulative work in the best BlockChain",
 	"getblockchaininforesult-softforks":            "The status of the super-majority soft-forks",
-	"getblockchaininforesult-unifiedsoftforks":     "The status of the super-majority soft-forks used by bitcoind on or after v0.19.0",
+	"getblockchaininforesult-unifiedsoftforks":     "The status of the super-majority soft-forks used by jaxnetd on or after v0.19.0",
 
 	// SoftForkDescription help.
 	"softforkdescription-reject":  "The current activation status of the softfork",
@@ -350,10 +350,10 @@ var helpDescsEnUS = map[string]string{
 	"softforks-bip9_softforks--desc":  "The status of any defined BIP0009 soft-fork deployments",
 
 	// UnifiedSoftForks help.
-	"unifiedsoftforks-softforks":        "The status of the super-majority soft-forks used by bitcoind on or after v0.19.0",
+	"unifiedsoftforks-softforks":        "The status of the super-majority soft-forks used by jaxnetd on or after v0.19.0",
 	"unifiedsoftforks-softforks--key":   "softforks",
-	"unifiedsoftforks-softforks--value": "An object describing an active softfork deployment used by bitcoind on or after v0.19.0",
-	"unifiedsoftforks-softforks--desc":  "JSON object describing an active softfork deployment used by bitcoind on or after v0.19.0",
+	"unifiedsoftforks-softforks--value": "An object describing an active softfork deployment used by jaxnetd on or after v0.19.0",
+	"unifiedsoftforks-softforks--desc":  "JSON object describing an active softfork deployment used by jaxnetd on or after v0.19.0",
 
 	// TxRawResult help.
 	"txrawresult-hex":           "Hex-encoded transaction",
@@ -702,8 +702,8 @@ var helpDescsEnUS = map[string]string{
 	// SendRawTransactionCmd help.
 	"sendrawtransaction--synopsis":     "Submits the serialized, hex-encoded transaction to the local peer and relays it to the network.",
 	"sendrawtransaction-hextx":         "Serialized, hex-encoded signed transaction",
-	"sendrawtransaction-allowhighfees": "Whether or not to allow insanely high fees (btcd does not yet implement this parameter, so it has no effect)",
-	"sendrawtransaction-maxfeerate":    "Used by bitcoind on or after v0.19.0",
+	"sendrawtransaction-allowhighfees": "Whether or not to allow insanely high fees (jaxnetd does not yet implement this parameter, so it has no effect)",
+	"sendrawtransaction-maxfeerate":    "Used by jaxnetd on or after v0.19.0",
 	"sendrawtransaction--result0":      "The hash of the transaction",
 
 	// SetGenerateCmd help.
@@ -712,8 +712,8 @@ var helpDescsEnUS = map[string]string{
 	"setgenerate-genproclimit": "The number of processors (cores) to limit generation to or -1 for default",
 
 	// StopCmd help.
-	"stop--synopsis": "Shutdown btcd.",
-	"stop--result0":  "The string 'btcd stopping.'",
+	"stop--synopsis": "Shutdown jaxnetd.",
+	"stop--result0":  "The string 'jaxnetd stopping.'",
 
 	// SubmitBlockOptions help.
 	"submitblockoptions-workid": "This parameter is currently ignored",
@@ -737,7 +737,7 @@ var helpDescsEnUS = map[string]string{
 	// VerifyChainCmd help.
 	"verifychain--synopsis": "Verifies the block BlockChain database.\n" +
 		"The actual checks performed by the checklevel parameter are implementation specific.\n" +
-		"For btcd this is:\n" +
+		"For jaxnetd this is:\n" +
 		"checklevel=0 - Look up each block and ensure it can be loaded from the database.\n" +
 		"checklevel=1 - Perform basic context-free sanity checks on each block.",
 	"verifychain-checklevel": "How thorough the block verification is",
@@ -784,7 +784,7 @@ var helpDescsEnUS = map[string]string{
 	"outpoint-index": "The index of the outpoint",
 
 	// NotifySpentCmd help.
-	"notifyspent--synopsis": "Send a redeemingtx notification when a transaction spending an outpoint appears in mempool (if relayed to this btcd instance) and when such a transaction first appears in a newly-attached block.",
+	"notifyspent--synopsis": "Send a redeemingtx notification when a transaction spending an outpoint appears in mempool (if relayed to this jaxnetd instance) and when such a transaction first appears in a newly-attached block.",
 	"notifyspent-outpoints": "List of transaction outpoints to monitor.",
 
 	// StopNotifySpentCmd help.

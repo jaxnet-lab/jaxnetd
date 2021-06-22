@@ -3,7 +3,7 @@ ffldb
 
 [![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://godoc.org/gitlab.com/jaxnet/core/shard.core/database/ffldb?status.png)](http://godoc.org/gitlab.com/jaxnet/core/shard.core/database/ffldb)
+[![GoDoc](https://godoc.org/gitlab.com/jaxnet/jaxnetd/database/ffldb?status.png)](http://godoc.org/gitlab.com/jaxnet/jaxnetd/database/ffldb)
 =======
 
 Package ffldb implements a driver for the database package that uses leveldb for

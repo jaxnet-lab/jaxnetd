@@ -11,7 +11,7 @@ import (
 	"log"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
 )
 
 func interruptOnError(e error) {

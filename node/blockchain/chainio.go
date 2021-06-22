@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // FetchSpendJournal attempts to retrieve the spend journal, or the set of
@@ -21,7 +21,7 @@ import (
 // main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) FetchSpendJournal(targetBlock *btcutil.Block) ([]chaindata.SpentTxOut, error) {
+func (b *BlockChain) FetchSpendJournal(targetBlock *jaxutil.Block) ([]chaindata.SpentTxOut, error) {
 	b.chainLock.RLock()
 	defer b.chainLock.RUnlock()
 
@@ -44,7 +44,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *btcutil.Block) ([]chaindata.
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := btcutil.NewBlock(b.chain.GenesisBlock())
+	genesisBlock := jaxutil.NewBlock(b.chain.GenesisBlock())
 	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
 	node := b.chain.NewNode(header, nil)
@@ -329,7 +329,7 @@ func (b *BlockChain) initChainState() error {
 
 		// Initialize the state related to the best block.
 		blockSize := uint64(len(blockBytes))
-		blockWeight := uint64(chaindata.GetBlockWeight(btcutil.NewBlock(&block)))
+		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(&block)))
 		numTxns := uint64(len(block.Transactions))
 		b.stateSnapshot = chaindata.NewBestState(tip, blockSize, blockWeight,
 			numTxns, state.TotalTxns, tip.CalcPastMedianTime())
@@ -349,7 +349,7 @@ func (b *BlockChain) initChainState() error {
 // BlockByHeight returns the block at the given height in the main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
+func (b *BlockChain) BlockByHeight(blockHeight int32) (*jaxutil.Block, error) {
 	// Lookup the block height in the best chain.
 	node := b.bestChain.NodeByHeight(blockHeight)
 	if node == nil {
@@ -358,7 +358,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
 	}
 
 	// Load the block from the database and return it.
-	var block *btcutil.Block
+	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, node)
@@ -371,7 +371,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*btcutil.Block, error) {
 // the appropriate chain height set.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, error) {
+func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 	// Lookup the block hash in block index and ensure it is in the best
 	// chain.
 	node := b.index.LookupNode(hash)
@@ -381,7 +381,7 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*btcutil.Block, error) {
 	}
 
 	// Load the block from the database and return it.
-	var block *btcutil.Block
+	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, node)

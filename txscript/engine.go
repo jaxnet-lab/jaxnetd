@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
 )
 
 // ScriptFlags is a bitmask defining additional operations or tests that will be

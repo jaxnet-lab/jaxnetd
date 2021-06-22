@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 )
 
 // TestCheckBlockScripts ensures that validating the all of the scripts in a

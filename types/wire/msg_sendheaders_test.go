@@ -7,7 +7,7 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"reflect"
 	"testing"
 

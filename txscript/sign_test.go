@@ -12,11 +12,11 @@ import (
 	"net"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type addressToKey struct {
@@ -26,12 +26,12 @@ type addressToKey struct {
 
 func mkGetKey(keys map[string]addressToKey) KeyDB {
 	if keys == nil {
-		return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
+		return KeyClosure(func(addr jaxutil.Address) (*btcec.PrivateKey,
 			bool, error) {
 			return nil, false, errors.New("nope")
 		})
 	}
-	return KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey,
+	return KeyClosure(func(addr jaxutil.Address) (*btcec.PrivateKey,
 		bool, error) {
 		a2k, ok := keys[addr.EncodeAddress()]
 		if !ok {
@@ -43,11 +43,11 @@ func mkGetKey(keys map[string]addressToKey) KeyDB {
 
 func mkGetScript(scripts map[string][]byte) ScriptDB {
 	if scripts == nil {
-		return ScriptClosure(func(addr btcutil.Address) ([]byte, error) {
+		return ScriptClosure(func(addr jaxutil.Address) ([]byte, error) {
 			return nil, errors.New("nope")
 		})
 	}
-	return ScriptClosure(func(addr btcutil.Address) ([]byte, error) {
+	return ScriptClosure(func(addr jaxutil.Address) ([]byte, error) {
 		script, ok := scripts[addr.EncodeAddress()]
 		if !ok {
 			return nil, errors.New("nope")
@@ -103,7 +103,7 @@ func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript 
 	return checkScripts(msg, tx, idx, inputAmt, sigScript, pkScript)
 }
 
-func genKeys(t *testing.T, msg string) (*btcec.PrivateKey, *btcutil.AddressPubKey, error) {
+func genKeys(t *testing.T, msg string) (*btcec.PrivateKey, *jaxutil.AddressPubKey, error) {
 	key1, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Errorf("failed to make privKey for %s: %v",
@@ -114,7 +114,7 @@ func genKeys(t *testing.T, msg string) (*btcec.PrivateKey, *btcutil.AddressPubKe
 
 	pk1 := (*btcec.PublicKey)(&key1.PublicKey).
 		SerializeCompressed()
-	address1, err := btcutil.NewAddressPubKey(pk1,
+	address1, err := jaxutil.NewAddressPubKey(pk1,
 		&chaincfg.TestNet3Params)
 	if err != nil {
 		t.Errorf("failed to make address for %s: %v",
@@ -477,7 +477,7 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -522,7 +522,7 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -591,7 +591,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -634,7 +634,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -702,7 +702,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -746,7 +746,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -815,7 +815,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -859,7 +859,7 @@ func TestSignTxOutput(t *testing.T) {
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -928,14 +928,14 @@ func TestSignTxOutput(t *testing.T) {
 			}
 
 			pkScript, err := MultiSigScript(
-				[]*btcutil.AddressPubKey{address1, address2},
+				[]*jaxutil.AddressPubKey{address1, address2},
 				2)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -980,14 +980,14 @@ func TestSignTxOutput(t *testing.T) {
 			}
 
 			pkScript, err := MultiSigScript(
-				[]*btcutil.AddressPubKey{address1, address2},
+				[]*jaxutil.AddressPubKey{address1, address2},
 				2)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -1062,14 +1062,14 @@ func TestSignTxOutput(t *testing.T) {
 			}
 
 			pkScript, err := MultiSigScript(
-				[]*btcutil.AddressPubKey{address1, address2},
+				[]*jaxutil.AddressPubKey{address1, address2},
 				2)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := btcutil.NewAddressScriptHash(
+			scriptAddr, err := jaxutil.NewAddressScriptHash(
 				pkScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
@@ -1130,7 +1130,7 @@ func TestSignTxOutput(t *testing.T) {
 	}
 }
 
-func parseKeys(t *testing.T, secret, msg string) (*btcec.PrivateKey, *btcutil.AddressPubKey, error) {
+func parseKeys(t *testing.T, secret, msg string) (*btcec.PrivateKey, *jaxutil.AddressPubKey, error) {
 	raw, err := hex.DecodeString(secret)
 	if err != nil {
 		t.Errorf("failed to make privKey for %s: %v", msg, err)
@@ -1141,7 +1141,7 @@ func parseKeys(t *testing.T, secret, msg string) (*btcec.PrivateKey, *btcutil.Ad
 	key1, _ := btcec.PrivKeyFromBytes(btcec.S256(), raw)
 
 	pk1 := (*btcec.PublicKey)(&key1.PublicKey).SerializeCompressed()
-	address1, err := btcutil.NewAddressPubKey(pk1, &chaincfg.TestNet3Params)
+	address1, err := jaxutil.NewAddressPubKey(pk1, &chaincfg.TestNet3Params)
 	if err != nil {
 		t.Errorf("failed to make address for %s: %v", msg, err)
 		return nil, nil, err
@@ -1204,13 +1204,13 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 
 	refundDeferringPeriod := int32(10)
 
-	multiSigLockScript, err := MultiSigLockScript([]*btcutil.AddressPubKey{address1, address2}, 2,
+	multiSigLockScript, err := MultiSigLockScript([]*jaxutil.AddressPubKey{address1, address2}, 2,
 		refundAddress, refundDeferringPeriod)
 	if err != nil {
 		t.Errorf("failed to make pkscript for %s: %v", msg, err)
 	}
 
-	scriptAddr, err := btcutil.NewAddressScriptHash(multiSigLockScript, &chaincfg.TestNet3Params)
+	scriptAddr, err := jaxutil.NewAddressScriptHash(multiSigLockScript, &chaincfg.TestNet3Params)
 	if err != nil {
 		t.Errorf("failed to make p2sh addr for %s: %v", msg, err)
 		return false
@@ -1655,7 +1655,7 @@ func TestEADScript(t *testing.T) {
 
 	pk := (*btcec.PublicKey)(&key.PublicKey).
 		SerializeCompressed()
-	address, err := btcutil.NewAddressPubKey(pk,
+	address, err := jaxutil.NewAddressPubKey(pk,
 		&chaincfg.TestNet3Params)
 	if err != nil {
 		t.Errorf("failed to make address for: %v", err)

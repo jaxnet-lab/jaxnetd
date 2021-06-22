@@ -12,12 +12,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/storage"
-	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txmodels"
-	"gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling/txutils"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/txutils"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 func main() {
@@ -237,7 +236,7 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 
 	if splitFiles {
 		for u, rows := range set {
-			err = storage.NewCSVStorage(fmt.Sprintf("chain-%d-%s", u, dataFile)).SaveRows(rows)
+			err = txmodels.NewCSVStorage(fmt.Sprintf("chain-%d-%s", u, dataFile)).SaveRows(rows)
 			if err != nil {
 				return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
 			}
@@ -250,7 +249,7 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 		}
 
 		fmt.Printf("\nFound %d UTXOs for <%s> in blocks[%d, %d]\n", len(allRows), address, offset, lastBlock)
-		err = storage.NewCSVStorage(dataFile).SaveRows(allRows)
+		err = txmodels.NewCSVStorage(dataFile).SaveRows(allRows)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to save UTXO"), 1)
 		}
@@ -321,7 +320,7 @@ func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
 		return cli.NewExitError(err, 1)
 	}
 
-	repo := storage.NewCSVStorage(app.config.DataFile)
+	repo := txmodels.NewCSVStorage(app.config.DataFile)
 	utxo, err := repo.FetchData()
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to fetch UTXO"), 1)
@@ -444,26 +443,26 @@ func (*App) genKp(*cli.Context) error {
 	}
 
 	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
-	addressPubKey, err := btcutil.NewAddressPubKey(pk, &chaincfg.FastNetParams)
+	addressPubKey, err := jaxutil.NewAddressPubKey(pk, &chaincfg.FastNetParams)
 	if err != nil {
 		println("[error] " + err.Error())
 		return cli.NewExitError("failed to generate kp", 1)
 
 	}
 
-	fastNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.FastNetParams)
+	fastNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.FastNetParams)
 	if err != nil {
 		println("[error] " + err.Error())
 		return cli.NewExitError("failed to generate kp", 1)
 	}
 
-	mainNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.MainNetParams)
+	mainNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.MainNetParams)
 	if err != nil {
 		println("[error] " + err.Error())
 		return cli.NewExitError("failed to generate kp", 1)
 	}
 
-	testNetAddress, err := btcutil.NewAddressPubKeyHash(btcutil.Hash160(pk), &chaincfg.TestNet3Params)
+	testNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.TestNet3Params)
 	if err != nil {
 		println("[error] " + err.Error())
 		return cli.NewExitError("failed to generate kp", 1)
@@ -480,7 +479,7 @@ func (*App) genKp(*cli.Context) error {
 
 func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
 	senderAddress := senderKP.Address.EncodeAddress()
-	senderUTXOIndex := storage.NewUTXORepo("", senderAddress)
+	senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 
 	var err error
 	err = senderUTXOIndex.ReadIndex()
