@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mining/cpuminer"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
 )
 
 const (

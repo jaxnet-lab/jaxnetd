@@ -8,10 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -144,7 +144,7 @@ func (s PkScript) Script() []byte {
 }
 
 // Address encodes the script into an address for the given chain.
-func (s PkScript) Address(chainParams *chaincfg.Params) (btcutil.Address, error) {
+func (s PkScript) Address(chainParams *chaincfg.Params) (jaxutil.Address, error) {
 	_, addrs, _, err := ExtractPkScriptAddrs(s.Script(), chainParams)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse address: %v", err)

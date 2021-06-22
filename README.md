@@ -3,9 +3,9 @@
 
 ![JAX.Network Logo](https://jax.network/wp-content/uploads/2020/10/logo.png)  
 
-# Shard Core
+# jaxnetd
 
-shard.core is a full node JAX.Network implementation written in Go (golang).
+jaxnetd is a full node JAX.Network implementation written in Go (golang).
 
 
 ## Requirements
@@ -35,14 +35,14 @@ recommended that `GOPATH` is set to a directory in your home directory such as
 `~/goprojects` to avoid write permission issues.  It is also recommended adding
 `$GOPATH/bin` to your `PATH` at this point.
 
-- Run the following commands to obtain **shard.core**, all dependencies, and install it:
+- Run the following commands to obtain **jaxnetd**, all dependencies, and install it:
 
 ```bash
-$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core
+$ cd $GOPATH/src/gitlab.com/jaxnet/jaxnetd
 $ GO111MODULE=on go install -v . ./cmd/...
 ```
 
-- **shard.core** (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
+- **jaxnetd** (and utilities) will now be installed in ```$GOPATH/bin```.  If you did
   not already add the bin directory to your system path during Go installation,
   we recommend you do so now.
 
@@ -57,14 +57,14 @@ $ GO111MODULE=on go install -v . ./cmd/...
 - Run the following commands to update btcd, all dependencies, and install it:
 
 ```bash
-$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core
+$ cd $GOPATH/src/gitlab.com/jaxnet/jaxnetd
 $ git pull
 $ GO111MODULE=on go install -v . ./cmd/...
 ```
 
 ## Getting Started
 
-shard.core has several configuration options available to tweak how it runs, but all the basic operations described in the intro section work with zero
+jaxnetd has several configuration options available to tweak how it runs, but all the basic operations described in the intro section work with zero
 configuration.
 
 ### Configuration
@@ -73,23 +73,23 @@ configuration.
 
 #### Windows (Installed from MSI)
 
-> Launch shard.core from your Start menu.
+> Launch jaxnetd from your Start menu.
 
 #### Linux/BSD/POSIX/Source
 
 ```bash
-$ ./shard.core
+$ ./jaxnetd
 ```
 
 
 ## Issue Tracker
 
-The [integrated github issue tracker](https://gitlab.com/jaxnet/core/shard.core/issues)
+The [integrated github issue tracker](https://gitlab.com/jaxnet/jaxnetd/issues)
 is used for this project.
 
 ## Documentation
 
-The documentation is a work-in-progress.  It is located in the [docs](https://gitlab.com/jaxnet/core/shard.core/tree/master/docs) folder.
+The documentation is a work-in-progress.  It is located in the [docs](https://gitlab.com/jaxnet/jaxnetd/tree/master/docs) folder.
 
 ## Release Verification
 
@@ -100,4 +100,4 @@ using our reproducible build system.
 
 ## License
 
-**shard.core** is licensed under the [copyfree](http://copyfree.org) ISC License.
+**jaxnetd** is licensed under the [copyfree](http://copyfree.org) ISC License.

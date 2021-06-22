@@ -4,22 +4,22 @@
 // license that can be found in the LICENSE file.
 
 /*
-shard.core is a full-node bitcoin implementation written in Go.
+jaxnetd is a full-node bitcoin implementation written in Go.
 
-The default options are sane for most users.  This means shard.core will work 'out of
+The default options are sane for most users.  This means jaxnetd will work 'out of
 the box' for most users.  However, there are also a wide variety of flags that
 can be used to control it.
 
 The following section provides a usage overview which enumerates the flags.  An
 interesting point to note is that the long form of all of these options
 (except -C) can be specified in a configuration file that is automatically
-parsed when shard.core starts up.  By default, the configuration file is located at
-~/.shard.core/shard.core.yaml on POSIX-style operating systems and %LOCALAPPDATA%\shard.core\shard.core.yaml
+parsed when jaxnetd starts up.  By default, the configuration file is located at
+~/.shard.jaxnetd.yaml on POSIX-style operating systems and %LOCALAPPDATA%\jaxnetd\jaxnetd.yaml
 on Windows.  The -C (--configfile) flag, as shown below, can be used to override
 this location.
 
 Usage:
-  shard.core [OPTIONS]
+  jaxnetd [OPTIONS]
 
 Application Options:
       --addcheckpoint=        Add a custom checkpoint.  Format:

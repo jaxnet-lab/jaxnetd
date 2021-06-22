@@ -1,10 +1,10 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // FetchUtxoView loads unspent transaction outputs for the inputs referenced by
@@ -13,7 +13,7 @@ import (
 // so the returned view can be examined for duplicate transactions.
 //
 // This function is safe for concurrent access however the returned view is NOT.
-func (b *BlockChain) FetchUtxoView(tx *btcutil.Tx) (*chaindata.UtxoViewpoint, error) {
+func (b *BlockChain) FetchUtxoView(tx *jaxutil.Tx) (*chaindata.UtxoViewpoint, error) {
 	// Create a set of needed outputs based on those referenced by the
 	// inputs of the passed transaction and the outputs of the transaction
 	// itself.

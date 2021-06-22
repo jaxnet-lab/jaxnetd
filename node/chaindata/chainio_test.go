@@ -12,9 +12,9 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // TestErrNotInMainChain ensures the functions related to ErrNotInMainChain work

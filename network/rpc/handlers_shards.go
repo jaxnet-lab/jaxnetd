@@ -12,15 +12,15 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type ShardRPC struct {
@@ -43,8 +43,8 @@ func NewShardRPC(chainProvider *cprovider.ChainProvider,
 
 func (server *ShardRPC) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
 	if cmd.shardID != server.chainProvider.ChainCtx.ShardID() {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrShardIDMismatch,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrShardIDMismatch,
 			Message: "Provided ShardID does not match with chain",
 		}
 	}
@@ -57,14 +57,14 @@ func (server *ShardRPC) ComposeHandlers() {
 	server.SetCommands(server.OwnHandlers())
 }
 
-func (server *ShardRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
-	return map[btcjson.MethodName]CommandHandler{
-		btcjson.ScopedMethod("shard", "getShardHeaders"):       server.handleGetHeaders,
-		btcjson.ScopedMethod("shard", "getShardBlock"):         server.handleGetBlock,
-		btcjson.ScopedMethod("shard", "getShardBlockHeader"):   server.handleGetBlockHeader,
-		btcjson.ScopedMethod("shard", "getShardBlockTemplate"): server.handleGetBlockTemplate,
-		// btcjson.ScopedMethod("shard", "getShardBlockHash"):     server.handleGetBlockHash,
-		btcjson.ScopedMethod("shard", "getShardBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
+func (server *ShardRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
+	return map[jaxjson.MethodName]CommandHandler{
+		jaxjson.ScopedMethod("shard", "getShardHeaders"):       server.handleGetHeaders,
+		jaxjson.ScopedMethod("shard", "getShardBlock"):         server.handleGetBlock,
+		jaxjson.ScopedMethod("shard", "getShardBlockHeader"):   server.handleGetBlockHeader,
+		jaxjson.ScopedMethod("shard", "getShardBlockTemplate"): server.handleGetBlockTemplate,
+		// jaxjson.ScopedMethod("shard", "getShardBlockHash"):     server.handleGetBlockHash,
+		jaxjson.ScopedMethod("shard", "getShardBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
 	}
 }
 
@@ -74,7 +74,7 @@ func (server *ShardRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
 func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetShardHeadersCmd)
+	c := cmd.(*jaxjson.GetShardHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -112,7 +112,7 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 
 // handleGetBlock implements the getblock command.
 func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetShardBlockCmd)
+	c := cmd.(*jaxjson.GetShardBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -124,7 +124,7 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 
-	c := cmd.(*btcjson.GetShardBlockBySerialNumberCmd)
+	c := cmd.(*jaxjson.GetShardBlockBySerialNumberCmd)
 
 	var hash *chainhash.Hash
 
@@ -135,8 +135,8 @@ func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan 
 	})
 
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -154,14 +154,14 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		return err
 	})
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
 
 	// Deserialize the block.
-	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
+	blk, err := jaxutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
 	if err != nil {
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
@@ -187,7 +187,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	}
 	// If verbosity is 0, return the serialized block as a hex encoded string.
 	if verbosity != nil && *verbosity == 0 {
-		return btcjson.GetShardBlockResult{
+		return jaxjson.GetShardBlockResult{
 			Block:        hex.EncodeToString(blkBytes),
 			Height:       blockHeight,
 			SerialID:     serialID,
@@ -204,7 +204,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	}
 
 	beaconHeader := blockHeader.BeaconHeader()
-	blockReply := btcjson.GetShardBlockVerboseResult{
+	blockReply := jaxjson.GetShardBlockVerboseResult{
 		Hash:          hash.String(),
 		ShardHash:     blockHeader.ShardBlockHash().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
@@ -220,7 +220,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		SerialID:      serialID,
 		PrevSerialID:  prevSerialID,
 		NextHash:      nextHashString,
-		BCBlock: btcjson.GetBeaconBlockVerboseResult{
+		BCBlock: jaxjson.GetBeaconBlockVerboseResult{
 			Confirmations: 0,
 			StrippedSize:  0,
 			Size:          0,
@@ -254,7 +254,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		blockReply.Tx = txNames
 	} else {
 		txns := blk.Transactions()
-		rawTxns := make([]btcjson.TxRawResult, len(txns))
+		rawTxns := make([]jaxjson.TxRawResult, len(txns))
 		for i, tx := range txns {
 			rawTxn, err := server.CreateTxRawResult(params, tx.MsgTx(),
 				tx.Hash().String(), blockHeader, hash.String(),
@@ -272,7 +272,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 
 // handleGetBlockHeader implements the getblockheader command.
 func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetShardBlockHeaderCmd)
+	c := cmd.(*jaxjson.GetShardBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -281,8 +281,8 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	}
 	blockHeader, err := server.chainProvider.BlockChain().HeaderByHash(hash)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -335,7 +335,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 		return err
 	})
 	beaconHeader := blockHeader.BeaconHeader()
-	blockHeaderReply := btcjson.GetShardBlockHeaderVerboseResult{
+	blockHeaderReply := jaxjson.GetShardBlockHeaderVerboseResult{
 		Hash:          c.Hash,
 		ShardHash:     shardHeader.ShardBlockHash().String(),
 		Confirmations: int64(1 + best.Height - blockHeight),
@@ -348,7 +348,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
 		Difficulty:    diff,
 		Time:          blockHeader.Timestamp().Unix(),
-		BCHeader: btcjson.GetBeaconBlockHeaderVerboseResult{
+		BCHeader: jaxjson.GetBeaconBlockHeaderVerboseResult{
 			Confirmations: 0,
 			Height:        0,
 			Difficulty:    0,
@@ -373,7 +373,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
 func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetShardBlockTemplateCmd)
+	c := cmd.(*jaxjson.GetShardBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -389,8 +389,8 @@ func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan
 		return server.handleGetBlockTemplateProposal(request)
 	}
 
-	return nil, &btcjson.RPCError{
-		Code:    btcjson.ErrRPCInvalidParameter,
+	return nil, &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCInvalidParameter,
 		Message: "Invalid mode",
 	}
 }
@@ -402,7 +402,7 @@ func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan
 // in regards to whether or not it supports creating its own coinbase (the
 // coinbasetxn and coinbasevalue capabilities) and modifies the returned block
 // template accordingly.
-func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateRequest, closeChan <-chan struct{}) (interface{}, error) {
+func (server *ShardRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateRequest, closeChan <-chan struct{}) (interface{}, error) {
 	// Extract the relevant passed capabilities and restrict the result to
 	// either a coinbase value or a coinbase transaction object depending on
 	// the request.  Default to only providing a coinbase value.
@@ -433,8 +433,8 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	// When a coinbase transaction has been requested, respond with an error
 	// if there are no addresses to pay the created block template to.
 	if !useCoinbaseValue && len(server.chainProvider.MiningAddrs) == 0 {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCInternal.Code,
 			Message: "A coinbase transaction has been requested, " +
 				"but the Server has not been configured with " +
 				"any payment addresses via --miningaddr",
@@ -449,8 +449,8 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	if !(netType == types.FastTestNet || netType == types.SimNet || netType == types.RegTest) &&
 		server.connMgr.ConnectedCount() == 0 {
 
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCClientNotConnected,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCClientNotConnected,
 			Message: "Bitcoin is not connected",
 		}
 	}
@@ -458,8 +458,8 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 	// No point in generating or accepting work before the BlockChain is synced.
 	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCClientInInitialDownload,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCClientInInitialDownload,
 			Message: "Bitcoin is downloading blocks...",
 		}
 	}
@@ -492,11 +492,11 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *btcjson.TemplateR
 // deals with block proposals.
 //
 // See https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.TemplateRequest) (interface{}, error) {
+func (server *ShardRPC) handleGetBlockTemplateProposal(request *jaxjson.TemplateRequest) (interface{}, error) {
 	hexData := request.Data
 	if hexData == "" {
-		return false, &btcjson.RPCError{
-			Code: btcjson.ErrRPCType,
+		return false, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCType,
 			Message: fmt.Sprintf("Data must contain the " +
 				"hex-encoded serialized block that is being " +
 				"proposed"),
@@ -509,20 +509,20 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 	}
 	dataBytes, err := hex.DecodeString(hexData)
 	if err != nil {
-		return false, &btcjson.RPCError{
-			Code: btcjson.ErrRPCDeserialization,
+		return false, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCDeserialization,
 			Message: fmt.Sprintf("Data must be "+
 				"hexadecimal string (not %q)", hexData),
 		}
 	}
 	var msgBlock = server.chainProvider.ChainCtx.EmptyBlock()
 	if err := msgBlock.Deserialize(bytes.NewReader(dataBytes)); err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCDeserialization,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "Block decode failed: " + err.Error(),
 		}
 	}
-	block := btcutil.NewBlock(&msgBlock)
+	block := jaxutil.NewBlock(&msgBlock)
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
@@ -535,8 +535,8 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *btcjson.Template
 		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			server.Log.Error().Msg(errStr)
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCVerify,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCVerify,
 				Message: errStr,
 			}
 		}

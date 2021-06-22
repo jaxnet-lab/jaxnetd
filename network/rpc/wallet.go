@@ -6,7 +6,7 @@
 
 package rpc
 
-// list of commands that we recognize, but for which btcd has no support because
+// list of commands that we recognize, but for which jaxnetd has no support because
 // it lacks support for wallet functionality. For these commands the user
 // should ask a connected instance of btcwallet.
 var rpcAskWallet = map[string]struct{}{
@@ -121,5 +121,5 @@ var rpcLimited = map[string]struct{}{
 // type retrievedTx struct {
 //	txBytes []byte
 //	blkHash *chainhash.Hash // Only set when transaction is in a block.
-//	tx      *btcutil.Tx
+//	tx      *jaxutil.Tx
 // }

@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 )
 
 type DBCtl struct {

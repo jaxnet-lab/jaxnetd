@@ -10,12 +10,12 @@ package chaindata
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 )
 
 // TestMerkle tests the BuildMerkleTreeStore API.
 func TestMerkle(t *testing.T) {
-	block := btcutil.NewBlock(&Block100000)
+	block := jaxutil.NewBlock(&Block100000)
 	merkles := BuildMerkleTreeStore(block.Transactions(), false)
 	calculatedMerkleRoot := merkles[len(merkles)-1]
 	wantMerkle := Block100000.Header.MerkleRoot()

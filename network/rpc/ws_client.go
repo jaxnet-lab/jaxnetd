@@ -9,10 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/btcsuite/websocket"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"io"
 	"sync"
 )
@@ -150,15 +150,15 @@ out:
 			break out
 		}
 
-		var request btcjson.Request
+		var request jaxjson.Request
 		err = json.Unmarshal(msg, &request)
 		if err != nil {
 			if !c.authenticated {
 				break out
 			}
 
-			jsonErr := &btcjson.RPCError{
-				Code:    btcjson.ErrRPCParse.Code,
+			jsonErr := &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCParse.Code,
 				Message: "Failed to parse request: " + err.Error(),
 			}
 			reply, err := c.manager.server.createMarshalledReply(nil, nil, jsonErr)
@@ -216,7 +216,7 @@ out:
 		// the authenticate request, an authenticate request is received
 		// when the client is already authenticated, or incorrect
 		// authentication credentials are provided in the request.
-		switch authCmd, ok := cmd.cmd.(*btcjson.AuthenticateCmd); {
+		switch authCmd, ok := cmd.cmd.(*jaxjson.AuthenticateCmd); {
 		case c.authenticated && ok:
 			c.manager.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
 			break out
@@ -251,8 +251,8 @@ out:
 		// error when not authorized to call this RPC.
 		if !c.isAdmin {
 			if _, ok := rpcLimited[request.Method]; !ok {
-				jsonErr := &btcjson.RPCError{
-					Code:    btcjson.ErrRPCInvalidParams.Code,
+				jsonErr := &jaxjson.RPCError{
+					Code:    jaxjson.ErrRPCInvalidParams.Code,
 					Message: "limited user not authorized for this method",
 				}
 				// Marshal and send response.

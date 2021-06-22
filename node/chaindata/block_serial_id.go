@@ -27,8 +27,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 type SerialValue struct {

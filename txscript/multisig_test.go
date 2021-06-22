@@ -9,8 +9,8 @@ package txscript
 import (
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 func Test_isMultiSigLock(t *testing.T) {
@@ -30,7 +30,7 @@ func Test_isMultiSigLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	multiSigLockScript, err := MultiSigLockScript([]*btcutil.AddressPubKey{address1, address2}, 2,
+	multiSigLockScript, err := MultiSigLockScript([]*jaxutil.AddressPubKey{address1, address2}, 2,
 		address0, int32(refundDeferringPeriod))
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func Test_extractMultiSigLockAddrs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	multiSigLockScript, err := MultiSigLockScript([]*btcutil.AddressPubKey{address1, address2}, 2,
+	multiSigLockScript, err := MultiSigLockScript([]*jaxutil.AddressPubKey{address1, address2}, 2,
 		address0, int32(refundDeferringPeriod))
 	if err != nil {
 		t.Fatal(err)

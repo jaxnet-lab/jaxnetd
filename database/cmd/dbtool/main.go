@@ -13,12 +13,12 @@ import (
 
 	"github.com/btcsuite/btclog"
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the btcd block database.
+	// blockDbNamePrefix is the prefix for the jaxnetd block database.
 	blockDbNamePrefix = "blocks"
 )
 

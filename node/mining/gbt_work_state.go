@@ -14,15 +14,15 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -56,7 +56,7 @@ var (
 	// in the coinbase signature script.  It is declared here to avoid the
 	// overhead of creating a new object on every invocation for constant
 	// data.
-	gbtCoinbaseAux = &btcjson.GetBlockTemplateResultAux{
+	gbtCoinbaseAux = &jaxjson.GetBlockTemplateResultAux{
 		Flags: hex.EncodeToString(builderScript(txscript.
 			NewScriptBuilder().
 			AddData([]byte(CoinbaseFlags)))),
@@ -269,7 +269,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// Choose a payment address at random if the caller requests a
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
-		var payAddr btcutil.Address
+		var payAddr jaxutil.Address
 		if !useCoinbaseValue && len(miningAddrs) == 0 {
 			payAddr = miningAddrs[0]
 		}
@@ -284,7 +284,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// appropriate address(es).
 		blkTemplate, err := state.generator.NewBlockTemplate(payAddr, burnRewardFlags)
 		if err != nil {
-			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+			return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code,
 				"failed to create new block template: "+err.Error())
 		}
 
@@ -337,7 +337,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			// pay to the randomly selected payment address.
 			pkScript, err := txscript.PayToAddrScript(payToAddr)
 			if err != nil {
-				return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+				return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code,
 					"Failed to create pay-to-addr script:"+err.Error())
 			}
 			burnReward := false
@@ -355,7 +355,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			template.ValidPayAddress = true
 
 			// Update the merkle root.
-			block := btcutil.NewBlock(template.Block)
+			block := jaxutil.NewBlock(template.Block)
 			merkles := chaindata.BuildMerkleTreeStore(block.Transactions(), false)
 			template.Block.Header.SetMerkleRoot(*merkles[len(merkles)-1])
 		}
@@ -370,7 +370,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// blocks per the BlockChain consensus rules.
 		err := state.generator.UpdateBlockTime(&msgBlock)
 		if err != nil {
-			return btcjson.NewRPCError(btcjson.ErrRPCInternal.Code,
+			return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code,
 				"Failed to update block time:"+err.Error())
 		}
 		msgBlock.Header.SetNonce(0)
@@ -385,11 +385,11 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 }
 
 // BeaconBlockTemplateResult returns the current block template associated with the
-// state as a btcjson.GetBeaconBlockTemplateResult that is ready to be encoded to JSON
+// state as a jaxjson.GetBeaconBlockTemplateResult that is ready to be encoded to JSON
 // and returned to the caller.
 //
 // This function MUST be called with the state locked.
-func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*btcjson.GetBeaconBlockTemplateResult, error) {
+func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetBeaconBlockTemplateResult, error) {
 	// Ensure the timestamps are still in valid range for the template.
 	// This should really only ever happen if the local clock is changed
 	// after the template is generated, but it's important to avoid serving
@@ -401,8 +401,8 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	maxTime := adjustedTime.Add(time.Second * chaindata.MaxTimeOffsetSeconds)
 
 	if header.Timestamp().After(maxTime) {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCOutOfRange,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCOutOfRange,
 			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
@@ -432,7 +432,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	//  Omitting CoinbaseTxn -> coinbase, generation
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
-	reply := btcjson.GetBeaconBlockTemplateResult{
+	reply := jaxjson.GetBeaconBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.PrevBlock().String(),
@@ -478,11 +478,11 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 }
 
 // ShardBlockTemplateResult returns the current block template associated with the
-// state as a btcjson.GetShardBlockTemplateResult that is ready to be encoded to JSON
+// state as a jaxjson.GetShardBlockTemplateResult that is ready to be encoded to JSON
 // and returned to the caller.
 //
 // This function MUST be called with the state locked.
-func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*btcjson.GetShardBlockTemplateResult, error) {
+func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetShardBlockTemplateResult, error) {
 	// Ensure the timestamps are still in valid range for the template.
 	// This should really only ever happen if the local clock is changed
 	// after the template is generated, but it's important to avoid serving
@@ -494,8 +494,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	maxTime := adjustedTime.Add(time.Second * chaindata.MaxTimeOffsetSeconds)
 
 	if header.Timestamp().After(maxTime) {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCOutOfRange,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCOutOfRange,
 			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
 				"time %v, maximum time %v", adjustedTime,
 				maxTime),
@@ -524,7 +524,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	//  Omitting CoinbaseTxn -> coinbase, generation
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
-	reply := btcjson.GetShardBlockTemplateResult{
+	reply := jaxjson.GetShardBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.PrevBlock().String(),
@@ -569,8 +569,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 }
 
 type coinbaseData struct {
-	CoinbaseAux   *btcjson.GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
-	CoinbaseTxn   *btcjson.GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
+	CoinbaseAux   *jaxjson.GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
+	CoinbaseTxn   *jaxjson.GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
 	CoinbaseValue *int64                             `json:"coinbasevalue,omitempty"`
 }
 
@@ -586,8 +586,8 @@ func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValu
 	// Ensure the template has a valid payment address associated
 	// with it when a full coinbase is requested.
 	if !template.ValidPayAddress {
-		return nil, &btcjson.RPCError{
-			Code: btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCInternal.Code,
 			Message: "A coinbase transaction has been " +
 				"requested, but the Server has not " +
 				"been configured with any payment " +
@@ -600,10 +600,10 @@ func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValu
 	txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 	if err := tx.Serialize(txBuf); err != nil {
 		err := errors.Wrap(err, "Failed to serialize transaction")
-		return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, err.Error())
+		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code, err.Error())
 	}
 
-	resultTx := btcjson.GetBlockTemplateResultTx{
+	resultTx := jaxjson.GetBlockTemplateResultTx{
 		Data:    hex.EncodeToString(txBuf.Bytes()),
 		Hash:    tx.TxHash().String(),
 		Depends: []int64{},
@@ -615,13 +615,13 @@ func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValu
 	return reply, nil
 }
 
-func (state *GBTWorkState) TransformTxs(template *BlockTemplate) ([]btcjson.GetBlockTemplateResultTx, error) {
+func (state *GBTWorkState) TransformTxs(template *BlockTemplate) ([]jaxjson.GetBlockTemplateResultTx, error) {
 
 	// Convert each transaction in the block template to a template result
 	// transaction.  The result does not include the coinbase, so notice
 	// the adjustments to the various lengths and indices.
 	numTx := len(template.Block.Transactions)
-	transactions := make([]btcjson.GetBlockTemplateResultTx, 0, numTx-1)
+	transactions := make([]jaxjson.GetBlockTemplateResultTx, 0, numTx-1)
 	txIndex := make(map[chainhash.Hash]int64, numTx)
 	for i, tx := range template.Block.Transactions {
 		txHash := tx.TxHash()
@@ -653,11 +653,11 @@ func (state *GBTWorkState) TransformTxs(template *BlockTemplate) ([]btcjson.GetB
 		txBuf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(txBuf); err != nil {
 			context := errors.Wrap(err, "Failed to serialize transaction").Error()
-			return nil, btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, context)
+			return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code, context)
 		}
 
-		bTx := btcutil.NewTx(tx)
-		resultTx := btcjson.GetBlockTemplateResultTx{
+		bTx := jaxutil.NewTx(tx)
+		resultTx := jaxjson.GetBlockTemplateResultTx{
 			Data:    hex.EncodeToString(txBuf.Bytes()),
 			Hash:    txHash.String(),
 			Depends: depends,

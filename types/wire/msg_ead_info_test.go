@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 func TestEADAddress_BtcEncode(t *testing.T) {

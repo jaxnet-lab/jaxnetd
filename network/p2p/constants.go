@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 	defaultDataDirname           = "data"
 	defaultLogLevel              = "info"
 	defaultLogDirname            = "logs"
-	defaultLogFilename           = "btcd.log"
+	defaultLogFilename           = "jaxnetd.log"
 	defaultMaxPeers              = 125
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 100
@@ -56,7 +56,7 @@ const (
 	defaultGenerate              = false
 	defaultMaxOrphanTransactions = 100
 	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-btcd.yaml"
+	sampleConfigFilename         = "sample-jaxnetd.yaml"
 	defaultTxIndex               = false
 	defaultAddrIndex             = false
 )
@@ -64,7 +64,7 @@ const (
 var (
 	// userAgentName is the user agent name and is used to help identify
 	// ourselves to other bitcoin peers.
-	userAgentName = "btcd"
+	userAgentName = "jaxnetd"
 
 	// userAgentVersion is the user agent version and is used to help
 	// identify ourselves to other bitcoin peers.

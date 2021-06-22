@@ -31,7 +31,7 @@ vendor/*
 /dist
 /tmp
 /spec
-shard.core
+jaxnetd
 *.csv
 *.dat
 

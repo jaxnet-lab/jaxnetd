@@ -9,9 +9,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // FutureGetShardBlockResult is a future promise to deliver the result of a
@@ -31,7 +31,7 @@ func (r FutureGetShardBlockResult) Receive() (*BlockResult, error) {
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult btcjson.GetShardBlockResult
+	var blockResult jaxjson.GetShardBlockResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (c *Client) GetShardBlockAsync(blockHash *chainhash.Hash) FutureGetShardBlo
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewGetShardBlockCmd(hash, btcjson.Int(0))
+	cmd := jaxjson.NewGetShardBlockCmd(hash, jaxjson.Int(0))
 	return FutureGetShardBlockResult{
 		client:   c,
 		hash:     hash,
@@ -94,14 +94,14 @@ type FutureGetShardBlockVerboseResult struct {
 
 // Receive waits for the response promised by the future and returns the data
 // structure from the server with information about the requested block.
-func (r FutureGetShardBlockVerboseResult) Receive() (*btcjson.GetShardBlockVerboseResult, error) {
+func (r FutureGetShardBlockVerboseResult) Receive() (*jaxjson.GetShardBlockVerboseResult, error) {
 	res, err := r.client.waitForGetBlockRes(r.Response, "getShardBlock", r.hash, true, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult btcjson.GetShardBlockVerboseResult
+	var blockResult jaxjson.GetShardBlockVerboseResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (c *Client) GetShardBlockVerboseAsync(blockHash *chainhash.Hash) FutureGetS
 	}
 	// From the bitcoin-cli getblock documentation:
 	// "If verbosity is 1, returns an Object with information about block ."
-	cmd := btcjson.NewGetShardBlockCmd(hash, btcjson.Int(1))
+	cmd := jaxjson.NewGetShardBlockCmd(hash, jaxjson.Int(1))
 	return FutureGetShardBlockVerboseResult{
 		client:   c,
 		hash:     hash,
@@ -134,7 +134,7 @@ func (c *Client) GetShardBlockVerboseAsync(blockHash *chainhash.Hash) FutureGetS
 //
 // See GetShardBlockVerboseTx to retrieve transaction data structures as well.
 // See GetShardBlock to retrieve a raw block instead.
-func (c *Client) GetShardBlockVerbose(blockHash *chainhash.Hash) (*btcjson.GetShardBlockVerboseResult, error) {
+func (c *Client) GetShardBlockVerbose(blockHash *chainhash.Hash) (*jaxjson.GetShardBlockVerboseResult, error) {
 	return c.GetShardBlockVerboseAsync(blockHash).Receive()
 }
 
@@ -148,13 +148,13 @@ type FutureGetShardBlockVerboseTxResult struct {
 
 // Receive waits for the response promised by the future and returns a verbose
 // version of the block including detailed information about its transactions.
-func (r FutureGetShardBlockVerboseTxResult) Receive() (*btcjson.GetShardBlockVerboseTxResult, error) {
+func (r FutureGetShardBlockVerboseTxResult) Receive() (*jaxjson.GetShardBlockVerboseTxResult, error) {
 	res, err := r.client.waitForGetBlockRes(r.Response, "getShardBlock", r.hash, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	var blockResult btcjson.GetShardBlockVerboseTxResult
+	var blockResult jaxjson.GetShardBlockVerboseTxResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (c *Client) GetShardBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureGe
 	//
 	// If verbosity is 2, returns an Object with information about block
 	// and information about each transaction.
-	cmd := btcjson.NewGetShardBlockCmd(hash, btcjson.Int(2))
+	cmd := jaxjson.NewGetShardBlockCmd(hash, jaxjson.Int(2))
 	return FutureGetShardBlockVerboseTxResult{
 		client:   c,
 		hash:     hash,
@@ -191,7 +191,7 @@ func (c *Client) GetShardBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureGe
 //
 // See GetShardBlockVerbose if only transaction hashes are preferred.
 // See GetShardBlock to retrieve a raw block instead.
-func (c *Client) GetShardBlockVerboseTx(blockHash *chainhash.Hash) (*btcjson.GetShardBlockVerboseTxResult, error) {
+func (c *Client) GetShardBlockVerboseTx(blockHash *chainhash.Hash) (*jaxjson.GetShardBlockVerboseTxResult, error) {
 	return c.GetShardBlockVerboseTxAsync(blockHash).Receive()
 }
 
@@ -240,7 +240,7 @@ func (c *Client) GetShardBlockHeaderAsync(blockHash *chainhash.Hash) FutureGetSh
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewGetShardBlockHeaderCmd(hash, btcjson.Bool(false))
+	cmd := jaxjson.NewGetShardBlockHeaderCmd(hash, jaxjson.Bool(false))
 	return c.sendCmd(cmd)
 }
 
@@ -258,14 +258,14 @@ type FutureGetShardBlockHeaderVerboseResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // data structure of the blockheader requested from the server given its hash.
-func (r FutureGetShardBlockHeaderVerboseResult) Receive() (*btcjson.GetShardBlockHeaderVerboseResult, error) {
+func (r FutureGetShardBlockHeaderVerboseResult) Receive() (*jaxjson.GetShardBlockHeaderVerboseResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a string.
-	var bh btcjson.GetShardBlockHeaderVerboseResult
+	var bh jaxjson.GetShardBlockHeaderVerboseResult
 	err = json.Unmarshal(res, &bh)
 	if err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func (c *Client) GetShardBlockHeaderVerboseAsync(blockHash *chainhash.Hash) Futu
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewGetShardBlockHeaderCmd(hash, btcjson.Bool(true))
+	cmd := jaxjson.NewGetShardBlockHeaderCmd(hash, jaxjson.Bool(true))
 	return c.sendCmd(cmd)
 }
 
@@ -293,7 +293,7 @@ func (c *Client) GetShardBlockHeaderVerboseAsync(blockHash *chainhash.Hash) Futu
 // blockheader from the server given its hash.
 //
 // See GetShardBlockHeader to retrieve a blockheader instead.
-func (c *Client) GetShardBlockHeaderVerbose(blockHash *chainhash.Hash) (*btcjson.GetShardBlockHeaderVerboseResult, error) {
+func (c *Client) GetShardBlockHeaderVerbose(blockHash *chainhash.Hash) (*jaxjson.GetShardBlockHeaderVerboseResult, error) {
 	return c.GetShardBlockHeaderVerboseAsync(blockHash).Receive()
 }
 
@@ -303,14 +303,14 @@ type FutureGetShardBlockTemplateAsync chan *response
 
 // Receive waits for the response promised by the future and returns the hash
 // data to work on.
-func (r FutureGetShardBlockTemplateAsync) Receive() (*btcjson.GetShardBlockTemplateResult, error) {
+func (r FutureGetShardBlockTemplateAsync) Receive() (*jaxjson.GetShardBlockTemplateResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a getwork result object.
-	var result btcjson.GetShardBlockTemplateResult
+	var result jaxjson.GetShardBlockTemplateResult
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -324,13 +324,13 @@ func (r FutureGetShardBlockTemplateAsync) Receive() (*btcjson.GetShardBlockTempl
 // returned instance.
 //
 // See GetWork for the blocking version and more details.
-func (c *Client) GetShardBlockTemplateAsync(reqData *btcjson.TemplateRequest) FutureGetShardBlockTemplateAsync {
-	cmd := btcjson.NewGetShardBlockTemplateCmd(reqData)
+func (c *Client) GetShardBlockTemplateAsync(reqData *jaxjson.TemplateRequest) FutureGetShardBlockTemplateAsync {
+	cmd := jaxjson.NewGetShardBlockTemplateCmd(reqData)
 	return c.sendCmd(cmd)
 }
 
 // GetShardBlockTemplate deals with generating and returning block templates to the caller.
-func (c *Client) GetShardBlockTemplate(reqData *btcjson.TemplateRequest) (*btcjson.GetShardBlockTemplateResult, error) {
+func (c *Client) GetShardBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetShardBlockTemplateResult, error) {
 	return c.GetShardBlockTemplateAsync(reqData).Receive()
 }
 
@@ -392,7 +392,7 @@ func (c *Client) GetShardHeadersAsync(blockLocators []chainhash.Hash, hashStop *
 	if hashStop != nil {
 		hash = hashStop.String()
 	}
-	cmd := btcjson.NewGetShardHeadersCmd(locators, hash)
+	cmd := jaxjson.NewGetShardHeadersCmd(locators, hash)
 	return c.sendCmd(cmd)
 }
 
@@ -430,7 +430,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error)
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult btcjson.GetShardBlockResult
+	var blockResult jaxjson.GetShardBlockResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
@@ -462,7 +462,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error)
 //
 // See GetShardBlockBySerialNumber for the blocking version and more details.
 func (c *Client) GetShardBlockBySerialNumberAsync(serialID int64) FutureGetShardBlockBySerialNumberResult {
-	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID, btcjson.Int(0))
+	cmd := jaxjson.NewGetShardBlockBySerialNumberCmd(serialID, jaxjson.Int(0))
 	return FutureGetShardBlockBySerialNumberResult{
 		client:   c,
 		serialID: serialID,
@@ -488,14 +488,14 @@ type FutureGetShardBlockVerboseBySerialNumberResult struct {
 
 // Receive waits for the response promised by the future and returns the data
 // structure from the server with information about the requested block.
-func (r FutureGetShardBlockVerboseBySerialNumberResult) Receive() (*btcjson.GetShardBlockVerboseResult, error) {
+func (r FutureGetShardBlockVerboseBySerialNumberResult) Receive() (*jaxjson.GetShardBlockVerboseResult, error) {
 	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "getShardBlockBySerialNumber", r.serialID, true, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult btcjson.GetShardBlockVerboseResult
+	var blockResult jaxjson.GetShardBlockVerboseResult
 	err = json.Unmarshal(res, &blockResult)
 	if err != nil {
 		return nil, err
@@ -511,7 +511,7 @@ func (r FutureGetShardBlockVerboseBySerialNumberResult) Receive() (*btcjson.GetS
 func (c *Client) GetShardBlockVerboseBySerialNumberAsync(serialID int64) FutureGetShardBlockVerboseBySerialNumberResult {
 	// From the bitcoin-cli getblock documentation:
 	// "If verbosity is 1, returns an Object with information about block ."
-	cmd := btcjson.NewGetShardBlockBySerialNumberCmd(serialID, btcjson.Int(1))
+	cmd := jaxjson.NewGetShardBlockBySerialNumberCmd(serialID, jaxjson.Int(1))
 	return FutureGetShardBlockVerboseBySerialNumberResult{
 		client:   c,
 		serialID: serialID,
@@ -524,6 +524,6 @@ func (c *Client) GetShardBlockVerboseBySerialNumberAsync(serialID int64) FutureG
 //
 // See GetShardBlockVerboseTx to retrieve transaction data structures as well.
 // See GetShardBlockBySerialNumber to retrieve a raw block instead.
-func (c *Client) GetShardBlockVerboseBySerialNumber(serialID int64) (*btcjson.GetShardBlockVerboseResult, error) {
+func (c *Client) GetShardBlockVerboseBySerialNumber(serialID int64) (*jaxjson.GetShardBlockVerboseResult, error) {
 	return c.GetShardBlockVerboseBySerialNumberAsync(serialID).Receive()
 }

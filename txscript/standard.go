@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"net"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -241,7 +241,7 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 		// of sigs and number of keys.  Check the first push instruction
 		// to see how many arguments are expected. typeOfScript already
 		// checked this so we know it'll be a small int.  Also, due to
-		// the original bitcoind bug where OP_CHECKMULTISIG pops an
+		// the original jaxnetd bug where OP_CHECKMULTISIG pops an
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
 		return asSmallInt(pops[0].opcode) + 1
@@ -463,39 +463,39 @@ func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
 
 // PayToAddrScript creates a new script to pay a transaction output to a the
 // specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 	const nilAddrErrStr = "unable to generate payment script for nil address"
 
 	switch addr := addr.(type) {
-	case *btcutil.AddressPubKeyHash:
+	case *jaxutil.AddressPubKeyHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToPubKeyHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressScriptHash:
+	case *jaxutil.AddressScriptHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToScriptHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressPubKey:
+	case *jaxutil.AddressPubKey:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToPubKeyScript(addr.ScriptAddress())
 
-	case *btcutil.AddressWitnessPubKeyHash:
+	case *jaxutil.AddressWitnessPubKeyHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressWitnessScriptHash:
+	case *jaxutil.AddressWitnessScriptHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
@@ -531,7 +531,7 @@ type EADScriptData struct {
 	IP             net.IP
 	Port           int64
 	ExpirationDate int64
-	Owner          *btcutil.AddressPubKey
+	Owner          *jaxutil.AddressPubKey
 	RawKey         []byte
 	OpCode         byte
 }
@@ -540,6 +540,7 @@ func (e EADScriptData) Encode() ([]byte, error) {
 	if e.OpCode == 0 {
 		e.OpCode = EADAddressCreate
 	}
+
 	return NewScriptBuilder().
 		AddData(scriptNum(e.ExpirationDate).Bytes()).
 		AddData(scriptNum(e.Port).Bytes()).
@@ -625,8 +626,8 @@ func PushedData(script []byte) ([][]byte, error) {
 // signatures associated with the passed PkScript.  Note that it only works for
 // 'standard' transaction script types.  Any data such as public keys which are
 // invalid are omitted from the results.
-func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, error) {
-	var addrs []btcutil.Address
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []jaxutil.Address, int, error) {
+	var addrs []jaxutil.Address
 	var requiredSigs int
 
 	// No valid addresses or required signatures if the script doesn't
@@ -644,7 +645,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKeyHash(pops[2].data,
+		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -656,7 +657,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the pubkey hash is the second item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessPubKeyHash(pops[1].data,
+		addr, err := jaxutil.NewAddressWitnessPubKeyHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -668,7 +669,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey is the first item on the stack.
 		// Skip the pubkey if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[0].data, chainParams)
+		addr, err := jaxutil.NewAddressPubKey(pops[0].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -679,7 +680,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the script hash is the 2nd item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressScriptHashFromHash(pops[1].data,
+		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -691,7 +692,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the script hash is the second item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessScriptHash(pops[1].data,
+		addr, err := jaxutil.NewAddressWitnessScriptHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -707,9 +708,9 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
 
 		// Extract the public keys while skipping any that are invalid.
-		addrs = make([]btcutil.Address, 0, numPubKeys)
+		addrs = make([]jaxutil.Address, 0, numPubKeys)
 		for i := 0; i < numPubKeys; i++ {
-			addr, err := btcutil.NewAddressPubKey(pops[i+1].data,
+			addr, err := jaxutil.NewAddressPubKey(pops[i+1].data,
 				chainParams)
 			if err == nil {
 				addrs = append(addrs, addr)
@@ -724,7 +725,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[5].data,
+		addr, err := jaxutil.NewAddressPubKey(pops[5].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)

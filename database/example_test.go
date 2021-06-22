@@ -12,12 +12,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 // This example demonstrates creating a new database.
@@ -25,8 +25,8 @@ func ExampleCreate() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	// 	"gitlab.com/jaxnet/jaxnetd/database"
+	// 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -51,8 +51,8 @@ func Example_basicUsage() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	// 	"gitlab.com/jaxnet/jaxnetd/database"
+	// 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -117,8 +117,8 @@ func Example_blockStorageAndRetrieval() {
 	// This example assumes the ffldb driver is imported.
 	//
 	// import (
-	// 	"gitlab.com/jaxnet/core/shard.core/database"
-	// 	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
+	// 	"gitlab.com/jaxnet/jaxnetd/database"
+	// 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	// )
 
 	// Create a database and schedule it to be closed and removed on exit.
@@ -139,7 +139,7 @@ func Example_blockStorageAndRetrieval() {
 	// and example.
 	err = db.Update(func(tx database.Tx) error {
 		genesisBlock := chaincfg.MainNetParams.GenesisBlock
-		return tx.StoreBlock(btcutil.NewBlock(genesisBlock))
+		return tx.StoreBlock(jaxutil.NewBlock(genesisBlock))
 	})
 	if err != nil {
 		fmt.Println(err)

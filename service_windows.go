@@ -14,18 +14,18 @@ import (
 	"github.com/btcsuite/winsvc/eventlog"
 	"github.com/btcsuite/winsvc/mgr"
 	"github.com/btcsuite/winsvc/svc"
-	"gitlab.com/jaxnet/core/shard.core/config"
-	"gitlab.com/jaxnet/core/shard.core/version"
+	"gitlab.com/jaxnet/jaxnetd/config"
+	"gitlab.com/jaxnet/jaxnetd/version"
 )
 
 const (
-	// svcName is the name of btcd service.
-	svcName = "btcdsvc"
+	// svcName is the name of jaxnetd service.
+	svcName = "jaxnetdsvc"
 
 	// svcDisplayName is the service name that will be shown in the windows
 	// services list.  Not the svcName is the "real" name which is used
 	// to control the service.  This is only for display purposes.
-	svcDisplayName = "Btcd Service"
+	svcDisplayName = "JaxNetD Service"
 
 	// svcDesc is the description of the service.
 	svcDesc = "Downloads and stays synchronized with the bitcoin block " +
@@ -35,7 +35,7 @@ const (
 // elog is used to send messages to the Windows event log.
 var elog *eventlog.Log
 
-// logServiceStartOfDay logs information about btcd when the main server has
+// logServiceStartOfDay logs information about jaxnetd when the main server has
 // been started to the Windows event log.
 func logServiceStartOfDay() {
 	var message string
@@ -49,7 +49,7 @@ type shardCoreService struct{}
 
 // Execute is the main entry point the winsvc package calls when receiving
 // information from the Windows service control manager.  It launches the
-// long-running shardCoreMain (which is the real meat of btcd), handles service
+// long-running shardCoreMain (which is the real meat of jaxnetd), handles service
 // change requests, and notifies the service control manager of changes.
 func (s *shardCoreService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	// Service start is pending.
@@ -103,7 +103,7 @@ loop:
 	return false, 0
 }
 
-// installService attempts to install the btcd service.  Typically this should
+// installService attempts to install the jaxnetd service.  Typically this should
 // be done by the msi installer, but it is provided here since it can be useful
 // for development.
 func installService() error {
@@ -152,7 +152,7 @@ func installService() error {
 	return eventlog.InstallAsEventCreate(svcName, eventsSupported)
 }
 
-// removeService attempts to uninstall the btcd service.  Typically this should
+// removeService attempts to uninstall the jaxnetd service.  Typically this should
 // be done by the msi uninstaller, but it is provided here since it can be
 // useful for development.  Not the eventlog entry is intentionally not removed
 // since it would invalidate any existing event log messages.
@@ -175,7 +175,7 @@ func removeService() error {
 	return service.Delete()
 }
 
-// startService attempts to start the btcd service.
+// startService attempts to start the jaxnetd service.
 func startService() error {
 	// Connect to the windows service manager.
 	serviceManager, err := mgr.Connect()

@@ -14,22 +14,22 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type CommonChainRPC struct {
@@ -68,7 +68,7 @@ func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool, burnReward i
 	return server.gbtWorkState.BlockTemplate(server.chainProvider, useCoinbaseValue, burnReward)
 }
 
-func (server *CommonChainRPC) Handlers() map[btcjson.MethodName]CommandHandler {
+func (server *CommonChainRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
 	return server.handlers
 }
 
@@ -76,60 +76,60 @@ func (server *CommonChainRPC) ComposeHandlers() {
 	server.SetCommands(server.OwnHandlers())
 }
 
-func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandler {
-	return map[btcjson.MethodName]CommandHandler{
+func (server *CommonChainRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
+	return map[jaxjson.MethodName]CommandHandler{
 		// ---- p2p-related commands ------------------------------
-		btcjson.ScopedMethod("chain", "addNode"):            server.handleAddNode,
-		btcjson.ScopedMethod("chain", "getAddedNodeInfo"):   server.handleGetAddedNodeInfo,
-		btcjson.ScopedMethod("chain", "getConnectionCount"): server.handleGetConnectionCount,
-		btcjson.ScopedMethod("chain", "getNetTotals"):       server.handleGetNetTotals,
-		btcjson.ScopedMethod("chain", "getPeerInfo"):        server.handleGetPeerInfo,
-		btcjson.ScopedMethod("chain", "node"):               server.handleNode,
-		btcjson.ScopedMethod("chain", "ping"):               server.handlePing,
+		jaxjson.ScopedMethod("chain", "addNode"):            server.handleAddNode,
+		jaxjson.ScopedMethod("chain", "getAddedNodeInfo"):   server.handleGetAddedNodeInfo,
+		jaxjson.ScopedMethod("chain", "getConnectionCount"): server.handleGetConnectionCount,
+		jaxjson.ScopedMethod("chain", "getNetTotals"):       server.handleGetNetTotals,
+		jaxjson.ScopedMethod("chain", "getPeerInfo"):        server.handleGetPeerInfo,
+		jaxjson.ScopedMethod("chain", "node"):               server.handleNode,
+		jaxjson.ScopedMethod("chain", "ping"):               server.handlePing,
 		// -------------------------------------------------------------------------------------------------------------
 
-		btcjson.ScopedMethod("chain", "decodeScript"):    server.handleDecodeScript,
-		btcjson.ScopedMethod("chain", "getCurrentNet"):   server.handleGetCurrentNet,
-		btcjson.ScopedMethod("chain", "validateAddress"): server.handleValidateAddress,
-		btcjson.ScopedMethod("chain", "verifyMessage"):   server.handleVerifyMessage,
-		btcjson.ScopedMethod("chain", "verifyChain"):     server.handleVerifyChain,
+		jaxjson.ScopedMethod("chain", "decodeScript"):    server.handleDecodeScript,
+		jaxjson.ScopedMethod("chain", "getCurrentNet"):   server.handleGetCurrentNet,
+		jaxjson.ScopedMethod("chain", "validateAddress"): server.handleValidateAddress,
+		jaxjson.ScopedMethod("chain", "verifyMessage"):   server.handleVerifyMessage,
+		jaxjson.ScopedMethod("chain", "verifyChain"):     server.handleVerifyChain,
 
 		// ---- tx-related commands -------------------------------
-		btcjson.ScopedMethod("chain", "createRawTransaction"):  server.handleCreateRawTransaction,
-		btcjson.ScopedMethod("chain", "decodeRawTransaction"):  server.handleDecodeRawTransaction,
-		btcjson.ScopedMethod("chain", "estimateFee"):           server.handleEstimateFee,
-		btcjson.ScopedMethod("chain", "estimateSmartFee"):      server.handleEstimateSmartFee,
-		btcjson.ScopedMethod("chain", "getExtendedFee"):        server.handleGetExtendedFee,
-		btcjson.ScopedMethod("chain", "getMempoolInfo"):        server.handleGetMempoolInfo,
-		btcjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
-		btcjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
-		btcjson.ScopedMethod("chain", "getTxDetails"):          server.handleGetTxDetails,
-		btcjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
-		btcjson.ScopedMethod("chain", "getTxOutsStatus"):       server.handleGetTxOutsStatus,
-		btcjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
-		btcjson.ScopedMethod("chain", "getBlockTxOps"):         server.handleGetBlockTxOps,
-		btcjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
-		btcjson.ScopedMethod("chain", "searchRawTransactions"): server.handleSearchRawTransactions,
+		jaxjson.ScopedMethod("chain", "createRawTransaction"):  server.handleCreateRawTransaction,
+		jaxjson.ScopedMethod("chain", "decodeRawTransaction"):  server.handleDecodeRawTransaction,
+		jaxjson.ScopedMethod("chain", "estimateFee"):           server.handleEstimateFee,
+		jaxjson.ScopedMethod("chain", "estimateSmartFee"):      server.handleEstimateSmartFee,
+		jaxjson.ScopedMethod("chain", "getExtendedFee"):        server.handleGetExtendedFee,
+		jaxjson.ScopedMethod("chain", "getMempoolInfo"):        server.handleGetMempoolInfo,
+		jaxjson.ScopedMethod("chain", "getRawMempool"):         server.handleGetRawMempool,
+		jaxjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
+		jaxjson.ScopedMethod("chain", "getTxDetails"):          server.handleGetTxDetails,
+		jaxjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
+		jaxjson.ScopedMethod("chain", "getTxOutsStatus"):       server.handleGetTxOutsStatus,
+		jaxjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
+		jaxjson.ScopedMethod("chain", "getBlockTxOps"):         server.handleGetBlockTxOps,
+		jaxjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
+		jaxjson.ScopedMethod("chain", "searchRawTransactions"): server.handleSearchRawTransactions,
 		// -------------------------------------------------------------------------------------------------------------
 
 		// ---- block-related commands ----------------------------
-		btcjson.ScopedMethod("chain", "getBestBlock"):             server.handleGetBestBlock,
-		btcjson.ScopedMethod("chain", "getBestBlockHash"):         server.handleGetBestBlockHash,
-		btcjson.ScopedMethod("chain", "getBlockchainInfo"):        server.handleGetBlockChainInfo,
-		btcjson.ScopedMethod("chain", "getBlockCount"):            server.handleGetBlockCount,
-		btcjson.ScopedMethod("chain", "getBlockHash"):             server.handleGetBlockHash,
-		btcjson.ScopedMethod("chain", "getCFilter"):               server.handleGetCFilter,
-		btcjson.ScopedMethod("chain", "getCFilterHeader"):         server.handleGetCFilterHeader,
-		btcjson.ScopedMethod("chain", "submitBlock"):              server.handleSubmitBlock,
-		btcjson.ScopedMethod("chain", "getLastSerialBlockNumber"): server.handleGetLastSerialBlockNumber,
+		jaxjson.ScopedMethod("chain", "getBestBlock"):             server.handleGetBestBlock,
+		jaxjson.ScopedMethod("chain", "getBestBlockHash"):         server.handleGetBestBlockHash,
+		jaxjson.ScopedMethod("chain", "getBlockchainInfo"):        server.handleGetBlockChainInfo,
+		jaxjson.ScopedMethod("chain", "getBlockCount"):            server.handleGetBlockCount,
+		jaxjson.ScopedMethod("chain", "getBlockHash"):             server.handleGetBlockHash,
+		jaxjson.ScopedMethod("chain", "getCFilter"):               server.handleGetCFilter,
+		jaxjson.ScopedMethod("chain", "getCFilterHeader"):         server.handleGetCFilterHeader,
+		jaxjson.ScopedMethod("chain", "submitBlock"):              server.handleSubmitBlock,
+		jaxjson.ScopedMethod("chain", "getLastSerialBlockNumber"): server.handleGetLastSerialBlockNumber,
 		// -------------------------------------------------------------------------------------------------------------
 
-		btcjson.ScopedMethod("chain", "getnetworkinfo"):   server.handleGetnetworkinfo, // todo: remove
-		btcjson.ScopedMethod("chain", "getDifficulty"):    server.handleGetDifficulty,
-		btcjson.ScopedMethod("chain", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
-		btcjson.ScopedMethod("chain", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
-		btcjson.ScopedMethod("chain", "getblockstats"):    server.handleGetBlockStats,    // todo: remove
-		btcjson.ScopedMethod("chain", "getchaintxstats"):  server.handleGetChaintxStats,  // todo: remove
+		jaxjson.ScopedMethod("chain", "getnetworkinfo"):   server.handleGetnetworkinfo, // todo: remove
+		jaxjson.ScopedMethod("chain", "getDifficulty"):    server.handleGetDifficulty,
+		jaxjson.ScopedMethod("chain", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
+		jaxjson.ScopedMethod("chain", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
+		jaxjson.ScopedMethod("chain", "getblockstats"):    server.handleGetBlockStats,    // todo: remove
+		jaxjson.ScopedMethod("chain", "getchaintxstats"):  server.handleGetChaintxStats,  // todo: remove
 
 	}
 }
@@ -139,7 +139,7 @@ func (server *CommonChainRPC) OwnHandlers() map[btcjson.MethodName]CommandHandle
 func (server *CommonChainRPC) handleBlockchainNotification(notification *blockchain.Notification) {
 	switch notification.Type {
 	case blockchain.NTBlockAccepted:
-		block, ok := notification.Data.(*btcutil.Block)
+		block, ok := notification.Data.(*jaxutil.Block)
 		if !ok {
 			server.Log.Warn().Msgf("Chain accepted notification is not a block.")
 			break
@@ -151,7 +151,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 		server.gbtWorkState.NotifyBlockConnected(block.Hash())
 
 	case blockchain.NTBlockConnected:
-		block, ok := notification.Data.(*btcutil.Block)
+		block, ok := notification.Data.(*jaxutil.Block)
 		if !ok {
 			server.Log.Warn().Msg("Chain connected notification is not a block.")
 			break
@@ -163,7 +163,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 		}
 
 	case blockchain.NTBlockDisconnected:
-		block, ok := notification.Data.(*btcutil.Block)
+		block, ok := notification.Data.(*jaxutil.Block)
 		if !ok {
 			server.Log.Warn().Msg("Chain disconnected notification is not a block.")
 			break
@@ -290,7 +290,7 @@ func (server *CommonChainRPC) handleAskWallet(cmd interface{}, closeChan <-chan 
 
 // handleDecodeScript handles decodescript commands.
 func (server *CommonChainRPC) handleDecodeScript(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.DecodeScriptCmd)
+	c := cmd.(*jaxjson.DecodeScriptCmd)
 
 	// Convert the hex script to bytes.
 	hexStr := c.HexScript
@@ -317,14 +317,14 @@ func (server *CommonChainRPC) handleDecodeScript(cmd interface{}, closeChan <-ch
 	}
 
 	// Convert the script itself to a pay-to-script-hash address.
-	p2sh, err := btcutil.NewAddressScriptHash(script, server.chainProvider.ChainParams)
+	p2sh, err := jaxutil.NewAddressScriptHash(script, server.chainProvider.ChainParams)
 	if err != nil {
 		context := "Failed to convert script to pay-to-script-hash"
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 
 	// Generate and return the reply.
-	reply := btcjson.DecodeScriptResult{
+	reply := jaxjson.DecodeScriptResult{
 		Asm:       disbuf,
 		ReqSigs:   int32(reqSigs),
 		Type:      scriptClass.String(),
@@ -342,7 +342,7 @@ func (server *CommonChainRPC) handleGetBestBlock(cmd interface{}, closeChan <-ch
 	// hash, or both but require the block SHA.  This gets both for
 	// the best block.
 	best := server.chainProvider.BlockChain().BestSnapshot()
-	result := &btcjson.GetBestBlockResult{
+	result := &jaxjson.GetBestBlockResult{
 		Hash:   best.Hash.String(),
 		Height: best.Height,
 	}
@@ -372,7 +372,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		return nil, err
 	}
 
-	chainInfo := &btcjson.GetBlockChainInfoResult{
+	chainInfo := &jaxjson.GetBlockChainInfoResult{
 		Chain:         params.Name,
 		Blocks:        chainSnapshot.Height,
 		Headers:       chainSnapshot.Height,
@@ -381,8 +381,8 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		MedianTime:    chainSnapshot.MedianTime.Unix(),
 		Pruned:        false,
 		Shards:        shards,
-		SoftForks: &btcjson.SoftForks{
-			Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
+		SoftForks: &jaxjson.SoftForks{
+			Bip9SoftForks: make(map[string]*jaxjson.Bip9SoftForkDescription),
 		},
 	}
 
@@ -390,7 +390,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	// status of soft-forks deployed via the super-majority block
 	// signalling mechanism.
 	height := chainSnapshot.Height
-	chainInfo.SoftForks.SoftForks = []*btcjson.SoftForkDescription{
+	chainInfo.SoftForks.SoftForks = []*jaxjson.SoftForkDescription{
 		{
 			ID:      "bip34",
 			Version: 2,
@@ -434,8 +434,8 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 			forkName = "segwit"
 
 		default:
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInternal.Code,
+			return nil, &jaxjson.RPCError{
+				Code: jaxjson.ErrRPCInternal.Code,
 				Message: fmt.Sprintf("Unknown deployment %v "+
 					"detected", deployment),
 			}
@@ -454,8 +454,8 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		// non-nil error is returned.
 		statusString, err := server.SoftForkStatus(deploymentStatus)
 		if err != nil {
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInternal.Code,
+			return nil, &jaxjson.RPCError{
+				Code: jaxjson.ErrRPCInternal.Code,
 				Message: fmt.Sprintf("unknown deployment status: %v",
 					deploymentStatus),
 			}
@@ -463,7 +463,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 
 		// Finally, populate the soft-fork description with all the
 		// information gathered above.
-		chainInfo.SoftForks.Bip9SoftForks[forkName] = &btcjson.Bip9SoftForkDescription{
+		chainInfo.SoftForks.Bip9SoftForks[forkName] = &jaxjson.Bip9SoftForkDescription{
 			Status:     strings.ToLower(statusString),
 			Bit:        deploymentDetails.BitNumber,
 			StartTime2: int64(deploymentDetails.StartTime),
@@ -483,11 +483,11 @@ func (server *CommonChainRPC) handleGetBlockCount(cmd interface{}, closeChan <-c
 
 // handleGetBlockHash implements the getblockhash command.
 func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockHashCmd)
+	c := cmd.(*jaxjson.GetBlockHashCmd)
 	hash, err := server.chainProvider.BlockChain().BlockHashByHeight(int32(c.Index))
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCOutOfRange,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCOutOfRange,
 			Message: "Block number out of range",
 		}
 	}
@@ -498,13 +498,13 @@ func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-ch
 // handleGetCFilter implements the getcfilter command.
 func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	if server.chainProvider.CfIndex == nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCNoCFIndex,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCNoCFIndex,
 			Message: "The CF index must be enabled for this command",
 		}
 	}
 
-	c := cmd.(*btcjson.GetCFilterCmd)
+	c := cmd.(*jaxjson.GetCFilterCmd)
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
@@ -513,8 +513,8 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 	filterBytes, err := server.chainProvider.CfIndex.FilterByBlockHash(hash, c.FilterType)
 	if err != nil {
 		server.Log.Debug().Msgf("Could not find committed filter for %v %v", hash, err)
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -526,13 +526,13 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 // handleGetCFilterHeader implements the getcfilterheader command.
 func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	if server.chainProvider.CfIndex == nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCNoCFIndex,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCNoCFIndex,
 			Message: "The CF index must be enabled for this command",
 		}
 	}
 
-	c := cmd.(*btcjson.GetCFilterHeaderCmd)
+	c := cmd.(*jaxjson.GetCFilterHeaderCmd)
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
@@ -543,8 +543,8 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 		server.Log.Debug().Msgf("Found header of committed filter for %s", hash.String())
 	} else {
 		server.Log.Debug().Msgf("Could not find header of committed filter for %v %v", hash, err)
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
@@ -560,7 +560,7 @@ func (server *CommonChainRPC) handleGetCurrentNet(cmd interface{}, closeChan <-c
 
 // createVinListPrevOut returns a slice of JSON objects for the inputs of the
 // passed transaction.
-func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams *chaincfg.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]btcjson.VinPrevOut, error) {
+func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams *chaincfg.Params, vinExtra bool, filterAddrMap map[string]struct{}) ([]jaxjson.VinPrevOut, error) {
 	// Coinbase transactions only have a single txin by definition.
 	if chaindata.IsCoinBaseTx(mtx) {
 		// Only include the transaction if the filter map is empty
@@ -571,14 +571,14 @@ func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams 
 		}
 
 		txIn := mtx.TxIn[0]
-		vinList := make([]btcjson.VinPrevOut, 1)
+		vinList := make([]jaxjson.VinPrevOut, 1)
 		vinList[0].Coinbase = hex.EncodeToString(txIn.SignatureScript)
 		vinList[0].Sequence = txIn.Sequence
 		return vinList, nil
 	}
 
 	// Use a dynamically sized list to accommodate the address filter.
-	vinList := make([]btcjson.VinPrevOut, 0, len(mtx.TxIn))
+	vinList := make([]jaxjson.VinPrevOut, 0, len(mtx.TxIn))
 
 	// Lookup all of the referenced transaction outputs needed to populate
 	// the previous output information if requested.
@@ -601,11 +601,11 @@ func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams 
 		// previous output details which will be added later if
 		// requested and available.
 		prevOut := &txIn.PreviousOutPoint
-		vinEntry := btcjson.VinPrevOut{
+		vinEntry := jaxjson.VinPrevOut{
 			Txid:     prevOut.Hash.String(),
 			Vout:     prevOut.Index,
 			Sequence: txIn.Sequence,
-			ScriptSig: &btcjson.ScriptSig{
+			ScriptSig: &jaxjson.ScriptSig{
 				Asm: disbuf,
 				Hex: hex.EncodeToString(txIn.SignatureScript),
 			},
@@ -669,9 +669,9 @@ func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams 
 		// requested.
 		if vinExtra {
 			vinListEntry := &vinList[len(vinList)-1]
-			vinListEntry.PrevOut = &btcjson.PrevOut{
+			vinListEntry.PrevOut = &jaxjson.PrevOut{
 				Addresses: encodedAddrs,
-				Value:     btcutil.Amount(originTxOut.Value).ToBTC(),
+				Value:     jaxutil.Amount(originTxOut.Value).ToBTC(),
 			}
 		}
 	}
@@ -682,7 +682,7 @@ func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams 
 // fetchMempoolTxnsForAddress queries the address index for all unconfirmed
 // transactions that involve the provided address.  The results will be limited
 // by the number to skip and the number requested.
-func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr btcutil.Address, numToSkip, numRequested uint32) ([]*btcutil.Tx, uint32) {
+func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr jaxutil.Address, numToSkip, numRequested uint32) ([]*jaxutil.Tx, uint32) {
 	// There are no entries to return when there are less available than the
 	// number being skipped.
 	mpTxns := server.chainProvider.AddrIndex.UnconfirmedTxnsForAddress(addr)
@@ -715,7 +715,7 @@ func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
 
 // handleSubmitBlock implements the submitblock command.
 func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.SubmitBlockCmd)
+	c := cmd.(*jaxjson.SubmitBlockCmd)
 
 	// Deserialize the submitted block.
 	hexStr := c.HexBlock
@@ -728,10 +728,10 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 		return nil, rpcDecodeHexError(hexStr)
 	}
 
-	block, err := btcutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), serializedBlock)
+	block, err := jaxutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), serializedBlock)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCDeserialization,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "Block decode failed: " + err.Error(),
 		}
 	}
@@ -749,10 +749,10 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 
 // handleValidateAddress implements the validateaddress command.
 func (server *CommonChainRPC) handleValidateAddress(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.ValidateAddressCmd)
+	c := cmd.(*jaxjson.ValidateAddressCmd)
 
-	result := btcjson.ValidateAddressChainResult{}
-	addr, err := btcutil.DecodeAddress(c.Address, server.chainProvider.ChainParams)
+	result := jaxjson.ValidateAddressChainResult{}
+	addr, err := jaxutil.DecodeAddress(c.Address, server.chainProvider.ChainParams)
 	if err != nil {
 		// Return the default value (false) for IsValid.
 		return result, nil
@@ -766,7 +766,7 @@ func (server *CommonChainRPC) handleValidateAddress(cmd interface{}, closeChan <
 
 // handleVerifyChain implements the verifychain command.
 func (server *CommonChainRPC) handleVerifyChain(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.VerifyChainCmd)
+	c := cmd.(*jaxjson.VerifyChainCmd)
 
 	var checkLevel, checkDepth int32
 	if c.CheckLevel != nil {
@@ -782,22 +782,22 @@ func (server *CommonChainRPC) handleVerifyChain(cmd interface{}, closeChan <-cha
 
 // handleVerifyMessage implements the verifymessage command.
 func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.VerifyMessageCmd)
+	c := cmd.(*jaxjson.VerifyMessageCmd)
 
 	// Decode the provided address.
 	params := server.chainProvider.ChainParams
-	addr, err := btcutil.DecodeAddress(c.Address, params)
+	addr, err := jaxutil.DecodeAddress(c.Address, params)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidAddressOrKey,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidAddressOrKey,
 			Message: "Invalid address or key: " + err.Error(),
 		}
 	}
 
 	// Only P2PKH addresses are valid for signing.
-	if _, ok := addr.(*btcutil.AddressPubKeyHash); !ok {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCType,
+	if _, ok := addr.(*jaxutil.AddressPubKeyHash); !ok {
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCType,
 			Message: "Address is not a pay-to-pubkey-hash address",
 		}
 	}
@@ -805,8 +805,8 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 	// Decode base64 signature.
 	sig, err := base64.StdEncoding.DecodeString(c.Signature)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCParse.Code,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCParse.Code,
 			Message: "Malformed base64 encoding: " + err.Error(),
 		}
 	}
@@ -832,7 +832,7 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 	} else {
 		serializedPK = pk.SerializeUncompressed()
 	}
-	address, err := btcutil.NewAddressPubKey(serializedPK, params)
+	address, err := jaxutil.NewAddressPubKey(serializedPK, params)
 	if err != nil {
 		// Again mirror Bitcoin Core behavior, which treats error in public key
 		// reconstruction as invalid signature.
@@ -853,13 +853,13 @@ func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, cl
 	})
 
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: err.Error(),
 		}
 	}
 
-	result := &btcjson.GetLastSerialBlockNumberResult{
+	result := &jaxjson.GetLastSerialBlockNumberResult{
 		LastSerial: lastSerial,
 	}
 
@@ -880,15 +880,15 @@ func directionString(inbound bool) string {
 func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Create a default getnetworkhashps command to use defaults and make
 	// use of the existing getnetworkhashps handler.
-	gnhpsCmd := btcjson.NewGetNetworkHashPSCmd(nil, nil)
+	gnhpsCmd := jaxjson.NewGetNetworkHashPSCmd(nil, nil)
 	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
 	if err != nil {
 		return nil, err
 	}
 	networkHashesPerSec, ok := networkHashesPerSecIface.(int64)
 	if !ok {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInternal.Code,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInternal.Code,
 			Message: "networkHashesPerSec is not an int64",
 		}
 	}
@@ -898,7 +898,7 @@ func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-c
 	if err != nil {
 		return nil, err
 	}
-	result := btcjson.GetMiningInfoResult{
+	result := jaxjson.GetMiningInfoResult{
 		Blocks:             int64(best.Height),
 		CurrentBlockSize:   best.BlockSize,
 		CurrentBlockWeight: best.BlockWeight,
@@ -917,7 +917,7 @@ func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan 
 	// Literal zeros are inferred as int, and won't coerce to int64
 	// because the return value is an interface{}.
 
-	c := cmd.(*btcjson.GetNetworkHashPSCmd)
+	c := cmd.(*jaxjson.GetNetworkHashPSCmd)
 	if server.chainProvider.BlockChain() == nil {
 		return int64(0), nil
 	}
@@ -1007,14 +1007,14 @@ func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan 
 }
 
 func (server *CommonChainRPC) handleGetBlockStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// c := cmd.(*btcjson.GetBlockStatsCmd)
-	res := btcjson.GetBlockStatsResult{}
+	// c := cmd.(*jaxjson.GetBlockStatsCmd)
+	res := jaxjson.GetBlockStatsResult{}
 	return res, nil
 }
 
 func (server *CommonChainRPC) handleGetChaintxStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*btcjson.GetChainStatsCmd)
-	res := btcjson.GetChainStatsResult{}
+	_ = cmd.(*jaxjson.GetChainStatsCmd)
+	res := jaxjson.GetChainStatsResult{}
 	return res, nil
 }
 

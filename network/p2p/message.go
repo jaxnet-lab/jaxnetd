@@ -4,9 +4,9 @@
 package p2p
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // RelayMsg packages an inventory vector along with the newly discovered

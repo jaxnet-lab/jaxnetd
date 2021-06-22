@@ -10,9 +10,9 @@ import (
 	"errors"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // fetchBlockCmd defines the configuration options for the fetchblock command.

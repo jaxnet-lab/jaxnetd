@@ -14,7 +14,7 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/go-socks/socks"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the
@@ -120,7 +120,7 @@ func sendPostRequest(marshalledJSON []byte, cfg *config) ([]byte, error) {
 	}
 
 	// Unmarshal the response.
-	var resp btcjson.Response
+	var resp jaxjson.Response
 	if err := json.Unmarshal(respBytes, &resp); err != nil {
 		return nil, err
 	}

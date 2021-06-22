@@ -11,16 +11,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -107,7 +107,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// exists.
 
 	msgBlock := wire.EmptyBeaconBlock()
-	genesisBlock := btcutil.NewBlock(&msgBlock)
+	genesisBlock := jaxutil.NewBlock(&msgBlock)
 	isMainChain, isOrphan, err := testChain.ProcessBlock(genesisBlock, 0)
 	if err != nil {
 		fmt.Printf("Failed to process block: %v\n", err)

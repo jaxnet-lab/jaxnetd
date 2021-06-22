@@ -3,8 +3,8 @@ include builder/Makefile-defaults.mk
 all: build
 
 build:
-	go build -o shard.core
-	go build -o jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
+	go build -o jaxnetd
+	go build -o jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
 
 clean:
 	go clean
@@ -19,6 +19,6 @@ up_local: build_docker_local
 
 debug_build:
 	#env GOOS=linux GOARCH=amd64
-	go build  -gcflags "all=-N -l" -o ./shard.core .
-	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./shard.core -C shard.local.yaml
+	go build  -gcflags "all=-N -l" -o ./jaxnetd .
+	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./jaxnetd -C shard.local.yaml
 

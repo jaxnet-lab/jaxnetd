@@ -6,7 +6,7 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
 )
 
@@ -41,7 +41,7 @@ func (msg *MsgVerAck) MaxPayloadLength(pver uint32) uint32 {
 	return 0
 }
 
-// NewMsgVerAck returns a new bitcoin verack message that conforms to the
+// NewMsgVerAck returns a new jaxnet verack message that conforms to the
 // Message interface.
 func NewMsgVerAck() *MsgVerAck {
 	return &MsgVerAck{}

@@ -1,9 +1,9 @@
 build:
-	cd .. && go build -o ./tmp/jaxcore && go build -o ./tmp/jaxctl gitlab.com/jaxnet/core/shard.core/cmd/jaxctl
+	cd .. && go build -o ./tmp/jaxcore && go build -o ./tmp/jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
 
 
 build_linux:
-	cd .. && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxcore && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxctl gitlab.com/jaxnet/core/shard.core/cmd/btcctl
+	cd .. && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxcore && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxctl gitlab.com/jaxnet/jaxnetd/cmd/btcctl
 
 clean:
 	rm -rf core_1/core/* && rm -rf core_2/core/* && rm -rf core_3/core/*
@@ -25,7 +25,7 @@ EVA_SK=bdfb934f403bd6c3f74730f9690f6fc22863388f473860eb001a1e7f02261b79
 EVA_PK=04229dea33b9b89b8b6d746bcf2df82c142f254b3acc6c5452525ef0774bf2d0a19ca45e6ace7a427756b4422dac084ca9b406835b33140641a5f6608c41434b8b
 EVA_ADDR=mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK
 
-GATLING_PKG=gitlab.com/jaxnet/core/shard.core/cmd/tx-gatling
+GATLING_PKG=gitlab.com/jaxnet/jaxnetd/cmd/tx-gatling
 
 sync_miner:
 	mkdir -p data || true

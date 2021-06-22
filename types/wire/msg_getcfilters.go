@@ -8,8 +8,8 @@ package wire
 import (
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // MaxGetCFiltersReqRange the maximum number of filters that may be requested in

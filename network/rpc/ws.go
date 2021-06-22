@@ -13,13 +13,13 @@ import (
 	"fmt"
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -259,14 +259,14 @@ func (m *wsManager) queueHandler(ctx context.Context) {
 
 type wsBlockNotification struct {
 	Client *wsClient
-	Block  *btcutil.Block
+	Block  *jaxutil.Block
 	Chain  *cprovider.ChainProvider
 }
 
 type wsTransactionNotification struct {
 	Client *wsClient
 	isNew  bool
-	tx     *btcutil.Tx
+	tx     *jaxutil.Tx
 	Chain  *cprovider.ChainProvider
 }
 
@@ -432,7 +432,7 @@ out:
 // notifying websocket clients of outputs spending to a watched address
 // and inputs spending a watched outpoint.
 func (m *wsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient,
-	addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+	addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	if len(ops) != 0 {
 		m.notifyForTxIns(chain, ops, tx, block)
@@ -446,7 +446,7 @@ func (m *wsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.Out
 // websocket clients of the transaction if an output spends to a watched
 // address.  A spent notification request is automatically registered for
 // the client for each matching output.
-func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	// Nothing to do if nobody is listening for address notifications.
 	if len(addrs) == 0 {
@@ -471,10 +471,10 @@ func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 			if txHex == "" {
 				txHex = txHexString(tx.MsgTx())
 			}
-			ntfn := btcjson.NewRecvTxNtfn(txHex, blockDetails(block,
+			ntfn := jaxjson.NewRecvTxNtfn(txHex, blockDetails(block,
 				tx.Index()))
 
-			marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+			marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 			if err != nil {
 				m.logger.Error().Err(err).Msg("Failed to marshal processedtx notification")
 				continue
@@ -497,7 +497,7 @@ func (m *wsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 // interested websocket clients a redeemingtx notification if any inputs
 // spend a watched output.  If block is non-nil, any matching spent
 // requests are removed.
-func (m *wsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *wsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	// Nothing to do if nobody is watching outpoints.
 	if len(ops) == 0 {
@@ -541,19 +541,19 @@ func txHexString(tx *wire.MsgTx) string {
 
 // newRedeemingTxNotification returns a new marshalled redeemingtx notification
 // with the passed parameters.
-func newRedeemingTxNotification(chain *cprovider.ChainProvider, txHex string, index int, block *btcutil.Block) ([]byte, error) {
+func newRedeemingTxNotification(chain *cprovider.ChainProvider, txHex string, index int, block *jaxutil.Block) ([]byte, error) {
 	// Create and marshal the notification.
-	ntfn := btcjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
-	return btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	ntfn := jaxjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
+	return jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 }
 
 // blockDetails creates a BlockDetails struct to include in btcws notifications
 // from a block and a transaction's block index.
-func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
+func blockDetails(block *jaxutil.Block, txIndex int) *jaxjson.BlockDetails {
 	if block == nil {
 		return nil
 	}
-	return &btcjson.BlockDetails{
+	return &jaxjson.BlockDetails{
 		Height: block.Height(),
 		Hash:   block.Hash().String(),
 		Index:  txIndex,
@@ -609,7 +609,7 @@ func (m *wsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 
 	// Check if any transactions spending these outputs already exists in
 	// the mempool, if so send the notification immediately.
-	spends := make(map[chainhash.Hash]*btcutil.Tx)
+	spends := make(map[chainhash.Hash]*jaxutil.Tx)
 	for _, op := range ops {
 		spend := chain.TxMemPool.CheckSpend(*op)
 		if spend != nil {
@@ -625,7 +625,7 @@ func (m *wsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
-func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *btcutil.Tx) {
+func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *jaxutil.Tx) {
 	txHashStr := tx.Hash().String()
 	mtx := tx.MsgTx()
 
@@ -634,14 +634,14 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 		amount += txOut.Value
 	}
 
-	ntfn := btcjson.NewTxAcceptedNtfn(txHashStr, btcutil.Amount(amount).ToBTC())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	ntfn := jaxjson.NewTxAcceptedNtfn(txHashStr, jaxutil.Amount(amount).ToBTC())
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal tx notification")
 		return
 	}
 
-	var verboseNtfn *btcjson.TxAcceptedVerboseNtfn
+	var verboseNtfn *jaxjson.TxAcceptedVerboseNtfn
 	var marshalledJSONVerbose []byte
 	for _, wsc := range clients {
 		if wsc.verboseTxUpdates {
@@ -657,8 +657,8 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 				return
 			}
 
-			verboseNtfn = btcjson.NewTxAcceptedVerboseNtfn(*rawTx)
-			marshalledJSONVerbose, err = btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), verboseNtfn)
+			verboseNtfn = jaxjson.NewTxAcceptedVerboseNtfn(*rawTx)
+			marshalledJSONVerbose, err = jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), verboseNtfn)
 			if err != nil {
 				m.logger.Error().Err(err).Msg("Failed to marshal verbose tx notification")
 				return
@@ -673,12 +673,12 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 // notifyBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
 func (m *wsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
-	block *btcutil.Block) {
+	block *jaxutil.Block) {
 
 	// Notify interested websocket clients about the connected block.
-	ntfn := btcjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
+	ntfn := jaxjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
 		block.MsgBlock().Header.Timestamp().Unix())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal block connected notification")
 		return
@@ -691,7 +691,7 @@ func (m *wsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 // notifyFilteredBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
 func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
-	block *btcutil.Block) {
+	block *jaxutil.Block) {
 
 	// Create the common portion of the notification that is the same for
 	// every client.
@@ -701,7 +701,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block")
 		return
 	}
-	ntfn := btcjson.NewFilteredBlockConnectedNtfn(block.Height(),
+	ntfn := jaxjson.NewFilteredBlockConnectedNtfn(block.Height(),
 		hex.EncodeToString(w.Bytes()), nil)
 
 	// Search for relevant transactions for each client and save them
@@ -722,7 +722,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 		ntfn.SubscribedTxs = subscribedTxs[quitChan]
 
 		// Marshal and queue notification.
-		marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+		marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 		if err != nil {
 			m.logger.Error().Err(err).Msg("Failed to marshal filtered block connected notification")
 			return
@@ -731,7 +731,7 @@ func (m *wsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 	}
 }
 
-func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *jaxutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -739,9 +739,9 @@ func (m *wsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clie
 	}
 
 	// Notify interested websocket clients about the disconnected block.
-	ntfn := btcjson.NewBlockDisconnectedNtfn(block.Hash().String(),
+	ntfn := jaxjson.NewBlockDisconnectedNtfn(block.Hash().String(),
 		block.Height(), block.MsgBlock().Header.Timestamp().Unix())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal block disconnected notification")
 		return
@@ -762,7 +762,7 @@ func (m *wsManager) NumClients() (n int) {
 // spending a watched output or outputting to a watched address.  Matching
 // client's filters are updated based on this transaction's outputs and output
 // addresses that may be relevant for a client.
-func (m *wsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
+func (m *wsManager) subscribedClients(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
 
 	// Use a map of client quit channels as keys to prevent duplicates when
 	// multiple inputs and/or outputs are relevant to the client.
@@ -823,7 +823,7 @@ func (m *wsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcuti
 // notifyFilteredBlockDisconnected notifies websocket clients that have registered for
 // block updates when a block is disconnected from the main BlockChain (due to a
 // reorganize).
-func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *jaxutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -837,9 +837,9 @@ func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block disconnected notification")
 		return
 	}
-	ntfn := btcjson.NewFilteredBlockDisconnectedNtfn(block.Height(),
+	ntfn := jaxjson.NewFilteredBlockDisconnectedNtfn(block.Height(),
 		hex.EncodeToString(w.Bytes()))
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal filtered block disconnected notification")
 		return
@@ -855,13 +855,13 @@ func (m *wsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 // address and inputs spending a watched outpoint.  Any outputs paying to a
 // watched address result in the output being watched as well for future
 // notifications.
-func (m *wsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) {
+func (m *wsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) {
 
 	clientsToNotify := m.subscribedClients(chain, tx, clients)
 
 	if len(clientsToNotify) != 0 {
-		n := btcjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
-		marshalled, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), n)
+		n := jaxjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
+		marshalled, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), n)
 		if err != nil {
 			m.logger.Error().Err(err).Msg("Failed to marshal notification")
 			return
@@ -929,7 +929,7 @@ type wsResponse struct {
 
 // ErrRescanReorg defines the error that is returned when an unrecoverable
 // reorganize is detected during a rescan.
-var ErrRescanReorg = btcjson.RPCError{
-	Code:    btcjson.ErrRPCDatabase,
+var ErrRescanReorg = jaxjson.RPCError{
+	Code:    jaxjson.ErrRPCDatabase,
 	Message: "Reorganize",
 }

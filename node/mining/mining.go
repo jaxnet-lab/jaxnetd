@@ -11,35 +11,35 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority = btcutil.SatoshiPerBitcoin * 144.0 / 250
+	MinHighPriority = jaxutil.SatoshiPerBitcoin * 144.0 / 250
 
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
-	// generated via btcd.
-	CoinbaseFlags = "/P2SH/btcd/"
+	// generated via jaxnetd.
+	CoinbaseFlags = "/P2SH/jaxnetd/"
 )
 
 // TxDesc is a descriptor about a transaction in a transaction source along with
 // additional metadata.
 type TxDesc struct {
 	// Tx is the transaction associated with the entry.
-	Tx *btcutil.Tx
+	Tx *jaxutil.Tx
 
 	// Added is the time when the entry was added to the source pool.
 	Added time.Time
@@ -78,7 +78,7 @@ type TxSource interface {
 // transaction to be prioritized and track dependencies on other transactions
 // which have not been mined into a block yet.
 type txPrioItem struct {
-	tx       *btcutil.Tx
+	tx       *jaxutil.Tx
 	fee      int64
 	priority float64
 	feePerKB int64
@@ -222,7 +222,7 @@ type BlockTemplate struct {
 }
 
 type blockTxsCollection struct {
-	BlockTxns         []*btcutil.Tx
+	BlockTxns         []*jaxutil.Tx
 	BlockWeight       uint32
 	TotalFees         int64
 	Reward            int64
@@ -263,7 +263,7 @@ func StandardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func CreateCoinbaseTx(value int64, nextHeight int32, addr btcutil.Address) (*btcutil.Tx, error) {
+func CreateCoinbaseTx(value int64, nextHeight int32, addr jaxutil.Address) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
 	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
 	if err != nil {
@@ -299,10 +299,10 @@ func CreateCoinbaseTx(value int64, nextHeight int32, addr btcutil.Address) (*btc
 	})
 
 	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
-	return btcutil.NewTx(tx), nil
+	return jaxutil.NewTx(tx), nil
 }
 
-func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32, addr btcutil.Address, burnReward bool) (*btcutil.Tx, error) {
+func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Address, burnReward bool) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
 	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
 	if err != nil {
@@ -334,13 +334,13 @@ func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32, addr btcutil.Addres
 	tx.AddTxOut(&wire.TxOut{Value: 0, PkScript: jaxNetLink})
 	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
 	tx.AddTxOut(&wire.TxOut{Value: fee, PkScript: feeAddress})
-	return btcutil.NewTx(tx), nil
+	return jaxutil.NewTx(tx), nil
 }
 
 // spendTransaction updates the passed view by marking the inputs to the passed
 // transaction as spent.  It also adds all outputs in the passed transaction
 // which are not provably unspendable as available unspent transaction outputs.
-func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *btcutil.Tx, height int32) error {
+func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *jaxutil.Tx, height int32) error {
 	for _, txIn := range tx.MsgTx().TxIn {
 		entry := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if entry != nil {
@@ -354,7 +354,7 @@ func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *btcutil.Tx, height 
 
 // logSkippedDeps logs any dependencies which are also skipped as a result of
 // skipping a transaction while generating a block template at the trace level.
-func logSkippedDeps(tx *btcutil.Tx, deps map[chainhash.Hash]*txPrioItem) {
+func logSkippedDeps(tx *jaxutil.Tx, deps map[chainhash.Hash]*txPrioItem) {
 	if deps == nil {
 		return
 	}
@@ -485,7 +485,7 @@ func NewBlkTmplGenerator(policy *Policy,
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
 
-func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, burnReward int) (*BlockTemplate, error) {
+func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnReward int) (*BlockTemplate, error) {
 	// fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
 	best := g.blockChain.BestSnapshot()
@@ -530,7 +530,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, burnRe
 	// Finally, perform a full check on the created block against the chain
 	// consensus rules to ensure it properly connects to the current best
 	// chain with no issues.
-	block := btcutil.NewBlock(&msgBlock)
+	block := jaxutil.NewBlock(&msgBlock)
 	block.SetHeight(nextBlockHeight)
 	if err := g.blockChain.CheckConnectBlockTemplate(block); err != nil {
 		return nil, err
@@ -551,7 +551,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address, burnRe
 	}, nil
 }
 
-func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress btcutil.Address, nextHeight int32, burnRewardFlags int) (*blockTxsCollection, error) {
+func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32, burnRewardFlags int) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -591,7 +591,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress btcutil.Address, next
 	// generated block with reserved space.  Also create a utxo view to
 	// house all of the input transactions so multiple lookups can be
 	// avoided.
-	blockTxns := make([]*btcutil.Tx, 0, len(sourceTxns))
+	blockTxns := make([]*jaxutil.Tx, 0, len(sourceTxns))
 	blockTxns = append(blockTxns, coinbaseTx)
 	blockUtxos := chaindata.NewUtxoViewpoint()
 
@@ -755,7 +755,7 @@ mempoolLoop:
 			// Therefore, we account for the additional weight
 			// within the block with a model coinbase tx with a
 			// witness commitment.
-			coinbaseCopy := btcutil.NewTx(coinbaseTx.MsgTx().Copy())
+			coinbaseCopy := jaxutil.NewTx(coinbaseTx.MsgTx().Copy())
 			coinbaseCopy.MsgTx().TxIn[0].Witness = [][]byte{
 				bytes.Repeat([]byte("a"),
 					chaindata.CoinbaseWitnessDataLen),
@@ -1006,7 +1006,7 @@ func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight
 
 	msgBlock.Header.UpdateCoinbaseScript(coinbaseScript)
 
-	// TODO(davec): A btcutil.Block should use saved in the state to avoid
+	// TODO(davec): A jaxutil.Block should use saved in the state to avoid
 	// recalculating all of the other transaction hashes.
 	// block.Transactions[0].InvalidateCache()
 	return nil

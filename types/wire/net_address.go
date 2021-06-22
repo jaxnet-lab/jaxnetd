@@ -11,7 +11,7 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress

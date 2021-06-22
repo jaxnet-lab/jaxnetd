@@ -17,9 +17,9 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // TODO incorporate Alex Morcos' modifications to Gavin's initial model
@@ -87,18 +87,18 @@ func (rate BtcPerKilobyte) ToSatoshiPerByte() SatoshiPerByte {
 
 // Fee returns the fee for a transaction of a given size for
 // the given fee rate.
-func (rate SatoshiPerByte) Fee(size uint32) btcutil.Amount {
+func (rate SatoshiPerByte) Fee(size uint32) jaxutil.Amount {
 	// If our rate is the error value, return that.
 	if rate == SatoshiPerByte(-1) {
-		return btcutil.Amount(-1)
+		return jaxutil.Amount(-1)
 	}
 
-	return btcutil.Amount(float64(rate) * float64(size))
+	return jaxutil.Amount(float64(rate) * float64(size))
 }
 
 // NewSatoshiPerByte creates a SatoshiPerByte from an Amount and a
 // size in bytes.
-func NewSatoshiPerByte(fee btcutil.Amount, size uint32) SatoshiPerByte {
+func NewSatoshiPerByte(fee jaxutil.Amount, size uint32) SatoshiPerByte {
 	return SatoshiPerByte(float64(fee) / float64(size))
 }
 
@@ -224,7 +224,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 
 		ef.observed[hash] = &observedTransaction{
 			hash:     hash,
-			feeRate:  NewSatoshiPerByte(btcutil.Amount(t.Fee), size),
+			feeRate:  NewSatoshiPerByte(jaxutil.Amount(t.Fee), size),
 			observed: t.Height,
 			mined:    mining.UnminedHeight,
 		}
@@ -232,7 +232,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 }
 
 // RegisterBlock informs the fee estimator of a new block to take into account.
-func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
+func (ef *FeeEstimator) RegisterBlock(block *jaxutil.Block) error {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -250,7 +250,7 @@ func (ef *FeeEstimator) RegisterBlock(block *btcutil.Block) error {
 	ef.numBlocksRegistered++
 
 	// Randomly order txs in block.
-	transactions := make(map[*btcutil.Tx]struct{})
+	transactions := make(map[*jaxutil.Tx]struct{})
 	for _, t := range block.Transactions() {
 		transactions[t] = struct{}{}
 	}

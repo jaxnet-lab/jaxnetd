@@ -8,10 +8,10 @@ package blockchain
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if
@@ -24,7 +24,7 @@ import (
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
+func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	// The height of this block is one more than the referenced previous
 	// block.
 	prevHash := block.MsgBlock().Header.PrevBlock()

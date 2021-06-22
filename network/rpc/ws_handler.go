@@ -3,12 +3,12 @@ package rpc
 import (
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // wsCommandHandler describes a callback function used to handle a specific
@@ -42,14 +42,14 @@ func WebSocketHandlers(core *MultiChainRPC) *wsHandler {
 }
 
 func (h *wsHandler) handleLoadTxFilter(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd := icmd.(*btcjson.LoadTxFilterCmd)
+	cmd := icmd.(*jaxjson.LoadTxFilterCmd)
 
 	outPoints := make([]wire.OutPoint, len(cmd.OutPoints))
 	for i := range cmd.OutPoints {
 		hash, err := chainhash.NewHashFromStr(cmd.OutPoints[i].Hash)
 		if err != nil {
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidParameter,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidParameter,
 				Message: err.Error(),
 			}
 		}
@@ -83,9 +83,9 @@ func (h *wsHandler) handleLoadTxFilter(chain *cprovider.ChainProvider, wsc *wsCl
 }
 
 func (h *wsHandler) handleWebsocketHelp(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	//cmd, ok := icmd.(*btcjson.HelpCmd)
+	//cmd, ok := icmd.(*jaxjson.HelpCmd)
 	//if !ok {
-	//	return nil, btcjson.ErrRPCInternal
+	//	return nil, jaxjson.ErrRPCInternal
 	//}
 	//
 	//// Provide a usage overview of all commands when no specific command
@@ -113,8 +113,8 @@ func (h *wsHandler) handleWebsocketHelp(chain *cprovider.ChainProvider, wsc *wsC
 	//	}
 	//}
 	//if !valid {
-	//	return nil, &btcjson.RPCError{
-	//		Code:    btcjson.ErrRPCInvalidParameter,
+	//	return nil, &jaxjson.RPCError{
+	//		Code:    jaxjson.ErrRPCInvalidParameter,
 	//		Message: "Unknown command: " + command,
 	//	}
 	//}
@@ -134,9 +134,9 @@ func (h *wsHandler) handleNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 }
 
 func (h *wsHandler) handleNotifyNewTransactions(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd, ok := icmd.(*btcjson.NotifyNewTransactionsCmd)
+	cmd, ok := icmd.(*jaxjson.NotifyNewTransactionsCmd)
 	if !ok {
-		return nil, btcjson.ErrRPCInternal
+		return nil, jaxjson.ErrRPCInternal
 	}
 
 	wsc.verboseTxUpdates = cmd.Verbose != nil && *cmd.Verbose
@@ -145,9 +145,9 @@ func (h *wsHandler) handleNotifyNewTransactions(chain *cprovider.ChainProvider, 
 }
 
 func (h *wsHandler) handleNotifyReceived(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd, ok := icmd.(*btcjson.NotifyReceivedCmd)
+	cmd, ok := icmd.(*jaxjson.NotifyReceivedCmd)
 	if !ok {
-		return nil, btcjson.ErrRPCInternal
+		return nil, jaxjson.ErrRPCInternal
 	}
 
 	// Decode addresses to validate input, but the strings slice is used
@@ -162,9 +162,9 @@ func (h *wsHandler) handleNotifyReceived(chain *cprovider.ChainProvider, wsc *ws
 }
 
 func (h *wsHandler) handleNotifySpent(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd, ok := icmd.(*btcjson.NotifySpentCmd)
+	cmd, ok := icmd.(*jaxjson.NotifySpentCmd)
 	if !ok {
-		return nil, btcjson.ErrRPCInternal
+		return nil, jaxjson.ErrRPCInternal
 	}
 
 	outpoints, err := deserializeOutpoints(cmd.OutPoints)
@@ -177,7 +177,7 @@ func (h *wsHandler) handleNotifySpent(chain *cprovider.ChainProvider, wsc *wsCli
 }
 
 func (h *wsHandler) handleSession(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	return &btcjson.SessionResult{SessionID: wsc.sessionID}, nil
+	return &jaxjson.SessionResult{SessionID: wsc.sessionID}, nil
 }
 
 func (h *wsHandler) handleStopNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
@@ -191,9 +191,9 @@ func (h *wsHandler) handleStopNotifyNewTransactions(chain *cprovider.ChainProvid
 }
 
 func (h *wsHandler) handleStopNotifySpent(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd, ok := icmd.(*btcjson.StopNotifySpentCmd)
+	cmd, ok := icmd.(*jaxjson.StopNotifySpentCmd)
 	if !ok {
-		return nil, btcjson.ErrRPCInternal
+		return nil, jaxjson.ErrRPCInternal
 	}
 
 	outpoints, err := deserializeOutpoints(cmd.OutPoints)
@@ -209,9 +209,9 @@ func (h *wsHandler) handleStopNotifySpent(chain *cprovider.ChainProvider, wsc *w
 }
 
 func (h *wsHandler) handleStopNotifyReceived(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	cmd, ok := icmd.(*btcjson.StopNotifyReceivedCmd)
+	cmd, ok := icmd.(*jaxjson.StopNotifyReceivedCmd)
 	if !ok {
-		return nil, btcjson.ErrRPCInternal
+		return nil, jaxjson.ErrRPCInternal
 	}
 
 	// Decode addresses to validate input, but the strings slice is used
@@ -240,7 +240,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //
 //// rescanBlock rescans all transactions in a single block.  This is a helper
 //// function for handleRescan.
-//func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *btcutil.Block) {
+//func rescanBlock(wsc *wsClient, lookups *rescanKeys, blk *jaxutil.Block) {
 //	for _, tx := range blk.Transactions() {
 //		// Hexadecimal representation of this tx.  Only created if
 //		// needed, and reused for later notifications if already made.
@@ -264,7 +264,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //			)
 //			if err != nil {
 //				return fmt.Errorf("unable to marshal "+
-//					"btcjson.RedeeminTxNtfn: %v", err)
+//					"jaxjson.RedeeminTxNtfn: %v", err)
 //			}
 //
 //			return wsc.QueueNotification(marshalledJSON)
@@ -360,10 +360,10 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //				if txHex == "" {
 //					txHex = txHexString(tx.MsgTx())
 //				}
-//				ntfn := btcjson.NewRecvTxNtfn(txHex,
+//				ntfn := jaxjson.NewRecvTxNtfn(txHex,
 //					blockDetails(blk, tx.Index()))
 //
-//				marshalledJSON, err := btcjson.MarshalCmd(nil, ntfn)
+//				marshalledJSON, err := jaxjson.MarshalCmd(nil, ntfn)
 //				if err != nil {
 //					m.logger.Errorf("Failed to marshal recvtx notification: %v", err)
 //					return
@@ -386,7 +386,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //// a string slice.
 ////
 //// NOTE: This extension is ported from github.com/decred/dcrd
-//func rescanBlockFilter(filter *wsClientFilter, block *btcutil.Block, params *chaincfg.Params) []string {
+//func rescanBlockFilter(filter *wsClientFilter, block *jaxutil.Block, params *chaincfg.Params) []string {
 //	var transactions []string
 //
 //	filter.mu.Lock()
@@ -451,9 +451,9 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 ////
 //// NOTE: This extension is ported from github.com/decred/dcrd
 //func handleRescanBlocks(s *ServerCore, wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	cmd, ok := icmd.(*btcjson.RescanBlocksCmd)
+//	cmd, ok := icmd.(*jaxjson.RescanBlocksCmd)
 //	if !ok {
-//		return nil, btcjson.ErrRPCInternal
+//		return nil, jaxjson.ErrRPCInternal
 //	}
 //
 //	// Load client's transaction filter.  Must exist in order to continue.
@@ -461,8 +461,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //	filter := wsc.filterData
 //	wsc.Unlock()
 //	if filter == nil {
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCMisc,
+//		return nil, &jaxjson.RPCError{
+//			Code:    jaxjson.ErrRPCMisc,
 //			Message: "Transaction filter must be loaded before rescanning",
 //		}
 //	}
@@ -477,7 +477,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //		blockHashes[i] = hash
 //	}
 //
-//	discoveredData := make([]btcjson.RescannedBlock, 0, len(blockHashes))
+//	discoveredData := make([]jaxjson.RescannedBlock, 0, len(blockHashes))
 //
 //	// Iterate over each block in the request and rescan.  When a block
 //	// contains relevant transactions, add it to the response.
@@ -487,14 +487,14 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //	for i := range blockHashes {
 //		block, err := bc.BlockByHash(blockHashes[i])
 //		if err != nil {
-//			return nil, &btcjson.RPCError{
-//				Code:    btcjson.ErrRPCBlockNotFound,
+//			return nil, &jaxjson.RPCError{
+//				Code:    jaxjson.ErrRPCBlockNotFound,
 //				Message: "Failed to fetch block: " + err.Error(),
 //			}
 //		}
 //		if lastBlockHash != nil && block.MsgBlock().Header.PrevBlock() != *lastBlockHash {
-//			return nil, &btcjson.RPCError{
-//				Code: btcjson.ErrRPCInvalidParameter,
+//			return nil, &jaxjson.RPCError{
+//				Code: jaxjson.ErrRPCInvalidParameter,
 //				Message: fmt.Sprintf("Block %v is not a child of %v",
 //					blockHashes[i], lastBlockHash),
 //			}
@@ -503,7 +503,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //
 //		transactions := rescanBlockFilter(filter, block, params)
 //		if len(transactions) != 0 {
-//			discoveredData = append(discoveredData, btcjson.RescannedBlock{
+//			discoveredData = append(discoveredData, jaxjson.RescannedBlock{
 //				Hash:         cmd.BlockHashes[i],
 //				Transactions: transactions,
 //			})
@@ -525,8 +525,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //	hashList, err := chain.HeightRange(minBlock, maxBlock)
 //	if err != nil {
 //		m.logger.Errorf("Error looking up block range: %v", err)
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCDatabase,
+//		return nil, &jaxjson.RPCError{
+//			Code:    jaxjson.ErrRPCDatabase,
 //			Message: "Database error: " + err.Error(),
 //		}
 //	}
@@ -538,8 +538,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //	if err != nil {
 //		m.logger.Errorf("Error looking up possibly reorged block: %v",
 //			err)
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCDatabase,
+//		return nil, &jaxjson.RPCError{
+//			Code:    jaxjson.ErrRPCDatabase,
 //			Message: "Database error: " + err.Error(),
 //		}
 //	}
@@ -552,7 +552,7 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //
 //// descendantBlock returns the appropriate JSON-RPC error if a current block
 //// fetched during a reorganize is not a direct child of the parent block hash.
-//func descendantBlock(prevHash *chainhash.Hash, curBlock *btcutil.Block) error {
+//func descendantBlock(prevHash *chainhash.Hash, curBlock *jaxutil.Block) error {
 //	curHash := curBlock.MsgBlock().Header.PrevBlock()
 //	if !prevHash.IsEqual(&curHash) {
 //		m.logger.Errorf("Stopping rescan for reorged block %v "+
@@ -567,14 +567,14 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //// amount of memory that we'll allocate to a given rescan. Every so often,
 //// we'll send back a rescan progress notification to the websockets client. The
 //// final block and block hash that we've scanned will be returned.
-//func scanBlockChunks(s *ServerCore, wsc *wsClient, cmd *btcjson.RescanCmd, lookups *rescanKeys, minBlock,
+//func scanBlockChunks(s *ServerCore, wsc *wsClient, cmd *jaxjson.RescanCmd, lookups *rescanKeys, minBlock,
 //	maxBlock int32, BlockChain *blockchain.GetBlockChain) (
-//	*btcutil.Block, *chainhash.Hash, error) {
+//	*jaxutil.Block, *chainhash.Hash, error) {
 //
 //	// lastBlock and lastBlockHash track the previously-rescanned block.
 //	// They equal nil when no previous blocks have been rescanned.
 //	var (
-//		lastBlock     *btcutil.Block
+//		lastBlock     *jaxutil.Block
 //		lastBlockHash *chainhash.Hash
 //	)
 //
@@ -599,8 +599,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //		hashList, err := BlockChain.HeightRange(minBlock, maxLoopBlock)
 //		if err != nil {
 //			s.logger.Errorf("Error looking up block range: %v", err)
-//			return nil, nil, &btcjson.RPCError{
-//				Code:    btcjson.ErrRPCDatabase,
+//			return nil, nil, &jaxjson.RPCError{
+//				Code:    jaxjson.ErrRPCDatabase,
 //				Message: "Database error: " + err.Error(),
 //			}
 //		}
@@ -638,8 +638,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //			if err != nil {
 //				s.logger.Errorf("Error fetching best block "+
 //					"hash: %v", err)
-//				return nil, nil, &btcjson.RPCError{
-//					Code: btcjson.ErrRPCDatabase,
+//				return nil, nil, &jaxjson.RPCError{
+//					Code: jaxjson.ErrRPCDatabase,
 //					Message: "Database error: " +
 //						err.Error(),
 //				}
@@ -661,8 +661,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //
 //					s.logger.Errorf("Error looking up "+
 //						"block: %v", err)
-//					return nil, nil, &btcjson.RPCError{
-//						Code: btcjson.ErrRPCDatabase,
+//					return nil, nil, &jaxjson.RPCError{
+//						Code: jaxjson.ErrRPCDatabase,
 //						Message: "Database error: " +
 //							err.Error(),
 //					}
@@ -730,11 +730,11 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //				continue
 //			}
 //
-//			n := btcjson.NewRescanProgressNtfn(
+//			n := jaxjson.NewRescanProgressNtfn(
 //				hashList[i].String(), blk.Height(),
 //				blk.MsgBlock().Header.Timestamp().Unix(),
 //			)
-//			mn, err := btcjson.MarshalCmd(nil, n)
+//			mn, err := jaxjson.MarshalCmd(nil, n)
 //			if err != nil {
 //				s.logger.Errorf("Failed to marshal rescan "+
 //					"progress notification: %v", err)
@@ -767,9 +767,9 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //// the BlockChain (perhaps from a rescanprogress notification) to resume their
 //// rescan.
 //func handleRescan(s *ServerCore, wsc *wsClient, icmd interface{}) (interface{}, error) {
-//	cmd, ok := icmd.(*btcjson.RescanCmd)
+//	cmd, ok := icmd.(*jaxjson.RescanCmd)
 //	if !ok {
-//		return nil, btcjson.ErrRPCInternal
+//		return nil, jaxjson.ErrRPCInternal
 //	}
 //
 //	outpoints := make([]*wire.OutPoint, 0, len(cmd.OutPoints))
@@ -810,8 +810,8 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //	}
 //	minBlock, err := BlockChain.BlockHeightByHash(minBlockHash)
 //	if err != nil {
-//		return nil, &btcjson.RPCError{
-//			Code:    btcjson.ErrRPCBlockNotFound,
+//		return nil, &jaxjson.RPCError{
+//			Code:    jaxjson.ErrRPCBlockNotFound,
 //			Message: "Error getting block: " + err.Error(),
 //		}
 //	}
@@ -824,15 +824,15 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //		}
 //		maxBlock, err = BlockChain.BlockHeightByHash(maxBlockHash)
 //		if err != nil {
-//			return nil, &btcjson.RPCError{
-//				Code:    btcjson.ErrRPCBlockNotFound,
+//			return nil, &jaxjson.RPCError{
+//				Code:    jaxjson.ErrRPCBlockNotFound,
 //				Message: "Error getting block: " + err.Error(),
 //			}
 //		}
 //	}
 //
 //	var (
-//		lastBlock     *btcutil.Block
+//		lastBlock     *jaxutil.Block
 //		lastBlockHash *chainhash.Hash
 //	)
 //	if len(lookups.addrs) != 0 || len(lookups.unspent) != 0 {
@@ -862,25 +862,25 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 //		lastBlockHash = &chainTip.Hash
 //		lastBlock, err = BlockChain.BlockByHash(lastBlockHash)
 //		if err != nil {
-//			return nil, &btcjson.RPCError{
-//				Code:    btcjson.ErrRPCBlockNotFound,
+//			return nil, &jaxjson.RPCError{
+//				Code:    jaxjson.ErrRPCBlockNotFound,
 //				Message: "Error getting block: " + err.Error(),
 //			}
 //		}
 //	}
 //
-//	// Notify websocket client of the finished rescan.  Due to how btcd
+//	// Notify websocket client of the finished rescan.  Due to how jaxnetd
 //	// asynchronously queues notifications to not block calling code,
 //	// there is no guarantee that any of the notifications created during
 //	// rescan (such as rescanprogress, recvtx and redeemingtx) will be
 //	// received before the rescan RPC returns.  Therefore, another method
 //	// is needed to safely inform clients that all rescan notifications have
 //	// been sent.
-//	n := btcjson.NewRescanFinishedNtfn(
+//	n := jaxjson.NewRescanFinishedNtfn(
 //		lastBlockHash.String(), lastBlock.Height(),
 //		lastBlock.MsgBlock().Header.Timestamp().Unix(),
 //	)
-//	if mn, err := btcjson.MarshalCmd(nil, n); err != nil {
+//	if mn, err := jaxjson.MarshalCmd(nil, n); err != nil {
 //		s.logger.Errorf("Failed to marshal rescan finished "+
 //			"notification: %v", err)
 //	} else {
@@ -899,10 +899,10 @@ func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsCl
 // properly, the function returns an error. Otherwise, nil is returned.
 func checkAddressValidity(addrs []string, params *chaincfg.Params) error {
 	for _, addr := range addrs {
-		_, err := btcutil.DecodeAddress(addr, params)
+		_, err := jaxutil.DecodeAddress(addr, params)
 		if err != nil {
-			return &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidAddressOrKey,
+			return &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidAddressOrKey,
 				Message: fmt.Sprintf("Invalid address or key: %v", addr),
 			}
 		}
@@ -911,7 +911,7 @@ func checkAddressValidity(addrs []string, params *chaincfg.Params) error {
 }
 
 // deserializeOutpoints deserializes each serialized outpoint.
-func deserializeOutpoints(serializedOuts []btcjson.OutPoint) ([]*wire.OutPoint, error) {
+func deserializeOutpoints(serializedOuts []jaxjson.OutPoint) ([]*wire.OutPoint, error) {
 	outpoints := make([]*wire.OutPoint, 0, len(serializedOuts))
 	for i := range serializedOuts {
 		blockHash, err := chainhash.NewHashFromStr(serializedOuts[i].Hash)

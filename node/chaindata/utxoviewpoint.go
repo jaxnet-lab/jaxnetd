@@ -10,12 +10,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // txoFlags is a bitmask defining additional information and state for a
@@ -182,7 +182,7 @@ func (view *UtxoViewpoint) addTxOut(outpoint wire.OutPoint, txOut *wire.TxOut, i
 // it exists and is not provably unspendable.  When the view already has an
 // entry for the output, it will be marked unspent.  All fields will be updated
 // for existing entries since it's possible it has changed during a reorg.
-func (view *UtxoViewpoint) AddTxOut(tx *btcutil.Tx, txOutIdx uint32, blockHeight int32) {
+func (view *UtxoViewpoint) AddTxOut(tx *jaxutil.Tx, txOutIdx uint32, blockHeight int32) {
 	// Can't add an output for an out of bounds index.
 	if txOutIdx >= uint32(len(tx.MsgTx().TxOut)) {
 		return
@@ -201,7 +201,7 @@ func (view *UtxoViewpoint) AddTxOut(tx *btcutil.Tx, txOutIdx uint32, blockHeight
 // unspendable to the view.  When the view already has entries for any of the
 // outputs, they are simply marked unspent.  All fields will be updated for
 // existing entries since it's possible it has changed during a reorg.
-func (view *UtxoViewpoint) AddTxOuts(tx *btcutil.Tx, blockHeight int32) {
+func (view *UtxoViewpoint) AddTxOuts(tx *jaxutil.Tx, blockHeight int32) {
 	// Loop all of the transaction outputs and add those which are not
 	// provably unspendable.
 	isCoinBase := IsCoinBase(tx)
@@ -222,7 +222,7 @@ func (view *UtxoViewpoint) AddTxOuts(tx *btcutil.Tx, blockHeight int32) {
 // spent.  In addition, when the 'stxos' argument is not nil, it will be updated
 // to append an entry for each spent txout.  An error will be returned if the
 // view does not contain the required utxos.
-func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
 	// Coinbase transactions don't have any inputs to spend.
 	if IsCoinBase(tx) {
 		// Add the transaction's outputs as available utxos.
@@ -292,7 +292,7 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 // | 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
 //
 // The order is not deterministic.
-func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) connectSwapTransaction(tx *jaxutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
 	err := ValidateSwapTxStructure(tx.MsgTx(), -1)
 	if err != nil {
 		return err
@@ -347,7 +347,7 @@ func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
 	return view.eadAddresses
 }
 
-func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentTxOut) error {
 	var removeEAD = func(pkScript []byte) error {
 		scriptData, err := txscript.EADAddressScriptData(pkScript)
 		if err != nil {
@@ -440,7 +440,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 // spend as spent, and setting the best Hash for the view to the passed block.
 // In addition, when the 'stxos' argument is not nil, it will be updated to
 // append an entry for each spent txout.
-func (view *UtxoViewpoint) ConnectTransactions(block *btcutil.Block, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) ConnectTransactions(block *jaxutil.Block, stxos *[]SpentTxOut) error {
 	for _, tx := range block.Transactions() {
 		err := view.ConnectTransaction(tx, block.Height(), stxos)
 		if err != nil {
@@ -481,7 +481,7 @@ func (view *UtxoViewpoint) fetchEntryByHash(db database.DB, hash *chainhash.Hash
 }
 
 // CountSpentOutputs returns the number of utxos the passed block spends.
-func CountSpentOutputs(block *btcutil.Block) int {
+func CountSpentOutputs(block *jaxutil.Block) int {
 	// Exclude the coinbase transaction since it can't spend anything.
 	var numSpent int
 	for _, tx := range block.Transactions()[1:] {
@@ -498,7 +498,7 @@ func CountSpentOutputs(block *btcutil.Block) int {
 // created by the passed block, restoring all utxos the transactions spent by
 // using the provided spent txo information, and setting the best Hash for the
 // view to the block before the passed block.
-func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *btcutil.Block, stxos []SpentTxOut) error {
+func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block, stxos []SpentTxOut) error {
 	// Sanity check the correct number of stxos are provided.
 	if len(stxos) != CountSpentOutputs(block) {
 		return AssertError("DisconnectTransactions called with bad " +
@@ -723,7 +723,7 @@ func (view *UtxoViewpoint) FetchUtxos(db database.DB, outpoints map[wire.OutPoin
 // database as needed.  In particular, referenced entries that are earlier in
 // the block are added to the view and entries that are already in the view are
 // not modified.
-func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *btcutil.Block) error {
+func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *jaxutil.Block) error {
 	// Build a map of in-flight transactions because some of the inputs in
 	// this block could be referencing other transactions earlier in this
 	// block which are not yet in the chain.

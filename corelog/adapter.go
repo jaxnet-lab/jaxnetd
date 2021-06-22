@@ -17,7 +17,7 @@ var (
 	Disabled zerolog.Logger
 
 	DefaultLevel   = zerolog.InfoLevel
-	DefaultLogFile = "shard.core.log"
+	DefaultLogFile = "jaxnetd.log"
 )
 
 func init() {
@@ -51,7 +51,7 @@ func (Config) Default() Config {
 		LogsAsJson:         false,
 		FileLoggingEnabled: false,
 		Directory:          "core",
-		Filename:           "shard.core.log",
+		Filename:           "jaxnetd.log",
 		MaxSize:            150,
 		MaxBackups:         3,
 		MaxAge:             28,
@@ -85,7 +85,7 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	logger := zerolog.New(mw).
 		Level(logLevel).
 		With().
-		Str("app", "shard.core").
+		Str("app", "jaxnetd").
 		Timestamp().
 		Logger()
 

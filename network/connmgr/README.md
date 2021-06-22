@@ -3,7 +3,7 @@ connmgr
 
 [![Build Status](http://img.shields.io/travis/btcsuite/btcd.svg)](https://travis-ci.org/btcsuite/btcd)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/gitlab.com/jaxnet/core/shard.core/connmgr)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/gitlab.com/jaxnet/jaxnetd/connmgr)
 
 Package connmgr implements a generic Bitcoin network connection manager.
 
@@ -29,7 +29,7 @@ In addition the connection manager provides the following utilities:
 ## Installation and Updating
 
 ```bash
-$ go get -u gitlab.com/jaxnet/core/shard.core/connmgr
+$ go get -u gitlab.com/jaxnet/jaxnetd/connmgr
 ```
 
 ## License

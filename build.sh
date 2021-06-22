@@ -21,7 +21,7 @@ function git_tag() {
     fi
 }
 
-SERVICE="gitlab.com/jaxnet/core/shard.core"
+SERVICE="gitlab.com/jaxnet/jaxnetd"
 ## extract short hash of the current commit
 COMMIT=$(git_commit)
 ## extract name of the current git branch or tag

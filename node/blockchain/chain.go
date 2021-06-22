@@ -12,15 +12,15 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	chain2 "gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -49,7 +49,7 @@ type BlockLocator []*chainhash.Hash
 // is a normal block plus an expiration time to prevent caching the orphan
 // forever.
 type orphanBlock struct {
-	block      *btcutil.Block
+	block      *jaxutil.Block
 	expiration time.Time
 }
 
@@ -68,13 +68,13 @@ type IndexManager interface {
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the previous output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *btcutil.Block, []chaindata.SpentTxOut) error
+	ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block.
-	DisconnectBlock(database.Tx, *btcutil.Block, []chaindata.SpentTxOut) error
+	DisconnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -469,7 +469,7 @@ func (b *BlockChain) ChainBlockGenerator() ChainBlockGenerator {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (b *BlockChain) addOrphanBlock(block *btcutil.Block) {
+func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
 	// Remove expired orphan blocks.
 	for _, oBlock := range b.orphans {
 		if time.Now().After(oBlock.expiration) {
@@ -520,7 +520,7 @@ func (b *BlockChain) addOrphanBlock(block *btcutil.Block) {
 // the candidate transaction to be included in a block.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *chaindata.UtxoViewpoint,
+func (b *BlockChain) CalcSequenceLock(tx *jaxutil.Tx, utxoView *chaindata.UtxoViewpoint,
 	mempool bool) (*chaindata.SequenceLock, error) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
@@ -532,7 +532,7 @@ func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *chaindata.UtxoVi
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *btcutil.Tx,
+func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *jaxutil.Tx,
 	utxoView *chaindata.UtxoViewpoint, mempool bool) (*chaindata.SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
@@ -742,7 +742,7 @@ func (b *BlockChain) getReorganizeNodes(node blocknode.IBlockNode) (*list.List, 
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Block,
+func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Block,
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
@@ -906,7 +906,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *btcutil.Bloc
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.Block, view *chaindata.UtxoViewpoint,
+func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
 	forkNode blocknode.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
@@ -918,7 +918,7 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *btcutil.B
 
 	// Load the previous block since some details for it are needed below.
 	prevNode := node.Parent()
-	var prevBlock *btcutil.Block
+	var prevBlock *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		prevBlock, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, prevNode)
@@ -1105,9 +1105,9 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// be loaded from the database during the reorg check phase below and
 	// then they are needed again when doing the actual database updates.
 	// Rather than doing two loads, cache the loaded data into these slices.
-	detachBlocks := make([]*btcutil.Block, 0, detachNodes.Len())
+	detachBlocks := make([]*jaxutil.Block, 0, detachNodes.Len())
 	detachSpentTxOuts := make([][]chaindata.SpentTxOut, 0, detachNodes.Len())
-	attachBlocks := make([]*btcutil.Block, 0, attachNodes.Len())
+	attachBlocks := make([]*jaxutil.Block, 0, attachNodes.Len())
 
 	// Disconnect all of the blocks back to the point of the fork.  This
 	// entails loading the blocks and their associated spent txos from the
@@ -1118,7 +1118,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	view.SetBestHash(&h)
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(blocknode.IBlockNode)
-		var block *btcutil.Block
+		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
 			block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, n)
@@ -1185,7 +1185,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
 		n := e.Value.(blocknode.IBlockNode)
 
-		var block *btcutil.Block
+		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
 			block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, n)
@@ -1332,7 +1332,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 //    This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
+func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 
 	flushIndexState := func() {

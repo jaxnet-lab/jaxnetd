@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 20 * btcutil.SatoshiPerBitcoin
+	baseSubsidy = 20 * jaxutil.SatoshiPerBitcoin
 )
 
 type StateProvider struct {
@@ -163,23 +163,23 @@ func calcBlockSubsidy(height int32) int64 {
 
 	// Year 1
 	case height >= 0 && height <= endOfEpoch:
-		return (340 - 10*((x-1+pow10)/pow11)) * btcutil.SatoshiPerBitcoin
+		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
 
 	// Year 2
 	case height > endOfEpoch && height <= endOfEpoch*2:
-		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * btcutil.SatoshiPerBitcoin
+		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
 
 	// Year 3
 	case height > endOfEpoch*2 && height <= endOfEpoch*3:
-		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * btcutil.SatoshiPerBitcoin
+		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
 
 	// Year 4
 	case height > endOfEpoch*3 && height <= endOfEpoch*4:
-		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * btcutil.SatoshiPerBitcoin
+		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
 
 	// Year 5
 	case height > endOfEpoch*4 && height <= endOfEpoch*5:
-		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * btcutil.SatoshiPerBitcoin
+		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
 
 	// Year 6+
 	case height > endOfEpoch*5:

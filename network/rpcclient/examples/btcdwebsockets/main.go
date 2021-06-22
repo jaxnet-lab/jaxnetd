@@ -10,9 +10,9 @@ import (
 	"log"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
-		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*btcutil.Tx) {
+		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*jaxutil.Tx) {
 			log.Printf("Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp())
 		},
@@ -31,9 +31,9 @@ func main() {
 		},
 	}
 
-	// Connect to local btcd RPC server using websockets.
-	//btcdHomeDir := btcutil.AppDataDir("btcd", false)
-	//certs, err := ioutil.ReadFile(filepath.Join(btcdHomeDir, "rpc.cert"))
+	// Connect to local jaxnetd RPC server using websockets.
+	//jaxnetdHomeDir := jaxutil.AppDataDir("jaxnetd", false)
+	//certs, err := ioutil.ReadFile(filepath.Join(jaxnetdHomeDir, "rpc.cert"))
 	//if err != nil {
 	//	log.Fatal(err)
 	//}

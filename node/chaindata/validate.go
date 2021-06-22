@@ -11,13 +11,13 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -38,7 +38,7 @@ const (
 
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 50 * btcutil.SatoshiPerBitcoin
+	baseSubsidy = 50 * jaxutil.SatoshiPerBitcoin
 )
 
 var (
@@ -112,7 +112,7 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 //
 // This function only differs from IsCoinBaseTx in that it works with a higher
 // level util transaction as opposed to a raw wire transaction.
-func IsCoinBase(tx *btcutil.Tx) bool {
+func IsCoinBase(tx *jaxutil.Tx) bool {
 	return IsCoinBaseTx(tx.MsgTx())
 }
 
@@ -133,7 +133,7 @@ func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
 	return true
 }
 
-func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
+func ValidMoneyBackAfterExpiration(tx *jaxutil.Tx, view *UtxoViewpoint) bool {
 	if len(tx.MsgTx().TxOut) > len(tx.MsgTx().TxIn) {
 		return false
 	}
@@ -156,7 +156,7 @@ func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
 }
 
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
-func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Time) bool {
+func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Time) bool {
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
@@ -230,7 +230,7 @@ func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
 // ensure it is sane.  These checks are context free.
-func CheckTransactionSanity(tx *btcutil.Tx) error {
+func CheckTransactionSanity(tx *jaxutil.Tx) error {
 	// A transaction must have at least one input.
 	msgTx := tx.MsgTx()
 	if len(msgTx.TxIn) == 0 {
@@ -272,10 +272,10 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 				"value of %v", satoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if satoshi > btcutil.MaxSatoshi {
+		if satoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", satoshi,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -286,14 +286,14 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		if totalSatoshi < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if totalSatoshi > btcutil.MaxSatoshi {
+		if totalSatoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshi,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -372,7 +372,7 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 // CheckProofOfWork ensures the block header bits which indicate the target
 // difficulty is in min/max range and that the block Hash is less than the
 // target difficulty as claimed.
-func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
+func CheckProofOfWork(block *jaxutil.Block, powLimit *big.Int) error {
 	return checkProofOfWork(block.MsgBlock().Header, powLimit, BFNone)
 }
 
@@ -380,7 +380,7 @@ func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
 // input and output scripts in the provided transaction.  This uses the
 // quicker, but imprecise, signature operation counting mechanism from
 // txscript.
-func CountSigOps(tx *btcutil.Tx) int {
+func CountSigOps(tx *jaxutil.Tx) int {
 	msgTx := tx.MsgTx()
 
 	// Accumulate the number of signature operations in all transaction
@@ -405,7 +405,7 @@ func CountSigOps(tx *btcutil.Tx) int {
 // transactions which are of the pay-to-script-Hash type.  This uses the
 // precise, signature operation counting mechanism from the script engine which
 // requires access to the input transaction scripts.
-func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
+func CountP2SHSigOps(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
 	// Coinbase transactions have no interesting inputs.
 	if isCoinBaseTx {
 		return 0, nil
@@ -508,7 +508,7 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	msgBlock := block.MsgBlock()
 	header := msgBlock.Header
 	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
@@ -564,7 +564,7 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// Build merkle tree and ensure the calculated merkle root matches the
 	// entry in the block header.  This also has the effect of caching all
 	// of the transaction hashes in the block to speed up future Hash
-	// checks.  Bitcoind builds the tree here and checks the merkle root
+	// checks.  Jaxnetd builds the tree here and checks the merkle root
 	// after the following checks, but there is no reason not to check the
 	// merkle root matches here.
 	merkles := BuildMerkleTreeStore(block.Transactions(), false)
@@ -610,14 +610,14 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 
 // CheckBlockSanity performs some preliminary checks on a block to ensure it is
 // sane before continuing with block processing.  These checks are context free.
-func CheckBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
+func CheckBlockSanity(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
 	return CheckBlockSanityWF(block, powLimit, timeSource, BFNone)
 }
 
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.
-func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
+func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
 	sigScript := coinbaseTx.MsgTx().TxIn[0].SignatureScript
 	if len(sigScript) < 1 {
 		str := "the coinbase signature script for blocks of " +
@@ -657,7 +657,7 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
 
 // CheckSerializedHeight checks if the signature script in the passed
 // transaction starts with the serialized block height of wantHeight.
-func CheckSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
+func CheckSerializedHeight(coinbaseTx *jaxutil.Tx, wantHeight int32) error {
 	serializedHeight, err := ExtractCoinbaseHeight(coinbaseTx)
 	if err != nil {
 		return err
@@ -683,7 +683,7 @@ func CheckSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 //
 // NOTE: The transaction MUST have already been sanity checked with the
 // CheckTransactionSanity function prior to calling this function.
-func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
+func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
@@ -747,14 +747,14 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		originTxSatoshi := utxo.Amount()
 		if originTxSatoshi < 0 {
 			str := fmt.Sprintf("transaction output has negative "+
-				"value of %v", btcutil.Amount(originTxSatoshi))
+				"value of %v", jaxutil.Amount(originTxSatoshi))
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
-		if originTxSatoshi > btcutil.MaxSatoshi {
+		if originTxSatoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
-				btcutil.Amount(originTxSatoshi),
-				btcutil.MaxSatoshi)
+				jaxutil.Amount(originTxSatoshi),
+				jaxutil.MaxSatoshi)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -764,11 +764,11 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		lastSatoshiIn := totalSatoshiIn
 		totalSatoshiIn += originTxSatoshi
 		if totalSatoshiIn < lastSatoshiIn ||
-			totalSatoshiIn > btcutil.MaxSatoshi {
+			totalSatoshiIn > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshiIn,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -794,7 +794,7 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		return 0, NewRuleError(ErrSpendTooHigh, str)
 	}
 
-	// NOTE: bitcoind checks if the transaction fees are < 0 here, but that
+	// NOTE: jaxnetd checks if the transaction fees are < 0 here, but that
 	// is an impossible condition because of the check above that ensures
 	// the inputs are >= the outputs.
 	txFeeInSatoshi := totalSatoshiIn - totalSatoshiOut

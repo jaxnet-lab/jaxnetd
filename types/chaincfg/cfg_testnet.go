@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // testNet3PowLimit is the highest proof of work value a Bitcoin block

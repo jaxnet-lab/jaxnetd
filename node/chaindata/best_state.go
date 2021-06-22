@@ -7,8 +7,8 @@ package chaindata
 import (
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // BestState houses information about the current best block and other info

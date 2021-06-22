@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
 )
 
 func main() {
@@ -20,14 +20,14 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
-		OnAccountBalance: func(account string, balance btcutil.Amount, confirmed bool) {
+		OnAccountBalance: func(account string, balance jaxutil.Amount, confirmed bool) {
 			log.Printf("New balance for account %s: %v", account,
 				balance)
 		},
 	}
 
 	// Connect to local btcwallet RPC server using websockets.
-	//certHomeDir := btcutil.AppDataDir("btcwallet", false)
+	//certHomeDir := jaxutil.AppDataDir("btcwallet", false)
 	//certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
 	//if err != nil {
 	//	log.Fatal(err)

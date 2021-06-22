@@ -17,11 +17,11 @@ import (
 	btcdchainhash "github.com/btcsuite/btcd/chaincfg/chainhash"
 	btcrpc "github.com/btcsuite/btcd/rpcclient"
 	btcdwire "github.com/btcsuite/btcd/wire"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type RPCCfg struct {
@@ -39,10 +39,10 @@ type Configuration struct {
 type BlockProvider struct {
 	client       *btcrpc.Client
 	offline      bool
-	minerAddress btcutil.Address
+	minerAddress jaxutil.Address
 }
 
-func NewBlockProvider(cfg Configuration, minerAddress btcutil.Address) (*BlockProvider, error) {
+func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockProvider, error) {
 	if !cfg.Enable {
 		return &BlockProvider{offline: true}, nil
 	}

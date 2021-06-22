@@ -9,7 +9,7 @@ Package blockchain implements bitcoin block handling and chain selection rules.
 The bitcoin block handling and chain selection rules are an integral, and quite
 likely the most important, part of bitcoin.  Unfortunately, at the time of
 this writing, these rules are also largely undocumented and had to be
-ascertained from the bitcoind source code.  At its core, bitcoin is a
+ascertained from the jaxnetd source code.  At its core, bitcoin is a
 distributed consensus of which blocks are valid and which ones will comprise the
 main block chain (public ledger) that ultimately determines accepted
 transactions, so it is extremely important that fully validating nodes agree on

@@ -9,10 +9,10 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/corelog"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
+	"gitlab.com/jaxnet/jaxnetd/database"
 )
 
 var log = corelog.Disabled

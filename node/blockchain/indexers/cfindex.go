@@ -8,14 +8,14 @@ package indexers
 import (
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs"
-	"gitlab.com/jaxnet/core/shard.core/btcutil/gcs/builder"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/gcs"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/gcs/builder"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -150,7 +150,7 @@ func (idx *CfIndex) Create(dbTx database.Tx) error {
 
 // storeFilter stores a given filter, and performs the steps needed to
 // generate the filter's header.
-func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
+func storeFilter(dbTx database.Tx, block *jaxutil.Block, f *gcs.Filter,
 	filterType wire.FilterType) error {
 	if uint8(filterType) > maxFilterType {
 		return errors.New("unsupported filter type")
@@ -210,7 +210,7 @@ func storeFilter(dbTx database.Tx, block *btcutil.Block, f *gcs.Filter,
 // ConnectBlock is invoked by the index manager when a new block has been
 // connected to the main chain. This indexer adds a hash-to-cf mapping for
 // every passed block. This is part of the Indexer interface.
-func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
+func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	stxos []chaindata.SpentTxOut) error {
 
 	prevScripts := make([][]byte, len(stxos))
@@ -229,7 +229,7 @@ func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 // DisconnectBlock is invoked by the index manager when a block has been
 // disconnected from the main chain.  This indexer removes the hash-to-cf
 // mapping for every passed block. This is part of the Indexer interface.
-func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
+func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	_ []chaindata.SpentTxOut) error {
 
 	for _, key := range cfIndexKeys {

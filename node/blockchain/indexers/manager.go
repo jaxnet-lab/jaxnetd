@@ -9,12 +9,12 @@ import (
 	"bytes"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
@@ -70,7 +70,7 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block,
+func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
 	stxo []chaindata.SpentTxOut) error {
 
 	// Assert that the block being connected properly connects to the
@@ -101,7 +101,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
-func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block,
+func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
 	stxo []chaindata.SpentTxOut) error {
 
 	// Assert that the block being disconnected is the current tip of the
@@ -306,14 +306,14 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			// loaded directly since it is no longer in the main
 			// chain and thus the chain.BlockByHash function would
 			// error.
-			var block *btcutil.Block
+			var block *jaxutil.Block
 			err := m.db.View(func(dbTx database.Tx) error {
 				blockBytes, err := dbTx.FetchBlock(hash)
 
 				if err != nil {
 					return err
 				}
-				block, err = btcutil.NewBlockFromBytes(chain.Chain(), blockBytes)
+				block, err = jaxutil.NewBlockFromBytes(chain.Chain(), blockBytes)
 				if err != nil {
 					return err
 				}
@@ -504,7 +504,7 @@ func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, error) {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
+func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	stxos []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block
@@ -524,7 +524,7 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *btcutil.Block,
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(dbTx database.Tx, block *btcutil.Block,
+func (m *Manager) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	stxo []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block

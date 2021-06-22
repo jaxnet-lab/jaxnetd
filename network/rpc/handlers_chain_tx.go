@@ -11,15 +11,15 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // retrievedTx represents a transaction that was either loaded from the
@@ -32,12 +32,12 @@ import (
 type retrievedTx struct {
 	txBytes []byte
 	blkHash *chainhash.Hash // Only set when transaction is in a block.
-	tx      *btcutil.Tx
+	tx      *jaxutil.Tx
 }
 
 // handleEstimateFee handles estimatefee commands.
 func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.EstimateFeeCmd)
+	c := cmd.(*jaxjson.EstimateFeeCmd)
 
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
@@ -58,7 +58,7 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 
 // estimatesmartfee
 func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.EstimateSmartFeeCmd)
+	c := cmd.(*jaxjson.EstimateSmartFeeCmd)
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
@@ -75,7 +75,7 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	btcPerKB := float64(feeRate)
 	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
 
-	res := btcjson.EstimateSmartFeeResult{
+	res := jaxjson.EstimateSmartFeeResult{
 		BtcPerKB:    &btcPerKB,
 		SatoshiPerB: &satoshiPerB,
 		Blocks:      c.ConfTarget}
@@ -84,7 +84,7 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 
 func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	var err error
-	result := btcjson.ExtendedFeeFeeResult{}
+	result := jaxjson.ExtendedFeeFeeResult{}
 
 	fast, moderate, slow := 2, 64, 128
 	if server.chainProvider.ChainCtx.IsBeacon() {
@@ -112,20 +112,20 @@ func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-
 	return result, nil
 }
 
-func (server *CommonChainRPC) estimateFeeForTarget(target int64) (btcjson.Fee, error) {
+func (server *CommonChainRPC) estimateFeeForTarget(target int64) (jaxjson.Fee, error) {
 	if server.chainProvider.FeeEstimator == nil {
-		return btcjson.Fee{}, errors.New("Fee estimation disabled")
+		return jaxjson.Fee{}, errors.New("Fee estimation disabled")
 	}
 
 	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(target))
 	if err != nil {
-		return btcjson.Fee{}, err
+		return jaxjson.Fee{}, err
 	}
 
 	btcPerKB := float64(feeRate)
 	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
 
-	res := btcjson.Fee{
+	res := jaxjson.Fee{
 		BtcPerKB:    btcPerKB,
 		SatoshiPerB: satoshiPerB,
 		Blocks:      target,
@@ -137,7 +137,7 @@ func (server *CommonChainRPC) estimateFeeForTarget(target int64) (btcjson.Fee, e
 
 // handleDecodeRawTransaction handles decoderawtransaction commands.
 func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.DecodeRawTransactionCmd)
+	c := cmd.(*jaxjson.DecodeRawTransactionCmd)
 
 	// Deserialize the transaction.
 	hexStr := c.HexTx
@@ -151,14 +151,14 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 	var mtx wire.MsgTx
 	err = mtx.Deserialize(bytes.NewReader(serializedTx))
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCDeserialization,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "TX decode failed: " + err.Error(),
 		}
 	}
 
 	// Create and return the result.
-	txReply := btcjson.TxRawDecodeResult{
+	txReply := jaxjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
 		Locktime: mtx.LockTime,
@@ -170,13 +170,13 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 
 // handleCreateRawTransaction handles createrawtransaction commands.
 func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.CreateRawTransactionCmd)
+	c := cmd.(*jaxjson.CreateRawTransactionCmd)
 
 	// Validate the locktime, if given.
 	if c.LockTime != nil &&
 		(*c.LockTime < 0 || *c.LockTime > int64(wire.MaxTxInSequenceNum)) {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidParameter,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidParameter,
 			Message: "Locktime out of range",
 		}
 	}
@@ -203,18 +203,18 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 	params := server.chainProvider.ChainParams
 	for encodedAddr, amount := range c.Amounts {
 		// Ensure amount is in the valid range for monetary amounts.
-		if amount <= 0 || amount > btcutil.MaxSatoshi {
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCType,
+		if amount <= 0 || amount > jaxutil.MaxSatoshi {
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCType,
 				Message: "Invalid amount",
 			}
 		}
 
 		// Decode the provided address.
-		addr, err := btcutil.DecodeAddress(encodedAddr, params)
+		addr, err := jaxutil.DecodeAddress(encodedAddr, params)
 		if err != nil {
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidAddressOrKey,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidAddressOrKey,
 				Message: "Invalid address or key: " + err.Error(),
 			}
 		}
@@ -223,17 +223,17 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 		// the network encoded with the address matches the network the
 		// Server is currently on.
 		switch addr.(type) {
-		case *btcutil.AddressPubKeyHash:
-		case *btcutil.AddressScriptHash:
+		case *jaxutil.AddressPubKeyHash:
+		case *jaxutil.AddressScriptHash:
 		default:
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidAddressOrKey,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidAddressOrKey,
 				Message: "Invalid address or key",
 			}
 		}
 		if !addr.IsForNet(params) {
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInvalidAddressOrKey,
+			return nil, &jaxjson.RPCError{
+				Code: jaxjson.ErrRPCInvalidAddressOrKey,
 				Message: "Invalid address: " + encodedAddr +
 					" is for the wrong network",
 			}
@@ -247,7 +247,7 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 		}
 
 		// Convert the amount to satoshi.
-		satoshi, err := btcutil.NewAmount(amount)
+		satoshi, err := jaxutil.NewAmount(amount)
 		if err != nil {
 			context := "Failed to convert amount"
 			return nil, server.InternalRPCError(err.Error(), context)
@@ -275,7 +275,7 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 
 // handleGetRawTransaction implements the getrawtransaction command.
 func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetRawTransactionCmd)
+	c := cmd.(*jaxjson.GetRawTransactionCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -316,7 +316,7 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 }
 
 func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetTxDetailsCmd)
+	c := cmd.(*jaxjson.GetTxDetailsCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -346,10 +346,10 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, orphan bool) (*txInf
 		}, err
 	}
 
-	// return btcjson.TxRawResult{}, nil
+	// return jaxjson.TxRawResult{}, nil
 	if server.chainProvider.TxIndex == nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCNoTxInfo,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCNoTxInfo,
 			Message: "The transaction index must be enabled to query the blockchain (specify --txindex)",
 		}
 	}
@@ -419,7 +419,7 @@ type txInfo struct {
 }
 
 func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool,
-	includeOrphan bool) (*btcjson.TxRawResult, *wire.MsgTx, error) {
+	includeOrphan bool) (*jaxjson.TxRawResult, *wire.MsgTx, error) {
 	txInfo, err := server.getTx(txHash, includeOrphan)
 	if err != nil {
 		return nil, nil, err
@@ -483,7 +483,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 }
 
 func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.SendRawTransactionCmd)
+	c := cmd.(*jaxjson.SendRawTransactionCmd)
 
 	// Deserialize and send off to tx relay
 	hexStr := c.HexTx
@@ -497,28 +497,28 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 	var msgTx wire.MsgTx
 	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCDeserialization,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "TX decode failed: " + err.Error(),
 		}
 	}
 
 	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.SwapTx() {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCTxError,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCTxError,
 			Message: "Beacon not support ShardSwapTx",
 		}
 	}
 
 	if !server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerEADAction {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCTxError,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCTxError,
 			Message: "ShardChain not support TxVerEADAction",
 		}
 	}
 
 	// Use 0 for the tag to represent local chainProvider.
-	tx := btcutil.NewTx(&msgTx)
+	tx := jaxutil.NewTx(&msgTx)
 	acceptedTxs, err := server.chainProvider.TxMemPool.ProcessTransaction(tx, false, false, 0)
 	if err != nil {
 		// When the error is a rule error, it means the transaction was
@@ -529,8 +529,8 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		if !ok {
 			server.Log.Error().Msgf("Failed to process transaction %v %v", tx.Hash(), err)
 
-			return nil, &btcjson.RPCError{
-				Code:    btcjson.ErrRPCTxError,
+			return nil, &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCTxError,
 				Message: "TX rejected: " + err.Error(),
 			}
 		}
@@ -538,27 +538,27 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		server.Log.Debug().Msgf("Rejected transaction %v: %v", tx.Hash(), err)
 
 		// We'll then map the rule error to the appropriate RPC error,
-		// matching bitcoind'server behavior.
-		code := btcjson.ErrRPCTxError
+		// matching jaxnetd'server behavior.
+		code := jaxjson.ErrRPCTxError
 		if txRuleErr, ok := ruleErr.Err.(mempool.TxRuleError); ok {
 			errDesc := txRuleErr.Description
 			switch {
 			case strings.Contains(
 				strings.ToLower(errDesc), "orphan transaction",
 			):
-				code = btcjson.ErrRPCTxError
+				code = jaxjson.ErrRPCTxError
 
 			case strings.Contains(
 				strings.ToLower(errDesc), "transaction already exists",
 			):
-				code = btcjson.ErrRPCTxAlreadyInChain
+				code = jaxjson.ErrRPCTxAlreadyInChain
 
 			default:
-				code = btcjson.ErrRPCTxRejected
+				code = jaxjson.ErrRPCTxRejected
 			}
 		}
 
-		return nil, &btcjson.RPCError{
+		return nil, &jaxjson.RPCError{
 			Code:    code,
 			Message: "TX rejected: " + err.Error(),
 		}
@@ -599,7 +599,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 
 // handleGetTxOut handles gettxout commands.
 func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetTxOutCmd)
+	c := cmd.(*jaxjson.GetTxOutCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -616,7 +616,7 @@ func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan s
 }
 
 // handleGetTxOut handles gettxout commands.
-func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, includeMempool bool) (*btcjson.GetTxOutResult, error) {
+func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, includeMempool bool) (*jaxjson.GetTxOutResult, error) {
 	// If requested and the tx is available in the mempool try to fetch it
 	// from there, otherwise attempt to fetch from the block database.
 	var bestBlockHash string
@@ -635,8 +635,8 @@ func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, incl
 
 		mtx := tx.MsgTx()
 		if vout > uint32(len(mtx.TxOut)-1) {
-			return nil, &btcjson.RPCError{
-				Code: btcjson.ErrRPCInvalidTxVout,
+			return nil, &jaxjson.RPCError{
+				Code: jaxjson.ErrRPCInvalidTxVout,
 				Message: "Output index number (vout) does not " +
 					"exist for transaction.",
 			}
@@ -695,11 +695,11 @@ func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, incl
 		addresses[i] = addr.EncodeAddress()
 	}
 
-	txOutReply := &btcjson.GetTxOutResult{
+	txOutReply := &jaxjson.GetTxOutResult{
 		BestBlock:     bestBlockHash,
 		Confirmations: int64(confirmations),
-		Value:         btcutil.Amount(value).ToBTC(),
-		ScriptPubKey: btcjson.ScriptPubKeyResult{
+		Value:         jaxutil.Amount(value).ToBTC(),
+		ScriptPubKey: jaxjson.ScriptPubKeyResult{
 			Asm:       disbuf,
 			Hex:       hex.EncodeToString(pkScript),
 			ReqSigs:   int32(reqSigs),
@@ -720,7 +720,7 @@ type txOut struct {
 
 // handleGetTxOut handles gettxout commands.
 func (server *CommonChainRPC) handleGetTxOutsStatus(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetTxOutStatus)
+	c := cmd.(*jaxjson.GetTxOutStatus)
 	onlyMempool := true
 	if c.OnlyMempool != nil {
 		onlyMempool = *c.OnlyMempool
@@ -741,8 +741,8 @@ func (server *CommonChainRPC) handleGetTxOutsStatus(cmd interface{}, closeChan <
 }
 
 // getTxOutStatus handles getTxOutStatus commands.
-func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool bool) ([]btcjson.TxOutStatus, error) {
-	result := make([]btcjson.TxOutStatus, 0, len(filter))
+func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool bool) ([]jaxjson.TxOutStatus, error) {
+	result := make([]jaxjson.TxOutStatus, 0, len(filter))
 	for _, txDesc := range server.chainProvider.TxMemPool.MiningDescs() {
 		for _, in := range txDesc.Tx.MsgTx().TxIn {
 			_, ok := filter[txOut{
@@ -753,7 +753,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 				continue
 			}
 
-			result = append(result, btcjson.TxOutStatus{
+			result = append(result, jaxjson.TxOutStatus{
 				OutTxHash: in.PreviousOutPoint.Hash.String(),
 				OutIndex:  in.PreviousOutPoint.Index,
 				IsSpent:   true,
@@ -770,7 +770,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 				continue
 			}
 
-			result = append(result, btcjson.TxOutStatus{
+			result = append(result, jaxjson.TxOutStatus{
 				OutTxHash: out.txHash.String(),
 				OutIndex:  out.vout,
 				Found:     false,
@@ -789,7 +789,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 		entry, err := server.chainProvider.BlockChain().
 			FetchUtxoEntry(wire.OutPoint{Hash: out.txHash, Index: out.vout})
 		if err != nil || entry == nil {
-			result = append(result, btcjson.TxOutStatus{
+			result = append(result, jaxjson.TxOutStatus{
 				OutTxHash: out.txHash.String(),
 				OutIndex:  out.vout,
 				Found:     false,
@@ -799,7 +799,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 			continue
 		}
 
-		result = append(result, btcjson.TxOutStatus{
+		result = append(result, jaxjson.TxOutStatus{
 			OutTxHash: out.txHash.String(),
 			OutIndex:  out.vout,
 			Found:     true,
@@ -813,7 +813,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 
 // handleGetBlockTxOps handles getblocktxops commands.
 func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetBlockTxOpsCmd)
+	c := cmd.(*jaxjson.GetBlockTxOpsCmd)
 
 	// Convert the provided block hash hex to a Hash.
 	hash, err := chainhash.NewHashFromStr(c.BlockHash)
@@ -828,14 +828,14 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 		return err
 	})
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCBlockNotFound,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCBlockNotFound,
 			Message: "Block not found",
 		}
 	}
 
 	// Deserialize the block.
-	blk, err := btcutil.NewBlockFromBytes(server.chainProvider.ChainCtx, blkBytes)
+	blk, err := jaxutil.NewBlockFromBytes(server.chainProvider.ChainCtx, blkBytes)
 	if err != nil {
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
@@ -854,11 +854,11 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 
 	blk.SetHeight(blockHeight)
 	txs := blk.Transactions()
-	result := btcjson.BlockTxOperations{
+	result := jaxjson.BlockTxOperations{
 		BlockHash:     c.BlockHash,
 		BlockHeight:   int64(blockHeight),
 		Confirmations: confirmations,
-		Ops:           make([]btcjson.TxOperation, 0, len(txs)*2),
+		Ops:           make([]jaxjson.TxOperation, 0, len(txs)*2),
 	}
 
 	for txId, tx := range txs {
@@ -871,7 +871,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 				addresses = append(addresses, adr.EncodeAddress())
 			}
 
-			op := btcjson.TxOperation{
+			op := jaxjson.TxOperation{
 				Input:        false,
 				PkScript:     hex.EncodeToString(out.PkScript),
 				Addresses:    addresses,
@@ -909,7 +909,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 			for _, adr := range addrr {
 				addresses = append(addresses, adr.EncodeAddress())
 			}
-			op := btcjson.TxOperation{
+			op := jaxjson.TxOperation{
 				Input:        true,
 				PkScript:     hex.EncodeToString(out.PkScript),
 				Addresses:    addresses,
@@ -933,7 +933,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 
 // handleListTxOut handles listtxout commands.
 func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*btcjson.ListTxOutCmd)
+	_ = cmd.(*jaxjson.ListTxOutCmd)
 
 	entries, err := server.chainProvider.BlockChain().ListUtxoEntry()
 	if err != nil {
@@ -942,7 +942,7 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
-	var reply = make([]btcjson.ExtendedTxOutResult, 0, len(entries))
+	var reply = make([]jaxjson.ExtendedTxOutResult, 0, len(entries))
 	for out, entry := range entries {
 		var confirmations int32
 		var pkScript []byte
@@ -976,13 +976,13 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 			addresses[i] = addr.EncodeAddress()
 		}
 
-		reply = append(reply, btcjson.ExtendedTxOutResult{
+		reply = append(reply, jaxjson.ExtendedTxOutResult{
 			TxHash:        out.Hash.String(),
 			Index:         out.Index,
 			Used:          entry.IsSpent(),
 			Confirmations: int64(confirmations),
 			Value:         entry.Amount(),
-			ScriptPubKey: btcjson.ScriptPubKeyResult{
+			ScriptPubKey: jaxjson.ScriptPubKeyResult{
 				Asm:       disbuf,
 				Hex:       hex.EncodeToString(pkScript),
 				ReqSigs:   int32(reqSigs),
@@ -993,32 +993,32 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 		})
 	}
 
-	return btcjson.ListTxOutResult{List: reply}, nil
+	return jaxjson.ListTxOutResult{List: reply}, nil
 }
 
 // handleEADAddresses handles handleEADAddresses commands.
 func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	opts := cmd.(*btcjson.ListEADAddressesCmd)
+	opts := cmd.(*jaxjson.ListEADAddressesCmd)
 
 	listEADAddresses, err := server.chainProvider.BlockChain().ListEADAddresses()
 	if err != nil {
 		return nil, rpcNoTxInfoError(nil)
 	}
 
-	var reply = make(map[string]btcjson.EADAddresses, len(listEADAddresses))
+	var reply = make(map[string]jaxjson.EADAddresses, len(listEADAddresses))
 	for pubKey, eadAddresses := range listEADAddresses {
 		if opts.EadPublicKey != nil && pubKey != *opts.EadPublicKey {
 			continue
 		}
 
-		ips := make([]btcjson.EADAddress, 0, len(eadAddresses.IPs))
+		ips := make([]jaxjson.EADAddress, 0, len(eadAddresses.IPs))
 		for _, p := range eadAddresses.IPs {
 			allPresent, _ := p.HasShard(opts.Shards...)
 			if len(opts.Shards) > 0 && !allPresent {
 				continue
 			}
 
-			ips = append(ips, btcjson.EADAddress{
+			ips = append(ips, jaxjson.EADAddress{
 				IP:         p.IP.String(),
 				Port:       p.Port,
 				ExpiresAt:  p.ExpiresAt,
@@ -1031,7 +1031,7 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 			continue
 		}
 
-		reply[pubKey] = btcjson.EADAddresses{
+		reply[pubKey] = jaxjson.EADAddresses{
 			PublicKey: string(eadAddresses.OwnerPubKey),
 			ID:        eadAddresses.ID,
 			IPs:       ips,
@@ -1039,7 +1039,7 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 
 	}
 
-	return btcjson.ListEADAddresses{Agents: reply}, nil
+	return jaxjson.ListEADAddresses{Agents: reply}, nil
 }
 
 // handleSearchRawTransactions implements the searchrawtransactions command.
@@ -1047,15 +1047,15 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 	// Respond with an error if the address index is not enabled.
 	addrIndex := server.chainProvider.AddrIndex
 	if addrIndex == nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCMisc,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCMisc,
 			Message: "Address index must be enabled (--addrindex)",
 		}
 	}
 
 	// Override the flag for including extra previous output information in
 	// each input if needed.
-	c := cmd.(*btcjson.SearchRawTransactionsCmd)
+	c := cmd.(*jaxjson.SearchRawTransactionsCmd)
 	vinExtra := false
 	if c.VinExtra != nil {
 		vinExtra = *c.VinExtra != 0
@@ -1066,18 +1066,18 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 	// transaction index, so this check is redundant, but it'server better to be
 	// safe in case the address index is ever changed to not rely on it.
 	if vinExtra && server.chainProvider.TxIndex == nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCMisc,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCMisc,
 			Message: "Transaction index must be enabled (--txindex)",
 		}
 	}
 
 	// Attempt to decode the supplied address.
 	params := server.chainProvider.ChainParams
-	addr, err := btcutil.DecodeAddress(c.Address, params)
+	addr, err := jaxutil.DecodeAddress(c.Address, params)
 	if err != nil {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCInvalidAddressOrKey,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCInvalidAddressOrKey,
 			Message: "Invalid address or key: " + err.Error(),
 		}
 	}
@@ -1188,8 +1188,8 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 
 	// Address has never been used if neither source yielded any results.
 	if len(addressTxns) == 0 {
-		return nil, &btcjson.RPCError{
-			Code:    btcjson.ErrRPCNoTxInfo,
+		return nil, &jaxjson.RPCError{
+			Code:    jaxjson.ErrRPCNoTxInfo,
 			Message: "No information available about address",
 		}
 	}
@@ -1229,7 +1229,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 
 	// The verbose flag is set, so generate the JSON object and return it.
 	best := server.chainProvider.BlockChain().BestSnapshot()
-	srtList := make([]btcjson.SearchRawTransactionsResult, len(addressTxns))
+	srtList := make([]jaxjson.SearchRawTransactionsResult, len(addressTxns))
 	for i := range addressTxns {
 		// The deserialized transaction is needed, so deserialize the
 		// retrieved transaction if it'server in serialized form (which will
@@ -1273,8 +1273,8 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 			// Fetch the header from BlockChain.
 			header, err := server.chainProvider.BlockChain().HeaderByHash(blkHash)
 			if err != nil {
-				return nil, &btcjson.RPCError{
-					Code:    btcjson.ErrRPCBlockNotFound,
+				return nil, &jaxjson.RPCError{
+					Code:    jaxjson.ErrRPCBlockNotFound,
 					Message: "Block not found",
 				}
 			}
@@ -1314,7 +1314,7 @@ func (server *CommonChainRPC) handleGetMempoolInfo(cmd interface{}, closeChan <-
 		numBytes += int64(txD.Tx.MsgTx().SerializeSize())
 	}
 
-	ret := &btcjson.GetMempoolInfoResult{
+	ret := &jaxjson.GetMempoolInfoResult{
 		Size:  int64(len(mempoolTxns)),
 		Bytes: numBytes,
 	}
@@ -1324,7 +1324,7 @@ func (server *CommonChainRPC) handleGetMempoolInfo(cmd interface{}, closeChan <-
 
 // handleGetRawMempool implements the getrawmempool command.
 func (server *CommonChainRPC) handleGetRawMempool(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcjson.GetRawMempoolCmd)
+	c := cmd.(*jaxjson.GetRawMempoolCmd)
 	mp := server.chainProvider.TxMemPool
 
 	if c.Verbose != nil && *c.Verbose {

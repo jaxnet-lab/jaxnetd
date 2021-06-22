@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 )
 
 // Driver defines a structure for backend drivers to use when they registered

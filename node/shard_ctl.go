@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type ShardInfo struct {
@@ -35,7 +35,7 @@ type Index struct {
 	Shards           map[uint32]ShardInfo `json:"shards"`
 }
 
-func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
+func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
 	if index.LastBeaconHeight < block.Height() {
 		index.LastBeaconHeight = block.Height()
 	}

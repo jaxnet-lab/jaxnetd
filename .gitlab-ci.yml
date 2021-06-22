@@ -9,7 +9,7 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/core/shard.core/$CI_COMMIT_REF_NAME:latest
+  IMAGE: registry.gitlab.com/jaxnet/jaxnetd/$CI_COMMIT_REF_NAME:latest
 
 .before_script: &before_script
   before_script:

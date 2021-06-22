@@ -6,8 +6,8 @@
 package mempool
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // RuleError identifies a rule violation.  It is used to indicate that

@@ -6,9 +6,9 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 
-	// "gitlab.com/jaxnet/core/shard.core/shards/chain/beacon"
+	// "gitlab.com/jaxnet/jaxnetd/shards/chain/beacon"
 	"math/rand"
 	"reflect"
 	"testing"
