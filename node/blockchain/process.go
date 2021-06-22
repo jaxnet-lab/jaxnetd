@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -150,11 +150,6 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 
-	// Perform checks of the coinbase tx structure according to merge mining spec.
-	err = b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
-	if err != nil {
-		return false, false, err
-	}
 	// Find the previous checkpoint and perform some additional checks based
 	// on the checkpoint.  This provides a few nice properties such as
 	// preventing old side chain blocks before the last checkpoint,
