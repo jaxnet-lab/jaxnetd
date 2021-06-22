@@ -8,6 +8,7 @@ package beacon
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -121,10 +122,10 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	if !btcBurnReward && !jaxBurnReward {
 		return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet reward prohibited")
 	}
-
 	properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
 	if !properReward {
-		return errors.New("invalid format of beacon coinbase tx: invalid value of second out")
+		return fmt.Errorf("invalid format of beacon coinbase tx: invalid value of second out - has(%d) expected(%d) height(%d)",
+			beaconCoinbaseTx.TxOut[1].Value, calcBlockSubsidy(height), height)
 	}
 
 	return nil

@@ -8,8 +8,8 @@ package blockchain
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 )
@@ -40,9 +40,15 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	blockHeight := prevNode.Height() + 1
 	block.SetHeight(blockHeight)
 
+	// Perform checks of the coinbase tx structure according to merge mining spec.
+	err := b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
+	if err != nil {
+		return false, err
+	}
+
 	// The block must pass all of the validation rules which depend on the
 	// position of the block within the block chain.
-	err := b.checkBlockContext(block, prevNode, flags)
+	err = b.checkBlockContext(block, prevNode, flags)
 	if err != nil {
 		return false, err
 	}
