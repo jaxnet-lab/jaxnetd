@@ -4,7 +4,6 @@ services:
 
 stages:
   - build
-  - deploy
   - release
 
 variables:
@@ -51,37 +50,6 @@ build:release:
       - dist
   only:
     - master
-    - dev
-    - stage
-
-.deploy: &deploy
-  stage: deploy
-  <<: *before_script
-  needs: [ "build:docker" ]
-  tags:
-    - docker
-  script:
-    - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-    - ssh ${REMOTE} "cd /opt/shard-core && docker-compose down && docker-compose up -d"
-  when: manual
-
-deploy:dev:
-  stage: deploy
-  <<: *deploy
-  variables:
-    REMOTE: $DEV_REMOTE
-  script:
-    - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-  only:
-    - dev
-
-deploy:stage:
-  <<: *deploy
-  variables:
-    REMOTE: $STAGE_REMOTE
-  only:
-    - master
-    - stage
 
 release:
   stage: release
