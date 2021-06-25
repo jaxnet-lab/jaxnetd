@@ -1653,10 +1653,8 @@ func TestEADScript(t *testing.T) {
 		return
 	}
 
-	pk := (*btcec.PublicKey)(&key.PublicKey).
-		SerializeCompressed()
-	address, err := jaxutil.NewAddressPubKey(pk,
-		&chaincfg.TestNet3Params)
+	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeCompressed()
+	address, err := jaxutil.NewAddressPubKey(pk, &chaincfg.TestNet3Params)
 	if err != nil {
 		t.Errorf("failed to make address for: %v", err)
 		return
@@ -1699,7 +1697,7 @@ func TestEADScript(t *testing.T) {
 		return
 	}
 
-	if class != EADAddress {
+	if class != EADAddressTy {
 		t.Errorf("got invalid script type: %v", class)
 		return
 	}
@@ -1737,6 +1735,47 @@ func TestEADScript(t *testing.T) {
 		t.Errorf("shardID mismatch: %v", scriptData.ShardID)
 		return
 	}
+
+	// t.Parallel()
+
+	// make key
+	// make script based on key.
+	// sign with magic pixie dust.
+	hashTypes := []SigHashType{
+		SigHashOld, // no longer used but should act like all
+		SigHashAll,
+		SigHashNone,
+		SigHashSingle,
+		SigHashAll | SigHashAnyOneCanPay,
+		SigHashNone | SigHashAnyOneCanPay,
+		SigHashSingle | SigHashAnyOneCanPay,
+	}
+	inputAmounts := []int64{5, 10, 15}
+	tx := &wire.MsgTx{
+		Version: wire.TxVerEADAction,
+		TxIn: []*wire.TxIn{
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
+		LockTime: 0,
+	}
+
+	for _, hashType := range hashTypes {
+		for i := range tx.TxIn {
+
+			msg := fmt.Sprintf("%d:%d", hashType, i)
+			// activateTraceLogger()
+
+			if err := signAndCheck(msg, tx, i, inputAmounts[i], script, hashType,
+				mkGetKey(map[string]addressToKey{
+					address.EncodeAddress(): {key, false},
+				}), mkGetScript(nil), nil); err != nil {
+				t.Error(err)
+				break
+			}
+
+		}
+	}
+
 }
 
 func TestSmallInt(t *testing.T) {

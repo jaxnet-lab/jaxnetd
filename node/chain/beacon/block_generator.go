@@ -22,7 +22,7 @@ import (
 const (
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 20 * jaxutil.SatoshiPerBitcoin
+	baseSubsidy = 20
 )
 
 type StateProvider struct {
@@ -164,29 +164,29 @@ func calcBlockSubsidy(height int32) int64 {
 
 	// Year 1
 	case height >= 0 && height <= endOfEpoch:
-		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
+		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
 
 	// Year 2
 	case height > endOfEpoch && height <= endOfEpoch*2:
-		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
+		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
 
 	// Year 3
 	case height > endOfEpoch*2 && height <= endOfEpoch*3:
-		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
+		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
 
 	// Year 4
 	case height > endOfEpoch*3 && height <= endOfEpoch*4:
-		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
+		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
 
 	// Year 5
 	case height > endOfEpoch*4 && height <= endOfEpoch*5:
-		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.SatoshiPerBitcoin
+		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
 
 	// Year 6+
 	case height > endOfEpoch*5:
-		return baseSubsidy
+		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
 	default:
-		return baseSubsidy
+		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
 	}
 
 }

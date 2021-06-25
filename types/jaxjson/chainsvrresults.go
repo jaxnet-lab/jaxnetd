@@ -533,6 +533,7 @@ type GetRawMempoolVerboseResult struct {
 	StartingPriority float64  `json:"startingpriority"`
 	CurrentPriority  float64  `json:"currentpriority"`
 	Depends          []string `json:"depends"`
+	PreciseFee       int64    `json:"precise_fee"`
 }
 
 // ScriptPubKeyResult models the scriptPubKey data of a tx script.  It is
@@ -553,6 +554,7 @@ type GetTxOutResult struct {
 	ScriptPubKey  ScriptPubKeyResult `json:"scriptPubKey"`
 	Coinbase      bool               `json:"coinbase"`
 	IsSpent       bool               `json:"isSpent"`
+	PreciseValue  int64              `json:"precise_value"`
 }
 
 type GetTxOutStatus struct {
@@ -706,8 +708,9 @@ func (v *Vin) MarshalJSON() ([]byte, error) {
 
 // PrevOut represents previous output for an input Vin.
 type PrevOut struct {
-	Addresses []string `json:"addresses,omitempty"`
-	Value     float64  `json:"value"`
+	Addresses    []string `json:"addresses,omitempty"`
+	Value        float64  `json:"value"`
+	PreciseValue int64    `json:"precise_value"`
 }
 
 // VinPrevOut is like Vin except it includes PrevOut.  It is used by searchrawtransaction
@@ -786,6 +789,7 @@ type Vout struct {
 	Value        float64            `json:"value"`
 	N            uint32             `json:"n"`
 	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
+	PreciseValue int64              `json:"precise_value"`
 }
 
 // GetMiningInfoResult models the data from the getmininginfo command.
@@ -892,7 +896,7 @@ type EstimateSmartFeeResult struct {
 }
 
 type Fee struct {
-	BtcPerKB    float64 `json:"btc_per_kb"`
+	CoinsPerKB  float64 `json:"coins_per_kb"`
 	SatoshiPerB float64 `json:"satoshi_per_b"`
 	Blocks      int64   `json:"blocks"`
 	Estimated   bool    `json:"estimated"`

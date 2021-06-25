@@ -39,7 +39,7 @@ node:
 
 btcd:
   network: "simnet"
-  enable: true
+#  enable: true
   rpc:
     host: 127.0.0.1:18556
     user: "jax"

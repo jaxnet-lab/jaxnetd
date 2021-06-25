@@ -605,7 +605,6 @@ func TestEADRegistration(ot *testing.T) {
 				Port:           port,
 				ExpirationDate: expTime,
 				Owner:          minerKP.AddressPubKey,
-				OpCode:         txscript.EADAddressCreate,
 			})
 			assert.NoError(t, err)
 			scripts = append(scripts, scriptAddress)
@@ -684,7 +683,6 @@ func TestEAD(ot *testing.T) {
 			assert.NoError(t, err)
 			scriptsToCreate = append(scriptsToCreate, scriptAddress)
 
-			data.OpCode = txscript.EADAddressDelete
 			scriptAddress, err = txscript.EADAddressScript(data)
 			assert.NoError(t, err)
 			scriptsToDelete = append(scriptsToDelete, scriptAddress)

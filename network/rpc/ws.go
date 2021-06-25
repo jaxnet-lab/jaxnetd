@@ -11,14 +11,15 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -634,7 +635,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 		amount += txOut.Value
 	}
 
-	ntfn := jaxjson.NewTxAcceptedNtfn(txHashStr, jaxutil.Amount(amount).ToBTC())
+	ntfn := jaxjson.NewTxAcceptedNtfn(txHashStr, jaxutil.Amount(amount).ToCoin(chain.ChainCtx.IsBeacon()))
 	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal tx notification")
@@ -650,8 +651,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 				continue
 			}
 
-			net := chain.ChainParams
-			rawTx, err := m.CreateTxRawResult(net, mtx, txHashStr, nil,
+			rawTx, err := m.CreateTxRawResult(chain.ChainCtx, mtx, txHashStr, nil,
 				"", 0, 0)
 			if err != nil {
 				return

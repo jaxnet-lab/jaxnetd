@@ -23,6 +23,8 @@ const (
 	AmountMegaBTC  AmountUnit = 6
 	AmountKiloBTC  AmountUnit = 3
 	AmountBTC      AmountUnit = 0
+	AmountJAXNet   AmountUnit = 0
+	AmountJAX      AmountUnit = 0
 	AmountMilliBTC AmountUnit = -3
 	AmountMicroBTC AmountUnit = -6
 	AmountSatoshi  AmountUnit = -8
@@ -98,6 +100,23 @@ func (a Amount) ToUnit(u AmountUnit) float64 {
 // ToBTC is the equivalent of calling ToUnit with AmountBTC.
 func (a Amount) ToBTC() float64 {
 	return a.ToUnit(AmountBTC)
+}
+
+// ToJax ...
+func (a Amount) ToJax() float64 {
+	return float64(a) / math.Pow10(3)
+}
+
+// ToJaxNet ...
+func (a Amount) ToJaxNet() float64 {
+	return float64(a) / math.Pow10(8)
+}
+
+func (a Amount) ToCoin(isBeacon bool) float64 {
+	if isBeacon {
+		return a.ToJaxNet()
+	}
+	return a.ToJax()
 }
 
 // Format formats a monetary amount counted in bitcoin base units as a

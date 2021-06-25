@@ -206,7 +206,7 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	case MultiSigLockTy:
 		script, _ := signMultiSigLock(tx, idx, subScript, hashType, addresses, nrequired, kdb)
 		return script, class, addresses, nrequired, nil
-	case EADAddress:
+	case EADAddressTy:
 		// look up key for address
 		key, _, err := kdb.GetKey(addresses[0])
 		if err != nil {

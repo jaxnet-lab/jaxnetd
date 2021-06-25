@@ -15,6 +15,7 @@ import (
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -155,7 +156,7 @@ func (c *BlockGenerator) AcceptBlock(blockHeader wire.BlockHeader) error {
 
 func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
 	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return 50 >> uint(height/210000)
+	return (20 * jaxutil.SatoshiPerJAXCoin) >> uint(height/210000)
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
