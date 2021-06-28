@@ -256,7 +256,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		txns := blk.Transactions()
 		rawTxns := make([]jaxjson.TxRawResult, len(txns))
 		for i, tx := range txns {
-			rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainCtx, tx.MsgTx(),
+			rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainCtx.Params(), tx.MsgTx(),
 				tx.Hash().String(), blockHeader, hash.String(),
 				blockHeight, best.Height)
 			if err != nil {

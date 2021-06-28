@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -101,7 +100,7 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx, age int32) []jaxjson.Vin {
 
 // CreateVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, ctx chain.IChainCtx, filterAddrMap map[string]struct{}) []jaxjson.Vout {
+func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []jaxjson.Vout {
 	voutList := make([]jaxjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the
@@ -112,7 +111,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, ctx chain.IChainCtx, filterAdd
 		// couldn't parse and there is no additional information about
 		// it anyways.
 		scriptClass, addrs, reqSigs, _ := txscript.ExtractPkScriptAddrs(
-			v.PkScript, ctx.Params())
+			v.PkScript, chainParams)
 
 		// Encode the addresses while checking if the address passes the
 		// filter when needed.
@@ -138,7 +137,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, ctx chain.IChainCtx, filterAdd
 
 		var vout jaxjson.Vout
 		vout.N = uint32(i)
-		vout.Value = jaxutil.Amount(v.Value).ToCoin(ctx.IsBeacon())
+		vout.Value = jaxutil.Amount(v.Value).ToCoin(chainParams.IsBeacon)
 		vout.PreciseValue = v.Value
 		vout.ScriptPubKey.Addresses = encodedAddrs
 		vout.ScriptPubKey.Asm = disbuf
@@ -154,7 +153,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, ctx chain.IChainCtx, filterAdd
 
 // CreateTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
-func (xt *ToolsXt) CreateTxRawResult(ctx chain.IChainCtx, mtx *wire.MsgTx,
+func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader wire.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*jaxjson.TxRawResult, error) {
 
@@ -166,13 +165,13 @@ func (xt *ToolsXt) CreateTxRawResult(ctx chain.IChainCtx, mtx *wire.MsgTx,
 	txReply := &jaxjson.TxRawResult{
 		Hex:        mtxHex,
 		Txid:       txHash,
-		ChainName:  ctx.Name(),
+		ChainName:  chainParams.Name,
 		Hash:       mtx.WitnessHash().String(),
 		Size:       int32(mtx.SerializeSize()),
 		Vsize:      int32(GetTxVirtualSize(jaxutil.NewTx(mtx))),
 		Weight:     int32(chaindata.GetTransactionWeight(jaxutil.NewTx(mtx))),
 		Vin:        xt.CreateVinList(mtx, 1+chainHeight-blkHeight),
-		Vout:       xt.CreateVoutList(mtx, ctx, nil),
+		Vout:       xt.CreateVoutList(mtx, chainParams, nil),
 		InAmount:   0,
 		OutAmount:  0,
 		Fee:        0,

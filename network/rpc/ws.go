@@ -651,7 +651,7 @@ func (m *wsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 				continue
 			}
 
-			rawTx, err := m.CreateTxRawResult(chain.ChainCtx, mtx, txHashStr, nil,
+			rawTx, err := m.CreateTxRawResult(chain.ChainCtx.Params(), mtx, txHashStr, nil,
 				"", 0, 0)
 			if err != nil {
 				return

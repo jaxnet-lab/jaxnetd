@@ -163,7 +163,7 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 		Version:  mtx.Version,
 		Locktime: mtx.LockTime,
 		Vin:      server.CreateVinList(&mtx, 0),
-		Vout:     server.CreateVoutList(&mtx, server.chainProvider.ChainCtx, nil),
+		Vout:     server.CreateVoutList(&mtx, server.chainProvider.ChainParams, nil),
 	}
 	return txReply, nil
 }
@@ -442,7 +442,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 		chainHeight = server.chainProvider.BlockChain().BestSnapshot().Height
 	}
 
-	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainCtx, txInfo.tx, txHash.String(),
+	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainCtx.Params(), txInfo.tx, txHash.String(),
 		blkHeader, blkHashStr, txInfo.blkHeight, chainHeight)
 	if err != nil {
 		context := "Failed to create TxRawResult"
@@ -1259,7 +1259,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 		if err != nil {
 			return nil, err
 		}
-		result.Vout = server.CreateVoutList(mtx, server.chainProvider.ChainCtx, filterAddrMap)
+		result.Vout = server.CreateVoutList(mtx, server.chainProvider.ChainCtx.Params(), filterAddrMap)
 		result.Version = mtx.Version
 		result.LockTime = mtx.LockTime
 
