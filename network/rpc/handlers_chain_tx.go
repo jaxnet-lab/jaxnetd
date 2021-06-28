@@ -1015,7 +1015,7 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 		ips := make([]jaxjson.EADAddress, 0, len(eadAddresses.IPs))
 		for _, p := range eadAddresses.IPs {
 			_, has := p.HasShard(opts.Shards...)
-			if len(opts.Shards) > 0 && has {
+			if len(opts.Shards) > 0 && !has {
 				continue
 			}
 
