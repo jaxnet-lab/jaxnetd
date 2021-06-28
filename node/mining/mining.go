@@ -27,8 +27,9 @@ import (
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority = jaxutil.SatoshiPerBitcoin * 144.0 / 250
-
+	MinHighPriority       = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityBeacon = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityShard  = jaxutil.SatoshiPerJAXCoin * 144.0 / 250
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
 	// generated via jaxnetd.
@@ -826,7 +827,7 @@ mempoolLoop:
 		// the priority size or there are no more high-priority
 		// transactions.
 		if !sortedByFee && (blockPlusTxWeight >= g.policy.BlockPrioritySize ||
-			prioItem.priority <= MinHighPriority) {
+			prioItem.priority <= MinHighPriority) { // todo (mike): use precise value
 
 			log.Trace().Msgf(
 				"Switching to sort by fees per kilobyte blockSize %d >= BlockPrioritySize %d || priority %.2f <= minHighPriority %.2f",

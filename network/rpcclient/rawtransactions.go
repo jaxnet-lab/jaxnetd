@@ -300,7 +300,7 @@ func (c *Client) CreateRawTransactionAsync(inputs []jaxjson.TransactionInput,
 
 	convertedAmts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
-		convertedAmts[addr.String()] = amount.ToBTC()
+		convertedAmts[addr.String()] = amount.ToCoin(c.isForBeacon())
 	}
 	cmd := jaxjson.NewCreateRawTransactionCmd(inputs, convertedAmts, lockTime)
 	return c.sendCmd(cmd)

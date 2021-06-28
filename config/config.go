@@ -24,10 +24,10 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
@@ -346,7 +346,7 @@ func LoadConfig() (*node.Config, []string, error) {
 				BlockMaxWeight:    defaultBlockMaxWeight,
 				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
 				MaxPeers:          defaultMaxPeers,
-				MinRelayTxFee:     mempool.DefaultMinRelayTxFee.ToBTC(),
+				MinRelayTxFee:     int64(mempool.DefaultMinRelayTxFee),
 				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
 				TxIndex:           defaultTxIndex,
 				AddrIndex:         defaultAddrIndex,
@@ -678,14 +678,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	// Validate the the minrelaytxfee.
-	cfg.Node.BeaconChain.MinRelayTxFeeValues, err = jaxutil.NewAmount(cfg.Node.BeaconChain.MinRelayTxFee)
-	if err != nil {
-		str := "%s: invalid minrelaytxfee: %v"
-		err := fmt.Errorf(str, funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
+	cfg.Node.BeaconChain.MinRelayTxFeeValues = jaxutil.Amount(cfg.Node.BeaconChain.MinRelayTxFee)
 
 	// Limit the max block size to a sane value.
 	if cfg.Node.BeaconChain.BlockMaxSize < blockMaxSizeMin || cfg.Node.BeaconChain.BlockMaxSize >

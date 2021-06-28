@@ -40,7 +40,7 @@ type ChainRuntimeConfig struct {
 	RelayNonStd         bool           `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
 	FreeTxRelayLimit    float64        `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
 	MaxOrphanTxs        int            `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	MinRelayTxFee       float64        `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
+	MinRelayTxFee       int64          `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in satoshi/kB to be considered a non-zero fee."`
 	MinRelayTxFeeValues jaxutil.Amount `yaml:"-"`
 	NoCFilters          bool           `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
 	DisableCheckpoints  bool           `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`

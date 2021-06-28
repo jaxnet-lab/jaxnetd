@@ -28,8 +28,8 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 var (
@@ -936,6 +936,14 @@ func (c *Client) getShardID() uint32 {
 		c.oneTimeShardID = nil
 	}
 	return shardID
+}
+
+func (c *Client) isForBeacon() bool {
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+	}
+	return shardID == 0
 }
 
 // sendCmd sends the passed command to the associated server and returns a

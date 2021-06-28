@@ -380,7 +380,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 	if stxos != nil {
 		for _, input := range *stxos {
 			class := txscript.GetScriptClass(input.PkScript)
-			if class != txscript.EADAddress {
+			if class != txscript.EADAddressTy {
 				continue
 			}
 
@@ -393,7 +393,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 	outputs := tx.MsgTx().TxOut
 	for outInd, out := range outputs {
 		class := txscript.GetScriptClass(out.PkScript)
-		if class != txscript.EADAddress {
+		if class != txscript.EADAddressTy {
 			continue
 		}
 
@@ -402,12 +402,12 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 			return err
 		}
 
-		if scriptData.OpCode == txscript.EADAddressDelete {
-			if err = removeEAD(out.PkScript); err != nil {
-				return err
-			}
-			continue
-		}
+		// if scriptData.OpCode == txscript.EADAddressDelete {
+		// 	if err = removeEAD(out.PkScript); err != nil {
+		// 		return err
+		// 	}
+		// 	continue
+		// }
 
 		ownerKey := string(scriptData.RawKey)
 		addr, ok := view.eadAddresses[ownerKey]

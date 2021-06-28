@@ -63,7 +63,7 @@ const (
 	MultiSigTy                               // Multi signature.
 	MultiSigLockTy                           // Multi signature with time lock (msl).
 	NullDataTy                               // Empty data-only (provably prunable).
-	EADAddress                               // Management of the EAD Net Address.
+	EADAddressTy                             // Management of the EAD Net Address.
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -78,7 +78,7 @@ var scriptClassToName = []string{
 	MultiSigTy:            "multisig",
 	MultiSigLockTy:        "multisig_lock",
 	NullDataTy:            "nulldata",
-	EADAddress:            "ead_address",
+	EADAddressTy:          "ead_address",
 }
 
 // String implements the Stringer interface by returning the name of
@@ -164,18 +164,6 @@ func isNullData(pops []parsedOpcode) bool {
 		len(pops[1].data) <= MaxDataCarrierSize
 }
 
-// isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
-// false otherwise.
-func isEADRegistration(pops []parsedOpcode) bool {
-	return len(pops) == 7 &&
-		pops[0].opcode.value >= OP_DATA_4 && // todo: fix numbers
-		pops[1].opcode.value >= OP_DATA_1 && // todo: fix numbers
-		pops[2].opcode.value >= OP_DATA_1 && // todo: fix numbers
-		(pops[4].opcode.value == OP_ADD_EAD_ADDRESS || pops[4].opcode.value == OP_RM_EAD_ADDRESS) &&
-		(len(pops[5].data) == 33 || len(pops[5].data) == 65) &&
-		pops[6].opcode.value == OP_CHECKSIG
-}
-
 // scriptType returns the type of the script being inspected from the known
 // standard types.
 func typeOfScript(pops []parsedOpcode) ScriptClass {
@@ -194,7 +182,7 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 	} else if isMultiSigLock(pops) {
 		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
-		return EADAddress
+		return EADAddressTy
 	} else if isNullData(pops) {
 		return NullDataTy
 	}
@@ -248,7 +236,7 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 	case MultiSigLockTy:
 		return asSmallInt(pops[mslFirstMSigOpI].opcode) + 1
 
-	case EADAddress:
+	case EADAddressTy:
 		return 1
 
 	case NullDataTy:
@@ -521,11 +509,6 @@ func NullDataScript(data []byte) ([]byte, error) {
 	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
 }
 
-const (
-	EADAddressCreate = OP_ADD_EAD_ADDRESS
-	EADAddressDelete = OP_RM_EAD_ADDRESS
-)
-
 type EADScriptData struct {
 	ShardID        uint32
 	IP             net.IP
@@ -533,34 +516,63 @@ type EADScriptData struct {
 	ExpirationDate int64
 	Owner          *jaxutil.AddressPubKey
 	RawKey         []byte
-	OpCode         byte
 }
 
 func (e EADScriptData) Encode() ([]byte, error) {
-	if e.OpCode == 0 {
-		e.OpCode = EADAddressCreate
-	}
-
 	return NewScriptBuilder().
-		AddData(scriptNum(e.ExpirationDate).Bytes()).
-		AddData(scriptNum(e.Port).Bytes()).
+		AddData(e.Owner.ScriptAddress()).
+		AddOp(OP_CHECKSIG).
+		AddOp(OP_NOP).
 		// The scriptNum doing shitty optimization for numbers less than 16,
 		// but the PushedData function and the parseScript do not support this optimization
 		// and won't extract value.
 		AddData(scriptNum(e.ShardID + 16).Bytes()).
-		AddData(e.IP).
-		AddOp(e.OpCode).
-		AddData(e.Owner.ScriptAddress()).
-		AddOp(OP_CHECKSIG).
+		AddData(scriptNum(e.ExpirationDate).Bytes()).
+		AddData([]byte(e.IP.String())).
+		AddData(scriptNum(e.Port).Bytes()).
 		Script()
 }
 
-// EADAddressScript ...
+// isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
+// false otherwise.
+// The structure of EADAddressTy:
+// [0] <owner_pubkey>
+// [1] OP_CHECKSIG
+// [2] OP_NOP
+// [3] <shard_id>
+// [4] <expiration_date>
+// [5] <ip>
+// [6] <port>
+func isEADRegistration(pops []parsedOpcode) bool {
+	isIP := func(data []byte) bool {
+		ip := net.ParseIP(string(data))
+		return ip != nil
+	}
+
+	return len(pops) == 7 &&
+		(len(pops[0].data) == 33 || len(pops[0].data) == 65) &&
+		pops[1].opcode.value == OP_CHECKSIG &&
+		pops[2].opcode.value == OP_NOP &&
+		isNumber(pops[3].opcode) &&
+		isNumber(pops[4].opcode) &&
+		isIP(pops[5].data) &&
+		isNumber(pops[6].opcode)
+}
+
+// EADAddressScript creates new script for registration of the new Exchange Agent.
 func EADAddressScript(data EADScriptData) ([]byte, error) {
 	return data.Encode()
 }
 
-// EADAddressScriptData ...
+// EADAddressScriptData extract registration details from EADAddressTy.
+// The structure of EADAddressTy:
+// [0] <owner_pubkey>
+// [1] OP_CHECKSIG
+// [2] OP_NOP
+// [3] <shard_id>
+// [4] <expiration_date>
+// [5] <ip>
+// [6] <port>
 func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	var pops []parsedOpcode
 	pops, err = parseScript(script)
@@ -568,37 +580,41 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 		return
 	}
 
-	var data [][]byte
-	data, err = PushedData(script)
-	if err != nil {
-		return
-	}
-	if len(data) != 4 {
-		err = errors.New("ead script data is invalid")
+	scriptData.RawKey = make([]byte, hex.EncodedLen(len(pops[0].data)))
+	hex.Encode(scriptData.RawKey, pops[0].data)
+
+	var shardID uint32
+	if isSmallInt(pops[2].opcode) {
+		rawShardID := asSmallInt(pops[3].opcode)
+		shardID = uint32(rawShardID)
+	} else {
+		var rawShardID scriptNum
+		rawShardID, err = makeScriptNum(pops[3].data, true, 1)
+		if err != nil {
+			return
+		}
+		shardID = uint32(rawShardID)
 	}
 
 	var rawTime scriptNum
-	rawTime, err = makeScriptNum(data[0], false, 5)
+	rawTime, err = makeScriptNum(pops[4].data, false, 5)
 	if err != nil {
 		return
 	}
 	var rawPort scriptNum
-	rawPort, err = makeScriptNum(data[1], false, 5)
+	rawPort, err = makeScriptNum(pops[6].data, false, 5)
 	if err != nil {
 		return
 	}
-	var rawShardID scriptNum
-	rawShardID, err = makeScriptNum(data[2], true, 1)
-	if err != nil {
-		return
-	}
-	scriptData.OpCode = pops[4].opcode.value
+
 	scriptData.ExpirationDate = int64(rawTime)
 	scriptData.Port = int64(rawPort)
-	scriptData.ShardID = uint32(rawShardID) - 16
-	scriptData.IP = data[3]
-	scriptData.RawKey = make([]byte, hex.EncodedLen(len(data[4])))
-	hex.Encode(scriptData.RawKey, data[4])
+	scriptData.ShardID = shardID - 16
+	scriptData.IP = net.ParseIP(string(pops[5].data))
+	if scriptData.IP == nil {
+		err = errors.New("invalid ip value")
+		return
+	}
 
 	return
 }
@@ -719,14 +735,13 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 
 	case MultiSigLockTy:
 		addrs, requiredSigs = extractMultiSigLockAddrs(pops, chainParams)
-	case EADAddress:
+	case EADAddressTy:
 		// A pay-to-pubkey-hash script is of the form:
 		//  OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressPubKey(pops[5].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressPubKey(pops[0].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}

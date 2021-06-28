@@ -15,8 +15,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/btcec"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
@@ -25,9 +25,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -62,6 +62,10 @@ func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P
 	rpc.helpCache = newHelpCacher(rpc)
 	rpc.chainProvider.BlockChain().Subscribe(rpc.handleBlockchainNotification)
 	return rpc
+}
+
+func (server *CommonChainRPC) IsBeacon() bool {
+	return server.chainProvider.ChainCtx.IsBeacon()
 }
 
 func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
@@ -670,8 +674,9 @@ func (server *CommonChainRPC) createVinListPrevOut(mtx *wire.MsgTx, chainParams 
 		if vinExtra {
 			vinListEntry := &vinList[len(vinList)-1]
 			vinListEntry.PrevOut = &jaxjson.PrevOut{
-				Addresses: encodedAddrs,
-				Value:     jaxutil.Amount(originTxOut.Value).ToBTC(),
+				Addresses:    encodedAddrs,
+				Value:        jaxutil.Amount(originTxOut.Value).ToCoin(server.IsBeacon()),
+				PreciseValue: originTxOut.Value,
 			}
 		}
 	}

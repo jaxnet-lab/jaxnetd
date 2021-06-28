@@ -11,14 +11,14 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -94,19 +94,19 @@ func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-
 	result.Fast, err = server.estimateFeeForTarget(int64(fast))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
 	}
 
 	result.Moderate, err = server.estimateFeeForTarget(int64(moderate))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
 	}
 
 	result.Slow, err = server.estimateFeeForTarget(int64(slow))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.BtcPerKB = mempool.DefaultMinRelayTxFee.ToBTC()
+		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
 	}
 
 	return result, nil
@@ -126,7 +126,7 @@ func (server *CommonChainRPC) estimateFeeForTarget(target int64) (jaxjson.Fee, e
 	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
 
 	res := jaxjson.Fee{
-		BtcPerKB:    btcPerKB,
+		CoinsPerKB:  btcPerKB,
 		SatoshiPerB: satoshiPerB,
 		Blocks:      target,
 		Estimated:   true,
@@ -442,7 +442,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 		chainHeight = server.chainProvider.BlockChain().BestSnapshot().Height
 	}
 
-	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainParams, txInfo.tx, txHash.String(),
+	rawTxn, err := server.CreateTxRawResult(server.chainProvider.ChainCtx.Params(), txInfo.tx, txHash.String(),
 		blkHeader, blkHashStr, txInfo.blkHeight, chainHeight)
 	if err != nil {
 		context := "Failed to create TxRawResult"
@@ -506,14 +506,14 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 	if server.chainProvider.ChainCtx.IsBeacon() && msgTx.SwapTx() {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCTxError,
-			Message: "Beacon not support ShardSwapTx",
+			Message: "Beacon does not support ShardSwapTx",
 		}
 	}
 
 	if !server.chainProvider.ChainCtx.IsBeacon() && msgTx.Version == wire.TxVerEADAction {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCTxError,
-			Message: "ShardChain not support TxVerEADAction",
+			Message: "ShardChain does not support TxVerEADAction",
 		}
 	}
 
@@ -698,7 +698,8 @@ func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, incl
 	txOutReply := &jaxjson.GetTxOutResult{
 		BestBlock:     bestBlockHash,
 		Confirmations: int64(confirmations),
-		Value:         jaxutil.Amount(value).ToBTC(),
+		Value:         jaxutil.Amount(value).ToCoin(server.IsBeacon()),
+		PreciseValue: value,
 		ScriptPubKey: jaxjson.ScriptPubKeyResult{
 			Asm:       disbuf,
 			Hex:       hex.EncodeToString(pkScript),
@@ -1258,7 +1259,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 		if err != nil {
 			return nil, err
 		}
-		result.Vout = server.CreateVoutList(mtx, params, filterAddrMap)
+		result.Vout = server.CreateVoutList(mtx, server.chainProvider.ChainCtx.Params(), filterAddrMap)
 		result.Version = mtx.Version
 		result.LockTime = mtx.LockTime
 
@@ -1328,7 +1329,7 @@ func (server *CommonChainRPC) handleGetRawMempool(cmd interface{}, closeChan <-c
 	mp := server.chainProvider.TxMemPool
 
 	if c.Verbose != nil && *c.Verbose {
-		return mp.RawMempoolVerbose(), nil
+		return mp.RawMempoolVerbose(server.IsBeacon()), nil
 	}
 
 	// The response is simply an array of the transaction hashes if the

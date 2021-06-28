@@ -19,9 +19,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -1176,6 +1176,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	if isNew && !mp.cfg.Policy.DisableRelayPriority && txFee < minFee {
 		currentPriority := mining.CalcPriority(tx.MsgTx(), utxoView,
 			nextBlockHeight)
+		// todo (mike): use precise value
 		if currentPriority <= mining.MinHighPriority {
 			str := fmt.Sprintf("transaction %v has insufficient priority (%g <= %g)",
 				txHash, currentPriority, mining.MinHighPriority)
@@ -1504,7 +1505,7 @@ func (mp *TxPool) MiningDescs() []*mining.TxDesc {
 // populated jaxjson result.
 //
 // This function is safe for concurrent access.
-func (mp *TxPool) RawMempoolVerbose() map[string]*jaxjson.GetRawMempoolVerboseResult {
+func (mp *TxPool) RawMempoolVerbose(isBeacon bool) map[string]*jaxjson.GetRawMempoolVerboseResult {
 	mp.mtx.RLock()
 	defer mp.mtx.RUnlock()
 
@@ -1528,7 +1529,8 @@ func (mp *TxPool) RawMempoolVerbose() map[string]*jaxjson.GetRawMempoolVerboseRe
 			Size:             int32(tx.MsgTx().SerializeSize()),
 			Vsize:            int32(GetTxVirtualSize(tx)),
 			Weight:           int32(chaindata.GetTransactionWeight(tx)),
-			Fee:              jaxutil.Amount(desc.Fee).ToBTC(),
+			Fee:              jaxutil.Amount(desc.Fee).ToCoin(isBeacon),
+			PreciseFee:       desc.Fee,
 			Time:             desc.Added.Unix(),
 			Height:           int64(desc.Height),
 			StartingPriority: desc.StartingPriority,

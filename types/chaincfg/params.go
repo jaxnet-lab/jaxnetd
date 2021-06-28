@@ -245,6 +245,7 @@ type Params struct {
 	AutoExpand     bool
 	ExpansionRule  int32
 	ExpansionLimit int32
+	IsBeacon       bool
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
