@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -65,14 +65,13 @@ func (b *BlockChain) FetchUtxoEntry(outpoint wire.OutPoint) (*chaindata.UtxoEntr
 	return entry, nil
 }
 
-func (b *BlockChain) ListUtxoEntry() (map[wire.OutPoint]*chaindata.UtxoEntry, error) {
+func (b *BlockChain) ListUtxoEntry(limit int) (map[wire.OutPoint]*chaindata.UtxoEntry, error) {
 	b.chainLock.RLock()
 	defer b.chainLock.RUnlock()
-
 	var entries map[wire.OutPoint]*chaindata.UtxoEntry
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		entries, err = chaindata.DBFetchUtxoEntries(dbTx)
+		entries, err = chaindata.DBFetchUtxoEntries(dbTx, limit)
 		return err
 	})
 

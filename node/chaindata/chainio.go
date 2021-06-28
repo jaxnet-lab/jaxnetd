@@ -12,8 +12,8 @@ import (
 	"math/big"
 	"sync"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -771,11 +771,17 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	return entry, nil
 }
 
-func DBFetchUtxoEntries(dbTx database.Tx) (map[wire.OutPoint]*UtxoEntry, error) {
-	view := map[wire.OutPoint]*UtxoEntry{}
+func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEntry, error) {
+	view := make(map[wire.OutPoint]*UtxoEntry, limit)
 	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+	count := 0
+
 	err := utxoBucket.ForEach(func(rawKey, serializedUtxo []byte) error {
-		if serializedUtxo == nil {
+		if count == limit {
+			return nil
+		}
+
+		if rawKey == nil || serializedUtxo == nil {
 			return nil
 		}
 
@@ -802,6 +808,7 @@ func DBFetchUtxoEntries(dbTx database.Tx) (map[wire.OutPoint]*UtxoEntry, error) 
 		}
 
 		view[outpoint] = entry
+		count += 1
 		return nil
 	})
 
@@ -882,8 +889,12 @@ func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses
 func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, error) {
 	view := map[string]*wire.EADAddresses{}
 	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	if utxoBucket == nil {
+		return view, nil
+	}
+
 	err := utxoBucket.ForEach(func(rawKey, serializedData []byte) error {
-		if serializedData == nil {
+		if rawKey == nil || serializedData == nil {
 			return nil
 		}
 

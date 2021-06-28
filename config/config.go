@@ -346,7 +346,7 @@ func LoadConfig() (*node.Config, []string, error) {
 				BlockMaxWeight:    defaultBlockMaxWeight,
 				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
 				MaxPeers:          defaultMaxPeers,
-				MinRelayTxFee:     int64(mempool.DefaultMinRelayTxFee),
+				MinRelayTxFee:     0,
 				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
 				TxIndex:           defaultTxIndex,
 				AddrIndex:         defaultAddrIndex,
@@ -676,9 +676,6 @@ func LoadConfig() (*node.Config, []string, error) {
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
-
-	// Validate the the minrelaytxfee.
-	cfg.Node.BeaconChain.MinRelayTxFeeValues = jaxutil.Amount(cfg.Node.BeaconChain.MinRelayTxFee)
 
 	// Limit the max block size to a sane value.
 	if cfg.Node.BeaconChain.BlockMaxSize < blockMaxSizeMin || cfg.Node.BeaconChain.BlockMaxSize >

@@ -21,13 +21,14 @@ func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, sha
 
 	var ipExist bool
 	for i, p := range msg.IPs {
-		if p.IP.Equal(ip) {
+		if p.IP.Equal(ip) && p.Shard == shardID {
 			p := p
 			p.TxHash = hash
 			p.TxOutIndex = ind
 			p.Port = port
 			p.ExpiresAt = time.Unix(expiresAt, 0)
-			msg.IPs[i] = p.AddShard(shardID)
+			msg.IPs[i] = p
+
 			ipExist = true
 			break
 		}
@@ -38,7 +39,7 @@ func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, sha
 			IP:         ip,
 			Port:       port,
 			ExpiresAt:  time.Unix(expiresAt, 0),
-			Shards:     []uint32{shardID},
+			Shard:      shardID,
 			TxHash:     hash,
 			TxOutIndex: ind,
 		})
@@ -50,11 +51,8 @@ func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, sha
 func (msg *EADAddress) HasShard(shards ...uint32) (allPresent bool, hasOneOf bool) {
 	var matchCount int
 	for _, shard := range shards {
-		for _, u := range msg.Shards {
-			if shard == u {
-				matchCount += 1
-			}
-
+		if shard == msg.Shard {
+			matchCount += 1
 		}
 	}
 
@@ -137,8 +135,8 @@ type EADAddress struct {
 	Port uint16
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time
-	// Shards shows what shards the agent works with.
-	Shards     []uint32
+	// Shard shows what shards the agent works with.
+	Shard      uint32
 	TxHash     *chainhash.Hash
 	TxOutIndex int
 }
@@ -149,27 +147,12 @@ func (msg *EADAddress) FilterOut(ip net.IP, shardID uint32) (*EADAddress, bool) 
 		return msg, false
 	}
 
-	shards := make([]uint32, 0, len(msg.Shards))
-	for _, shard := range msg.Shards {
-		if shard != shardID {
-			shards = append(shards, shard)
-		}
-	}
-
 	clone := *msg
-	clone.Shards = shards
-	return &clone, len(shards) == 0
-}
-
-func (msg *EADAddress) AddShard(shardID uint32) EADAddress {
-	for _, shard := range msg.Shards {
-		if shard == shardID {
-			return *msg
-		}
+	if msg.Shard != shardID {
+		clone.Shard = msg.Shard
 	}
 
-	msg.Shards = append(msg.Shards, shardID)
-	return *msg
+	return &clone, msg.Shard == shardID
 }
 
 func (msg *EADAddress) Command() string {
@@ -187,18 +170,12 @@ func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEnco
 	if err != nil {
 		return err
 	}
-	count, err := encoder.ReadVarInt(r, pver)
+
+	id, err := encoder.ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
-	msg.Shards = make([]uint32, count)
-	for i := range msg.Shards {
-		id, err := encoder.ReadVarInt(r, pver)
-		if err != nil {
-			return err
-		}
-		msg.Shards[i] = uint32(id)
-	}
+	msg.Shard = uint32(id)
 
 	// Sigh. Bitcoin protocol mixes little and big endian.
 	port, err := encoder.BinarySerializer.Uint16(r, bigEndian)
@@ -223,7 +200,7 @@ func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEnco
 		ExpiresAt:  msg.ExpiresAt,
 		IP:         ip[:],
 		Port:       port,
-		Shards:     msg.Shards,
+		Shard:      msg.Shard,
 		TxHash:     msg.TxHash,
 		TxOutIndex: int(txOutId),
 	}
@@ -240,18 +217,12 @@ func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 	if err != nil {
 		return err
 	}
-	shardsCount := len(msg.Shards)
-	err = encoder.WriteVarInt(w, uint64(shardsCount))
+
+	err = encoder.WriteVarInt(w, uint64(msg.Shard))
 	if err != nil {
 		return err
 	}
 
-	for _, na := range msg.Shards {
-		err := encoder.WriteVarInt(w, uint64(na))
-		if err != nil {
-			return err
-		}
-	}
 	// Sigh.  Bitcoin protocol mixes little and big endian.
 	err = binary.Write(w, bigEndian, msg.Port)
 	if err != nil {

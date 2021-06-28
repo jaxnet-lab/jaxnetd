@@ -684,6 +684,7 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[wire.Out
 			view.entries[outpoint] = entry
 		}
 
+		// todo: omit this step if shard
 		var err error
 		view.eadAddresses, err = DBFetchAllEADAddresses(dbTx)
 		if err != nil {

@@ -57,6 +57,22 @@ const (
 	maxStandardMultiSigKeys = 3
 )
 
+func MinRelayFee(isBeacon bool) float64 {
+	if isBeacon {
+		return DefaultMinRelayTxFee.ToCoin(isBeacon)
+	}
+
+	return jaxutil.Amount(1).ToCoin(isBeacon)
+}
+
+func MinRelayFeeAmount(isBeacon bool) jaxutil.Amount {
+	if isBeacon {
+		return DefaultMinRelayTxFee
+	}
+
+	return jaxutil.Amount(1)
+}
+
 // calcMinRequiredTxRelayFee returns the minimum transaction fee required for a
 // transaction with the passed serialized size to be accepted into the memory
 // pool and relayed.

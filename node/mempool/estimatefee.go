@@ -48,7 +48,9 @@ const (
 
 	bytePerKb = 1000
 
-	btcPerSatoshi = 1e-8
+	btcPerSatoshi    = 1e-8
+	jaxNetPerSatoshi = 1e-8
+	jaxPerSatoshi    = 1e-3
 )
 
 var (
@@ -60,29 +62,59 @@ var (
 // SatoshiPerByte is number with units of satoshis per byte.
 type SatoshiPerByte float64
 
-// BtcPerKilobyte is number with units of bitcoins per kilobyte.
-type BtcPerKilobyte float64
+// CoinPerKilobyte is number with units of bitcoins per kilobyte.
+type CoinPerKilobyte float64
 
-// ToBtcPerKb returns a float value that represents the given
+// ToCoinPerKb returns a float value that represents the given
 // SatoshiPerByte converted to satoshis per kb.
-func (rate SatoshiPerByte) ToBtcPerKb() BtcPerKilobyte {
+func (rate SatoshiPerByte) ToCoinPerKb(isBeacon bool) CoinPerKilobyte {
+	// If our rate is the error value, return that.
+	if rate == SatoshiPerByte(-1.0) {
+		return -1.0
+	}
+	precision := jaxPerSatoshi
+	if isBeacon {
+		precision = jaxNetPerSatoshi
+	}
+
+	return CoinPerKilobyte(float64(rate) * bytePerKb * precision)
+}
+
+// ToSatoshiPerByte returns a float value that represents the given
+// CoinPerKilobyte converted to satoshis per byte.
+func (rate CoinPerKilobyte) ToSatoshiPerByte(isBeacon bool) SatoshiPerByte {
+	// If our rate is the error value, return that.
+	if rate == CoinPerKilobyte(-1.0) {
+		return -1.0
+	}
+	precision := jaxPerSatoshi
+	if isBeacon {
+		precision = jaxNetPerSatoshi
+	}
+
+	return SatoshiPerByte(float64(rate) / (bytePerKb * precision))
+}
+
+// ToJaxNetPerKb returns a float value that represents the given
+// SatoshiPerByte converted to satoshis per kb.
+func (rate SatoshiPerByte) ToJaxNetPerKb() CoinPerKilobyte {
 	// If our rate is the error value, return that.
 	if rate == SatoshiPerByte(-1.0) {
 		return -1.0
 	}
 
-	return BtcPerKilobyte(float64(rate) * bytePerKb * btcPerSatoshi)
+	return CoinPerKilobyte(float64(rate) * bytePerKb * jaxNetPerSatoshi)
 }
 
-// ToSatoshiPerByte returns a float value that represents the given
-// BtcPerKilobyte converted to satoshis per byte.
-func (rate BtcPerKilobyte) ToSatoshiPerByte() SatoshiPerByte {
+// ToJaxPerKb returns a float value that represents the given
+// SatoshiPerByte converted to satoshis per kb.
+func (rate SatoshiPerByte) ToJaxPerKb() CoinPerKilobyte {
 	// If our rate is the error value, return that.
-	if rate == BtcPerKilobyte(-1.0) {
+	if rate == SatoshiPerByte(-1.0) {
 		return -1.0
 	}
 
-	return SatoshiPerByte(float64(rate) / (bytePerKb * btcPerSatoshi))
+	return CoinPerKilobyte(float64(rate) * bytePerKb * jaxPerSatoshi)
 }
 
 // Fee returns the fee for a transaction of a given size for
@@ -558,7 +590,7 @@ func (ef *FeeEstimator) estimates() []SatoshiPerByte {
 
 // EstimateFee estimates the fee per byte to have a tx confirmed a given
 // number of blocks from now.
-func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
+func (ef *FeeEstimator) EstimateFee(numBlocks uint32, isBeacon bool) (CoinPerKilobyte, error) {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 
@@ -582,7 +614,7 @@ func (ef *FeeEstimator) EstimateFee(numBlocks uint32) (BtcPerKilobyte, error) {
 		ef.cached = ef.estimates()
 	}
 
-	return ef.cached[int(numBlocks)-1].ToBtcPerKb(), nil
+	return ef.cached[int(numBlocks)-1].ToCoinPerKb(isBeacon), nil
 }
 
 // In case the format for the serialized version of the FeeEstimator changes,

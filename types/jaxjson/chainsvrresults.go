@@ -608,8 +608,8 @@ type EADAddress struct {
 
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time `json:"expires_at"`
-	// Shards shows what shards the agent works with.
-	Shards []uint32 `json:"shards"`
+	// Shard shows what shards the agent works with.
+	Shard uint32 `json:"shards"`
 
 	TxHash     string `json:"tx_hash"`
 	TxOutIndex int    `json:"tx_out_index"`

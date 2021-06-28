@@ -572,15 +572,11 @@ func TestEADRegistration(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// Host: "116.203.250.136:18333",
-			// User: "jaxnetrpc",
-			// Pass: "ec0bb2575b06bfdf",
-			// Host: "116.202.107.209:18333",
 			// User: "jaxnetrpc",
 			// Pass: "AUL6VBjoQnhP3bfFzl",
-			Host: "127.0.0.1:18333",
-			User: "somerpc",
-			Pass: "somerpc",
+			// Host: "127.0.0.1:18333",
+			// User: "somerpc",
+			// Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}

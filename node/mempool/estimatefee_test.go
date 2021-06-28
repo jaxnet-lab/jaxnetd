@@ -61,11 +61,11 @@ func (eft *estimateFeeTester) testTx(fee jaxutil.Amount) *TxDesc {
 	}
 }
 
-func expectedFeePerKilobyte(t *TxDesc) BtcPerKilobyte {
+func expectedFeePerKilobyte(t *TxDesc) CoinPerKilobyte {
 	size := float64(t.TxDesc.Tx.MsgTx().SerializeSize())
 	fee := float64(t.TxDesc.Fee)
 
-	return SatoshiPerByte(fee / size).ToBtcPerKb()
+	return SatoshiPerByte(fee / size).ToCoinPerKb(true)
 }
 
 func (eft *estimateFeeTester) newBlock(txs []*wire.MsgTx) {
@@ -103,9 +103,9 @@ func TestEstimateFee(t *testing.T) {
 	eft := estimateFeeTester{ef: ef, t: t}
 
 	// Try with no txs and get zero for all queries.
-	expected := BtcPerKilobyte(0.0)
+	expected := CoinPerKilobyte(0.0)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f when estimator is empty; got %f", expected, estimated)
@@ -117,9 +117,9 @@ func TestEstimateFee(t *testing.T) {
 	ef.ObserveTransaction(tx)
 
 	// Expected should still be zero because this is still in the mempool.
-	expected = BtcPerKilobyte(0.0)
+	expected = CoinPerKilobyte(0.0)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f when estimator has one tx in mempool; got %f", expected, estimated)
@@ -129,9 +129,9 @@ func TestEstimateFee(t *testing.T) {
 	// Change minRegisteredBlocks to make sure that works. Error return
 	// value expected.
 	ef.minRegisteredBlocks = 1
-	expected = BtcPerKilobyte(-1.0)
+	expected = CoinPerKilobyte(-1.0)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f before any blocks have been registered; got %f", expected, estimated)
@@ -142,7 +142,7 @@ func TestEstimateFee(t *testing.T) {
 	eft.newBlock([]*wire.MsgTx{tx.Tx.MsgTx()})
 	expected = expectedFeePerKilobyte(tx)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f when one tx is binned; got %f", expected, estimated)
@@ -152,9 +152,9 @@ func TestEstimateFee(t *testing.T) {
 	// Roll back the last block; this was an orphan block.
 	ef.minRegisteredBlocks = 0
 	eft.rollback()
-	expected = BtcPerKilobyte(0.0)
+	expected = CoinPerKilobyte(0.0)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f after rolling back block; got %f", expected, estimated)
@@ -168,7 +168,7 @@ func TestEstimateFee(t *testing.T) {
 	eft.newBlock([]*wire.MsgTx{tx.Tx.MsgTx()})
 	expected = expectedFeePerKilobyte(tx)
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 
 		if estimated != expected {
 			t.Errorf("Estimate fee error: expected %f when one tx is binned; got %f", expected, estimated)
@@ -194,7 +194,7 @@ func TestEstimateFee(t *testing.T) {
 	// Now the estimated amount should depend on the value
 	// of the argument to estimate fee.
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 		if i > 2 {
 			expected = expectedFeePerKilobyte(txA)
 		} else {
@@ -216,7 +216,7 @@ func TestEstimateFee(t *testing.T) {
 	// Now the estimated amount should depend on the value
 	// of the argument to estimate fee.
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 		if i <= 2 {
 			expected = expectedFeePerKilobyte(txB)
 		} else if i <= 8 {
@@ -241,7 +241,7 @@ func TestEstimateFee(t *testing.T) {
 	// This should have no effect on the outcome because too
 	// many blocks have been mined for txC to be recorded.
 	for i := uint32(1); i <= estimateFeeDepth; i++ {
-		estimated, _ := ef.EstimateFee(i)
+		estimated, _ := ef.EstimateFee(i, true)
 		if i <= 2 {
 			expected = expectedFeePerKilobyte(txC)
 		} else if i <= 8 {
@@ -258,12 +258,12 @@ func TestEstimateFee(t *testing.T) {
 	}
 }
 
-func (eft *estimateFeeTester) estimates() [estimateFeeDepth]BtcPerKilobyte {
+func (eft *estimateFeeTester) estimates() [estimateFeeDepth]CoinPerKilobyte {
 
 	// Generate estimates
-	var estimates [estimateFeeDepth]BtcPerKilobyte
+	var estimates [estimateFeeDepth]CoinPerKilobyte
 	for i := 0; i < estimateFeeDepth; i++ {
-		estimates[i], _ = eft.ef.EstimateFee(uint32(i + 1))
+		estimates[i], _ = eft.ef.EstimateFee(uint32(i+1), true)
 	}
 
 	// Check that all estimated fee results go in descending order.
@@ -279,8 +279,8 @@ func (eft *estimateFeeTester) estimates() [estimateFeeDepth]BtcPerKilobyte {
 }
 
 func (eft *estimateFeeTester) round(txHistory [][]*TxDesc,
-	estimateHistory [][estimateFeeDepth]BtcPerKilobyte,
-	txPerRound, txPerBlock uint32) ([][]*TxDesc, [][estimateFeeDepth]BtcPerKilobyte) {
+	estimateHistory [][estimateFeeDepth]CoinPerKilobyte,
+	txPerRound, txPerBlock uint32) ([][]*TxDesc, [][estimateFeeDepth]CoinPerKilobyte) {
 
 	// generate new txs.
 	var newTxs []*TxDesc
@@ -334,7 +334,7 @@ func TestEstimateFeeRollback(t *testing.T) {
 
 	eft := estimateFeeTester{ef: newTestFeeEstimator(binSize, maxReplacements, uint32(stepsBack)), t: t}
 	var txHistory [][]*TxDesc
-	estimateHistory := [][estimateFeeDepth]BtcPerKilobyte{eft.estimates()}
+	estimateHistory := [][estimateFeeDepth]CoinPerKilobyte{eft.estimates()}
 
 	for round := 0; round < rounds; round++ {
 		// Go forward a few rounds.
@@ -369,7 +369,7 @@ func TestEstimateFeeRollback(t *testing.T) {
 }
 
 func (eft *estimateFeeTester) checkSaveAndRestore(
-	previousEstimates [estimateFeeDepth]BtcPerKilobyte) {
+	previousEstimates [estimateFeeDepth]CoinPerKilobyte) {
 
 	// Get the save state.
 	save := eft.ef.Save()
@@ -408,7 +408,7 @@ func TestDatabase(t *testing.T) {
 
 	eft := estimateFeeTester{ef: newTestFeeEstimator(binSize, maxReplacements, uint32(rounds)+1), t: t}
 	var txHistory [][]*TxDesc
-	estimateHistory := [][estimateFeeDepth]BtcPerKilobyte{eft.estimates()}
+	estimateHistory := [][estimateFeeDepth]CoinPerKilobyte{eft.estimates()}
 
 	for round := 0; round < rounds; round++ {
 		eft.checkSaveAndRestore(estimateHistory[len(estimateHistory)-1])

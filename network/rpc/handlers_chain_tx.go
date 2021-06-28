@@ -47,7 +47,7 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 		return -1.0, errors.New("Parameter NumBlocks must be positive")
 	}
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.NumBlocks))
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.NumBlocks), server.IsBeacon())
 	if err != nil {
 		return -1.0, err
 	}
@@ -67,13 +67,13 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 		return -1.0, errors.New("Parameter NumBlocks must be positive")
 	}
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.ConfTarget))
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(c.ConfTarget), server.IsBeacon())
 	if err != nil {
 		return -1.0, err
 	}
 
 	btcPerKB := float64(feeRate)
-	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte(server.IsBeacon()))
 
 	res := jaxjson.EstimateSmartFeeResult{
 		BtcPerKB:    &btcPerKB,
@@ -94,19 +94,19 @@ func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-
 	result.Fast, err = server.estimateFeeForTarget(int64(fast))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
+		result.Fast.CoinsPerKB = mempool.MinRelayFee(server.IsBeacon())
 	}
 
 	result.Moderate, err = server.estimateFeeForTarget(int64(moderate))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
+		result.Fast.CoinsPerKB = mempool.MinRelayFee(server.IsBeacon())
 	}
 
 	result.Slow, err = server.estimateFeeForTarget(int64(slow))
 	if err != nil {
 		result.Fast.SatoshiPerB = mempool.DefaultMinRelayTxFeeSatoshiPerByte
-		result.Fast.CoinsPerKB = mempool.DefaultMinRelayTxFee.ToCoin(server.IsBeacon())
+		result.Fast.CoinsPerKB = mempool.MinRelayFee(server.IsBeacon())
 	}
 
 	return result, nil
@@ -117,13 +117,13 @@ func (server *CommonChainRPC) estimateFeeForTarget(target int64) (jaxjson.Fee, e
 		return jaxjson.Fee{}, errors.New("Fee estimation disabled")
 	}
 
-	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(target))
+	feeRate, err := server.chainProvider.FeeEstimator.EstimateFee(uint32(target), server.IsBeacon())
 	if err != nil {
 		return jaxjson.Fee{}, err
 	}
 
 	btcPerKB := float64(feeRate)
-	satoshiPerB := float64(feeRate.ToSatoshiPerByte())
+	satoshiPerB := float64(feeRate.ToSatoshiPerByte(server.IsBeacon()))
 
 	res := jaxjson.Fee{
 		CoinsPerKB:  btcPerKB,
@@ -699,7 +699,7 @@ func (server *CommonChainRPC) getTxOut(txHash *chainhash.Hash, vout uint32, incl
 		BestBlock:     bestBlockHash,
 		Confirmations: int64(confirmations),
 		Value:         jaxutil.Amount(value).ToCoin(server.IsBeacon()),
-		PreciseValue: value,
+		PreciseValue:  value,
 		ScriptPubKey: jaxjson.ScriptPubKeyResult{
 			Asm:       disbuf,
 			Hex:       hex.EncodeToString(pkScript),
@@ -936,7 +936,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	_ = cmd.(*jaxjson.ListTxOutCmd)
 
-	entries, err := server.chainProvider.BlockChain().ListUtxoEntry()
+	entries, err := server.chainProvider.BlockChain().ListUtxoEntry(1000)
 	if err != nil {
 		return nil, rpcNoTxInfoError(nil)
 	}
@@ -1023,7 +1023,7 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 				IP:         p.IP.String(),
 				Port:       p.Port,
 				ExpiresAt:  p.ExpiresAt,
-				Shards:     p.Shards,
+				Shard:      p.Shard,
 				TxHash:     p.TxHash.String(),
 				TxOutIndex: p.TxOutIndex,
 			})
