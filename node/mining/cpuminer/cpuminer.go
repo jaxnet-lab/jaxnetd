@@ -238,7 +238,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Update the extra nonce in the block template with the
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
-		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, extraNonce+enOffset)
+		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, 0,  extraNonce+enOffset)
 
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while

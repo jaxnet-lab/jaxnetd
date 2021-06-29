@@ -35,7 +35,7 @@ type BlockGenerator struct {
 }
 
 type btcGen interface {
-	NewBlockTemplate(burnReward int) (wire.BTCBlockAux, error)
+	NewBlockTemplate(burnReward int) (wire.BTCBlockAux, bool, error)
 }
 
 func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
@@ -75,9 +75,14 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleR
 	header.SetK(header.Bits() / 2)
 	header.SetVoteK(header.Bits() / 2)
 
-	aux, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward)
+	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to generate btc block aux")
+	}
+	if !full {
+		aux.Version = header.Version().Version()
+		aux.Bits = header.Bits()
+		aux.Nonce = header.Nonce()
 	}
 	header.SetBTCAux(aux)
 

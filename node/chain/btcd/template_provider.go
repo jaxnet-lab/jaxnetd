@@ -62,11 +62,22 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 	}, err
 }
 
-func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux, error) {
+func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
+		burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
+		tx, err := mining.CreateJaxCoinbaseTx(6, 0, int32(-1), 0, bg.minerAddress, burnReward)
+		if err != nil {
+			return wire.BTCBlockAux{}, false, err
+		}
+
 		return wire.BTCBlockAux{
-			Timestamp: time.Unix(time.Now().Unix(), 0),
-		}, nil
+			CoinbaseAux: wire.CoinbaseAux{
+				Tx:       *tx.MsgTx(),
+				TxMerkle: []chainhash.Hash{*tx.Hash()},
+			},
+			MerkleRoot: *tx.Hash(),
+			Timestamp:  time.Unix(time.Now().Unix(), 0),
+		}, false, nil
 	}
 
 	template, err := bg.client.GetBlockTemplate(
@@ -75,12 +86,12 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux,
 			Capabilities: []string{"coinbasevalue"},
 		})
 	if err != nil {
-		return wire.BTCBlockAux{}, err
+		return wire.BTCBlockAux{}, false, err
 	}
 
 	block, height, err := DecodeBitcoinResponse(template)
 	if err != nil {
-		return wire.BTCBlockAux{}, err
+		return wire.BTCBlockAux{}, false, err
 	}
 
 	aux := wire.BTCBlockAux{
@@ -109,13 +120,13 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux,
 	}
 
 	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-	tx, err := mining.CreateJaxCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress, burnReward)
+	tx, err := mining.CreateJaxCoinbaseTx(reward, totalFee, int32(height), 0, bg.minerAddress, burnReward)
 	if err != nil {
-		return wire.BTCBlockAux{}, err
+		return wire.BTCBlockAux{}, false, err
 	}
 
 	aux.Tx = *tx.MsgTx()
-	return aux, nil
+	return aux, true, nil
 }
 
 func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (

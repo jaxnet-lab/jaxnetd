@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 func interruptOnError(e error) {
@@ -37,12 +37,12 @@ func main() {
 	connCfg := &rpcclient.ConnConfig{
 		// shardID: 42,
 		Params: "fastnet",
-		Pass:   "somerpc",
-		User:   "somerpc",
-		Host:   "127.0.0.1:18333",
+		// Pass:   "somerpc",
+		// User:   "somerpc",
+		Host: "198.199.125.197:18333",
 		// Host:         "128.199.64.36:18333",
-		// User:         "jaxnetrpc",
-		// Pass:         "AUL6VBjoQnhP3bfFzl",
+		User:         "jaxnetrpc",
+		Pass:         "AUL6VBjoQnhP3bfFzl",
 		HTTPPostMode: true,
 		DisableTLS:   true,
 	}
@@ -54,25 +54,28 @@ func main() {
 	resp, err := rpcClient.ListShards()
 	interruptOnError(err)
 
-	for i := int64(0); i < 10; i++ {
-		block, err := rpcClient.ForBeacon().GetBeaconBlockBySerialNumber(i)
+	hash, _ := chainhash.NewHashFromStr("1ac13347d23f49a6d853ba39607d71905ca073d33c03ff75810e53c643c96f82")
+	// for i := int64(0); i < 10; i++ {
+	block, err := rpcClient.ForBeacon().GetRawTransactionVerbose(hash, false)
+	if err != nil {
+		fmt.Println(err)
+		// break
+	}
+	prettyPrint(block)
+	// spew.Dump(block)
+	// }
+
+	for _, info := range resp.Shards {
+		fmt.Println("Shard #", info.ID)
+		// for i := int64(0); ; i++ {
+		block, err := rpcClient.ForShard(info.ID).GetRawTransactionVerbose(hash, false)
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
+		prettyPrint(block)
 
-		spew.Dump(block)
-	}
-
-	for _, info := range resp.Shards {
-		fmt.Println("Shard #", info.ID)
-		for i := int64(0); ; i++ {
-			block, err := rpcClient.ForShard(info.ID).GetShardBlockBySerialNumber(i)
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-			spew.Dump(block)
-		}
+		// spew.Dump(block)
+		// }
 	}
 }

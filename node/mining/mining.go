@@ -252,9 +252,12 @@ func mergeUtxoView(viewA *chaindata.UtxoViewpoint, viewB *chaindata.UtxoViewpoin
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
-func StandardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, error) {
-	return txscript.NewScriptBuilder().AddInt64(int64(nextBlockHeight)).
-		AddInt64(int64(extraNonce)).AddData([]byte(CoinbaseFlags)).
+func StandardCoinbaseScript(nextBlockHeight int32, shardID uint32, extraNonce uint64) ([]byte, error) {
+	return txscript.NewScriptBuilder().
+		AddInt64(int64(nextBlockHeight)).
+		AddInt64(int64(shardID)).
+		AddInt64(int64(extraNonce)).
+		AddData([]byte(CoinbaseFlags)).
 		Script()
 }
 
@@ -264,9 +267,9 @@ func StandardCoinbaseScript(nextBlockHeight int32, extraNonce uint64) ([]byte, e
 //
 // See the comment for NewBlockTemplate for more information about why the nil
 // address handling is useful.
-func CreateCoinbaseTx(value int64, nextHeight int32, addr jaxutil.Address) (*jaxutil.Tx, error) {
+func CreateCoinbaseTx(value int64, nextHeight int32, shardID uint32, addr jaxutil.Address) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
-	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
+	coinbaseScript, err := StandardCoinbaseScript(nextHeight, shardID, extraNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -303,9 +306,10 @@ func CreateCoinbaseTx(value int64, nextHeight int32, addr jaxutil.Address) (*jax
 	return jaxutil.NewTx(tx), nil
 }
 
-func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Address, burnReward bool) (*jaxutil.Tx, error) {
+func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
+	shardID uint32, addr jaxutil.Address, burnReward bool) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
-	coinbaseScript, err := StandardCoinbaseScript(nextHeight, extraNonce)
+	coinbaseScript, err := StandardCoinbaseScript(nextHeight, shardID, extraNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +556,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	}, nil
 }
 
-func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32, burnRewardFlags int) (*blockTxsCollection, error) {
+func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32,
+	burnRewardFlags int) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -572,7 +577,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
 	}
 
-	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, payToAddress, burnReward)
+	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress, burnReward)
 	if err != nil {
 		return nil, err
 	}
@@ -993,8 +998,8 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 // height.  It also recalculates and updates the new merkle root that results
 // from changing the coinbase script.
 func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32,
-	extraNonce uint64) error {
-	coinbaseScript, err := StandardCoinbaseScript(blockHeight, extraNonce)
+	shardID uint32, extraNonce uint64) error {
+	coinbaseScript, err := StandardCoinbaseScript(blockHeight, shardID, extraNonce)
 	if err != nil {
 		return err
 	}
