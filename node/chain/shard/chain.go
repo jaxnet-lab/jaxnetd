@@ -8,54 +8,51 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type shardChain struct {
 	wire.ShardHeaderConstructor
-	chainParams *chaincfg.Params
+	chainParams chaincfg.Params
+	genesisTx   wire.MsgTx
 }
 
-func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHeader) *shardChain {
+func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHeader, tx *wire.MsgTx) *shardChain {
 	shard := &shardChain{
 		ShardHeaderConstructor: wire.ShardHeaderConstructor{ID: shardID},
+		genesisTx:              *tx.Copy(),
 	}
 
-	clone := params.ShardGenesis(shardID, nil)
-	clone.GenesisBlock = chaincfg.GenesisBlockOpts{
+	chainParams := params.ShardGenesis(shardID, nil)
+	chainParams.GenesisBlock = chaincfg.GenesisBlockOpts{
 		Version:    int32(beaconGenesis.Version()),
 		Timestamp:  beaconGenesis.Timestamp(),
 		PrevBlock:  chainhash.Hash{},
 		MerkleRoot: chainhash.Hash{},
-		Bits:       beaconGenesis.Bits(),
+		Bits:       pow.ShardGenesisDifficulty(beaconGenesis.Bits()),
 		Nonce:      beaconGenesis.Nonce(),
 		BCHeader:   *beaconGenesis,
 	}
-	shard.chainParams = clone
-
-	genesis := shard.GenesisBlock()
-	h := genesis.Header.(*wire.ShardHeader)
-	hash := h.BlockHash()
-	clone.GenesisHash = &hash
-	clone.IsBeacon = false
-
+	chainParams.PowLimitBits = pow.ShardGenesisDifficulty(beaconGenesis.Bits())
+	shard.SetChainParams(*chainParams)
 	return shard
+}
+
+func (c *shardChain) SetChainParams(params chaincfg.Params) {
+	c.chainParams = params
+
+	genesis := c.GenesisBlock().BlockHash()
+	c.chainParams.GenesisHash = &genesis
 }
 
 func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
 	return blocknode.NewShardBlockNode(blockHeader, parent)
 }
 
-func (c *shardChain) Params() *chaincfg.Params {
-	return c.chainParams
-}
-func (c *shardChain) Name() string {
-	return c.chainParams.Name
-}
-
-func (c *shardChain) EmptyBlock() wire.MsgBlock {
-	return wire.EmptyShardBlock()
-}
+func (c *shardChain) Params() *chaincfg.Params  { return &c.chainParams }
+func (c *shardChain) Name() string              { return c.chainParams.Name }
+func (c *shardChain) EmptyBlock() wire.MsgBlock { return wire.EmptyShardBlock() }
 
 func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
@@ -66,8 +63,11 @@ func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 			c.chainParams.GenesisBlock.Timestamp,
 			c.chainParams.GenesisBlock.Bits,
 			c.chainParams.GenesisBlock.BCHeader,
-			wire.CoinbaseAux{}.New(), // todo: put the real coinbase tx from beacon
+			wire.CoinbaseAux{
+				Tx:       *c.genesisTx.Copy(),
+				TxMerkle: []chainhash.Hash{c.chainParams.GenesisBlock.MerkleRoot},
+			},
 		),
-		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+		Transactions: []*wire.MsgTx{&c.genesisTx},
 	}
 }

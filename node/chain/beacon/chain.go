@@ -40,7 +40,7 @@ func (c *beaconChain) GenesisBlock() *wire.MsgBlock {
 			c.chainParams.GenesisBlock.Bits,
 			c.chainParams.GenesisBlock.Nonce,
 		),
-		Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+		Transactions: []*wire.MsgTx{&chaincfg.GenesisCoinbaseTx},
 	}
 }
 

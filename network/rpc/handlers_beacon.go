@@ -402,7 +402,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.Template
 
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCClientNotConnected,
-			Message: "JaxNetD is not connected",
+			Message: "JaxNetD Beacon Chain is not connected",
 		}
 	}
 
@@ -411,7 +411,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.Template
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCClientInInitialDownload,
-			Message: "JaxNetD is downloading blocks...",
+			Message: "JaxNetD Beacon Chain is downloading blocks...",
 		}
 	}
 

@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -178,8 +178,10 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	params := config.ChainParams
+
 	targetTimespan := int64(params.TargetTimespan / time.Second)
 	targetTimePerBlock := int64(params.TargetTimePerBlock / time.Second)
+
 	adjustmentFactor := params.RetargetAdjustmentFactor
 	b := BlockChain{
 		checkpoints:         config.Checkpoints,

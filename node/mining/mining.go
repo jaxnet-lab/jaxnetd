@@ -495,7 +495,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	// Extend the most recently known best block.
 	best := g.blockChain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
-	txsCollection, err := g.collectTxsForBlock(payToAddress, nextBlockHeight, burnReward)
+	lastBlock, _ := g.blockChain.BlockByHash(&best.Hash)
+	txsCollection, err := g.collectTxsForBlock(payToAddress, nextBlockHeight, burnReward, lastBlock.MsgBlock().Header)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +509,6 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	if err != nil {
 		return nil, err
 	}
-
 	// Calculate the next expected block version based on the state of the
 	// rule change deployments.
 	nextBlockVersion, err := g.blockChain.CalcNextBlockVersion()
@@ -524,6 +524,11 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 		best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
 	if err != nil {
 		return nil, err
+	}
+	if g.chainCtx.IsBeacon() {
+		k := g.blockChain.CalcNextK()
+		msgBlock.Header.SetK(k)
+		msgBlock.Header.SetVoteK(k)
 	}
 
 	for _, tx := range txsCollection.BlockTxns {
@@ -557,7 +562,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 }
 
 func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32,
-	burnRewardFlags int) (*blockTxsCollection, error) {
+	burnRewardFlags int, prevHeader wire.BlockHeader) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -567,7 +572,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 
-	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, nil) // TODO
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader)
 
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {

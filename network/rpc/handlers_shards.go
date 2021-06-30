@@ -459,7 +459,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateR
 
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCClientNotConnected,
-			Message: "Bitcoin is not connected",
+			Message: "JaxNetD Shard Chain is not connected",
 		}
 	}
 
@@ -468,7 +468,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateR
 	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCClientInInitialDownload,
-			Message: "Bitcoin is downloading blocks...",
+			Message: "JaxNetD Shard Chain is downloading blocks...",
 		}
 	}
 

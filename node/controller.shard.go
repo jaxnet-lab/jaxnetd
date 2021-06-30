@@ -114,7 +114,8 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
-		block.MsgBlock().Header.Copy().BeaconHeader())
+		block.MsgBlock().Header.Copy().BeaconHeader(), block.MsgBlock().Transactions[0])
+
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
 

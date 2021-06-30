@@ -9,6 +9,7 @@ package pow
 import (
 	"math/big"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -39,17 +40,51 @@ const (
 	SupplementaryK1 = LambdaPow12
 	// K1 is inflation coefficient for the first mining epoch.
 	K1 = 3.552713678800501e-15 // 2^−48
+
+	beaconEpoch = 1 << 11
+	shardEpoch  = 4 * 60 * 24
 )
 
-func CalcKCoefficient(epoch int, prevK float64) float64 {
-	switch epoch {
-	case 1:
-		return K1
-	case 2:
-		return K1 * SupplementaryK1
-	default:
-		return prevK * 0
+func BeaconEpoch(height int32) int32 {
+	return (height / beaconEpoch) + 1
+}
+
+func ShardEpoch(height int32) int32 {
+	return (height / shardEpoch) + 1
+}
+
+func CalcKCoefficient(height int32, prevK uint32) uint32 {
+	if BeaconEpoch(height) == 1 {
+		return PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
 	}
+
+	k := UnpackRat(prevK)
+	//   -1 if x <  y
+	//    0 if x == y
+	//   +1 if x >  y
+	if k.Cmp(new(big.Rat).SetFloat64(1)) >= 0 {
+		return PackRat(new(big.Rat).SetFloat64(1))
+	}
+
+	return prevK
+
+}
+
+func PackRat(val *big.Rat) uint32 {
+	mult, _ := new(big.Rat).SetString("10000000000000000000")
+	nVal := new(big.Rat).Mul(val, mult)
+	intPart := strings.Split(nVal.FloatString(18), ".")[0]
+
+	bigVal, _ := new(big.Int).SetString(intPart, 10)
+	return BigToCompact(bigVal)
+}
+
+func UnpackRat(val uint32) *big.Rat {
+	nVal := CompactToBig(val)
+
+	mult, _ := new(big.Rat).SetString("10000000000000000000")
+	rVal, _ := new(big.Rat).SetString(nVal.String())
+	return new(big.Rat).Quo(rVal, mult)
 }
 
 func GetDifficultyF(bits uint32) (float64, error) {
@@ -63,7 +98,6 @@ func GetDifficultyF(bits uint32) (float64, error) {
 	difficulty := new(big.Rat).SetFrac(twoPow256, target)
 
 	outString := difficulty.FloatString(8)
-	println(outString)
 	diff, err := strconv.ParseFloat(outString, 64)
 	if err != nil {
 		return 0, err
@@ -72,11 +106,9 @@ func GetDifficultyF(bits uint32) (float64, error) {
 }
 
 func GetDifficulty(bits uint32) *big.Rat {
-	// D = 2^240- / Target
-	twoPow240 := new(big.Int).Exp(big.NewInt(2), big.NewInt(240), nil)
+	twoPow180 := new(big.Int).Exp(big.NewInt(2), big.NewInt(180), nil)
 
-	// max := CompactToBig(params.PowLimitBits)
 	target := CompactToBig(bits)
-
-	return new(big.Rat).SetFrac(twoPow240, target)
+	// D =  Target / 2^180
+	return new(big.Rat).SetFrac(target, twoPow180)
 }

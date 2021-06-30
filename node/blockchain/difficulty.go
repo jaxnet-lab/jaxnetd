@@ -75,6 +75,24 @@ func (b *BlockChain) findPrevTestNetDifficulty(startNode blocknode.IBlockNode) u
 	return lastBits
 }
 
+func (b *BlockChain) calcNextK(lastNode blocknode.IBlockNode) uint32 {
+	if lastNode == nil {
+		return pow.CalcKCoefficient(1, 0)
+	}
+
+	return pow.CalcKCoefficient(lastNode.Height()+1, lastNode.Header().K())
+}
+
+// CalcNextK calculates the required k coefficient
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) CalcNextK() uint32 {
+	b.chainLock.Lock()
+	difficulty := b.calcNextK(b.bestChain.Tip())
+	b.chainLock.Unlock()
+	return difficulty
+}
+
 // calcNextRequiredDifficulty calculates the required difficulty for the block
 // after the passed previous block node based on the difficulty retarget rules.
 // This function differs from the exported CalcNextRequiredDifficulty in that

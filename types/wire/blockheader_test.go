@@ -207,8 +207,10 @@ func TestBeaconBlockHeaderSerialize(t *testing.T) {
 			Timestamp:  time.Time{},
 			Bits:       0,
 			Nonce:      nonce,
-			Tx:         MsgTx{},
-			TxMerkle:   nil,
+			CoinbaseAux: CoinbaseAux{
+				Tx:       MsgTx{},
+				TxMerkle: nil,
+			},
 		},
 	}
 
@@ -308,8 +310,10 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 				Timestamp:  time.Time{},
 				Bits:       0,
 				Nonce:      nonce,
-				Tx:         MsgTx{},
-				TxMerkle:   nil,
+				CoinbaseAux: CoinbaseAux{
+					Tx:       MsgTx{},
+					TxMerkle: nil,
+				},
 			},
 		},
 	}

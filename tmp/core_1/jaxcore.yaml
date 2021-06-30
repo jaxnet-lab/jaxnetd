@@ -4,8 +4,8 @@ debug_level: debug
 
 node:
   #  net: mainnet
-  net: fastnet
-#  net: testnet
+#  net: fastnet
+  net: testnet
   p2p:
 #    disable_outbound: true
     listeners:
@@ -28,7 +28,7 @@ node:
 
   beacon_chain:
     auto_expand: true
-    expansion_rule: 10
+    expansion_rule: 1
     expansion_limit: 2
     max_peers: 1000
     tx_index: true
@@ -39,7 +39,7 @@ node:
 
 btcd:
   network: "simnet"
-  enable: true
+#  enable: true
   rpc:
     host: 127.0.0.1:18556
     user: "jax"

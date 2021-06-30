@@ -14,7 +14,16 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
+)
+
+const (
+	BeaconEpochLength = 1 << 11
+	BeaconTimeDelta   = 600 // in seconds
+
+	ShardEpochLength = 4 * 60 * 24
+	ShardTimeDelta   = 15 // in seconds
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -144,6 +153,7 @@ type Params struct {
 
 	// GenesisBlock defines the first block of the chain.
 	GenesisBlock GenesisBlockOpts
+
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
 
@@ -253,13 +263,13 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 	// shard's exclusive info
 	cfg.Name = "shard_" + strconv.FormatUint(uint64(shard), 10)
 	cfg.GenesisHash = hash
+	cfg.IsBeacon = false
 
-	cfg.TargetTimespan = time.Second * 60 * 60 * 24
-	cfg.TargetTimePerBlock = time.Second * 15
+	cfg.TargetTimePerBlock = time.Second * ShardTimeDelta
+	cfg.TargetTimespan = cfg.TargetTimespan * ShardEpochLength
 
 	cfg.PowLimit = shardChainPowLimit
-	cfg.PowLimitBits = shardPoWBits
-
+	cfg.PowLimitBits = pow.ShardGenesisDifficulty(cfg.PowLimitBits)
 	return &cfg
 }
 

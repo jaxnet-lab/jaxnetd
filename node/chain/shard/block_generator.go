@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
@@ -21,6 +22,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/mmr"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -155,8 +157,22 @@ func (c *BlockGenerator) AcceptBlock(blockHeader wire.BlockHeader) error {
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
-	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return (20 * jaxutil.SatoshiPerJAXCoin) >> uint(height/210000)
+	switch pow.ShardEpoch(height) {
+	case 1:
+		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
+		d := pow.GetDifficulty(header.Bits())
+		k1 := pow.UnpackRat(header.K())
+		rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
+		reward, err := strconv.ParseFloat(rewardStr, 64)
+		if err != nil {
+			return (20 * jaxutil.SatoshiPerJAXCoin) >> uint(height/210000)
+		}
+		return int64(reward * jaxutil.SatoshiPerJAXCoin)
+
+	default:
+		// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
+		return (20 * jaxutil.SatoshiPerJAXCoin) >> uint(height/210000)
+	}
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
