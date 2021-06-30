@@ -216,6 +216,8 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		StrippedSize:  int32(blk.MsgBlock().SerializeSizeStripped()),
 		Weight:        int32(chaindata.GetBlockWeight(blk)),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		K:             strconv.FormatInt(int64(blockHeader.K()), 16),
+		VoteK:         strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		Difficulty:    diff,
 		SerialID:      serialID,
 		PrevSerialID:  prevSerialID,
@@ -241,6 +243,8 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 			VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 			Nonce:               blockHeader.Nonce(),
 			PoWHash:             blockHeader.PoWHash().String(),
+			K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
+			VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		},
 	}
 
@@ -346,6 +350,8 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 		PreviousHash:  blockHeader.PrevBlock().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		K:             strconv.FormatInt(int64(blockHeader.K()), 16),
+		VoteK:         strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		Difficulty:    diff,
 		Time:          blockHeader.Timestamp().Unix(),
 		BCHeader: jaxjson.GetBeaconBlockHeaderVerboseResult{
@@ -363,6 +369,8 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 			Version:             int32(beaconHeader.Version()),
 			VersionHex:          fmt.Sprintf("%08x", beaconHeader.Version()),
 			Nonce:               uint64(beaconHeader.Nonce()),
+			K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
+			VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		},
 	}
 	return blockHeaderReply, nil

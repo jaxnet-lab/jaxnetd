@@ -26,6 +26,8 @@ type GetBeaconBlockHeaderVerboseResult struct {
 	Time                int64   `json:"time"`
 	Nonce               uint64  `json:"nonce"`
 	Bits                string  `json:"bits"`
+	K                   string  `json:"k"`
+	VoteK               string  `json:"voteK"`
 	Difficulty          float64 `json:"difficulty"`
 	PreviousHash        string  `json:"previousblockhash,omitempty"`
 	NextHash            string  `json:"nextblockhash,omitempty"`
@@ -44,6 +46,8 @@ type GetShardBlockHeaderVerboseResult struct {
 	MerkleRoot    string                            `json:"merkleroot"`
 	Time          int64                             `json:"time"`
 	Bits          string                            `json:"bits"`
+	K             string                            `json:"k"`
+	VoteK         string                            `json:"voteK"`
 	Difficulty    float64                           `json:"difficulty"`
 	PreviousHash  string                            `json:"previousblockhash,omitempty"`
 	NextHash      string                            `json:"nextblockhash,omitempty"`
@@ -118,6 +122,8 @@ type GetBeaconBlockVerboseResult struct {
 	Time                int64         `json:"time"`
 	Nonce               uint32        `json:"nonce"`
 	Bits                string        `json:"bits"`
+	K                   string        `json:"k"`
+	VoteK               string        `json:"voteK"`
 	Difficulty          float64       `json:"difficulty"`
 	PoWHash             string        `json:"powhash"`
 	PreviousHash        string        `json:"previousblockhash"`
@@ -146,6 +152,8 @@ type GetShardBlockVerboseResult struct {
 	RawTx         []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
 	Time          int64                       `json:"time"`
 	Bits          string                      `json:"bits"`
+	K             string                      `json:"k"`
+	VoteK         string                      `json:"voteK"`
 	Difficulty    float64                     `json:"difficulty"`
 	PreviousHash  string                      `json:"previousblockhash"`
 	NextHash      string                      `json:"nextblockhash,omitempty"`
@@ -174,6 +182,8 @@ type GetBeaconBlockVerboseTxResult struct {
 	Time         int64         `json:"time"`
 	Nonce        uint32        `json:"nonce"`
 	Bits         string        `json:"bits"`
+	K            string        `json:"k"`
+	VoteK        string        `json:"voteK"`
 	Difficulty   float64       `json:"difficulty"`
 	PreviousHash string        `json:"previousblockhash"`
 	NextHash     string        `json:"nextblockhash,omitempty"`

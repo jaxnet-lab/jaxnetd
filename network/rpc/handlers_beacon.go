@@ -203,6 +203,8 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
 		Weight:              int32(chaindata.GetBlockWeight(blk)),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
+		VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		PoWHash:             blockHeader.PoWHash().String(),
 		Difficulty:          diff,
 		NextHash:            nextHashString,
@@ -310,6 +312,8 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		Nonce:               uint64(blockHeader.Nonce()),
 		Time:                blockHeader.Timestamp().Unix(),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
+		K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
+		VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
 		Difficulty:          diff,
 	}
 	return blockHeaderReply, nil
