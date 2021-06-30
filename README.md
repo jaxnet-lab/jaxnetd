@@ -69,7 +69,7 @@ configuration.
 
 ### Configuration
 
-> todo
+Edit the `data_dir` and `log_dir` in [jaxnetd.testnet.yaml](./jaxnetd.testnet.yaml) 
 
 #### Windows (Installed from MSI)
 
@@ -78,7 +78,8 @@ configuration.
 #### Linux/BSD/POSIX/Source
 
 ```bash
-$ ./jaxnetd
+$ go build .
+$ ./jaxnetd -C jaxnetd.testnet.yaml
 ```
 
 

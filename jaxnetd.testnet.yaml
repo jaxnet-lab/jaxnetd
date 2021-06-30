@@ -1,0 +1,43 @@
+data_dir: jaxnetd-data/data
+log_dir: jaxnetd-data/logs
+
+#debug_level: debug
+debug_level: info
+
+node:
+  net: testnet
+  p2p:
+    listeners:
+      - 0.0.0.0:18444
+    peers:
+      - '164.90.150.0:18444'    # sfo3
+      - '128.199.31.83:18444'   # blr1
+      - '138.68.152.77:18444'   # lon1
+      - '159.89.89.207:18444'   # nyc1
+
+  rpc:
+    disable: false
+    user: jax
+    password: aWeSoMePaSss
+    maxclients: 1000
+    listeners:
+      - 0.0.0.0:18333
+
+  shards:
+    enable: true
+    autorun: true
+
+  beacon_chain:
+    tx_index: true
+    addr_index: true
+    auto_expand: true
+    expansion_rule: 1
+    expansion_limit: 2
+    max_peers: 1000
+    no_relay_priority: true
+    mining_addresses:
+      - mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
+
+metrics:
+  enable: false
+  port: 18222
