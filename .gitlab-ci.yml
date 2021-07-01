@@ -8,7 +8,7 @@ stages:
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/jaxnetd/$CI_COMMIT_REF_NAME:latest
+  IMAGE: registry.gitlab.com/jaxnet/jaxnetd:$CI_COMMIT_REF_NAME
 
 .before_script: &before_script
   before_script:
@@ -27,7 +27,7 @@ build:docker:
   <<: *before_script
   only:
     - master
-    - dev
+    - tags
   tags:
     - shell
   script:
@@ -46,6 +46,7 @@ build:release:
   tags:
     - docker
   artifacts:
+    expire_in: 30 days
     paths:
       - dist
   only:

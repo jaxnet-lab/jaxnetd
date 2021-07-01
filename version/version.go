@@ -20,7 +20,7 @@ const semanticAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 const (
 	appMajor uint = 0
 	appMinor uint = 3
-	appPatch uint = 5
+	appPatch uint = 6
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
 	// per the semantic versioning spec.
@@ -28,9 +28,10 @@ const (
 )
 
 var (
-	tag    = "dev"
-	commit = "none"
-	date   = "unknown"
+	tag     = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
 )
 
 // appBuild is defined as a variable so it can be overridden during the build
@@ -70,6 +71,7 @@ type Ver struct {
 	Commit  string `json:"commit"`
 	Tag     string `json:"tag"`
 	Date    string `json:"date"`
+	BuiltBy string `json:"builtBy"`
 }
 
 func GetExtendedVersion() Ver {
@@ -78,6 +80,7 @@ func GetExtendedVersion() Ver {
 		Commit:  commit,
 		Tag:     tag,
 		Date:    date,
+		BuiltBy: builtBy,
 	}
 }
 

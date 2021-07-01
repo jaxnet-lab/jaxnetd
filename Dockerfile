@@ -21,6 +21,14 @@ WORKDIR /
 
 COPY --from=build-env /jaxnetd /
 COPY --from=build-env /jaxctl /
+COPY /jaxnetd.testnet.yaml /
+
+# default p2p port
+EXPOSE 18444
+# default rpc port
+EXPOSE 18333
+# default prometheus monitoring port
+EXPOSE 18222
 
 # Run app
-CMD ./jaxnetd
+CMD ./jaxnetd -C jaxnetd.testnet.yaml
