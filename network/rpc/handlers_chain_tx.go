@@ -449,6 +449,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 		return nil, nil, server.InternalRPCError(err.Error(), context)
 	}
 
+	var inputsFromAnotherChain []int
 	if detailedIn && !rawTxn.CoinbaseTx {
 		for i, in := range rawTxn.Vin {
 			hashStr := in.Coinbase
@@ -463,6 +464,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				return nil, nil, server.InternalRPCError(err.Error(), context)
 			case err != nil && txInfo.tx.SwapTx():
 				// ignore missed parent for for swap tx
+				inputsFromAnotherChain = append(inputsFromAnotherChain, i)
 				continue
 			}
 
@@ -473,6 +475,13 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 
 			rawTxn.InAmount += out.Value
 			rawTxn.Vin[i].Amount = out.Value
+		}
+		if txInfo.tx.SwapTx() {
+			// in swap tx we have fixed order of inputs and outputs,
+			// so if input X from chain A, then output X in chain A also
+			for i := range inputsFromAnotherChain {
+				rawTxn.OutAmount -= rawTxn.Vout[i].PreciseValue
+			}
 		}
 
 		rawTxn.Fee = rawTxn.InAmount - rawTxn.OutAmount

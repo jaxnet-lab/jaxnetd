@@ -286,10 +286,10 @@ func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvid
 	expectedInCount := 2
 
 prepareUTXO:
-	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true)
+	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true, 0) // ead always works in beacon
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
 
-	utxo, err := utxoPrv.SelectForAmount(amountToSpend, client.cfg.ShardID, client.key.Address.EncodeAddress())
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, 0, client.key.Address.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 	expectedInCount := 1
 
 prepareUTXO:
-	fee := EstimateFee(expectedInCount, 1, feeRate, true)
+	fee := EstimateFee(expectedInCount, 1, feeRate, true, client.cfg.ShardID)
 
 	draft := txmodels.DraftTx{
 		Amount:     amount,
@@ -354,7 +354,7 @@ prepareUTXO:
 	}
 
 	if draft.UTXO.GetSum() < amount+draft.NetworkFee {
-		return nil, errors.New("not enought utxo value")
+		return nil, errors.New("not enough utxo value")
 	}
 
 	err = draft.SetPayToAddress(destination, client.NetParams)

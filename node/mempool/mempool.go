@@ -892,7 +892,7 @@ func (mp *TxPool) validateReplacement(tx *jaxutil.Tx,
 	// It should also have an absolute fee greater than all of the
 	// transactions it intends to replace and pay for its own bandwidth,
 	// which is determined by our minimum relay fee.
-	minFee := calcMinRequiredTxRelayFee(txSize, mp.cfg.Policy.MinRelayTxFee)
+	minFee := calcMinRequiredTxRelayFee(txSize, mp.cfg.Policy.MinRelayTxFee, mp.cfg.ChainParams.IsBeacon)
 	if txFee < conflictsFee+minFee {
 		str := fmt.Sprintf("replacement transaction %v has an insufficient absolute fee: needs %v, has %v",
 			tx.Hash(), conflictsFee+minFee, txFee)
@@ -1162,7 +1162,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	// transaction does not exceeed 1000 less than the reserved space for
 	// high-priority transactions, don't require a fee for it.
 	serializedSize := GetTxVirtualSize(tx)
-	minFee := calcMinRequiredTxRelayFee(serializedSize, mp.cfg.Policy.MinRelayTxFee)
+	minFee := calcMinRequiredTxRelayFee(serializedSize, mp.cfg.Policy.MinRelayTxFee, mp.cfg.ChainParams.IsBeacon)
 	if serializedSize >= (DefaultBlockPrioritySize-1000) && txFee < minFee {
 		str := fmt.Sprintf("transaction %v has %d fees which is under the required amount of %d",
 			txHash, txFee, minFee)

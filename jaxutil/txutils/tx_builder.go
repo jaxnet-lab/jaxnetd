@@ -29,7 +29,7 @@ var (
 	// SwapTxEstWeight    = 1800
 )
 
-func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool) int64 {
+func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool, shardID uint32) int64 {
 	if feeRate < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
 		feeRate = mempool.DefaultMinRelayTxFeeSatoshiPerByte
 	}
@@ -38,10 +38,15 @@ func EstimateFeeForTx(tx *wire.MsgTx, feeRate int64, addChange bool) int64 {
 	if addChange {
 		size += int64(TxInEstWeight + TxOutEstWeight)
 	}
-	return feeRate * (size / 1000) // (Satoshi/bytes) * Byte =  satoshi
+
+	if shardID == 0 { // is beacon
+		return feeRate * (size / 1000) // (Satoshi/bytes) * Byte =  satoshi
+	}
+
+	return feeRate * (size / 1000) / 8 // (Satoshi/bytes) * 1/8 Byte =  satoshi
 }
 
-func EstimateFee(inCount, outCount int, feeRate int64, addChange bool) int64 {
+func EstimateFee(inCount, outCount int, feeRate int64, addChange bool, shardID uint32) int64 {
 	if feeRate < mempool.DefaultMinRelayTxFeeSatoshiPerByte {
 		feeRate = mempool.DefaultMinRelayTxFeeSatoshiPerByte
 	}
@@ -60,8 +65,11 @@ func EstimateFee(inCount, outCount int, feeRate int64, addChange bool) int64 {
 		TxOutEstWeight*outCount
 
 	size := int64(baseSize * chaindata.WitnessScaleFactor)
+	if shardID == 0 { // is beacon
+		return feeRate * size // (Satoshi/bytes) * Byte = satoshi
+	}
 
-	return feeRate * size // (Satoshi/bytes) * Byte = satoshi
+	return feeRate * size / 8 // (Satoshi/bytes) * 1/8 Byte = satoshi
 }
 
 type TxBuilder interface {
@@ -112,8 +120,8 @@ type extraOpts struct {
 	utxoRows txmodels.UTXORows
 }
 
-func (e extraOpts) calcFee() int64 {
-	return EstimateFee(len(e.utxoRows), e.outs, e.feeRate, true)
+func (e extraOpts) calcFee(shardID uint32) int64 {
+	return EstimateFee(len(e.utxoRows), e.outs, e.feeRate, true, shardID)
 }
 
 func NewTxBuilder(net chaincfg.NetName) TxBuilder {
@@ -502,7 +510,7 @@ func (t *txBuilder) prepareUTXOs() error {
 		opts := t.collectedOpts[shardID]
 		hasCoins := opts.utxoRows.GetSum()
 		if opts.fee < 1 {
-			opts.fee = opts.calcFee()
+			opts.fee = opts.calcFee(shardID)
 		}
 
 		needed := opts.needed + opts.fee

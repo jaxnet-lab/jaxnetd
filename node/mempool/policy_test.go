@@ -85,7 +85,7 @@ func TestCalcMinRequiredTxRelayFee(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := calcMinRequiredTxRelayFee(test.size, test.relayFee)
+		got := calcMinRequiredTxRelayFee(test.size, test.relayFee, false)
 		if got != test.want {
 			t.Errorf("TestCalcMinRequiredTxRelayFee test '%s' "+
 				"failed: got %v want %v", test.name, got,

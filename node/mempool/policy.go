@@ -76,13 +76,17 @@ func MinRelayFeeAmount(isBeacon bool) jaxutil.Amount {
 // calcMinRequiredTxRelayFee returns the minimum transaction fee required for a
 // transaction with the passed serialized size to be accepted into the memory
 // pool and relayed.
-func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee jaxutil.Amount) int64 {
+func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee jaxutil.Amount, isBeacon bool) int64 {
 	// Calculate the minimum fee for a transaction to be allowed into the
 	// mempool and relayed by scaling the base fee (which is the minimum
 	// free transaction relay fee).  minRelayTxFee is in Satoshi/kB so
 	// multiply by serializedSize (which is in bytes) and divide by 1000 to
 	// get minimum Satoshis.
 	minFee := (serializedSize * int64(minRelayTxFee)) / 1000
+	if !isBeacon {
+		// decreasing min fee for shard chains
+		minFee = ((serializedSize / 8) * int64(minRelayTxFee)) / 1000
+	}
 
 	if minFee == 0 && minRelayTxFee > 0 {
 		minFee = int64(minRelayTxFee)
