@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -1148,4 +1148,64 @@ func (c *Client) GetBlockTxOperationsAsync(blockHash *chainhash.Hash) FutureGetB
 // nil, otherwise.
 func (c *Client) GetBlockTxOperations(blockHash *chainhash.Hash) (*jaxjson.BlockTxOperations, error) {
 	return c.GetBlockTxOperationsAsync(blockHash).Receive()
+}
+
+// FutureGetMempoolUTXOs ...
+type FutureGetMempoolUTXOs chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetMempoolUTXOs) Receive() ([]jaxjson.MempoolUTXO, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := make([]jaxjson.MempoolUTXO, 0)
+	err = json.Unmarshal(res, &listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// GetMempoolUTXOsAsync ...
+func (c *Client) GetMempoolUTXOsAsync() FutureGetMempoolUTXOs {
+	return c.sendCmd(&jaxjson.GetMempoolUTXOs{})
+}
+
+// GetMempoolUTXOs ...
+func (c *Client) GetMempoolUTXOs() ([]jaxjson.MempoolUTXO, error) {
+	return c.GetMempoolUTXOsAsync().Receive()
+}
+
+// FutureEstimateLockTime ...
+type FutureEstimateLockTime chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureEstimateLockTime) Receive() (*jaxjson.EstimateLockTimeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := new(jaxjson.EstimateLockTimeResult)
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// EstimateLockTimeAsync ...
+func (c *Client) EstimateLockTimeAsync(amount int64) FutureEstimateLockTime {
+	return c.sendCmd(&jaxjson.EstimateLockTime{Amount: amount})
+}
+
+// EstimateLockTime ...
+func (c *Client) EstimateLockTime(amount int64) (*jaxjson.EstimateLockTimeResult, error) {
+	return c.EstimateLockTimeAsync(amount).Receive()
 }

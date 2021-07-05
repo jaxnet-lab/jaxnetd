@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.7] 
+
+- Added `estimateLockTime` and `getMempoolUTXOs` RPC calls
+- Normalize fee for the shard chains;
+- Fix the `getTxOutsStatus` method;
+- Added the network diagram to docs.
+
+
 ## [0.3.5] - 2021-06-30: Initial testnet release
 - Implemented basic Jax.Net protocol:
     1. Multi-chain network - Beacon and Shards;

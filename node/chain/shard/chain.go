@@ -34,7 +34,12 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 		Nonce:      beaconGenesis.Nonce(),
 		BCHeader:   *beaconGenesis,
 	}
+
 	chainParams.PowLimitBits = pow.ShardGenesisDifficulty(beaconGenesis.Bits())
+	if params.Net == chaincfg.FastNetParams.Net {
+		chainParams.PowLimitBits = chaincfg.FastNetParams.PowLimitBits
+	}
+
 	shard.SetChainParams(*chainParams)
 	return shard
 }

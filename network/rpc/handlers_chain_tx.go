@@ -803,7 +803,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 				OutTxHash: out.txHash.String(),
 				OutIndex:  out.vout,
 				Found:     false,
-				IsSpent:   false,
+				IsSpent:   true,
 				InMempool: false,
 			})
 			continue
@@ -1350,4 +1350,26 @@ func (server *CommonChainRPC) handleGetRawMempool(cmd interface{}, closeChan <-c
 	}
 
 	return hashStrings, nil
+}
+
+// handleGetMempoolUTXOs implements the gGetMempoolUTXOs command.
+// return list of UTXO used by txs in mempool
+func (server *CommonChainRPC) handleGetMempoolUTXOs(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	_ = cmd.(*jaxjson.GetMempoolUTXOs)
+	mp := server.chainProvider.TxMemPool
+
+	result := make([]jaxjson.MempoolUTXO, 0, len(mp.TxDescs()))
+
+	for _, txDesc := range mp.TxDescs() {
+		for i, in := range txDesc.Tx.MsgTx().TxIn {
+			result = append(result, jaxjson.MempoolUTXO{
+				UTXOHash:      in.PreviousOutPoint.Hash.String(),
+				UTXOIndex:     in.PreviousOutPoint.Index,
+				UsedByTxHash:  txDesc.Tx.Hash().String(),
+				UsedByTxIndex: uint32(i),
+			})
+		}
+	}
+
+	return result, nil
 }

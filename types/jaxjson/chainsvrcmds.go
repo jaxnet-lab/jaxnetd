@@ -553,6 +553,10 @@ type GetRawMempoolCmd struct {
 	Verbose *bool `jsonrpcdefault:"false"`
 }
 
+// GetMempoolUTXOs defines the GetMempoolUTXOs JSON-RPC command.
+type GetMempoolUTXOs struct {
+}
+
 // NewGetRawMempoolCmd returns a new instance which can be used to issue a
 // getrawmempool JSON-RPC command.
 //
@@ -965,6 +969,10 @@ func NewGetShardBlockBySerialNumberCmd(serialNumber int64, verbosity *int) *GetS
 	}
 }
 
+type EstimateLockTime struct {
+	Amount int64 `json:"amount"`
+}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -991,6 +999,7 @@ func init() {
 	MustRegisterCmd("chain", "getExtendedFee", (*GetExtendedFee)(nil), flags)
 	MustRegisterCmd("chain", "getMempoolInfo", (*GetMempoolInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getRawMempool", (*GetRawMempoolCmd)(nil), flags)
+	MustRegisterCmd("chain", "getMempoolUTXOs", (*GetMempoolUTXOs)(nil), flags)
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxDetails", (*GetTxDetailsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
@@ -1010,7 +1019,6 @@ func init() {
 	MustRegisterCmd("chain", "submitBlock", (*SubmitBlockCmd)(nil), flags)
 
 	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
-	// MustRegisterCmd("chain", "getBlockBySerialNumber", (*GetBlockBySerialNumberCmd)(nil), flags)
 
 	MustRegisterCmd("chain", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
@@ -1018,6 +1026,7 @@ func init() {
 	MustRegisterCmd("chain", "getNetworkHashPs", (*GetNetworkHashPSCmd)(nil), flags)
 	MustRegisterCmd("chain", "getBlockStats", (*GetBlockStatsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getChainTxStats", (*GetChainStatsCmd)(nil), flags)
+	MustRegisterCmd("chain", "estimateLockTime", (*EstimateLockTime)(nil), flags)
 
 	// ---- node rpc commands ------------------------------------------------------------------------------------------
 	MustRegisterCmd("node", "version", (*VersionCmd)(nil), flags)

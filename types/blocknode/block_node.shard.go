@@ -138,6 +138,7 @@ func (node *ShardBlockNode) Version() int32               { return node.version 
 func (node *ShardBlockNode) Height() int32                { return node.height }
 func (node *ShardBlockNode) SerialID() int64              { return node.serialID }
 func (node *ShardBlockNode) Bits() uint32                 { return node.bits }
+func (node *ShardBlockNode) K() uint32                    { return node.bcHeader.k }
 func (node *ShardBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *ShardBlockNode) WorkSum() *big.Int            { return node.workSum }
 func (node *ShardBlockNode) Timestamp() int64             { return node.timestamp }

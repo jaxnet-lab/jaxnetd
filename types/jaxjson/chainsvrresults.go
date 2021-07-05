@@ -974,3 +974,14 @@ type BlockTxOperations struct {
 type GetBlockTxOpsCmd struct {
 	BlockHash string `json:"blockHash"`
 }
+
+type MempoolUTXO struct {
+	UTXOHash      string `json:"utxoHash"`
+	UTXOIndex     uint32 `json:"utxoIndex"`
+	UsedByTxHash  string `json:"usedByTxHash"`
+	UsedByTxIndex uint32 `json:"usedByTxIndex"`
+}
+
+type EstimateLockTimeResult struct {
+	NBlocks int64 `json:"nBlocks"`
+}

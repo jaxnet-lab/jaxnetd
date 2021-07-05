@@ -102,6 +102,7 @@ func (node *BeaconBlockNode) Version() int32               { return node.version
 func (node *BeaconBlockNode) Height() int32                { return node.height }
 func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
+func (node *BeaconBlockNode) K() uint32                    { return node.k }
 func (node *BeaconBlockNode) SetBits(value uint32)         { node.bits = value }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }

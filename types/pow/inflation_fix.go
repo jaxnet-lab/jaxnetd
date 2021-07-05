@@ -112,3 +112,34 @@ func GetDifficulty(bits uint32) *big.Rat {
 	// D =  Target / 2^180
 	return new(big.Rat).SetFrac(target, twoPow180)
 }
+
+func MultBitsAndK(bits, k uint32) float64 {
+	// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
+	d := GetDifficulty(bits)
+	k1 := UnpackRat(k)
+	rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
+	reward, err := strconv.ParseFloat(rewardStr, 64)
+	if err != nil {
+		return 20
+	}
+	return reward
+}
+
+func CalcShardBlockSubsidy(height int32, bits, k uint32) int64 {
+	switch ShardEpoch(height) {
+	case 1:
+		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
+		d := GetDifficulty(bits)
+		k1 := UnpackRat(k)
+		rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
+		reward, err := strconv.ParseFloat(rewardStr, 64)
+		if err != nil {
+			return (20 * 1000) >> uint(height/210000)
+		}
+		return int64(reward * 1000)
+
+	default:
+		// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
+		return (20 * 1000) >> uint(height/210000)
+	}
+}

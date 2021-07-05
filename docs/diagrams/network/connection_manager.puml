@@ -1,0 +1,123 @@
+@startuml
+
+
+' arrows usage:
+' | Example      | Usage                         |
+' |--------------|-------------------------------|
+' | A ->    B    | regular invocation            |
+' | A o->   B    | sync IO call; ex HTTP request |
+' | A o-->> B    | start new goroutine           |
+' | A ->>o  B    | write to channel              |
+' | A o->>o B    | B read from channel           |
+' | A ->o   B    | state update                  |
+' | A o->   B !! | write to response channel     |
+
+' color codes:
+' #bc6ff1 - goroutine invocation
+' #bedbbb - scope boundary
+
+participant "P2P\nServer" as S
+database "Peer\nStorage" as PDB
+control "UPNP\nUpdate" as UPNP
+control "Server:\nPeerHandler" as SPH
+control "Sync\nManager" as SyncManager
+entity "Server\nPeer" as SP
+control "Peer\n" as P
+control "Address\nManager" as AddrMan
+entity "Connection\nManager" as ConnMan
+control "ConnMan:\nHandler" as CManHandler
+participant "Remote\n" as Remote
+participant "RPC\n" as RPC
+
+!procedure $ConnMan_Connect()
+  group ConnMan.Connect()
+      ConnMan o-> Remote ++: Net Dial
+      alt Dial Success
+        return conn
+        |||
+        ConnMan ->>o CManHandler: handleConnected{c, conn}
+        |||
+      else
+        ConnMan ->>o CManHandler:  handleFailed{c, err}
+        |||
+      end
+      deactivate ConnMan
+      |||
+  end
+
+!endprocedure
+
+== p2p Connection Manager Scope ==
+|||
+group p2p Connection Manager Scope
+  S -> ConnMan ++: << Start() >>
+  ConnMan -> CManHandler ++ #bc6ff1
+
+  alt " <-cm.requests "
+  else registerPending
+  CManHandler -> CManHandler : add conn\nto pending
+
+  else handleConnected
+    CManHandler -> CManHandler : update state
+    CManHandler -> S ++: <<OnConnection | outboundPeerConnected >>
+    S -> S :  << NewOutboundPeer(...) >>
+
+    S -> SP ++ #bc6ff1: << AssociateConnection(conn) >>
+      group Peer Run
+        SP -> P ++: start
+        loop peer handle loop
+          P -> P
+          |||
+        end
+        return
+
+
+      SP -> SP: << Disconnect() >>
+      destroy SP
+     end
+
+
+
+    S -> S ++ #bc6ff1: << peerDoneHandler(serverPeer) >>
+    group peerDoneHandler
+      S ->>o SPH: "   donePeers "
+      S ->>o SyncManager: DonePeer | donePeerMsg
+      S -> S : << RemoveOrphansByTag >>
+      |||
+      deactivate S
+    end
+
+    deactivate S
+
+  else handleDisconnected
+  else handleFailed
+
+  end
+
+  deactivate CManHandler
+
+  |||
+  loop cfg.TargetOutbound
+    ConnMan -> ConnMan ++ #bc6ff1: << NewConnReq() >>
+
+
+    ConnMan -> S ++ : << GetNewAddress() >>
+      S o--> SPH ++: << GetOutboundGroup >>
+        SPH -->o S: OutboundGroupCount
+        deactivate SPH
+
+        loop 0..100
+          S ->o AddrMan ++:  << GetAddress() >>
+          return address
+          S ->o AddrMan: Inc << Attempt() >>
+          |||
+        end
+      return address
+
+     $ConnMan_Connect()
+  end
+
+end
+' == p2p Connection Manager Scope ==
+
+@enduml

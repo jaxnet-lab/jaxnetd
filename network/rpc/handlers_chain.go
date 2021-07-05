@@ -110,6 +110,7 @@ func (server *CommonChainRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandle
 		jaxjson.ScopedMethod("chain", "getTxDetails"):          server.handleGetTxDetails,
 		jaxjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
 		jaxjson.ScopedMethod("chain", "getTxOutsStatus"):       server.handleGetTxOutsStatus,
+		jaxjson.ScopedMethod("chain", "getMempoolUTXOs"):       server.handleGetMempoolUTXOs,
 		jaxjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,
 		jaxjson.ScopedMethod("chain", "getBlockTxOps"):         server.handleGetBlockTxOps,
 		jaxjson.ScopedMethod("chain", "sendRawTransaction"):    server.handleSendRawTransaction,
@@ -128,13 +129,13 @@ func (server *CommonChainRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandle
 		jaxjson.ScopedMethod("chain", "getLastSerialBlockNumber"): server.handleGetLastSerialBlockNumber,
 		// -------------------------------------------------------------------------------------------------------------
 
-		jaxjson.ScopedMethod("chain", "getnetworkinfo"):   server.handleGetnetworkinfo, // todo: remove
+		jaxjson.ScopedMethod("chain", "getnetworkinfo"):   server.handleGetnetworkinfo,
 		jaxjson.ScopedMethod("chain", "getDifficulty"):    server.handleGetDifficulty,
-		jaxjson.ScopedMethod("chain", "getmininginfo"):    server.handleGetMiningInfo,    // todo: remove
-		jaxjson.ScopedMethod("chain", "getnetworkhashps"): server.handleGetNetworkHashPS, // todo: remove
-		jaxjson.ScopedMethod("chain", "getblockstats"):    server.handleGetBlockStats,    // todo: remove
-		jaxjson.ScopedMethod("chain", "getchaintxstats"):  server.handleGetChaintxStats,  // todo: remove
-
+		jaxjson.ScopedMethod("chain", "getmininginfo"):    server.handleGetMiningInfo,
+		jaxjson.ScopedMethod("chain", "getnetworkhashps"): server.handleGetNetworkHashPS,
+		jaxjson.ScopedMethod("chain", "getblockstats"):    server.handleGetBlockStats,
+		jaxjson.ScopedMethod("chain", "getchaintxstats"):  server.handleGetChaintxStats,
+		jaxjson.ScopedMethod("chain", "estimateLockTime"): server.handleEstimateLockTime,
 	}
 }
 
@@ -1035,4 +1036,24 @@ func (server *CommonChainRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-
 func (server *CommonChainRPC) handleGetDifficulty(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	best := server.chainProvider.BlockChain().BestSnapshot()
 	return server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
+}
+
+// handleGetDifficulty implements the getdifficulty command.
+func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*jaxjson.EstimateLockTime)
+
+	best := server.chainProvider.BlockChain().BestSnapshot()
+
+	kd := pow.MultBitsAndK(best.Bits, best.K)
+	n := c.Amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
+
+	if n < 4 {
+		n = 4
+	}
+	if n > 2000 {
+		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
+			fmt.Sprintf("lock time more than 2000 blocks"))
+	}
+
+	return jaxjson.EstimateLockTimeResult{NBlocks: n}, nil
 }

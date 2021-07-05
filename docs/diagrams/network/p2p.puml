@@ -1,0 +1,328 @@
+@startuml
+
+' arrows usage:
+' | Example      | Usage                         |
+' |--------------|-------------------------------|
+' | A ->    B    | regular invocation            |
+' | A o->   B    | sync IO call; ex HTTP request |
+' | A o-->> B    | start new goroutine           |
+' | A ->>o  B    | write to channel              |
+' | A o->>o B    | B read from channel           |
+' | A ->o   B    | state update                  |
+' | A o->   B !! | write to response channel     |
+
+
+' color codes:
+' #bc6ff1 - goroutine invocation
+' #bedbbb - scope boundary
+
+participant "P2P\nServer" as S
+database "Peer\nStorage" as PDB
+control "UPNP\nUpdate" as UPNP
+control "Server:\nPeerHandler" as SPH
+control "Sync\nManager" as SyncManager
+entity "Server\nPeer" as SP
+control "Peer\n" as P
+control "Address\nManager" as AddrMan
+entity "Connection\nManager" as ConnMan
+control "ConnMan:\nHandler" as CManHandler
+participant "Remote\n" as Remote
+participant "RPC\n" as RPC
+
+!procedure $ConnMan_Connect()
+  group ConnMan.Connect()
+      ConnMan o-> Remote ++: Net Dial
+      alt Dial Success
+        return conn
+        |||
+        ConnMan ->>o CManHandler: handleConnected{c, conn}
+        |||
+      else
+        ConnMan ->>o CManHandler:  handleFailed{c, err}
+        |||
+      end
+      deactivate ConnMan
+      |||
+  end
+
+!endprocedure
+
+activate S
+
+== Connect To Permanent Peers ==
+
+S -> S ++ #bedbbb
+  loop  range cfg.permanentPeers
+    S -> ConnMan ++: << Connect(peer_data) >>
+    return
+
+    ConnMan -> ConnMan ++ #bc6ff1 : 'start new goroutine
+    $ConnMan_Connect()
+  end
+deactivate S
+' == Connect To Permanent Peers ==
+
+S -> S ++ #bedbbb
+
+== Resolve NAT Addresses ==
+
+  alt Has NAT
+    S -> UPNP ++
+    loop
+      UPNP -> UPNP: << nat.AddPortMapping("tcp",\n   int(lport), int(lport) >>
+      UPNP ->o AddrMan: <<AddLocalAddress(IP:port, flag) >>
+      |||
+    end
+    |||
+    deactivate UPNP
+    |||
+  end
+deactivate S
+
+' == Resolve NAT Addresses ==
+S -> S ++ #bedbbb
+
+S -> PDB ++
+return PDB
+
+S -> AddrMan: << Start() >>
+S -> SyncManager: << Start() >>
+
+== p2p Connection Manager Scope ==
+|||
+group p2p Connection Manager Scope
+  S -> ConnMan ++: << Start() >>
+  ConnMan -> CManHandler ++ #bc6ff1
+
+  alt " <-cm.requests "
+  else registerPending
+  CManHandler -> CManHandler : add conn\nto pending
+
+  else handleConnected
+    CManHandler -> CManHandler : update state
+    CManHandler -> S ++: <<OnConnection | outboundPeerConnected >>
+    S -> S :  << NewOutboundPeer(...) >>
+
+    S -> SP ++ #bc6ff1: << AssociateConnection(conn) >>
+      group Peer Run
+        SP -> P ++: start
+        loop peer handle loop
+          P -> P
+          |||
+        end
+        return
+
+
+      SP -> SP: << Disconnect() >>
+      destroy SP
+     end
+
+
+
+    S -> S ++ #bc6ff1: << peerDoneHandler(serverPeer) >>
+    group peerDoneHandler
+      S ->>o SPH: "   donePeers "
+      S ->>o SyncManager: DonePeer | donePeerMsg
+      S -> S : << RemoveOrphansByTag >>
+      |||
+      deactivate S
+    end
+
+    deactivate S
+
+  else handleDisconnected
+  else handleFailed
+
+  end
+
+  deactivate CManHandler
+
+  |||
+  loop cfg.TargetOutbound
+    ConnMan -> ConnMan ++ #bc6ff1: << NewConnReq() >>
+
+
+    ConnMan -> S ++ : << GetNewAddress() >>
+      S o--> SPH ++: << GetOutboundGroup >>
+        SPH -->o S: OutboundGroupCount
+        deactivate SPH
+
+        loop 0..100
+          S ->o AddrMan ++:  << GetAddress() >>
+          return address
+          S ->o AddrMan: Inc << Attempt() >>
+          |||
+        end
+      return address
+
+     $ConnMan_Connect()
+  end
+
+end
+' == p2p Connection Manager Scope ==
+
+
+== p2p Server Handle Messages ==
+
+S -> SPH ++: << handlePeers() >>
+deactivate S
+
+group  p2p Server Handle Messages
+    |||
+    loop [ handle peers ]
+      |||
+      alt
+      |||
+      else " <-newPeers: handleAddPeerMsg "
+        SPH -> SPH: "check:\n  is Connected\n  is Banned\n  is MaxPeer Reached"
+        SPH -> PDB: Store New Peer by ID
+        SPH -> AddrMan: << Connected(peerAddr)>>
+        SPH -> SyncManager: << NewPeer( {Peer Obj} ) >>
+        alt OUTBOUND
+          SPH -> AddrMan: << Good(peerAddr) >>
+        end
+      |||
+
+      else " <-donePeers: handleDonePeerMsg"
+      |||
+        alt OUTBOUND
+        else  && persistent
+          SPH -> ConnMan: <<Disconnect(id)>>
+        else  &&  NOT persistent
+          SPH -> ConnMan: <<Remove(id)>>
+          'TODO:  maybe here is problem point
+          SPH -> ConnMan: <<NewConnReq>>
+        end
+        SPH -> PDB: Delete Peer by ID
+      |||
+
+      else " <-peerHeightsUpdate: handleUpdatePeerHeights"
+        SPH -> PDB ++ : Get All Peers
+        return peer_list
+
+        loop peer_list
+          SPH ->o SP: << UpdateLastBlockHeight() >>
+          SPH ->o SP: << UpdateLastAnnouncedBlock >>
+        |||
+        end
+
+
+      |||
+
+      else " <-banPeers: handleBanPeerMsg"
+         SPH -> PDB: Ban Peer by ID for Duration
+      |||
+
+      else " <-relayInv: handleRelayInvMsg"
+        SPH --> PDB ++: Get All Peers
+        return peer_list
+
+        loop peer_list
+          alt WantsHeaders
+            SPH ->o SP:  << QueueMessage(msgHeaders, nil) >>
+          end
+          SPH ->o SP:  << QueueInventory(msg.InvVect) >>
+        end
+      |||
+
+      else " <-broadcast: handleBroadcastMsg"
+        SPH --> PDB ++: Get All Peers
+        return peer_list
+
+        loop peer_list
+            SPH ->o SP:  << QueueMessage(message, nil) >>
+        end
+      |||
+
+      else " <-query: handleQuery"
+        |||
+        alt querymsg
+        else GetConnCountMsg
+          SPH -> SPH ++ #bedbbb
+
+            SPH --> PDB ++: Get All Peers
+            return peer_list
+
+            SPH o-> RPC !!: << len(peer_list, if active) >>
+          deactivate SPH
+        else GetPeersMsg
+          SPH --> PDB ++: Get All Peers
+          return peer_list
+
+          SPH o-> RPC !!: << len(peer_list, if active) >>
+        else ConnectNodeMsg
+          SPH -> SPH ++ #bedbbb
+
+            SPH -> SPH: "check:\n  is Exist"
+
+            SPH -> ConnMan ++: << Connect(peer_data) >>
+            return
+            SPH o-> RPC !!
+          deactivate SPH
+
+          ConnMan -> ConnMan ++ #bc6ff1: 'start new goroutine
+          $ConnMan_Connect()
+
+        else RemoveNodeMsg
+          SPH -> SPH ++ #bedbbb
+            SPH -> PDB++: Remove Peer
+              PDB -> SP++: << Disconnect() >>
+              return
+              destroy SP
+              |||
+            return
+
+            SPH o-> RPC !!
+          deactivate SPH
+
+        else GetOutboundGroup
+          SPH -> SPH ++ #bedbbb
+
+            SPH --> PDB ++: Get Outbound Peers
+            return peer_list
+
+            SPH o-> RPC !!: << len(peer_list) >>
+          deactivate SPH
+
+        else GetAddedNodesMsg
+          SPH -> SPH ++ #bedbbb
+
+            SPH --> PDB ++: Get Persistent Peers
+            return peer_list
+
+            SPH o-> RPC !!: << peer_list >>
+          deactivate SPH
+
+        else DisconnectNodeMsg
+          SPH -> SPH ++ #bedbbb
+            SPH -> PDB++: Get Peers
+            return peer_list
+
+              loop peer_list
+                PDB -> SP ++: << Disconnect() >>
+                return
+                destroy SP
+                |||
+              end
+            SPH o-> RPC !!
+            |||
+          deactivate SPH
+        end
+       ' -- END OF " <-query: handleQuery"
+       |||
+       |||
+    end
+    SPH -> SPH: drain channel\n and clean up
+    |||
+  end
+  deactivate SPH
+  |||
+end
+' == p2p Server Handle Messages ==
+
+
+deactivate S
+|||
+
+@enduml
+

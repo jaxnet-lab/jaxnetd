@@ -24,6 +24,7 @@ type BestState struct {
 	Hash        chainhash.Hash // The hash of the block.
 	Height      int32          // The height of the block.
 	Bits        uint32         // The difficulty bits of the block.
+	K           uint32         // The K coefficient.
 	BlockSize   uint64         // The size of the block.
 	BlockWeight uint64         // The weight of the block.
 	NumTxns     uint64         // The number of txns in the block.
@@ -39,6 +40,7 @@ func NewBestState(node blocknode.IBlockNode, blockSize, blockWeight, numTxns,
 		Hash:        node.GetHash(),
 		Height:      node.Height(),
 		Bits:        node.Bits(),
+		K:           node.K(),
 		BlockSize:   blockSize,
 		BlockWeight: blockWeight,
 		NumTxns:     numTxns,

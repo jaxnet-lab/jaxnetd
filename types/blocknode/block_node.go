@@ -42,6 +42,7 @@ type IBlockNode interface {
 	Version() int32
 	Bits() uint32
 	SetBits(uint32)
+	K() uint32
 	Status() BlockStatus
 	SetStatus(status BlockStatus)
 	NewHeader() wire.BlockHeader
