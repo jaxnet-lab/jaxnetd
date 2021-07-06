@@ -8,6 +8,7 @@ import (
 	"net"
 
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
@@ -88,6 +89,8 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 
 type ShardManager interface {
 	ListShards() jaxjson.ShardListResult
+
+	ShardCtl(id uint32) (*cprovider.ChainProvider, bool)
 
 	EnableShard(shardID uint32) error
 

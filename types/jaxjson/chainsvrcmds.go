@@ -618,6 +618,13 @@ func NewGetTxOutCmd(txHash string, vout uint32, includeMempool, includeOrphan *b
 	}
 }
 
+// GetTxCmd defines the gettx JSON-RPC command.
+type GetTxCmd struct {
+	Txid           string
+	IncludeMempool *bool `jsonrpcdefault:"true"`
+	IncludeOrphan  *bool `jsonrpcdefault:"false"`
+}
+
 // ListTxOutCmd defines the listtxout JSON-RPC command.
 type ListTxOutCmd struct{}
 
@@ -973,6 +980,12 @@ type EstimateLockTime struct {
 	Amount int64 `json:"amount"`
 }
 
+type EstimateSwapLockTime struct {
+	Amount           int64  `json:"amount"`
+	SourceShard      uint32 `json:"sourceShard"`
+	DestinationShard uint32 `json:"destinationShard"`
+}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -1003,6 +1016,7 @@ func init() {
 	MustRegisterCmd("chain", "getRawTransaction", (*GetRawTransactionCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxDetails", (*GetTxDetailsCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOut", (*GetTxOutCmd)(nil), flags)
+	MustRegisterCmd("chain", "getTx", (*GetTxCmd)(nil), flags)
 	MustRegisterCmd("chain", "getTxOutsStatus", (*GetTxOutStatus)(nil), flags)
 	MustRegisterCmd("chain", "listTxOut", (*ListTxOutCmd)(nil), flags)
 	MustRegisterCmd("chain", "getBlockTxOps", (*GetBlockTxOpsCmd)(nil), flags)
@@ -1035,6 +1049,7 @@ func init() {
 
 	MustRegisterCmd("node", "manageShards", (*ManageShardsCmd)(nil), flags)
 	MustRegisterCmd("node", "listShards", (*ListShardsCmd)(nil), flags)
+	MustRegisterCmd("node", "estimateSwapLockTime", (*EstimateSwapLockTime)(nil), flags)
 
 	MustRegisterCmd("node", "generate", (*GenerateCmd)(nil), flags)
 	MustRegisterCmd("node", "setGenerate", (*SetGenerateCmd)(nil), flags)

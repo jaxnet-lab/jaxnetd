@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -13,6 +14,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
 
@@ -51,8 +53,9 @@ func (server *NodeRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
 		jaxjson.ScopedMethod("node", "getInfo"): server.handleGetInfo,
 		jaxjson.ScopedMethod("node", "uptime"):  server.handleUptime,
 
-		jaxjson.ScopedMethod("node", "manageShards"): server.handleManageShards,
-		jaxjson.ScopedMethod("node", "listShards"):   server.handleListShards,
+		jaxjson.ScopedMethod("node", "manageShards"):         server.handleManageShards,
+		jaxjson.ScopedMethod("node", "listShards"):           server.handleListShards,
+		jaxjson.ScopedMethod("node", "estimateSwapLockTime"): server.handleEstimateLockTime,
 
 		jaxjson.ScopedMethod("node", "generate"):    server.handleGenerate,
 		jaxjson.ScopedMethod("node", "setGenerate"): server.handleSetGenerate,
@@ -163,7 +166,6 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	return reply, nil
 }
 
-
 func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.ManageShardsCmd)
 
@@ -190,6 +192,59 @@ func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan stru
 func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	shards := server.shardsMgr.ListShards()
 	return shards, nil
+}
+
+// handleGetDifficulty implements the getdifficulty command.
+func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*jaxjson.EstimateSwapLockTime)
+
+	sourceShard, ok := server.shardsMgr.ShardCtl(c.SourceShard)
+	if !ok {
+		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInvalidParameter,
+			fmt.Sprintf("shard %d not exist", c.SourceShard))
+	}
+	sourceBest := sourceShard.BlockChain().BestSnapshot()
+	sN, err := EstimateLockInChain(sourceBest.Bits, sourceBest.K, c.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	destinationShard, ok := server.shardsMgr.ShardCtl(c.DestinationShard)
+	if !ok {
+		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInvalidParameter,
+			fmt.Sprintf("shard %d not exist", c.SourceShard))
+	}
+
+	destBest := destinationShard.BlockChain().BestSnapshot()
+	dN, err := EstimateLockInChain(destBest.Bits, destBest.K, c.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	if sN < dN*2 {
+		sN = dN * 2
+	}
+
+	return jaxjson.EstimateSwapLockTimeResult{
+		NBlocksAtSource: sN,
+		NBlocksAtDest:   dN,
+	}, nil
+}
+
+// EstimateLockInChain estimates desired period in block for locking funds
+// in shard during the CrossShard Swap Tx.
+func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
+	kd := pow.MultBitsAndK(bits, k)
+	n := amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
+
+	if n < 4 {
+		n = 4
+	}
+	if n > 2000 {
+		return 0, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
+			fmt.Sprintf("lock time more than 2000 blocks"))
+	}
+	return n, nil
 }
 
 // handleSetGenerate implements the setgenerate command.

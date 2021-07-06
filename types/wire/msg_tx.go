@@ -7,6 +7,7 @@ package wire
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
@@ -789,6 +790,16 @@ func (msg *MsgTx) HasWitness() bool {
 	}
 
 	return false
+}
+
+func (msg *MsgTx) SerializeToHex() (string, error) {
+	buf := bytes.NewBuffer(nil)
+	err := msg.Serialize(buf)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // Serialize encodes the transaction to w using a format that suitable for

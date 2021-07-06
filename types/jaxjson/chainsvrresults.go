@@ -567,6 +567,16 @@ type GetTxOutResult struct {
 	PreciseValue  int64              `json:"precise_value"`
 }
 
+// GetTxResult models the data from the gettx command.
+type GetTxResult struct {
+	BestBlock     string `json:"bestblock"`
+	Block         string `json:"block"`
+	Height        int64  `json:"height"`
+	Confirmations int64  `json:"confirmations"`
+	Coinbase      bool   `json:"coinbase"`
+	RawTx         string `json:"raw_tx"`
+}
+
 type GetTxOutStatus struct {
 	Outs        []TxOutKey
 	OnlyMempool *bool `jsonrpcdefault:"true"`
@@ -984,4 +994,9 @@ type MempoolUTXO struct {
 
 type EstimateLockTimeResult struct {
 	NBlocks int64 `json:"nBlocks"`
+}
+
+type EstimateSwapLockTimeResult struct {
+	NBlocksAtSource int64 `json:"NBlocksAtSource"`
+	NBlocksAtDest   int64 `json:"NBlocksAtDest"`
 }

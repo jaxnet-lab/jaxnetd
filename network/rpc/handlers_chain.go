@@ -109,6 +109,7 @@ func (server *CommonChainRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandle
 		jaxjson.ScopedMethod("chain", "getRawTransaction"):     server.handleGetRawTransaction,
 		jaxjson.ScopedMethod("chain", "getTxDetails"):          server.handleGetTxDetails,
 		jaxjson.ScopedMethod("chain", "getTxOut"):              server.handleGetTxOut,
+		jaxjson.ScopedMethod("chain", "getTx"):                 server.handleGetTx,
 		jaxjson.ScopedMethod("chain", "getTxOutsStatus"):       server.handleGetTxOutsStatus,
 		jaxjson.ScopedMethod("chain", "getMempoolUTXOs"):       server.handleGetMempoolUTXOs,
 		jaxjson.ScopedMethod("chain", "listTxOut"):             server.handleListTxOut,

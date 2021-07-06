@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 type (
@@ -34,10 +34,10 @@ type (
 
 // API version constants
 const (
-	jsonrpcSemverString = "1.3.0"
-	jsonrpcSemverMajor  = 1
+	jsonrpcSemverString = "0.3.8"
+	jsonrpcSemverMajor  = 0
 	jsonrpcSemverMinor  = 3
-	jsonrpcSemverPatch  = 0
+	jsonrpcSemverPatch  = 8
 )
 
 const (

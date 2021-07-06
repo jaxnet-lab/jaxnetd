@@ -66,8 +66,6 @@ func realMain() error {
 	backendLogger := btclog.NewBackend(os.Stdout)
 	defer os.Stdout.Sync()
 	log = backendLogger.Logger("MAIN")
-	dbLog := backendLogger.Logger("BCDB")
-	dbLog.SetLevel(btclog.LevelDebug)
 	// database.UseLogger(dbLog)
 
 	// Setup the parser options and commands.
@@ -91,6 +89,9 @@ func realMain() error {
 	parser.AddCommand("fetchblockregion",
 		"Fetch the specified block region from the database", "",
 		&blockRegionCfg)
+	parser.AddCommand("export-indexes",
+		"Exports blockchain data in csv format", "",
+		&ExportIndexesCfg)
 
 	// Parse command line and invoke the Execute function for the specified
 	// command.

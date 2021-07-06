@@ -1205,7 +1205,90 @@ func (c *Client) EstimateLockTimeAsync(amount int64) FutureEstimateLockTime {
 	return c.sendCmd(&jaxjson.EstimateLockTime{Amount: amount})
 }
 
-// EstimateLockTime ...
+// EstimateLockTime estimates desired period in block for locking funds
+// // in shard during the CrossShard Swap Tx.
 func (c *Client) EstimateLockTime(amount int64) (*jaxjson.EstimateLockTimeResult, error) {
 	return c.EstimateLockTimeAsync(amount).Receive()
+}
+
+type FutureSwapEstimateLockTime chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureSwapEstimateLockTime) Receive() (*jaxjson.EstimateSwapLockTimeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := new(jaxjson.EstimateSwapLockTimeResult)
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// EstimateSwapLockTimeAsync ...
+func (c *Client) EstimateSwapLockTimeAsync(source, dest uint32, amount int64) FutureSwapEstimateLockTime {
+	return c.sendCmd(&jaxjson.EstimateSwapLockTime{
+		Amount:           amount,
+		SourceShard:      source,
+		DestinationShard: dest,
+	})
+}
+
+// EstimateSwapLockTime estimates desired period in block for locking funds
+// in source and destination shards during the CrossShard Swap Tx.
+func (c *Client) EstimateSwapLockTime(source, dest uint32, amount int64) (*jaxjson.EstimateSwapLockTimeResult, error) {
+	return c.EstimateSwapLockTimeAsync(source, dest, amount).Receive()
+}
+
+// FutureGetTxResult is a future promise to deliver the result of a
+// GetTxOutAsync RPC invocation (or an applicable error).
+type FutureGetTxResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetTxResult) Receive() (*jaxjson.GetTxResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettx result object.
+	var txInfo *jaxjson.GetTxResult
+	err = json.Unmarshal(res, &txInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return txInfo, nil
+}
+
+// GetTxAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetTxOut for the blocking version and more details.
+func (c *Client) GetTxAsync(txHash *chainhash.Hash, mempool, orphan bool) FutureGetTxResult {
+	hash := ""
+	if txHash != nil {
+		hash = txHash.String()
+	}
+
+	cmd := &jaxjson.GetTxCmd{Txid: hash, IncludeMempool: &mempool, IncludeOrphan: &orphan}
+	return c.sendCmd(cmd)
+}
+
+// GetTx returns the transaction info
+func (c *Client) GetTx(txHash *chainhash.Hash, mempool, orphan bool) (*jaxjson.GetTxResult, error) {
+	return c.GetTxAsync(txHash, mempool, orphan).Receive()
 }

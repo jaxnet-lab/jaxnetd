@@ -17,6 +17,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/rpc"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
@@ -28,6 +29,15 @@ func (chainCtl *chainController) EnableShard(shardID uint32) error {
 
 func (chainCtl *chainController) DisableShard(shardID uint32) error {
 	return nil
+}
+
+func (chainCtl *chainController) ShardCtl(id uint32) (*cprovider.ChainProvider, bool) {
+	shardInfo, ok := chainCtl.shardsCtl[id]
+	if !ok {
+		return nil, ok
+	}
+
+	return shardInfo.ctl.chainProvider, ok
 }
 
 func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {

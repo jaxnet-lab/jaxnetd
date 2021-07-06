@@ -336,14 +336,16 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 	return *rawTxn, nil
 }
 
-func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, orphan bool) (*txInfo, error) {
-	tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
-	if err == nil {
-		return &txInfo{
-			tx:        tx.MsgTx(),
-			blkHash:   nil,
-			blkHeight: 0,
-		}, err
+func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, mempool, orphan bool) (*txInfo, error) {
+	if mempool {
+		tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
+		if err == nil {
+			return &txInfo{
+				tx:        tx.MsgTx(),
+				blkHash:   &chainhash.ZeroHash,
+				blkHeight: 0,
+			}, err
+		}
 	}
 
 	// return jaxjson.TxRawResult{}, nil
@@ -420,7 +422,7 @@ type txInfo struct {
 
 func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool,
 	includeOrphan bool) (*jaxjson.TxRawResult, *wire.MsgTx, error) {
-	txInfo, err := server.getTx(txHash, includeOrphan)
+	txInfo, err := server.getTx(txHash, true, includeOrphan)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -457,7 +459,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				hashStr = in.Txid
 			}
 			hash, _ := chainhash.NewHashFromStr(hashStr)
-			parentTx, err := server.getTx(hash, includeOrphan)
+			parentTx, err := server.getTx(hash, true, includeOrphan)
 			switch {
 			case err != nil && !txInfo.tx.SwapTx():
 				context := fmt.Sprintf("missing details of parent for tx(%s)", txInfo.tx.TxHash().String())
@@ -604,6 +606,47 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 	server.connMgr.AddRebroadcastInventory(iv, txD)
 
 	return tx.Hash().String(), nil
+}
+
+// handleGetTxOut handles gettxout commands.
+func (server *CommonChainRPC) handleGetTx(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*jaxjson.GetTxCmd)
+
+	// Convert the provided transaction hash hex to a Hash.
+	txHash, err := chainhash.NewHashFromStr(c.Txid)
+	if err != nil {
+		return nil, rpcDecodeHexError(c.Txid)
+	}
+
+	includeMempool := true
+	if c.IncludeMempool != nil {
+		includeMempool = *c.IncludeMempool
+	}
+
+	includeOrphan := true
+	if c.IncludeOrphan != nil {
+		includeOrphan = *c.IncludeOrphan
+	}
+
+	txInfo, err := server.getTx(txHash, includeMempool, includeOrphan)
+	if err != nil {
+		return nil, err
+	}
+
+	best := server.chainProvider.BlockChain().BestSnapshot()
+	rawTx, err := txInfo.tx.SerializeToHex()
+	if err != nil {
+		return nil, server.InternalRPCError(err.Error(), "unable to marshal tx")
+	}
+
+	return jaxjson.GetTxResult{
+		Block:         txInfo.blkHash.String(),
+		Height:        int64(txInfo.blkHeight),
+		Confirmations: int64(best.Height - txInfo.blkHeight),
+		BestBlock:     best.Hash.String(),
+		Coinbase:      chaindata.IsCoinBaseTx(txInfo.tx),
+		RawTx:         rawTx,
+	}, nil
 }
 
 // handleGetTxOut handles gettxout commands.
@@ -902,7 +945,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 		}
 
 		for inId, in := range tx.MsgTx().TxIn {
-			parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true)
+			parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true, true)
 			switch {
 			case err != nil && !tx.MsgTx().SwapTx():
 				context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, tx.Hash().String())
