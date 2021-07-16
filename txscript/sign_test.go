@@ -1666,8 +1666,9 @@ func TestEADScript(t *testing.T) {
 	shardID := uint32(1)
 
 	script, err := EADAddressScript(EADScriptData{
-		ShardID:        shardID,
-		IP:             ipV4,
+		ShardID: shardID,
+		IP:      ipV4,
+		// URL:            fmt.Sprintf("https://%s.jax.net", ipV4.String()),
 		Port:           port,
 		ExpirationDate: expTime,
 		Owner:          address,
@@ -1682,14 +1683,14 @@ func TestEADScript(t *testing.T) {
 		return
 	}
 
-	fmt.Printf("scriptAsm: %s\n", scriptAsm)
+	t.Logf("scriptAsm: %s\n", scriptAsm)
 	data, err := PushedData(script)
 	if err != nil {
 		t.Errorf("failed to disasm ead address script: %v", err)
 		return
 	}
 
-	fmt.Println(data)
+	t.Log(data)
 
 	class, addressees, sigReq, err := ExtractPkScriptAddrs(script, &chaincfg.TestNet3Params)
 	if err != nil {
@@ -1716,6 +1717,7 @@ func TestEADScript(t *testing.T) {
 		t.Errorf("failed to parse the ead address script: %v", err)
 		return
 	}
+	t.Logf("%+v", scriptData)
 
 	if scriptData.IP.String() != ipV4.String() {
 		t.Errorf("ip mismatch: %v", scriptData.IP.String())

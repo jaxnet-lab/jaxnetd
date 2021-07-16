@@ -7,10 +7,11 @@ package txscript
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net"
+	"net/url"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -512,6 +513,7 @@ func NullDataScript(data []byte) ([]byte, error) {
 type EADScriptData struct {
 	ShardID        uint32
 	IP             net.IP
+	URL            string
 	Port           int64
 	ExpirationDate int64
 	Owner          *jaxutil.AddressPubKey
@@ -519,6 +521,23 @@ type EADScriptData struct {
 }
 
 func (e EADScriptData) Encode() ([]byte, error) {
+	address := e.URL
+	if e.IP != nil {
+		address = e.IP.String()
+	} else {
+		_, err := url.Parse(e.URL)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid url")
+		}
+	}
+
+	if len(e.URL) == 0 && e.IP == nil {
+		return nil, errors.New("ead.URL and ead.IP empty")
+	}
+	if len(e.URL) > wire.MaxEADDomainLen {
+		return nil, fmt.Errorf("ead.URL too long: %d > %d", len(e.URL), wire.MaxEADDomainLen)
+	}
+
 	return NewScriptBuilder().
 		AddData(e.Owner.ScriptAddress()).
 		AddOp(OP_CHECKSIG).
@@ -528,7 +547,7 @@ func (e EADScriptData) Encode() ([]byte, error) {
 		// and won't extract value.
 		AddData(scriptNum(e.ShardID + 16).Bytes()).
 		AddData(scriptNum(e.ExpirationDate).Bytes()).
-		AddData([]byte(e.IP.String())).
+		AddData([]byte(address)).
 		AddData(scriptNum(e.Port).Bytes()).
 		Script()
 }
@@ -549,13 +568,18 @@ func isEADRegistration(pops []parsedOpcode) bool {
 		return ip != nil
 	}
 
+	isURL := func(data []byte) bool {
+		_, err := url.Parse(string(data))
+		return err == nil
+	}
+
 	return len(pops) == 7 &&
 		(len(pops[0].data) == 33 || len(pops[0].data) == 65) &&
 		pops[1].opcode.value == OP_CHECKSIG &&
 		pops[2].opcode.value == OP_NOP &&
 		isNumber(pops[3].opcode) &&
 		isNumber(pops[4].opcode) &&
-		isIP(pops[5].data) &&
+		(isIP(pops[5].data) || isURL(pops[5].data)) &&
 		isNumber(pops[6].opcode)
 }
 
@@ -610,12 +634,22 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	scriptData.ExpirationDate = int64(rawTime)
 	scriptData.Port = int64(rawPort)
 	scriptData.ShardID = shardID - 16
+
 	scriptData.IP = net.ParseIP(string(pops[5].data))
 	if scriptData.IP == nil {
-		err = errors.New("invalid ip value")
+		scriptData.URL = string(pops[5].data)
 		return
 	}
 
+	if len(scriptData.URL) == 0 && scriptData.IP == nil {
+		err = errors.New("ead.URL and ead.IP empty")
+		return
+	}
+
+	if len(scriptData.URL) > wire.MaxEADDomainLen {
+		err = fmt.Errorf("ead.URL too long: %d > %d", len(scriptData.URL), wire.MaxEADDomainLen)
+		return
+	}
 	return
 }
 

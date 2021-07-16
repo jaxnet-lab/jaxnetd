@@ -408,6 +408,8 @@ type Tx interface {
 	// block storage.  Calling this function on a managed transaction will
 	// result in a panic.
 	Rollback() error
+
+	Chain() chain.IChainCtx
 }
 
 // DB provides a generic interface that is used to store bitcoin blocks and

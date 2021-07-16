@@ -14,7 +14,6 @@ import (
 )
 
 func TestGetDifficulty(t *testing.T) {
-
 	oldTarget := CompactToBig(0x1d00ffff)
 	fmt.Printf("(%064x) target %08x \n", CompactToBig(0x1d00ffff), 0x1d00ffff)
 
@@ -33,5 +32,4 @@ func TestGetDifficulty(t *testing.T) {
 	println(err)
 	println(reward)
 	println(int64(reward * 1000))
-
 }

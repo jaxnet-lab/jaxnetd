@@ -402,13 +402,6 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 			return err
 		}
 
-		// if scriptData.OpCode == txscript.EADAddressDelete {
-		// 	if err = removeEAD(out.PkScript); err != nil {
-		// 		return err
-		// 	}
-		// 	continue
-		// }
-
 		ownerKey := string(scriptData.RawKey)
 		addr, ok := view.eadAddresses[ownerKey]
 		if !ok {
@@ -424,6 +417,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 
 		view.eadAddresses[ownerKey] = addr.AddAddress(
 			scriptData.IP,
+			scriptData.URL,
 			uint16(scriptData.Port),
 			scriptData.ExpirationDate,
 			scriptData.ShardID,

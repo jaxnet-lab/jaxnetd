@@ -620,17 +620,15 @@ type EADAddresses struct {
 
 type EADAddress struct {
 	// IP address of the server.
-	IP string `json:"ip"`
+	IP  string `json:"ip"`
+	URL string `json:"url"`
 
-	// Port the server is using.  This is encoded in big endian on the wire
-	// which differs from most everything else.
+	// Port the server is using.
 	Port uint16 `json:"port"`
-
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time `json:"expires_at"`
 	// Shard shows what shards the agent works with.
-	Shard uint32 `json:"shards"`
-
+	Shard      uint32 `json:"shards"`
 	TxHash     string `json:"tx_hash"`
 	TxOutIndex int    `json:"tx_out_index"`
 }

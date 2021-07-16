@@ -22,9 +22,9 @@ import (
 	"github.com/btcsuite/goleveldb/leveldb/iterator"
 	"github.com/btcsuite/goleveldb/leveldb/opt"
 	"github.com/btcsuite/goleveldb/leveldb/util"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/database/internal/treap"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -954,11 +954,10 @@ type pendingBlock struct {
 // read-write and implements the database.Tx interface.  The transaction
 // provides a root bucket against which all read and writes occur.
 type transaction struct {
-	managed        bool // Is the transaction managed?
-	closed         bool // Is the transaction closed?
-	writable       bool // Is the transaction writable?
-	db             *db  // DB instance the tx was created from.
-	chain          chain2.IChainCtx
+	managed        bool             // Is the transaction managed?
+	closed         bool             // Is the transaction closed?
+	writable       bool             // Is the transaction writable?
+	db             *db              // DB instance the tx was created from.
 	snapshot       *dbCacheSnapshot // Underlying snapshot for txns.
 	metaBucket     *bucket          // The root metadata bucket.
 	blockIdxBucket *bucket          // The block index bucket.
@@ -981,6 +980,10 @@ type transaction struct {
 
 // Enforce transaction implements the database.Tx interface.
 var _ database.Tx = (*transaction)(nil)
+
+func (tx *transaction) Chain() chain2.IChainCtx {
+	return tx.db.Chain()
+}
 
 // removeActiveIter removes the passed iterator from the list of active
 // iterators against the pending keys treap.
@@ -1260,7 +1263,7 @@ func (tx *transaction) FetchBlockHeader(hash *chainhash.Hash) ([]byte, error) {
 	return tx.FetchBlockRegion(&database.BlockRegion{
 		Hash:   hash,
 		Offset: 0,
-		Len:    uint32(tx.chain.MaxBlockHeaderPayload()),
+		Len:    uint32(tx.db.Chain().MaxBlockHeaderPayload()),
 	})
 }
 
@@ -1284,7 +1287,7 @@ func (tx *transaction) FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, err
 	for i := range hashes {
 		regions[i].Hash = &hashes[i]
 		regions[i].Offset = 0
-		regions[i].Len = uint32(tx.chain.MaxBlockHeaderPayload())
+		regions[i].Len = uint32(tx.db.Chain().MaxBlockHeaderPayload())
 	}
 	return tx.FetchBlockRegions(regions)
 }

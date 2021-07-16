@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -90,7 +90,7 @@ func (b *BlockChain) createChainState() error {
 		// EAD registration is possible only at beacon
 		if b.chain.IsBeacon() {
 			// Create the bucket that houses the EAD addresses index.
-			_, err = meta.CreateBucket(chaindata.EADAddressesBucketName)
+			_, err = meta.CreateBucket(chaindata.EADAddressesBucketNameV2)
 			if err != nil {
 				return err
 			}
@@ -222,8 +222,20 @@ func (b *BlockChain) initChainState() error {
 		}
 	}
 
+	err = b.db.Update(func(dbTx database.Tx) error {
+		// gracefully apply migrations
+		if err = chaindata.MigrateEADAddresses(dbTx); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+
 	// Attempt to load the chain state from the database.
 	err = b.db.View(func(dbTx database.Tx) error {
+
 		// Fetch the stored chain state from the database metadata.
 		// When it doesn't exist, it means the database hasn't been
 		// initialized for use with chain yet, so break out now to allow

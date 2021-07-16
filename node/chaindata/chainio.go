@@ -73,9 +73,13 @@ var (
 	// MerkleMountainRange for Merged Mining Tree.
 	ShardsMMRBucketName = []byte("shardsmmr")
 
-	// EADAddressesBucketName is the name of the db bucket used to house the
+	// EADAddressesBucketNameV1 is the name of the db bucket used to house the
 	// net addresses of Exchange Agents.
-	EADAddressesBucketName = []byte("ead_addresses")
+	EADAddressesBucketNameV1 = []byte("ead_addresses")
+
+	// EADAddressesBucketNameV2 is the name of the db bucket used to house the
+	// net addresses of Exchange Agents.
+	EADAddressesBucketNameV2 = []byte("ead_addresses_v2")
 
 	// BlockLastSerialID is the name of the db bucket used to house the
 	// block last serial id.
@@ -860,7 +864,7 @@ func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 
 // DBPutEADAddresses ...
 func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses) error {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	for owner, entry := range updateSet {
 		if entry == nil {
 			if err := bucket.Delete([]byte(owner)); err != nil {
@@ -888,7 +892,7 @@ func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses
 // DBFetchAllEADAddresses ...
 func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, error) {
 	view := map[string]*wire.EADAddresses{}
-	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	if utxoBucket == nil {
 		return view, nil
 	}
@@ -917,7 +921,7 @@ func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, er
 
 // DBFetchEADAddresses ...
 func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, error) {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	serializedData := bucket.Get([]byte(ownerPK))
 
 	if serializedData == nil {

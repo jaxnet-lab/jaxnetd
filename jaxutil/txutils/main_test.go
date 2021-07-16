@@ -574,9 +574,9 @@ func TestEADRegistration(ot *testing.T) {
 		RPC: NodeRPC{
 			// User: "jaxnetrpc",
 			// Pass: "AUL6VBjoQnhP3bfFzl",
-			// Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
@@ -643,12 +643,12 @@ func TestEAD(ot *testing.T) {
 			// Host: "116.203.250.136:18333",
 			// User: "jaxnetrpc",
 			// Pass: "ec0bb2575b06bfdf",
-			Host: "116.202.107.209:22333",
-			User: "jaxnetrpc",
-			Pass: "AUL6VBjoQnhP3bfFzl",
-			// Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
+			// Host: "116.202.107.209:22333",
+			// User: "jaxnetrpc",
+			// Pass: "AUL6VBjoQnhP3bfFzl",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
@@ -662,14 +662,13 @@ func TestEAD(ot *testing.T) {
 	//
 	{
 		var scriptsToCreate [][]byte
-		var scriptsToDelete [][]byte
 		for i := 1; i < 12; i++ {
 			ipV4 := net.IPv4(77, 244, 36, 88)
 			expTime := int64(1608157135)
 			port := int64(43801)
 			data := txscript.EADScriptData{
 				ShardID:        uint32(i),
-				IP:             ipV4,
+				URL:            fmt.Sprintf("https://%s.jax.net", ipV4),
 				Port:           port,
 				ExpirationDate: expTime,
 				Owner:          minerKP.AddressPubKey,
@@ -681,7 +680,6 @@ func TestEAD(ot *testing.T) {
 
 			scriptAddress, err = txscript.EADAddressScript(data)
 			assert.NoError(t, err)
-			scriptsToDelete = append(scriptsToDelete, scriptAddress)
 		}
 
 		senderAddress := minerKP.Address.EncodeAddress()
@@ -712,7 +710,7 @@ func TestEAD(ot *testing.T) {
 		}
 
 		sendClosure(scriptsToCreate...)
-		sendClosure(scriptsToDelete...)
+		// sendClosure(scriptsToDelete...)
 	}
 
 }

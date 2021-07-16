@@ -1070,10 +1070,14 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 			if len(opts.Shards) > 0 && !has {
 				continue
 			}
-
+			ip := ""
+			if p.IP != nil {
+				ip = p.IP.String()
+			}
 			ips = append(ips, jaxjson.EADAddress{
-				IP:         p.IP.String(),
+				IP:         ip,
 				Port:       p.Port,
+				URL:        p.URL,
 				ExpiresAt:  p.ExpiresAt,
 				Shard:      p.Shard,
 				TxHash:     p.TxHash.String(),

@@ -1,7 +1,6 @@
 package wire
 
 import (
-	"encoding/binary"
 	"io"
 	"net"
 	"time"
@@ -10,13 +9,18 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
+const (
+	// MaxEADDomainLen is limit for the length of ead address host/URI
+	MaxEADDomainLen = 256
+)
+
 type EADAddresses struct {
 	ID          uint64
 	OwnerPubKey []byte
 	IPs         []EADAddress
 }
 
-func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, shardID uint32,
+func (msg *EADAddresses) AddAddress(ip net.IP, domain string, port uint16, expiresAt int64, shardID uint32,
 	hash *chainhash.Hash, ind int) *EADAddresses {
 
 	var ipExist bool
@@ -37,6 +41,7 @@ func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, sha
 	if !ipExist {
 		msg.IPs = append(msg.IPs, EADAddress{
 			IP:         ip,
+			URL:        domain,
 			Port:       port,
 			ExpiresAt:  time.Unix(expiresAt, 0),
 			Shard:      shardID,
@@ -130,9 +135,10 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 type EADAddress struct {
 	// IP address of the server.
 	IP net.IP
-	// Port the server is using.  This is encoded in big endian on the wire
-	// which differs from most everything else.
+	// Port the server is using.
 	Port uint16
+	// URL address of the server.
+	URL string
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time
 	// Shard shows what shards the agent works with.
@@ -164,76 +170,72 @@ func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {
 }
 
 func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
-	var ip [16]byte
-
-	err := encoder.ReadElements(r, (*encoder.Uint32Time)(&msg.ExpiresAt), &ip)
-	if err != nil {
-		return err
-	}
-
-	id, err := encoder.ReadVarInt(r, pver)
-	if err != nil {
-		return err
-	}
-	msg.Shard = uint32(id)
-
-	// Sigh. Bitcoin protocol mixes little and big endian.
-	port, err := encoder.BinarySerializer.Uint16(r, bigEndian)
-	if err != nil {
-		return err
-	}
-	rawHash, err := encoder.ReadVarBytes(r, pver, chainhash.HashSize, "TxHash")
-	if err != nil {
-		return err
-	}
-
-	msg.TxHash, err = chainhash.NewHash(rawHash)
-	if err != nil {
-		return err
-	}
-
-	txOutId, err := encoder.ReadVarInt(r, pver)
+	var port uint32
+	var txOutIndex uint64
+	var isURL bool
+	msg.TxHash = new(chainhash.Hash)
+	err := encoder.ReadElements(r,
+		(*encoder.Uint32Time)(&msg.ExpiresAt),
+		&msg.Shard,
+		msg.TxHash,
+		&port,
+		&txOutIndex,
+		&isURL,
+	)
 	if err != nil {
 		return err
 	}
 	*msg = EADAddress{
 		ExpiresAt:  msg.ExpiresAt,
-		IP:         ip[:],
-		Port:       port,
+		Port:       uint16(port),
 		Shard:      msg.Shard,
 		TxHash:     msg.TxHash,
-		TxOutIndex: int(txOutId),
+		TxOutIndex: int(txOutIndex),
 	}
+
+	if !isURL {
+		var ip [16]byte
+		err := encoder.ReadElement(r, &ip)
+		if err != nil {
+			return err
+		}
+		msg.IP = ip[:]
+	} else {
+		domain, err := encoder.ReadVarBytes(r, pver, MaxEADDomainLen, "TxHash")
+		if err != nil {
+			return err
+		}
+		msg.URL = string(domain)
+	}
+
 	return nil
 }
 
-func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
+	err := encoder.WriteElements(w,
+		uint32(msg.ExpiresAt.Unix()),
+		msg.Shard,
+		msg.TxHash,
+		uint32(msg.Port),
+		uint64(msg.TxOutIndex),
+		msg.IP == nil, // isDomain
+	)
+	if err != nil {
+		return err
+	}
+
 	// Ensure to always write 16 bytes even if the ip is nil.
-	var ip [16]byte
 	if msg.IP != nil {
+		var ip [16]byte
 		copy(ip[:], msg.IP.To16())
-	}
-	err := encoder.WriteElements(w, uint32(msg.ExpiresAt.Unix()), ip)
-	if err != nil {
-		return err
-	}
-
-	err = encoder.WriteVarInt(w, uint64(msg.Shard))
-	if err != nil {
-		return err
+		err = encoder.WriteElement(w, ip)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
-	// Sigh.  Bitcoin protocol mixes little and big endian.
-	err = binary.Write(w, bigEndian, msg.Port)
-	if err != nil {
-		return err
-	}
-	err = encoder.WriteVarBytes(w, pver, msg.TxHash.CloneBytes())
-	if err != nil {
-		return err
-	}
-
-	err = encoder.WriteVarInt(w, uint64(msg.TxOutIndex))
+	err = encoder.WriteVarBytes(w, pver, []byte(msg.URL))
 	if err != nil {
 		return err
 	}

@@ -184,6 +184,17 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 	return chainhash.DoubleHashH(buf.Bytes())
 }
 
+// BeaconExclusiveHash computes the hash of the BeaconHeader without BtcAux.
+// This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
+func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
+	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
+	sec := uint32(h.timestamp.Unix())
+	encoder.WriteElements(buf, h.version, &h.prevBlock, &h.merkleRoot, &h.mergeMiningRoot,
+		sec, h.bits, &h.shards, &h.k, &h.voteK, &h.treeEncoding)
+
+	return chainhash.DoubleHashH(buf.Bytes())
+}
+
 // PoWHash computes the hash for block that will be used to check ProofOfWork.
 func (h *BeaconHeader) PoWHash() chainhash.Hash {
 	return h.btcAux.BlockHash()
