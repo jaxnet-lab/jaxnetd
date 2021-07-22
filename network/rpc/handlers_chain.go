@@ -1049,9 +1049,9 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 	n := c.Amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
 
 	if n < 4 {
-		n = 4
+		n = 4 * 30
 	}
-	if n > 2000 {
+	if n > 20000 {
 		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
 			fmt.Sprintf("lock time more than 2000 blocks"))
 	}

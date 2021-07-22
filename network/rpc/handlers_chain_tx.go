@@ -1049,8 +1049,8 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 	return jaxjson.ListTxOutResult{List: reply}, nil
 }
 
-// handleEADAddresses handles handleEADAddresses commands.
-func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+// handleListEADAddresses handles listEADAddresses commands.
+func (server *CommonChainRPC) handleListEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	opts := cmd.(*jaxjson.ListEADAddressesCmd)
 
 	listEADAddresses, err := server.chainProvider.BlockChain().ListEADAddresses()
@@ -1065,11 +1065,13 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 		}
 
 		ips := make([]jaxjson.EADAddress, 0, len(eadAddresses.IPs))
+		presentShards := map[uint32]struct{}{}
 		for _, p := range eadAddresses.IPs {
-			_, has := p.HasShard(opts.Shards...)
+			has := p.HasShard(opts.Shards...)
 			if len(opts.Shards) > 0 && !has {
 				continue
 			}
+
 			ip := ""
 			if p.IP != nil {
 				ip = p.IP.String()
@@ -1083,8 +1085,14 @@ func (server *CommonChainRPC) handleEADAddresses(cmd interface{}, closeChan <-ch
 				TxHash:     p.TxHash.String(),
 				TxOutIndex: p.TxOutIndex,
 			})
+			presentShards[p.Shard] = struct{}{}
 		}
+
 		if len(ips) == 0 {
+			continue
+		}
+
+		if len(opts.Shards) > 0 && len(presentShards) < len(opts.Shards) {
 			continue
 		}
 

@@ -238,9 +238,9 @@ func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 	n := amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
 
 	if n < 4 {
-		n = 4
+		n = 4 * 30
 	}
-	if n > 2000 {
+	if n > 20000 {
 		return 0, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
 			fmt.Sprintf("lock time more than 2000 blocks"))
 	}

@@ -295,7 +295,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	// header as a hex-encoded string.
 	if c.Verbose != nil && !*c.Verbose {
 		var headerBuf bytes.Buffer
-		err := blockHeader.Read(&headerBuf)
+		err := blockHeader.Write(&headerBuf)
 		if err != nil {
 			context := "Failed to serialize block header"
 			return nil, server.InternalRPCError(err.Error(), context)

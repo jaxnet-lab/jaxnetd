@@ -5,7 +5,7 @@ debug_level: debug
 node:
   #  net: mainnet
   net: fastnet
-  #  net: testnet
+  # net: testnet
   p2p:
 #    disable_outbound: true
     listeners:
