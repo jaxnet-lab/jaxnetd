@@ -235,7 +235,7 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32,
 	}
 
 	if tx.MsgTx().Version == wire.TxVerEADAction {
-		err := view.connectEADTransaction(tx, stxos)
+		err := view.connectEADTransaction(tx)
 		if err != nil {
 			return err
 		}
@@ -273,6 +273,12 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32,
 
 	// Add the transaction's outputs as available utxos.
 	view.AddTxOuts(tx, blockHeight)
+
+	err := view.disconnectEADAddresses(stxos)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -347,49 +353,7 @@ func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
 	return view.eadAddresses
 }
 
-func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentTxOut) error {
-	var removeEAD = func(pkScript []byte) error {
-		scriptData, err := txscript.EADAddressScriptData(pkScript)
-		if err != nil {
-			return err
-		}
-		ownerKey := string(scriptData.RawKey)
-		address, ok := view.eadAddresses[ownerKey]
-		if !ok || address == nil || len(address.IPs) < 1 {
-			return nil
-		}
-
-		filtered := make([]wire.EADAddress, 0, len(address.IPs)-1)
-		for _, p := range view.eadAddresses[ownerKey].IPs {
-			addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
-			if removed {
-				continue
-			}
-
-			filtered = append(filtered, *addr)
-		}
-		if len(filtered) == 0 {
-			view.eadAddresses[ownerKey] = nil
-			return nil
-		}
-		address.IPs = filtered
-		view.eadAddresses[ownerKey] = address
-		return nil
-	}
-
-	if stxos != nil {
-		for _, input := range *stxos {
-			class := txscript.GetScriptClass(input.PkScript)
-			if class != txscript.EADAddressTy {
-				continue
-			}
-
-			if err := removeEAD(input.PkScript); err != nil {
-				return err
-			}
-		}
-	}
-
+func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx) error {
 	outputs := tx.MsgTx().TxOut
 	for outInd, out := range outputs {
 		class := txscript.GetScriptClass(out.PkScript)
@@ -426,6 +390,54 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx, stxos *[]SpentT
 		)
 	}
 
+	return nil
+}
+
+func (view *UtxoViewpoint) disconnectEADAddresses(stxos *[]SpentTxOut) error {
+	if stxos == nil {
+		return nil
+	}
+
+	for _, input := range *stxos {
+		class := txscript.GetScriptClass(input.PkScript)
+		if class != txscript.EADAddressTy {
+			continue
+		}
+
+		if err := view.removeEAD(input.PkScript); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (view *UtxoViewpoint) removeEAD(pkScript []byte) error {
+	scriptData, err := txscript.EADAddressScriptData(pkScript)
+	if err != nil {
+		return err
+	}
+	ownerKey := string(scriptData.RawKey)
+	address, ok := view.eadAddresses[ownerKey]
+	if !ok || address == nil || len(address.IPs) < 1 {
+		return nil
+	}
+
+	filtered := make([]wire.EADAddress, 0, len(address.IPs)-1)
+	for _, p := range view.eadAddresses[ownerKey].IPs {
+		addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
+		if removed {
+			continue
+		}
+
+		filtered = append(filtered, *addr)
+	}
+	if len(filtered) == 0 {
+		view.eadAddresses[ownerKey] = nil
+		return nil
+	}
+	address.IPs = filtered
+	view.eadAddresses[ownerKey] = address
 	return nil
 }
 
