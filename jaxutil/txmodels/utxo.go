@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/hex"
+	"sort"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -274,13 +275,22 @@ func (utxo *ShortUTXO) GetScript(jaxutil.Address) ([]byte, error) {
 	return hex.DecodeString(utxo.RedeemScript)
 }
 
+type UTXOs interface {
+	sort.Interface
+	GetSum() int64
+	CollectForAmount(amount int64, shardID uint32) (UTXOs, int64)
+	GetSingle(amount int64, shardID uint32) *UTXO
+	List() []UTXO
+	Append(...UTXO) UTXOs
+}
+
 type UTXORows []UTXO
 
-func (rows UTXORows) Len() int { return len(rows) }
-func (rows UTXORows) Less(i, j int) bool {
-	return rows[i].Value < rows[j].Value
-}
-func (rows UTXORows) Swap(i, j int) { rows[i], rows[j] = rows[j], rows[i] }
+func (rows UTXORows) Len() int                 { return len(rows) }
+func (rows UTXORows) Less(i, j int) bool       { return rows[i].Value < rows[j].Value }
+func (rows UTXORows) Swap(i, j int)            { rows[i], rows[j] = rows[j], rows[i] }
+func (rows UTXORows) List() []UTXO             { return rows }
+func (rows UTXORows) Append(new ...UTXO) UTXOs { return append(rows, new...) }
 
 func (rows UTXORows) GetSum() int64 {
 	var sum int64
@@ -293,7 +303,7 @@ func (rows UTXORows) GetSum() int64 {
 	return sum
 }
 
-func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXORows, int64) {
+func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXOs, int64) {
 	var res UTXORows
 	change := amount
 
@@ -328,4 +338,59 @@ func (rows UTXORows) GetSingle(amount int64, shardID uint32) *UTXO {
 	}
 
 	return nil
+}
+
+type EADUTXOs []UTXO
+
+func (rows EADUTXOs) Len() int                 { return len(rows) }
+func (rows EADUTXOs) Less(i, j int) bool       { return rows[i].Value < rows[j].Value }
+func (rows EADUTXOs) Swap(i, j int)            { rows[i], rows[j] = rows[j], rows[i] }
+func (rows EADUTXOs) List() []UTXO             { return rows }
+func (rows EADUTXOs) Append(new ...UTXO) UTXOs { return append(rows, new...) }
+func (rows EADUTXOs) GetSum() int64 {
+	var sum int64
+	for _, txOut := range rows {
+		if txOut.Used {
+			continue
+		}
+		sum += txOut.Value
+	}
+	return sum
+}
+
+func (rows EADUTXOs) GetSingle(amount int64, shardID uint32) *UTXO {
+	for i := range rows {
+		if !rows[i].CanBeSpend(shardID) {
+			continue
+		}
+		if rows[i].Value >= amount {
+			utxo := rows[i]
+			rows[i].Used = true
+			return &utxo
+		}
+	}
+
+	return nil
+}
+
+func (rows EADUTXOs) CollectForAmount(amount int64, shardID uint32) (UTXOs, int64) {
+	var res UTXORows
+	change := amount
+
+	for i := range rows {
+		if !rows[i].CanBeSpend(shardID) {
+			continue
+		}
+
+		utxo := rows[i]
+		res = append(res, utxo)
+		rows[i].Used = true
+
+		change -= utxo.Value
+		if change <= 0 {
+			break
+		}
+	}
+
+	return res, 0
 }

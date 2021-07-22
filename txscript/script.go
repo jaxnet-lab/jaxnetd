@@ -8,6 +8,7 @@ package txscript
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -613,6 +614,12 @@ func CheckIsSignedByPubKey(tx *wire.MsgTx, idx int, script []byte, pubKey *btcec
 		parsedSig, err = btcec.ParseDERSignature(p.data, btcec.S256())
 		if err == nil {
 			if parsedSig.Verify(sigHash, pubKey) {
+				fmt.Printf("der data: '%s',\nparsedSig: '%s',\nsigHash: '%s',\npubKey:'%s',\n \n",
+					hex.EncodeToString(p.data),
+					hex.EncodeToString(parsedSig.Serialize()),
+					hex.EncodeToString(sigHash),
+					hex.EncodeToString(pubKey.SerializeUncompressed()),
+				)
 				return true, nil
 			}
 		}
@@ -620,6 +627,12 @@ func CheckIsSignedByPubKey(tx *wire.MsgTx, idx int, script []byte, pubKey *btcec
 		parsedSig, err = btcec.ParseSignature(p.data, btcec.S256())
 		if err == nil {
 			if parsedSig.Verify(sigHash, pubKey) {
+				fmt.Printf("data: '%s',\nparsedSig: '%s',\nsigHash: '%s',\npubKey:'%s',\n \n",
+					hex.EncodeToString(p.data),
+					hex.EncodeToString(parsedSig.Serialize()),
+					hex.EncodeToString(sigHash),
+					hex.EncodeToString(pubKey.SerializeUncompressed()),
+				)
 				return true, nil
 			}
 		}

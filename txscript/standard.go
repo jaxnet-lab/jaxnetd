@@ -549,6 +549,8 @@ func (e EADScriptData) Encode() ([]byte, error) {
 		AddData(scriptNum(e.ExpirationDate).Bytes()).
 		AddData([]byte(address)).
 		AddData(scriptNum(e.Port).Bytes()).
+		AddOp(OP_2DROP).
+		AddOp(OP_2DROP).
 		Script()
 }
 
@@ -573,7 +575,7 @@ func isEADRegistration(pops []parsedOpcode) bool {
 		return err == nil
 	}
 
-	return len(pops) == 7 &&
+	return len(pops) == 9 &&
 		(len(pops[0].data) == 33 || len(pops[0].data) == 65) &&
 		pops[1].opcode.value == OP_CHECKSIG &&
 		pops[2].opcode.value == OP_NOP &&
@@ -608,7 +610,7 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	hex.Encode(scriptData.RawKey, pops[0].data)
 
 	var shardID uint32
-	if isSmallInt(pops[2].opcode) {
+	if isSmallInt(pops[3].opcode) {
 		rawShardID := asSmallInt(pops[3].opcode)
 		shardID = uint32(rawShardID)
 	} else {

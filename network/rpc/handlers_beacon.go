@@ -48,7 +48,7 @@ func (server *BeaconRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
 		jaxjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
 		jaxjson.ScopedMethod("beacon", "getBlockHeader"):               server.handleGetBlockHeader,
 		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):       server.handleGetBlockTemplate,
-		jaxjson.ScopedMethod("beacon", "listEADAddresses"):             server.handleEADAddresses,
+		jaxjson.ScopedMethod("beacon", "listEADAddresses"):             server.handleListEADAddresses,
 		// jaxjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// jaxjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
 
@@ -257,7 +257,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	// header as a hex-encoded string.
 	if c.Verbose != nil && !*c.Verbose {
 		var headerBuf bytes.Buffer
-		err := blockHeader.Read(&headerBuf)
+		err := blockHeader.Write(&headerBuf)
 		if err != nil {
 			context := "Failed to serialize block header"
 			return nil, server.InternalRPCError(err.Error(), context)

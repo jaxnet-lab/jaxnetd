@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package txutils
 
 import (
@@ -55,7 +56,7 @@ func (path UTXOFromCSV) SelectForAmount(amount int64, shardID uint32, addresses 
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
 	}
-	return collected, nil
+	return collected.List(), nil
 }
 
 // UTXOFromRows is a wrapper for txmodels.UTXORows to implement the UTXOProvider.
@@ -82,7 +83,7 @@ func (rows UTXOFromRows) SelectForAmount(amount int64, shardID uint32, addresses
 	if change > 0 {
 		return nil, fmt.Errorf("not enough coins (need %d; has %d)", amount, amount-change)
 	}
-	return collected, nil
+	return collected.List(), nil
 }
 
 // UTXOFromRows is a wrapper for txmodels.UTXO to implement the UTXOProvider.

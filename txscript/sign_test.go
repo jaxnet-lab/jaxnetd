@@ -59,7 +59,7 @@ func mkGetScript(scripts map[string][]byte) ScriptDB {
 func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript, pkScript []byte) error {
 	tx.TxIn[idx].SignatureScript = sigScript
 	vm, err := NewEngine(pkScript, tx, idx,
-		ScriptBip16|ScriptVerifyDERSignatures, nil, nil, inputAmt)
+		StandardVerifyFlags, nil, nil, inputAmt)
 	if err != nil {
 		return fmt.Errorf("failed to make script engine for %s: %v",
 			msg, err)
@@ -1667,8 +1667,8 @@ func TestEADScript(t *testing.T) {
 
 	script, err := EADAddressScript(EADScriptData{
 		ShardID: shardID,
-		IP:      ipV4,
-		// URL:            fmt.Sprintf("https://%s.jax.net", ipV4.String()),
+		// IP:      ipV4,
+		URL:            fmt.Sprintf("https://%s.jax.net", ipV4.String()),
 		Port:           port,
 		ExpirationDate: expTime,
 		Owner:          address,
@@ -1719,10 +1719,10 @@ func TestEADScript(t *testing.T) {
 	}
 	t.Logf("%+v", scriptData)
 
-	if scriptData.IP.String() != ipV4.String() {
-		t.Errorf("ip mismatch: %v", scriptData.IP.String())
-		return
-	}
+	// if scriptData.IP.String() != ipV4.String() {
+	// 	t.Errorf("ip mismatch: %v", scriptData.IP.String())
+	// 	return
+	// }
 
 	if scriptData.Port != port {
 		t.Errorf("newPort mismatch: %v", scriptData.Port)
@@ -1744,13 +1744,13 @@ func TestEADScript(t *testing.T) {
 	// make script based on key.
 	// sign with magic pixie dust.
 	hashTypes := []SigHashType{
-		SigHashOld, // no longer used but should act like all
+		// SigHashOld, // no longer used but should act like all
 		SigHashAll,
-		SigHashNone,
-		SigHashSingle,
-		SigHashAll | SigHashAnyOneCanPay,
-		SigHashNone | SigHashAnyOneCanPay,
-		SigHashSingle | SigHashAnyOneCanPay,
+		// SigHashNone,
+		// SigHashSingle,
+		// SigHashAll | SigHashAnyOneCanPay,
+		// SigHashNone | SigHashAnyOneCanPay,
+		// SigHashSingle | SigHashAnyOneCanPay,
 	}
 	inputAmounts := []int64{5, 10, 15}
 	tx := &wire.MsgTx{
@@ -1765,7 +1765,7 @@ func TestEADScript(t *testing.T) {
 		for i := range tx.TxIn {
 
 			msg := fmt.Sprintf("%d:%d", hashType, i)
-			// activateTraceLogger()
+			activateTraceLogger()
 
 			if err := signAndCheck(msg, tx, i, inputAmounts[i], script, hashType,
 				mkGetKey(map[string]addressToKey{

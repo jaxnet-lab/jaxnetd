@@ -336,6 +336,7 @@ func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvide
 
 prepareUTXO:
 	fee := EstimateFee(expectedInCount, 1, feeRate, true, client.cfg.ShardID)
+	fee = int64(0)
 
 	draft := txmodels.DraftTx{
 		Amount:     amount,
