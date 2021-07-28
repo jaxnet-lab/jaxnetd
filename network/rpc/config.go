@@ -31,7 +31,7 @@ type Config struct {
 	// take ownership of and accept connections.  Since the RPC Server takes
 	// ownership of these listeners, they will be closed when the RPC Server
 	// is stopped.
-	Listeners []net.Listener `yaml:"-"`
+	Listeners []net.Listener `toml:"-" yaml:"-"`
 }
 
 // SetupRPCListeners returns a slice of listeners that are configured for use

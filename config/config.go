@@ -24,6 +24,8 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
+	"github.com/pelletier/go-toml"
+	_ "github.com/pelletier/go-toml"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
@@ -430,14 +432,19 @@ func LoadConfig() (*node.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	if !strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
-		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .yaml")
-		return nil, nil, errors.New("Invalid file extension, must be .yaml ")
-	}
-
-	err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-	if err != nil {
-		configFileError = err
+	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
+		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			configFileError = err
+		}
+	} else if strings.HasSuffix(preCfg.ConfigFile, ".toml") {
+		err = toml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			configFileError = err
+		}
+	} else {
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .yaml or .toml")
+		return nil, nil, errors.New("invalid file extension, must be .yaml or .toml")
 	}
 
 	// Parse command line options again to ensure they take precedence.

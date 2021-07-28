@@ -45,10 +45,10 @@ type Config struct {
 	NoPeerBloomFilters bool          `long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	Upnp               bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
 
-	Oniondial    func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
-	Dial         func(string, string, time.Duration) (net.Conn, error) `yaml:"-"`
-	Lookup       func(string) ([]net.IP, error)                        `yaml:"-"`
-	GetChainPort func(shardID uint32) (int, bool)                      `yaml:"-"`
+	Oniondial    func(string, string, time.Duration) (net.Conn, error) `toml:"-" yaml:"-"`
+	Dial         func(string, string, time.Duration) (net.Conn, error) `toml:"-" yaml:"-"`
+	Lookup       func(string) ([]net.IP, error)                        `toml:"-" yaml:"-"`
+	GetChainPort func(shardID uint32) (int, bool)                      `toml:"-" yaml:"-"`
 }
 
 type ListenOpts struct {

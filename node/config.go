@@ -16,8 +16,8 @@ import (
 )
 
 type Config struct {
-	ConfigFile  string `yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
-	ShowVersion bool   `yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile  string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
+	ShowVersion bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
 
 	Node      NodeConfig         `yaml:"node"`
 	LogConfig corelog.Config     `yaml:"log_config" `

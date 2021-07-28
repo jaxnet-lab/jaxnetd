@@ -2,6 +2,9 @@ data_dir: ./core
 log_dir: ./core/logs
 debug_level: debug
 
+log_config:
+  logs_as_json: true
+
 node:
   #  net: mainnet
   net: fastnet

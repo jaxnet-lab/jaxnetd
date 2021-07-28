@@ -64,7 +64,7 @@ type Logger struct {
 
 func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	var writers []io.Writer
-	if !config.DisableConsoleLog {
+	if !config.DisableConsoleLog && !config.LogsAsJson {
 		out := zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}
 		out.TimeFormat = time.RFC3339
 		out.FormatLevel = func(i interface{}) string {
@@ -74,6 +74,9 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 			return fmt.Sprintf("%-6s  ", i)
 		}
 		writers = append(writers, out)
+	}
+	if !config.DisableConsoleLog && config.LogsAsJson {
+		writers = append(writers, os.Stdout)
 	}
 	if config.FileLoggingEnabled {
 		writers = append(writers, newRollingFile(config))

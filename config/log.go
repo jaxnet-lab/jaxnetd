@@ -13,8 +13,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
-	"gitlab.com/jaxnet/jaxnetd/network/rpc"
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
@@ -117,6 +117,14 @@ func setLogLevel(unit, logLevel string, config corelog.Config) {
 // level.  It also dynamically creates the subsystem loggers as needed, so it
 // can be used to initialize the logging system.
 func setLogLevels(logLevel string, config corelog.Config) {
+	level, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		level = zerolog.InfoLevel
+	}
+
+	backendLog = corelog.New(logUnitJXCD, level, config)
+	Log = backendLog.With().Str("app.unit", logUnitJXCD).Logger()
+
 	// Configure all sub-systems with the new logging level.  Dynamically
 	// create loggers as needed.
 	for unit := range unitLogs {
