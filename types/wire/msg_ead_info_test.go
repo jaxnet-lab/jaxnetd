@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -16,7 +17,7 @@ func TestEADAddress_BtcEncode(t *testing.T) {
 		IP:         net.IPv4(127, 0, 2, 42),
 		Port:       28023,
 		ExpiresAt:  time.Now(),
-		Shards:     []uint32{1, 2, 43},
+		Shard:      43,
 		TxOutIndex: 1,
 		TxHash:     hash,
 	}
@@ -74,13 +75,13 @@ func TestEADAddresses_BtcEncode(t *testing.T) {
 	val := EADAddresses{
 		ID:          123,
 		OwnerPubKey: pk,
-		IPs: []EADAddress{{
+		Addresses: []EADAddress{{
 			IP:         net.IPv4(127, 0, 2, 42),
 			Port:       28023,
 			ExpiresAt:  time.Now(),
 			TxHash:     hash,
 			TxOutIndex: 3,
-			Shards:     []uint32{12, 11, 2},
+			Shard:      12,
 		}},
 	}
 
@@ -106,8 +107,88 @@ func TestEADAddresses_BtcEncode(t *testing.T) {
 		return
 	}
 
-	if len(newVal.IPs) != len(val.IPs) {
-		t.Error("len(val.IPs) mismatch")
+	if len(newVal.Addresses) != len(val.Addresses) {
+		t.Error("len(val.Addresses) mismatch")
 		return
 	}
+}
+
+func TestEADAddresses_AddAddress(t *testing.T) {
+	set := EADAddresses{
+		ID:          42,
+		OwnerPubKey: []byte("test_3333"),
+		Addresses:   []EADAddress{},
+	}
+
+	assert.Equal(t, 0, len(set.Addresses))
+
+	ips := []net.IP{
+		0: net.IPv4(14, 12, 33, 21),
+		1: net.IPv4(14, 12, 33, 22),
+		2: net.IPv4(14, 12, 33, 23),
+		3: nil,
+		4: nil,
+	}
+
+	urls := []string{
+		0: "",
+		1: "",
+		2: "",
+		3: "test_url_1",
+		4: "test_url_2",
+	}
+
+	set.AddAddress(ips[0], urls[0], 0, 32, 1, &chainhash.ZeroHash, 0)
+	assert.Equal(t, 1, len(set.Addresses))
+
+	set.AddAddress(ips[0], urls[0], 0, 32, 1, &chainhash.ZeroHash, 1)
+	assert.Equal(t, 1, len(set.Addresses))
+
+	set.AddAddress(ips[1], urls[1], 0, 32, 1, &chainhash.ZeroHash, 0)
+	set.AddAddress(ips[2], urls[2], 0, 32, 1, &chainhash.ZeroHash, 0)
+	set.AddAddress(ips[3], urls[3], 0, 32, 1, &chainhash.ZeroHash, 0)
+	set.AddAddress(ips[4], urls[4], 0, 32, 1, &chainhash.ZeroHash, 0)
+
+	assert.Equal(t, 5, len(set.Addresses))
+
+	set.AddAddress(ips[3], urls[3], 0, 32, 1, &chainhash.ZeroHash, 55)
+	set.AddAddress(ips[4], urls[4], 0, 32, 1, &chainhash.ZeroHash, 12)
+
+	assert.Equal(t, 5, len(set.Addresses))
+
+	set.Addresses = append(set.Addresses, EADAddress{
+		IP:         ips[4],
+		Port:       21,
+		URL:        urls[4],
+		ExpiresAt:  time.Time{},
+		Shard:      1,
+		TxHash:     &chainhash.ZeroHash,
+		TxOutIndex: 21,
+	})
+
+	set.Addresses = append(set.Addresses, EADAddress{
+		IP:         ips[4],
+		Port:       211,
+		URL:        urls[4],
+		ExpiresAt:  time.Time{},
+		Shard:      1,
+		TxHash:     &chainhash.ZeroHash,
+		TxOutIndex: 22,
+	})
+
+	set.Addresses = append(set.Addresses, EADAddress{
+		IP:         ips[4],
+		Port:       211,
+		URL:        urls[4],
+		ExpiresAt:  time.Time{},
+		Shard:      1,
+		TxHash:     &chainhash.ZeroHash,
+		TxOutIndex: 23,
+	})
+	assert.Equal(t, 8, len(set.Addresses))
+
+	set.AddAddress(ips[4], urls[4], 0, 32, 1, &chainhash.ZeroHash, 12)
+
+	assert.Equal(t, 5, len(set.Addresses))
+
 }

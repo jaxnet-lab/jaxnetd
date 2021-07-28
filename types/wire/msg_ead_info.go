@@ -17,40 +17,30 @@ const (
 type EADAddresses struct {
 	ID          uint64
 	OwnerPubKey []byte
-	IPs         []EADAddress
+	Addresses   []EADAddress // Address is unique combination of {IP|URL, SHARD_ID}
 }
 
-func (msg *EADAddresses) AddAddress(ip net.IP, domain string, port uint16, expiresAt int64, shardID uint32,
-	hash *chainhash.Hash, ind int) *EADAddresses {
+func (msg *EADAddresses) AddAddress(ip net.IP, url string, port uint16, expiresAt int64, shardID uint32,
+	hash *chainhash.Hash, ind int) {
 
-	var ipExist bool
-	for i, p := range msg.IPs {
-		if p.IP.Equal(ip) && p.Shard == shardID {
-			p := p
-			p.TxHash = hash
-			p.TxOutIndex = ind
-			p.Port = port
-			p.ExpiresAt = time.Unix(expiresAt, 0)
-			msg.IPs[i] = p
-
-			ipExist = true
-			break
+	addresses := make([]EADAddress, 0, len(msg.Addresses)+1)
+	for _, p := range msg.Addresses {
+		if !p.Eq(ip, url, shardID) {
+			addresses = append(addresses, p)
 		}
 	}
 
-	if !ipExist {
-		msg.IPs = append(msg.IPs, EADAddress{
-			IP:         ip,
-			URL:        domain,
-			Port:       port,
-			ExpiresAt:  time.Unix(expiresAt, 0),
-			Shard:      shardID,
-			TxHash:     hash,
-			TxOutIndex: ind,
-		})
-	}
+	addresses = append(addresses, EADAddress{
+		IP:         ip,
+		URL:        url,
+		Port:       port,
+		ExpiresAt:  time.Unix(expiresAt, 0),
+		Shard:      shardID,
+		TxHash:     hash,
+		TxOutIndex: ind,
+	})
 
-	return msg
+	msg.Addresses = addresses
 }
 
 func (msg *EADAddress) HasShard(shards ...uint32) (hasOneOf bool) {
@@ -86,10 +76,10 @@ func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc encoder.Message
 	if err != nil {
 		return err
 	}
-	msg.IPs = make([]EADAddress, count)
+	msg.Addresses = make([]EADAddress, count)
 
-	for i := range msg.IPs {
-		err = msg.IPs[i].BtcDecode(r, pver, enc)
+	for i := range msg.Addresses {
+		err = msg.Addresses[i].BtcDecode(r, pver, enc)
 		if err != nil {
 			return err
 		}
@@ -113,14 +103,14 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 
 	// Protocol versions before MultipleAddressVersion only allowed 1 address
 	// per message.
-	count := len(msg.IPs)
+	count := len(msg.Addresses)
 	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
-	for i := range msg.IPs {
-		err = msg.IPs[i].BtcEncode(w, pver, enc)
+	for i := range msg.Addresses {
+		err = msg.Addresses[i].BtcEncode(w, pver, enc)
 		if err != nil {
 			return err
 		}
@@ -146,18 +136,12 @@ type EADAddress struct {
 	TxOutIndex int
 }
 
-// FilterOut returns true if the address has no shards left in which it works.
-func (msg *EADAddress) FilterOut(ip net.IP, shardID uint32) (*EADAddress, bool) {
-	if !msg.IP.Equal(ip) {
-		return msg, false
-	}
-
-	clone := *msg
-	if msg.Shard != shardID {
-		clone.Shard = msg.Shard
-	}
-
-	return &clone, msg.Shard == shardID
+// Eq returns true if the address match with passed params.
+func (msg *EADAddress) Eq(ip net.IP, url string, shardID uint32) bool {
+	ipEq := msg.IP == nil || msg.IP.Equal(ip)
+	urlEq := msg.URL == "" || msg.URL == url
+	shardEq := msg.Shard == shardID
+	return ipEq && urlEq && shardEq
 }
 
 func (msg *EADAddress) Command() string {
@@ -165,7 +149,7 @@ func (msg *EADAddress) Command() string {
 }
 
 func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {
-	return 16 + 4 + 8
+	return 16 + 4 + 8 // todo: fix this
 }
 
 func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {

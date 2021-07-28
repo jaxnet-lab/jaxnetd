@@ -31,7 +31,7 @@ func (b *BlockChain) FetchUtxoView(tx *jaxutil.Tx) (*chaindata.UtxoViewpoint, er
 
 	// Request the utxos from the point of view of the end of the main
 	// chain.
-	view := chaindata.NewUtxoViewpoint()
+	view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 	b.chainLock.RLock()
 	err := view.FetchUtxosMain(b.db, neededSet)
 	b.chainLock.RUnlock()

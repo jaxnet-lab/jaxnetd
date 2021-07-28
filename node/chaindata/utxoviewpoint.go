@@ -126,7 +126,8 @@ type UtxoViewpoint struct {
 	entries  map[wire.OutPoint]*UtxoEntry
 	bestHash chainhash.Hash
 
-	eadAddresses map[string]*wire.EADAddresses
+	eadAddresses eadAddrSet
+	beacon       bool
 }
 
 // BestHash returns the Hash of the best block in the chain the view currently
@@ -350,10 +351,14 @@ func (view *UtxoViewpoint) connectSwapTransaction(tx *jaxutil.Tx, blockHeight in
 }
 
 func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
-	return view.eadAddresses
+	return view.eadAddresses.data
 }
 
 func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx) error {
+	if !view.beacon {
+		return nil
+	}
+
 	outputs := tx.MsgTx().TxOut
 	for outInd, out := range outputs {
 		class := txscript.GetScriptClass(out.PkScript)
@@ -365,29 +370,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx) error {
 		if err != nil {
 			return err
 		}
-
-		ownerKey := string(scriptData.RawKey)
-		addr, ok := view.eadAddresses[ownerKey]
-		if !ok {
-			b := make([]byte, 8)
-			_, _ = rand.Read(b)
-
-			addr = &wire.EADAddresses{
-				ID:          binary.LittleEndian.Uint64(b),
-				OwnerPubKey: []byte(ownerKey),
-				IPs:         []wire.EADAddress{},
-			}
-		}
-
-		view.eadAddresses[ownerKey] = addr.AddAddress(
-			scriptData.IP,
-			scriptData.URL,
-			uint16(scriptData.Port),
-			scriptData.ExpirationDate,
-			scriptData.ShardID,
-			tx.Hash(),
-			outInd,
-		)
+		view.eadAddresses.add(scriptData, tx.Hash(), outInd)
 	}
 
 	return nil
@@ -403,41 +386,13 @@ func (view *UtxoViewpoint) disconnectEADAddresses(stxos *[]SpentTxOut) error {
 		if class != txscript.EADAddressTy {
 			continue
 		}
-
-		if err := view.removeEAD(input.PkScript); err != nil {
+		scriptData, err := txscript.EADAddressScriptData(input.PkScript)
+		if err != nil {
 			return err
 		}
+		view.eadAddresses.remove(scriptData)
 	}
 
-	return nil
-}
-
-func (view *UtxoViewpoint) removeEAD(pkScript []byte) error {
-	scriptData, err := txscript.EADAddressScriptData(pkScript)
-	if err != nil {
-		return err
-	}
-	ownerKey := string(scriptData.RawKey)
-	address, ok := view.eadAddresses[ownerKey]
-	if !ok || address == nil || len(address.IPs) < 1 {
-		return nil
-	}
-
-	filtered := make([]wire.EADAddress, 0, len(address.IPs)-1)
-	for _, p := range view.eadAddresses[ownerKey].IPs {
-		addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
-		if removed {
-			continue
-		}
-
-		filtered = append(filtered, *addr)
-	}
-	if len(filtered) == 0 {
-		view.eadAddresses[ownerKey] = nil
-		return nil
-	}
-	address.IPs = filtered
-	view.eadAddresses[ownerKey] = address
 	return nil
 }
 
@@ -626,6 +581,12 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil
 				entry.packedFlags |= tfCoinBase
 			}
 		}
+
+		// todo: complete disconnect logic
+		// err := view.disconnectEADAddresses(&stxos)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 
 	// Update the best Hash for view to the previous block since all of the
@@ -690,9 +651,12 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[wire.Out
 			view.entries[outpoint] = entry
 		}
 
-		// todo: omit this step if shard
+		if !view.beacon {
+			return nil
+		}
+
 		var err error
-		view.eadAddresses, err = DBFetchAllEADAddresses(dbTx)
+		view.eadAddresses.data, err = DBFetchAllEADAddresses(dbTx)
 		if err != nil {
 			return err
 		}
@@ -793,9 +757,70 @@ func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *jaxutil.Block)
 }
 
 // NewUtxoViewpoint returns a new empty unspent transaction output view.
-func NewUtxoViewpoint() *UtxoViewpoint {
+func NewUtxoViewpoint(beacon bool) *UtxoViewpoint {
 	return &UtxoViewpoint{
 		entries:      make(map[wire.OutPoint]*UtxoEntry),
-		eadAddresses: make(map[string]*wire.EADAddresses),
+		eadAddresses: eadAddrSet{data: make(map[string]*wire.EADAddresses)},
+		beacon:       beacon,
 	}
+}
+
+type eadAddrSet struct {
+	data map[string]*wire.EADAddresses
+}
+
+func (eSet *eadAddrSet) add(scriptData txscript.EADScriptData, txHash *chainhash.Hash, outN int) {
+	ownerKey := string(scriptData.RawKey)
+	addr, ok := eSet.data[ownerKey]
+	if !ok {
+		b := make([]byte, 4)
+		_, _ = rand.Read(b)
+
+		addr = &wire.EADAddresses{
+			ID:          uint64(binary.LittleEndian.Uint32(b)),
+			OwnerPubKey: []byte(ownerKey),
+			Addresses:   []wire.EADAddress{},
+		}
+	}
+	addr.AddAddress(
+		scriptData.IP,
+		scriptData.URL,
+		uint16(scriptData.Port),
+		scriptData.ExpirationDate,
+		scriptData.ShardID,
+		txHash,
+		outN,
+	)
+
+	eSet.data[ownerKey] = addr
+}
+
+func (eSet *eadAddrSet) remove(scriptData txscript.EADScriptData) {
+	ownerKey := string(scriptData.RawKey)
+	address, ok := eSet.data[ownerKey]
+	if !ok || address == nil || len(address.Addresses) < 1 {
+		eSet.data[ownerKey] = nil
+		return
+	}
+
+	filtered := make([]wire.EADAddress, 0, len(address.Addresses)-1)
+	for _, p := range eSet.data[ownerKey].Addresses {
+		// if this address  match with script data params,
+		// we need to remove it from set
+		eq := p.Eq(scriptData.IP, scriptData.URL, scriptData.ShardID)
+		if eq {
+			continue
+		}
+
+		filtered = append(filtered, p)
+	}
+
+	if len(filtered) == 0 {
+		eSet.data[ownerKey] = nil
+		return
+	}
+
+	address.Addresses = filtered
+	eSet.data[ownerKey] = address
+	return
 }

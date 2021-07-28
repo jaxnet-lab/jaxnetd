@@ -1115,7 +1115,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// entails loading the blocks and their associated spent txos from the
 	// database and using that information to unspend all of the spent txos
 	// and remove the utxos created by the blocks.
-	view := chaindata.NewUtxoViewpoint()
+	view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 	h := oldBest.GetHash()
 	view.SetBestHash(&h)
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
@@ -1246,7 +1246,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// the reorg would be successful and the connection code requires the
 	// view to be valid from the viewpoint of each block being connected or
 	// disconnected.
-	view = chaindata.NewUtxoViewpoint()
+	view = chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 	h = b.bestChain.Tip().GetHash()
 	view.SetBestHash(&h)
 
@@ -1359,7 +1359,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 		// Perform several checks to verify the block can be connected
 		// to the main chain without violating any rules and without
 		// actually connecting the block.
-		view := chaindata.NewUtxoViewpoint()
+		view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 		view.SetBestHash(&parentHash)
 		stxos := make([]chaindata.SpentTxOut, 0, chaindata.CountSpentOutputs(block))
 		if !fastAdd {

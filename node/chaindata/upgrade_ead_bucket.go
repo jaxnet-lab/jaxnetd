@@ -92,10 +92,10 @@ func DecodeEADAddressesV1(r io.Reader, pver uint32) (wire.EADAddresses, error) {
 	if err != nil {
 		return msg, err
 	}
-	msg.IPs = make([]wire.EADAddress, count)
+	msg.Addresses = make([]wire.EADAddress, count)
 
-	for i := range msg.IPs {
-		msg.IPs[i], err = DecodeEADAddressV1(r, pver)
+	for i := range msg.Addresses {
+		msg.Addresses[i], err = DecodeEADAddressV1(r, pver)
 		if err != nil {
 			return msg, err
 		}

@@ -46,7 +46,7 @@ func (s *fakeChain) FetchUtxoView(tx *jaxutil.Tx) (*chaindata.UtxoViewpoint, err
 	// do not affect the fake chain's view.
 
 	// Add an entry for the tx itself to the new view.
-	viewpoint := chaindata.NewUtxoViewpoint()
+	viewpoint := chaindata.NewUtxoViewpoint(false)
 	prevOut := wire.OutPoint{Hash: *tx.Hash()}
 	for txOutIdx := range tx.MsgTx().TxOut {
 		prevOut.Index = uint32(txOutIdx)
@@ -308,7 +308,7 @@ func newPoolHarness(chainParams *chaincfg.Params) (*poolHarness, []spendableOutp
 	}
 
 	// Create a new fake chain and harness bound to it.
-	chain := &fakeChain{utxos: chaindata.NewUtxoViewpoint()}
+	chain := &fakeChain{utxos: chaindata.NewUtxoViewpoint(false)}
 	harness := poolHarness{
 		signKey:     signKey,
 		payAddr:     payAddr,

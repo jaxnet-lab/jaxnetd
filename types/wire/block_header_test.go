@@ -135,8 +135,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 	sh := ShardHeader{}
 	sh.timestamp = time.Now()
 	sh.bCHeader = BeaconHeader{
-		bits:  1,
-		nonce: 2,
+		bits: 1,
 	}
 	sh.bits = 3
 	sh.mergeMiningNumber = 4
@@ -222,7 +221,6 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	sh.bCHeader = BeaconHeader{
 		version:   BVersion(7),
 		bits:      1,
-		nonce:     2,
 		timestamp: time.Now().Add(1 * time.Hour),
 	}
 	sh.bits = 3

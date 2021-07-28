@@ -572,7 +572,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 
 	// Leave the spent txouts entry nil in the state since the information
 	// is not needed and thus extra work can be avoided.
-	view := chaindata.NewUtxoViewpoint()
+	view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 	h := tip.GetHash()
 	view.SetBestHash(&h)
 	newNode := b.chain.NewNode(header, tip)

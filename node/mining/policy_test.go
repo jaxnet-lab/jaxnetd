@@ -48,7 +48,7 @@ func newUtxoViewpoint(sourceTxns []*wire.MsgTx, sourceTxHeights []int32) *chaind
 		panic("each transaction must have its block height specified")
 	}
 
-	view := chaindata.NewUtxoViewpoint()
+	view := chaindata.NewUtxoViewpoint(false)
 	for i, tx := range sourceTxns {
 		view.AddTxOuts(jaxutil.NewTx(tx), sourceTxHeights[i])
 	}

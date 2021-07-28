@@ -149,7 +149,7 @@ func TestCalcSequenceLock(t *testing.T) {
 			Value:    10,
 		}},
 	})
-	utxoView := chaindata.NewUtxoViewpoint()
+	utxoView := chaindata.NewUtxoViewpoint(false)
 	utxoView.AddTxOuts(targetTx, int32(numBlocksToActivate)-4)
 	h := node.GetHash()
 	utxoView.SetBestHash(&h)

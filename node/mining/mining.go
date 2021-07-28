@@ -604,7 +604,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// avoided.
 	blockTxns := make([]*jaxutil.Tx, 0, len(sourceTxns))
 	blockTxns = append(blockTxns, coinbaseTx)
-	blockUtxos := chaindata.NewUtxoViewpoint()
+	blockUtxos := chaindata.NewUtxoViewpoint(g.blockChain.Chain().IsBeacon())
 
 	// dependers is used to track transactions which depend on another
 	// transaction in the source pool.  This, in conjunction with the

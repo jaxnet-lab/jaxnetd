@@ -1064,9 +1064,9 @@ func (server *CommonChainRPC) handleListEADAddresses(cmd interface{}, closeChan 
 			continue
 		}
 
-		ips := make([]jaxjson.EADAddress, 0, len(eadAddresses.IPs))
+		ips := make([]jaxjson.EADAddress, 0, len(eadAddresses.Addresses))
 		presentShards := map[uint32]struct{}{}
-		for _, p := range eadAddresses.IPs {
+		for _, p := range eadAddresses.Addresses {
 			has := p.HasShard(opts.Shards...)
 			if len(opts.Shards) > 0 && !has {
 				continue
