@@ -93,7 +93,7 @@ func MakeMultiSigScript(keys []string, nRequired int, net *chaincfg.Params) (*Mu
 		keysesPrecious[i] = addr
 	}
 
-	script, err := txscript.MultiSigScript(keysesPrecious, nRequired)
+	script, err := txscript.MultiSigScript(keysesPrecious, nRequired, true)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func MakeMultiSigLockAddress(keys []string, nRequired int, refundPublicKey strin
 
 	}
 
-	script, err := txscript.MultiSigLockScript(keysesPrecious, nRequired, refungAddress, refundDefferingPeriod)
+	script, err := txscript.MultiSigLockScript(keysesPrecious, nRequired, refungAddress, refundDefferingPeriod, true)
 	if err != nil {
 		return nil, err
 	}

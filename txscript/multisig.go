@@ -1,7 +1,9 @@
 package txscript
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -12,7 +14,7 @@ import (
 // nrequired of the keys in pubkeys are required to have signed the transaction
 // for success.  An Error with the error code ErrTooManyRequiredSigs will be
 // returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int) ([]byte, error) {
+func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int, sortKeys bool) ([]byte, error) {
 	if len(pubkeys) < nrequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -21,8 +23,8 @@ func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int) ([]byte, er
 	}
 
 	builder := NewScriptBuilder().AddInt64(int64(nrequired))
-	for _, key := range pubkeys {
-		builder.AddData(key.ScriptAddress())
+	for _, key := range pubKeysToAddresses(pubkeys, sortKeys) {
+		builder.AddData(key)
 	}
 	builder.AddInt64(int64(len(pubkeys)))
 	builder.AddOp(OP_CHECKMULTISIG)
@@ -53,7 +55,7 @@ func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int) ([]byte, er
 // Otherwise, in case of "refund to owner" (pay-to-pubkey), requires one signature
 // and pubkey is the second to last item on the stack.
 func MultiSigLockScript(pubkeys []*jaxutil.AddressPubKey, sigRequired int,
-	refundAddress *jaxutil.AddressPubKey, refundDeferringPeriod int32) ([]byte, error) {
+	refundAddress *jaxutil.AddressPubKey, refundDeferringPeriod int32, sortKeys bool) ([]byte, error) {
 	if len(pubkeys) < sigRequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -72,9 +74,10 @@ func MultiSigLockScript(pubkeys []*jaxutil.AddressPubKey, sigRequired int,
 
 	// multisig statement
 	builder.AddInt64(int64(sigRequired))
-	for _, key := range pubkeys {
-		builder.AddData(key.ScriptAddress())
+	for _, key := range pubKeysToAddresses(pubkeys, sortKeys) {
+		builder.AddData(key)
 	}
+
 	builder.AddInt64(int64(len(pubkeys)))
 	builder.AddOp(OP_CHECKMULTISIG)
 	// ---
@@ -91,8 +94,23 @@ func MultiSigLockScript(pubkeys []*jaxutil.AddressPubKey, sigRequired int,
 	return builder.Script()
 }
 
-const (
+func pubKeysToAddresses(pubkeys []*jaxutil.AddressPubKey, sortKeys bool) [][]byte {
+	res := make([][]byte, len(pubkeys))
+	for i, pubkey := range pubkeys {
+		res[i] = pubkey.ScriptAddress()
+	}
 
+	if sortKeys {
+		sort.Slice(res, func(i, j int) bool {
+			// The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
+			return bytes.Compare(res[i], res[j]) < 0
+		})
+	}
+
+	return res
+}
+
+const (
 	// mslFirstMSigOpI is the index of the first parsedOpcode for MultiSigTy
 	mslFirstMSigOpI = 4
 

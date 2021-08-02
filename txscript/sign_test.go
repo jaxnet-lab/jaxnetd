@@ -6,9 +6,11 @@
 package txscript
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"testing"
 
@@ -927,9 +929,7 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			pkScript, err := MultiSigScript(
-				[]*jaxutil.AddressPubKey{address1, address2},
-				2)
+			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
@@ -979,9 +979,7 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			pkScript, err := MultiSigScript(
-				[]*jaxutil.AddressPubKey{address1, address2},
-				2)
+			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
@@ -1061,9 +1059,7 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			pkScript, err := MultiSigScript(
-				[]*jaxutil.AddressPubKey{address1, address2},
-				2)
+			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
@@ -1202,13 +1198,14 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 
 	_, _ = key1, key2
 
-	refundDeferringPeriod := int32(10)
+	refundDeferringPeriod := int32(240)
 
-	multiSigLockScript, err := MultiSigLockScript([]*jaxutil.AddressPubKey{address1, address2}, 2,
-		refundAddress, refundDeferringPeriod)
+	multiSigLockScript, err := MultiSigLockScript([]*jaxutil.AddressPubKey{address1, address2}, 2, refundAddress, refundDeferringPeriod, false)
 	if err != nil {
 		t.Errorf("failed to make pkscript for %s: %v", msg, err)
 	}
+
+	t.Logf("multisig lock: %s", hex.EncodeToString(multiSigLockScript))
 
 	scriptAddr, err := jaxutil.NewAddressScriptHash(multiSigLockScript, &chaincfg.TestNet3Params)
 	if err != nil {
@@ -1236,7 +1233,22 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 	// asm, _ = DisasmString(scriptPkScript)
 	// fmt.Println("pay_to_lock_script_asm: ", asm)
 	// fmt.Println("pay_to_lock_script_hex: ", hex.EncodeToString(scriptPkScript))
+	parentTx := &wire.MsgTx{
+		Version: wire.TxVerRegular,
+		TxIn: []*wire.TxIn{
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295}},
+		TxOut:    []*wire.TxOut{{Value: 100000, PkScript: scriptPkScript}},
+		LockTime: 0,
+	}
+	buf := bytes.NewBuffer(nil)
+	parentTx.Serialize(buf)
+	t.Logf("parent tx[%d]: %s", i, hex.EncodeToString(buf.Bytes()))
+	tx.TxIn[i].PreviousOutPoint.Hash = parentTx.TxHash()
+	tx.TxIn[i].PreviousOutPoint.Index = 0
 
+	buf = bytes.NewBuffer(nil)
+	tx.Serialize(buf)
+	t.Logf("tx[%d] before signing: %s", i, hex.EncodeToString(buf.Bytes()))
 	{ // check the strategy of the multi sig spend
 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
 			tx, i, scriptPkScript, hashType,
@@ -1249,6 +1261,11 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("failed to sign output %s: %v", msg, err)
 			return false
 		}
+
+		tx.TxIn[i].SignatureScript = sigScript
+		buf = bytes.NewBuffer(nil)
+		tx.Serialize(buf)
+		t.Logf("tx[%d] with 1 sig: %s", i, hex.EncodeToString(buf.Bytes()))
 
 		// asm, _ = DisasmString(sigScript)
 		// fmt.Println("partial_signature_asm: ", asm)
@@ -1271,6 +1288,11 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 			t.Errorf("failed to sign output %s: %v", msg, err)
 			return false
 		}
+
+		tx.TxIn[i].SignatureScript = sigScript
+		buf = bytes.NewBuffer(nil)
+		tx.Serialize(buf)
+		t.Logf("tx[%d] with 2 sig: %s", i, hex.EncodeToString(buf.Bytes()))
 
 		// Now we should pass.
 		err = checkMultiSigLockScripts(msg, tx, i, inputAmounts[i], sigScript, scriptPkScript)

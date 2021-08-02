@@ -46,7 +46,7 @@ func GetPayToAddressScript(destAddress string, params *chaincfg.Params) ([]byte,
 // SetMultiSig2of2 creates multiSig script, what can be spent only whist 2 of 2 signatures.
 // 	firstPubKey and secondPubKey is hex-encoded jaxutil.AddressPubKey, NOT an address.
 func (tx *DraftTx) SetMultiSig2of2(firstPubKey, secondPubKey *jaxutil.AddressPubKey, params *chaincfg.Params) error {
-	pkScript, err := txscript.MultiSigScript([]*jaxutil.AddressPubKey{firstPubKey, secondPubKey}, 2)
+	pkScript, err := txscript.MultiSigScript([]*jaxutil.AddressPubKey{firstPubKey, secondPubKey}, 2, true)
 	if err != nil {
 		return err
 	}
