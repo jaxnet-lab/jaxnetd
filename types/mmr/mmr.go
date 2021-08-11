@@ -31,7 +31,7 @@ type IShardsMergedMiningTree interface {
 	Index() int
 	Root() (root Hash, err error)
 	Set(index uint64, weight *big.Int, hash []byte) (root Hash, err error)
-	Append(weight *big.Int, hash []byte) (root Hash, err error)
+	Append(weight *big.Int, hash []byte) (err error)
 	Copy(db IStore) (IShardsMergedMiningTree, error)
 }
 
@@ -110,19 +110,23 @@ func (mmTree *ShardsMergedMiningTree) Root() (root Hash, err error) {
 	return mmTree.GetRoot(uint64(len(blocks))), err
 }
 
-func (mmTree *ShardsMergedMiningTree) Append(weight *big.Int, hash []byte) (root Hash, err error) {
+func (mmTree *ShardsMergedMiningTree) Append(weight *big.Int, hash []byte) (
+	// root Hash,
+	err error) {
 	mmTree.Lock()
 	defer mmTree.Unlock()
 	blocks, err := mmTree.db.Blocks()
 	if err != nil {
-		return root, err
+		// return root, err
+		return err
 	}
 	index := uint64(len(blocks))
 
 	if index == 0 {
 		_, err = mmTree.set(0, big.NewInt(0), mmTree.genesis)
 		if err != nil {
-			return Hash{}, errors.Wrap(err, "unable to init mountainRange for shard")
+			// return Hash{}, errors.Wrap(err, "unable to init mountainRange for shard")
+			return errors.Wrap(err, "unable to init mountainRange for shard")
 		}
 		index += 1
 	}
@@ -133,7 +137,8 @@ func (mmTree *ShardsMergedMiningTree) Append(weight *big.Int, hash []byte) (root
 	node := LeafIndex(index)
 	err = node.AppendValue(mmTree, &BlockData{Weight: weight, Hash: blockHash})
 
-	return mmTree.GetRoot(index), err
+	// return mmTree.GetRoot(index), err
+	return err
 }
 
 // Set appends ShardsMergedMiningTree with the block data by index

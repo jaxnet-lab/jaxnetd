@@ -43,8 +43,7 @@ func main() {
 	base64.StdEncoding.Encode(encoded, compressed.Bytes())
 
 	fmt.Fprintln(fi, "// Copyright (c) 2015 The btcsuite developers")
-	fmt.Fprintln(fi, "// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC")
+	fmt.Fprintln(fi, "// Copyright (c) 2020 The JaxNetwork developers\n// Use of this source code is governed by an ISC")
 	fmt.Fprintln(fi, "// license that can be found in the LICENSE file.")
 	fmt.Fprintln(fi)
 	fmt.Fprintln(fi, "package btcec")

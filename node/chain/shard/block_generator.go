@@ -10,16 +10,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
-	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
-	"gitlab.com/jaxnet/jaxnetd/types/mmr"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -30,15 +27,11 @@ type BeaconBlockProvider interface {
 }
 
 type BlockGenerator struct {
-	beacon                 BeaconBlockProvider
-	shardsMergedMiningTree mmr.IShardsMergedMiningTree
+	beacon BeaconBlockProvider
 }
 
-func NewChainBlockGenerator(beacon BeaconBlockProvider, db database.DB, genesis chainhash.Hash) *BlockGenerator {
-	return &BlockGenerator{
-		beacon:                 beacon,
-		shardsMergedMiningTree: mmr.MergedMiningTree(mmr.Storage(db), genesis.CloneBytes()),
-	}
+func NewChainBlockGenerator(beacon BeaconBlockProvider) *BlockGenerator {
+	return &BlockGenerator{beacon: beacon}
 }
 
 func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
@@ -148,10 +141,9 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 
 	return nil
 }
-func (c *BlockGenerator) AcceptBlock(blockHeader wire.BlockHeader) error {
-	h := blockHeader.BlockHash()
-	_, err := c.shardsMergedMiningTree.Append(big.NewInt(0), h.CloneBytes())
-	return err
+
+func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
+	return nil
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {

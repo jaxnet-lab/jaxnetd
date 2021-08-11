@@ -7,6 +7,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+- Removed usage of the `IShardsMergedMiningTree`, because it is broken, useless and part of abandoned feature.
+- Extend response of the `GetBlockTxOps`
 
 ## [0.3.11]
 

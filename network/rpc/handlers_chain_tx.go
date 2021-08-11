@@ -431,7 +431,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 	var blkHeader wire.BlockHeader
 	var blkHashStr string
 	var chainHeight int32
-	if txInfo.blkHash != nil && !txInfo.isOrphan {
+	if txInfo.blkHash != nil && *txInfo.blkHash != chainhash.ZeroHash && !txInfo.isOrphan {
 		// Fetch the header from BlockChain.
 		header, err := server.chainProvider.BlockChain().HeaderByHash(txInfo.blkHash)
 		if err != nil {
@@ -935,6 +935,8 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 				Coinbase:     coinbase,
 				OriginTxHash: tx.Hash().String(),
 				OriginIdx:    uint32(outId),
+				CSTx:         tx.MsgTx().SwapTx(),
+				ShardID:      server.chainProvider.ChainCtx.ShardID(),
 			}
 
 			result.Ops = append(result.Ops, op)
@@ -962,6 +964,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 			for _, adr := range addrr {
 				addresses = append(addresses, adr.EncodeAddress())
 			}
+
 			op := jaxjson.TxOperation{
 				Input:        true,
 				PkScript:     hex.EncodeToString(out.PkScript),
@@ -973,10 +976,11 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 				Coinbase:     false,
 				OriginTxHash: in.PreviousOutPoint.Hash.String(),
 				OriginIdx:    in.PreviousOutPoint.Index,
+				CSTx:         tx.MsgTx().SwapTx(),
+				ShardID:      server.chainProvider.ChainCtx.ShardID(),
 			}
 
 			result.Ops = append(result.Ops, op)
-
 		}
 
 	}

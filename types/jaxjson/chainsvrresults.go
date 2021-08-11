@@ -969,6 +969,9 @@ type TxOperation struct {
 	Coinbase     bool     `json:"coinbase"`     // indicates is this coinbase tx
 	OriginTxHash string   `json:"originTxHash"` // not empty if input; tx hash of parent utxo
 	OriginIdx    uint32   `json:"originIdx"`    // not empty if input; serial number of output in tx if input
+
+	CSTx    bool   `json:"csTx"`
+	ShardID uint32 `json:"shardId"`
 }
 
 type BlockTxOperations struct {
