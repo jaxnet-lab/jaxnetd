@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
 
@@ -102,6 +104,11 @@ func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknode.IBlockNode, n
 	// Genesis block.
 	if lastNode == nil {
 		return b.chainParams.PowLimitBits, nil
+	}
+
+	// todo: this is a temporally fix; addNode bounds based on block height and remove this
+	if !b.chain.IsBeacon() && b.chain.Params().Net == types.TestNet3 {
+		return chaincfg.ShardPoWBits, nil
 	}
 
 	// Return the previous block's difficulty requirements if this block

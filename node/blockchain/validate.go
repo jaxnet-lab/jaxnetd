@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -35,10 +36,13 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		if err != nil {
 			return err
 		}
+
 		blockDifficulty := header.Bits()
-		if blockDifficulty != expectedDifficulty {
-			str := "block difficulty of %d is not the expected value of %d"
-			str = fmt.Sprintf(str, blockDifficulty, expectedDifficulty)
+
+		blockDifficultyLess := pow.CompactToBig(blockDifficulty).Cmp(pow.CompactToBig(expectedDifficulty)) > 0
+		if (b.chain.IsBeacon() && blockDifficulty != expectedDifficulty) || (!b.chain.IsBeacon() && blockDifficultyLess) {
+			str := "block difficulty of %0x is not the expected value of %0x, with time(%s)"
+			str = fmt.Sprintf(str, blockDifficulty, expectedDifficulty, header.Timestamp())
 			return chaindata.NewRuleError(chaindata.ErrUnexpectedDifficulty, str)
 		}
 

@@ -36,8 +36,10 @@ var (
 	// shardChainPowLimit is the highest proof of work value a Bitcoin block
 	// can have for the test network (version 3).  It is the value
 	// 2^255 - 1.
-	shardChainPowLimit        = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
-	shardPoWBits       uint32 = 0x1e0dffff
+	shardChainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+
+	// ShardPoWBits is basic target for shard chain.
+	ShardPoWBits uint32 = 0x1e0dffff
 )
 
 var (

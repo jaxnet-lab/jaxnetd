@@ -158,4 +158,5 @@ func ShardGenesisDifficulty(beaconBits uint32) uint32 {
 	// work := new(big.Int).Mul(CalcWork(beaconBits), big.NewInt(32))
 	// return BigToCompact(work)
 	return 0x1e00ffff
+	// return 0x1e0dffff
 }
