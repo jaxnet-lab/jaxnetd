@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
@@ -1066,7 +1067,15 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	if tx.MsgTx().SwapTx() {
 		err = chaindata.ValidateSwapTxStructure(tx.MsgTx(), missingParentsCount)
 		if err != nil {
-			return missingParents, nil, err
+			msg := "["
+			for i, parent := range missingParents {
+				msg += parent.String()
+				if i < missingParentsCount-1 {
+					msg += ", "
+				}
+			}
+			msg += "]"
+			return missingParents, nil, errors.New(err.Error() + msg)
 		}
 
 	} else {

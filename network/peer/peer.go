@@ -2024,8 +2024,7 @@ func (peer *Peer) readRemoteVersionMsg() error {
 		// Notify and disconnect clients if the first message is not a version
 		// message.
 		reason := "a version message must precede all others"
-		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
-			reason)
+		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed, reason)
 
 		if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
 			return err

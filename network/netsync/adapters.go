@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package netsync
 
 import (
@@ -56,7 +57,7 @@ type ServerPeer interface {
 	// the peer is to being banned.
 	GetBanScore() uint32
 
-	// FeeFilter returns the requested current minimum fee rate for which
+	// GetFeeFilter returns the requested current minimum fee rate for which
 	// transactions should be announced.
 	GetFeeFilter() int64
 }
@@ -167,7 +168,7 @@ func (b *RPCSyncMgr) SyncPeerID() int32 {
 	return b.SyncMgr.SyncPeerID()
 }
 
-// LocateBlocks returns the hashes of the blocks after the first known block in
+// LocateHeaders returns the hashes of the blocks after the first known block in
 // the provided locators until the provided stop hash or the current tip is
 // reached, up to a max of wire.MaxBlockHeadersPerMsg hashes.
 //
