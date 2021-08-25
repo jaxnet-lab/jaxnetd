@@ -916,49 +916,23 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 
 	for txId, tx := range txs {
 		coinbase := chaindata.IsCoinBase(tx)
-
-		for outId, out := range tx.MsgTx().TxOut {
-			_, addrr, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, server.chainProvider.ChainParams)
-			addresses := make([]string, 0, len(addrr))
-			for _, adr := range addrr {
-				addresses = append(addresses, adr.EncodeAddress())
-			}
-
-			op := jaxjson.TxOperation{
-				Input:        false,
-				PkScript:     hex.EncodeToString(out.PkScript),
-				Addresses:    addresses,
-				Idx:          uint32(outId),
-				Amount:       out.Value,
-				TxHash:       tx.Hash().String(),
-				TxIndex:      uint32(txId),
-				Coinbase:     coinbase,
-				OriginTxHash: tx.Hash().String(),
-				OriginIdx:    uint32(outId),
-				CSTx:         tx.MsgTx().SwapTx(),
-				ShardID:      server.chainProvider.ChainCtx.ShardID(),
-			}
-
-			result.Ops = append(result.Ops, op)
-		}
+		var missedInputs = map[int]struct{}{}
 
 		if chaindata.IsCoinBase(tx) {
-			continue
+			goto outsAnalysis
 		}
 
 		for inId, in := range tx.MsgTx().TxIn {
-			parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true, true)
-			switch {
-			case err != nil && !tx.MsgTx().SwapTx():
-				context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, tx.Hash().String())
-				err = rpcNoTxInfoError(&in.PreviousOutPoint.Hash)
-				return nil, server.InternalRPCError(err.Error(), context)
-			case err != nil && tx.MsgTx().SwapTx():
-				// ignore missed parent for for swap tx
+			out, found, err := server.getParentOut(tx.MsgTx().SwapTx(), in, inId, tx.Hash())
+			if err != nil {
+				return nil, err
+			}
+
+			if !found {
+				missedInputs[inId] = struct{}{}
 				continue
 			}
 
-			out := parentTx.tx.TxOut[in.PreviousOutPoint.Index]
 			_, addrr, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, server.chainProvider.ChainParams)
 			addresses := make([]string, 0, len(addrr))
 			for _, adr := range addrr {
@@ -983,9 +957,63 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 			result.Ops = append(result.Ops, op)
 		}
 
+	outsAnalysis:
+		for outId, out := range tx.MsgTx().TxOut {
+			_, missedInput := missedInputs[outId]
+			if tx.MsgTx().SwapTx() && missedInput {
+				continue
+			}
+
+			_, adr, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, server.chainProvider.ChainParams)
+			addresses := make([]string, 0, len(adr))
+			for _, adr := range adr {
+				addresses = append(addresses, adr.EncodeAddress())
+			}
+
+			op := jaxjson.TxOperation{
+				Input:        false,
+				PkScript:     hex.EncodeToString(out.PkScript),
+				Addresses:    addresses,
+				Idx:          uint32(outId),
+				Amount:       out.Value,
+				TxHash:       tx.Hash().String(),
+				TxIndex:      uint32(txId),
+				Coinbase:     coinbase,
+				OriginTxHash: tx.Hash().String(),
+				OriginIdx:    uint32(outId),
+				CSTx:         tx.MsgTx().SwapTx(),
+				ShardID:      server.chainProvider.ChainCtx.ShardID(),
+			}
+
+			result.Ops = append(result.Ops, op)
+		}
+
 	}
 
 	return result, nil
+}
+
+func (server *CommonChainRPC) getParentOut(swapTx bool, in *wire.TxIn, inId int, txHash *chainhash.Hash) (out *wire.TxOut, found bool, err error) {
+	parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true, true)
+	switch {
+	case err != nil && !swapTx:
+		context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, txHash.String())
+		err = rpcNoTxInfoError(&in.PreviousOutPoint.Hash)
+		return nil, false, server.InternalRPCError(err.Error(), context)
+	case err != nil && swapTx:
+		// ignore missed parent for for swap tx
+		return nil, false, nil
+	}
+
+	if swapTx && parentTx.tx.SwapTx() {
+		grandParentIn := parentTx.tx.TxIn[in.PreviousOutPoint.Index]
+		_, found, err := server.getParentOut(true, grandParentIn, int(in.PreviousOutPoint.Index), txHash)
+		if !found || err != nil {
+			return nil, false, nil
+		}
+	}
+
+	return parentTx.tx.TxOut[in.PreviousOutPoint.Index], true, nil
 }
 
 // handleListTxOut handles listtxout commands.
