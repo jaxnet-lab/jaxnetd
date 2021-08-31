@@ -11,9 +11,7 @@ require (
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792
 	github.com/btcsuite/winsvc v1.0.0
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
 	github.com/davecgh/go-spew v1.1.1
-	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/gocarina/gocsv v0.0.0-20200827134620-49f5c3fa2b3e
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jessevdk/go-flags v1.5.0
