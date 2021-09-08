@@ -150,13 +150,3 @@ func CalcWork(bits uint32) *big.Int {
 	denominator := new(big.Int).Add(difficultyNum, bigOne)
 	return new(big.Int).Div(oneLsh256, denominator)
 }
-
-// ShardGenesisDifficulty calculates initial difficulty of the shard chain.
-// The difficulty of the firs epoch in Shard Chain equals half of the difficulty
-// of respective genesis block on the Beacon Chain.
-func ShardGenesisDifficulty(beaconBits uint32) uint32 {
-	// work := new(big.Int).Mul(CalcWork(beaconBits), big.NewInt(32))
-	// return BigToCompact(work)
-	return 0x1e00ffff
-	// return 0x1e0dffff
-}

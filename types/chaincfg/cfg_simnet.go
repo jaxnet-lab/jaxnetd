@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package chaincfg
 
 import (
@@ -38,20 +39,21 @@ var SimNetParams = Params{
 		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
 		Nonce:      2,
 	},
-	GenesisHash:              &genesisHash,
-	PowLimit:                 simNetPowLimit,
-	PowLimitBits:             0x207fffff,
-	BIP0034Height:            0, // Always active on simnet
-	BIP0065Height:            0, // Always active on simnet
-	BIP0066Height:            0, // Always active on simnet
+	GenesisHash: &genesisHash,
+
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
-	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+
+	PowParams: PowParams{
+		PowLimit:                 simNetPowLimit,
+		PowLimitBits:             0x207fffff,
+		TargetTimespan:           time.Hour * 24 * 14, // 14 days
+		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+		ReduceMinDifficulty:      true,
+		MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
+		GenerateSupported:        true,
+	},
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,

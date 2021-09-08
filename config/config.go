@@ -829,8 +829,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers,
-		ActiveNetParams.DefaultPort)
+	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers, ActiveNetParams.DefaultPort)
 	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
 		ActiveNetParams.DefaultPort)
 

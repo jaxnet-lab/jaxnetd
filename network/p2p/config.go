@@ -44,6 +44,7 @@ type Config struct {
 	NoOnion            bool          `yaml:"no_onion" long:"noonion" description:"Disable connecting to tor hidden services"`
 	NoPeerBloomFilters bool          `long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	Upnp               bool          `yaml:"upnp" long:"upnp" description:"Use UPnP to map our listening port outside of NAT"`
+	ShardDefaultPort   int           `yaml:"shard_default_port" long:"sharddefaultport"`
 
 	Oniondial    func(string, string, time.Duration) (net.Conn, error) `toml:"-" yaml:"-"`
 	Dial         func(string, string, time.Duration) (net.Conn, error) `toml:"-" yaml:"-"`
@@ -56,11 +57,15 @@ type ListenOpts struct {
 	Listeners   []string
 }
 
-func (o *ListenOpts) Update(listeners []string) error {
-	port, err := GetFreePort()
-	if err != nil {
-		return err
+func (o *ListenOpts) Update(listeners []string, chainID uint32, shardDefaultPort int) (err error) {
+	port := shardDefaultPort + int(chainID)
+	if shardDefaultPort == 0 {
+		port, err = GetFreePort()
+		if err != nil {
+			return err
+		}
 	}
+
 	o.DefaultPort = port
 	o.Listeners = SetPortForListeners(listeners, port)
 	return nil

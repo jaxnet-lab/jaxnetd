@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blockchain
 
 import (
@@ -145,7 +146,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
-	err = chaindata.CheckBlockSanityWF(block, b.chainParams.PowLimit, b.TimeSource, flags)
+	err = chaindata.CheckBlockSanityWF(block, b.chainParams.PowParams.PowLimit, b.TimeSource, flags)
 	if err != nil {
 		return false, false, err
 	}

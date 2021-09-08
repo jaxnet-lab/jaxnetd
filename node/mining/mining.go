@@ -987,7 +987,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 	msgBlock.Header.SetTimestamp(newTime)
 
 	// Recalculate the difficulty if running on a network that requires it.
-	if g.chainCtx.Params().ReduceMinDifficulty {
+	if g.chainCtx.Params().PowParams.ReduceMinDifficulty {
 		difficulty, err := g.blockChain.CalcNextRequiredDifficulty(newTime)
 		if err != nil {
 			return err

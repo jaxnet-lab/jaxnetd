@@ -36,21 +36,21 @@ var TestNet3Params = Params{
 		Bits:       0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
 		Nonce:      0x18aea41a,               // 414098458
 	},
-	GenesisHash:              &genesisHash,
-	PowLimit:                 testNet3PowLimit,
-	PowLimitBits:             0x1d0ffff0,
-	BIP0034Height:            0,
-	BIP0065Height:            0,
-	BIP0066Height:            0,
+	GenesisHash: &genesisHash,
+
 	CoinbaseMaturity:         10,
 	SubsidyReductionInterval: 210000,
 
-	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	PowParams: PowParams{
+		PowLimit:                 testNet3PowLimit,
+		PowLimitBits:             0x1d0ffff0,
+		TargetTimespan:           time.Hour * 24 * 14, // 14 days
+		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+		ReduceMinDifficulty:      false,
+		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
+		GenerateSupported:        true,
+	},
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,

@@ -32,15 +32,6 @@ var mainNetParams = params{
 	rpcPort: "8334",
 }
 
-// regressionNetParams contains parameters specific to the regression test
-// network (wire.TestNet).  NOTE: The RPC port is intentionally different
-// than the reference implementation - see the mainNetParams comment for
-// details.
-var regressionNetParams = params{
-	Params:  &chaincfg.RegressionNetParams,
-	rpcPort: "18334",
-}
-
 // testNet3Params contains parameters specific to the test network (version 3)
 // (types.TestNet3).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.

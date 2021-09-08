@@ -124,9 +124,13 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	}
 
 	jaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	if !btcBurnReward && !jaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet reward prohibited")
+	if btcBurnReward && !jaxBurnReward {
+		return errors.New("invalid format of beacon coinbase tx: BTC burned, JaxNet reward prohibited")
 	}
+	if !btcBurnReward && jaxBurnReward {
+		return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
+	}
+
 	properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
 	if !properReward {
 		return fmt.Errorf("invalid format of beacon coinbase tx: invalid value of second out - has(%d) expected(%d) height(%d)",

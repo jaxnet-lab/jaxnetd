@@ -179,10 +179,10 @@ func New(config *Config) (*BlockChain, error) {
 
 	params := config.ChainParams
 
-	targetTimespan := int64(params.TargetTimespan / time.Second)
-	targetTimePerBlock := int64(params.TargetTimePerBlock / time.Second)
+	targetTimespan := int64(params.PowParams.TargetTimespan / time.Second)
+	targetTimePerBlock := int64(params.PowParams.TargetTimePerBlock / time.Second)
 
-	adjustmentFactor := params.RetargetAdjustmentFactor
+	adjustmentFactor := params.PowParams.RetargetAdjustmentFactor
 	b := BlockChain{
 		checkpoints:         config.Checkpoints,
 		checkpointsByHeight: checkpointsByHeight,
@@ -193,19 +193,23 @@ func New(config *Config) (*BlockChain, error) {
 		blockGen:    config.BlockGen,
 		chainParams: params,
 		// ------ ------ ------ ------ ------
-		TimeSource:          config.TimeSource,
-		SigCache:            config.SigCache,
-		indexManager:        config.IndexManager,
-		minRetargetTimespan: targetTimespan / adjustmentFactor,
-		maxRetargetTimespan: targetTimespan * adjustmentFactor,
-		blocksPerRetarget:   int32(targetTimespan / targetTimePerBlock),
-		index:               newBlockIndex(config.DB, params),
-		HashCache:           config.HashCache,
-		bestChain:           newChainView(nil),
-		orphans:             make(map[chainhash.Hash]*orphanBlock),
-		prevOrphans:         make(map[chainhash.Hash][]*orphanBlock),
-		warningCaches:       newThresholdCaches(vbNumBits),
-		deploymentCaches:    newThresholdCaches(chaincfg.DefinedDeployments),
+		TimeSource:   config.TimeSource,
+		SigCache:     config.SigCache,
+		indexManager: config.IndexManager,
+
+		retargetOpts: retargetOpts{
+			minRetargetTimespan: targetTimespan / adjustmentFactor,
+			maxRetargetTimespan: targetTimespan * adjustmentFactor,
+			blocksPerRetarget:   int32(targetTimespan / targetTimePerBlock),
+		},
+
+		index:            newBlockIndex(config.DB, params),
+		HashCache:        config.HashCache,
+		bestChain:        newChainView(nil),
+		orphans:          make(map[chainhash.Hash]*orphanBlock),
+		prevOrphans:      make(map[chainhash.Hash][]*orphanBlock),
+		warningCaches:    newThresholdCaches(vbNumBits),
+		deploymentCaches: newThresholdCaches(chaincfg.DefinedDeployments),
 	}
 
 	// Initialize the chain state from the passed database.  When the db
@@ -281,10 +285,7 @@ type BlockChain struct {
 	// The following fields are calculated based upon the provided chain
 	// parameters.  They are also set when the instance is created and
 	// can't be changed afterwards, so there is no need to protect them with
-	// a separate mutex.
-	minRetargetTimespan int64 // target timespan / adjustment factor
-	maxRetargetTimespan int64 // target timespan * adjustment factor
-	blocksPerRetarget   int32 // target timespan / target time per block
+	retargetOpts retargetOpts
 
 	// chainLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.

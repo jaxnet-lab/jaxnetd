@@ -110,7 +110,6 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 		return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
 	}
 
-	btcBurnReward := bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
 	// properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
 
 	beaconCoinbaseTx := block.Header.(*wire.ShardHeader).CoinbaseAux.Tx
@@ -121,11 +120,6 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 		return errors.New("invalid format of beacon coinbase tx: first out must be zero and have JaxNetLink")
 	}
 
-	beaconJaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	if !btcBurnReward && !beaconJaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC not burned, Jax reward prohibited")
-	}
-
 	shardCoinbaseTx := block.Transactions[0]
 
 	shardJaxNetLinkOut := bytes.Equal(shardCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
@@ -134,9 +128,24 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 		return errors.New("invalid format of shard coinbase tx: first out must be zero and have JaxNetLink")
 	}
 
-	shardJaxBurnReward := bytes.Equal(shardCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	if !btcBurnReward && !beaconJaxBurnReward && !shardJaxBurnReward {
-		return errors.New("invalid format of shard coinbase tx: BTC  or JaxNet not burned, Jax reward prohibited")
+	{
+		btcBurnReward := bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+		beaconJaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+		shardJaxBurnReward := bytes.Equal(shardCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+
+		if btcBurnReward && !beaconJaxBurnReward {
+			return errors.New("invalid format of beacon coinbase tx: BTC burned, JaxNet reward prohibited")
+		}
+		if !btcBurnReward && beaconJaxBurnReward {
+			return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
+		}
+		btcJaxBurn := btcBurnReward && beaconJaxBurnReward
+		if !btcJaxBurn && shardJaxBurnReward {
+			return errors.New("invalid format of shard coinbase tx: BTC & JaxNet not burned, Jax reward prohibited")
+		}
+		if btcJaxBurn && shardJaxBurnReward {
+			return errors.New("invalid format of shard coinbase tx: BTC & JaxNet burned, Jax burn prohibited")
+		}
 	}
 
 	return nil
@@ -147,7 +156,8 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
-	return pow.CalcShardBlockSubsidy(height, header.Bits(), header.K())
+	return pow.CalcShardBlockSubsidy(height,
+		header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
