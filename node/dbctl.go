@@ -24,7 +24,7 @@ type DBCtl struct {
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeConfig) (database.DB, error) {
+func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg InstanceConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
@@ -118,7 +118,7 @@ func (ctrl *DBCtl) blockDbPath(dataDir string, chain string, dbType string) stri
 // warnMultipleDBs shows a warning if multiple block database types are detected.
 // This is not a situation most users want.  It is handy for development however
 // to support multiple side-by-side databases.
-func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
+func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg InstanceConfig) {
 	// This is intentionally not using the known db types which depend
 	// on the database types compiled into the binary since we want to
 	// detect legacy db types as well.

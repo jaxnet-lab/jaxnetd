@@ -90,11 +90,10 @@ func GetSigOpCost(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bi
 		if err != nil {
 			return 0, nil
 		}
-		numSigOps += (numP2SHSigOps * WitnessScaleFactor)
+		numSigOps += numP2SHSigOps * WitnessScaleFactor
 	}
 
 	if segWit && !isCoinBaseTx {
-
 		msgTx := tx.MsgTx()
 		thisIsSwapTx := tx.MsgTx().SwapTx()
 		missingCount := 0

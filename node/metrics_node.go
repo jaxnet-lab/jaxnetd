@@ -22,7 +22,7 @@ type nodeStatsProvider interface {
 	Stats() map[string]float64
 }
 
-func NodeMetrics(cfg *Config, stats nodeStatsProvider, logger zerolog.Logger) (res IMetric) {
+func MetricsOfNode(cfg *Config, stats nodeStatsProvider, logger zerolog.Logger) (res IMetric) {
 	res = &nodeMetrics{
 		logger:        logger,
 		cfg:           cfg,

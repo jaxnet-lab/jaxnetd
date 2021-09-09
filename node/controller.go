@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -221,10 +222,10 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 		port = 2112
 	}
 
-	chainCtl.metrics = Metrics(childCtx, time.Duration(interval)*time.Second)
+	chainCtl.metrics = MetricsManager(childCtx, time.Duration(interval)*time.Second)
 	chainCtl.metrics.Add(
-		ChainMetrics(&chainCtl.beacon, chainCtl.logger),
-		NodeMetrics(chainCtl.cfg, chainCtl, chainCtl.logger),
+		MetricsOfChain(&chainCtl.beacon, chainCtl.logger),
+		MetricsOfNode(chainCtl.cfg, chainCtl, chainCtl.logger),
 	)
 
 	return chainCtl.metrics.Listen("/metrics", port)

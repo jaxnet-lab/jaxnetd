@@ -26,7 +26,7 @@ type chainMetrics struct {
 	chain statsProvider
 }
 
-func ChainMetrics(chain statsProvider, logger zerolog.Logger) (res IMetric) {
+func MetricsOfChain(chain statsProvider, logger zerolog.Logger) (res IMetric) {
 	res = &chainMetrics{
 		chain:         chain,
 		logger:        logger.With().Str("ctx", "metrics").Str("chain", chain.ChainCtx().Name()).Logger(),

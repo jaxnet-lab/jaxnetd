@@ -338,7 +338,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	cfg := node.Config{
-		Node: node.NodeConfig{
+		Node: node.InstanceConfig{
 			Net:    ActiveNetParams.Name,
 			DbType: defaultDbType,
 			BeaconChain: cprovider.ChainRuntimeConfig{

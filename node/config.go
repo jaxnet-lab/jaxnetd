@@ -19,7 +19,7 @@ type Config struct {
 	ConfigFile  string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
 	ShowVersion bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
 
-	Node      NodeConfig         `yaml:"node"`
+	Node      InstanceConfig     `yaml:"node"`
 	LogConfig corelog.Config     `yaml:"log_config" `
 	Metrics   MetricsConfig      `yaml:"metrics"`
 	BTCD      btcd.Configuration `yaml:"btcd"`
@@ -45,7 +45,7 @@ type MetricsConfig struct {
 	Port     uint16 `yaml:"port"`
 }
 
-type NodeConfig struct {
+type InstanceConfig struct {
 	BeaconChain    cprovider.ChainRuntimeConfig `yaml:"beacon_chain"`
 	RPC            rpc.Config                   `yaml:"rpc"`
 	P2P            p2p.Config                   `yaml:"p2p"`
@@ -61,7 +61,7 @@ type ShardConfig struct {
 	ChainParams map[uint32]cprovider.ChainRuntimeConfig `yaml:"chain_params"`
 }
 
-func (cfg *NodeConfig) ChainParams() *chaincfg.Params {
+func (cfg *InstanceConfig) ChainParams() *chaincfg.Params {
 	return chaincfg.NetName(cfg.Net).Params()
 }
 
