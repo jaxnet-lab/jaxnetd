@@ -15,8 +15,8 @@ import (
 
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -134,13 +134,6 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 				defaultPort = "18554"
 			} else {
 				defaultPort = "18556"
-			}
-		case &chaincfg.RegressionNetParams:
-			if useWallet {
-				paramErr := fmt.Errorf("cannot use -wallet with -regtest, btcwallet not yet compatible with regtest")
-				return "", paramErr
-			} else {
-				defaultPort = "18334"
 			}
 		default:
 			if useWallet {
