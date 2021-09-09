@@ -16,7 +16,9 @@ import (
 
 // mainPowLimit is the highest proof of work value a Bitcoin block can
 // have for the main network.  It is the value 2^224 - 1.
-var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 224), bigOne)
+var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
+
+// var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 224), bigOne)
 
 // GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
