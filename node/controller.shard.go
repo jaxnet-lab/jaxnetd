@@ -77,7 +77,7 @@ func (chainCtl *chainController) runShards() error {
 			return errors.New("invalid start genesis block, expansion not made at this height")
 		}
 
-		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners)
+		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners, info.ID, chainCtl.cfg.Node.P2P.ShardDefaultPort)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,9 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	}
 
 	opts := p2p.ListenOpts{}
-	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners); err != nil {
+	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners,
+		block.MsgBlock().Header.BeaconHeader().Shards(), // todo: change this
+		chainCtl.cfg.Node.P2P.ShardDefaultPort); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("unable to get free port")
 	}
 
@@ -166,7 +168,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	if chainCtl.cfg.Metrics.Enable {
-		chainCtl.metrics.Add(ChainMetrics(shardCtl, chainCtl.logger))
+		chainCtl.metrics.Add(MetricsOfChain(shardCtl, chainCtl.logger))
 	}
 }
 

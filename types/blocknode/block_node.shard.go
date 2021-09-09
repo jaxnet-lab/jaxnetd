@@ -38,6 +38,7 @@ type ShardBlockNode struct {
 	height   int32          // height is the position in the block chain.
 	serialID int64          // serialID is the absolute unique id of current block.
 
+	// todo(mike): review this, might be make sense to store raw bytes or wire obj instead
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
 	// immutable and are intentionally ordered to avoid padding on 64-bit
@@ -59,6 +60,8 @@ type ShardBlockNode struct {
 type beaconBlockNodeFields struct {
 	hash    chainhash.Hash // hash is the double sha 256 of the block.
 	workSum *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+
+	// todo(mike): review this, might be make sense to store raw bytes or wire obj instead
 
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
@@ -128,12 +131,7 @@ func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardB
 	return node
 }
 
-func (node *ShardBlockNode) NewNode() IBlockNode {
-	return new(ShardBlockNode)
-}
-
 func (node *ShardBlockNode) GetHash() chainhash.Hash      { return node.hash }
-func (node *ShardBlockNode) GetHeight() int32             { return node.height }
 func (node *ShardBlockNode) Version() int32               { return node.version }
 func (node *ShardBlockNode) Height() int32                { return node.height }
 func (node *ShardBlockNode) SerialID() int64              { return node.serialID }

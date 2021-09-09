@@ -83,19 +83,6 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		return chaindata.NewRuleError(chaindata.ErrForkTooOld, str)
 	}
 
-	// Reject outdated block versions once a majority of the network
-	// has upgraded.  These were originally voted on by BIP0034,
-	// BIP0065, and BIP0066.
-	params := b.chainParams
-	if header.Version() < 2 && blockHeight >= params.BIP0034Height ||
-		header.Version() < 3 && blockHeight >= params.BIP0066Height ||
-		header.Version() < 4 && blockHeight >= params.BIP0065Height {
-
-		str := "new blocks with version %d are no longer valid"
-		str = fmt.Sprintf(str, header.Version())
-		return chaindata.NewRuleError(chaindata.ErrBlockVersionTooOld, str)
-	}
-
 	return nil
 }
 
@@ -154,8 +141,7 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 		// blocks whose version is the serializedHeightVersion or newer
 		// once a majority of the network has upgraded.  This is part of
 		// BIP0034.
-		if chaindata.ShouldHaveSerializedBlockHeight(header) &&
-			blockHeight >= b.chainParams.BIP0034Height {
+		if chaindata.ShouldHaveSerializedBlockHeight(header) {
 
 			coinbaseTx := block.Transactions()[0]
 			err := chaindata.CheckSerializedHeight(coinbaseTx, blockHeight)
@@ -298,29 +284,6 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 			"of expected %v", view.BestHash(), parentHash))
 	}
 
-	// BIP0030 added a rule to prevent blocks which contain duplicate
-	// transactions that 'overwrite' older transactions which are not fully
-	// spent.  See the documentation for checkBIP0030 for more details.
-	//
-	// There are two blocks in the chain which violate this rule, so the
-	// check must be skipped for those blocks.  The isBIP0030Node function
-	// is used to determine if this block is one of the two blocks that must
-	// be skipped.
-	//
-	// In addition, as of BIP0034, duplicate coinbases are no longer
-	// possible due to its requirement for including the block height in the
-	// coinbase and thus it is no longer possible to create transactions
-	// that 'overwrite' older ones.  Therefore, only enforce the rule if
-	// BIP0034 is not yet active.  This is a useful optimization because the
-	// BIP0030 check is expensive since it involves a ton of cache misses in
-	// the utxoset.
-	if !chaindata.IsBIP0030Node(node) && (node.Height() < b.chainParams.BIP0034Height) {
-		err := b.checkBIP0030(node, block, view)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Load all of the utxos referenced by the inputs for all transactions
 	// in the block don't already exist in the utxo view from the database.
 	//
@@ -459,13 +422,13 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	// Enforce DER signatures for block versions 3+ once the historical
 	// activation threshold has been reached.  This is part of BIP0066.
 	blockHeader := block.MsgBlock().Header
-	if blockHeader.Version() >= 3 && node.Height() >= b.chainParams.BIP0066Height {
+	if blockHeader.Version() >= 3 {
 		scriptFlags |= txscript.ScriptVerifyDERSignatures
 	}
 
 	// Enforce CHECKLOCKTIMEVERIFY for block versions 4+ once the historical
 	// activation threshold has been reached.  This is part of BIP0065.
-	if blockHeader.Version() >= 4 && node.Height() >= b.chainParams.BIP0065Height {
+	if blockHeader.Version() >= 4 {
 		scriptFlags |= txscript.ScriptVerifyCheckLockTimeVerify
 	}
 
@@ -558,7 +521,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 
-	err := chaindata.CheckBlockSanityWF(block, b.chainParams.PowLimit, b.TimeSource, flags)
+	err := chaindata.CheckBlockSanityWF(block, b.chainParams.PowParams.PowLimit, b.TimeSource, flags)
 	if err != nil {
 		return err
 	}

@@ -103,19 +103,19 @@ var MainNetParams = Params{
 	},
 
 	GenesisHash:              &genesisHash,
-	PowLimit:                 mainPowLimit,
-	PowLimitBits:             0x1d0ffff0,
-	BIP0034Height:            10, // need to set 0, but it will break tests
-	BIP0065Height:            10, // need to set 0, but it will break tests
-	BIP0066Height:            10, // need to set 0, but it will break tests
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 210000,
-	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
-	ReduceMinDifficulty:      false,
-	MinDiffReductionTime:     0,
-	GenerateSupported:        false,
+
+	PowParams: PowParams{
+		PowLimit:                 mainPowLimit,
+		PowLimitBits:             0x1d0ffff0,
+		TargetTimespan:           time.Hour * 24 * 14, // 14 days
+		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+		ReduceMinDifficulty:      false,
+		MinDiffReductionTime:     0,
+		GenerateSupported:        false,
+	},
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{},

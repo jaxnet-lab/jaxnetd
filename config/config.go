@@ -338,7 +338,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	cfg := node.Config{
-		Node: node.NodeConfig{
+		Node: node.InstanceConfig{
 			Net:    ActiveNetParams.Name,
 			DbType: defaultDbType,
 			BeaconChain: cprovider.ChainRuntimeConfig{
@@ -433,6 +433,8 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
+		_, _ = fmt.Fprintln(os.Stderr, "WARNING! YAML configuration is deprecated and will be removed in next release. Use TOML.")
+
 		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
 		if err != nil {
 			configFileError = err
@@ -443,8 +445,8 @@ func LoadConfig() (*node.Config, []string, error) {
 			configFileError = err
 		}
 	} else {
-		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .yaml or .toml")
-		return nil, nil, errors.New("invalid file extension, must be .yaml or .toml")
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .toml")
+		return nil, nil, errors.New("invalid file extension, must be .toml")
 	}
 
 	// Parse command line options again to ensure they take precedence.
@@ -829,8 +831,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers,
-		ActiveNetParams.DefaultPort)
+	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers, ActiveNetParams.DefaultPort)
 	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
 		ActiveNetParams.DefaultPort)
 
@@ -973,6 +974,15 @@ func LoadConfig() (*node.Config, []string, error) {
 	if configFileError != nil {
 		Log.Warn().Msg(configFileError.Error())
 	}
+
+	// buf := bytes.NewBuffer(nil)
+	// err = toml.NewEncoder(buf).Encode(cfg)
+	// if err != nil {
+	// 	Log.Warn().Msg(err.Error())
+	// } else {
+	// 	err = ioutil.WriteFile("template.jaxnetd.toml", buf.Bytes(), 0644)
+	// 	fmt.Println(err)
+	// }
 
 	return &cfg, remainingArgs, nil
 }

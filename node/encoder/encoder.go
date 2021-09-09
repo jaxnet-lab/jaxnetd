@@ -25,8 +25,10 @@ const (
 	// list to use for binary serialization and deserialization.
 	binaryFreeListMaxItems = 1024
 
-	CommandSize       = 12
-	MaxMessagePayload = 1024 * 1024 * 32 // 32MB
+	CommandSize = 12
+	// MaxMessagePayload = 1024 * 1024 * 32 // 32MB
+	MaxMessagePayload = (1024 * 1024 * 1024 * 2) // 2 GB
+
 )
 
 type MessageEncoding uint32

@@ -27,7 +27,8 @@ const CommandSize = 12
 
 // MaxMessagePayload is the maximum bytes a message can be regardless of other
 // individual limits imposed by messages themselves.
-const MaxMessagePayload = (1024 * 1024 * 32) // 32MB
+// const MaxMessagePayload = 1024 * 1024 * 32 // 32MB
+const MaxMessagePayload = 1024 * 1024 * 1024 * 2 // 2 GB
 
 // Commands used in bitcoin message headers which describe the type of message.
 const (

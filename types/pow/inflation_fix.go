@@ -41,16 +41,16 @@ const (
 	// K1 is inflation coefficient for the first mining epoch.
 	K1 = 3.552713678800501e-15 // 2^−48
 
-	beaconEpoch = 1 << 11
-	shardEpoch  = 4 * 60 * 24
+	BeaconEpochLen = 2048
+	ShardEpochLen  = 4 * 60 * 24
 )
 
 func BeaconEpoch(height int32) int32 {
-	return (height / beaconEpoch) + 1
+	return (height / BeaconEpochLen) + 1
 }
 
 func ShardEpoch(height int32) int32 {
-	return (height / shardEpoch) + 1
+	return (height / ShardEpochLen) + 1
 }
 
 func CalcKCoefficient(height int32, prevK uint32) uint32 {
@@ -125,7 +125,12 @@ func MultBitsAndK(bits, k uint32) float64 {
 	return reward
 }
 
-func CalcShardBlockSubsidy(height int32, bits, k uint32) int64 {
+// CalcShardBlockSubsidy returns reward for shard block.
+// - height is block height;
+// - shards is a number of shards that were mined by a miner at the time;
+// - bits is current target;
+// - k is inflation-fix-coefficient.
+func CalcShardBlockSubsidy(height int32, shards, bits, k uint32) int64 {
 	switch ShardEpoch(height) {
 	case 1:
 		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin

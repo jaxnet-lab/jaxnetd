@@ -25,15 +25,15 @@ import (
 )
 
 type RPCCfg struct {
-	Host     string `yaml:"host"`
-	User     string `yaml:"user"`
-	Password string `yaml:"pass"`
+	Host     string `yaml:"host" toml:"host"`
+	User     string `yaml:"user" toml:"user"`
+	Password string `yaml:"pass" toml:"pass"`
 }
 
 type Configuration struct {
-	Network string `yaml:"network"`
-	RPC     RPCCfg `yaml:"rpc"`
-	Enable  bool   `yaml:"enable"`
+	Network string `yaml:"network" toml:"network"`
+	RPC     RPCCfg `yaml:"rpc" toml:"rpc"`
+	Enable  bool   `yaml:"enable" toml:"enable"`
 }
 
 type BlockProvider struct {

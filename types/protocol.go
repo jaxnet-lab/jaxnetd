@@ -11,8 +11,9 @@ import (
 	"strings"
 )
 
-// XXX pedro: we will probably need to bump this.
 const (
+	// TODO: renew this constants
+
 	// ProtocolVersion is the latest protocol version this package supports.
 	ProtocolVersion uint32 = 70013
 
@@ -150,9 +151,6 @@ const (
 	// MainNet represents the main jax network.
 	MainNet JaxNet = 0xd9b4bef9
 
-	// RegTest represents the regression test network.
-	RegTest JaxNet = 0xdab5bffa
-
 	// TestNet3 represents the test network (version 3).
 	TestNet3 JaxNet = 0x0709110b
 
@@ -167,7 +165,6 @@ const (
 // pretty printing.
 var bnStrings = map[JaxNet]string{
 	MainNet:     "MainNet",
-	RegTest:     "RegTest",
 	TestNet3:    "TestNet3",
 	SimNet:      "SimNet",
 	FastTestNet: "FastTestNet",

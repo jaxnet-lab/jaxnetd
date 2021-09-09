@@ -397,7 +397,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.Template
 	// However, allow this state when running in the regression test or
 	// simulation test mode.
 	netType := server.chainProvider.ChainParams.Net
-	if !(netType == types.FastTestNet || netType == types.SimNet || netType == types.RegTest) &&
+	if !(netType == types.FastTestNet || netType == types.SimNet) &&
 		server.connMgr.ConnectedCount() == 0 {
 
 		return nil, &jaxjson.RPCError{

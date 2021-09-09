@@ -27,22 +27,22 @@ func init() {
 // Config for logging
 type Config struct {
 	// Disable console logging
-	DisableConsoleLog bool `yaml:"disable_console_log"`
+	DisableConsoleLog bool `yaml:"disable_console_log" toml:"disable_console_log"`
 	// LogsAsJson makes the log framework log JSON
-	LogsAsJson bool `yaml:"logs_as_json"`
+	LogsAsJson bool `yaml:"logs_as_json" toml:"logs_as_json"`
 	// FileLoggingEnabled makes the framework log to a file
 	// the fields below can be skipped if this value is false!
-	FileLoggingEnabled bool `yaml:"file_logging_enabled"`
+	FileLoggingEnabled bool `yaml:"file_logging_enabled" toml:"file_logging_enabled"`
 	// Directory to log to to when filelogging is enabled
-	Directory string `yaml:"directory"`
+	Directory string `yaml:"directory" toml:"directory"`
 	// Filename is the name of the logfile which will be placed inside the directory
-	Filename string `yaml:"filename"`
+	Filename string `yaml:"filename" toml:"filename"`
 	// MaxSize the max size in MB of the logfile before it's rolled
-	MaxSize int `yaml:"max_size"`
+	MaxSize int `yaml:"max_size" toml:"max_size"`
 	// MaxBackups the max number of rolled files to keep
-	MaxBackups int `yaml:"max_backups"`
+	MaxBackups int `yaml:"max_backups" toml:"max_backups"`
 	// MaxAge the max age in days to keep a logfile
-	MaxAge int `yaml:"max_age"`
+	MaxAge int `yaml:"max_age" toml:"max_age"`
 }
 
 func (Config) Default() Config {

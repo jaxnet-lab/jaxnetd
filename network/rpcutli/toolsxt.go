@@ -203,7 +203,7 @@ func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chaincfg.Params) (floa
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block
 	// with the compact form which loses precision.
-	max := pow.CompactToBig(params.PowLimitBits)
+	max := pow.CompactToBig(params.PowParams.PowLimitBits)
 	target := pow.CompactToBig(bits)
 
 	difficulty := new(big.Rat).SetFrac(max, target)

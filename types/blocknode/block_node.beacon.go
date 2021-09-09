@@ -36,6 +36,7 @@ type BeaconBlockNode struct {
 	height   int32          // height is the position in the block chain.
 	serialID int64          // serialID is the absolute unique id of current block.
 
+	// todo(mike): review this, might be make sense to store raw bytes or wire obj instead
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
 	// immutable and are intentionally ordered to avoid padding on 64-bit
@@ -95,15 +96,12 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *Beacon
 	return initBeaconBlockNode(blockHeader, parent)
 }
 
-func (node *BeaconBlockNode) NewNode() IBlockNode          { return new(BeaconBlockNode) }
-func (node *BeaconBlockNode) GetHeight() int32             { return node.height }
 func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
 func (node *BeaconBlockNode) Version() int32               { return node.version }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
 func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
 func (node *BeaconBlockNode) K() uint32                    { return node.k }
-func (node *BeaconBlockNode) SetBits(value uint32)         { node.bits = value }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
 func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }

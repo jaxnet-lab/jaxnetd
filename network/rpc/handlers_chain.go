@@ -267,7 +267,7 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 		// Level 1 does basic BlockChain sanity checks.
 		if level > 0 {
 			err := chaindata.CheckBlockSanity(block,
-				server.chainProvider.ChainParams.PowLimit, server.chainProvider.TimeSource)
+				server.chainProvider.ChainParams.PowParams.PowLimit, server.chainProvider.TimeSource)
 			if err != nil {
 				server.Log.Error().Msgf("Verify is unable to validate "+
 					"block at hash %v height %d: %v",
@@ -395,7 +395,6 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	// Next, populate the response with information describing the current
 	// status of soft-forks deployed via the super-majority block
 	// signalling mechanism.
-	height := chainSnapshot.Height
 	chainInfo.SoftForks.SoftForks = []*jaxjson.SoftForkDescription{
 		{
 			ID:      "bip34",
@@ -403,7 +402,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 			Reject: struct {
 				Status bool `json:"status"`
 			}{
-				Status: height >= params.BIP0034Height,
+				Status: true,
 			},
 		},
 		{
@@ -412,7 +411,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 			Reject: struct {
 				Status bool `json:"status"`
 			}{
-				Status: height >= params.BIP0066Height,
+				Status: true,
 			},
 		},
 		{
@@ -421,7 +420,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 			Reject: struct {
 				Status bool `json:"status"`
 			}{
-				Status: height >= params.BIP0065Height,
+				Status: true,
 			},
 		},
 	}
@@ -947,8 +946,8 @@ func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan 
 
 	// Calculate the number of blocks per retarget interval based on the
 	// BlockChain parameters.
-	blocksPerRetarget := int32(server.chainProvider.ChainParams.TargetTimespan /
-		server.chainProvider.ChainParams.TargetTimePerBlock)
+	blocksPerRetarget := int32(server.chainProvider.ChainParams.PowParams.TargetTimespan /
+		server.chainProvider.ChainParams.PowParams.TargetTimePerBlock)
 
 	// Calculate the starting block height based on the passed number of
 	// blocks.  When the passed value is negative, use the last block the

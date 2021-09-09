@@ -8,7 +8,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
-	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -30,16 +29,13 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 		Timestamp:  beaconGenesis.Timestamp(),
 		PrevBlock:  chainhash.Hash{},
 		MerkleRoot: chainhash.Hash{},
-		Bits:       pow.ShardGenesisDifficulty(beaconGenesis.Bits()),
-		Nonce:      beaconGenesis.Nonce(),
-		BCHeader:   *beaconGenesis,
+		Bits:       0x1e00ffff,
+		// Bits:       chaincfg.ShardPoWBits,
+		Nonce:    beaconGenesis.Nonce(),
+		BCHeader: *beaconGenesis,
 	}
 
-	// chainParams.PowLimitBits = pow.ShardGenesisDifficulty(beaconGenesis.Bits())
-	chainParams.PowLimitBits = chaincfg.ShardPoWBits
-	if params.Net == chaincfg.FastNetParams.Net {
-		chainParams.PowLimitBits = chaincfg.FastNetParams.PowLimitBits
-	}
+	chainParams.PowParams.PowLimitBits = chaincfg.ShardPoWBits
 
 	shard.SetChainParams(*chainParams)
 	return shard

@@ -34,18 +34,16 @@ const (
 )
 
 type IBlockNode interface {
-	NewNode() IBlockNode
 	GetHash() chainhash.Hash
-	GetHeight() int32
 	Height() int32
 	SerialID() int64
 	Version() int32
 	Bits() uint32
-	SetBits(uint32)
 	K() uint32
 	Status() BlockStatus
 	SetStatus(status BlockStatus)
-	NewHeader() wire.BlockHeader
+
+	NewHeader() wire.BlockHeader // required only for tests
 
 	Header() wire.BlockHeader
 	Parent() IBlockNode

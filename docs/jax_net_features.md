@@ -35,19 +35,41 @@ tx.Version = TxVerRegular + TxMarkShardSwap = 65537
 tx.Version = TxVerTimeLock + TxMarkShardSwap = 65538
 ```
 
-
 It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 `wire.TxIn` and `wire.TxOut` are strictly associated with each other by an index.
 
 One pair corresponds to the one chain. The second is for another. The order is not deterministic.
 
-| # |     []TxIn       | --- |     []TxOut       | # |
-|---|------------------|-----|-------------------|---|
-| 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
-| 1 | TxIn_1 ∈ Shard_X | --> | TxOut_1 ∈ Shard_X | 1 |
-| 2 | TxIn_2 ∈ Shard_Y | --> | TxOut_2 ∈ Shard_Y | 2 |
-| 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
+1. Scheme 4x4:
+  - {TxIn_0, TxIn_1, TxOut_0, TxOut_1 } ∈ Shard_X
+  - {TxIn_2, TxIn_3, TxOut_2, TxOut_3 } ∈ Shard_Y
 
+| # | []TxIn | --- | []TxOut | # |                        |
+|---|--------|-----|---------|---|------------------------|
+| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
+| 1 | TxIn_1 | --> | TxOut_1 | 1 | spend or fee @ Shard X |
+| 2 | TxIn_2 | --> | TxOut_2 | 2 | spend or fee @ Shard Y |
+| 3 | TxIn_3 | --> | TxOut_3 | 3 | spend or fee @ Shard Y |
+
+2. Scheme 2x2:
+  - {TxIn_0, TxOut_0 } ∈ Shard_X
+  - {TxIn_1, TxOut_1 } ∈ Shard_Y
+
+| # | []TxIn | --- | []TxOut | # |                        |
+|---|--------|-----|---------|---|------------------------|
+| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
+| 1 | TxIn_1 | --> | TxOut_1 | 1 | spend or fee @ Shard Y |
+
+3. Scheme 4x2:
+  - {TxIn_0, TxIn_1, TxOut_0 } ∈ Shard_X
+  - {TxIn_2, TxIn_3, TxOut_1 } ∈ Shard_Y
+
+| # | []TxIn | --- | []TxOut | # |                        |
+|---|--------|-----|---------|---|------------------------|
+| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
+| 1 | TxIn_1 | --- |         |   | spend or fee @ Shard X |
+| 2 | TxIn_2 | --> | TxOut_1 | 1 | spend or fee @ Shard Y |
+| 3 | TxIn_3 | --- |         |   | spend or fee @ Shard Y |
 
 
 ### MultiSig Lock with Refund
@@ -91,6 +113,8 @@ value from stack (OP_FALSE) in case of refund.
 
 #### Validation reference:
 
+***TODO (mike): update test data!!***
+
 ```yaml
 refund_key: 82610ee6f34f1d640a532335d362397fdeca997a84075f964774fa3de3779ccc
 refund_pub_key: 0280dae123b8b57cbfb284011b6cc59fd25a9cb056c978c49345b4784724218c23
@@ -124,9 +148,9 @@ Exchange Agents (EAs) can register their IPv4/IPv6 (and potentially in future DN
 then would accept connections from clients in p2p manner on these interfaces and process the exchange operations in a
 p2p manner.
 
-| # | []TxIn | __ | []TxOut | # |
-|---|--------|----|---------|---|
+| # | []TxIn |     | []TxOut | # |
+|---|--------|-----|---------|---|
 | 0 | TxIn_0 | --> | TxOut_0 | 0 |
-| 1 | ------ | --> | TxOut_1 | 1 |
+| . | ------ | --> | TxOut_1 | 1 |
 | . | ------ | --> | ....... | . |
-| N | ------ | --> | TxOut_N | N |
+| . | ------ | --> | TxOut_N | N |

@@ -80,7 +80,7 @@ func TestLoadConfig(t *testing.T) {
 	cfg := node.Config{
 		ConfigFile:  "",
 		ShowVersion: false,
-		Node: node.NodeConfig{
+		Node: node.InstanceConfig{
 			BeaconChain: cprovider.ChainRuntimeConfig{
 				SigCacheMaxSize:    0,
 				AddCheckpoints:     nil,

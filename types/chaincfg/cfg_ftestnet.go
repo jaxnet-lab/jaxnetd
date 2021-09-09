@@ -34,21 +34,21 @@ var FastNetParams = Params{
 		Bits:       0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
 		Nonce:      0x18aea41a,
 	},
-	GenesisHash:              &genesisHash,
-	PowLimit:                 fastNetPowLimit,
-	PowLimitBits:             0x1e0dffff,
-	BIP0034Height:            0,
-	BIP0065Height:            0,
-	BIP0066Height:            0,
+	GenesisHash: &genesisHash,
+
 	CoinbaseMaturity:         5,
 	SubsidyReductionInterval: 210000,
 
-	TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
-	TargetTimePerBlock:       time.Second * 15,           // 15 seconds
-	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
-	ReduceMinDifficulty:      false,
-	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	PowParams: PowParams{
+		PowLimit:                 fastNetPowLimit,
+		PowLimitBits:             0x1e0dffff,
+		TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
+		TargetTimePerBlock:       time.Second * 15,           // 15 seconds
+		RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
+		ReduceMinDifficulty:      false,
+		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
+		GenerateSupported:        true,
+	},
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
