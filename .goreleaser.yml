@@ -14,7 +14,8 @@ builds:
       - darwin
     goarch:
       - amd64
-      - arm64
+# disable because of https://gitlab.com/jaxnet/jaxnetd/-/issues/26
+#      - arm64
 
   - main: ./cmd/jaxctl
     id: "jaxctl"

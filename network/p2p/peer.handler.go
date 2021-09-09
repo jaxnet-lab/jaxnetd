@@ -23,11 +23,11 @@ import (
 )
 
 type PeersConfig struct {
-	DisableBanning  bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
-	BanThreshold    uint32        `yaml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
-	BlocksOnly      bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
-	Proxy           string        `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	TrickleInterval time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
+	DisableBanning  bool          `yaml:"disable_banning" toml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
+	BanThreshold    uint32        `yaml:"ban_threshold" toml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
+	BlocksOnly      bool          `yaml:"blocks_only" toml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
+	Proxy           string        `yaml:"proxy" toml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	TrickleInterval time.Duration `yaml:"trickle_interval" toml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
 }
 
 type serverPeerHandler struct {

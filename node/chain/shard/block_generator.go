@@ -102,15 +102,16 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
 	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
 
-	btcCoinbaseTx := aux.CoinbaseAux.Tx
-
-	btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-		btcCoinbaseTx.TxOut[0].Value == 0
-	if !btcJaxNetLinkOut {
-		return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
+	var btcBurnReward = false
+	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
+		btcCoinbaseTx := aux.CoinbaseAux.Tx
+		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
+			btcCoinbaseTx.TxOut[0].Value == 0
+		if !btcJaxNetLinkOut {
+			return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
+		}
+		btcBurnReward = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
 	}
-
-	// properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
 
 	beaconCoinbaseTx := block.Header.(*wire.ShardHeader).CoinbaseAux.Tx
 
@@ -129,7 +130,6 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	}
 
 	{
-		btcBurnReward := bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
 		beaconJaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
 		shardJaxBurnReward := bytes.Equal(shardCoinbaseTx.TxOut[1].PkScript, jaxBurn)
 
