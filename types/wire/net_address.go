@@ -21,16 +21,12 @@ func maxNetAddressPayload(pver uint32) uint32 {
 	plen := uint32(26)
 
 	// NetAddressTimeVersion added a timestamp field.
-	if pver >= NetAddressTimeVersion {
-		// Timestamp 4 bytes.
-		plen += 4
-	}
-
+	// Timestamp 4 bytes.
+	plen += 4
 	return plen
 }
 
-// NetAddress defines information about a server on the network including the time
-// it was last seen, the services it supports, its IP address, and port.
+// ShardAddress ....
 type ShardAddress struct {
 	ShardID uint32
 	Address *NetAddress
@@ -104,7 +100,7 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// protocol version >= NetAddressTimeVersion
-	if ts && pver >= NetAddressTimeVersion {
+	if ts {
 		err := encoder.ReadElement(r, (*encoder.Uint32Time)(&na.Timestamp))
 		if err != nil {
 			return err
@@ -137,7 +133,7 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) error {
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.
-	if ts && pver >= NetAddressTimeVersion {
+	if ts {
 		err := encoder.WriteElement(w, uint32(na.Timestamp.Unix()))
 		if err != nil {
 			return err

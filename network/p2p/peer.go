@@ -411,13 +411,12 @@ func (sp *serverPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 		if invVect.Type == types.InvTypeTx {
 			sp.logger.Trace().Msgf("Ignoring tx %v in inv from %v -- "+
 				"blocksonly enabled", invVect.Hash, sp)
-			if sp.ProtocolVersion() >= wire.BIP0037Version {
-				sp.logger.Info().Msgf("Peer %v is announcing "+
-					"transactions -- disconnecting", sp)
-				sp.Disconnect()
-				return
-			}
-			continue
+			// if sp.ProtocolVersion() >= wire.BIP0037Version {
+			sp.logger.Info().Msgf("Peer %v is announcing transactions -- disconnecting", sp)
+			sp.Disconnect()
+			return
+			// }
+			// continue
 		}
 		err := newInv.AddInvVect(invVect)
 		if err != nil {
@@ -437,7 +436,7 @@ func (sp *serverPeer) OnHeaders(_ *peer.Peer, msg *wire.MsgHeaders) {
 	sp.serverPeerHandler.chain.SyncManager.QueueHeaders(msg, sp.Peer)
 }
 
-// handleGetData is invoked when a peer receives a getdata bitcoin message and
+// OnGetData is invoked when a peer receives a getdata bitcoin message and
 // is used to deliver block and transaction information.
 func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 	numAdded := 0
@@ -920,8 +919,8 @@ func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
 		// whether or not banning is enabled, it is checked here as well
 		// to ensure the violation is logged and the peer is
 		// disconnected regardless.
-		if sp.ProtocolVersion() >= wire.BIP0111Version &&
-			!sp.serverPeerHandler.cfg.DisableBanning {
+		// if sp.ProtocolVersion() >= wire.BIP0111Version &&
+		if !sp.serverPeerHandler.cfg.DisableBanning {
 
 			// Disconnect the peer regardless of whether it was
 			// banned.
@@ -1053,9 +1052,9 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 // used to notify the Server about advertised addresses.
 func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 	// Ignore old style addresses which don't include a timestamp.
-	if sp.ProtocolVersion() < wire.NetAddressTimeVersion {
-		return
-	}
+	// if sp.ProtocolVersion() < wire.NetAddressTimeVersion {
+	// 	return
+	// }
 
 	// A message that has no addresses is invalid.
 	if len(msg.AddrList) == 0 {

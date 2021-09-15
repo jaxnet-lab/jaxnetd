@@ -306,11 +306,12 @@ func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) deploymentState(prevNode blocknode.IBlockNode, deploymentID uint32) (ThresholdState, error) {
-	if deploymentID > uint32(len(b.chainParams.Deployments)) {
-		return ThresholdFailed, chaindata.DeploymentError(deploymentID)
-	}
 	if deploymentID == chaincfg.DeploymentCSV || deploymentID == chaincfg.DeploymentSegwit {
 		return ThresholdActive, nil
+	}
+
+	if deploymentID > uint32(len(b.chainParams.Deployments)) {
+		return ThresholdFailed, chaindata.DeploymentError(deploymentID)
 	}
 
 	deployment := &b.chainParams.Deployments[deploymentID]

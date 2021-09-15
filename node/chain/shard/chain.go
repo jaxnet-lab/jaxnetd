@@ -5,6 +5,7 @@
 package shard
 
 import (
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -23,19 +24,22 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 		genesisTx:              *tx.Copy(),
 	}
 
+	shardBits := chaincfg.ShardPoWBits
+	if params.Net == types.TestNet {
+		shardBits = 0x1e00ffff
+	}
 	chainParams := params.ShardGenesis(shardID, nil)
 	chainParams.GenesisBlock = chaincfg.GenesisBlockOpts{
 		Version:    int32(beaconGenesis.Version()),
 		Timestamp:  beaconGenesis.Timestamp(),
 		PrevBlock:  chainhash.Hash{},
 		MerkleRoot: chainhash.Hash{},
-		Bits:       0x1e00ffff,
-		// Bits:       chaincfg.ShardPoWBits,
-		Nonce:    beaconGenesis.Nonce(),
-		BCHeader: *beaconGenesis,
+		Bits:       shardBits,
+		Nonce:      beaconGenesis.Nonce(),
+		BCHeader:   *beaconGenesis,
 	}
 
-	chainParams.PowParams.PowLimitBits = chaincfg.ShardPoWBits
+	chainParams.PowParams.PowLimitBits = shardBits
 
 	shard.SetChainParams(*chainParams)
 	return shard

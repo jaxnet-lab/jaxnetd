@@ -588,7 +588,7 @@ func ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) err
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// protocol version >= NetAddressTimeVersion
-	if ts && pver >= types.NetAddressTimeVersion {
+	if ts {
 		err := ReadElements(r, (*Uint32Time)(&na.Timestamp))
 		if err != nil {
 			return err
@@ -622,7 +622,7 @@ func WriteNetAddress(w io.Writer, pver uint32, na *types.NetAddress, ts bool) er
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.
 	// enc := chain.NewEncoder(chain.CommandSize)
-	if ts && pver >= types.NetAddressTimeVersion {
+	if ts {
 		err := WriteElements(w, uint32(na.Timestamp.Unix()))
 		if err != nil {
 			return err

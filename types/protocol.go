@@ -140,7 +140,7 @@ func (f ServiceFlag) String() string {
 	return s
 }
 
-// JaxNet represents which bitcoin network a message belongs to.
+// JaxNet represents which JAX network a message belongs to.
 type JaxNet uint32
 
 // Constants used to indicate the message bitcoin network.  They can also be
@@ -149,10 +149,12 @@ type JaxNet uint32
 // better idea to simply disconnect clients that are misbehaving over TCP.
 const (
 	// MainNet represents the main jax network.
-	MainNet JaxNet = 0xd9b4bef9
+	MainNet JaxNet = 0x6a_61_78_64
 
-	// TestNet3 represents the test network (version 3).
-	TestNet3 JaxNet = 0x0709110b
+	// TestNet represents the test network.
+	// TestNet JaxNet = 0x0709110b
+	TestNet JaxNet = 0x76_6e_64_6d
+
 
 	// SimNet represents the simulation test network.
 	SimNet JaxNet = 0x12141c16
@@ -165,7 +167,7 @@ const (
 // pretty printing.
 var bnStrings = map[JaxNet]string{
 	MainNet:     "MainNet",
-	TestNet3:    "TestNet3",
+	TestNet:     "TestNet",
 	SimNet:      "SimNet",
 	FastTestNet: "FastTestNet",
 }

@@ -53,17 +53,6 @@ func TestNetAddress(t *testing.T) {
 			"protocol version %d - got %v, want %v", pver,
 			maxPayload, wantPayload)
 	}
-
-	// Protocol version before NetAddressTimeVersion when timestamp was
-	// added.  Ensure max payload is expected value for it.
-	pver = NetAddressTimeVersion - 1
-	wantPayload = 26
-	maxPayload = MaxNetAddressPayload(pver)
-	if maxPayload != wantPayload {
-		t.Errorf("MaxNetAddressPayload: wrong max payload length for "+
-			"protocol version %d - got %v, want %v", pver,
-			maxPayload, wantPayload)
-	}
 }
 
 //

@@ -17,10 +17,8 @@ func MaxNetAddressPayload(pver uint32) uint32 {
 	plen := uint32(26)
 
 	// NetAddressTimeVersion added a timestamp field.
-	if pver >= NetAddressTimeVersion {
-		// Timestamp 4 bytes.
-		plen += 4
-	}
+	// Timestamp 4 bytes.
+	plen += 4
 
 	return plen
 }

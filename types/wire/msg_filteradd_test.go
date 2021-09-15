@@ -7,10 +7,11 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
 	"reflect"
 	"testing"
+
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // TestFilterAddLatest tests the MsgFilterAdd API against the latest protocol
@@ -69,20 +70,6 @@ func TestFilterAddCrossProtocol(t *testing.T) {
 		t.Errorf("encode of MsgFilterAdd failed %v err <%v>", msg, err)
 	}
 
-	// Decode with old protocol version.
-	var readmsg MsgFilterAdd
-	err = readmsg.BtcDecode(&buf, BIP0031Version, LatestEncoding)
-	if err == nil {
-		t.Errorf("decode of MsgFilterAdd succeeded when it shouldn't "+
-			"have %v", msg)
-	}
-
-	// Since one of the protocol versions doesn't support the filteradd
-	// message, make sure the data didn't get encoded and decoded back out.
-	if bytes.Equal(msg.Data, readmsg.Data) {
-		t.Error("should not get same data for cross protocol")
-	}
-
 }
 
 // TestFilterAddMaxDataSize tests the MsgFilterAdd API maximum data size.
@@ -111,8 +98,6 @@ func TestFilterAddMaxDataSize(t *testing.T) {
 // of MsgFilterAdd to confirm error paths work correctly.
 func TestFilterAddWireErrors(t *testing.T) {
 	pver := ProtocolVersion
-	pverNoFilterAdd := BIP0037Version - 1
-	wireErr := &MessageError{}
 
 	baseData := []byte{0x01, 0x02, 0x03, 0x04}
 	baseFilterAdd := NewMsgFilterAdd(baseData)
@@ -137,11 +122,6 @@ func TestFilterAddWireErrors(t *testing.T) {
 		{
 			baseFilterAdd, baseFilterAddEncoded, pver, BaseEncoding, 1,
 			io.ErrShortWrite, io.EOF,
-		},
-		// Force error due to unsupported protocol version.
-		{
-			baseFilterAdd, baseFilterAddEncoded, pverNoFilterAdd, BaseEncoding, 5,
-			wireErr, wireErr,
 		},
 	}
 

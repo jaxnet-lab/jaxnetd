@@ -550,16 +550,16 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *jaxutil.Tx,
 
 	// If we're performing block validation, then we need to query the BIP9
 	// state.
-	if !csvSoftforkActive {
-		// Obtain the latest BIP9 version bits state for the
-		// CSV-package soft-fork deployment. The adherence of sequence
-		// locks depends on the current soft-fork state.
-		csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
-		if err != nil {
-			return nil, err
-		}
-		csvSoftforkActive = csvState == ThresholdActive
-	}
+	// if !csvSoftforkActive {
+	// 	// Obtain the latest BIP9 version bits state for the
+	// 	// CSV-package soft-fork deployment. The adherence of sequence
+	// 	// locks depends on the current soft-fork state.
+	// 	csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	csvSoftforkActive = csvState == ThresholdActive
+	// }
 
 	// If the transaction's version is less than 2, and BIP 68 has not yet
 	// been activated then sequence locks are disabled. Additionally,

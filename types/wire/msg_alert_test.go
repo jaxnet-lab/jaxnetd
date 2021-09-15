@@ -7,10 +7,11 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
 	"reflect"
 	"testing"
+
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -112,41 +113,41 @@ func TestMsgAlertWire(t *testing.T) {
 			BaseEncoding,
 		},
 
-		// Protocol version BIP0035Version.
-		{
-			baseMsgAlert,
-			baseMsgAlert,
-			baseMsgAlertEncoded,
-			BIP0035Version,
-			BaseEncoding,
-		},
-
-		// Protocol version BIP0031Version.
-		{
-			baseMsgAlert,
-			baseMsgAlert,
-			baseMsgAlertEncoded,
-			BIP0031Version,
-			BaseEncoding,
-		},
-
-		// Protocol version NetAddressTimeVersion.
-		{
-			baseMsgAlert,
-			baseMsgAlert,
-			baseMsgAlertEncoded,
-			NetAddressTimeVersion,
-			BaseEncoding,
-		},
-
-		// Protocol version MultipleAddressVersion.
-		{
-			baseMsgAlert,
-			baseMsgAlert,
-			baseMsgAlertEncoded,
-			MultipleAddressVersion,
-			BaseEncoding,
-		},
+		// // Protocol version BIP0035Version.
+		// {
+		// 	baseMsgAlert,
+		// 	baseMsgAlert,
+		// 	baseMsgAlertEncoded,
+		// 	BIP0035Version,
+		// 	BaseEncoding,
+		// },
+		//
+		// // Protocol version BIP0031Version.
+		// {
+		// 	baseMsgAlert,
+		// 	baseMsgAlert,
+		// 	baseMsgAlertEncoded,
+		// 	BIP0031Version,
+		// 	BaseEncoding,
+		// },
+		//
+		// // Protocol version NetAddressTimeVersion.
+		// {
+		// 	baseMsgAlert,
+		// 	baseMsgAlert,
+		// 	baseMsgAlertEncoded,
+		// 	NetAddressTimeVersion,
+		// 	BaseEncoding,
+		// },
+		//
+		// // Protocol version MultipleAddressVersion.
+		// {
+		// 	baseMsgAlert,
+		// 	baseMsgAlert,
+		// 	baseMsgAlertEncoded,
+		// 	MultipleAddressVersion,
+		// 	BaseEncoding,
+		// },
 	}
 
 	t.Logf("Running %d tests", len(tests))

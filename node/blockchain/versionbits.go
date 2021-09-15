@@ -16,7 +16,7 @@ import (
 const (
 	// vbLegacyBlockVersion is the highest legacy block version before the
 	// version bits scheme became active.
-	vbLegacyBlockVersion = 4
+	vbLegacyBlockVersion = 1
 
 	// vbTopBits defines the bits to set in the version to signal that the
 	// version bits scheme is being used.
@@ -116,10 +116,11 @@ func (c bitConditionChecker) Condition(node blocknode.IBlockNode) (bool, error) 
 		return false, nil
 	}
 
-	expectedVersion, err := c.chain.calcNextBlockVersion(node.Parent())
+	blockVersion, err := c.chain.calcNextBlockVersion(node.Parent())
 	if err != nil {
 		return false, err
 	}
+	expectedVersion := blockVersion.Version()
 	return uint32(expectedVersion)&conditionMask == 0, nil
 }
 
@@ -200,23 +201,24 @@ func (c deploymentChecker) Condition(node blocknode.IBlockNode) (bool, error) {
 // while this function accepts any block node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (int32, error) {
+func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.BVersion, error) {
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
-	expectedVersion := uint32(vbTopBits)
-	for id := 0; id < len(b.chainParams.Deployments); id++ {
-		deployment := &b.chainParams.Deployments[id]
-		cache := &b.deploymentCaches[id]
-		checker := deploymentChecker{deployment: deployment, chain: b}
-		state, err := b.thresholdState(prevNode, checker, cache)
-		if err != nil {
-			return 0, err
-		}
-		if state == ThresholdStarted || state == ThresholdLockedIn {
-			expectedVersion |= uint32(1) << deployment.BitNumber
-		}
-	}
+	expectedVersion := uint32(vbLegacyBlockVersion)
+	// todo: return this logic in future
+	// for id := 0; id < len(b.chainParams.Deployments); id++ {
+	// 	deployment := &b.chainParams.Deployments[id]
+	// 	cache := &b.deploymentCaches[id]
+	// 	checker := deploymentChecker{deployment: deployment, chain: b}
+	// 	state, err := b.thresholdState(prevNode, checker, cache)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	if state == ThresholdStarted || state == ThresholdLockedIn {
+	// 		expectedVersion |= uint32(1) << deployment.BitNumber
+	// 	}
+	// }
 
 	version := wire.BVersion(expectedVersion).
 		UnsetExpansionApproved().
@@ -238,7 +240,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (int32,
 			SetExpansionMade()
 	}
 
-	return int32(version), nil
+	return version, nil
 }
 
 // CalcNextBlockVersion calculates the expected version of the block after the
@@ -251,7 +253,7 @@ func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
 	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
 	b.chainLock.Unlock()
 
-	return wire.BVersion(version), err
+	return version, err
 }
 
 // warnUnknownRuleActivations displays a warning when any unknown new rules are
@@ -303,10 +305,11 @@ func (b *BlockChain) warnUnknownVersions(node blocknode.IBlockNode) error {
 	// Warn if enough previous blocks have unexpected versions.
 	numUpgraded := uint32(0)
 	for i := uint32(0); i < unknownVerNumToCheck && node != nil; i++ {
-		expectedVersion, err := b.calcNextBlockVersion(node.Parent())
+		blockVersion, err := b.calcNextBlockVersion(node.Parent())
 		if err != nil {
 			return err
 		}
+		expectedVersion := blockVersion.Version()
 		if expectedVersion > vbLegacyBlockVersion &&
 			(node.Version() & ^expectedVersion) != 0 {
 

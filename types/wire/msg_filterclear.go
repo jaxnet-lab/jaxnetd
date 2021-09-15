@@ -6,9 +6,9 @@
 package wire
 
 import (
-	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
+
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MsgFilterClear implements the Message interface and represents a bitcoin
@@ -21,11 +21,11 @@ type MsgFilterClear struct{}
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterClear) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	if pver < BIP0037Version {
-		str := fmt.Sprintf("filterclear message invalid for protocol "+
-			"version %d", pver)
-		return messageError("MsgFilterClear.BtcDecode", str)
-	}
+	// if pver < BIP0037Version {
+	// 	str := fmt.Sprintf("filterclear message invalid for protocol "+
+	// 		"version %d", pver)
+	// 	return messageError("MsgFilterClear.BtcDecode", str)
+	// }
 
 	return nil
 }
@@ -33,11 +33,11 @@ func (msg *MsgFilterClear) BtcDecode(r io.Reader, pver uint32, enc encoder.Messa
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterClear) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	if pver < BIP0037Version {
-		str := fmt.Sprintf("filterclear message invalid for protocol "+
-			"version %d", pver)
-		return messageError("MsgFilterClear.BtcEncode", str)
-	}
+	// if pver < BIP0037Version {
+	// 	str := fmt.Sprintf("filterclear message invalid for protocol "+
+	// 		"version %d", pver)
+	// 	return messageError("MsgFilterClear.BtcEncode", str)
+	// }
 
 	return nil
 }

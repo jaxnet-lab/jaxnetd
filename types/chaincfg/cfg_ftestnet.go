@@ -95,5 +95,5 @@ var FastNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 0x6A, // ASCII for j
 }

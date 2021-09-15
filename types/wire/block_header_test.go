@@ -16,29 +16,40 @@ import (
 func TestBVersion_ExpansionMade(t *testing.T) {
 	tests := []struct {
 		name string
+		v    int32
 		bv   BVersion
 		want bool
 	}{
 		{
+			v:    1,
 			bv:   NewBVersion(1),
 			want: false,
 		},
 		{
+			v: 1,
+
 			bv:   NewBVersion(1).SetExpansionMade(),
 			want: true,
 		},
 		{
+			v: 100500,
+
 			bv:   NewBVersion(100500).SetExpansionMade(),
 			want: true,
-		}, {
+		},
+		{
+			v: 100500,
+
 			bv:   NewBVersion(100500).SetExpansionMade().UnsetExpansionMade(),
 			want: false,
 		},
 		{
+			v:    42,
 			bv:   NewBVersion(42).SetExpansionApproved(),
 			want: false,
 		},
 		{
+			v:    42,
 			bv:   NewBVersion(42).SetExpansionApproved().SetExpansionMade(),
 			want: true,
 		},
@@ -50,6 +61,11 @@ func TestBVersion_ExpansionMade(t *testing.T) {
 				t.Logf("%b", tt.bv)
 				t.Errorf("ExpansionMade() = %v, want %v", got, tt.want)
 			}
+			if tt.bv.Version() != tt.v {
+				t.Logf("%032x", tt.bv)
+				t.Logf("%b", tt.bv)
+				t.Errorf("Version() = %v, want %v", tt.bv.Version(), tt.v)
+			}
 		})
 	}
 }
@@ -57,32 +73,39 @@ func TestBVersion_ExpansionMade(t *testing.T) {
 func TestBVersion_ExpansionApproved(t *testing.T) {
 	tests := []struct {
 		name string
+		v    int32
 		bv   BVersion
 		want bool
 	}{
 		{
+			v:    1,
 			bv:   NewBVersion(1),
 			want: false,
 		},
 		{
+			v:    1,
 			bv:   NewBVersion(1).SetExpansionApproved(),
 			want: true,
 		},
 		{
+			v: 1,
 			bv: NewBVersion(1).
 				SetExpansionApproved().
 				UnsetExpansionApproved(),
 			want: false,
 		},
 		{
+			v:    100500,
 			bv:   NewBVersion(100500).SetExpansionApproved(),
 			want: true,
 		},
 		{
+			v:    42,
 			bv:   NewBVersion(42).SetExpansionApproved().SetExpansionMade(),
 			want: true,
 		},
 		{
+			v:    42,
 			bv:   NewBVersion(42).SetExpansionMade(),
 			want: false,
 		},
@@ -94,6 +117,12 @@ func TestBVersion_ExpansionApproved(t *testing.T) {
 				t.Logf("%032x", tt.bv)
 				t.Logf("%b", tt.bv)
 				t.Errorf("ExpansionMade() = %v, want %v", got, tt.want)
+			}
+
+			if tt.bv.Version() != tt.v {
+				t.Logf("%032x", tt.bv)
+				t.Logf("%b", tt.bv)
+				t.Errorf("Version() = %v, want %v", tt.bv.Version(), tt.v)
 			}
 		})
 	}

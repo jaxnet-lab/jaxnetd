@@ -23,7 +23,7 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
 	Name:        "testnet",
-	Net:         types.TestNet3,
+	Net:         types.TestNet,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},
 
@@ -95,5 +95,5 @@ var TestNet3Params = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 0x6A, // ASCII for j
 }

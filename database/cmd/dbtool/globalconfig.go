@@ -11,15 +11,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 var (
-	jaxnetdHomeDir     = jaxutil.AppDataDir("jaxnetd", false)
+	jaxnetdHomeDir  = jaxutil.AppDataDir("jaxnetd", false)
 	knownDbTypes    = database.SupportedDrivers()
 	activeNetParams = &chaincfg.MainNetParams
 
@@ -64,14 +64,14 @@ func validDbType(dbType string) bool {
 // time of writing, jaxnetd currently places blocks for testnet version 3 in the
 // data and log directory "testnet", which does not match the Name field of the
 // chaincfg parameters.  This function can be used to override this directory name
-// as "testnet" when the passed active network matches types.TestNet3.
+// as "testnet" when the passed active network matches types.TestNet.
 //
 // A proper upgrade to move the data and log directories for this network to
 // "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
-	case types.TestNet3:
+	case types.TestNet:
 		return "testnet"
 	default:
 		return chainParams.Name
@@ -89,10 +89,6 @@ func setupGlobalConfig() error {
 	if cfg.TestNet3 {
 		numNets++
 		activeNetParams = &chaincfg.TestNet3Params
-	}
-	if cfg.RegressionTest {
-		numNets++
-		activeNetParams = &chaincfg.RegressionNetParams
 	}
 	if cfg.SimNet {
 		numNets++
