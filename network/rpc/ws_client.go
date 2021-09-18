@@ -170,18 +170,18 @@ out:
 			continue
 		}
 
-		// The JSON-RPC 1.0 spec defines that notifications must have their "id"
+		// The JSON-RPC 1.0 spec defines that notifications must have their "ID"
 		// set to null and states that notifications do not have a response.
 		//
 		// A JSON-RPC 2.0 notification is a request with "json-rpc":"2.0", and
-		// without an "id" member. The specification states that notifications
+		// without an "ID" member. The specification states that notifications
 		// must not be responded to. JSON-RPC 2.0 permits the null value as a
-		// valid request id, therefore such requests are not notifications.
+		// valid request ID, therefore such requests are not notifications.
 		//
-		// Bitcoin Core serves requests with "id":null or even an absent "id",
-		// and responds to such requests with "id":null in the response.
+		// Bitcoin Core serves requests with "ID":null or even an absent "ID",
+		// and responds to such requests with "ID":null in the response.
 		//
-		// Btcd does not respond to any request without and "id" or "id":null,
+		// Btcd does not respond to any request without and "ID" or "ID":null,
 		// regardless the indicated JSON-RPC protocol version unless RPC quirks
 		// are enabled. With RPC quirks enabled, such requests will be responded
 		// to if the reqeust does not indicate JSON-RPC version.
@@ -195,13 +195,13 @@ out:
 			continue
 		}
 
-		cmd := parseCmd(&request)
-		if cmd.err != nil {
+		cmd := ParseCmd(&request)
+		if cmd.Err != nil {
 			if !c.authenticated {
 				break out
 			}
 
-			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, cmd.err)
+			reply, err := c.manager.server.createMarshalledReply(cmd.ID, nil, cmd.Err)
 			if err != nil {
 				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
 				continue
@@ -209,14 +209,14 @@ out:
 			c.SendMessage(reply, nil)
 			continue
 		}
-		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
+		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
 
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
 		// when the client is already authenticated, or incorrect
 		// authentication credentials are provided in the request.
-		switch authCmd, ok := cmd.cmd.(*jaxjson.AuthenticateCmd); {
+		switch authCmd, ok := cmd.Cmd.(*jaxjson.AuthenticateCmd); {
 		case c.authenticated && ok:
 			c.manager.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
 			break out
@@ -238,7 +238,7 @@ out:
 			c.isAdmin = cmp == 1
 
 			// Marshal and send response.
-			reply, err := c.manager.server.createMarshalledReply(cmd.id, nil, nil)
+			reply, err := c.manager.server.createMarshalledReply(cmd.ID, nil, nil)
 			if err != nil {
 				c.manager.logger.Error().Err(err).Msg("Failed to marshal authenticate")
 				continue
@@ -253,7 +253,7 @@ out:
 			if _, ok := rpcLimited[request.Method]; !ok {
 				jsonErr := &jaxjson.RPCError{
 					Code:    jaxjson.ErrRPCInvalidParams.Code,
-					Message: "limited user not authorized for this method",
+					Message: "limited user not authorized for this Method",
 				}
 				// Marshal and send response.
 				reply, err := c.manager.server.createMarshalledReply(request.ID, nil, jsonErr)
@@ -302,30 +302,30 @@ out:
 // serviceRequest services a parsed RPC request by looking up and executing the
 // appropriate RPC handler.  The response is marshalled and sent to the
 // websocket client.
-func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
+func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	var (
 		result interface{}
 		err    error
 	)
 
-	shard, ok := c.manager.server.shardRPCs[r.shardID]
+	shard, ok := c.manager.server.shardRPCs[r.ShardID]
 	if ok {
-		//result, err = c.manager.server.HandleCommand(r, nil)
+		//result, Err = c.manager.server.HandleCommand(r, nil)
 		return
 	}
 
 	// Lookup the websocket extension for the command and if it doesn't
 	// exist fallback to handling the command as a standard command.
-	wsHandler, ok := c.manager.handler.handlers[r.method]
+	wsHandler, ok := c.manager.handler.handlers[r.Method]
 	if ok {
-		result, err = wsHandler(shard.chainProvider, c, r.cmd)
+		result, err = wsHandler(shard.chainProvider, c, r.Cmd)
 	} else {
 		//TODO: implement
-		//result, err = c.manager.server.HandleCommand(r, nil)
+		//result, Err = c.manager.server.HandleCommand(r, nil)
 	}
-	reply, err := c.manager.server.createMarshalledReply(r.id, result, err)
+	reply, err := c.manager.server.createMarshalledReply(r.ID, result, err)
 	if err != nil {
-		c.manager.logger.Error().Str("command", r.method).Err(err).Msg("Failed to marshal reply command")
+		c.manager.logger.Error().Str("command", r.Method).Err(err).Msg("Failed to marshal reply command")
 		return
 	}
 	c.SendMessage(reply, nil)

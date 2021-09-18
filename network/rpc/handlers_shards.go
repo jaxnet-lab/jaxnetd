@@ -41,8 +41,8 @@ func NewShardRPC(chainProvider *cprovider.ChainProvider,
 	return rpc
 }
 
-func (server *ShardRPC) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-	if cmd.shardID != server.chainProvider.ChainCtx.ShardID() {
+func (server *ShardRPC) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
+	if cmd.ShardID != server.chainProvider.ChainCtx.ShardID() {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrShardIDMismatch,
 			Message: "Provided ShardID does not match with chain",

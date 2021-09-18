@@ -80,22 +80,22 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 	rpcServeMux.HandleFunc("/ws", server.WSHandleFunc())
 
 	rpcServeMux.HandleFunc("/",
-		server.HandleFunc(func(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-			if cmd.scope == "node" {
+		server.HandleFunc(func(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
+			if cmd.Scope == "node" {
 				return server.nodeRPC.HandleCommand(cmd, closeChan)
 			}
-			if cmd.shardID == 0 {
+			if cmd.ShardID == 0 {
 				return server.beaconRPC.HandleCommand(cmd, closeChan)
 			}
 
 			server.chainsMutex.RLock()
-			prcPtr, ok := server.shardRPCs[cmd.shardID]
+			prcPtr, ok := server.shardRPCs[cmd.ShardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
-				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.shardID)
+				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.ShardID)
 				return nil, &jaxjson.RPCError{
 					Code:    jaxjson.ErrShardIDMismatch,
-					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.shardID),
+					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.ShardID),
 				}
 			}
 
@@ -123,12 +123,16 @@ func NewRPCMux(logger zerolog.Logger) Mux {
 // command and runs the appropriate handler to reply to the command.  Any
 // commands which are not recognized or not implemented will return an error
 // suitable for use in replies.
-func (server *Mux) HandleCommand(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
-	method := jaxjson.ScopedMethod(cmd.scope, cmd.method)
+func (server *Mux) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error) {
+	method := jaxjson.ScopedMethod(cmd.Scope, cmd.Method)
+	if cmd.Scope == "" {
+		method = jaxjson.LegacyMethod(cmd.Method)
+	}
+
 	handler, ok := server.handlers[method]
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
-		return handler(cmd.cmd, closeChan)
+		return handler(cmd.Cmd, closeChan)
 	}
 
 	return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())
