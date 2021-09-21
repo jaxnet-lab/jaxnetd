@@ -76,7 +76,7 @@ func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
 func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
 func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
-func (node *BeaconBlockNode) Bits() uint32                 { return node.Bits() }
+func (node *BeaconBlockNode) Bits() uint32                 { return node.header.Bits() }
 func (node *BeaconBlockNode) K() uint32                    { return node.header.K() }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
