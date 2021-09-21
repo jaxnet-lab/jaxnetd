@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2020-2021 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -21,8 +21,8 @@ const (
 	BeaconEpochLength = 2048
 	BeaconTimeDelta   = 600 // in seconds
 
-	ShardEpochLength = 4 * 60 * 24 // (4 blocks/per minute * 1 hour * 1 day) in seconds
-	ShardTimeDelta   = 15          // in seconds
+	ShardEpochLength = 2335 // (4 blocks/per minute * 1 hour * 1 day) in seconds
+	ShardTimeDelta   = 37   // in seconds
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -134,6 +134,7 @@ type GenesisBlockOpts struct {
 	Nonce      uint32
 	BCHeader   wire.BeaconHeader
 }
+
 type PowParams struct {
 
 	// PowLimit defines the highest allowed proof of work value for a block
@@ -173,6 +174,8 @@ type PowParams struct {
 
 	// GenerateSupported specifies whether or not CPU mining is allowed.
 	GenerateSupported bool
+
+	HashSorting bool
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be

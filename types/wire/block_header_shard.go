@@ -32,10 +32,6 @@ type ShardHeader struct {
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
 
-	// Time the block was created.  This is, unfortunately, encoded as a
-	// uint32 on the wire and therefore is limited to 2106.
-	timestamp time.Time
-
 	// Difficulty target for the block.
 	bits uint32
 
@@ -53,7 +49,7 @@ func EmptyShardHeader() *ShardHeader { return &ShardHeader{bCHeader: *EmptyBeaco
 // NewShardBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time.Time, bits uint32,
+func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, bits uint32,
 	bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
 
 	// Limit the timestamp to one second precision since the protocol
@@ -61,7 +57,6 @@ func NewShardBlockHeader(prevHash, merkleRootHash chainhash.Hash, timestamp time
 	return &ShardHeader{
 		prevBlock:   prevHash,
 		merkleRoot:  merkleRootHash,
-		timestamp:   timestamp,
 		bits:        bits,
 		bCHeader:    bcHeader,
 		CoinbaseAux: aux,
@@ -92,8 +87,8 @@ func (h *ShardHeader) SetMerkleRoot(hash chainhash.Hash) { h.merkleRoot = hash }
 func (h *ShardHeader) PrevBlock() chainhash.Hash             { return h.prevBlock }
 func (h *ShardHeader) SetPrevBlock(prevBlock chainhash.Hash) { h.prevBlock = prevBlock }
 
-func (h *ShardHeader) Timestamp() time.Time     { return h.timestamp }
-func (h *ShardHeader) SetTimestamp(t time.Time) { h.timestamp = t }
+func (h *ShardHeader) Timestamp() time.Time     { return h.bCHeader.btcAux.Timestamp }
+func (h *ShardHeader) SetTimestamp(t time.Time) { h.bCHeader.btcAux.Timestamp = t }
 
 func (h *ShardHeader) Version() BVersion { return h.bCHeader.version }
 
@@ -193,7 +188,6 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 	err := encoder.ReadElements(r,
 		&bh.prevBlock,
 		&bh.merkleRoot,
-		(*encoder.Uint32Time)(&bh.timestamp),
 		&bh.bits,
 		&bh.mergeMiningNumber,
 	)
@@ -211,11 +205,9 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
-	sec := uint32(bh.timestamp.Unix())
 	err := encoder.WriteElements(w,
 		&bh.prevBlock,
 		&bh.merkleRoot,
-		sec,
 		&bh.bits,
 		bh.mergeMiningNumber,
 	)
@@ -235,11 +227,9 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func writeShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
-	sec := uint32(bh.timestamp.Unix())
 	return encoder.WriteElements(w,
 		&bh.prevBlock,
 		&bh.merkleRoot,
-		sec,
 		&bh.bits,
 		bh.mergeMiningNumber,
 	)

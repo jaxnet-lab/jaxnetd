@@ -196,6 +196,7 @@ func (server *ServerCore) HandleFunc(handler commandMux) func(w http.ResponseWri
 					Msg("caught panic when handling rpc request")
 			}
 		}()
+		// todo: make this optional
 		setCORS(&w, r)
 		if r.Method == "OPTIONS" {
 			return

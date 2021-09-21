@@ -225,6 +225,10 @@ const (
 	// ErrInvalidShardSwapInOuts indicates that tx content not match
 	// with ShardsSwapTx requirements.
 	ErrInvalidShardSwapInOuts
+
+	// ErrHashSortingRuleNotMatch indicates that block hash not match
+	// with hash sorting mask for current chain
+	ErrHashSortingRuleNotMatch
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -273,6 +277,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrInvalidAncestorBlock:      "ErrInvalidAncestorBlock",
 	ErrPrevBlockNotBest:          "ErrPrevBlockNotBest",
 	ErrInvalidShardSwapInOuts:    "ErrInvalidShardSwapInOuts",
+	ErrHashSortingRuleNotMatch:   "ErrHashSortingRuleNotMatch",
 }
 
 // String returns the ErrorCode as a human-readable name.

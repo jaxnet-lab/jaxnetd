@@ -32,8 +32,7 @@ func calcEasiestDifficulty(powParams chaincfg.PowParams, opts retargetOpts, bits
 	// than twice the desired amount of time needed to generate a block has
 	// elapsed.
 	if powParams.ReduceMinDifficulty {
-		reductionTime := int64(powParams.MinDiffReductionTime /
-			time.Second)
+		reductionTime := int64(powParams.MinDiffReductionTime / time.Second)
 		if durationVal > reductionTime {
 			return powParams.PowLimitBits
 		}

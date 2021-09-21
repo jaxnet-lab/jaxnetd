@@ -146,7 +146,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
-	err = chaindata.CheckBlockSanityWF(block, b.chainParams.PowParams.PowLimit, b.TimeSource, flags)
+	err = chaindata.CheckBlockSanityWF(block, b.chainParams, b.TimeSource, flags)
 	if err != nil {
 		return false, false, err
 	}

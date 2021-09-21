@@ -66,7 +66,6 @@ func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 		Header: wire.NewShardBlockHeader(
 			c.chainParams.GenesisBlock.PrevBlock,
 			c.chainParams.GenesisBlock.MerkleRoot,
-			c.chainParams.GenesisBlock.Timestamp,
 			c.chainParams.GenesisBlock.Bits,
 			c.chainParams.GenesisBlock.BCHeader,
 			wire.CoinbaseAux{

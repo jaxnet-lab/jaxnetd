@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -338,7 +337,7 @@ func CheckTransactionSanity(tx *jaxutil.Tx) error {
 // The flags modify the behavior of this function as follows:
 //  - BFNoPoWCheck: The check to ensure the block Hash is less than the target
 //    difficulty is not performed.
-func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags BehaviorFlags) error {
+func checkProofOfWork(header wire.BlockHeader, chainCfg *chaincfg.Params, flags BehaviorFlags) error {
 	// The target difficulty must be larger than zero.
 	target := pow.CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
@@ -347,8 +346,9 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	}
 
 	// The target difficulty must be less than the maximum allowed.
-	if target.Cmp(powLimit) > 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target, powLimit)
+	if target.Cmp(chainCfg.PowParams.PowLimit) > 0 {
+		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target,
+			chainCfg.PowParams.PowLimit)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
@@ -364,6 +364,12 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 			str := fmt.Sprintf("block Hash of %064x is higher than expected max of %064x", hashNum, target)
 			return NewRuleError(ErrHighHash, str)
 		}
+
+		if chainCfg.PowParams.HashSorting && pow.ValidateHashSortingRule(target, chainCfg.ChainID) {
+			str := fmt.Sprintf("block Hash of %064x is not match for chain %d by hash-sorting rules",
+				hashNum, chainCfg.ChainID)
+			return NewRuleError(ErrHashSortingRuleNotMatch, str)
+		}
 	}
 
 	return nil
@@ -372,8 +378,8 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 // CheckProofOfWork ensures the block header bits which indicate the target
 // difficulty is in min/max range and that the block Hash is less than the
 // target difficulty as claimed.
-func CheckProofOfWork(block *jaxutil.Block, powLimit *big.Int) error {
-	return checkProofOfWork(block.MsgBlock().Header, powLimit, BFNone)
+func CheckProofOfWork(block *jaxutil.Block, chainCfg *chaincfg.Params) error {
+	return checkProofOfWork(block.MsgBlock().Header, chainCfg, BFNone)
 }
 
 // CountSigOps returns the number of signature operations for all transaction
@@ -474,7 +480,7 @@ func CountP2SHSigOps(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
-func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *chaincfg.Params, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	// Ensure the proof of work bits in the block header is in min/max range
 	// and the block Hash is less than the target value described by the
 	// bits.
@@ -508,10 +514,10 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func CheckBlockSanityWF(block *jaxutil.Block, chainParams *chaincfg.Params, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	msgBlock := block.MsgBlock()
 	header := msgBlock.Header
-	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
+	err := checkBlockHeaderSanity(header, chainParams, timeSource, flags)
 	if err != nil {
 		return err
 	}
@@ -610,8 +616,8 @@ func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource Medi
 
 // CheckBlockSanity performs some preliminary checks on a block to ensure it is
 // sane before continuing with block processing.  These checks are context free.
-func CheckBlockSanity(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
-	return CheckBlockSanityWF(block, powLimit, timeSource, BFNone)
+func CheckBlockSanity(block *jaxutil.Block, chainParams *chaincfg.Params, timeSource MedianTimeSource) error {
+	return CheckBlockSanityWF(block, chainParams, timeSource, BFNone)
 }
 
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
@@ -802,7 +808,7 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 }
 
 // ValidateSwapTxStructure validates formats of the cross shard swap tx.
-// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// wire.TxVerCrossShardSwap transaction is a special tx for atomic swap between chains.
 // It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 // TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.

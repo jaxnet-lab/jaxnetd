@@ -285,8 +285,8 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32,
 
 // connectSwapTransaction updates the view by adding all new utxos created by the
 // passed transaction and marking all utxos that the transactions spend as
-// spent. This function handles special case for the wire.TxMarkShardSwap transactions.
-// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// spent. This function handles special case for the wire.TxVerCrossShardSwap transactions.
+// wire.TxVerCrossShardSwap transaction is a special tx for atomic swap between chains.
 // It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 // TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.

@@ -30,28 +30,13 @@ type BeaconBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	parent   IBlockNode     // parent is the parent block for this node.
-	hash     chainhash.Hash // hash is the double sha 256 of the block.
-	workSum  *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	height   int32          // height is the position in the block chain.
-	serialID int64          // serialID is the absolute unique id of current block.
-
-	// todo(mike): review this, might be make sense to store raw bytes or wire obj instead
-	// Some fields from block headers to aid in best chain selection and
-	// reconstructing headers from memory.  These must be treated as
-	// immutable and are intentionally ordered to avoid padding on 64-bit
-	// platforms.
-	version      int32
-	bits         uint32
-	timestamp    int64
-	merkleRoot   chainhash.Hash
-	mmrRoot      chainhash.Hash
-	shards       uint32           // A number of shards at moment, when block was mined.
-	treeEncoding []uint8          // Encoding of the Merge-mining tree
-	k            uint32           // k is inflation-fix coefficient for current mining epoch.
-	voteK        uint32           // voteK is a proposed inflation-fix coefficient for next mining epoch.
-	btcAux       wire.BTCBlockAux // A bitcoin header auxiliary, required by merge mining protocol.
-
+	parent    IBlockNode     // parent is the parent block for this node.
+	hash      chainhash.Hash // hash is the double sha 256 of the block.
+	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	height    int32          // height is the position in the block chain.
+	serialID  int64          // serialID is the absolute unique id of current block.
+	timestamp int64
+	header    wire.BlockHeader
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -64,21 +49,12 @@ type BeaconBlockNode struct {
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
 func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
-	beaconHeader := blockHeader.Copy().BeaconHeader()
-
 	node := &BeaconBlockNode{
-		hash:         blockHeader.BlockHash(),
-		workSum:      pow.CalcWork(blockHeader.Bits()),
-		version:      int32(blockHeader.Version()),
-		bits:         blockHeader.Bits(),
-		timestamp:    blockHeader.Timestamp().Unix(),
-		merkleRoot:   blockHeader.MerkleRoot(),
-		mmrRoot:      beaconHeader.MergeMiningRoot(),
-		shards:       beaconHeader.Shards(),
-		treeEncoding: beaconHeader.MergedMiningTree(),
-		k:            beaconHeader.K(),
-		voteK:        beaconHeader.VoteK(),
-		btcAux:       *beaconHeader.BTCAux().Copy(),
+		hash:      blockHeader.BlockHash(),
+		workSum:   pow.CalcWork(blockHeader.Bits()),
+		timestamp: blockHeader.Timestamp().Unix(),
+		header:    blockHeader,
+		// header: blockHeader.Copy(),
 	}
 	if parent != nil {
 		node.parent = parent
@@ -97,11 +73,11 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *Beacon
 }
 
 func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
-func (node *BeaconBlockNode) Version() int32               { return node.version }
+func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
 func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
-func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
-func (node *BeaconBlockNode) K() uint32                    { return node.k }
+func (node *BeaconBlockNode) Bits() uint32                 { return node.Bits() }
+func (node *BeaconBlockNode) K() uint32                    { return node.header.K() }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
 func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }
@@ -113,20 +89,8 @@ func (node *BeaconBlockNode) NewHeader() wire.BlockHeader  { return new(wire.Bea
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) Header() wire.BlockHeader {
-	// No lock is needed because all accessed fields are immutable.
-	prevHash := &zeroHash
-	if node.parent != nil {
-		h := node.parent.GetHash()
-		prevHash = &h
-	}
-	header := wire.NewBeaconBlockHeader(wire.BVersion(node.version), *prevHash,
-		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.btcAux.Nonce)
-	header.SetShards(node.shards)
-	header.SetMergedMiningTree(node.treeEncoding)
-	header.SetK(node.k)
-	header.SetVoteK(node.voteK)
-	header.BeaconHeader().SetBTCAux(node.btcAux)
-	return header
+	return node.header
+	// return node.header.Copy()
 }
 
 // Ancestor returns the ancestor block node at the provided height by following

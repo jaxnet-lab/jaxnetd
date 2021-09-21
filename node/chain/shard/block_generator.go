@@ -36,12 +36,12 @@ func NewChainBlockGenerator(beacon BeaconBlockProvider) *BlockGenerator {
 
 func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
-	header, cAux, err := c.generateBeaconHeader(nonce, burnReward)
+	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
 	}
 
-	return wire.NewShardBlockHeader(prevHash, merkleRootHash, timestamp, bits, *header, cAux), nil
+	return wire.NewShardBlockHeader(prevHash, merkleRootHash, bits, *header, cAux), nil
 }
 
 func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
@@ -160,7 +160,7 @@ func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader)
 		header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
 }
 
-func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
+func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
 	blockTemplate, err := c.beacon.BlockTemplate(false, burnReward)
 	if err != nil {
 		return nil, wire.CoinbaseAux{}, err
@@ -177,6 +177,7 @@ func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wi
 
 	beaconHeader := blockTemplate.Block.Header.BeaconHeader()
 	beaconHeader.SetNonce(nonce)
+	beaconHeader.SetTimestamp(timestamp)
 
 	return beaconHeader, coinbaseAux, nil
 }

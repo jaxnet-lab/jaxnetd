@@ -982,7 +982,7 @@ type transaction struct {
 var _ database.Tx = (*transaction)(nil)
 
 func (tx *transaction) Chain() chain2.IChainCtx {
-	return tx.db.Chain()
+	return tx.db.chain
 }
 
 // removeActiveIter removes the passed iterator from the list of active

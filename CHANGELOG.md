@@ -7,8 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+- Removed TxMark, now CSTX (CrossShard Swap Tx aka SwapTx) has own version - `wire.TxVerCrossShardSwap` = 4.
+- Keep only one timestamp filed for all block headers.
+- Removed redundant fields and Copy operations from `blocknode.BeaconBlockNode` and `blocknode.ShardBlockNode`
+- Enabled hash-sorting.
+
+
+## [0.3.12-14]
+
 - Removed usage of the `IShardsMergedMiningTree`, because it is broken, useless and part of abandoned feature.
 - Extend response of the `GetBlockTxOps`
+- Exposed internal RPC types to provide possibility compose compatible RPC server.
+- Allow the common BTC coinbase tx format if no burning.
+- Added toml annotations for config.
+- Tweak PoW limits, initial target and other PoW params.
 
 ## [0.3.11]
 

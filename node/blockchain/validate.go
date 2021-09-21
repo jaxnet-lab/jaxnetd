@@ -208,7 +208,7 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *jaxutil.Bloc
 
 	for _, tx := range block.Transactions() {
 		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		txMarkers[prevOut] = tx.MsgTx().Mark()
+		txMarkers[prevOut] = tx.MsgTx().Version
 
 		for txOutIdx := range tx.MsgTx().TxOut {
 			prevOut.Index = uint32(txOutIdx)
@@ -223,7 +223,7 @@ func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *jaxutil.Bloc
 	// Duplicate transactions are only allowed if the previous transaction
 	// is fully spent.
 	for outpoint := range fetchSet {
-		thisIsSwapTx := txMarkers[outpoint] == wire.TxMarkShardSwap
+		thisIsSwapTx := txMarkers[outpoint] == wire.TxVerCrossShardSwap
 		utxo := view.LookupEntry(outpoint)
 		if utxo != nil && thisIsSwapTx {
 			continue
@@ -461,7 +461,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 			if err != nil {
 				return err
 			}
-			switch tx.MsgTx().CleanVersion() {
+			switch tx.MsgTx().Version {
 			case wire.TxVerTimeLock:
 				if !chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
 					str := fmt.Sprintf(
@@ -521,7 +521,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 
-	err := chaindata.CheckBlockSanityWF(block, b.chainParams.PowParams.PowLimit, b.TimeSource, flags)
+	err := chaindata.CheckBlockSanityWF(block, b.chainParams, b.TimeSource, flags)
 	if err != nil {
 		return err
 	}

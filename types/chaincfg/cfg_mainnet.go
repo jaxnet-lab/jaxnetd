@@ -1,4 +1,5 @@
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -117,6 +118,7 @@ var MainNetParams = Params{
 		ReduceMinDifficulty:      false,
 		MinDiffReductionTime:     0,
 		GenerateSupported:        false,
+		HashSorting:              true,
 	},
 
 	// Checkpoints ordered from oldest to newest.

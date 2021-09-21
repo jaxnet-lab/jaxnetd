@@ -18,7 +18,8 @@ import (
 
 const (
 	// TxVersion is the current latest supported transaction version.
-	TxVersion = TxVerRegular
+	TxVersion    = TxVerRegular
+	MaxTxVersion = TxVerCrossShardSwap
 
 	// MaxTxInSequenceNum is the maximum sequence number the sequence field
 	// of a transaction input can be.
@@ -63,7 +64,7 @@ const (
 
 	// maxTxInPerMessage is the maximum number of transactions inputs that
 	// a transaction which fits into a message could possibly have.
-	maxTxInPerMessage = (MaxMessagePayload / minTxInPayload) + 1
+	maxTxInPerMessage = (MaxBlockPayload / minTxInPayload) + 1
 
 	// MinTxOutPayload is the minimum payload size for a transaction output.
 	// Value 8 bytes + Varint for PkScript length 1 byte.
@@ -71,7 +72,7 @@ const (
 
 	// maxTxOutPerMessage is the maximum number of transactions outputs that
 	// a transaction which fits into a message could possibly have.
-	maxTxOutPerMessage = (MaxMessagePayload / MinTxOutPayload) + 1
+	maxTxOutPerMessage = (MaxBlockPayload / MinTxOutPayload) + 1
 
 	// minTxPayload is the minimum payload size for a transaction.  Note
 	// that any realistically usable transaction must have at least one
@@ -287,14 +288,10 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 }
 
 const (
-	TxVerRegular   = 1 // TxVerRegular is a simple transaction.
-	TxVerTimeLock  = 2 // TxVerTimeLock - tx will not be accepted until the LockTime expires.
-	TxVerEADAction = 3 // TxVerEADAction is a tx for EAD Address Registration/Revoking
-)
-
-const (
-	TxMarkNone      int32 = 0
-	TxMarkShardSwap int32 = 1 << 16 // 65536; Regular+ShardSwap=65537; TimeLock+ShardSwap=65538
+	TxVerRegular        = 1 // TxVerRegular is a simple transaction.
+	TxVerTimeLock       = 2 // TxVerTimeLock - tx will not be accepted until the LockTime expires.
+	TxVerEADAction      = 3 // TxVerEADAction is a tx for EAD Address Registration/Revoking
+	TxVerCrossShardSwap = 4 // TxVerCrossShardSwap is a tx for EAD Address Registration/Revoking
 )
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -304,9 +301,6 @@ const (
 // Use the AddTxIn and AddTxOut functions to build up the list of transaction
 // inputs and outputs.
 type MsgTx struct {
-	// version structure 0xOAAABBBB
-	// 0xO000BBBB - Version
-	// 0xOAAA0000 - Mark
 	Version  int32
 	TxIn     []*TxIn
 	TxOut    []*TxOut
@@ -323,21 +317,12 @@ func (msg *MsgTx) AddTxOut(to *TxOut) {
 	msg.TxOut = append(msg.TxOut, to)
 }
 
-// SetMark adds a marker to the message.
-func (msg *MsgTx) SetMark(mark int32) {
-	msg.Version = msg.Version | mark
-}
-
 func (msg *MsgTx) SwapTx() bool {
-	return msg.Version&TxMarkShardSwap == TxMarkShardSwap
+	return msg.Version == TxVerCrossShardSwap
 }
 
 func (msg *MsgTx) CleanVersion() int32 {
-	return msg.Version & 0xFFFF
-}
-
-func (msg *MsgTx) Mark() int32 {
-	return msg.Version & 0x0FFF0000
+	return msg.Version
 }
 
 // TxHash generates the Hash for the transaction.

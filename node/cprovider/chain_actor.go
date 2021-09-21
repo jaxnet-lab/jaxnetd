@@ -21,6 +21,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const defaultMaxOrphanTxSize = 100000
@@ -294,7 +295,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
 			MaxSigOpCostPerTx:    chaindata.MaxBlockSigOpsCost / 4,
 			MinRelayTxFee:        minRelayTxFee,
-			MaxTxVersion:         2,
+			MaxTxVersion:         wire.MaxTxVersion,
 			RejectReplacement:    cfg.RejectReplacement,
 		},
 		ChainParams:    chainProvider.ChainParams,

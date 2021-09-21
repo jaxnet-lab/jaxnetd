@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
+
 	"github.com/btcsuite/websocket"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
-	"io"
-	"sync"
 )
 
 type semaphore chan struct{}
@@ -119,7 +120,7 @@ func newWebsocketClient(manager *wsManager, conn *websocket.Conn,
 		manager:       manager,
 		addrRequests:  make(map[string]struct{}),
 		spentRequests: make(map[wire.OutPoint]struct{}),
-		//serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
+		// serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
 		ntfnChan: make(chan []byte, 1), // nonblocking sync
 		sendChan: make(chan wsResponse, websocketSendBufferSize),
 		quit:     make(chan struct{}),
@@ -310,7 +311,7 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 
 	shard, ok := c.manager.server.shardRPCs[r.shardID]
 	if ok {
-		//result, err = c.manager.server.HandleCommand(r, nil)
+		// result, err = c.manager.server.HandleCommand(r, nil)
 		return
 	}
 
@@ -320,8 +321,8 @@ func (c *wsClient) serviceRequest(r *parsedRPCCmd) {
 	if ok {
 		result, err = wsHandler(shard.chainProvider, c, r.cmd)
 	} else {
-		//TODO: implement
-		//result, err = c.manager.server.HandleCommand(r, nil)
+		// TODO: implement
+		// result, err = c.manager.server.HandleCommand(r, nil)
 	}
 	reply, err := c.manager.server.createMarshalledReply(r.id, result, err)
 	if err != nil {
