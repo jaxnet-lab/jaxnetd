@@ -16,19 +16,19 @@ import (
 )
 
 type (
-	commandMux     func(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error)
+	commandMux     func(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error)
 	CommandHandler func(interface{}, <-chan struct{}) (interface{}, error)
 
-	// parsedRPCCmd represents a JSON-RPC request object that has been parsed into
+	// ParsedRPCCmd represents a JSON-RPC request object that has been parsed into
 	// a known concrete command along with any error that might have happened while
 	// parsing it.
-	parsedRPCCmd struct {
-		id      interface{}
-		scope   string
-		method  string
-		shardID uint32
-		cmd     interface{}
-		err     *jaxjson.RPCError
+	ParsedRPCCmd struct {
+		ID      interface{}
+		Scope   string
+		Method  string
+		ShardID uint32
+		Cmd     interface{}
+		Err     *jaxjson.RPCError
 	}
 )
 
@@ -68,36 +68,36 @@ var (
 	}
 )
 
-// parseCmd parses a JSON-RPC request object into known concrete command.  The
-// err field of the returned parsedRPCCmd struct will contain an RPC error that
+// ParseCmd parses a JSON-RPC request object into known concrete command.  The
+// err field of the returned ParsedRPCCmd struct will contain an RPC error that
 // is suitable for use in replies if the command is invalid in some way such as
 // an unregistered command or invalid parameters.
-func parseCmd(request *jaxjson.Request) *parsedRPCCmd {
-	parsedCmd := parsedRPCCmd{
-		id:      request.ID,
-		method:  request.Method,
-		scope:   request.Scope,
-		shardID: request.ShardID,
+func ParseCmd(request *jaxjson.Request) *ParsedRPCCmd {
+	parsedCmd := ParsedRPCCmd{
+		ID:      request.ID,
+		Method:  request.Method,
+		Scope:   request.Scope,
+		ShardID: request.ShardID,
 	}
 
 	cmd, err := jaxjson.UnmarshalCmd(request)
 	if err != nil {
-		// When the error is because the method is not registered,
-		// produce a method not found RPC error.
+		// When the error is because the Method is not registered,
+		// produce a Method not found RPC error.
 		if jerr, ok := err.(jaxjson.Error); ok &&
 			jerr.ErrorCode == jaxjson.ErrUnregisteredMethod {
 
-			parsedCmd.err = jaxjson.ErrRPCMethodNotFound
+			parsedCmd.Err = jaxjson.ErrRPCMethodNotFound
 			return &parsedCmd
 		}
 
 		// Otherwise, some type of invalid parameters is the
 		// cause, so produce the equivalent RPC error.
-		parsedCmd.err = jaxjson.NewRPCError(
+		parsedCmd.Err = jaxjson.NewRPCError(
 			jaxjson.ErrRPCInvalidParams.Code, err.Error())
 		return &parsedCmd
 	}
-	parsedCmd.cmd = cmd
+	parsedCmd.Cmd = cmd
 	return &parsedCmd
 }
 

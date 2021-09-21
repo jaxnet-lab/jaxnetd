@@ -340,9 +340,9 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 		if jsonErr == nil {
 			// Attempt to parse the JSON-RPC request into a known concrete
 			// command.
-			parsedCmd := parseCmd(&request)
-			if parsedCmd.err != nil {
-				jsonErr = parsedCmd.err
+			parsedCmd := ParseCmd(&request)
+			if parsedCmd.Err != nil {
+				jsonErr = parsedCmd.Err
 			} else {
 				result, jsonErr = handler(parsedCmd, closeChan)
 			}

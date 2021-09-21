@@ -1497,9 +1497,10 @@ func (b *BlockChain) isCurrent() bool {
 	//
 	// The chain appears to be current if none of the checks reported
 	// otherwise.
-	minus24Hours := b.TimeSource.AdjustedTime().Add(-24 * time.Hour).Unix()
-
-	return b.bestChain.Tip().Timestamp() >= minus24Hours
+	// minus24Hours := b.TimeSource.AdjustedTime().Add(-24 * time.Hour).Unix()
+	minus1Week := b.TimeSource.AdjustedTime().Add(-1 * 7 * 24 * time.Hour).Unix()
+	// todo: rollback this when network become more stable
+	return b.bestChain.Tip().Timestamp() >= minus1Week
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several

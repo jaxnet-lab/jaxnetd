@@ -86,14 +86,23 @@ type methodInfo struct {
 
 type MethodName struct {
 	Scope, Method string
+	Legacy        bool
 }
 
 func (mn MethodName) String() string {
+	if mn.Legacy {
+		return strings.ToLower(mn.Method)
+	}
+
 	return strings.ToLower(mn.Scope + "." + mn.Method)
 }
 
 func ScopedMethod(scope, method string) MethodName {
-	return MethodName{scope, strings.ToLower(method)}
+	return MethodName{scope, strings.ToLower(method), false}
+}
+
+func LegacyMethod(method string) MethodName {
+	return MethodName{"", strings.ToLower(method), true}
 }
 
 var (
@@ -186,20 +195,18 @@ func isAcceptableKind(kind reflect.Kind) bool {
 // passed struct, so it does not need to be an actual instance.  Therefore, it
 // is recommended to simply pass a nil pointer cast to the appropriate type.
 // For example, (*FooCmd)(nil).
-func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
-	method = strings.ToLower(method)
+func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag) error {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
-	scopedMethodName := ScopedMethod(scope, method)
-	if _, ok := methodToConcreteType[method]; ok {
+	if _, ok := methodToConcreteType[method.Method]; ok {
 		str := fmt.Sprintf("method %q is already registered", method)
 		return makeError(ErrDuplicateMethod, str)
 	}
 
 	// Ensure that no unrecognized flag bits were specified.
 	if ^(highestUsageFlagBit-1)&flags != 0 {
-		str := fmt.Sprintf("invalid usage flags specified for method %s.%s: %v", scope, method, flags)
+		str := fmt.Sprintf("invalid usage flags specified for method %s.%s: %v", method.Scope, method, flags)
 		return makeError(ErrInvalidUsageFlags, str)
 	}
 
@@ -282,15 +289,15 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 	}
 
 	// Update the registration maps.
-	concreteTypeToMethod[rtp] = scopedMethodName
-	methodToConcreteType[method] = rtp
-	methodToInfo[method] = methodInfo{
+	concreteTypeToMethod[rtp] = method
+	methodToConcreteType[method.Method] = rtp
+	methodToInfo[method.Method] = methodInfo{
 		maxParams:    numFields,
 		numReqParams: numFields - numOptFields,
 		numOptParams: numOptFields,
 		defaults:     defaults,
 		flags:        flags,
-		scope:        scope,
+		scope:        method.Scope,
 	}
 	return nil
 }
@@ -299,7 +306,16 @@ func RegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) error {
 // if there is an error.  This should only be called from package init
 // functions.
 func MustRegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) {
-	if err := RegisterCmd(scope, strings.ToLower(method), cmd, flags); err != nil {
+	scopedMethodName := ScopedMethod(scope, method)
+	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
+		panic(fmt.Sprintf("failed to register type %q: %v\n", method,
+			err))
+	}
+}
+
+func MustRegisterLegacyCmd(method string, cmd interface{}, flags UsageFlag) {
+	scopedMethodName := LegacyMethod(method)
+	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
 		panic(fmt.Sprintf("failed to register type %q: %v\n", method,
 			err))
 	}
