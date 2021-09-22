@@ -175,7 +175,11 @@ type PowParams struct {
 	// GenerateSupported specifies whether or not CPU mining is allowed.
 	GenerateSupported bool
 
+	// Enable/disable hash sorting feature
 	HashSorting bool
+
+	// Maximum chain ID count
+	ChainIDCount uint32
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be

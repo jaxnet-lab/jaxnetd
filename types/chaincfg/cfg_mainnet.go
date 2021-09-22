@@ -119,6 +119,7 @@ var MainNetParams = Params{
 		MinDiffReductionTime:     0,
 		GenerateSupported:        false,
 		HashSorting:              true,
+		ChainIDCount:             4096, // 2^12
 	},
 
 	// Checkpoints ordered from oldest to newest.
