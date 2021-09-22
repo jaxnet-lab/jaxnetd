@@ -32,6 +32,10 @@ func (cmd *headersCmd) Execute(args []string) error {
 		return err
 	}
 
+	if len(args) < 1 {
+		return errors.New("required shardID parameter not specified")
+	}
+
 	shardID, err := parseShardID(args[0])
 	if err != nil {
 		return errors.New("wrong shardID format specified")

@@ -33,14 +33,14 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 		return errors.New("required block hash, net name and shardID parameters are not specified")
 	}
 
-	blockHash, err := chainhash.NewHashFromStr(args[1])
-	if err != nil {
-		return err
-	}
-
 	shardID, err := parseShardID(args[0])
 	if err != nil {
 		return errors.New("wrong shardID format specified")
+	}
+
+	blockHash, err := chainhash.NewHashFromStr(args[1])
+	if err != nil {
+		return err
 	}
 
 	// Load the block database.

@@ -550,6 +550,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 		"fees, %d signature operations cost, %d weight, target difficulty "+
 		"%064x)", len(msgBlock.Transactions), txsCollection.TotalFees, txsCollection.BlockSigOpCost,
 		txsCollection.BlockWeight, pow.CompactToBig(msgBlock.Header.Bits()))
+
 	return &BlockTemplate{
 		Block:             &msgBlock,
 		Fees:              txsCollection.TxFees,
