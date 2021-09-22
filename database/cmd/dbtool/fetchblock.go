@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -30,16 +29,22 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 		return err
 	}
 
-	if len(args) < 1 {
-		return errors.New("required block hash parameter not specified")
+	if len(args) < 2 {
+		return errors.New("required block hash, net name and shardID parameters are not specified")
 	}
-	blockHash, err := chainhash.NewHashFromStr(args[0])
+
+	blockHash, err := chainhash.NewHashFromStr(args[1])
 	if err != nil {
 		return err
 	}
 
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain)
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}

@@ -20,4 +20,6 @@ type IChainCtx interface {
 	NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode
 }
 
-var BeaconChain IChainCtx
+var (
+	BeaconChain IChainCtx
+)

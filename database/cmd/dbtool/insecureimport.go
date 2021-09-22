@@ -7,16 +7,15 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -341,8 +340,13 @@ func (cmd *importCmd) Execute(args []string) error {
 		return fmt.Errorf(str, cmd.InFile)
 	}
 
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
 	// Load the block database.
-	db, err := loadBlockDB(beacon.Chain(&chaincfg.TestNet3Params))
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}

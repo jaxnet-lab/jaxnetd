@@ -6,10 +6,10 @@
 package main
 
 import (
+	"errors"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -32,8 +32,13 @@ func (cmd *headersCmd) Execute(args []string) error {
 		return err
 	}
 
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain)
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}
@@ -50,6 +55,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 				totalHdrs++
 				return nil
 			})
+			// "4d45c13080a7289ffdca58a6489fc781bfd26595e15ba3cba89a5645aa9debdc"
 			log.Infof("Loading headers for %d blocks...", totalHdrs)
 			numLoaded := 0
 			startTime := time.Now()

@@ -42,11 +42,16 @@ func (cmd *ExportIndexesCmd) Execute(args []string) error {
 		limit = &lmt
 	}
 
-	switch args[0] {
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
+	switch args[1] {
 	case "raw":
-		return rawScanner(offset)
+		return rawScanner(offset, shardID)
 	case "history":
-		return historyScanner(offset, limit)
+		return historyScanner(offset, limit, shardID)
 	}
 	return nil
 }

@@ -11,9 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
@@ -37,6 +37,7 @@ type config struct {
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
 	TestNet3       bool   `long:"testnet" description:"Use the test network"`
+	FastNet bool `long:"fastnet" description:"Use the fast network"`
 }
 
 // fileExists reports whether the named file or directory exists.
@@ -73,6 +74,8 @@ func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
 	case types.TestNet3:
 		return "testnet"
+	case types.FastTestNet:
+		return "fastnet"
 	default:
 		return chainParams.Name
 	}
@@ -90,13 +93,13 @@ func setupGlobalConfig() error {
 		numNets++
 		activeNetParams = &chaincfg.TestNet3Params
 	}
-	if cfg.RegressionTest {
-		numNets++
-		activeNetParams = &chaincfg.RegressionNetParams
-	}
 	if cfg.SimNet {
 		numNets++
 		activeNetParams = &chaincfg.SimNetParams
+	}
+	if cfg.FastNet {
+		numNets++
+		activeNetParams = &chaincfg.FastNetParams
 	}
 	if numNets > 1 {
 		return errors.New("The testnet, regtest, and simnet params " +

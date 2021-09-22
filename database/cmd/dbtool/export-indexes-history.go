@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -72,7 +71,7 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	})
 }
 
-func historyScanner(offset int, limit *int) error {
+func historyScanner(offset int, limit *int, shardID uint32) error {
 	ctx, cancelScanning := context.WithCancel(context.Background())
 	writerCtx, cancelWrite := context.WithCancel(context.Background())
 
@@ -90,15 +89,15 @@ func historyScanner(offset int, limit *int) error {
 	scanner.runWriters(&eGroup, writerCtx)
 
 	eGroup.Go(func() error {
-		return scanner.scan(ctx, cancelWrite, offset, limit)
+		return scanner.scan(ctx, cancelWrite, offset, limit, shardID)
 	})
 
 	return eGroup.Wait()
 }
 
-func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc, offset int, limit *int) error {
+func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc, offset int, limit *int, shardID uint32) error {
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain) // todo: add shardID as arg
+	db, err := loadBlockDB(relevantChain(shardID)) // todo: add shardID as arg
 	if err != nil {
 		return err
 	}

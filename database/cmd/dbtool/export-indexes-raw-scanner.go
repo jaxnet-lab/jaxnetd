@@ -10,14 +10,13 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"golang.org/x/sync/errgroup"
 )
 
-func rawScanner(offset int) error {
+func rawScanner(offset int, shardID uint32) error {
 	ctx, cancelScanning := context.WithCancel(context.Background())
 	writerCtx, cancelWrite := context.WithCancel(context.Background())
 
@@ -61,15 +60,15 @@ func rawScanner(offset int) error {
 	})
 
 	eGroup.Go(func() error {
-		return scan(ctx, cancelWrite, offset, blocksChan, inputsChan, outputsChan)
+		return scan(ctx, cancelWrite, offset, blocksChan, inputsChan, outputsChan, shardID)
 	})
 
 	return eGroup.Wait()
 }
 
-func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan, inputsChan, outputsChan chan row) error {
+func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan, inputsChan, outputsChan chan row, shardID uint32) error {
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain) // todo: add shardID as arg
+	db, err := loadBlockDB(relevantChain(shardID)) // todo: add shardID as arg
 	if err != nil {
 		return err
 	}

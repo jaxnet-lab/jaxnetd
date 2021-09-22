@@ -6,9 +6,13 @@
 package main
 
 import (
+	"fmt"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/btcsuite/btclog"
@@ -31,9 +35,16 @@ var (
 func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
-	dbPath := filepath.Join(cfg.DataDir, dbName)
 
-	log.Infof("Loading block data0base from '%s'", dbPath)
+	chainDir := fmt.Sprintf("shard_%d", chain.ShardID())
+	if chain.ShardID() == 0 {
+		chainDir = "beacon"
+	}
+
+	dbPath := filepath.Join(cfg.DataDir, chainDir, dbName)
+	// dbPath := filepath.Join("/home/nikita/go/src/Projects/jaxnetd/node1/jaxnetd-data/data/fastnet", chainDir, dbName)
+	//dbPath = "/home/nikita/go/src/Projects/jaxnetd/node1/jaxnetd-data/data/fastnet/beacon/blocks_ffldb"
+	log.Infof("Loading block database from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
@@ -116,4 +127,21 @@ func main() {
 	if err := realMain(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func parseShardID(cliArg string) (uint32, error) {
+	shardID, err := strconv.ParseUint(cliArg, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint32(shardID), nil
+}
+
+func relevantChain(shardID uint32) chain.IChainCtx {
+	if shardID > 0 {
+		return shard.ChainWithoutGenesis(shardID, activeNetParams)
+	}
+
+	return beacon.Chain(activeNetParams)
 }
