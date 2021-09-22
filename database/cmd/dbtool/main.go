@@ -42,8 +42,6 @@ func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
 	}
 
 	dbPath := filepath.Join(cfg.DataDir, chainDir, dbName)
-	// dbPath := filepath.Join("/home/nikita/go/src/Projects/jaxnetd/node1/jaxnetd-data/data/fastnet", chainDir, dbName)
-	//dbPath = "/home/nikita/go/src/Projects/jaxnetd/node1/jaxnetd-data/data/fastnet/beacon/blocks_ffldb"
 	log.Infof("Loading block database from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
