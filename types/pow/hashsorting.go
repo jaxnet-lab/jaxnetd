@@ -7,13 +7,7 @@ import (
 // ValidateHashSortingRule checks if chain ID equals chainIDCount or equals remainder of modulo operation with chain ID as dividend and
 // chainIDCount as divisor.
 func ValidateHashSortingRule(headerTarget *big.Int, chainIDCount, chainID uint32) bool {
-
-	lastBits := HashSortingLastBits(headerTarget, chainIDCount)
-
-	if lastBits == chainID {
-			return true
-		}
-		return false
+	return HashSortingLastBits(headerTarget, chainIDCount) == chainID
 }
 
 func HashSortingLastBits(diff *big.Int, chainIDCount uint32) uint32 {
@@ -31,4 +25,3 @@ func HashSortingLastBits(diff *big.Int, chainIDCount uint32) uint32 {
 
 	return 0
 }
-
