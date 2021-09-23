@@ -35,13 +35,7 @@ var (
 func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
-
-	chainDir := fmt.Sprintf("shard_%d", chain.ShardID())
-	if chain.ShardID() == 0 {
-		chainDir = "beacon"
-	}
-
-	dbPath := filepath.Join(cfg.DataDir, chainDir, dbName)
+	dbPath := filepath.Join(cfg.DataDir, getChainDir(chain.ShardID()), dbName)
 	log.Infof("Loading block database from '%s'", dbPath)
 	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
@@ -138,8 +132,18 @@ func parseShardID(cliArg string) (uint32, error) {
 
 func relevantChain(shardID uint32) chain.IChainCtx {
 	if shardID > 0 {
-		return shard.ChainWithoutGenesis(shardID, activeNetParams)
+		return shard.Chain(shardID, activeNetParams, beacon.Chain(activeNetParams).GenesisBlock().Header.BeaconHeader(), beacon.Chain(activeNetParams).GenesisBlock().Transactions[0])
+		// return shard.ChainWithoutGenesis(shardID, activeNetParams)
 	}
 
 	return beacon.Chain(activeNetParams)
+}
+
+func getChainDir(shardID uint32) string {
+	chainDir := "beacon"
+	if shardID > 0 {
+		return fmt.Sprintf("shard_%d", shardID)
+	}
+
+	return chainDir
 }

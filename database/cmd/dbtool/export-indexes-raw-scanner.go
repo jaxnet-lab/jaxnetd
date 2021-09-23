@@ -3,9 +3,19 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"io/ioutil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -68,27 +78,24 @@ func rawScanner(offset int, shardID uint32) error {
 
 func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan, inputsChan, outputsChan chan row, shardID uint32) error {
 	// Load the block database.
-	db, err := loadBlockDB(relevantChain(shardID)) // todo: add shardID as arg
+	var dbShard database.DB
+	dbBeacon, err := loadBlockDB(beacon.Chain(activeNetParams))
 	if err != nil {
 		return err
 	}
+	defer dbBeacon.Close()
 
-	defer db.Close()
+	// we need dbShard only if we are dealing with shards. In order to properly close the db connection, we need to create the connection in this function
+	// if we pass it as nil to prepareBlockchain, the case will be handled safely thanks to early exit from function based on shardID
+	if shardID != 0 {
+		dbShard, err = loadBlockDB(relevantChain(shardID))
+		if err != nil {
+			return err
+		}
+		defer dbShard.Close()
+	}
 
-	interrupt := make(chan struct{})
-	var checkpoints []chaincfg.Checkpoint
-	var indexManager blockchain.IndexManager
-
-	blockChain, err := blockchain.New(&blockchain.Config{
-		DB:           db,
-		Interrupt:    interrupt,
-		ChainParams:  activeNetParams,
-		Checkpoints:  checkpoints,
-		IndexManager: indexManager,
-		TimeSource:   chaindata.NewMedianTime(),
-		SigCache:     txscript.NewSigCache(100000),
-		HashCache:    txscript.NewHashCache(100000),
-	})
+	blockChain, err := prepareBlockchain(filepath.Join(cfg.DataDir, "shards.json"), shardID, dbBeacon, dbShard)
 	if err != nil {
 		return err
 	}
@@ -204,4 +211,73 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 	cancel()
 	log.Info("\nFinish scanning.")
 	return nil
+}
+
+func prepareBlockchain(shardsJSONPath string, shardID uint32, dbBeacon, dbShard database.DB) (*blockchain.BlockChain, error) {
+	if shardID == 0 {
+		return createBlockchain(dbBeacon, beacon.Chain(activeNetParams))
+	}
+
+	idx, err := deserializeShardData(shardsJSONPath)
+	if err != nil {
+		return nil, err
+	}
+
+	beaconBlockChain, err := createBlockchain(dbBeacon, beacon.Chain(activeNetParams))
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating beacon blockchain")
+	}
+
+	block, err := getGenesisBlock(shardID, idx, beaconBlockChain)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting genesis block from beacon chain")
+	}
+
+	shardBlockChain, err := createBlockchain(dbShard, shard.Chain(shardID, activeNetParams, block.MsgBlock().Header.Copy().BeaconHeader(), block.MsgBlock().Transactions[0]))
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating shard blockchain")
+	}
+
+	return shardBlockChain, nil
+}
+
+func deserializeShardData(filePath string) (node.Index, error) {
+	var idx node.Index
+
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return node.Index{}, errors.Wrapf(err, "error reading file from %s", filePath)
+	}
+
+	if err := json.Unmarshal(data, &idx); err != nil {
+		return node.Index{}, errors.Wrap(err, "error deserisalizing data")
+	}
+
+	return idx, nil
+}
+
+func createBlockchain(db database.DB, chain chain.IChainCtx) (*blockchain.BlockChain, error) {
+	interrupt := make(chan struct{})
+	var checkpoints []chaincfg.Checkpoint
+	var indexManager blockchain.IndexManager
+	return blockchain.New(&blockchain.Config{
+		DB:           db,
+		Interrupt:    interrupt,
+		ChainParams:  activeNetParams,
+		Checkpoints:  checkpoints,
+		IndexManager: indexManager,
+		TimeSource:   chaindata.NewMedianTime(),
+		SigCache:     txscript.NewSigCache(100000),
+		HashCache:    txscript.NewHashCache(100000),
+		ChainCtx:     chain,
+	})
+}
+
+func getGenesisBlock(shardID uint32, idx node.Index, blockChain *blockchain.BlockChain) (*jaxutil.Block, error) {
+	shardInfo, ok := idx.Shards[shardID]
+	if !ok {
+		return nil, errors.New("errror")
+	}
+
+	return blockChain.BlockByHeight(shardInfo.GenesisHeight)
 }
