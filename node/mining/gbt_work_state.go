@@ -19,8 +19,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -345,7 +345,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			case true:
 				burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
 			case false:
-				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
+				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 			}
 
 			if len(template.Block.Transactions[0].TxOut) < 2 && !burnReward {

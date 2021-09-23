@@ -85,8 +85,8 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 }
 
 func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
-	aux := block.Header.BeaconHeader().BTCAux()
-	if len(aux.Tx.TxOut) != 3 {
+	btcAux := block.Header.BeaconHeader().BTCAux()
+	if len(btcAux.Tx.TxOut) != 3 {
 		return errors.New("invalid format of btc aux coinbase tx: less than 3 out")
 	}
 
@@ -103,8 +103,8 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
 
 	var btcBurnReward = false
-	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
-		btcCoinbaseTx := aux.CoinbaseAux.Tx
+	if len(btcAux.CoinbaseAux.Tx.TxOut) == 3 {
+		btcCoinbaseTx := btcAux.CoinbaseAux.Tx
 		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
 			btcCoinbaseTx.TxOut[0].Value == 0
 		if !btcJaxNetLinkOut {

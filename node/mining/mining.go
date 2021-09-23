@@ -579,7 +579,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	case true:
 		burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
 	case false:
-		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
+		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 	}
 
 	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress, burnReward)

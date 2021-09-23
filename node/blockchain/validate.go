@@ -129,8 +129,7 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 
 		// Ensure all transactions in the block are finalized.
 		for _, tx := range block.Transactions() {
-			if !chaindata.IsFinalizedTransaction(tx, blockHeight,
-				blockTime) {
+			if !chaindata.IsFinalizedTransaction(tx, blockHeight, blockTime) {
 
 				str := fmt.Sprintf("block contains unfinalized transaction %v", tx.Hash())
 				return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
