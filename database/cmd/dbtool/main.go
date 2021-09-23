@@ -133,7 +133,6 @@ func parseShardID(cliArg string) (uint32, error) {
 func relevantChain(shardID uint32) chain.IChainCtx {
 	if shardID > 0 {
 		return shard.Chain(shardID, activeNetParams, beacon.Chain(activeNetParams).GenesisBlock().Header.BeaconHeader(), beacon.Chain(activeNetParams).GenesisBlock().Transactions[0])
-		// return shard.ChainWithoutGenesis(shardID, activeNetParams)
 	}
 
 	return beacon.Chain(activeNetParams)

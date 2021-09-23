@@ -59,7 +59,6 @@ func (cmd *headersCmd) Execute(args []string) error {
 				totalHdrs++
 				return nil
 			})
-			// "4d45c13080a7289ffdca58a6489fc781bfd26595e15ba3cba89a5645aa9debdc"
 			log.Infof("Loading headers for %d blocks...", totalHdrs)
 			numLoaded := 0
 			startTime := time.Now()

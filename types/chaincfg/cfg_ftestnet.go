@@ -61,7 +61,7 @@ var FastNetParams = Params{
 	// MinerConfirmationWindow:       2016,
 	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       100,
-	ExpansionLimit:                1, // todo this makes dbtool work for raw scan in beacon case, figure out what to do
+	ExpansionLimit:                10, // todo this makes dbtool work for raw scan in beacon case, figure out what to do, this can break fastnet potentially
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentCSV: {
 			BitNumber:  0,

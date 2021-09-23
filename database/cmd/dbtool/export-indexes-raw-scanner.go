@@ -97,6 +97,7 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 
 	blockChain, err := prepareBlockchain(filepath.Join(cfg.DataDir, "shards.json"), shardID, dbBeacon, dbShard)
 	if err != nil {
+		log.Errorf("Error creating blockchain %s, aborting", err)
 		return err
 	}
 

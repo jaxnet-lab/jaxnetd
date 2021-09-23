@@ -41,19 +41,6 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 	return shard
 }
 
-func ChainWithoutGenesis(shardID uint32, params *chaincfg.Params) *shardChain {
-	shard := &shardChain{
-		ShardHeaderConstructor: wire.ShardHeaderConstructor{ID: shardID},
-	}
-
-	h, _ := chainhash.NewHashFromStr("4c1af1e4dee5acac317a9918ebb98631e6391a511b73a92b5a2c0bacca0024f2")
-
-	chainParams := params.ShardGenesis(shardID, h)
-	chainParams.PowParams.PowLimitBits = chaincfg.ShardPoWBits
-	shard.SetChainParams(*chainParams)
-	return shard
-}
-
 func (c *shardChain) SetChainParams(params chaincfg.Params) {
 	c.chainParams = params
 

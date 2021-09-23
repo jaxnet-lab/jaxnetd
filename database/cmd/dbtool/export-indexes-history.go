@@ -45,7 +45,6 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	eGroup.Go(func() error {
 		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"addresses_txs.csv"))
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.addressTxBus)
@@ -53,7 +52,6 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	eGroup.Go(func() error {
 		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"tx_ops.csv"))
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.txOperationBus)
@@ -61,7 +59,6 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	eGroup.Go(func() error {
 		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"utxo.csv"))
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.utxoBus)
@@ -69,7 +66,6 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	eGroup.Go(func() error {
 		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"inputs.csv"))
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.inputsBus)
@@ -121,6 +117,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 
 	blockChain, err := prepareBlockchain(filepath.Join(cfg.DataDir, "shards.json"), shardID, dbBeacon, dbShard)
 	if err != nil {
+		log.Errorf("Error creating blockchain %s, aborting", err)
 		return err
 	}
 
