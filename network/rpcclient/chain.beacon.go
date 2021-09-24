@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -465,6 +466,7 @@ func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int64) FutureGetBeac
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
 func (c *Client) GetBeaconBlockBySerialNumber(serialID int64) (*BlockResult, error) {
+	fmt.Println("enter handlerz")
 	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
 }
 
