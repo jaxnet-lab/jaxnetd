@@ -9,8 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -476,6 +476,75 @@ func (c *Client) GetShardBlockBySerialNumberAsync(serialID int64) FutureGetShard
 // block instead.
 func (c *Client) GetShardBlockBySerialNumber(serialID int64) (*BlockResult, error) {
 	return c.GetShardBlockBySerialNumberAsync(serialID).Receive()
+}
+
+// FutureGetBeaconBlockBySerialNumberResult is a future promise to deliver the result of a
+// GetBeaconBlockAsync RPC invocation (or an applicable error).
+type FutureListShardBlocksBySerialNumberResult struct {
+	client   *Client
+	serialID int64
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the raw
+// block requested from the server given its hash.
+func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "listShardBlocksBySerialNumber", r.serialID, false, false)
+	if err != nil {
+		return nil, err
+	}
+	// Unmarshal the raw result into a BlockResult.
+	var blockResults []jaxjson.GetShardBlockResult
+	err = json.Unmarshal(res, &blockResults)
+	if err != nil {
+		return nil, err
+	}
+
+	var output []*BlockResult
+	for i := 0; i < len(blockResults); i++ {
+		serializedBlock, err := hex.DecodeString(blockResults[i].Block)
+		if err != nil {
+			return nil, err
+		}
+
+		// Deserialize the block and return it.
+		var msgBlock = wire.EmptyShardBlock()
+		err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
+		if err != nil {
+			return nil, err
+		}
+
+		output = append(output, &BlockResult{
+			Block:        &msgBlock,
+			Height:       blockResults[i].Height,
+			SerialID:     blockResults[i].SerialID,
+			PrevSerialID: blockResults[i].PrevSerialID,
+		})
+	}
+
+	return output, nil
+}
+
+// GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetBeaconBlockBySerialNumber for the blocking version and more details.
+func (c *Client) ListShardBlocksBySerialNumberAsync(shardID uint32, serialID int64, limit int) FutureListShardBlocksBySerialNumberResult {
+	cmd := jaxjson.NewListShardBlocksBySerialNumberCmd(serialID, jaxjson.Int(0), jaxjson.Int(limit))
+	return FutureListShardBlocksBySerialNumberResult{
+		client:   c,
+		serialID: serialID,
+		Response: c.ForShard(shardID).sendCmd(cmd),
+	}
+}
+
+// GetBeaconBlockBySerialNumber returns a raw block from the server given its id.
+//
+// See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
+// block instead.
+func (c *Client) ListShardBlocksBySerialNumber(shardID uint32, serialID int64, limit int) ([]*BlockResult, error) {
+	return c.ListShardBlocksBySerialNumberAsync(shardID, serialID, limit).Receive()
 }
 
 // FutureGetShardBlockVerboseBySerialNumberResult is a future promise to deliver the result of a

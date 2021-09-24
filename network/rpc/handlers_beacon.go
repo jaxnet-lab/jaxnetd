@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/rs/zerolog"
@@ -42,13 +43,14 @@ func (server *BeaconRPC) ComposeHandlers() {
 
 func (server *BeaconRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
 	return map[jaxjson.MethodName]CommandHandler{
-		jaxjson.ScopedMethod("beacon", "getBeaconHeaders"):             server.handleGetHeaders,
-		jaxjson.ScopedMethod("beacon", "getBeaconBlock"):               server.handleGetBlock,
-		jaxjson.ScopedMethod("beacon", "getBeaconBlockHeader"):         server.handleGetBlockHeader,
-		jaxjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
-		jaxjson.ScopedMethod("beacon", "getBlockHeader"):               server.handleGetBlockHeader,
-		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):       server.handleGetBlockTemplate,
-		jaxjson.ScopedMethod("beacon", "listEADAddresses"):             server.handleListEADAddresses,
+		jaxjson.ScopedMethod("beacon", "getBeaconHeaders"):               server.handleGetHeaders,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlock"):                 server.handleGetBlock,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockHeader"):           server.handleGetBlockHeader,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"):   server.handleGetBlockBySerialNumber,
+		jaxjson.ScopedMethod("beacon", "listBeaconBlocksBySerialNumber"): server.handleListBlocksBySerialNumber,
+		jaxjson.ScopedMethod("beacon", "getBlockHeader"):                 server.handleGetBlockHeader,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):         server.handleGetBlockTemplate,
+		jaxjson.ScopedMethod("beacon", "listEADAddresses"):               server.handleListEADAddresses,
 		// jaxjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// jaxjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
 
@@ -111,18 +113,52 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.GetBeaconBlockBySerialNumberCmd)
 
+	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
+}
+
+func (server *BeaconRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*jaxjson.ListBeaconBlocksBySerialNumberCmd)
+
+	// this variable is for showing in which direction we are heading
+	// if limit < 0 then we are going downwards. This is achieved by multiplying offset
+	// with sign.
+	var sign int64 = 1
+	if *c.Limit < 0 {
+		sign = -1
+	}
+
+	// this is done to assure that offset is always positive and we just multiply it with sign
+	absLimit := int64(math.Abs(float64(*c.Limit)))
+
+	var (
+		offset int64
+		output []interface{}
+	)
+
+	for offset = 0; offset <= absLimit; offset++ {
+		block, err := server.getBlockBySerialID(c.Verbosity, c.SerialNumber+offset*sign)
+		if err != nil {
+			return nil, err
+		}
+
+		output = append(output, block)
+	}
+
+	return output, nil
+}
+
+func (server *BeaconRPC) getBlockBySerialID(verbosity *int, serialID int64) (interface{}, error) {
 	var hash *chainhash.Hash
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, c.SerialNumber)
+		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, serialID)
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
-	return server.getBlock(hash, c.Verbosity)
+	return server.getBlock(hash, verbosity)
 }
 
 // handleGetBlock implements the getblock command.

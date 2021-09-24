@@ -7,9 +7,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -467,6 +466,75 @@ func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int64) FutureGetBeac
 // block instead.
 func (c *Client) GetBeaconBlockBySerialNumber(serialID int64) (*BlockResult, error) {
 	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
+}
+
+// FutureGetBeaconBlockBySerialNumberResult is a future promise to deliver the result of a
+// GetBeaconBlockAsync RPC invocation (or an applicable error).
+type FutureListBeaconBlocksBySerialNumberResult struct {
+	client   *Client
+	serialID int64
+	Response chan *response
+}
+
+// Receive waits for the response promised by the future and returns the raw
+// block requested from the server given its hash.
+func (r FutureListBeaconBlocksBySerialNumberResult) Receive() ([]*BlockResult, error) {
+	res, err := r.client.waitForGetBlockBySerialNumberRes(r.Response, "listBeaconBlocksBySerialNumber", r.serialID, false, false)
+	if err != nil {
+		return nil, err
+	}
+	// Unmarshal the raw result into a BlockResult.
+	var blockResults []jaxjson.GetBeaconBlockResult
+	err = json.Unmarshal(res, &blockResults)
+	if err != nil {
+		return nil, err
+	}
+
+	var output []*BlockResult
+	for i := 0; i < len(blockResults); i++ {
+		serializedBlock, err := hex.DecodeString(blockResults[i].Block)
+		if err != nil {
+			return nil, err
+		}
+
+		// Deserialize the block and return it.
+		var msgBlock = wire.EmptyBeaconBlock()
+		err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
+		if err != nil {
+			return nil, err
+		}
+
+		output = append(output, &BlockResult{
+			Block:        &msgBlock,
+			Height:       blockResults[i].Height,
+			SerialID:     blockResults[i].SerialID,
+			PrevSerialID: blockResults[i].PrevSerialID,
+		})
+	}
+
+	return output, nil
+}
+
+// GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetBeaconBlockBySerialNumber for the blocking version and more details.
+func (c *Client) ListBeaconBlocksBySerialNumberAsync(serialID int64, limit int) FutureListBeaconBlocksBySerialNumberResult {
+	cmd := jaxjson.NewListBeaconBlocksBySerialNumberCmd(serialID, jaxjson.Int(0), jaxjson.Int(limit))
+	return FutureListBeaconBlocksBySerialNumberResult{
+		client:   c,
+		serialID: serialID,
+		Response: c.ForBeacon().sendCmd(cmd),
+	}
+}
+
+// GetBeaconBlockBySerialNumber returns a raw block from the server given its id.
+//
+// See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
+// block instead.
+func (c *Client) ListBeaconBlocksBySerialNumber(serialID int64, limit int) ([]*BlockResult, error) {
+	return c.ListBeaconBlocksBySerialNumberAsync(serialID, limit).Receive()
 }
 
 // FutureGetBeaconBlockVerboseBySerialNumberResult is a future promise to deliver the result of a
