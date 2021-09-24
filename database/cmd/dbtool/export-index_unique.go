@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"strconv"
 )
 
@@ -12,8 +13,8 @@ type UniqueIndex struct {
 	storage *CSVStorage
 }
 
-func NewUniqueIndex(name string) (UniqueIndex, error) {
-	storage, err := NewCSVStorage("archive/" + name + ".csv")
+func NewUniqueIndex(name string, shardID uint32) (UniqueIndex, error) {
+	storage, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+name+".csv"))
 	if err != nil {
 		return UniqueIndex{}, err
 	}
@@ -43,8 +44,8 @@ type AddressUniqueIndex struct {
 	UniqueIndex
 }
 
-func NewAddressIndex() AddressUniqueIndex {
-	i, _ := NewUniqueIndex("addresses")
+func NewAddressIndex(shardID uint32) AddressUniqueIndex {
+	i, _ := NewUniqueIndex("addresses", shardID)
 	return AddressUniqueIndex{UniqueIndex: i}
 }
 
@@ -64,8 +65,8 @@ type HashUniqueIndex struct {
 	UniqueIndex
 }
 
-func NewHashIndex() HashUniqueIndex {
-	i, _ := NewUniqueIndex("hashes")
+func NewHashIndex(shardID uint32) HashUniqueIndex {
+	i, _ := NewUniqueIndex("hashes", shardID)
 	return HashUniqueIndex{UniqueIndex: i}
 }
 

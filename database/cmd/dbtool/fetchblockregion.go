@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -33,34 +32,38 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 	}
 
 	// Ensure expected arguments.
-	if len(args) < 1 {
-		return errors.New("required block hash parameter not specified")
-	}
 	if len(args) < 2 {
-		return errors.New("required start offset parameter not " +
-			"specified")
+		return errors.New("required shard ID and block hash parameters are not specified")
 	}
 	if len(args) < 3 {
-		return errors.New("required region length parameter not " +
+		return errors.New("required shard ID and start offset parameters are not " +
+			"specified")
+	}
+	if len(args) < 4 {
+		return errors.New("required shard ID region length parameters are not " +
 			"specified")
 	}
 
 	// Parse arguments.
-	blockHash, err := chainhash.NewHashFromStr(args[0])
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+	blockHash, err := chainhash.NewHashFromStr(args[1])
 	if err != nil {
 		return err
 	}
-	startOffset, err := strconv.ParseUint(args[1], 10, 32)
+	startOffset, err := strconv.ParseUint(args[2], 10, 32)
 	if err != nil {
 		return err
 	}
-	regionLen, err := strconv.ParseUint(args[2], 10, 32)
+	regionLen, err := strconv.ParseUint(args[3], 10, 32)
 	if err != nil {
 		return err
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain)
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}
