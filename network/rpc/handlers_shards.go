@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/rs/zerolog"
@@ -64,7 +65,8 @@ func (server *ShardRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
 		jaxjson.ScopedMethod("shard", "getShardBlockHeader"):   server.handleGetBlockHeader,
 		jaxjson.ScopedMethod("shard", "getShardBlockTemplate"): server.handleGetBlockTemplate,
 		// jaxjson.ScopedMethod("shard", "getShardBlockHash"):     server.handleGetBlockHash,
-		jaxjson.ScopedMethod("shard", "getShardBlockBySerialNumber"): server.handleGetBlockBySerialNumber,
+		jaxjson.ScopedMethod("shard", "getShardBlockBySerialNumber"):   server.handleGetBlockBySerialNumber,
+		jaxjson.ScopedMethod("shard", "listShardBlocksBySerialNumber"): server.handleListBlocksBySerialNumber,
 	}
 }
 
@@ -123,17 +125,49 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-
 	c := cmd.(*jaxjson.GetShardBlockBySerialNumberCmd)
 
-	var hash *chainhash.Hash
+	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
+}
 
+func (server *ShardRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	c := cmd.(*jaxjson.ListShardBlocksBySerialNumberCmd)
+
+	// this variable is for showing in which direction we are heading
+	// if limit < 0 then we are going downwards. This is achieved by multiplying offset
+	// with sign.
+	var sign int64 = 1
+	if *c.Limit < 0 {
+		sign = -1
+	}
+
+	// this is done to assure that offset is always positive and we just multiply it with sign
+	absLimit := int64(math.Abs(float64(*c.Limit)))
+
+	var (
+		offset int64
+		output []interface{}
+	)
+
+	for offset = 0; offset <= absLimit; offset++ {
+		block, err := server.getBlockBySerialID(c.Verbosity, c.SerialNumber+offset*sign)
+		if err != nil {
+			return nil, err
+		}
+
+		output = append(output, block)
+	}
+
+	return output, nil
+}
+
+func (server *ShardRPC) getBlockBySerialID(verbosity *int, serialID int64) (interface{}, error) {
+	var hash *chainhash.Hash
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, c.SerialNumber)
+		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, serialID)
 		return err
 	})
-
 	if err != nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCBlockNotFound,
@@ -141,7 +175,7 @@ func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan 
 		}
 	}
 
-	return server.getBlock(hash, c.Verbosity)
+	return server.getBlock(hash, verbosity)
 }
 
 // handleGetBlock implements the getblock command.

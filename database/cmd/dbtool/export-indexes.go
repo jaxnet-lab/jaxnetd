@@ -22,31 +22,36 @@ func (cmd *ExportIndexesCmd) Execute(args []string) error {
 		return err
 	}
 	log.Info(args)
-	if len(args) < 1 {
-		return errors.New("<scanner-type> not passed; Usage: " + cmd.Usage())
+	if len(args) < 2 {
+		return errors.New("<shardID> <scanner-type> not passed; Usage: " + cmd.Usage())
+	}
+
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
 	}
 
 	var offset = 0
-	if len(args) >= 2 {
-		offset, err = strconv.Atoi(args[1])
+	if len(args) >= 3 {
+		offset, err = strconv.Atoi(args[2])
 		if err != nil {
 			return err
 		}
 	}
 	var limit *int
-	if len(args) >= 3 {
-		lmt, err := strconv.Atoi(args[2])
+	if len(args) >= 4 {
+		lmt, err := strconv.Atoi(args[3])
 		if err != nil {
 			return err
 		}
 		limit = &lmt
 	}
 
-	switch args[0] {
+	switch args[1] {
 	case "raw":
-		return rawScanner(offset)
+		return rawScanner(offset, shardID)
 	case "history":
-		return historyScanner(offset, limit)
+		return historyScanner(offset, limit, shardID)
 	}
 	return nil
 }

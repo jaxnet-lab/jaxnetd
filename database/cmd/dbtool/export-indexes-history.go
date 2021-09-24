@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -27,10 +27,10 @@ type histScanner struct {
 	inputsBus      chan row
 }
 
-func (histScanner) New() histScanner {
+func (histScanner) New(shardID uint32) histScanner {
 	return histScanner{
-		addresses:      NewAddressIndex(),
-		hashes:         NewHashIndex(),
+		addresses:      NewAddressIndex(shardID),
+		hashes:         NewHashIndex(shardID),
 		scripts:        NewUTXOIndex(),
 		addressTxBus:   make(chan row),
 		txOperationBus: make(chan row),
@@ -39,32 +39,32 @@ func (histScanner) New() histScanner {
 	}
 }
 
-func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context.Context) {
+func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context.Context, shardID uint32) {
 	eGroup.Go(func() error { return scanner.addresses.Write(writerCtx) })
 	eGroup.Go(func() error { return scanner.hashes.Write(writerCtx) })
 	eGroup.Go(func() error {
-		blocksFile, err := NewCSVStorage("archive/addresses_txs.csv")
+		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"addresses_txs.csv"))
 		if err != nil {
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.addressTxBus)
 	})
 	eGroup.Go(func() error {
-		blocksFile, err := NewCSVStorage("archive/tx_ops.csv")
+		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"tx_ops.csv"))
 		if err != nil {
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.txOperationBus)
 	})
 	eGroup.Go(func() error {
-		blocksFile, err := NewCSVStorage("archive/utxo.csv")
+		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"utxo.csv"))
 		if err != nil {
 			return err
 		}
 		return blocksFile.WriteData(writerCtx, scanner.utxoBus)
 	})
 	eGroup.Go(func() error {
-		blocksFile, err := NewCSVStorage("archive/inputs.csv")
+		blocksFile, err := NewCSVStorage(filepath.Join(cfg.DataDir, getChainDir(shardID), "archive"+"inputs.csv"))
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context
 	})
 }
 
-func historyScanner(offset int, limit *int) error {
+func historyScanner(offset int, limit *int, shardID uint32) error {
 	ctx, cancelScanning := context.WithCancel(context.Background())
 	writerCtx, cancelWrite := context.WithCancel(context.Background())
 
@@ -84,42 +84,40 @@ func historyScanner(offset int, limit *int) error {
 			cancelScanning()
 		}
 	}()
-	scanner := histScanner{}.New()
+	scanner := histScanner{}.New(shardID)
 	eGroup := errgroup.Group{}
 
-	scanner.runWriters(&eGroup, writerCtx)
+	scanner.runWriters(&eGroup, writerCtx, shardID)
 
 	eGroup.Go(func() error {
-		return scanner.scan(ctx, cancelWrite, offset, limit)
+		return scanner.scan(ctx, cancelWrite, offset, limit, shardID)
 	})
 
 	return eGroup.Wait()
 }
 
-func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc, offset int, limit *int) error {
+func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc, offset int, limit *int, shardID uint32) error {
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain) // todo: add shardID as arg
+	var dbShard database.DB
+	dbBeacon, err := loadBlockDB(beacon.Chain(activeNetParams))
 	if err != nil {
 		return err
 	}
+	defer dbBeacon.Close()
 
-	defer db.Close()
+	// we need dbShard only if we are dealing with shards. In order to properly close the db connection, we need to create the connection in this function
+	// if we pass it as nil to prepareBlockchain, the case will be handled safely thanks to early exit from function based on shardID
+	if shardID != 0 {
+		dbShard, err = loadBlockDB(relevantChain(shardID))
+		if err != nil {
+			return err
+		}
+		defer dbShard.Close()
+	}
 
-	interrupt := make(chan struct{})
-	var checkpoints []chaincfg.Checkpoint
-	var indexManager blockchain.IndexManager
-
-	blockChain, err := blockchain.New(&blockchain.Config{
-		DB:           db,
-		Interrupt:    interrupt,
-		ChainParams:  activeNetParams,
-		Checkpoints:  checkpoints,
-		IndexManager: indexManager,
-		TimeSource:   chaindata.NewMedianTime(),
-		SigCache:     txscript.NewSigCache(100000),
-		HashCache:    txscript.NewHashCache(100000),
-	})
+	blockChain, err := prepareBlockchain(filepath.Join(cfg.DataDir, "shards.json"), shardID, dbBeacon, dbShard)
 	if err != nil {
+		log.Errorf("Error creating blockchain %s, aborting", err)
 		return err
 	}
 

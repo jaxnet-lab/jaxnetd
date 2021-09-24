@@ -37,6 +37,7 @@ type config struct {
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
 	TestNet3       bool   `long:"testnet" description:"Use the test network"`
+	FastNet bool `long:"fastnet" description:"Use the fast network"`
 }
 
 // fileExists reports whether the named file or directory exists.
@@ -73,6 +74,8 @@ func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
 	case types.TestNet:
 		return "testnet"
+	case types.FastTestNet:
+		return "fastnet"
 	default:
 		return chainParams.Name
 	}
@@ -93,6 +96,10 @@ func setupGlobalConfig() error {
 	if cfg.SimNet {
 		numNets++
 		activeNetParams = &chaincfg.SimNetParams
+	}
+	if cfg.FastNet {
+		numNets++
+		activeNetParams = &chaincfg.FastNetParams
 	}
 	if numNets > 1 {
 		return errors.New("The testnet, regtest, and simnet params " +
