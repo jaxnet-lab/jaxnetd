@@ -115,6 +115,8 @@ func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan
 	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
 }
 
+// handleListBlocksBySerialNumber - returns transaction with specified serialNumber + number of txs which is equal to limit
+// so if you specify serialNumber = 10 and limit 2, then you will receive blocks with serialNumbers 10,11,12
 func (server *BeaconRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.ListBeaconBlocksBySerialNumberCmd)
 
