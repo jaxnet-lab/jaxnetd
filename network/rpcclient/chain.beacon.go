@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -466,12 +465,11 @@ func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int64) FutureGetBeac
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
 func (c *Client) GetBeaconBlockBySerialNumber(serialID int64) (*BlockResult, error) {
-	fmt.Println("enter handlerz")
 	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
 }
 
-// FutureGetBeaconBlockBySerialNumberResult is a future promise to deliver the result of a
-// GetBeaconBlockAsync RPC invocation (or an applicable error).
+// FutureListBeaconBlocksBySerialNumberResult is a future promise to deliver the result of a
+// ListBeaconBlocksAsync RPC invocation (or an applicable error).
 type FutureListBeaconBlocksBySerialNumberResult struct {
 	client   *Client
 	serialID int64
@@ -517,11 +515,11 @@ func (r FutureListBeaconBlocksBySerialNumberResult) Receive() ([]*BlockResult, e
 	return output, nil
 }
 
-// GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// ListBeaconBlocksBySerialNumberAsync returns an instance of a type that can be used to get the
 // result of the RPC at some future time by invoking the Receive function on the
 // returned instance.
 //
-// See GetBeaconBlockBySerialNumber for the blocking version and more details.
+// See ListBeaconBlocksBySerialNumber for the blocking version and more details.
 func (c *Client) ListBeaconBlocksBySerialNumberAsync(serialID int64, limit int) FutureListBeaconBlocksBySerialNumberResult {
 	cmd := jaxjson.NewListBeaconBlocksBySerialNumberCmd(serialID, jaxjson.Int(0), jaxjson.Int(limit))
 	return FutureListBeaconBlocksBySerialNumberResult{
@@ -531,7 +529,7 @@ func (c *Client) ListBeaconBlocksBySerialNumberAsync(serialID int64, limit int) 
 	}
 }
 
-// GetBeaconBlockBySerialNumber returns a raw block from the server given its id.
+// ListBeaconBlocksBySerialNumber returns a list of raw blocks from the server given its id and limit.
 //
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.

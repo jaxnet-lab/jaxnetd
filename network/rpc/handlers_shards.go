@@ -131,7 +131,7 @@ func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan 
 }
 
 func (server *ShardRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.ListBeaconBlocksBySerialNumberCmd)
+	c := cmd.(*jaxjson.ListShardBlocksBySerialNumberCmd)
 
 	// this variable is for showing in which direction we are heading
 	// if limit < 0 then we are going downwards. This is achieved by multiplying offset

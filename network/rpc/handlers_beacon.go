@@ -111,7 +111,6 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
 func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	fmt.Println("we enter here")
 	c := cmd.(*jaxjson.GetBeaconBlockBySerialNumberCmd)
 	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
 }

@@ -470,7 +470,7 @@ func (c *Client) GetShardBlockBySerialNumberAsync(serialID int64) FutureGetShard
 	}
 }
 
-// GetShardBlockBySerialNumber returns a raw block from the server given its id.
+// GetShardBlockBySerialNumber returns a list of raw blocks from the server given its id and limit.
 //
 // See GetShardBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
@@ -478,7 +478,7 @@ func (c *Client) GetShardBlockBySerialNumber(serialID int64) (*BlockResult, erro
 	return c.GetShardBlockBySerialNumberAsync(serialID).Receive()
 }
 
-// FutureGetBeaconBlockBySerialNumberResult is a future promise to deliver the result of a
+// FutureListShardBlocksBySerialNumberResult is a future promise to deliver the result of a
 // GetBeaconBlockAsync RPC invocation (or an applicable error).
 type FutureListShardBlocksBySerialNumberResult struct {
 	client   *Client
@@ -525,11 +525,11 @@ func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, er
 	return output, nil
 }
 
-// GetBeaconBlockBySerialNumberAsync returns an instance of a type that can be used to get the
+// ListShardBlocksBySerialNumberAsync returns an instance of a type that can be used to get the
 // result of the RPC at some future time by invoking the Receive function on the
 // returned instance.
 //
-// See GetBeaconBlockBySerialNumber for the blocking version and more details.
+// See ListShardBlocksBySerialNumber for the blocking version and more details.
 func (c *Client) ListShardBlocksBySerialNumberAsync(shardID uint32, serialID int64, limit int) FutureListShardBlocksBySerialNumberResult {
 	cmd := jaxjson.NewListShardBlocksBySerialNumberCmd(serialID, jaxjson.Int(0), jaxjson.Int(limit))
 	return FutureListShardBlocksBySerialNumberResult{
@@ -539,7 +539,7 @@ func (c *Client) ListShardBlocksBySerialNumberAsync(shardID uint32, serialID int
 	}
 }
 
-// GetBeaconBlockBySerialNumber returns a raw block from the server given its id.
+// ListShardBlocksBySerialNumber returns a raw block from the server given its id.
 //
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
