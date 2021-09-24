@@ -24,7 +24,7 @@ func TestMerkleBlock(t *testing.T) {
 	enc := BaseEncoding
 
 	// Block 1 header.
-	prevHash := blockOne.Header.PrevBlock()
+	prevHash := blockOne.Header.BlocksMerkleMountainRoot()
 	merkleHash := blockOne.Header.MerkleRoot()
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
@@ -117,7 +117,7 @@ func TestMerkleBlock(t *testing.T) {
 // the latest protocol version and decoding with BIP0031Version.
 func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
-	prevHash := blockOne.Header.PrevBlock()
+	prevHash := blockOne.Header.BlocksMerkleMountainRoot()
 	merkleHash := blockOne.Header.MerkleRoot()
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()

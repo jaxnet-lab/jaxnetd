@@ -15,9 +15,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-// medianTimeBlocks is the number of previous blocks which should be
+// beaconMedianTimeBlocks is the number of previous blocks which should be
 // used to calculate the median time used to validate block timestamps.
-const medianTimeBlocks = 11
+const beaconMedianTimeBlocks = 11
 
 // BeaconBlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.  The main chain is
@@ -127,11 +127,11 @@ func (node *BeaconBlockNode) RelativeAncestor(distance int32) IBlockNode {
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) CalcPastMedianTime() time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
-	// the median per the number defined by the constant medianTimeBlocks.
-	timestamps := make([]int64, medianTimeBlocks)
+	// the median per the number defined by the constant beaconMedianTimeBlocks.
+	timestamps := make([]int64, beaconMedianTimeBlocks)
 	numNodes := 0
 	iterNode := IBlockNode(node)
-	for i := 0; i < medianTimeBlocks && iterNode != nil; i++ {
+	for i := 0; i < beaconMedianTimeBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.Timestamp()
 		numNodes++
 
@@ -154,7 +154,7 @@ func (node *BeaconBlockNode) CalcPastMedianTime() time.Time {
 	// will always be an odd number of blocks in the set per the constant.
 	//
 	// This code follows suit to ensure the same rules are used, however, be
-	// aware that should the medianTimeBlocks constant ever be changed to an
+	// aware that should the beaconMedianTimeBlocks constant ever be changed to an
 	// even number, this code will be wrong.
 	medianTimestamp := timestamps[numNodes/2]
 	return time.Unix(medianTimestamp, 0)

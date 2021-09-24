@@ -27,8 +27,10 @@ import (
 func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	// The height of this block is one more than the referenced previous
 	// block.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	prevNode := b.index.LookupNode(&prevHash)
+
 	if prevNode == nil {
 		str := fmt.Sprintf("previous block %s is unknown", prevHash)
 		return false, chaindata.NewRuleError(chaindata.ErrPreviousBlockUnknown, str)

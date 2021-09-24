@@ -21,8 +21,9 @@ const (
 	BeaconEpochLength = 2048
 	BeaconTimeDelta   = 600 // in seconds
 
-	ShardEpochLength = 2335 // (4 blocks/per minute * 1 hour * 1 day) in seconds
-	ShardTimeDelta   = 37   // in seconds
+	// ShardEpochLength = 2304  // (1.6 blocks/per hour * 1 day) in blocks
+	ShardEpochLength = 2048
+	ShardTimeDelta   = 37500 // 37.5s in milliseconds
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -284,8 +285,8 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 	cfg.GenesisHash = hash
 	cfg.IsBeacon = false
 
-	cfg.PowParams.TargetTimePerBlock = time.Second * ShardTimeDelta
-	cfg.PowParams.TargetTimespan = time.Second * ShardTimeDelta * ShardEpochLength
+	cfg.PowParams.TargetTimePerBlock = time.Millisecond * ShardTimeDelta
+	cfg.PowParams.TargetTimespan = time.Millisecond * ShardTimeDelta * ShardEpochLength
 
 	cfg.PowParams.PowLimit = shardChainPowLimit
 	cfg.PowParams.PowLimitBits = ShardPoWBits

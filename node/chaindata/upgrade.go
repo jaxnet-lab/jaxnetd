@@ -69,7 +69,7 @@ func MigrateBlockIndex(db database.DB) error {
 	err := db.Update(func(dbTx database.Tx) error {
 		v1BlockIdxBucket := dbTx.Metadata().Bucket(v1BucketName)
 		if v1BlockIdxBucket == nil {
-			return fmt.Errorf("Bucket %s does not exist", v1BucketName)
+			return fmt.Errorf("ducket %s does not exist", v1BucketName)
 		}
 
 		log.Info().Msg("Re-indexing block information in the database. This might take a while...")
@@ -165,7 +165,7 @@ func readBlockTree(chain chain.IChainCtx, v1BlockIdxBucket database.Bucket) (map
 		}
 
 		blockHash := header.BlockHash()
-		prevHash := header.PrevBlock()
+		prevHash := header.BlocksMerkleMountainRoot() // todo: remove this
 
 		if blocksMap[blockHash] == nil {
 			blocksMap[blockHash] = &blockChainContext{height: -1}

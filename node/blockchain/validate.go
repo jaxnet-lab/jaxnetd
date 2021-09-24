@@ -276,7 +276,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	}
 
 	// Ensure the view is for the node being checked.
-	parentHash := block.MsgBlock().Header.PrevBlock()
+	parentHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if !view.BestHash().IsEqual(&parentHash) {
 		return chaindata.AssertError(fmt.Sprintf("inconsistent view when "+
 			"checking block connection: best hash is %v instead "+
@@ -514,9 +514,9 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	// current chain.
 	tip := b.bestChain.Tip()
 	header := block.MsgBlock().Header
-	if tip.GetHash() != header.PrevBlock() {
+	if tip.GetHash() != header.BlocksMerkleMountainRoot() { // TODO: FIX MMR ROOT
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
-			"instead got %v", tip.GetHash(), header.PrevBlock())
+			"instead got %v", tip.GetHash(), header.BlocksMerkleMountainRoot())
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 

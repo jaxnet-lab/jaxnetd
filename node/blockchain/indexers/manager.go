@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -80,7 +80,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 	if err != nil {
 		return err
 	}
-	h := block.MsgBlock().Header.PrevBlock()
+	h := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if !curTipHash.IsEqual(&h) {
 		return AssertError(fmt.Sprintf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
@@ -125,7 +125,7 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Bl
 	}
 
 	// Update the current index tip.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	return dbPutIndexerTip(dbTx, idxKey, &prevHash, block.Height()-1)
 }
 
@@ -344,7 +344,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				}
 
 				// Update the tip to the previous block.
-				h := block.MsgBlock().Header.PrevBlock()
+				h := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 				hash = &h
 				height--
 

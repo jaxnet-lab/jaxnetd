@@ -591,7 +591,7 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil
 
 	// Update the best Hash for view to the previous block since all of the
 	// transactions for the current block have been disconnected.
-	h := block.MsgBlock().Header.PrevBlock()
+	h := block.MsgBlock().Header.MerkleRoot() // todo: FIX MMR ROOT
 	view.SetBestHash(&h)
 	return nil
 }

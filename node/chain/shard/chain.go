@@ -64,7 +64,7 @@ func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
-			c.chainParams.GenesisBlock.PrevBlock,
+			c.chainParams.GenesisBlock.PrevBlock, // todo: Put actual MMR Root
 			c.chainParams.GenesisBlock.MerkleRoot,
 			c.chainParams.GenesisBlock.Bits,
 			c.chainParams.GenesisBlock.BCHeader,

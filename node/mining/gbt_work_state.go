@@ -414,7 +414,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
-	prevHash := header.PrevBlock()
+	prevHash := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -435,7 +435,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	reply := jaxjson.GetBeaconBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.PrevBlock().String(),
+		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
 		Height:       int64(template.Height),
 		SerialID:     prevSerialID + 1,
 		PrevSerialID: prevSerialID,
@@ -506,7 +506,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if err != nil {
 		return nil, err
 	}
-	prevHash := header.PrevBlock()
+	prevHash := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -527,7 +527,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	reply := jaxjson.GetShardBlockTemplateResult{
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.PrevBlock().String(),
+		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
 		Height:       int64(template.Height),
 		SerialID:     prevSerialID + 1,
 		PrevSerialID: prevSerialID,

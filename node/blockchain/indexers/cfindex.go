@@ -8,10 +8,10 @@ package indexers
 import (
 	"errors"
 
+	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/gcs"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/gcs/builder"
-	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -184,7 +184,7 @@ func storeFilter(dbTx database.Tx, block *jaxutil.Block, f *gcs.Filter,
 
 	// Then fetch the previous block's filter header.
 	var prevHeader *chainhash.Hash
-	ph := block.MsgBlock().Header.PrevBlock()
+	ph := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if ph.IsEqual(&zeroHash) {
 		prevHeader = &zeroHash
 	} else {

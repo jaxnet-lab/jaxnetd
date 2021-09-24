@@ -33,7 +33,7 @@ func (c *beaconChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
 		Header: wire.NewBeaconBlockHeader(
 			wire.NewBVersion(c.chainParams.GenesisBlock.Version),
-			c.chainParams.GenesisBlock.PrevBlock,
+			c.chainParams.GenesisBlock.PrevBlock, // todo: put actual MMR Root
 			c.chainParams.GenesisBlock.MerkleRoot,
 			chainhash.Hash{},
 			c.chainParams.GenesisBlock.Timestamp,

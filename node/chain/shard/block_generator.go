@@ -41,6 +41,7 @@ func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, prevHash, merkleRootHas
 		return nil, err
 	}
 
+	// todo: put actual MMR
 	return wire.NewShardBlockHeader(prevHash, merkleRootHash, bits, *header, cAux), nil
 }
 

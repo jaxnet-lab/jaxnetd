@@ -25,8 +25,8 @@ type BlockHeader interface {
 
 	Version() BVersion
 
-	PrevBlock() chainhash.Hash
-	SetPrevBlock(prevBlock chainhash.Hash)
+	BlocksMerkleMountainRoot() chainhash.Hash
+	SetBlocksMerkleMountainRoot(prevBlock chainhash.Hash)
 
 	Timestamp() time.Time
 	SetTimestamp(time.Time)

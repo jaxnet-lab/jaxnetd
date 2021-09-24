@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	shardMedianTimeBlocks = 11
+	shardMedianTimeBlocks = 23
 )
 
 // ShardBlockNode represents a block within the block chain and is primarily used to

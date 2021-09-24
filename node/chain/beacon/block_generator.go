@@ -51,7 +51,7 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleR
 	// doesn't support better.
 	header := wire.NewBeaconBlockHeader(
 		version,
-		prevHash,
+		prevHash, // TODO: FIX MMR ROOT
 		merkleRootHash,
 		chainhash.Hash{},
 		timestamp,

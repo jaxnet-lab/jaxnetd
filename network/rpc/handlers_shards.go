@@ -206,9 +206,9 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	beaconHeader := blockHeader.BeaconHeader()
 	blockReply := jaxjson.GetShardBlockVerboseResult{
 		Hash:          hash.String(),
-		ShardHash:     blockHeader.ShardBlockHash().String(),
+		ShardHash:     blockHeader.ShardExclusiveBlockHash().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
-		PreviousHash:  blockHeader.PrevBlock().String(),
+		PreviousHash:  blockHeader.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
 		Time:          blockHeader.Timestamp().Unix(),
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        int64(blockHeight),
@@ -341,13 +341,13 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	beaconHeader := blockHeader.BeaconHeader()
 	blockHeaderReply := jaxjson.GetShardBlockHeaderVerboseResult{
 		Hash:          c.Hash,
-		ShardHash:     shardHeader.ShardBlockHash().String(),
+		ShardHash:     shardHeader.ShardExclusiveBlockHash().String(),
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        blockHeight,
 		SerialID:      serialID,
 		PrevSerialID:  prevSerialID,
 		NextHash:      nextHashString,
-		PreviousHash:  blockHeader.PrevBlock().String(),
+		PreviousHash:  blockHeader.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),
 		K:             strconv.FormatInt(int64(blockHeader.K()), 16),
@@ -365,7 +365,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 			MerkleMountainRange: beaconHeader.MergeMiningRoot().String(),
 			Time:                beaconHeader.Timestamp().Unix(),
 			Bits:                strconv.FormatInt(int64(beaconHeader.Bits()), 16),
-			PreviousHash:        beaconHeader.PrevBlock().String(),
+			PreviousHash:        beaconHeader.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
 			Version:             int32(beaconHeader.Version()),
 			VersionHex:          fmt.Sprintf("%08x", beaconHeader.Version()),
 			Nonce:               uint64(beaconHeader.Nonce()),
@@ -534,7 +534,7 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *jaxjson.Template
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if !expectedPrevHash.IsEqual(&prevHash) {
 		return "bad-prevblk", nil
 	}
@@ -595,7 +595,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.Template.Block.Header.PrevBlock()
+	prevTemplateHash := state.Template.Block.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if !prevHash.IsEqual(&prevTemplateHash) ||
 		lastGenerated != state.LastGenerated.Unix() {
 
@@ -642,7 +642,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block BlockChain.
-	h := state.Template.Block.Header.PrevBlock()
+	h := state.Template.Block.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	submitOld := prevHash.IsEqual(&h)
 	result, err := state.ShardBlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {

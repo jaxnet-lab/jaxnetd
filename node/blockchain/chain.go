@@ -416,7 +416,7 @@ func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 			break
 		}
 		orphanRoot = prevHash
-		h := orphan.block.MsgBlock().Header.PrevBlock()
+		h := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 		prevHash = &h
 	}
 
@@ -438,7 +438,7 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash := orphan.block.MsgBlock().Header.PrevBlock()
+	prevHash := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	orphans := b.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
@@ -510,7 +510,7 @@ func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
 	b.orphans[*block.Hash()] = oBlock
 
 	// Add to previous hash lookup index for faster dependency lookups.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }
 
@@ -749,11 +749,10 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	bestBlockHash := b.bestChain.Tip().GetHash()
 	if !prevHash.IsEqual(&bestBlockHash) {
-		return chaindata.AssertError("connectBlock must be called with a block " +
-			"that extends the main chain")
+		return chaindata.AssertError("connectBlock must be called with a block that extends the main chain")
 	}
 
 	// Sanity check the correct number of stxos are provided.
@@ -1351,7 +1350,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 
 	// We are extending the main (best) chain with a new block.  This is the
 	// most common case.
-	parentHash := block.MsgBlock().Header.PrevBlock()
+	parentHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	h := b.bestChain.Tip().GetHash()
 	if parentHash.IsEqual(&h) {
 		// Skip checks if node has already been fully validated.

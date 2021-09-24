@@ -168,10 +168,10 @@ func (miner *CPUMiner) submitBlock(block *jaxutil.Block) bool {
 	// a new block, but the check only happens periodically, so it is
 	// possible a block was found and submitted in between.
 	msgBlock := block.MsgBlock()
-	h := msgBlock.Header.PrevBlock()
+	h := msgBlock.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if !h.IsEqual(&miner.generator.BestSnapshot().Hash) {
 		miner.log.Debug().Msgf("Block submitted via CPU miner with previous block %s is stale",
-			msgBlock.Header.PrevBlock)
+			msgBlock.Header.BlocksMerkleMountainRoot())
 		return false
 	}
 
@@ -238,7 +238,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Update the extra nonce in the block template with the
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
-		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, 0,  extraNonce+enOffset)
+		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, 0, extraNonce+enOffset)
 
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
@@ -256,7 +256,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				// The current block is stale if the best block
 				// has changed.
 				best := miner.generator.BestSnapshot()
-				h := header.PrevBlock()
+				h := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 				if !(&h).IsEqual(&best.Hash) {
 					return false
 				}

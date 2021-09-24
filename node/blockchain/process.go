@@ -190,7 +190,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// Handle orphan blocks.
-	prevHash := blockHeader.PrevBlock()
+	prevHash := blockHeader.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if err := b.blockGen.ValidateBlockHeader(blockHeader); err != nil {
 		return false, false, err
 	}
