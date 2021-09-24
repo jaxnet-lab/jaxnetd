@@ -141,7 +141,7 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 			return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
 		}
 		btcJaxBurn := btcBurnReward && beaconJaxBurnReward
-		if !btcJaxBurn && shardJaxBurnReward {
+		if !btcJaxBurn && !shardJaxBurnReward {
 			return errors.New("invalid format of shard coinbase tx: BTC & JaxNet not burned, Jax reward prohibited")
 		}
 		if btcJaxBurn && shardJaxBurnReward {
