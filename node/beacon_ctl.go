@@ -6,6 +6,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/rs/zerolog"
@@ -48,6 +49,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 	params.IsBeacon = true
 	beaconChain := beacon.Chain(params)
 
+	fmt.Printf("%+v\n", params)
 	// initialize chainProvider instance
 	{
 		// Load the block database.
