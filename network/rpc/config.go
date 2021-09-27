@@ -6,7 +6,6 @@ package rpc
 
 import (
 	"crypto/tls"
-	"fmt"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"io/ioutil"
 	"net"
@@ -65,8 +64,6 @@ func (cfg *Config) SetupRPCListeners() ([]net.Listener, error) {
 			Certificates: []tls.Certificate{keypair},
 			MinVersion:   tls.VersionTLS12,
 		}
-
-		fmt.Printf("keyPair: %+v\n", keypair)
 
 		// Change the standard net.Listen function to the tls one.
 		listenFunc = func(net string, laddr string) (net.Listener, error) {
