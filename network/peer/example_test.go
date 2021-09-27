@@ -13,10 +13,10 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // mockRemotePeer creates a basic inbound peer listening on the simnet port for

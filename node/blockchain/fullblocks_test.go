@@ -10,20 +10,20 @@ package blockchain_test
 //import (
 //	"bytes"
 //	"fmt"
-//	"gitlab.com/jaxnet/core/shard.core/btcutil"
-//	"gitlab.com/jaxnet/core/shard.core/types"
+//	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+//	"gitlab.com/jaxnet/jaxnetd/types"
 //	"os"
 //	"path/filepath"
 //	"testing"
 //
-//	"gitlab.com/jaxnet/core/shard.core/shards/blockchain"
-//	"gitlab.com/jaxnet/core/shard.core/shards/blockchain/fullblocktests"
-//	"gitlab.com/jaxnet/core/shard.core/chaincfg"
-//	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-//	"gitlab.com/jaxnet/core/shard.core/database"
-//	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-//	"gitlab.com/jaxnet/core/shard.core/types/wire"
-//	"gitlab.com/jaxnet/core/shard.core/txscript"
+//	"gitlab.com/jaxnet/jaxnetd/shards/blockchain"
+//	"gitlab.com/jaxnet/jaxnetd/shards/blockchain/fullblocktests"
+//	"gitlab.com/jaxnet/jaxnetd/chaincfg"
+//	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+//	"gitlab.com/jaxnet/jaxnetd/database"
+//	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+//	"gitlab.com/jaxnet/jaxnetd/types/wire"
+//	"gitlab.com/jaxnet/jaxnetd/txscript"
 //)
 //
 //const (
@@ -154,7 +154,7 @@ package blockchain_test
 //	// specified in the test.
 //	testAcceptedBlock := func(item fullblocktests.AcceptedBlock) {
 //		blockHeight := item.Height
-//		block := btcutil.NewBlock(item.Block)
+//		block := jaxutil.NewBlock(item.Block)
 //		block.SetHeight(blockHeight)
 //		t.Logf("Testing block %s (hash %s, height %d)",
 //			item.Name, block.Hash(), blockHeight)
@@ -188,7 +188,7 @@ package blockchain_test
 //	// specified in the test.
 //	testRejectedBlock := func(item fullblocktests.RejectedBlock) {
 //		blockHeight := item.Height
-//		block := btcutil.NewBlock(item.Block)
+//		block := jaxutil.NewBlock(item.Block)
 //		block.SetHeight(blockHeight)
 //		t.Logf("Testing block %s (hash %s, height %d)",
 //			item.Name, block.Hash(), blockHeight)
@@ -245,7 +245,7 @@ package blockchain_test
 //	// orphan or rejected with a rule violation.
 //	testOrphanOrRejectedBlock := func(item fullblocktests.OrphanOrRejectedBlock) {
 //		blockHeight := item.Height
-//		block := btcutil.NewBlock(item.Block)
+//		block := jaxutil.NewBlock(item.Block)
 //		block.SetHeight(blockHeight)
 //		t.Logf("Testing block %s (hash %s, height %d)",
 //			item.Name, block.Hash(), blockHeight)
@@ -273,7 +273,7 @@ package blockchain_test
 //	// block specified in the provided test instance.
 //	testExpectedTip := func(item fullblocktests.ExpectedTip) {
 //		blockHeight := item.Height
-//		block := btcutil.NewBlock(item.Block)
+//		block := jaxutil.NewBlock(item.Block)
 //		block.SetHeight(blockHeight)
 //		t.Logf("Testing tip for block %s (hash %s, height %d)",
 //			item.Name, block.Hash(), blockHeight)

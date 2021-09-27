@@ -282,7 +282,7 @@ func hashToInt(hash []byte, c elliptic.Curve) *big.Int {
 // in the inner loop in Step 1. The counter provided is actually the j parameter
 // of the loop * 2 - on the first iteration of j we do the R case, else the -R
 // case in step 1.6. This counter is used in the bitcoin compressed signature
-// format and thus we match bitcoind's behaviour here.
+// format and thus we match jaxnetd's behaviour here.
 func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 	iter int, doChecks bool) (*PublicKey, error) {
 	// 1.1 x = (n * i) + r
@@ -356,7 +356,7 @@ func SignCompact(curve *KoblitzCurve, key *PrivateKey,
 		return nil, err
 	}
 
-	// bitcoind checks the bit length of R and S here. The ecdsa signature
+	// jaxnetd checks the bit length of R and S here. The ecdsa signature
 	// algorithm returns R and S mod N therefore they will be the bitsize of
 	// the curve, and thus correctly sized.
 	for i := 0; i < (curve.H+1)*2; i++ {

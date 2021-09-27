@@ -11,26 +11,26 @@ import (
 
 const metricsNamespace = "jax_core"
 
-//metricsManager metrics manager
+// metricsManager metrics manager
 type metricsManager struct {
 	metrics  []IMetric
 	interval time.Duration
 	closing  bool
 }
 
-//IMetric metric reader
+// IMetric metric reader
 type IMetric interface {
 	Read()
 }
 
-//IMetricManager metric manager
+// IMetricManager metric manager
 type IMetricManager interface {
 	Add(metrics ...IMetric)
 	Listen(route string, port uint16) error
 }
 
-//Metrics creates metric instance
-func Metrics(ctx context.Context, interval time.Duration) IMetricManager {
+// MetricsManager creates metric instance
+func MetricsManager(ctx context.Context, interval time.Duration) IMetricManager {
 	res := &metricsManager{
 		interval: interval,
 	}

@@ -8,7 +8,7 @@ package types
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 	// single bitcoin inv message.
 	MaxInvPerMsg = 50000
 
-	// Maximum payload size for an inventory vector.
+	// MaxInvVectPayload is maximum payload size for an inventory vector.
 	MaxInvVectPayload = 4 + chainhash.HashSize
 
 	// InvWitnessFlag denotes that the inventory vector type is requesting,

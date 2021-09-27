@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -9,9 +10,9 @@ import (
 	"path/filepath"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 )
 
 type DBCtl struct {
@@ -23,7 +24,7 @@ type DBCtl struct {
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeConfig) (database.DB, error) {
+func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg InstanceConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
@@ -48,7 +49,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 	// removeRegressionDB(cfg, dbPath)
 
 	ctrl.logger.Info().Msgf("Loading block database from '%s'", dbPath)
-	db, err := database.Open(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
+	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't exist.
 		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
@@ -63,7 +64,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg NodeCo
 			return nil, err
 		}
 
-		db, err = database.Create(cfg.DbType, chain, dbPath, cfg.ChainParams().Net)
+		db, err = database.Create(cfg.DbType, chain, dbPath)
 		if err != nil {
 			return nil, err
 		}
@@ -87,6 +88,9 @@ func (ctrl *DBCtl) cleanIndexes(ctx context.Context, cfg *Config, db database.DB
 
 	if cfg.DropTxIndex {
 		if err := indexers.DropTxIndex(db, ctx.Done()); err != nil {
+			return cleanPerformed, err
+		}
+		if err := indexers.DropOrphanTxIndex(db, ctx.Done()); err != nil {
 			return cleanPerformed, err
 		}
 	}
@@ -114,7 +118,7 @@ func (ctrl *DBCtl) blockDbPath(dataDir string, chain string, dbType string) stri
 // warnMultipleDBs shows a warning if multiple block database types are detected.
 // This is not a situation most users want.  It is handy for development however
 // to support multiple side-by-side databases.
-func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg NodeConfig) {
+func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg InstanceConfig) {
 	// This is intentionally not using the known db types which depend
 	// on the database types compiled into the binary since we want to
 	// detect legacy db types as well.

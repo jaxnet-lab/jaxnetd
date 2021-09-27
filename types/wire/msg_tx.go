@@ -7,12 +7,13 @@ package wire
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
@@ -214,6 +215,9 @@ type TxIn struct {
 	SignatureScript  []byte
 	Witness          TxWitness
 	Sequence         uint32
+	// Age is an internal field that needed for runtime processing,
+	// it will be ignored during serialization and hashing.
+	Age int32
 }
 
 // SerializeSize returns the number of bytes it would take to serialize the
@@ -283,14 +287,14 @@ func NewTxOut(value int64, pkScript []byte) *TxOut {
 }
 
 const (
-	TxVerRegular           = 1 // TxVerRegular is a normal simple transaction
-	TxVerTimeLock          = 2 // TxVerTimeLock
-	TxVerTimeLockAllowance = 3 //
-	TxVerEADAction         = 4 //
+	TxVerRegular   = 1 // TxVerRegular is a simple transaction.
+	TxVerTimeLock  = 2 // TxVerTimeLock - tx will not be accepted until the LockTime expires.
+	TxVerEADAction = 3 // TxVerEADAction is a tx for EAD Address Registration/Revoking
 )
+
 const (
 	TxMarkNone      int32 = 0
-	TxMarkShardSwap int32 = 1 << 16
+	TxMarkShardSwap int32 = 1 << 16 // 65536; Regular+ShardSwap=65537; TimeLock+ShardSwap=65538
 )
 
 // MsgTx implements the Message interface and represents a bitcoin tx message.
@@ -321,10 +325,7 @@ func (msg *MsgTx) AddTxOut(to *TxOut) {
 
 // SetMark adds a marker to the message.
 func (msg *MsgTx) SetMark(mark int32) {
-
-	if msg.Version&mark != mark {
-		msg.Version = msg.Version ^ mark
-	}
+	msg.Version = msg.Version | mark
 }
 
 func (msg *MsgTx) SwapTx() bool {
@@ -789,6 +790,16 @@ func (msg *MsgTx) HasWitness() bool {
 	}
 
 	return false
+}
+
+func (msg *MsgTx) SerializeToHex() (string, error) {
+	buf := bytes.NewBuffer(nil)
+	err := msg.Serialize(buf)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(buf.Bytes()), nil
 }
 
 // Serialize encodes the transaction to w using a format that suitable for

@@ -14,7 +14,7 @@ demonstrate clean shutdown.
 The first step is to use `go get` to download and install the rpcclient package:
 
 ```bash
-$ go get gitlab.com/jaxnet/core/shard.core/rpc/rpcclient
+$ go get gitlab.com/jaxnet/jaxnetd/rpc/rpcclient
 ```
 
 Next, modify the `main.go` source to specify the correct RPC username and
@@ -28,7 +28,7 @@ password for the RPC server:
 Finally, navigate to the example's directory and run it with:
 
 ```bash
-$ cd $GOPATH/src/gitlab.com/jaxnet/core/shard.core/rpc/rpcclient/examples/btcwalletwebsockets
+$ cd $GOPATH/src/gitlab.com/jaxnet/jaxnetd/rpc/rpcclient/examples/btcwalletwebsockets
 $ go run *.go
 ```
 

@@ -17,41 +17,41 @@ var (
 	Disabled zerolog.Logger
 
 	DefaultLevel   = zerolog.InfoLevel
-	DefaultLogFile = "shard.core.log"
+	DefaultLogFile = "jaxnetd.log"
 )
 
 func init() {
 	Disabled = zerolog.Nop()
 }
 
-// Configuration for logging
+// Config for logging
 type Config struct {
 	// Disable console logging
-	DisableConsoleLog bool `yaml:"disable_console_log"`
+	DisableConsoleLog bool `yaml:"disable_console_log" toml:"disable_console_log"`
 	// LogsAsJson makes the log framework log JSON
-	LogsAsJson bool `yaml:"logs_as_json"`
+	LogsAsJson bool `yaml:"logs_as_json" toml:"logs_as_json"`
 	// FileLoggingEnabled makes the framework log to a file
 	// the fields below can be skipped if this value is false!
-	FileLoggingEnabled bool `yaml:"file_logging_enabled"`
+	FileLoggingEnabled bool `yaml:"file_logging_enabled" toml:"file_logging_enabled"`
 	// Directory to log to to when filelogging is enabled
-	Directory string `yaml:"directory"`
+	Directory string `yaml:"directory" toml:"directory"`
 	// Filename is the name of the logfile which will be placed inside the directory
-	Filename string `yaml:"filename"`
+	Filename string `yaml:"filename" toml:"filename"`
 	// MaxSize the max size in MB of the logfile before it's rolled
-	MaxSize int `yaml:"max_size"`
+	MaxSize int `yaml:"max_size" toml:"max_size"`
 	// MaxBackups the max number of rolled files to keep
-	MaxBackups int `yaml:"max_backups"`
+	MaxBackups int `yaml:"max_backups" toml:"max_backups"`
 	// MaxAge the max age in days to keep a logfile
-	MaxAge int `yaml:"max_age"`
+	MaxAge int `yaml:"max_age" toml:"max_age"`
 }
 
 func (Config) Default() Config {
 	return Config{
 		DisableConsoleLog:  false,
 		LogsAsJson:         false,
-		FileLoggingEnabled: true,
+		FileLoggingEnabled: false,
 		Directory:          "core",
-		Filename:           "shard.core.log",
+		Filename:           "jaxnetd.log",
 		MaxSize:            150,
 		MaxBackups:         3,
 		MaxAge:             28,
@@ -64,28 +64,31 @@ type Logger struct {
 
 func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	var writers []io.Writer
-	if !config.DisableConsoleLog {
+	if !config.DisableConsoleLog && !config.LogsAsJson {
 		out := zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}
 		out.TimeFormat = time.RFC3339
 		out.FormatLevel = func(i interface{}) string {
 			return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
 		}
 		out.FormatMessage = func(i interface{}) string {
-			return fmt.Sprintf("%-6s  |>", i)
+			return fmt.Sprintf("%-6s  ", i)
 		}
 		writers = append(writers, out)
+	}
+	if !config.DisableConsoleLog && config.LogsAsJson {
+		writers = append(writers, os.Stdout)
 	}
 	if config.FileLoggingEnabled {
 		writers = append(writers, newRollingFile(config))
 	}
 
 	mw := io.MultiWriter(writers...)
-	// zerolog.SetGlobalLevel(DefaultLevel)
+	zerolog.SetGlobalLevel(DefaultLevel)
 
 	logger := zerolog.New(mw).
 		Level(logLevel).
 		With().
-		Str("app", "shard.core").
+		Str("app", "jaxnetd").
 		Timestamp().
 		Logger()
 

@@ -15,11 +15,11 @@ import (
 	"runtime"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 // dbType is the database type name for this driver.
@@ -33,7 +33,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Ensure that attempting to open a database that doesn't exist returns
 	// the expected error.
 	wantErrCode := database.ErrDbDoesNotExist
-	_, err := database.Open(dbType, chain.BeaconChain, "noexist", blockDataNet)
+	_, err := database.Open(dbType, chain.BeaconChain, "noexist")
 	if !checkDbError(t, "Open", err, wantErrCode) {
 		return
 	}
@@ -53,7 +53,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// the first parameter returns the expected error.
 	wantErr = fmt.Errorf("first argument to %s.Open is invalid -- "+
 		"expected database path string", dbType)
-	_, err = database.Open(dbType, chain.BeaconChain, 1, blockDataNet)
+	_, err = database.Open(dbType, chain.BeaconChain, 1)
 	if err.Error() != wantErr.Error() {
 		t.Errorf("Open: did not receive expected error - got %v, "+
 			"want %v", err, wantErr)
@@ -175,7 +175,7 @@ func TestPersistence(t *testing.T) {
 		"b1key2": "foo2",
 		"b1key3": "foo3",
 	}
-	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	genesisBlock := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
 	genesisHash := chaincfg.MainNetParams.GenesisHash
 	err = db.Update(func(tx database.Tx) error {
 		metadataBucket := tx.Metadata()
@@ -211,7 +211,7 @@ func TestPersistence(t *testing.T) {
 
 	// Close and reopen the database to ensure the values persist.
 	db.Close()
-	db, err = database.Open(dbType, chain.BeaconChain, dbPath, blockDataNet)
+	db, err = database.Open(dbType, chain.BeaconChain, dbPath)
 	if err != nil {
 		t.Errorf("Failed to open test database (%s) %v", dbType, err)
 		return

@@ -7,7 +7,7 @@ package database
 
 import (
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
+	"gitlab.com/jaxnet/jaxnetd/corelog"
 )
 
 // log is a logger that is initialized with no output filters.  This

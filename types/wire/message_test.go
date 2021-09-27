@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // makeHeader is a convenience function to make a message header in the form of
 // a byte slice.  It is used to force errors when reading messages.
-func makeHeader(btcnet types.BitcoinNet, command string,
+func makeHeader(btcnet types.JaxNet, command string,
 	payloadLen uint32, checksum uint32) []byte {
 
 	// The length of a bitcoin message header is 24 bytes.
@@ -82,11 +82,11 @@ func TestMessage(t *testing.T) {
 	msgCFCheckpt := NewMsgCFCheckpt(GCSFilterRegular, &chainhash.Hash{}, 0)
 
 	tests := []struct {
-		in     Message          // Value to encode
-		out    Message          // Expected decoded value
-		pver   uint32           // Protocol version for wire encoding
-		btcnet types.BitcoinNet // Network to use for wire encoding
-		bytes  int              // Expected num bytes read/written
+		in     Message      // Value to encode
+		out    Message      // Expected decoded value
+		pver   uint32       // Protocol version for wire encoding
+		btcnet types.JaxNet // Network to use for wire encoding
+		bytes  int          // Expected num bytes read/written
 	}{
 		{msgVersion, msgVersion, pver, types.MainNet, 125},
 		{msgVerack, msgVerack, pver, types.MainNet, 24},
@@ -245,12 +245,12 @@ func TestReadMessageWireErrors(t *testing.T) {
 	discardBytes := makeHeader(btcnet, "bogus", 15*1024, 0)
 
 	tests := []struct {
-		buf     []byte           // Wire encoding
-		pver    uint32           // Protocol version for wire encoding
-		btcnet  types.BitcoinNet // Bitcoin network for wire encoding
-		max     int              // Max size of fixed buffer to induce errors
-		readErr error            // Expected read error
-		bytes   int              // Expected num bytes read
+		buf     []byte       // Wire encoding
+		pver    uint32       // Protocol version for wire encoding
+		btcnet  types.JaxNet // Bitcoin network for wire encoding
+		max     int          // Max size of fixed buffer to induce errors
+		readErr error        // Expected read error
+		bytes   int          // Expected num bytes read
 	}{
 		// Latest protocol version with intentional read errors.
 
@@ -412,12 +412,12 @@ func TestWriteMessageWireErrors(t *testing.T) {
 	bogusMsg := &fakeMessage{command: "bogus", payload: bogusPayload}
 
 	tests := []struct {
-		msg    Message          // Message to encode
-		pver   uint32           // Protocol version for wire encoding
-		btcnet types.BitcoinNet // Bitcoin network for wire encoding
-		max    int              // Max size of fixed buffer to induce errors
-		err    error            // Expected error
-		bytes  int              // Expected num bytes written
+		msg    Message      // Message to encode
+		pver   uint32       // Protocol version for wire encoding
+		btcnet types.JaxNet // Bitcoin network for wire encoding
+		max    int          // Max size of fixed buffer to induce errors
+		err    error        // Expected error
+		bytes  int          // Expected num bytes written
 	}{
 		// Command too long.
 		{badCommandMsg, pver, btcnet, 0, wireErr, 0},

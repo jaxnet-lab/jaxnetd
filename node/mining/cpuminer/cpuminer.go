@@ -15,14 +15,14 @@ import (
 
 	"github.com/minio/sha256-simd"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -64,12 +64,12 @@ type Config struct {
 
 	// MiningAddrs is a list of payment addresses to use for the generated
 	// blocks.  Each generated block will randomly choose one of them.
-	MiningAddrs []btcutil.Address
+	MiningAddrs []jaxutil.Address
 
 	// ProcessBlock defines the function to call with any solved blocks.
 	// It typically must run the provided block through the same set of
 	// rules and handling as any other block coming from the network.
-	ProcessBlock func(*btcutil.Block, chaindata.BehaviorFlags) (bool, error)
+	ProcessBlock func(*jaxutil.Block, chaindata.BehaviorFlags) (bool, error)
 
 	// ConnectedCount defines the function to use to obtain how many other
 	// peers the server is connected to.  This is used by the automatic
@@ -158,7 +158,7 @@ out:
 
 // submitBlock submits the passed block to network after ensuring it passes all
 // of the consensus validation rules.
-func (miner *CPUMiner) submitBlock(block *btcutil.Block) bool {
+func (miner *CPUMiner) submitBlock(block *jaxutil.Block) bool {
 	miner.submitBlockLock.Lock()
 	defer miner.submitBlockLock.Unlock()
 
@@ -198,7 +198,7 @@ func (miner *CPUMiner) submitBlock(block *btcutil.Block) bool {
 	// The block was accepted.
 	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
 	miner.log.Info().Msgf("Block submitted via CPU miner accepted (hash %s, amount %v)",
-		block.Hash(), btcutil.Amount(coinbaseTx.Value))
+		block.Hash(), jaxutil.Amount(coinbaseTx.Value))
 	return true
 }
 
@@ -238,7 +238,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 		// Update the extra nonce in the block template with the
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
-		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, extraNonce+enOffset)
+		miner.generator.UpdateExtraNonce(msgBlock, blockHeight, 0,  extraNonce+enOffset)
 
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
@@ -357,7 +357,7 @@ out:
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.generator.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr, 7)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			miner.log.Error().Err(err).Msg("Failed to create new block template")
@@ -369,7 +369,7 @@ out:
 		// a new block template can be generated.  When the return is
 		// true a solution was found, so submit the solved block.
 		if miner.solveBlock(template.Block, curHeight+1, ticker, quit, worker) {
-			block := btcutil.NewBlock(template.Block)
+			block := jaxutil.NewBlock(template.Block)
 			miner.submitBlock(block)
 		}
 	}
@@ -615,7 +615,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// Create a new block template using the available transactions
 		// in the memory pool as a source of transactions to potentially
 		// include in the block.
-		template, err := miner.generator.NewBlockTemplate(payToAddr)
+		template, err := miner.generator.NewBlockTemplate(payToAddr, 7)
 		miner.submitBlockLock.Unlock()
 		if err != nil {
 			miner.log.Error().Err(err).Msg("Failed to create new block template")
@@ -627,7 +627,7 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 		// a new block template can be generated.  When the return is
 		// true a solution was found, so submit the solved block.
 		if miner.solveBlock(template.Block, curHeight+1, ticker, nil, 1000) {
-			block := btcutil.NewBlock(template.Block)
+			block := jaxutil.NewBlock(template.Block)
 			miner.submitBlock(block)
 			blockHashes[i] = block.Hash()
 			i++

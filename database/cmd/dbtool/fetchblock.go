@@ -10,9 +10,8 @@ import (
 	"errors"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // fetchBlockCmd defines the configuration options for the fetchblock command.
@@ -30,16 +29,22 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 		return err
 	}
 
-	if len(args) < 1 {
-		return errors.New("required block hash parameter not specified")
+	if len(args) < 2 {
+		return errors.New("required block hash, net name and shardID parameters are not specified")
 	}
-	blockHash, err := chainhash.NewHashFromStr(args[0])
+
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
+	blockHash, err := chainhash.NewHashFromStr(args[1])
 	if err != nil {
 		return err
 	}
 
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain)
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}

@@ -20,13 +20,13 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 func init() {
@@ -1195,35 +1195,6 @@ func (peer *Peer) writeMessage(msg wire.Message, enc encoder.MessageEncoding) er
 	return err
 }
 
-// isAllowedReadError returns whether or not the passed error is allowed without
-// disconnecting the peer.  In particular, regression tests need to be allowed
-// to send malformed messages without the peer being disconnected.
-func (peer *Peer) isAllowedReadError(err error) bool {
-	// Only allow read errors in regression test mode.
-	if peer.cfg.ChainParams.Net != types.TestNet {
-		return false
-	}
-
-	// Don't allow the error if it's not specifically a malformed message error.
-	if _, ok := err.(*wire.MessageError); !ok {
-		return false
-	}
-
-	// Don't allow the error if it's not coming from localhost or the
-	// hostname can't be determined for some reason.
-	host, _, err := net.SplitHostPort(peer.addr)
-	if err != nil {
-		return false
-	}
-
-	if host != "127.0.0.1" && host != "localhost" {
-		return false
-	}
-
-	// Allowed if all checks passed.
-	return true
-}
-
 // shouldHandleReadError returns whether or not the passed error, which is
 // expected to have come from reading from the remote peer in the inHandler,
 // should be logged and responded to with a reject message.
@@ -1455,15 +1426,6 @@ out:
 		rmsg, buf, err := peer.readMessage(peer.wireEncoding)
 		idleTimer.Stop()
 		if err != nil {
-			// In order to allow regression tests with malformed messages, don't
-			// disconnect the peer when we're in regression test mode and the
-			// error is one of the allowed errors.
-			if peer.isAllowedReadError(err) {
-				log.Error().Msgf("Allowed test error from %s: %v", peer, err)
-				idleTimer.Reset(idleTimeout)
-				continue
-			}
-
 			// Only log the error and send reject message if the
 			// local peer is not forcibly disconnecting and the
 			// remote peer has not disconnected.
@@ -2024,8 +1986,7 @@ func (peer *Peer) readRemoteVersionMsg() error {
 		// Notify and disconnect clients if the first message is not a version
 		// message.
 		reason := "a version message must precede all others"
-		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed,
-			reason)
+		rejectMsg := wire.NewMsgReject(msg.Command(), wire.RejectMalformed, reason)
 
 		if err = peer.writeMessage(rejectMsg, wire.LatestEncoding); err != nil {
 			return err

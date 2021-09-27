@@ -18,17 +18,17 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type INodeServer interface {
@@ -110,7 +110,7 @@ type Server struct {
 	chain *cprovider.ChainProvider
 }
 
-// newServer returns a new shard.core p2p server configured to listen on addr for the
+// NewServer returns a new jaxnetd p2p server configured to listen on addr for the
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
 func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
@@ -215,6 +215,7 @@ func (server *Server) Run(ctx context.Context) {
 	}
 
 	for _, addr := range permanentPeers {
+		addr = changePort(addr, server.chain.ChainCtx.ShardID(), server.cfg.ShardDefaultPort)
 		netAddr, err := server.addrStringToNetAddr(addr)
 		if err != nil {
 			server.logger.Error().Err(err).Msg("unable to parse netAddr of peer")
@@ -441,9 +442,9 @@ func (server *Server) AnnounceNewTransactions(txns []*mempool.TxDesc) {
 	}
 }
 
-// Transaction has one confirmation on the main BlockChain. Now we can mark it as no
+// TransactionConfirmed has one confirmation on the main BlockChain. Now we can mark it as no
 // longer needing rebroadcasting.
-func (server *Server) TransactionConfirmed(tx *btcutil.Tx) {
+func (server *Server) TransactionConfirmed(tx *jaxutil.Tx) {
 	// Rebroadcasting is only necessary when the RPC server is active.
 	if server.nodeServer == nil {
 		return
@@ -687,7 +688,7 @@ func (server *Server) peerHandler() {
 		// Add peers discovered through DNS to the address manager.
 		connmgr.SeedFromDNS(server.chain.ChainParams, defaultRequiredServices,
 			server.netLookup, func(addrs []*wire.NetAddress) {
-				// Bitcoind uses a lookup of the dns seeder here. This
+				// Jaxnetd uses a lookup of the dns seeder here. This
 				// is rather strange since the values looked up by the
 				// DNS seed lookups will vary quite a lot.
 				// to replicate this behaviour we put all addresses as
@@ -941,6 +942,23 @@ out:
 	}
 
 	server.wg.Done()
+}
+
+func changePort(addr string, shardID uint32, defaultPort int) string {
+	host, strPort, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+
+	port, err := strconv.Atoi(strPort)
+	if err != nil {
+		return addr
+	}
+	if shardID > 0 && defaultPort > 0 {
+		port = defaultPort + int(shardID)
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port))
+
 }
 
 // addrStringToNetAddr takes an address in the form of 'host:port' and returns

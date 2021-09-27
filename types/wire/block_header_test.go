@@ -134,9 +134,8 @@ func TestTreeEncoding(t *testing.T) {
 func TestShardHeaderEncoding(t *testing.T) {
 	sh := ShardHeader{}
 	sh.timestamp = time.Now()
-	sh.BCHeader = BeaconHeader{
-		bits:  1,
-		nonce: 2,
+	sh.bCHeader = BeaconHeader{
+		bits: 1,
 	}
 	sh.bits = 3
 	sh.mergeMiningNumber = 4
@@ -148,7 +147,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 	coding := make([]byte, 300)
 	var bits uint32 = 222
 
-	sh.BCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+	sh.bCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
 
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
@@ -161,7 +160,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 	fmt.Printf("%d %d\n", wr.Size(), wr.Available())
 	sh2 := ShardHeader{}
 	reader := bufio.NewReader(&b)
-	if err := ReadShardBlockHeader(reader, &sh2); err != nil {
+	if err := readShardBlockHeader(reader, &sh2); err != nil {
 		t.Error(err)
 		return
 	}
@@ -191,7 +190,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	hashes2, coding2, bits2 := sh.BCHeader.MergedMiningTreeCodingProof()
+	hashes2, coding2, bits2 := sh.bCHeader.MergedMiningTreeCodingProof()
 
 	if bytes.Compare(hashes, hashes2) != 0 {
 		t.Error("Proof hashes not equal")
@@ -219,10 +218,9 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	}
 
 	sh.timestamp = time.Now()
-	sh.BCHeader = BeaconHeader{
+	sh.bCHeader = BeaconHeader{
 		version:   BVersion(7),
 		bits:      1,
-		nonce:     2,
 		timestamp: time.Now().Add(1 * time.Hour),
 	}
 	sh.bits = 3
@@ -238,14 +236,14 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	var bits uint32 = 222
 
-	sh.BCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+	sh.bCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
 
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
 
 	bCopy := block.Copy()
 
-	fmt.Println("Clone 1", sh.BCHeader.treeEncoding)
+	fmt.Println("Clone 1", sh.bCHeader.treeEncoding)
 	fmt.Println("Clone 2", bCopy.Header.BeaconHeader().treeEncoding)
 
 	if err := bCopy.BtcEncode(wr, 0, BaseEncoding); err != nil {
@@ -292,7 +290,7 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	hashes2, coding2, bits2 := sh2.BCHeader.MergedMiningTreeCodingProof()
+	hashes2, coding2, bits2 := sh2.bCHeader.MergedMiningTreeCodingProof()
 
 	fmt.Println(hashes2, coding2, bits2)
 	if bytes.Compare(hashes, hashes2) != 0 {

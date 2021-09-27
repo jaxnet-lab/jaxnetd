@@ -1,16 +1,17 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package netsync
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // ServerSyncManager represents a sync manager for use with the RPC server.
@@ -24,7 +25,7 @@ type ServerSyncManager interface {
 
 	// SubmitBlock submits the provided block to the network after
 	// processing it locally.
-	SubmitBlock(block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error)
+	SubmitBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error)
 
 	// Pause pauses the sync manager until the returned channel is closed.
 	Pause() chan<- struct{}
@@ -56,7 +57,7 @@ type ServerPeer interface {
 	// the peer is to being banned.
 	GetBanScore() uint32
 
-	// FeeFilter returns the requested current minimum fee rate for which
+	// GetFeeFilter returns the requested current minimum fee rate for which
 	// transactions should be announced.
 	GetFeeFilter() int64
 }
@@ -146,7 +147,7 @@ func (b *RPCSyncMgr) IsCurrent() bool {
 //
 // This function is safe for concurrent access and is part of the
 // ServerSyncManager interface implementation.
-func (b *RPCSyncMgr) SubmitBlock(block *btcutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
+func (b *RPCSyncMgr) SubmitBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	return b.SyncMgr.ProcessBlock(block, flags)
 }
 
@@ -167,7 +168,7 @@ func (b *RPCSyncMgr) SyncPeerID() int32 {
 	return b.SyncMgr.SyncPeerID()
 }
 
-// LocateBlocks returns the hashes of the blocks after the first known block in
+// LocateHeaders returns the hashes of the blocks after the first known block in
 // the provided locators until the provided stop hash or the current tip is
 // reached, up to a max of wire.MaxBlockHeadersPerMsg hashes.
 //

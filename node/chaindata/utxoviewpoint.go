@@ -10,12 +10,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // txoFlags is a bitmask defining additional information and state for a
@@ -126,7 +126,8 @@ type UtxoViewpoint struct {
 	entries  map[wire.OutPoint]*UtxoEntry
 	bestHash chainhash.Hash
 
-	eadAddresses map[string]*wire.EADAddresses
+	eadAddresses eadAddrSet
+	beacon       bool
 }
 
 // BestHash returns the Hash of the best block in the chain the view currently
@@ -182,7 +183,7 @@ func (view *UtxoViewpoint) addTxOut(outpoint wire.OutPoint, txOut *wire.TxOut, i
 // it exists and is not provably unspendable.  When the view already has an
 // entry for the output, it will be marked unspent.  All fields will be updated
 // for existing entries since it's possible it has changed during a reorg.
-func (view *UtxoViewpoint) AddTxOut(tx *btcutil.Tx, txOutIdx uint32, blockHeight int32) {
+func (view *UtxoViewpoint) AddTxOut(tx *jaxutil.Tx, txOutIdx uint32, blockHeight int32) {
 	// Can't add an output for an out of bounds index.
 	if txOutIdx >= uint32(len(tx.MsgTx().TxOut)) {
 		return
@@ -201,7 +202,7 @@ func (view *UtxoViewpoint) AddTxOut(tx *btcutil.Tx, txOutIdx uint32, blockHeight
 // unspendable to the view.  When the view already has entries for any of the
 // outputs, they are simply marked unspent.  All fields will be updated for
 // existing entries since it's possible it has changed during a reorg.
-func (view *UtxoViewpoint) AddTxOuts(tx *btcutil.Tx, blockHeight int32) {
+func (view *UtxoViewpoint) AddTxOuts(tx *jaxutil.Tx, blockHeight int32) {
 	// Loop all of the transaction outputs and add those which are not
 	// provably unspendable.
 	isCoinBase := IsCoinBase(tx)
@@ -222,7 +223,7 @@ func (view *UtxoViewpoint) AddTxOuts(tx *btcutil.Tx, blockHeight int32) {
 // spent.  In addition, when the 'stxos' argument is not nil, it will be updated
 // to append an entry for each spent txout.  An error will be returned if the
 // view does not contain the required utxos.
-func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
 	// Coinbase transactions don't have any inputs to spend.
 	if IsCoinBase(tx) {
 		// Add the transaction's outputs as available utxos.
@@ -235,7 +236,7 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 	}
 
 	if tx.MsgTx().Version == wire.TxVerEADAction {
-		err := view.connectEADTransaction(tx, stxos)
+		err := view.connectEADTransaction(tx)
 		if err != nil {
 			return err
 		}
@@ -273,6 +274,12 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 
 	// Add the transaction's outputs as available utxos.
 	view.AddTxOuts(tx, blockHeight)
+
+	err := view.disconnectEADAddresses(stxos)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -280,18 +287,22 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *btcutil.Tx, blockHeight int32,
 // passed transaction and marking all utxos that the transactions spend as
 // spent. This function handles special case for the wire.TxMarkShardSwap transactions.
 // wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
-// It can contain only TWO inputs and TWO outputs. TxIn and TxOut are strictly associated with each other by index.
+// It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
+// TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.
 //
 // | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
 // | - | ---------------- | --- | ----------------- | - |
 // | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
-// | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
+// | 1 | TxIn_1 ∈ Shard_X | --> | TxOut_1 ∈ Shard_X | 1 |
+// | 2 | TxIn_2 ∈ Shard_Y | --> | TxOut_2 ∈ Shard_Y | 2 |
+// | 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
 //
 // The order is not deterministic.
-func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
-	if len(tx.MsgTx().TxIn) > 2 || len(tx.MsgTx().TxOut) > 2 {
-		return AssertError("ShardSwap tx with more than 2 inputs and outputs not allowed")
+func (view *UtxoViewpoint) connectSwapTransaction(tx *jaxutil.Tx, blockHeight int32, stxos *[]SpentTxOut) error {
+	err := ValidateSwapTxStructure(tx.MsgTx(), -1)
+	if err != nil {
+		return err
 	}
 
 	inputs := tx.MsgTx().TxIn
@@ -340,54 +351,18 @@ func (view *UtxoViewpoint) connectSwapTransaction(tx *btcutil.Tx, blockHeight in
 }
 
 func (view *UtxoViewpoint) EADAddressesSet() map[string]*wire.EADAddresses {
-	return view.eadAddresses
+	return view.eadAddresses.data
 }
 
-func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentTxOut) error {
-	var removeEAD = func(pkScript []byte) error {
-		scriptData, err := txscript.EADAddressScriptData(pkScript)
-		if err != nil {
-			return err
-		}
-		ownerKey := string(scriptData.RawKey)
-		if _, ok := view.eadAddresses[ownerKey]; !ok {
-			return nil
-		}
-
-		filtered := make([]wire.EADAddress, 0, len(view.eadAddresses[ownerKey].IPs)-1)
-		for _, p := range view.eadAddresses[ownerKey].IPs {
-			addr, removed := p.FilterOut(scriptData.IP, scriptData.ShardID)
-			if removed {
-				continue
-			}
-
-			filtered = append(filtered, *addr)
-		}
-		if len(filtered) == 0 {
-			view.eadAddresses[ownerKey] = nil
-			return nil
-		}
-		view.eadAddresses[ownerKey].IPs = filtered
+func (view *UtxoViewpoint) connectEADTransaction(tx *jaxutil.Tx) error {
+	if !view.beacon {
 		return nil
-	}
-
-	if stxos != nil {
-		for _, input := range *stxos {
-			class := txscript.GetScriptClass(input.PkScript)
-			if class != txscript.EADAddress {
-				continue
-			}
-
-			if err := removeEAD(input.PkScript); err != nil {
-				return err
-			}
-		}
 	}
 
 	outputs := tx.MsgTx().TxOut
 	for outInd, out := range outputs {
 		class := txscript.GetScriptClass(out.PkScript)
-		if class != txscript.EADAddress {
+		if class != txscript.EADAddressTy {
 			continue
 		}
 
@@ -395,35 +370,27 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 		if err != nil {
 			return err
 		}
+		view.eadAddresses.add(scriptData, tx.Hash(), outInd)
+	}
 
-		if scriptData.OpCode == txscript.EADAddressDelete {
-			if err = removeEAD(out.PkScript); err != nil {
-				return err
-			}
+	return nil
+}
+
+func (view *UtxoViewpoint) disconnectEADAddresses(stxos *[]SpentTxOut) error {
+	if stxos == nil {
+		return nil
+	}
+
+	for _, input := range *stxos {
+		class := txscript.GetScriptClass(input.PkScript)
+		if class != txscript.EADAddressTy {
 			continue
 		}
-
-		ownerKey := string(scriptData.RawKey)
-		addr, ok := view.eadAddresses[ownerKey]
-		if !ok {
-			b := make([]byte, 8)
-			_, _ = rand.Read(b)
-
-			addr = &wire.EADAddresses{
-				ID:          binary.LittleEndian.Uint64(b),
-				OwnerPubKey: []byte(ownerKey),
-				IPs:         []wire.EADAddress{},
-			}
+		scriptData, err := txscript.EADAddressScriptData(input.PkScript)
+		if err != nil {
+			return err
 		}
-
-		view.eadAddresses[ownerKey] = addr.AddAddress(
-			scriptData.IP,
-			uint16(scriptData.Port),
-			scriptData.ExpirationDate,
-			scriptData.ShardID,
-			tx.Hash(),
-			outInd,
-		)
+		view.eadAddresses.remove(scriptData)
 	}
 
 	return nil
@@ -434,7 +401,7 @@ func (view *UtxoViewpoint) connectEADTransaction(tx *btcutil.Tx, stxos *[]SpentT
 // spend as spent, and setting the best Hash for the view to the passed block.
 // In addition, when the 'stxos' argument is not nil, it will be updated to
 // append an entry for each spent txout.
-func (view *UtxoViewpoint) ConnectTransactions(block *btcutil.Block, stxos *[]SpentTxOut) error {
+func (view *UtxoViewpoint) ConnectTransactions(block *jaxutil.Block, stxos *[]SpentTxOut) error {
 	for _, tx := range block.Transactions() {
 		err := view.ConnectTransaction(tx, block.Height(), stxos)
 		if err != nil {
@@ -475,7 +442,7 @@ func (view *UtxoViewpoint) fetchEntryByHash(db database.DB, hash *chainhash.Hash
 }
 
 // CountSpentOutputs returns the number of utxos the passed block spends.
-func CountSpentOutputs(block *btcutil.Block) int {
+func CountSpentOutputs(block *jaxutil.Block) int {
 	// Exclude the coinbase transaction since it can't spend anything.
 	var numSpent int
 	for _, tx := range block.Transactions()[1:] {
@@ -492,7 +459,7 @@ func CountSpentOutputs(block *btcutil.Block) int {
 // created by the passed block, restoring all utxos the transactions spent by
 // using the provided spent txo information, and setting the best Hash for the
 // view to the block before the passed block.
-func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *btcutil.Block, stxos []SpentTxOut) error {
+func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block, stxos []SpentTxOut) error {
 	// Sanity check the correct number of stxos are provided.
 	if len(stxos) != CountSpentOutputs(block) {
 		return AssertError("DisconnectTransactions called with bad " +
@@ -614,6 +581,12 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *btcutil
 				entry.packedFlags |= tfCoinBase
 			}
 		}
+
+		// todo: complete disconnect logic
+		// err := view.disconnectEADAddresses(&stxos)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 
 	// Update the best Hash for view to the previous block since all of the
@@ -678,8 +651,12 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[wire.Out
 			view.entries[outpoint] = entry
 		}
 
+		if !view.beacon {
+			return nil
+		}
+
 		var err error
-		view.eadAddresses, err = DBFetchAllEADAddresses(dbTx)
+		view.eadAddresses.data, err = DBFetchAllEADAddresses(dbTx)
 		if err != nil {
 			return err
 		}
@@ -717,7 +694,7 @@ func (view *UtxoViewpoint) FetchUtxos(db database.DB, outpoints map[wire.OutPoin
 // database as needed.  In particular, referenced entries that are earlier in
 // the block are added to the view and entries that are already in the view are
 // not modified.
-func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *btcutil.Block) error {
+func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *jaxutil.Block) error {
 	// Build a map of in-flight transactions because some of the inputs in
 	// this block could be referencing other transactions earlier in this
 	// block which are not yet in the chain.
@@ -780,9 +757,70 @@ func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *btcutil.Block)
 }
 
 // NewUtxoViewpoint returns a new empty unspent transaction output view.
-func NewUtxoViewpoint() *UtxoViewpoint {
+func NewUtxoViewpoint(beacon bool) *UtxoViewpoint {
 	return &UtxoViewpoint{
 		entries:      make(map[wire.OutPoint]*UtxoEntry),
-		eadAddresses: make(map[string]*wire.EADAddresses),
+		eadAddresses: eadAddrSet{data: make(map[string]*wire.EADAddresses)},
+		beacon:       beacon,
 	}
+}
+
+type eadAddrSet struct {
+	data map[string]*wire.EADAddresses
+}
+
+func (eSet *eadAddrSet) add(scriptData txscript.EADScriptData, txHash *chainhash.Hash, outN int) {
+	ownerKey := string(scriptData.RawKey)
+	addr, ok := eSet.data[ownerKey]
+	if !ok {
+		b := make([]byte, 4)
+		_, _ = rand.Read(b)
+
+		addr = &wire.EADAddresses{
+			ID:          uint64(binary.LittleEndian.Uint32(b)),
+			OwnerPubKey: []byte(ownerKey),
+			Addresses:   []wire.EADAddress{},
+		}
+	}
+	addr.AddAddress(
+		scriptData.IP,
+		scriptData.URL,
+		uint16(scriptData.Port),
+		scriptData.ExpirationDate,
+		scriptData.ShardID,
+		txHash,
+		outN,
+	)
+
+	eSet.data[ownerKey] = addr
+}
+
+func (eSet *eadAddrSet) remove(scriptData txscript.EADScriptData) {
+	ownerKey := string(scriptData.RawKey)
+	address, ok := eSet.data[ownerKey]
+	if !ok || address == nil || len(address.Addresses) < 1 {
+		eSet.data[ownerKey] = nil
+		return
+	}
+
+	filtered := make([]wire.EADAddress, 0, len(address.Addresses)-1)
+	for _, p := range eSet.data[ownerKey].Addresses {
+		// if this address  match with script data params,
+		// we need to remove it from set
+		eq := p.Eq(scriptData.IP, scriptData.URL, scriptData.ShardID)
+		if eq {
+			continue
+		}
+
+		filtered = append(filtered, p)
+	}
+
+	if len(filtered) == 0 {
+		eSet.data[ownerKey] = nil
+		return
+	}
+
+	address.Addresses = filtered
+	eSet.data[ownerKey] = address
+	return
 }

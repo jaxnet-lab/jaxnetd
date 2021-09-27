@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // mruInventoryMap provides a concurrency safe map that is limited to a maximum

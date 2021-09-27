@@ -1,0 +1,161 @@
+@startuml
+
+' arrows usage:
+' | Example      | Usage                         |
+' |--------------|-------------------------------|
+' | A ->    B    | regular invocation            |
+' | A o->   B    | sync IO call; ex HTTP request |
+' | A o-->> B    | start new goroutine           |
+' | A ->>o  B    | write to channel              |
+' | A o->>o B    | B read from channel           |
+' | A ->o   B    | state update                  |
+' | A o->   B !! | write to response channel     |
+
+' color codes:
+' #bc6ff1 - goroutine invocation
+' #bedbbb - scope boundary
+
+control "Connection\nManager" as CManHandler
+participant "P2P\nServer" as S
+database "Peer\nStorage" as PDB
+control "Server:\nPeerHandler" as SPH
+control "Sync\nManager" as SyncManager
+entity "Server\nPeer" as SP
+control "Peer\n" as P
+control "Peer\nRoutines" as PR
+participant "Remote\n" as Remote
+
+
+== p2p Peer Lifecycle ==
+|||
+group p2p Peer Lifecycle
+|||
+  alt "Peer Direction"
+  else INBOUND
+    CManHandler -> S++: <<OnAccept |\n inboundPeerConnected >>
+    S -> S :  << NewInboundPeer(...) >>
+  else OUTBOUND
+    CManHandler -> S: <<OnConnection |\n outboundPeerConnected >>
+    S -> S :  << NewOutboundPeer(...) >>
+  end
+
+  S o-->> SP ++ #bc6ff1: << AssociateConnection(conn) >>
+  group Peer Run
+    SP -> P ++: start
+    P o-->> PR ++ #bc6ff1: << negotiate with remote >>
+
+    alt "Peer Negotiation"
+    else INBOUND
+      PR o-> Remote ++:  << readRemoteVersionMsg >>
+      return MsgVersion
+
+      PR o-> Remote ++:  << writeLocalVersionMsg(MsgVersion) >>
+      return
+
+      PR o-> Remote ++:  << writeMessage(MsgVerAck) >>
+      return
+
+      PR o-> Remote ++:  << readRemoteVerAckMsg() >>
+      return MsgVerAck
+      |||
+
+    else OUTBOUND
+      PR o-> Remote ++:  << writeLocalVersionMsg(MsgVersion) >>
+      return
+
+      PR o-> Remote ++:  << readRemoteVersionMsg >>
+      return MsgVersion
+
+      PR o-> Remote ++:  << readRemoteVerAckMsg() >>
+      return MsgVerAck
+
+      PR o-> Remote ++:  << writeMessage(MsgVerAck) >>
+      return
+      |||
+    end
+
+    return ok | err
+
+
+    P o-->> PR ++ #bc6ff1: << stallHandler >>
+      loop
+        alt "<- stallControl"
+        P o->>o PR: << msg <- stallControl >>
+        else sccSendMessage
+          PR ->o P
+        else sccReceiveMessage
+          PR ->o P
+        else sccHandlerStart
+          PR ->o P
+        else sccHandlerDone
+          PR ->o P
+        end
+        |||
+
+        alt stallTicker
+          PR ->o P !!: << Disconnect() >>
+          note right
+            Disconnect the peer
+            if any of the pending
+            responses don't arrive by
+            their adjusted deadline.
+          end note
+        end
+      end
+
+      return
+
+    P o-->> PR ++ #bc6ff1: << inHandler >>
+    loop ping with pingInterval
+      PR ->>o P: << QueueMessage(MsgPing) >>
+      |||
+    end
+    return
+
+    P o-->> PR ++ #bc6ff1: << queueHandler >>
+    loop ping with pingInterval
+      PR ->>o P: << QueueMessage(MsgPing) >>
+      |||
+    end
+    return
+
+    P o-->> PR ++ #bc6ff1: << outHandler >>
+    loop ping with pingInterval
+      PR ->>o P: << QueueMessage(MsgPing) >>
+      |||
+    end
+    return
+
+    P o-->> PR ++ #bc6ff1: << pingHandler >>
+    loop ping with pingInterval
+      PR ->>o P: << QueueMessage(MsgPing) >>
+      |||
+    end
+    return
+
+
+    alt has error
+      SP ->o P !!: << Disconnect() >>
+    end
+    |||
+    deactivate SP
+  end
+
+
+
+  S o-->> S ++ #bc6ff1: << peerDoneHandler(...) >>
+  group peerDoneHandler
+    S ->>o SPH: "donePeers "
+    S ->>o SyncManager: DonePeer | donePeerMsg
+    S -> S : << RemoveOrphansByTag >>
+    |||
+  return
+  end
+  |||
+
+ deactivate S
+
+end
+' == p2p Connection Manager Scope ==
+
+@enduml

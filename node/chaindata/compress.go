@@ -6,8 +6,8 @@
 package chaindata
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 )
 
 // -----------------------------------------------------------------------------

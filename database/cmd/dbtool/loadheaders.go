@@ -6,11 +6,11 @@
 package main
 
 import (
+	"errors"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // headersCmd defines the configuration options for the loadheaders command.
@@ -32,8 +32,17 @@ func (cmd *headersCmd) Execute(args []string) error {
 		return err
 	}
 
+	if len(args) < 1 {
+		return errors.New("required shardID parameter not specified")
+	}
+
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
 	// Load the block database.
-	db, err := loadBlockDB(chain.BeaconChain)
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}

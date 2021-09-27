@@ -12,12 +12,12 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
@@ -193,9 +193,9 @@ func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) erro
 
 	// The genesis block is included in blocksMap as a child of the zero Hash
 	// because that is the value of the PrevBlock field in the genesis header.
-	preGenesisContext, exists := blocksMap[zeroHash]
+	preGenesisContext, exists := blocksMap[chainhash.ZeroHash]
 	if !exists || len(preGenesisContext.children) == 0 {
-		return fmt.Errorf("Unable to find genesis block")
+		return fmt.Errorf("unable to find genesis block")
 	}
 
 	for _, genesisHash := range preGenesisContext.children {
@@ -223,7 +223,7 @@ func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) erro
 // determine which block hashes that are part of the main chain. This function
 // modifies the mainChain field on the blocksMap entries.
 func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, tip *chainhash.Hash) {
-	for nextHash := tip; *nextHash != zeroHash; nextHash = blocksMap[*nextHash].parent {
+	for nextHash := tip; *nextHash != chainhash.ZeroHash; nextHash = blocksMap[*nextHash].parent {
 		blocksMap[*nextHash].mainChain = true
 	}
 }

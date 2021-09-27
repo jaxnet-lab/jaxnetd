@@ -11,13 +11,13 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -38,15 +38,10 @@ const (
 
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 50 * btcutil.SatoshiPerBitcoin
+	baseSubsidy = 50 * jaxutil.SatoshiPerBitcoin
 )
 
 var (
-	// zeroHash is the zero value for a chainhash.Hash and is defined as
-	// a package level variable to avoid the need to create a new instance
-	// every time a check is needed.
-	zeroHash chainhash.Hash
-
 	// block91842Hash is one of the two nodes which violate the rules
 	// set forth in BIP0030.  It is defined as a package level variable to
 	// avoid the need to create a new instance every time a check is needed.
@@ -61,7 +56,7 @@ var (
 // isNullOutpoint determines whether or not a previous transaction output point
 // is set.
 func isNullOutpoint(outpoint *wire.OutPoint) bool {
-	if outpoint.Index == math.MaxUint32 && outpoint.Hash == zeroHash {
+	if outpoint.Index == math.MaxUint32 && outpoint.Hash == chainhash.ZeroHash {
 		return true
 	}
 	return false
@@ -102,7 +97,7 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 	// The previous output of a coin base must have a max value index and
 	// a zero Hash.
 	prevOut := &msgTx.TxIn[0].PreviousOutPoint
-	if prevOut.Index != math.MaxUint32 || prevOut.Hash != zeroHash {
+	if prevOut.Index != math.MaxUint32 || prevOut.Hash != chainhash.ZeroHash {
 		return false
 	}
 
@@ -117,7 +112,7 @@ func IsCoinBaseTx(msgTx *wire.MsgTx) bool {
 //
 // This function only differs from IsCoinBaseTx in that it works with a higher
 // level util transaction as opposed to a raw wire transaction.
-func IsCoinBase(tx *btcutil.Tx) bool {
+func IsCoinBase(tx *jaxutil.Tx) bool {
 	return IsCoinBaseTx(tx.MsgTx())
 }
 
@@ -138,7 +133,7 @@ func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
 	return true
 }
 
-func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
+func ValidMoneyBackAfterExpiration(tx *jaxutil.Tx, view *UtxoViewpoint) bool {
 	if len(tx.MsgTx().TxOut) > len(tx.MsgTx().TxIn) {
 		return false
 	}
@@ -161,12 +156,13 @@ func ValidMoneyBackAfterExpiration(tx *btcutil.Tx, view *UtxoViewpoint) bool {
 }
 
 // IsFinalizedTransaction determines whether or not a transaction is finalized.
-func IsFinalizedTransaction(tx *btcutil.Tx, blockHeight int32, blockTime time.Time) bool {
+func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Time) bool {
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
+	// wire.TxVerRefundableTimeLock is always finalized, like a wire.TxVerRegular.
 	lockTime := msgTx.LockTime
-	if lockTime == 0 || msgTx.CleanVersion() == wire.TxVerTimeLockAllowance {
+	if lockTime == 0 {
 		return true
 	}
 
@@ -234,7 +230,7 @@ func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
 // ensure it is sane.  These checks are context free.
-func CheckTransactionSanity(tx *btcutil.Tx) error {
+func CheckTransactionSanity(tx *jaxutil.Tx) error {
 	// A transaction must have at least one input.
 	msgTx := tx.MsgTx()
 	if len(msgTx.TxIn) == 0 {
@@ -246,9 +242,11 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		return NewRuleError(ErrNoTxOutputs, "transaction has no outputs")
 	}
 
-	if msgTx.SwapTx() && (len(msgTx.TxIn) > 2 || len(msgTx.TxOut) > 2) {
-		return NewRuleError(ErrInvalidShardSwapInOuts,
-			"ShardSwap tx with more than 2 inputs and outputs not allowed")
+	if msgTx.SwapTx() {
+		err := ValidateSwapTxStructure(msgTx, -1)
+		if err != nil {
+			return err
+		}
 	}
 
 	// A transaction must not exceed the maximum allowed block payload when
@@ -274,10 +272,10 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 				"value of %v", satoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if satoshi > btcutil.MaxSatoshi {
+		if satoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", satoshi,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -288,14 +286,14 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		if totalSatoshi < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if totalSatoshi > btcutil.MaxSatoshi {
+		if totalSatoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshi,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -324,9 +322,8 @@ func CheckTransactionSanity(tx *btcutil.Tx) error {
 		// transaction must not be null. Null allowed only for ShardsSwapTxs.
 		for _, txIn := range msgTx.TxIn {
 			if isNullOutpoint(&txIn.PreviousOutPoint) && !msgTx.SwapTx() {
-				return NewRuleError(ErrBadTxInput, "transaction "+
-					"input refers to previous output that "+
-					"is null")
+				return NewRuleError(ErrBadTxInput,
+					"transaction input refers to previous output that is null")
 			}
 		}
 	}
@@ -345,27 +342,26 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	// The target difficulty must be larger than zero.
 	target := pow.CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is too low",
-			target)
+		str := fmt.Sprintf("block target difficulty of %064x is too low", target)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The target difficulty must be less than the maximum allowed.
 	if target.Cmp(powLimit) > 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is "+
-			"higher than max of %064x", target, powLimit)
+		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target, powLimit)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
 	// The block Hash must be less than the claimed target unless the flag
 	// to avoid proof of work checks is set.
 	if flags&BFNoPoWCheck != BFNoPoWCheck {
+		// according to merge-mining scheme,
+		// we are checking the difficulty of the BTC-container
+		hash := header.PoWHash()
 		// The block Hash must be less than the claimed target.
-		hash := header.BeaconHeader().BlockHash()
 		hashNum := pow.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
-			str := fmt.Sprintf("block Hash of %064x is higher than "+
-				"expected max of %064x", hashNum, target)
+			str := fmt.Sprintf("block Hash of %064x is higher than expected max of %064x", hashNum, target)
 			return NewRuleError(ErrHighHash, str)
 		}
 	}
@@ -376,7 +372,7 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 // CheckProofOfWork ensures the block header bits which indicate the target
 // difficulty is in min/max range and that the block Hash is less than the
 // target difficulty as claimed.
-func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
+func CheckProofOfWork(block *jaxutil.Block, powLimit *big.Int) error {
 	return checkProofOfWork(block.MsgBlock().Header, powLimit, BFNone)
 }
 
@@ -384,7 +380,7 @@ func CheckProofOfWork(block *btcutil.Block, powLimit *big.Int) error {
 // input and output scripts in the provided transaction.  This uses the
 // quicker, but imprecise, signature operation counting mechanism from
 // txscript.
-func CountSigOps(tx *btcutil.Tx) int {
+func CountSigOps(tx *jaxutil.Tx) int {
 	msgTx := tx.MsgTx()
 
 	// Accumulate the number of signature operations in all transaction
@@ -409,7 +405,7 @@ func CountSigOps(tx *btcutil.Tx) int {
 // transactions which are of the pay-to-script-Hash type.  This uses the
 // precise, signature operation counting mechanism from the script engine which
 // requires access to the input transaction scripts.
-func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
+func CountP2SHSigOps(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint) (int, error) {
 	// Coinbase transactions have no interesting inputs.
 	if isCoinBaseTx {
 		return 0, nil
@@ -424,13 +420,14 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 	for txInIndex, txIn := range msgTx.TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil && thisIsSwapTx && missingCount < 2 {
+		if utxo == nil && thisIsSwapTx {
 			missingCount += 1
 			continue
 		}
 
-		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
-			str := fmt.Sprintf("output %v referenced from transaction %s:%d either does not exist or has already been spent",
+		if utxo == nil || utxo.IsSpent() {
+			str := fmt.Sprintf(
+				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
@@ -461,6 +458,13 @@ func CountP2SHSigOps(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 		}
 	}
 
+	if thisIsSwapTx {
+		err := ValidateSwapTxStructure(msgTx, missingCount)
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	return totalSigOps, nil
 }
 
@@ -485,17 +489,14 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 	// seconds and it's much nicer to deal with standard Go time values
 	// instead of converting to seconds everywhere.
 	if !header.Timestamp().Equal(time.Unix(header.Timestamp().Unix(), 0)) {
-		str := fmt.Sprintf("block timestamp of %v has a higher "+
-			"precision than one second", header.Timestamp())
+		str := fmt.Sprintf("block timestamp of %v has a higher precision than one second", header.Timestamp())
 		return NewRuleError(ErrInvalidTime, str)
 	}
 
 	// Ensure the block time is not too far in the future.
-	maxTimestamp := timeSource.AdjustedTime().Add(time.Second *
-		MaxTimeOffsetSeconds)
+	maxTimestamp := timeSource.AdjustedTime().Add(time.Second * MaxTimeOffsetSeconds)
 	if header.Timestamp().After(maxTimestamp) {
-		str := fmt.Sprintf("block timestamp of %v is too far in the "+
-			"future", header.Timestamp())
+		str := fmt.Sprintf("block timestamp of %v is too far in the future", header.Timestamp())
 		return NewRuleError(ErrTimeTooNew, str)
 	}
 
@@ -507,7 +508,7 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	msgBlock := block.MsgBlock()
 	header := msgBlock.Header
 	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
@@ -518,15 +519,14 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// A block must have at least one transaction.
 	numTx := len(msgBlock.Transactions)
 	if numTx == 0 {
-		return NewRuleError(ErrNoTransactions, "block does not contain "+
-			"any transactions")
+		return NewRuleError(ErrNoTransactions, "block does not contain any transactions")
 	}
 
 	// A block must not have more transactions than the max block payload or
 	// else it is certainly over the weight limit.
 	if numTx > MaxBlockBaseSize {
-		str := fmt.Sprintf("block contains too many transactions - "+
-			"got %d, max %d", numTx, MaxBlockBaseSize)
+		str := fmt.Sprintf("block contains too many transactions - got %d, max %d",
+			numTx, MaxBlockBaseSize)
 		return NewRuleError(ErrBlockTooBig, str)
 	}
 
@@ -534,23 +534,20 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// serialized.
 	serializedSize := msgBlock.SerializeSizeStripped()
 	if serializedSize > MaxBlockBaseSize {
-		str := fmt.Sprintf("serialized block is too big - got %d, "+
-			"max %d", serializedSize, MaxBlockBaseSize)
+		str := fmt.Sprintf("serialized block is too big - got %d, max %d", serializedSize, MaxBlockBaseSize)
 		return NewRuleError(ErrBlockTooBig, str)
 	}
 
 	// The first transaction in a block must be a coinbase.
 	transactions := block.Transactions()
 	if !IsCoinBase(transactions[0]) {
-		return NewRuleError(ErrFirstTxNotCoinbase, "first transaction in "+
-			"block is not a coinbase")
+		return NewRuleError(ErrFirstTxNotCoinbase, "first transaction in block is not a coinbase")
 	}
 
 	// A block must not have more than one coinbase.
 	for i, tx := range transactions[1:] {
 		if IsCoinBase(tx) {
-			str := fmt.Sprintf("block contains second coinbase at "+
-				"index %d", i+1)
+			str := fmt.Sprintf("block contains second coinbase at index %d", i+1)
 			return NewRuleError(ErrMultipleCoinbases, str)
 		}
 	}
@@ -567,15 +564,14 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	// Build merkle tree and ensure the calculated merkle root matches the
 	// entry in the block header.  This also has the effect of caching all
 	// of the transaction hashes in the block to speed up future Hash
-	// checks.  Bitcoind builds the tree here and checks the merkle root
+	// checks.  Jaxnetd builds the tree here and checks the merkle root
 	// after the following checks, but there is no reason not to check the
 	// merkle root matches here.
 	merkles := BuildMerkleTreeStore(block.Transactions(), false)
 	calculatedMerkleRoot := merkles[len(merkles)-1]
 	root := header.MerkleRoot()
 	if !root.IsEqual(calculatedMerkleRoot) {
-		str := fmt.Sprintf("block merkle root is invalid - block "+
-			"header indicates %v, but calculated value is %v",
+		str := fmt.Sprintf("block merkle root is invalid - block header indicates %v, but calculated value is %v",
 			header.MerkleRoot(), calculatedMerkleRoot)
 		return NewRuleError(ErrBadMerkleRoot, str)
 	}
@@ -587,8 +583,7 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 	for _, tx := range transactions {
 		hash := tx.Hash()
 		if _, exists := existingTxHashes[*hash]; exists {
-			str := fmt.Sprintf("block contains duplicate "+
-				"transaction %v", hash)
+			str := fmt.Sprintf("block contains duplicate transaction %v", hash)
 			return NewRuleError(ErrDuplicateTx, str)
 		}
 		existingTxHashes[*hash] = struct{}{}
@@ -602,10 +597,10 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 		// overflow.
 		lastSigOps := totalSigOps
 		totalSigOps += (CountSigOps(tx) * WitnessScaleFactor)
+
 		if totalSigOps < lastSigOps || totalSigOps > MaxBlockSigOpsCost {
-			str := fmt.Sprintf("block contains too many signature "+
-				"operations - got %v, max %v", totalSigOps,
-				MaxBlockSigOpsCost)
+			str := fmt.Sprintf("block contains too many signature operations - got %v, max %v",
+				totalSigOps, MaxBlockSigOpsCost)
 			return NewRuleError(ErrTooManySigOps, str)
 		}
 	}
@@ -615,14 +610,14 @@ func CheckBlockSanityWF(block *btcutil.Block, powLimit *big.Int, timeSource Medi
 
 // CheckBlockSanity performs some preliminary checks on a block to ensure it is
 // sane before continuing with block processing.  These checks are context free.
-func CheckBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
+func CheckBlockSanity(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
 	return CheckBlockSanityWF(block, powLimit, timeSource, BFNone)
 }
 
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.
-func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
+func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
 	sigScript := coinbaseTx.MsgTx().TxIn[0].SignatureScript
 	if len(sigScript) < 1 {
 		str := "the coinbase signature script for blocks of " +
@@ -662,7 +657,7 @@ func ExtractCoinbaseHeight(coinbaseTx *btcutil.Tx) (int32, error) {
 
 // CheckSerializedHeight checks if the signature script in the passed
 // transaction starts with the serialized block height of wantHeight.
-func CheckSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
+func CheckSerializedHeight(coinbaseTx *jaxutil.Tx, wantHeight int32) error {
 	serializedHeight, err := ExtractCoinbaseHeight(coinbaseTx)
 	if err != nil {
 		return err
@@ -688,34 +683,33 @@ func CheckSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 //
 // NOTE: The transaction MUST have already been sanity checked with the
 // CheckTransactionSanity function prior to calling this function.
-func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
+func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpoint, chainParams *chaincfg.Params) (int64, error) {
 	// Coinbase transactions have no inputs.
 	if IsCoinBase(tx) {
 		return 0, nil
 	}
 
-	txHash := tx.Hash()
-	var totalSatoshiIn int64
+	var (
+		totalSatoshiIn int64
+		txHash         = tx.Hash()
+		missedInputs   = map[int]struct{}{}
+		thisIsSwapTx   = tx.MsgTx().SwapTx()
+	)
 
-	missingCount := 0
-	missedInputs := map[int]struct{}{}
-	thisIsSwapTx := tx.MsgTx().SwapTx()
 	for txInIndex, txIn := range tx.MsgTx().TxIn {
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-		if utxo == nil && thisIsSwapTx && missingCount < 2 {
-			missingCount += 1
+		if utxo == nil && thisIsSwapTx {
 			missedInputs[txInIndex] = struct{}{}
 			continue
 		}
 
-		if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+		if utxo == nil || utxo.IsSpent() {
 			str := fmt.Sprintf(
 				"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 				txIn.PreviousOutPoint,
 				tx.Hash(), txInIndex)
 			return 0, NewRuleError(ErrMissingTxOut, str)
-
 		}
 
 		// Ensure the transaction is not spending coins which have not
@@ -735,6 +729,15 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 			}
 		}
 
+		txIn.Age = txHeight - utxo.BlockHeight()
+
+		if thisIsSwapTx {
+			err := ValidateSwapTxStructure(tx.MsgTx(), len(missedInputs))
+			if err != nil {
+				return 0, err
+			}
+		}
+
 		// Ensure the transaction amounts are in range.  Each of the
 		// output values of the input transactions must not be negative
 		// or more than the max allowed per transaction.  All amounts in
@@ -744,14 +747,14 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		originTxSatoshi := utxo.Amount()
 		if originTxSatoshi < 0 {
 			str := fmt.Sprintf("transaction output has negative "+
-				"value of %v", btcutil.Amount(originTxSatoshi))
+				"value of %v", jaxutil.Amount(originTxSatoshi))
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
-		if originTxSatoshi > btcutil.MaxSatoshi {
+		if originTxSatoshi > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
-				btcutil.Amount(originTxSatoshi),
-				btcutil.MaxSatoshi)
+				jaxutil.Amount(originTxSatoshi),
+				jaxutil.MaxSatoshi)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -761,11 +764,11 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		lastSatoshiIn := totalSatoshiIn
 		totalSatoshiIn += originTxSatoshi
 		if totalSatoshiIn < lastSatoshiIn ||
-			totalSatoshiIn > btcutil.MaxSatoshi {
+			totalSatoshiIn > jaxutil.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshiIn,
-				btcutil.MaxSatoshi)
+				jaxutil.MaxSatoshi)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -791,9 +794,47 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		return 0, NewRuleError(ErrSpendTooHigh, str)
 	}
 
-	// NOTE: bitcoind checks if the transaction fees are < 0 here, but that
+	// NOTE: jaxnetd checks if the transaction fees are < 0 here, but that
 	// is an impossible condition because of the check above that ensures
 	// the inputs are >= the outputs.
 	txFeeInSatoshi := totalSatoshiIn - totalSatoshiOut
 	return txFeeInSatoshi, nil
+}
+
+// ValidateSwapTxStructure validates formats of the cross shard swap tx.
+// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
+// TxIn and TxOut are strictly associated with each other by index.
+// One pair corresponds to the current chain. The second is for another, unknown chain.
+//
+// | # | --- []TxIn ----- | --- | --- []TxOut ----- | # |
+// | - | ---------------- | --- | ----------------- | - |
+// | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
+// | 1 | TxIn_1 ∈ Shard_X | --> | TxOut_1 ∈ Shard_X | 1 |
+// | 2 | TxIn_2 ∈ Shard_Y | --> | TxOut_2 ∈ Shard_Y | 2 |
+// | 3 | TxIn_3 ∈ Shard_Y | --> | TxOut_3 ∈ Shard_Y | 3 |
+//
+// The order is not deterministic.
+func ValidateSwapTxStructure(tx *wire.MsgTx, missedUTXO int) error {
+	inLen := len(tx.TxIn)
+	outLen := len(tx.TxOut)
+	if inLen != outLen || (inLen != 2 && inLen != 4) {
+		str := fmt.Sprintf("cross shard swap tx has invalid format: [%d]TxIn, [%d]TxOut",
+			inLen, outLen)
+		return NewRuleError(ErrInvalidShardSwapInOuts, str)
+	}
+
+	// this is a special case for callers
+	// who have no information about missing UTXOs within their context.
+	if missedUTXO == -1 {
+		return nil
+	}
+
+	if missedUTXO > inLen/2 {
+		str := fmt.Sprintf(
+			"cross shard swap tx contains too many unknown inputs: [%d]TxIn, [%d]TxOut, [%d] missed",
+			inLen, outLen, missedUTXO)
+		return NewRuleError(ErrInvalidShardSwapInOuts, str)
+	}
+	return nil
 }

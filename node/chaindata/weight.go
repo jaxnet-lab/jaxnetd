@@ -8,10 +8,10 @@ package chaindata
 import (
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
-	"gitlab.com/jaxnet/core/shard.core/txscript"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 )
 
 const (
@@ -52,7 +52,7 @@ const (
 // Currently the weight metric is simply the sum of the block's serialized size
 // without any witness data scaled proportionally by the WitnessScaleFactor,
 // and the block's serialized size including any witness data.
-func GetBlockWeight(blk *btcutil.Block) int64 {
+func GetBlockWeight(blk *jaxutil.Block) int64 {
 	msgBlock := blk.MsgBlock()
 
 	baseSize := msgBlock.SerializeSizeStripped()
@@ -67,7 +67,7 @@ func GetBlockWeight(blk *btcutil.Block) int64 {
 // transactions's serialized size without any witness data scaled
 // proportionally by the WitnessScaleFactor, and the transaction's serialized
 // size including any witness data.
-func GetTransactionWeight(tx *btcutil.Tx) int64 {
+func GetTransactionWeight(tx *jaxutil.Tx) int64 {
 	msgTx := tx.MsgTx()
 
 	baseSize := msgTx.SerializeSizeStripped()
@@ -83,30 +83,31 @@ func GetTransactionWeight(tx *btcutil.Tx) int64 {
 // legacy sig op count scaled according to the WitnessScaleFactor, the sig op
 // count for all p2sh inputs scaled by the WitnessScaleFactor, and finally the
 // unscaled sig op count for any inputs spending witness programs.
-func GetSigOpCost(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bip16, segWit bool) (int, error) {
+func GetSigOpCost(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bip16, segWit bool) (int, error) {
 	numSigOps := CountSigOps(tx) * WitnessScaleFactor
 	if bip16 {
 		numP2SHSigOps, err := CountP2SHSigOps(tx, isCoinBaseTx, utxoView)
 		if err != nil {
 			return 0, nil
 		}
-		numSigOps += (numP2SHSigOps * WitnessScaleFactor)
+		numSigOps += numP2SHSigOps * WitnessScaleFactor
 	}
 
 	if segWit && !isCoinBaseTx {
 		msgTx := tx.MsgTx()
-		missingCount := 0
 		thisIsSwapTx := tx.MsgTx().SwapTx()
+		missingCount := 0
+
 		for txInIndex, txIn := range msgTx.TxIn {
 			// Ensure the referenced output is available and hasn't
 			// already been spent.
 			utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
-			if utxo == nil && thisIsSwapTx && missingCount < 2 {
+			if utxo == nil && thisIsSwapTx {
 				missingCount += 1
 				continue
 			}
 
-			if utxo == nil || utxo.IsSpent() || missingCount > 1 {
+			if utxo == nil || utxo.IsSpent() {
 				str := fmt.Sprintf(
 					"output %v referenced from transaction %s:%d either does not exist or has already been spent",
 					txIn.PreviousOutPoint, tx.Hash(),
@@ -118,6 +119,13 @@ func GetSigOpCost(tx *btcutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bi
 			sigScript := txIn.SignatureScript
 			pkScript := utxo.PkScript()
 			numSigOps += txscript.GetWitnessSigOpCount(sigScript, pkScript, witness)
+		}
+
+		if thisIsSwapTx {
+			err := ValidateSwapTxStructure(msgTx, missingCount)
+			if err != nil {
+				return 0, err
+			}
 		}
 
 	}

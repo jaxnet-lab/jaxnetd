@@ -3,7 +3,7 @@ indexers
 
 [![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://godoc.org/gitlab.com/jaxnet/core/shard.core/shards/blockchain/indexers?status.png)](http://godoc.org/gitlab.com/jaxnet/core/shard.core/shards/blockchain/indexers)
+[![GoDoc](https://godoc.org/gitlab.com/jaxnet/jaxnetd/shards/blockchain/indexers?status.png)](http://godoc.org/gitlab.com/jaxnet/jaxnetd/shards/blockchain/indexers)
 
 Package indexers implements optional block chain indexes.
 
@@ -23,7 +23,7 @@ via an RPC interface.
 ## Installation
 
 ```bash
-$ go get -u gitlab.com/jaxnet/core/shard.core/shards/blockchain/indexers
+$ go get -u gitlab.com/jaxnet/jaxnetd/shards/blockchain/indexers
 ```
 
 ## License

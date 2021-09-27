@@ -24,32 +24,33 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/corelog"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	_ "gitlab.com/jaxnet/core/shard.core/database/ffldb"
-	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/peer"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"github.com/pelletier/go-toml"
+	_ "github.com/pelletier/go-toml"
+	"gitlab.com/jaxnet/jaxnetd/corelog"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/peer"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	defaultConfigFilename = "shard.core.yaml"
+	defaultConfigFilename = "jaxnetd.yaml"
 	defaultDataDirname    = "data"
 	defaultLogLevel       = "info"
 
 	defaultMaxPeers              = 125
 	defaultBanDuration           = time.Hour * 24
 	defaultBanThreshold          = 100
-	defaultConnectTimeout        = time.Second * 30
 	defaultMaxRPCClients         = 100
 	defaultMaxRPCWebsockets      = 25
 	defaultMaxRPCConcurrentReqs  = 20
@@ -64,17 +65,15 @@ const (
 	blockMaxSizeMax              = chaindata.MaxBlockBaseSize - 1000
 	blockMaxWeightMin            = 4000
 	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
-	defaultGenerate              = false
 	defaultMaxOrphanTransactions = 100
-	defaultMaxOrphanTxSize       = 100000
 	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-shard.core.yaml"
+	sampleConfigFilename         = "sample-jaxnetd.yaml"
 	defaultTxIndex               = false
 	defaultAddrIndex             = false
 )
 
 var (
-	defaultHomeDir = btcutil.AppDataDir("shard.core", false)
+	defaultHomeDir = jaxutil.AppDataDir("jaxnetd", false)
 	// defaultConfigFile  =  defaultConfigFilename
 	// defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	knownDbTypes = database.SupportedDrivers()
@@ -321,7 +320,7 @@ func newConfigParser(cfg *node.Config, so *serviceOptions, options flags.Options
 // 	3) Load configuration file overwriting defaults with any specified options
 // 	4) Parse CLI options and overwrite/add any specified options
 //
-// The above results in btcd functioning properly without any config settings
+// The above results in jaxnetd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
 func LoadConfig() (*node.Config, []string, error) {
@@ -339,7 +338,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	cfg := node.Config{
-		Node: node.NodeConfig{
+		Node: node.InstanceConfig{
 			Net:    ActiveNetParams.Name,
 			DbType: defaultDbType,
 			BeaconChain: cprovider.ChainRuntimeConfig{
@@ -349,7 +348,7 @@ func LoadConfig() (*node.Config, []string, error) {
 				BlockMaxWeight:    defaultBlockMaxWeight,
 				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
 				MaxPeers:          defaultMaxPeers,
-				MinRelayTxFee:     mempool.DefaultMinRelayTxFee.ToBTC(),
+				MinRelayTxFee:     0,
 				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
 				TxIndex:           defaultTxIndex,
 				AddrIndex:         defaultAddrIndex,
@@ -417,7 +416,8 @@ func LoadConfig() (*node.Config, []string, error) {
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
 
 	stats, err := os.Stat(preCfg.ConfigFile)
-	if os.IsNotExist(err) {
+	if stats == nil || os.IsNotExist(err) {
+		// todo(mike): fix the default cfg.
 		err := createDefaultConfigFile(preCfg.ConfigFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating a "+
@@ -432,16 +432,21 @@ func LoadConfig() (*node.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	ext := filepath.Ext(stats.Name())
-	switch ext {
-	case ".yaml":
+	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
+		_, _ = fmt.Fprintln(os.Stderr, "WARNING! YAML configuration is deprecated and will be removed in next release. Use TOML.")
+
 		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
 		if err != nil {
 			configFileError = err
 		}
-	default:
-		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension:", ext)
-		return nil, nil, errors.New("Invalid file extension: " + ext)
+	} else if strings.HasSuffix(preCfg.ConfigFile, ".toml") {
+		err = toml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			configFileError = err
+		}
+	} else {
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .toml")
+		return nil, nil, errors.New("invalid file extension, must be .toml")
 	}
 
 	// Parse command line options again to ensure they take precedence.
@@ -513,6 +518,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Parse, validate, and set debug log level(s).
 	cfg.LogConfig.Directory = cfg.LogDir
+	cfg.LogConfig.FileLoggingEnabled = cfg.LogDir != ""
 	cfg.LogConfig.Filename = filepath.Join(cfg.LogDir, corelog.DefaultLogFile)
 	err = parseAndSetDebugLevels(cfg.DebugLevel, cfg.LogConfig)
 	if err != nil {
@@ -680,16 +686,6 @@ func LoadConfig() (*node.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Validate the the minrelaytxfee.
-	cfg.Node.BeaconChain.MinRelayTxFeeValues, err = btcutil.NewAmount(cfg.Node.BeaconChain.MinRelayTxFee)
-	if err != nil {
-		str := "%s: invalid minrelaytxfee: %v"
-		err := fmt.Errorf(str, funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
-
 	// Limit the max block size to a sane value.
 	if cfg.Node.BeaconChain.BlockMaxSize < blockMaxSizeMin || cfg.Node.BeaconChain.BlockMaxSize >
 		blockMaxSizeMax {
@@ -835,8 +831,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers,
-		ActiveNetParams.DefaultPort)
+	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers, ActiveNetParams.DefaultPort)
 	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
 		ActiveNetParams.DefaultPort)
 
@@ -980,10 +975,19 @@ func LoadConfig() (*node.Config, []string, error) {
 		Log.Warn().Msg(configFileError.Error())
 	}
 
+	// buf := bytes.NewBuffer(nil)
+	// err = toml.NewEncoder(buf).Encode(cfg)
+	// if err != nil {
+	// 	Log.Warn().Msg(err.Error())
+	// } else {
+	// 	err = ioutil.WriteFile("template.jaxnetd.toml", buf.Bytes(), 0644)
+	// 	fmt.Println(err)
+	// }
+
 	return &cfg, remainingArgs, nil
 }
 
-// createDefaultConfig copies the file sample-btcd.conf to the given destination path,
+// createDefaultConfig copies the file sample-jaxnetd.conf to the given destination path,
 // and populates it with some randomly generated RPC username and password.
 func createDefaultConfigFile(destinationPath string) error {
 	// Create the destination directory if it does not exists

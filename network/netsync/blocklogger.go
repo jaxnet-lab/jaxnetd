@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 )
 
 // blockProgressLogger provides periodic logging for other services in order
@@ -41,7 +41,7 @@ func newBlockProgressLogger(progressMessage string, logger zerolog.Logger) *bloc
 // LogBlockHeight logs a new block height as an information message to show
 // progress to the user. In order to prevent spam, it limits logging to one
 // message every 10 seconds with duration and totals included.
-func (b *blockProgressLogger) LogBlockHeight(block *btcutil.Block) {
+func (b *blockProgressLogger) LogBlockHeight(block *jaxutil.Block) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -69,7 +69,7 @@ func (b *blockProgressLogger) LogBlockHeight(block *btcutil.Block) {
 	}
 	b.subsystemLogger.Info().Msgf("%s %d %s in the last %s (%d %s, height %d, %s)",
 		b.progressAction, b.receivedLogBlocks, blockStr, tDuration, b.receivedLogTx,
-		txStr, block.Height(), block.MsgBlock().Header.Timestamp)
+		txStr, block.Height(), block.MsgBlock().Header.Timestamp())
 
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0

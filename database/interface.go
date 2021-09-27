@@ -9,9 +9,9 @@
 package database
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a
@@ -229,7 +229,7 @@ type Tx interface {
 	//   - ErrTxClosed if the transaction has already been closed
 	//
 	// Other errors are possible depending on the implementation.
-	StoreBlock(block *btcutil.Block) error
+	StoreBlock(block *jaxutil.Block) error
 
 	// HasBlock returns whether or not a block with the given hash exists
 	// in the database.
@@ -408,6 +408,8 @@ type Tx interface {
 	// block storage.  Calling this function on a managed transaction will
 	// result in a panic.
 	Rollback() error
+
+	Chain() chain.IChainCtx
 }
 
 // DB provides a generic interface that is used to store bitcoin blocks and

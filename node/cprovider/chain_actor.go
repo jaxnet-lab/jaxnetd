@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+// license that can be found in the LICENSE file.+
+
 package cprovider
 
 import (
@@ -8,51 +9,51 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain/indexers"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/node/mining"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 const defaultMaxOrphanTxSize = 100000
 
 type ChainRuntimeConfig struct {
-	SigCacheMaxSize     uint           `yaml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
-	AddCheckpoints      []string       `yaml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	AddrIndex           bool           `yaml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
-	MaxPeers            int            `yaml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
-	BlockMaxSize        uint32         `yaml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
-	BlockMinSize        uint32         `yaml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
-	BlockMaxWeight      uint32         `yaml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
-	BlockMinWeight      uint32         `yaml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
-	BlockPrioritySize   uint32         `yaml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
-	TxIndex             bool           `yaml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
-	NoRelayPriority     bool           `yaml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
-	RejectReplacement   bool           `yaml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
-	RelayNonStd         bool           `yaml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
-	FreeTxRelayLimit    float64        `yaml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
-	MaxOrphanTxs        int            `yaml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	MinRelayTxFee       float64        `yaml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in BTC/kB to be considered a non-zero fee."`
-	MinRelayTxFeeValues btcutil.Amount `yaml:"-"`
-	NoCFilters          bool           `yaml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
-	DisableCheckpoints  bool           `yaml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
-	MiningAddresses     []string       `yaml:"mining_addresses"`
-	AutoExpand          bool           `yaml:"auto_expand"`
-	ExpansionRule       int32          `yaml:"expansion_rule"`
-	ExpansionLimit      int32          `yaml:"expansion_limit"`
+	SigCacheMaxSize    uint     `yaml:"sig_cache_max_size" toml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
+	AddCheckpoints     []string `yaml:"add_checkpoints" toml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+	AddrIndex          bool     `yaml:"addr_index" toml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+	MaxPeers           int      `yaml:"max_peers" toml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
+	BlockMaxSize       uint32   `yaml:"block_max_size" toml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
+	BlockMinSize       uint32   `yaml:"block_min_size" toml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
+	BlockMaxWeight     uint32   `yaml:"block_max_weight" toml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
+	BlockMinWeight     uint32   `yaml:"block_min_weight" toml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
+	BlockPrioritySize  uint32   `yaml:"block_priority_size" toml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
+	TxIndex            bool     `yaml:"tx_index" toml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
+	NoRelayPriority    bool     `yaml:"no_relay_priority" toml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
+	RejectReplacement  bool     `yaml:"reject_replacement" toml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+	RelayNonStd        bool     `yaml:"relay_non_std" toml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
+	FreeTxRelayLimit   float64  `yaml:"free_tx_relay_limit" toml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
+	MaxOrphanTxs       int      `yaml:"max_orphan_txs" toml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
+	MinRelayTxFee      int64    `yaml:"min_relay_tx_fee" toml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in satoshi/kB to be considered a non-zero fee."`
+	NoCFilters         bool     `yaml:"no_c_filters" toml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
+	DisableCheckpoints bool     `yaml:"disable_checkpoints" toml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
+	MiningAddresses    []string `yaml:"mining_addresses" toml:"mining_addresses"`
+	AutoExpand         bool     `yaml:"auto_expand" toml:"auto_expand"`
+	ExpansionRule      int32    `yaml:"expansion_rule" toml:"expansion_rule"`
+	ExpansionLimit     int32    `yaml:"expansion_limit" toml:"expansion_limit"`
 }
 
-func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]btcutil.Address, error) {
-	miningAddrs := make([]btcutil.Address, 0, len(cfg.MiningAddresses))
+func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]jaxutil.Address, error) {
+	miningAddrs := make([]jaxutil.Address, 0, len(cfg.MiningAddresses))
 	for _, address := range cfg.MiningAddresses {
-		addr, err := btcutil.DecodeAddress(address, params)
+		addr, err := jaxutil.DecodeAddress(address, params)
 		if err != nil {
 			return nil, err
 		}
@@ -79,14 +80,15 @@ type ChainProvider struct {
 
 	// These fields define any optional indexes the RPC Server can make use
 	// of to provide additional data when queried.
-	TxIndex   *indexers.TxIndex
-	AddrIndex *indexers.AddrIndex
-	CfIndex   *indexers.CfIndex
+	TxIndex       *indexers.TxIndex
+	AddrIndex     *indexers.AddrIndex
+	CfIndex       *indexers.CfIndex
+	OrphanTxIndex *indexers.OrphanTxIndex
 
 	// The fee estimator keeps track of how long transactions are left in
 	// the mempool before they are mined into blocks.
 	FeeEstimator *mempool.FeeEstimator
-	MiningAddrs  []btcutil.Address
+	MiningAddrs  []jaxutil.Address
 
 	SigCache    *txscript.SigCache
 	HashCache   *txscript.HashCache
@@ -179,11 +181,12 @@ func (chainProvider *ChainProvider) Log() zerolog.Logger {
 	return chainProvider.logger
 }
 
-func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
-	return chainProvider.blockChain
-}
-
 func (chainProvider *ChainProvider) initBlkTmplGenerator() {
+	minRelayTxFee := mempool.MinRelayFeeAmount(chainProvider.ChainCtx.IsBeacon())
+	if chainProvider.config.MinRelayTxFee > 1 {
+		minRelayTxFee = jaxutil.Amount(chainProvider.config.MinRelayTxFee)
+	}
+
 	// Create the mining policy and block template generator based on the
 	// configuration options.
 	policy := mining.Policy{
@@ -192,7 +195,7 @@ func (chainProvider *ChainProvider) initBlkTmplGenerator() {
 		BlockMinSize:      chainProvider.config.BlockMinSize,
 		BlockMaxSize:      chainProvider.config.BlockMaxSize,
 		BlockPrioritySize: chainProvider.config.BlockPrioritySize,
-		TxMinFreeFee:      chainProvider.config.MinRelayTxFeeValues,
+		TxMinFreeFee:      minRelayTxFee,
 	}
 
 	chainProvider.blockTmplGenerator = mining.NewBlkTmplGenerator(&policy,
@@ -211,10 +214,6 @@ func (chainProvider *ChainProvider) GbtWorkState() *mining.GBTWorkState {
 	return chainProvider.gbtWorkState
 }
 
-func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool) (mining.BlockTemplate, error) {
-	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue)
-}
-
 func (chainProvider *ChainProvider) Stats() map[string]float64 {
 	shards, _ := chainProvider.ShardCount()
 	snapshot := chainProvider.blockChain.BestSnapshot()
@@ -231,22 +230,24 @@ func (chainProvider *ChainProvider) Stats() map[string]float64 {
 	}
 }
 
-func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
-	snap := chainProvider.BlockChain().BestSnapshot()
-	if snap == nil {
-		return 0, nil
-	}
-
-	bestBlock, err := chainProvider.BlockChain().BlockByHash(&snap.Hash)
-	if err != nil {
-		return 0, err
-	}
-
-	return bestBlock.MsgBlock().Header.BeaconHeader().Shards(), nil
+func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
+	return chainProvider.blockChain
+}
+func (chainProvider *ChainProvider) MiningAddresses() []jaxutil.Address {
+	return chainProvider.MiningAddrs
 }
 
-func (chainProvider *ChainProvider) MiningAddresses() []btcutil.Address {
-	return chainProvider.MiningAddrs
+func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
+	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue, burnReward)
+}
+
+func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
+	return chainProvider.BlockChain().ShardCount()
+}
+
+func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
+	// todo
+	return nil
 }
 
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,
@@ -279,6 +280,11 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 			mempool.DefaultEstimateFeeMinRegisteredBlocks)
 	}
 
+	minRelayTxFee := mempool.MinRelayFeeAmount(chainProvider.ChainCtx.IsBeacon())
+	if chainProvider.config.MinRelayTxFee > 1 {
+		minRelayTxFee = jaxutil.Amount(chainProvider.config.MinRelayTxFee)
+	}
+
 	txC := mempool.Config{
 		Policy: mempool.Policy{
 			DisableRelayPriority: cfg.NoRelayPriority,
@@ -287,7 +293,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 			MaxOrphanTxs:         cfg.MaxOrphanTxs,
 			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
 			MaxSigOpCostPerTx:    chaindata.MaxBlockSigOpsCost / 4,
-			MinRelayTxFee:        cfg.MinRelayTxFeeValues,
+			MinRelayTxFee:        minRelayTxFee,
 			MaxTxVersion:         2,
 			RejectReplacement:    cfg.RejectReplacement,
 		},
@@ -295,7 +301,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 		FetchUtxoView:  chainProvider.blockChain.FetchUtxoView,
 		BestHeight:     func() int32 { return chainProvider.blockChain.BestSnapshot().Height },
 		MedianTimePast: func() time.Time { return chainProvider.blockChain.BestSnapshot().MedianTime },
-		CalcSequenceLock: func(tx *btcutil.Tx, view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
+		CalcSequenceLock: func(tx *jaxutil.Tx, view *chaindata.UtxoViewpoint) (*chaindata.SequenceLock, error) {
 			return chainProvider.blockChain.CalcSequenceLock(tx, view, true)
 		},
 		IsDeploymentActive: chainProvider.blockChain.IsDeploymentActive,
@@ -329,13 +335,15 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 		}
 
 		chainProvider.TxIndex = indexers.NewTxIndex(chainProvider.DB)
-		indexes = append(indexes, chainProvider.TxIndex)
+		chainProvider.OrphanTxIndex = indexers.NewOrphanTxIndex(chainProvider.DB)
+		indexes = append(indexes, chainProvider.TxIndex, chainProvider.OrphanTxIndex)
 	}
 	if cfg.AddrIndex {
 		chainProvider.logger.Info().Msg("Address index is enabled")
 		chainProvider.AddrIndex = indexers.NewAddrIndex(chainProvider.DB, chainProvider.ChainCtx.Params())
 		indexes = append(indexes, chainProvider.AddrIndex)
 	}
+
 	if !cfg.NoCFilters {
 		chainProvider.logger.Info().Msg("Committed filter index is enabled")
 		chainProvider.CfIndex = indexers.NewCfIndex(chainProvider.DB, chainProvider.ChainCtx.Params())

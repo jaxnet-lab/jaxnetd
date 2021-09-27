@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
@@ -11,12 +12,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 func (chainCtl *chainController) EnableShard(shardID uint32) error {
@@ -29,13 +31,22 @@ func (chainCtl *chainController) DisableShard(shardID uint32) error {
 	return nil
 }
 
-func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
+func (chainCtl *chainController) ShardCtl(id uint32) (*cprovider.ChainProvider, bool) {
+	shardInfo, ok := chainCtl.shardsCtl[id]
+	if !ok {
+		return nil, ok
+	}
+
+	return shardInfo.ctl.chainProvider, ok
+}
+
+func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 	chainCtl.shardsMutex.RLock()
 	defer chainCtl.shardsMutex.RUnlock()
-	list := make(map[uint32]btcjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
+	list := make(map[uint32]jaxjson.ShardInfo, len(chainCtl.shardsIndex.Shards))
 
 	for _, shardInfo := range chainCtl.shardsIndex.Shards {
-		list[shardInfo.ID] = btcjson.ShardInfo{
+		list[shardInfo.ID] = jaxjson.ShardInfo{
 			ID:            shardInfo.ID,
 			LastVersion:   int32(shardInfo.LastVersion),
 			GenesisHeight: shardInfo.GenesisHeight,
@@ -45,7 +56,7 @@ func (chainCtl *chainController) ListShards() btcjson.ShardListResult {
 		}
 	}
 
-	return btcjson.ShardListResult{
+	return jaxjson.ShardListResult{
 		Shards: list,
 	}
 }
@@ -66,7 +77,7 @@ func (chainCtl *chainController) runShards() error {
 			return errors.New("invalid start genesis block, expansion not made at this height")
 		}
 
-		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners)
+		err = info.P2PInfo.Update(chainCtl.cfg.Node.P2P.Listeners, info.ID, chainCtl.cfg.Node.P2P.ShardDefaultPort)
 		if err != nil {
 			return err
 		}
@@ -82,9 +93,9 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	block, ok := not.Data.(*btcutil.Block)
+	block, ok := not.Data.(*jaxutil.Block)
 	if !ok {
-		chainCtl.logger.Warn().Msg("block notification data is not a *btcutil.Block")
+		chainCtl.logger.Warn().Msg("block notification data is not a *jaxutil.Block")
 		return
 	}
 
@@ -94,7 +105,9 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	}
 
 	opts := p2p.ListenOpts{}
-	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners); err != nil {
+	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners,
+		block.MsgBlock().Header.BeaconHeader().Shards(), // todo: change this
+		chainCtl.cfg.Node.P2P.ShardDefaultPort); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("unable to get free port")
 	}
 
@@ -102,7 +115,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	chainCtl.runShardRoutine(shardID, opts, block, true)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *btcutil.Block, autoInit bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *jaxutil.Block, autoInit bool) {
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error().
 			Uint32("shard_id", shardID).
@@ -113,19 +126,15 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(),
-		block.MsgBlock().Header.BeaconHeader())
+		block.MsgBlock().Header.Copy().BeaconHeader(), block.MsgBlock().Transactions[0])
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
 
-	beaconBlockGen := shard.BeaconBlockProvider{
-		// gbt worker state was initialized in cprovider.NewChainProvider
-		BlockGenerator: chainCtl.beacon.chainProvider.BlockTemplate,
-		ShardCount:     chainCtl.beacon.chainProvider.ShardCount,
-	}
-
-	if err := shardCtl.Init(beaconBlockGen, autoInit); err != nil {
+	// gbt worker state was initialized in cprovider.NewChainProvider
+	if err := shardCtl.Init(chainCtl.beacon.chainProvider); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Can't init shard chainCtl")
+		cancel()
 		return
 	}
 
@@ -153,12 +162,13 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 
 		if chainCtl.cfg.Node.EnableCPUMiner {
-			chainCtl.runShardMiner(shardCtl.ChainProvider())
+			chainCtl.logger.Warn().Msg("CPUMiner is not available.")
+			// chainCtl.runShardMiner(shardCtl.ChainProvider())
 		}
 	}
 
 	if chainCtl.cfg.Metrics.Enable {
-		chainCtl.metrics.Add(ChainMetrics(shardCtl, chainCtl.logger))
+		chainCtl.metrics.Add(MetricsOfChain(shardCtl, chainCtl.logger))
 	}
 }
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package chaincfg
 
 import (
@@ -8,8 +9,8 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // fastNetPowLimit is the highest proof of work value a Bitcoin block
@@ -17,55 +18,37 @@ import (
 // 2^255 - 1.
 var fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
-// fastNetGenesisHash is the hash of the first block in the block chain for the
-// test network (version 3).
-var fastNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
-	0x43, 0x49, 0x7f, 0xd7, 0xf8, 0x26, 0x95, 0x71,
-	0x08, 0xf4, 0xa3, 0x0f, 0xd9, 0xce, 0xc3, 0xae,
-	0xba, 0x79, 0x97, 0x20, 0x84, 0xe9, 0x0e, 0xad,
-	0x01, 0xea, 0x33, 0x09, 0x00, 0x00, 0x00, 0x00,
-})
-
-// fTestNetGenesisMerkleRoot is the hash of the first transaction in the genesis
-// block for the test network (version 3).  It is the same as the merkle root
-// for the main network.
-var fTestNetGenesisMerkleRoot = genesisMerkleRoot
-
-// DEPRECATED
-// FTestNetParams is deprecated name use the FastNetParams instead.
-var FTestNetParams = FastNetParams
-
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
 	Name:        "fastnet",
-	Net:         types.FTestNet,
+	Net:         types.FastTestNet,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},
 
 	// Chain parameters
 	GenesisBlock: GenesisBlockOpts{
 		Version:    1,
-		PrevBlock:  chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: fTestNetGenesisMerkleRoot, // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-		Timestamp:  time.Unix(1296688602, 0),  // 2011-02-02 23:16:42 +0000 UTC
-		Bits:       0x1e0fffff,                // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
+		Bits:       0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
 		Nonce:      0x18aea41a,
 	},
-	GenesisHash:              &fastNetGenesisHash,
-	PowLimit:                 fastNetPowLimit,
-	PowLimitBits:             0x1e0dffff,
-	BIP0034Height:            0,
-	BIP0065Height:            0,
-	BIP0066Height:            0,
+	GenesisHash: &genesisHash,
+
 	CoinbaseMaturity:         5,
 	SubsidyReductionInterval: 210000,
 
-	TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
-	TargetTimePerBlock:       time.Second * 15,           // 15 seconds
-	RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
-	ReduceMinDifficulty:      false,
-	MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
+	PowParams: PowParams{
+		PowLimit:                 fastNetPowLimit,
+		PowLimitBits:             0x1e0dffff,
+		TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
+		TargetTimePerBlock:       time.Second * 15,           // 15 seconds
+		RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
+		ReduceMinDifficulty:      false,
+		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
+		GenerateSupported:        true,
+	},
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
@@ -78,6 +61,7 @@ var FastNetParams = Params{
 	// MinerConfirmationWindow:       2016,
 	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       100,
+	ExpansionLimit:                10, // todo this makes dbtool work for raw scan in beacon case, figure out what to do, this can break fastnet potentially
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentCSV: {
 			BitNumber:  0,

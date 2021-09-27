@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package p2p
 
 import (
@@ -8,11 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/connmgr"
-	"gitlab.com/jaxnet/core/shard.core/node/mempool"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
+	"gitlab.com/jaxnet/jaxnetd/node/mempool"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // handleUpdatePeerHeight updates the heights of all peers who were known to
@@ -259,8 +260,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 			txD, ok := msg.Data.(*mempool.TxDesc)
 			if !ok {
 				server.logger.Warn().Msgf("Underlying data for tx inv "+
-					"relay is not a *mempool.TxDesc: %T",
-					msg.Data)
+					"relay is not a *mempool.TxDesc: %T", msg.Data)
 				return
 			}
 

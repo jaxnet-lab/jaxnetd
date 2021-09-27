@@ -12,6 +12,26 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+# disable because of https://gitlab.com/jaxnet/jaxnetd/-/issues/26
+#      - arm64
+
+  - main: ./cmd/jaxctl
+    id: "jaxctl"
+    binary: jaxctl
+    ldflags:
+      - -s -w -X gitlab.com/jaxnet/jaxnetd/version.tag={{.Version}}
+        -X gitlab.com/jaxnet/jaxnetd/version.commit={{.Commit}}
+        -X gitlab.com/jaxnet/jaxnetd/version.date={{.Date}}
+        -X gitlab.com/jaxnet/jaxnetd/version.builtBy=goreleaser
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+#      - arm64
 archives:
   - replacements:
       darwin: Darwin
@@ -19,27 +39,31 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - jaxnetd.testnet.yaml
+      - docs/*
+
+nfpms:
+  - maintainer: JAX.Net Devs <dev@jax.net>
+    description: The JAX.Network node
+    homepage: https://jax.network
+    license: ISC
+    formats:
+      - deb
+      - rpm
+      - apk
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
-
-release:
-  # Repo in which the release will be created.
-  # Default is extracted from the origin remote URL or empty if its private hosted.
-  # Note: it can only be one: either github, gitlab or gitea
-  gitlab:
-    owner: jaxnet/core
-    name: shard.core
-
-#gitlab_urls:
-#  api: https://gitlab.com/api/v4/
-#  download: https://gitlab.com/jaxnet/core/shard.core
-#  # set to true if you use a self-signed certificate
-#  skip_tls_verify: false

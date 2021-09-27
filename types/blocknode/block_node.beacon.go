@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blocknode
 
 import (
@@ -8,10 +9,10 @@ import (
 	"sort"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // medianTimeBlocks is the number of previous blocks which should be
@@ -29,34 +30,27 @@ type BeaconBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	// parent is the parent block for this node.
-	parent IBlockNode
+	parent   IBlockNode     // parent is the parent block for this node.
+	hash     chainhash.Hash // hash is the double sha 256 of the block.
+	workSum  *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	height   int32          // height is the position in the block chain.
+	serialID int64          // serialID is the absolute unique id of current block.
 
-	// hash is the double sha 256 of the block.
-	hash chainhash.Hash
-
-	// workSum is the total amount of work in the chain up to and including
-	// this node.
-	workSum *big.Int
-
-	// height is the position in the block chain.
-	height int32
-
+	// todo(mike): review this, might be make sense to store raw bytes or wire obj instead
 	// Some fields from block headers to aid in best chain selection and
 	// reconstructing headers from memory.  These must be treated as
 	// immutable and are intentionally ordered to avoid padding on 64-bit
 	// platforms.
-	version    int32
-	bits       uint32
-	nonce      uint32
-	timestamp  int64
-	merkleRoot chainhash.Hash
-	mmrRoot    chainhash.Hash
-
-	// Encoding of the Merge-mining tree
-	treeEncoding []uint8
-
-	shards uint32
+	version      int32
+	bits         uint32
+	timestamp    int64
+	merkleRoot   chainhash.Hash
+	mmrRoot      chainhash.Hash
+	shards       uint32           // A number of shards at moment, when block was mined.
+	treeEncoding []uint8          // Encoding of the Merge-mining tree
+	k            uint32           // k is inflation-fix coefficient for current mining epoch.
+	voteK        uint32           // voteK is a proposed inflation-fix coefficient for next mining epoch.
+	btcAux       wire.BTCBlockAux // A bitcoin header auxiliary, required by merge mining protocol.
 
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
@@ -70,57 +64,52 @@ type BeaconBlockNode struct {
 // This function is NOT safe for concurrent access.  It must only be called when
 // initially creating a node.
 func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
-	beaconHeader := blockHeader.BeaconHeader()
+	beaconHeader := blockHeader.Copy().BeaconHeader()
 
 	node := &BeaconBlockNode{
 		hash:         blockHeader.BlockHash(),
 		workSum:      pow.CalcWork(blockHeader.Bits()),
 		version:      int32(blockHeader.Version()),
 		bits:         blockHeader.Bits(),
-		nonce:        blockHeader.Nonce(),
 		timestamp:    blockHeader.Timestamp().Unix(),
 		merkleRoot:   blockHeader.MerkleRoot(),
 		mmrRoot:      beaconHeader.MergeMiningRoot(),
 		shards:       beaconHeader.Shards(),
 		treeEncoding: beaconHeader.MergedMiningTree(),
+		k:            beaconHeader.K(),
+		voteK:        beaconHeader.VoteK(),
+		btcAux:       *beaconHeader.BTCAux().Copy(),
 	}
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
+		node.serialID = parent.SerialID() + 1 // todo: check correctness
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
 	return node
 }
 
-// newBlockNode returns a new block node for the given block header and parent
+// NewBeaconBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
 func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
 	return initBeaconBlockNode(blockHeader, parent)
 }
 
-func (node *BeaconBlockNode) NewNode() IBlockNode {
-	var res BeaconBlockNode
-	return &res
-}
-
-func (node *BeaconBlockNode) GetHeight() int32             { return node.height }
 func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
 func (node *BeaconBlockNode) Version() int32               { return node.version }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
+func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                 { return node.bits }
-func (node *BeaconBlockNode) SetBits(value uint32)         { node.bits = value }
+func (node *BeaconBlockNode) K() uint32                    { return node.k }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
 func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }
 func (node *BeaconBlockNode) Status() BlockStatus          { return node.status }
 func (node *BeaconBlockNode) SetStatus(status BlockStatus) { node.status = status }
+func (node *BeaconBlockNode) NewHeader() wire.BlockHeader  { return new(wire.BeaconHeader) }
 
-func (node *BeaconBlockNode) NewHeader() wire.BlockHeader {
-	return new(wire.BeaconHeader)
-}
-
-// header constructs a block header from the node and returns it.
+// Header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) Header() wire.BlockHeader {
@@ -131,9 +120,12 @@ func (node *BeaconBlockNode) Header() wire.BlockHeader {
 		prevHash = &h
 	}
 	header := wire.NewBeaconBlockHeader(wire.BVersion(node.version), *prevHash,
-		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.nonce)
+		node.merkleRoot, node.mmrRoot, time.Unix(node.timestamp, 0), node.bits, node.btcAux.Nonce)
 	header.SetShards(node.shards)
 	header.SetMergedMiningTree(node.treeEncoding)
+	header.SetK(node.k)
+	header.SetVoteK(node.voteK)
+	header.BeaconHeader().SetBTCAux(node.btcAux)
 	return header
 }
 

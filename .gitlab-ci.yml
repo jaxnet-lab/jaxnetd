@@ -4,12 +4,11 @@ services:
 
 stages:
   - build
-  - deploy
   - release
 
 variables:
   DOCKER_TLS_CERTDIR: ""
-  IMAGE: registry.gitlab.com/jaxnet/core/shard.core/$CI_COMMIT_REF_NAME:latest
+  IMAGE: registry.gitlab.com/jaxnet/jaxnetd:$CI_COMMIT_REF_NAME
 
 .before_script: &before_script
   before_script:
@@ -28,7 +27,7 @@ build:docker:
   <<: *before_script
   only:
     - master
-    - dev
+    - tags
   tags:
     - shell
   script:
@@ -39,7 +38,7 @@ build:release:
   stage: build
   image:
     name: goreleaser/goreleaser
-    entrypoint: [""]
+    entrypoint: [ "" ]
   before_script:
     - echo Just to replace default
   script:
@@ -47,46 +46,17 @@ build:release:
   tags:
     - docker
   artifacts:
+    expire_in: 30 days
     paths:
       - dist
   only:
     - master
-    - dev
-    - stage
-
-.deploy: &deploy
-  stage: deploy
-  <<: *before_script
-  needs: ["build:docker"]
-  tags:
-    - docker
-  script:
-    - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-    - ssh ${REMOTE} "cd /opt/shard-core && docker-compose down && docker-compose up -d"
-
-deploy:dev:
-  stage: deploy
-  <<: *deploy
-  variables:
-    REMOTE: $DEV_REMOTE
-  script:
-    - ssh ${REMOTE} "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com && docker pull $IMAGE"
-  only:
-    - dev
-
-deploy:stage:
-  <<: *deploy
-  variables:
-    REMOTE: $STAGE_REMOTE
-  only:
-    - master
-    - stage
 
 release:
   stage: release
   image:
     name: goreleaser/goreleaser:latest
-    entrypoint: [""]
+    entrypoint: [ "" ]
   variables:
     GITLAB_TOKEN: $CI_ACCESS_TOKEN
   before_script:

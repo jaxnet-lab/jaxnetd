@@ -28,8 +28,8 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 var (
@@ -113,15 +113,15 @@ type jsonRequest struct {
 type BackendVersion uint8
 
 const (
-	// BitcoindPre19 represents a bitcoind version before 0.19.0.
-	BitcoindPre19 BackendVersion = iota
+	// JaxnetdPre19 represents a jaxnetd version before 0.19.0.
+	JaxnetdPre19 BackendVersion = iota
 
-	// BitcoindPost19 represents a bitcoind version equal to or greater than
+	// JaxnetdPost19 represents a jaxnetd version equal to or greater than
 	// 0.19.0.
-	BitcoindPost19
+	JaxnetdPost19
 
-	// Btcd represents a catch-all btcd version.
-	Btcd
+	// Jaxnetd represents a catch-all jaxnetd version.
+	Jaxnetd
 )
 
 // Client represents a Bitcoin RPC client which allows easy access to the
@@ -296,10 +296,10 @@ func (c *Client) trackRegisteredNtfns(cmd interface{}) {
 	defer c.ntfnStateLock.Unlock()
 
 	switch bcmd := cmd.(type) {
-	case *btcjson.NotifyBlocksCmd:
+	case *jaxjson.NotifyBlocksCmd:
 		c.ntfnState.notifyBlocks = true
 
-	case *btcjson.NotifyNewTransactionsCmd:
+	case *jaxjson.NotifyNewTransactionsCmd:
 		if bcmd.Verbose != nil && *bcmd.Verbose {
 			c.ntfnState.notifyNewTxVerbose = true
 		} else {
@@ -307,12 +307,12 @@ func (c *Client) trackRegisteredNtfns(cmd interface{}) {
 
 		}
 
-	case *btcjson.NotifySpentCmd:
+	case *jaxjson.NotifySpentCmd:
 		for _, op := range bcmd.OutPoints {
 			c.ntfnState.notifySpent[op] = struct{}{}
 		}
 
-	case *btcjson.NotifyReceivedCmd:
+	case *jaxjson.NotifyReceivedCmd:
 		for _, addr := range bcmd.Addresses {
 			c.ntfnState.notifyReceived[addr] = struct{}{}
 		}
@@ -341,7 +341,7 @@ type rawNotification struct {
 // to be valid (according to JSON-RPC 1.0 spec), ID may not be nil.
 type rawResponse struct {
 	Result json.RawMessage   `json:"result"`
-	Error  *btcjson.RPCError `json:"error"`
+	Error  *jaxjson.RPCError `json:"error"`
 }
 
 // response is the raw bytes of a JSON-RPC result, or the error if the response
@@ -352,7 +352,7 @@ type response struct {
 }
 
 // result checks whether the unmarshaled response contains a non-nil error,
-// returning an unmarshaled btcjson.RPCError (or an unmarshaling error) if so.
+// returning an unmarshaled jaxjson.RPCError (or an unmarshaling error) if so.
 // If the response is not an error, the raw bytes of the request are
 // returned for further unmashaling into specific result types.
 func (r rawResponse) result() (result []byte, err error) {
@@ -585,7 +585,7 @@ func (c *Client) reregisterNtfns() error {
 	// outpoints in one command if needed.
 	nslen := len(stateCopy.notifySpent)
 	if nslen > 0 {
-		outpoints := make([]btcjson.OutPoint, 0, nslen)
+		outpoints := make([]jaxjson.OutPoint, 0, nslen)
 		for op := range stateCopy.notifySpent {
 			outpoints = append(outpoints, op)
 		}
@@ -940,13 +940,21 @@ func (c *Client) getShardID() uint32 {
 	return shardID
 }
 
+func (c *Client) isForBeacon() bool {
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+	}
+	return shardID == 0
+}
+
 // sendCmd sends the passed command to the associated server and returns a
 // response channel on which the reply will be delivered at some point in the
 // future.  It handles both websocket and HTTP POST mode depending on the
 // configuration of the client.
 func (c *Client) sendCmd(cmd interface{}) chan *response {
 	// Get the method associated with the command.
-	method, err := btcjson.CmdMethod(cmd)
+	method, err := jaxjson.CmdMethod(cmd)
 	if err != nil {
 		return newFutureError(err)
 	}
@@ -959,7 +967,7 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 
 	// Marshal the command.
 	id := c.NextID()
-	marshalledJSON, err := btcjson.MarshalCmd(id, shardID, cmd)
+	marshalledJSON, err := jaxjson.MarshalCmd(id, shardID, cmd)
 	if err != nil {
 		return newFutureError(err)
 	}
@@ -1490,32 +1498,32 @@ func (c *Client) Connect(tries int) error {
 }
 
 const (
-	// bitcoind19Str is the string representation of bitcoind v0.19.0.
-	bitcoind19Str = "0.19.0"
+	// jaxnetd19Str is the string representation of jaxnetd v0.19.0.
+	jaxnetd19Str = "0.19.0"
 
-	// bitcoindVersionPrefix specifies the prefix included in every bitcoind
+	// jaxnetdVersionPrefix specifies the prefix included in every jaxnetd
 	// version exposed through GetNetworkInfo.
-	bitcoindVersionPrefix = "/Satoshi:"
+	jaxnetdVersionPrefix = "/Satoshi:"
 
-	// bitcoindVersionSuffix specifies the suffix included in every bitcoind
+	// jaxnetdVersionSuffix specifies the suffix included in every jaxnetd
 	// version exposed through GetNetworkInfo.
-	bitcoindVersionSuffix = "/"
+	jaxnetdVersionSuffix = "/"
 )
 
-// parseBitcoindVersion parses the bitcoind version from its string
+// parseJaxnetdVersion parses the jaxnetd version from its string
 // representation.
-func parseBitcoindVersion(version string) BackendVersion {
+func parseJaxnetdVersion(version string) BackendVersion {
 	// Trim the version of its prefix and suffix to determine the
 	// appropriate version number.
 	version = strings.TrimPrefix(
-		strings.TrimSuffix(version, bitcoindVersionSuffix),
-		bitcoindVersionPrefix,
+		strings.TrimSuffix(version, jaxnetdVersionSuffix),
+		jaxnetdVersionPrefix,
 	)
 	switch {
-	case version < bitcoind19Str:
-		return BitcoindPre19
+	case version < jaxnetd19Str:
+		return JaxnetdPre19
 	default:
-		return BitcoindPost19
+		return JaxnetdPost19
 	}
 }
 
@@ -1530,41 +1538,41 @@ func (c *Client) BackendVersion() (BackendVersion, error) {
 	}
 
 	// We'll start by calling GetInfo. This method doesn't exist for
-	// bitcoind nodes as of v0.16.0, so we'll assume the client is connected
-	// to a btcd backend if it does exist.
+	// jaxnetd nodes as of v0.16.0, so we'll assume the client is connected
+	// to a jaxnetd backend if it does exist.
 	info, err := c.GetInfo()
 
 	switch err := err.(type) {
-	// Parse the btcd version and cache it.
+	// Parse the jaxnetd version and cache it.
 	case nil:
-		log.Debug().Msgf("Detected btcd version: %v", info.Version)
-		version := Btcd
+		log.Debug().Msgf("Detected jaxnetd version: %v", info.Version)
+		version := Jaxnetd
 		c.backendVersion = &version
 		return *c.backendVersion, nil
 
 	// Inspect the RPC error to ensure the method was not found, otherwise
 	// we actually ran into an error.
-	case *btcjson.RPCError:
-		if err.Code != btcjson.ErrRPCMethodNotFound.Code {
-			return 0, fmt.Errorf("unable to detect btcd version: "+
+	case *jaxjson.RPCError:
+		if err.Code != jaxjson.ErrRPCMethodNotFound.Code {
+			return 0, fmt.Errorf("unable to detect jaxnetd version: "+
 				"%v", err)
 		}
 
 	default:
-		return 0, fmt.Errorf("unable to detect btcd version: %v", err)
+		return 0, fmt.Errorf("unable to detect jaxnetd version: %v", err)
 	}
 
 	// Since the GetInfo method was not found, we assume the client is
-	// connected to a bitcoind backend, which exposes its version through
+	// connected to a jaxnetd backend, which exposes its version through
 	// GetNetworkInfo.
 	networkInfo, err := c.GetNetworkInfo()
 	if err != nil {
-		return 0, fmt.Errorf("unable to detect bitcoind version: %v", err)
+		return 0, fmt.Errorf("unable to detect jaxnetd version: %v", err)
 	}
 
-	// Parse the bitcoind version and cache it.
-	log.Debug().Msgf("Detected bitcoind version: %v", networkInfo.SubVersion)
-	version := parseBitcoindVersion(networkInfo.SubVersion)
+	// Parse the jaxnetd version and cache it.
+	log.Debug().Msgf("Detected jaxnetd version: %v", networkInfo.SubVersion)
+	version := parseJaxnetdVersion(networkInfo.SubVersion)
 	c.backendVersion = &version
 
 	return *c.backendVersion, nil

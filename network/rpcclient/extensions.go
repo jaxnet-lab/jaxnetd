@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -45,9 +45,9 @@ func (r FutureDebugLevelResult) Receive() (string, error) {
 //
 // See DebugLevel for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a jaxnetd extension.
 func (c *Client) DebugLevelAsync(levelSpec string) FutureDebugLevelResult {
-	cmd := btcjson.NewDebugLevelCmd(levelSpec)
+	cmd := jaxjson.NewDebugLevelCmd(levelSpec)
 	return c.sendCmd(cmd)
 }
 
@@ -60,7 +60,7 @@ func (c *Client) DebugLevelAsync(levelSpec string) FutureDebugLevelResult {
 // Additionally, the special keyword 'show' can be used to get a list of the
 // available subsystems.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a jaxnetd extension.
 func (c *Client) DebugLevel(levelSpec string) (string, error) {
 	return c.DebugLevelAsync(levelSpec).Receive()
 }
@@ -83,7 +83,7 @@ func (r FutureCreateEncryptedWalletResult) Receive() error {
 //
 // NOTE: This is a btcwallet extension.
 func (c *Client) CreateEncryptedWalletAsync(passphrase string) FutureCreateEncryptedWalletResult {
-	cmd := btcjson.NewCreateEncryptedWalletCmd(passphrase)
+	cmd := jaxjson.NewCreateEncryptedWalletCmd(passphrase)
 	return c.sendCmd(cmd)
 }
 
@@ -105,14 +105,14 @@ type FutureListAddressTransactionsResult chan *response
 
 // Receive waits for the response promised by the future and returns information
 // about all transactions associated with the provided addresses.
-func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactionsResult, error) {
+func (r FutureListAddressTransactionsResult) Receive() ([]jaxjson.ListTransactionsResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the result as an array of listtransactions objects.
-	var transactions []btcjson.ListTransactionsResult
+	var transactions []jaxjson.ListTransactionsResult
 	err = json.Unmarshal(res, &transactions)
 	if err != nil {
 		return nil, err
@@ -126,14 +126,14 @@ func (r FutureListAddressTransactionsResult) Receive() ([]btcjson.ListTransactio
 //
 // See ListAddressTransactions for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
-func (c *Client) ListAddressTransactionsAsync(addresses []btcutil.Address, account string) FutureListAddressTransactionsResult {
+// NOTE: This is a jaxnetd extension.
+func (c *Client) ListAddressTransactionsAsync(addresses []jaxutil.Address, account string) FutureListAddressTransactionsResult {
 	// Convert addresses to strings.
 	addrs := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
 		addrs = append(addrs, addr.EncodeAddress())
 	}
-	cmd := btcjson.NewListAddressTransactionsCmd(addrs, &account)
+	cmd := jaxjson.NewListAddressTransactionsCmd(addrs, &account)
 	return c.sendCmd(cmd)
 }
 
@@ -141,7 +141,7 @@ func (c *Client) ListAddressTransactionsAsync(addresses []btcutil.Address, accou
 // with the provided addresses.
 //
 // NOTE: This is a btcwallet extension.
-func (c *Client) ListAddressTransactions(addresses []btcutil.Address, account string) ([]btcjson.ListTransactionsResult, error) {
+func (c *Client) ListAddressTransactions(addresses []jaxutil.Address, account string) ([]jaxjson.ListTransactionsResult, error) {
 	return c.ListAddressTransactionsAsync(addresses, account).Receive()
 }
 
@@ -158,7 +158,7 @@ func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, error) {
 	}
 
 	// Unmarshal result as a getbestblock result object.
-	var bestBlock btcjson.GetBestBlockResult
+	var bestBlock jaxjson.GetBestBlockResult
 	err = json.Unmarshal(res, &bestBlock)
 	if err != nil {
 		return nil, 0, err
@@ -179,16 +179,16 @@ func (r FutureGetBestBlockResult) Receive() (*chainhash.Hash, int32, error) {
 //
 // See GetBestBlock for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a jaxnetd extension.
 func (c *Client) GetBestBlockAsync() FutureGetBestBlockResult {
-	cmd := btcjson.NewGetBestBlockCmd()
+	cmd := jaxjson.NewGetBestBlockCmd()
 	return c.sendCmd(cmd)
 }
 
 // GetBestBlock returns the hash and height of the block in the longest (best)
 // chain.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a jaxnetd extension.
 func (c *Client) GetBestBlock() (*chainhash.Hash, int32, error) {
 	return c.GetBestBlockAsync().Receive()
 }
@@ -199,7 +199,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
+func (r FutureGetCurrentNetResult) Receive() (types.JaxNet, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -212,7 +212,7 @@ func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
 		return 0, err
 	}
 
-	return types.BitcoinNet(net), nil
+	return types.JaxNet(net), nil
 }
 
 // GetCurrentNetAsync returns an instance of a type that can be used to get the
@@ -221,16 +221,16 @@ func (r FutureGetCurrentNetResult) Receive() (types.BitcoinNet, error) {
 //
 // See GetCurrentNet for the blocking version and more details.
 //
-// NOTE: This is a btcd extension.
+// NOTE: This is a jaxnetd extension.
 func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
-	cmd := btcjson.NewGetCurrentNetCmd()
+	cmd := jaxjson.NewGetCurrentNetCmd()
 	return c.sendCmd(cmd)
 }
 
 // GetCurrentNet returns the network the server is running on.
 //
-// NOTE: This is a btcd extension.
-func (c *Client) GetCurrentNet() (types.BitcoinNet, error) {
+// NOTE: This is a jaxnetd extension.
+func (c *Client) GetCurrentNet() (types.JaxNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
 
@@ -289,7 +289,7 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
 //
 // NOTE: This is a btcwallet extension.
 func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingWalletResult {
-	cmd := btcjson.NewExportWatchingWalletCmd(&account, btcjson.Bool(true))
+	cmd := jaxjson.NewExportWatchingWalletCmd(&account, jaxjson.Bool(true))
 	return c.sendCmd(cmd)
 }
 
@@ -309,14 +309,14 @@ type FutureSessionResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // session result.
-func (r FutureSessionResult) Receive() (*btcjson.SessionResult, error) {
+func (r FutureSessionResult) Receive() (*jaxjson.SessionResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a session result object.
-	var session btcjson.SessionResult
+	var session jaxjson.SessionResult
 	err = json.Unmarshal(res, &session)
 	if err != nil {
 		return nil, err
@@ -338,7 +338,7 @@ func (c *Client) SessionAsync() FutureSessionResult {
 		return newFutureError(ErrWebsocketsRequired)
 	}
 
-	cmd := btcjson.NewSessionCmd()
+	cmd := jaxjson.NewSessionCmd()
 	return c.sendCmd(cmd)
 }
 
@@ -347,7 +347,7 @@ func (c *Client) SessionAsync() FutureSessionResult {
 // This RPC requires the client to be running in websocket mode.
 //
 // NOTE: This is a btcsuite extension.
-func (c *Client) Session() (*btcjson.SessionResult, error) {
+func (c *Client) Session() (*jaxjson.SessionResult, error) {
 	return c.SessionAsync().Receive()
 }
 
@@ -363,14 +363,14 @@ type FutureVersionResult chan *response
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (r FutureVersionResult) Receive() (*btcjson.NodeVersion, error) {
+func (r FutureVersionResult) Receive() (*jaxjson.NodeVersion, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a version result object.
-	var vr btcjson.NodeVersion
+	var vr jaxjson.NodeVersion
 	err = json.Unmarshal(res, &vr)
 	if err != nil {
 		return nil, err
@@ -388,7 +388,7 @@ func (r FutureVersionResult) Receive() (*btcjson.NodeVersion, error) {
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
 func (c *Client) VersionAsync() FutureVersionResult {
-	cmd := btcjson.NewVersionCmd()
+	cmd := jaxjson.NewVersionCmd()
 	return c.sendCmd(cmd)
 }
 
@@ -396,6 +396,6 @@ func (c *Client) VersionAsync() FutureVersionResult {
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) Version() (*btcjson.NodeVersion, error) {
+func (c *Client) Version() (*jaxjson.NodeVersion, error) {
 	return c.VersionAsync().Receive()
 }

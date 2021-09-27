@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpc
 
 import (
@@ -9,34 +10,34 @@ import (
 	"net/http"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/network/netsync"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/network/netsync"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 type (
-	commandMux     func(cmd *parsedRPCCmd, closeChan <-chan struct{}) (interface{}, error)
+	commandMux     func(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error)
 	CommandHandler func(interface{}, <-chan struct{}) (interface{}, error)
 
-	// parsedRPCCmd represents a JSON-RPC request object that has been parsed into
+	// ParsedRPCCmd represents a JSON-RPC request object that has been parsed into
 	// a known concrete command along with any error that might have happened while
 	// parsing it.
-	parsedRPCCmd struct {
-		id      interface{}
-		scope   string
-		method  string
-		shardID uint32
-		cmd     interface{}
-		err     *btcjson.RPCError
+	ParsedRPCCmd struct {
+		ID      interface{}
+		Scope   string
+		Method  string
+		ShardID uint32
+		Cmd     interface{}
+		Err     *jaxjson.RPCError
 	}
 )
 
 // API version constants
 const (
-	jsonrpcSemverString = "1.3.0"
-	jsonrpcSemverMajor  = 1
+	jsonrpcSemverString = "0.3.8"
+	jsonrpcSemverMajor  = 0
 	jsonrpcSemverMinor  = 3
-	jsonrpcSemverPatch  = 0
+	jsonrpcSemverPatch  = 8
 )
 
 const (
@@ -54,62 +55,62 @@ var (
 var (
 	// ErrRPCUnimplemented is an error returned to RPC clients when the
 	// provided command is recognized, but not implemented.
-	ErrRPCUnimplemented = &btcjson.RPCError{
-		Code:    btcjson.ErrRPCUnimplemented,
+	ErrRPCUnimplemented = &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCUnimplemented,
 		Message: "Command unimplemented",
 	}
 
 	// ErrRPCNoWallet is an error returned to RPC clients when the provided
 	// command is recognized as a wallet command.
-	ErrRPCNoWallet = &btcjson.RPCError{
-		Code:    btcjson.ErrRPCNoWallet,
+	ErrRPCNoWallet = &jaxjson.RPCError{
+		Code:    jaxjson.ErrRPCNoWallet,
 		Message: "This implementation does not implement wallet commands",
 	}
 )
 
-// parseCmd parses a JSON-RPC request object into known concrete command.  The
-// err field of the returned parsedRPCCmd struct will contain an RPC error that
+// ParseCmd parses a JSON-RPC request object into known concrete command.  The
+// err field of the returned ParsedRPCCmd struct will contain an RPC error that
 // is suitable for use in replies if the command is invalid in some way such as
 // an unregistered command or invalid parameters.
-func parseCmd(request *btcjson.Request) *parsedRPCCmd {
-	parsedCmd := parsedRPCCmd{
-		id:      request.ID,
-		method:  request.Method,
-		scope:   request.Scope,
-		shardID: request.ShardID,
+func ParseCmd(request *jaxjson.Request) *ParsedRPCCmd {
+	parsedCmd := ParsedRPCCmd{
+		ID:      request.ID,
+		Method:  request.Method,
+		Scope:   request.Scope,
+		ShardID: request.ShardID,
 	}
 
-	cmd, err := btcjson.UnmarshalCmd(request)
+	cmd, err := jaxjson.UnmarshalCmd(request)
 	if err != nil {
-		// When the error is because the method is not registered,
-		// produce a method not found RPC error.
-		if jerr, ok := err.(btcjson.Error); ok &&
-			jerr.ErrorCode == btcjson.ErrUnregisteredMethod {
+		// When the error is because the Method is not registered,
+		// produce a Method not found RPC error.
+		if jerr, ok := err.(jaxjson.Error); ok &&
+			jerr.ErrorCode == jaxjson.ErrUnregisteredMethod {
 
-			parsedCmd.err = btcjson.ErrRPCMethodNotFound
+			parsedCmd.Err = jaxjson.ErrRPCMethodNotFound
 			return &parsedCmd
 		}
 
 		// Otherwise, some type of invalid parameters is the
 		// cause, so produce the equivalent RPC error.
-		parsedCmd.err = btcjson.NewRPCError(
-			btcjson.ErrRPCInvalidParams.Code, err.Error())
+		parsedCmd.Err = jaxjson.NewRPCError(
+			jaxjson.ErrRPCInvalidParams.Code, err.Error())
 		return &parsedCmd
 	}
-	parsedCmd.cmd = cmd
+	parsedCmd.Cmd = cmd
 	return &parsedCmd
 }
 
 // jsonAuthFail sends a message back to the client if the http auth is rejected.
 func jsonAuthFail(w http.ResponseWriter) {
-	w.Header().Add("WWW-Authenticate", `Basic realm="btcd RPC"`)
+	w.Header().Add("WWW-Authenticate", `Basic realm="jaxnetd RPC"`)
 	http.Error(w, "401 Unauthorized.", http.StatusUnauthorized)
 }
 
 // rpcDecodeHexError is a convenience function for returning a nicely formatted
 // RPC error which indicates the provided hex string failed to decode.
-func rpcDecodeHexError(gotHex string) *btcjson.RPCError {
-	return btcjson.NewRPCError(btcjson.ErrRPCDecodeHexString,
+func rpcDecodeHexError(gotHex string) *jaxjson.RPCError {
+	return jaxjson.NewRPCError(jaxjson.ErrRPCDecodeHexString,
 		fmt.Sprintf("Argument must be hexadecimal string (not %q)",
 			gotHex))
 }
@@ -117,8 +118,8 @@ func rpcDecodeHexError(gotHex string) *btcjson.RPCError {
 // rpcNoTxInfoError is a convenience function for returning a nicely formatted
 // RPC error which indicates there is no information available for the provided
 // transaction hash.
-func rpcNoTxInfoError(txHash *chainhash.Hash) *btcjson.RPCError {
-	return btcjson.NewRPCError(btcjson.ErrRPCNoTxInfo,
+func rpcNoTxInfoError(txHash *chainhash.Hash) *jaxjson.RPCError {
+	return jaxjson.NewRPCError(jaxjson.ErrRPCNoTxInfo,
 		fmt.Sprintf("No information available about transaction %v",
 			txHash))
 }

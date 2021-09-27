@@ -7,18 +7,17 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // importCmd defines the configuration options for the insecureimport command.
@@ -111,7 +110,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // NOTE: This is not a safe import as it does not verify chain rules.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := btcutil.NewBlockFromBytes(bi.db.Chain(), serializedBlock)
+	block, err := jaxutil.NewBlockFromBytes(bi.db.Chain(), serializedBlock)
 	if err != nil {
 		return false, err
 	}
@@ -341,8 +340,17 @@ func (cmd *importCmd) Execute(args []string) error {
 		return fmt.Errorf(str, cmd.InFile)
 	}
 
+	if len(args) < 1 {
+		return errors.New("required shardID parameter not specified")
+	}
+
+	shardID, err := parseShardID(args[0])
+	if err != nil {
+		return errors.New("wrong shardID format specified")
+	}
+
 	// Load the block database.
-	db, err := loadBlockDB(beacon.Chain(&chaincfg.TestNet3Params))
+	db, err := loadBlockDB(relevantChain(shardID))
 	if err != nil {
 		return err
 	}

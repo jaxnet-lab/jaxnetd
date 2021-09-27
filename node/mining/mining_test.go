@@ -10,7 +10,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
+	"github.com/davecgh/go-spew/spew"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 // TestTxFeePrioHeap ensures the priority queue for transaction fees and
@@ -44,7 +46,7 @@ func TestTxFeePrioHeap(t *testing.T) {
 	prng := rand.New(rand.NewSource(randSeed))
 	for i := 0; i < 1000; i++ {
 		testItems = append(testItems, &txPrioItem{
-			feePerKB: int64(prng.Float64() * btcutil.SatoshiPerBitcoin),
+			feePerKB: int64(prng.Float64() * jaxutil.SatoshiPerBitcoin),
 			priority: prng.Float64() * 100,
 		})
 	}
@@ -108,4 +110,20 @@ func TestTxFeePrioHeap(t *testing.T) {
 		}
 		highest = prioItem
 	}
+}
+
+func TestCreateJaxCoinbaseTx(t *testing.T) {
+	address, err := jaxutil.DecodeAddress("mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz", &chaincfg.FastNetParams)
+	if err != nil {
+		t.Errorf("DecodeAddress() error = %v", err)
+		return
+	}
+
+	got, err := CreateJaxCoinbaseTx(100_0000, 100, 0, 43, address, true)
+	if err != nil {
+		t.Errorf("CreateJaxCoinbaseTx() error = %v", err)
+		return
+	}
+
+	spew.Dump(got)
 }

@@ -6,11 +6,11 @@
 package mining
 
 import (
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 )
 
 type chainProvider interface {
 	BlockChain() *blockchain.BlockChain
-	MiningAddresses() []btcutil.Address
+	MiningAddresses() []jaxutil.Address
 }

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // MsgGetData implements the Message interface and represents a bitcoin

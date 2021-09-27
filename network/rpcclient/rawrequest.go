@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 // FutureRawResult is a future promise to deliver the result of a RawRequest RPC
@@ -41,10 +41,10 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 
 	// Create a raw JSON-RPC request using the provided method and params
 	// and marshal it.  This is done rather than using the sendCmd function
-	// since that relies on marshalling registered btcjson commands rather
+	// since that relies on marshalling registered jaxjson commands rather
 	// than custom commands.
 	id := c.NextID()
-	rawRequest := &btcjson.Request{
+	rawRequest := &jaxjson.Request{
 		JsonRPC: "1.0",
 		ID:      id,
 		Method:  method,

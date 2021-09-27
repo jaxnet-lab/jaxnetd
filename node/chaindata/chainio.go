@@ -12,12 +12,12 @@ import (
 	"math/big"
 	"sync"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/types/blocknode"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -73,9 +73,25 @@ var (
 	// MerkleMountainRange for Merged Mining Tree.
 	ShardsMMRBucketName = []byte("shardsmmr")
 
-	// EADAddressesBucketName is the name of the db bucket used to house the
+	// EADAddressesBucketNameV1 is the name of the db bucket used to house the
 	// net addresses of Exchange Agents.
-	EADAddressesBucketName = []byte("ead_addresses")
+	EADAddressesBucketNameV1 = []byte("ead_addresses")
+
+	// EADAddressesBucketNameV2 is the name of the db bucket used to house the
+	// net addresses of Exchange Agents.
+	EADAddressesBucketNameV2 = []byte("ead_addresses_v2")
+
+	// BlockLastSerialID is the name of the db bucket used to house the
+	// block last serial id.
+	BlockLastSerialID = []byte("block_last_serial_id")
+
+	// BlockHashSerialID is the name of the db bucket used to house the mapping of
+	// block hash to serial id.
+	BlockHashSerialID = []byte("block_hash_serial_id")
+
+	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the mapping of
+	// block serial id to hash and previous serial id.
+	BlockSerialIDHashPrevSerialID = []byte("block_serial_id_hash_prev_serial_id")
 
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
@@ -439,7 +455,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 // NOTE: Legacy entries will not have the coinbase flag or height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
-func DBFetchSpendJournalEntry(dbTx database.Tx, block *btcutil.Block) ([]SpentTxOut, error) {
+func DBFetchSpendJournalEntry(dbTx database.Tx, block *jaxutil.Block) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
 	spendBucket := dbTx.Metadata().Bucket(SpendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
@@ -759,11 +775,17 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	return entry, nil
 }
 
-func DBFetchUtxoEntries(dbTx database.Tx) (map[wire.OutPoint]*UtxoEntry, error) {
-	view := map[wire.OutPoint]*UtxoEntry{}
+func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEntry, error) {
+	view := make(map[wire.OutPoint]*UtxoEntry, limit)
 	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+	count := 0
+
 	err := utxoBucket.ForEach(func(rawKey, serializedUtxo []byte) error {
-		if serializedUtxo == nil {
+		if count == limit {
+			return nil
+		}
+
+		if rawKey == nil || serializedUtxo == nil {
 			return nil
 		}
 
@@ -790,6 +812,7 @@ func DBFetchUtxoEntries(dbTx database.Tx) (map[wire.OutPoint]*UtxoEntry, error) 
 		}
 
 		view[outpoint] = entry
+		count += 1
 		return nil
 	})
 
@@ -841,7 +864,7 @@ func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 
 // DBPutEADAddresses ...
 func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses) error {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	for owner, entry := range updateSet {
 		if entry == nil {
 			if err := bucket.Delete([]byte(owner)); err != nil {
@@ -869,9 +892,13 @@ func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses
 // DBFetchAllEADAddresses ...
 func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, error) {
 	view := map[string]*wire.EADAddresses{}
-	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
+	if utxoBucket == nil {
+		return view, nil
+	}
+
 	err := utxoBucket.ForEach(func(rawKey, serializedData []byte) error {
-		if serializedData == nil {
+		if rawKey == nil || serializedData == nil {
 			return nil
 		}
 
@@ -894,7 +921,7 @@ func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, er
 
 // DBFetchEADAddresses ...
 func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, error) {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketName)
+	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	serializedData := bucket.Get([]byte(ownerPK))
 
 	if serializedData == nil {
@@ -1020,9 +1047,9 @@ func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error
 //   work sum          big.Int          work sum length
 // -----------------------------------------------------------------------------
 
-// bestChainState represents the data to be stored the database for the current
+// BestChainState represents the data to be stored the database for the current
 // best chain state.
-type bestChainState struct {
+type BestChainState struct {
 	Hash      chainhash.Hash
 	height    uint32
 	TotalTxns uint64
@@ -1031,7 +1058,7 @@ type bestChainState struct {
 
 // serializeBestChainState returns the serialization of the passed block best
 // chain state.  This is data to be stored in the chain state bucket.
-func serializeBestChainState(state bestChainState) []byte {
+func serializeBestChainState(state BestChainState) []byte {
 	// Calculate the full size needed to serialize the chain state.
 	workSumBytes := state.workSum.Bytes()
 	workSumBytesLen := uint32(len(workSumBytes))
@@ -1055,17 +1082,17 @@ func serializeBestChainState(state bestChainState) []byte {
 // state.  This is data stored in the chain state bucket and is updated after
 // every block is connected or disconnected form the main chain.
 // block.
-func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
+func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	// Ensure the serialized data has enough bytes to properly deserialize
 	// the Hash, height, total transactions, and work sum length.
 	if len(serializedData) < chainhash.HashSize+16 {
-		return bestChainState{}, database.Error{
+		return BestChainState{}, database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
 		}
 	}
 
-	state := bestChainState{}
+	state := BestChainState{}
 	copy(state.Hash[:], serializedData[0:chainhash.HashSize])
 	offset := uint32(chainhash.HashSize)
 	state.height = byteOrder.Uint32(serializedData[offset : offset+4])
@@ -1078,7 +1105,7 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 	// Ensure the serialized data has enough bytes to deserialize the work
 	// sum.
 	if uint32(len(serializedData[offset:])) < workSumBytesLen {
-		return bestChainState{}, database.Error{
+		return BestChainState{}, database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: "corrupt best chain state",
 		}
@@ -1093,7 +1120,7 @@ func DeserializeBestChainState(serializedData []byte) (bestChainState, error) {
 // state with the given parameters.
 func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
-	serializedData := serializeBestChainState(bestChainState{
+	serializedData := serializeBestChainState(BestChainState{
 		Hash:      snapshot.Hash,
 		height:    uint32(snapshot.Height),
 		TotalTxns: snapshot.TotalTxns,
@@ -1152,9 +1179,9 @@ func dbFetchHeaderByHeight(chain chain.IChainCtx, dbTx database.Tx, height int32
 }
 
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
-// raw block for the provided node, deserialize it, and return a btcutil.Block
+// raw block for the provided node, deserialize it, and return a jaxutil.Block
 // with the height set.
-func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) (*btcutil.Block, error) {
+func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
 	blockBytes, err := dbTx.FetchBlock(&h)
@@ -1163,7 +1190,7 @@ func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.
 	}
 
 	// Create the encapsulated block and set the height appropriately.
-	block, err := btcutil.NewBlockFromBytes(chain, blockBytes)
+	block, err := jaxutil.NewBlockFromBytes(chain, blockBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1197,7 +1224,7 @@ func DBStoreBlockNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IB
 
 // DBStoreBlock stores the provided block in the database if it is not already
 // there. The full block data is written to ffldb.
-func DBStoreBlock(dbTx database.Tx, block *btcutil.Block) error {
+func DBStoreBlock(dbTx database.Tx, block *jaxutil.Block) error {
 	hasBlock, err := dbTx.HasBlock(block.Hash())
 	if err != nil {
 		return err

@@ -10,13 +10,9 @@ import (
 	"log"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/beacon"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 func main() {
@@ -40,9 +36,9 @@ func main() {
 		// },
 	}
 
-	// Connect to local btcd RPC server using websockets.
-	//btcdHomeDir := btcutil.AppDataDir("btcd", false)
-	//certs, err := ioutil.ReadFile(filepath.Join(btcdHomeDir, "rpc.cert"))
+	// Connect to local jaxnetd RPC server using websockets.
+	//jaxnetdHomeDir := jaxutil.AppDataDir("jaxnetd", false)
+	//certs, err := ioutil.ReadFile(filepath.Join(jaxnetdHomeDir, "rpc.cert"))
 	//if err != nil {
 	//	log.Fatal(err)
 	//}

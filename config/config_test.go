@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/network/rpc"
-	"gitlab.com/jaxnet/core/shard.core/node"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/network/rpc"
+	"gitlab.com/jaxnet/jaxnetd/node"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,16 +26,16 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if !ok {
 		t.Fatalf("Failed finding config file path")
 	}
-	sampleConfigFile := filepath.Join(filepath.Dir(path), "sample-btcd.conf")
+	sampleConfigFile := filepath.Join(filepath.Dir(path), "sample-jaxnetd.conf")
 
 	// Setup a temporary directory
-	tmpDir, err := ioutil.TempDir("", "btcd")
+	tmpDir, err := ioutil.TempDir("", "jaxnetd")
 	if err != nil {
 		t.Fatalf("Failed creating a temporary directory: %v", err)
 	}
 	testpath := filepath.Join(tmpDir, "test.conf")
 
-	// copy config file to location of btcd binary
+	// copy config file to location of jaxnetd binary
 	data, err := ioutil.ReadFile(sampleConfigFile)
 	if err != nil {
 		t.Fatalf("Failed reading sample config file: %v", err)
@@ -44,7 +44,7 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed obtaining app path: %v", err)
 	}
-	tmpConfigFile := filepath.Join(appPath, "sample-btcd.conf")
+	tmpConfigFile := filepath.Join(appPath, "sample-jaxnetd.conf")
 	err = ioutil.WriteFile(tmpConfigFile, data, 0644)
 	if err != nil {
 		t.Fatalf("Failed copying sample config file: %v", err)
@@ -80,29 +80,28 @@ func TestLoadConfig(t *testing.T) {
 	cfg := node.Config{
 		ConfigFile:  "",
 		ShowVersion: false,
-		Node: node.NodeConfig{
+		Node: node.InstanceConfig{
 			BeaconChain: cprovider.ChainRuntimeConfig{
-				SigCacheMaxSize:     0,
-				AddCheckpoints:      nil,
-				AddrIndex:           false,
-				MaxPeers:            0,
-				BlockMaxSize:        0,
-				BlockMinSize:        0,
-				BlockMaxWeight:      0,
-				BlockMinWeight:      0,
-				BlockPrioritySize:   0,
-				TxIndex:             false,
-				NoRelayPriority:     false,
-				RejectReplacement:   false,
-				RelayNonStd:         false,
-				FreeTxRelayLimit:    0,
-				MaxOrphanTxs:        0,
-				MinRelayTxFee:       0,
-				MinRelayTxFeeValues: 0,
-				NoCFilters:          false,
-				DisableCheckpoints:  false,
-				MiningAddresses:     nil,
-				AutoExpand:          false,
+				SigCacheMaxSize:    0,
+				AddCheckpoints:     nil,
+				AddrIndex:          false,
+				MaxPeers:           0,
+				BlockMaxSize:       0,
+				BlockMinSize:       0,
+				BlockMaxWeight:     0,
+				BlockMinWeight:     0,
+				BlockPrioritySize:  0,
+				TxIndex:            false,
+				NoRelayPriority:    false,
+				RejectReplacement:  false,
+				RelayNonStd:        false,
+				FreeTxRelayLimit:   0,
+				MaxOrphanTxs:       0,
+				MinRelayTxFee:      0,
+				NoCFilters:         false,
+				DisableCheckpoints: false,
+				MiningAddresses:    nil,
+				AutoExpand:         false,
 			},
 			RPC: rpc.Config{
 				ListenerAddresses: nil,
@@ -150,10 +149,9 @@ func TestLoadConfig(t *testing.T) {
 				Autorun:     false,
 				ChainParams: nil,
 			},
-			DbType:          "",
-			Net:             "",
-			MiningAddresses: nil,
-			EnableCPUMiner:  false,
+			DbType:         "",
+			Net:            "",
+			EnableCPUMiner: false,
 		},
 		DataDir:       "",
 		LogDir:        "",

@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	"github.com/jessevdk/go-flags"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,13 +24,13 @@ const (
 	// unusableFlags are the command usage flags which this utility are not
 	// able to use.  In particular it doesn't support websockets and
 	// consequently notifications.
-	unusableFlags = btcjson.UFWebsocketOnly | btcjson.UFNotification
+	unusableFlags = jaxjson.UFWebsocketOnly | jaxjson.UFNotification
 )
 
 var (
-	coreHomeDir           = btcutil.AppDataDir("shard.core", false)
-	ctlHomeDir            = btcutil.AppDataDir("jaxctl", false)
-	walletHomeDir         = btcutil.AppDataDir("jaxwallet", false)
+	coreHomeDir           = jaxutil.AppDataDir("jaxnetd", false)
+	ctlHomeDir            = jaxutil.AppDataDir("jaxctl", false)
+	walletHomeDir         = jaxutil.AppDataDir("jaxwallet", false)
 	defaultConfigFile     = "jaxctl.yaml"
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(coreHomeDir, "rpc.cert")
@@ -47,10 +47,10 @@ func listCommands() {
 	)
 
 	// Get a list of registered commands and categorize and filter them.
-	cmdMethods := btcjson.RegisteredCmdMethods()
+	cmdMethods := jaxjson.RegisteredCmdMethods()
 	categorized := make([][]string, numCategories)
 	for _, method := range cmdMethods {
-		flags, err := btcjson.MethodUsageFlags(method)
+		flags, err := jaxjson.MethodUsageFlags(method)
 		if err != nil {
 			// This should never happen since the method was just
 			// returned from the package, but be safe.
@@ -62,7 +62,7 @@ func listCommands() {
 			continue
 		}
 
-		usage, err := btcjson.MethodUsageText(method)
+		usage, err := jaxjson.MethodUsageText(method)
 		if err != nil {
 			// This should never happen since the method was just
 			// returned from the package, but be safe.
@@ -71,7 +71,7 @@ func listCommands() {
 
 		// Categorize the command based on the usage flags.
 		category := categoryChain
-		if flags&btcjson.UFWalletOnly != 0 {
+		if flags&jaxjson.UFWalletOnly != 0 {
 			// category = categoryWallet
 			continue
 		}
@@ -134,13 +134,6 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 				defaultPort = "18554"
 			} else {
 				defaultPort = "18556"
-			}
-		case &chaincfg.RegressionNetParams:
-			if useWallet {
-				paramErr := fmt.Errorf("cannot use -wallet with -regtest, btcwallet not yet compatible with regtest")
-				return "", paramErr
-			} else {
-				defaultPort = "18334"
 			}
 		default:
 			if useWallet {

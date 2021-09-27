@@ -7,13 +7,14 @@ package txscript
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net"
+	"net/url"
 
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"github.com/pkg/errors"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -61,8 +62,9 @@ const (
 	ScriptHashTy                             // Pay to script hash.
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
+	MultiSigLockTy                           // Multi signature with time lock (msl).
 	NullDataTy                               // Empty data-only (provably prunable).
-	EADAddress                               // Management of the EAD Net Address.
+	EADAddressTy                             // Management of the EAD Net Address.
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -75,8 +77,9 @@ var scriptClassToName = []string{
 	ScriptHashTy:          "scripthash",
 	WitnessV0ScriptHashTy: "witness_v0_scripthash",
 	MultiSigTy:            "multisig",
+	MultiSigLockTy:        "multisig_lock",
 	NullDataTy:            "nulldata",
-	EADAddress:            "ead_address",
+	EADAddressTy:          "ead_address",
 }
 
 // String implements the Stringer interface by returning the name of
@@ -162,18 +165,6 @@ func isNullData(pops []parsedOpcode) bool {
 		len(pops[1].data) <= MaxDataCarrierSize
 }
 
-// isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
-// false otherwise.
-func isEADRegistration(pops []parsedOpcode) bool {
-	return len(pops) == 7 &&
-		pops[0].opcode.value >= OP_DATA_4 &&
-		pops[1].opcode.value >= OP_DATA_1 &&
-		pops[2].opcode.value >= OP_DATA_1 &&
-		(pops[4].opcode.value == OP_ADD_EAD_ADDRESS || pops[4].opcode.value == OP_RM_EAD_ADDRESS) &&
-		(len(pops[5].data) == 33 || len(pops[5].data) == 65) &&
-		pops[6].opcode.value == OP_CHECKSIG
-}
-
 // scriptType returns the type of the script being inspected from the known
 // standard types.
 func typeOfScript(pops []parsedOpcode) ScriptClass {
@@ -189,8 +180,10 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return WitnessV0ScriptHashTy
 	} else if isMultiSig(pops) {
 		return MultiSigTy
+	} else if isMultiSigLock(pops) {
+		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
-		return EADAddress
+		return EADAddressTy
 	} else if isNullData(pops) {
 		return NullDataTy
 	}
@@ -237,12 +230,14 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 		// of sigs and number of keys.  Check the first push instruction
 		// to see how many arguments are expected. typeOfScript already
 		// checked this so we know it'll be a small int.  Also, due to
-		// the original bitcoind bug where OP_CHECKMULTISIG pops an
+		// the original jaxnetd bug where OP_CHECKMULTISIG pops an
 		// additional item from the stack, add an extra expected input
 		// for the extra push that is required to compensate.
 		return asSmallInt(pops[0].opcode) + 1
+	case MultiSigLockTy:
+		return asSmallInt(pops[mslFirstMSigOpI].opcode) + 1
 
-	case EADAddress:
+	case EADAddressTy:
 		return 1
 
 	case NullDataTy:
@@ -275,9 +270,7 @@ type ScriptInfo struct {
 // pair.  It will error if the pair is in someway invalid such that they can not
 // be analysed, i.e. if they do not parse or the pkScript is not a push-only
 // script
-func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
-	bip16, segwit bool) (*ScriptInfo, error) {
-
+func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness, bip16, segwit bool) (*ScriptInfo, error) {
 	sigPops, err := parseScript(sigScript)
 	if err != nil {
 		return nil, err
@@ -381,11 +374,19 @@ func CalcScriptInfo(sigScript, pkScript []byte, witness wire.TxWitness,
 
 // CalcMultiSigStats returns the number of public keys and signatures from
 // a multi-signature transaction script.  The passed script MUST already be
-// known to be a multi-signature script.
-func CalcMultiSigStats(script []byte) (int, int, error) {
+// known to be a multi-signature script. TODO
+func CalcMultiSigStats(script []byte, scriptClass ScriptClass) (int, int, error) {
 	pops, err := parseScript(script)
 	if err != nil {
 		return 0, 0, err
+	}
+
+	var numSigsInd, numPubKeysOffset, minLen int
+	switch scriptClass {
+	case MultiSigTy:
+		numSigsInd, numPubKeysOffset, minLen = 0, 2, 4
+	case MultiSigLockTy:
+		numSigsInd, numPubKeysOffset, minLen = mslFirstMSigOpI, mslTailLen+2, 11
 	}
 
 	// A multi-signature script is of the pattern:
@@ -395,13 +396,14 @@ func CalcMultiSigStats(script []byte) (int, int, error) {
 	// minimum for a multi-signature script is 1 pubkey, so at least 4
 	// items must be on the stack per:
 	//  OP_1 PUBKEY OP_1 OP_CHECKMULTISIG
-	if len(pops) < 4 {
+
+	if len(pops) < minLen {
 		str := fmt.Sprintf("script %x is not a multisig script", script)
 		return 0, 0, scriptError(ErrNotMultisigScript, str)
 	}
 
-	numSigs := asSmallInt(pops[0].opcode)
-	numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
+	numSigs := asSmallInt(pops[numSigsInd].opcode)
+	numPubKeys := asSmallInt(pops[len(pops)-numPubKeysOffset].opcode)
 	return numPubKeys, numSigs, nil
 }
 
@@ -409,8 +411,12 @@ func CalcMultiSigStats(script []byte) (int, int, error) {
 // output to a 20-byte pubkey hash. It is expected that the input is a valid
 // hash.
 func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_DUP).AddOp(OP_HASH160).
-		AddData(pubKeyHash).AddOp(OP_EQUALVERIFY).AddOp(OP_CHECKSIG).
+	return NewScriptBuilder().
+		AddOp(OP_DUP).
+		AddOp(OP_HASH160).
+		AddData(pubKeyHash).
+		AddOp(OP_EQUALVERIFY).
+		AddOp(OP_CHECKSIG).
 		Script()
 }
 
@@ -423,8 +429,11 @@ func payToWitnessPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 // payToScriptHashScript creates a new script to pay a transaction output to a
 // script hash. It is expected that the input is a valid hash.
 func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
-	return NewScriptBuilder().AddOp(OP_HASH160).AddData(scriptHash).
-		AddOp(OP_EQUAL).Script()
+	return NewScriptBuilder().
+		AddOp(OP_HASH160).
+		AddData(scriptHash).
+		AddOp(OP_EQUAL).
+		Script()
 }
 
 // payToWitnessPubKeyHashScript creates a new script to pay to a version 0
@@ -436,45 +445,46 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
 // payToPubkeyScript creates a new script to pay a transaction output to a
 // public key. It is expected that the input is a valid pubkey.
 func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
-	return NewScriptBuilder().AddData(serializedPubKey).
+	return NewScriptBuilder().
+		AddData(serializedPubKey).
 		AddOp(OP_CHECKSIG).Script()
 }
 
 // PayToAddrScript creates a new script to pay a transaction output to a the
 // specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 	const nilAddrErrStr = "unable to generate payment script for nil address"
 
 	switch addr := addr.(type) {
-	case *btcutil.AddressPubKeyHash:
+	case *jaxutil.AddressPubKeyHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToPubKeyHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressScriptHash:
+	case *jaxutil.AddressScriptHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToScriptHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressPubKey:
+	case *jaxutil.AddressPubKey:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToPubKeyScript(addr.ScriptAddress())
 
-	case *btcutil.AddressWitnessPubKeyHash:
+	case *jaxutil.AddressWitnessPubKeyHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
 		}
 		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
 
-	case *btcutil.AddressWitnessScriptHash:
+	case *jaxutil.AddressWitnessScriptHash:
 		if addr == nil {
 			return nil, scriptError(ErrUnsupportedAddress,
 				nilAddrErrStr)
@@ -500,67 +510,95 @@ func NullDataScript(data []byte) ([]byte, error) {
 	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
 }
 
-// MultiSigScript returns a valid script for a multisignature redemption where
-// nrequired of the keys in pubkeys are required to have signed the transaction
-// for success.  An Error with the error code ErrTooManyRequiredSigs will be
-// returned if nrequired is larger than the number of keys provided.
-func MultiSigScript(pubkeys []*btcutil.AddressPubKey, nrequired int) ([]byte, error) {
-	if len(pubkeys) < nrequired {
-		str := fmt.Sprintf("unable to generate multisig script with "+
-			"%d required signatures when there are only %d public "+
-			"keys available", nrequired, len(pubkeys))
-		return nil, scriptError(ErrTooManyRequiredSigs, str)
-	}
-
-	builder := NewScriptBuilder().AddInt64(int64(nrequired))
-	for _, key := range pubkeys {
-		builder.AddData(key.ScriptAddress())
-	}
-	builder.AddInt64(int64(len(pubkeys)))
-	builder.AddOp(OP_CHECKMULTISIG)
-
-	return builder.Script()
-}
-
-const (
-	EADAddressCreate = OP_ADD_EAD_ADDRESS
-	EADAddressDelete = OP_RM_EAD_ADDRESS
-)
-
 type EADScriptData struct {
 	ShardID        uint32
 	IP             net.IP
+	URL            string
 	Port           int64
 	ExpirationDate int64
-	Owner          *btcutil.AddressPubKey
+	Owner          *jaxutil.AddressPubKey
 	RawKey         []byte
-	OpCode         byte
 }
 
 func (e EADScriptData) Encode() ([]byte, error) {
-	if e.OpCode == 0 {
-		e.OpCode = EADAddressCreate
+	address := e.URL
+	if e.IP != nil {
+		address = e.IP.String()
+	} else {
+		_, err := url.Parse(e.URL)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid url")
+		}
 	}
+
+	if len(e.URL) == 0 && e.IP == nil {
+		return nil, errors.New("ead.URL and ead.IP empty")
+	}
+	if len(e.URL) > wire.MaxEADDomainLen {
+		return nil, fmt.Errorf("ead.URL too long: %d > %d", len(e.URL), wire.MaxEADDomainLen)
+	}
+
 	return NewScriptBuilder().
-		AddData(scriptNum(e.ExpirationDate).Bytes()).
-		AddData(scriptNum(e.Port).Bytes()).
+		AddData(e.Owner.ScriptAddress()).
+		AddOp(OP_CHECKSIG).
+		AddOp(OP_NOP).
 		// The scriptNum doing shitty optimization for numbers less than 16,
 		// but the PushedData function and the parseScript do not support this optimization
 		// and won't extract value.
 		AddData(scriptNum(e.ShardID + 16).Bytes()).
-		AddData(e.IP).
-		AddOp(e.OpCode).
-		AddData(e.Owner.ScriptAddress()).
-		AddOp(OP_CHECKSIG).
+		AddData(scriptNum(e.ExpirationDate).Bytes()).
+		AddData([]byte(address)).
+		AddData(scriptNum(e.Port).Bytes()).
+		AddOp(OP_2DROP).
+		AddOp(OP_2DROP).
 		Script()
 }
 
-// EADAddressScript ...
+// isEADRegistration returns true if the passed script is a EAD Address Registration transaction,
+// false otherwise.
+// The structure of EADAddressTy:
+// [0] <owner_pubkey>
+// [1] OP_CHECKSIG
+// [2] OP_NOP
+// [3] <shard_id>
+// [4] <expiration_date>
+// [5] <ip>
+// [6] <port>
+func isEADRegistration(pops []parsedOpcode) bool {
+	isIP := func(data []byte) bool {
+		ip := net.ParseIP(string(data))
+		return ip != nil
+	}
+
+	isURL := func(data []byte) bool {
+		_, err := url.Parse(string(data))
+		return err == nil
+	}
+
+	return len(pops) == 9 &&
+		(len(pops[0].data) == 33 || len(pops[0].data) == 65) &&
+		pops[1].opcode.value == OP_CHECKSIG &&
+		pops[2].opcode.value == OP_NOP &&
+		isNumber(pops[3].opcode) &&
+		isNumber(pops[4].opcode) &&
+		(isIP(pops[5].data) || isURL(pops[5].data)) &&
+		isNumber(pops[6].opcode)
+}
+
+// EADAddressScript creates new script for registration of the new Exchange Agent.
 func EADAddressScript(data EADScriptData) ([]byte, error) {
 	return data.Encode()
 }
 
-// EADAddressScriptData ...
+// EADAddressScriptData extract registration details from EADAddressTy.
+// The structure of EADAddressTy:
+// [0] <owner_pubkey>
+// [1] OP_CHECKSIG
+// [2] OP_NOP
+// [3] <shard_id>
+// [4] <expiration_date>
+// [5] <ip>
+// [6] <port>
 func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	var pops []parsedOpcode
 	pops, err = parseScript(script)
@@ -568,38 +606,52 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 		return
 	}
 
-	var data [][]byte
-	data, err = PushedData(script)
-	if err != nil {
-		return
-	}
-	if len(data) != 4 {
-		err = errors.New("ead script data is invalid")
+	scriptData.RawKey = make([]byte, hex.EncodedLen(len(pops[0].data)))
+	hex.Encode(scriptData.RawKey, pops[0].data)
+
+	var shardID uint32
+	if isSmallInt(pops[3].opcode) {
+		rawShardID := asSmallInt(pops[3].opcode)
+		shardID = uint32(rawShardID)
+	} else {
+		var rawShardID scriptNum
+		rawShardID, err = makeScriptNum(pops[3].data, true, 1)
+		if err != nil {
+			return
+		}
+		shardID = uint32(rawShardID)
 	}
 
 	var rawTime scriptNum
-	rawTime, err = makeScriptNum(data[0], false, 5)
+	rawTime, err = makeScriptNum(pops[4].data, false, 5)
 	if err != nil {
 		return
 	}
 	var rawPort scriptNum
-	rawPort, err = makeScriptNum(data[1], false, 5)
+	rawPort, err = makeScriptNum(pops[6].data, false, 5)
 	if err != nil {
 		return
 	}
-	var rawShardID scriptNum
-	rawShardID, err = makeScriptNum(data[2], true, 1)
-	if err != nil {
-		return
-	}
-	scriptData.OpCode = pops[4].opcode.value
+
 	scriptData.ExpirationDate = int64(rawTime)
 	scriptData.Port = int64(rawPort)
-	scriptData.ShardID = uint32(rawShardID) - 16
-	scriptData.IP = data[3]
-	scriptData.RawKey = make([]byte, hex.EncodedLen(len(data[4])))
-	hex.Encode(scriptData.RawKey, data[4])
+	scriptData.ShardID = shardID - 16
 
+	scriptData.IP = net.ParseIP(string(pops[5].data))
+	if scriptData.IP == nil {
+		scriptData.URL = string(pops[5].data)
+		return
+	}
+
+	if len(scriptData.URL) == 0 && scriptData.IP == nil {
+		err = errors.New("ead.URL and ead.IP empty")
+		return
+	}
+
+	if len(scriptData.URL) > wire.MaxEADDomainLen {
+		err = fmt.Errorf("ead.URL too long: %d > %d", len(scriptData.URL), wire.MaxEADDomainLen)
+		return
+	}
 	return
 }
 
@@ -626,8 +678,8 @@ func PushedData(script []byte) ([][]byte, error) {
 // signatures associated with the passed PkScript.  Note that it only works for
 // 'standard' transaction script types.  Any data such as public keys which are
 // invalid are omitted from the results.
-func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []btcutil.Address, int, error) {
-	var addrs []btcutil.Address
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (ScriptClass, []jaxutil.Address, int, error) {
+	var addrs []jaxutil.Address
 	var requiredSigs int
 
 	// No valid addresses or required signatures if the script doesn't
@@ -645,7 +697,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKeyHash(pops[2].data,
+		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -657,7 +709,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the pubkey hash is the second item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessPubKeyHash(pops[1].data,
+		addr, err := jaxutil.NewAddressWitnessPubKeyHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -669,7 +721,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey is the first item on the stack.
 		// Skip the pubkey if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[0].data, chainParams)
+		addr, err := jaxutil.NewAddressPubKey(pops[0].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -680,7 +732,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the script hash is the 2nd item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressScriptHashFromHash(pops[1].data,
+		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -692,7 +744,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the script hash is the second item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressWitnessScriptHash(pops[1].data,
+		addr, err := jaxutil.NewAddressWitnessScriptHash(pops[1].data,
 			chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
@@ -708,23 +760,24 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		numPubKeys := asSmallInt(pops[len(pops)-2].opcode)
 
 		// Extract the public keys while skipping any that are invalid.
-		addrs = make([]btcutil.Address, 0, numPubKeys)
+		addrs = make([]jaxutil.Address, 0, numPubKeys)
 		for i := 0; i < numPubKeys; i++ {
-			addr, err := btcutil.NewAddressPubKey(pops[i+1].data,
+			addr, err := jaxutil.NewAddressPubKey(pops[i+1].data,
 				chainParams)
 			if err == nil {
 				addrs = append(addrs, addr)
 			}
 		}
 
-	case EADAddress:
+	case MultiSigLockTy:
+		addrs, requiredSigs = extractMultiSigLockAddrs(pops, chainParams)
+	case EADAddressTy:
 		// A pay-to-pubkey-hash script is of the form:
 		//  OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := btcutil.NewAddressPubKey(pops[5].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressPubKey(pops[0].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}

@@ -1,64 +1,56 @@
 package wire
 
 import (
-	"encoding/binary"
 	"io"
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+)
+
+const (
+	// MaxEADDomainLen is limit for the length of ead address host/URI
+	MaxEADDomainLen = 256
 )
 
 type EADAddresses struct {
 	ID          uint64
 	OwnerPubKey []byte
-	IPs         []EADAddress
+	Addresses   []EADAddress // Address is unique combination of {IP|URL, SHARD_ID}
 }
 
-func (msg *EADAddresses) AddAddress(ip net.IP, port uint16, expiresAt int64, shardID uint32,
-	hash *chainhash.Hash, ind int) *EADAddresses {
+func (msg *EADAddresses) AddAddress(ip net.IP, url string, port uint16, expiresAt int64, shardID uint32,
+	hash *chainhash.Hash, ind int) {
 
-	var ipExist bool
-	for i, p := range msg.IPs {
-		if p.IP.Equal(ip) {
-			p := p
-			p.TxHash = hash
-			p.TxOutIndex = ind
-			p.Port = port
-			p.ExpiresAt = time.Unix(expiresAt, 0)
-			msg.IPs[i] = p.AddShard(shardID)
-			ipExist = true
-			break
+	addresses := make([]EADAddress, 0, len(msg.Addresses)+1)
+	for _, p := range msg.Addresses {
+		if !p.Eq(ip, url, shardID) {
+			addresses = append(addresses, p)
 		}
 	}
 
-	if !ipExist {
-		msg.IPs = append(msg.IPs, EADAddress{
-			IP:         ip,
-			Port:       port,
-			ExpiresAt:  time.Unix(expiresAt, 0),
-			Shards:     []uint32{shardID},
-			TxHash:     hash,
-			TxOutIndex: ind,
-		})
-	}
+	addresses = append(addresses, EADAddress{
+		IP:         ip,
+		URL:        url,
+		Port:       port,
+		ExpiresAt:  time.Unix(expiresAt, 0),
+		Shard:      shardID,
+		TxHash:     hash,
+		TxOutIndex: ind,
+	})
 
-	return msg
+	msg.Addresses = addresses
 }
 
-func (msg *EADAddress) HasShard(shards ...uint32) (allPresent bool, hasOneOf bool) {
-	var matchCount int
+func (msg *EADAddress) HasShard(shards ...uint32) (hasOneOf bool) {
 	for _, shard := range shards {
-		for _, u := range msg.Shards {
-			if shard == u {
-				matchCount += 1
-			}
+		if shard == msg.Shard {
+			return true
 
 		}
 	}
-
-	return matchCount == len(shards), matchCount > 0
+	return false
 }
 
 func (msg *EADAddresses) Command() string {
@@ -84,10 +76,10 @@ func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc encoder.Message
 	if err != nil {
 		return err
 	}
-	msg.IPs = make([]EADAddress, count)
+	msg.Addresses = make([]EADAddress, count)
 
-	for i := range msg.IPs {
-		err = msg.IPs[i].BtcDecode(r, pver, enc)
+	for i := range msg.Addresses {
+		err = msg.Addresses[i].BtcDecode(r, pver, enc)
 		if err != nil {
 			return err
 		}
@@ -111,14 +103,14 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 
 	// Protocol versions before MultipleAddressVersion only allowed 1 address
 	// per message.
-	count := len(msg.IPs)
+	count := len(msg.Addresses)
 	err = encoder.WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
-	for i := range msg.IPs {
-		err = msg.IPs[i].BtcEncode(w, pver, enc)
+	for i := range msg.Addresses {
+		err = msg.Addresses[i].BtcEncode(w, pver, enc)
 		if err != nil {
 			return err
 		}
@@ -132,44 +124,24 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 type EADAddress struct {
 	// IP address of the server.
 	IP net.IP
-	// Port the server is using.  This is encoded in big endian on the wire
-	// which differs from most everything else.
+	// Port the server is using.
 	Port uint16
+	// URL address of the server.
+	URL string
 	// ExpiresAt Address expiration time.
 	ExpiresAt time.Time
-	// Shards shows what shards the agent works with.
-	Shards     []uint32
+	// Shard shows what shards the agent works with.
+	Shard      uint32
 	TxHash     *chainhash.Hash
 	TxOutIndex int
 }
 
-// FilterOut returns true if the address has no shards left in which it works.
-func (msg *EADAddress) FilterOut(ip net.IP, shardID uint32) (*EADAddress, bool) {
-	if !msg.IP.Equal(ip) {
-		return msg, false
-	}
-
-	shards := make([]uint32, 0, len(msg.Shards))
-	for _, shard := range msg.Shards {
-		if shard != shardID {
-			shards = append(shards, shard)
-		}
-	}
-
-	clone := *msg
-	clone.Shards = shards
-	return &clone, len(shards) == 0
-}
-
-func (msg *EADAddress) AddShard(shardID uint32) EADAddress {
-	for _, shard := range msg.Shards {
-		if shard == shardID {
-			return *msg
-		}
-	}
-
-	msg.Shards = append(msg.Shards, shardID)
-	return *msg
+// Eq returns true if the address match with passed params.
+func (msg *EADAddress) Eq(ip net.IP, url string, shardID uint32) bool {
+	ipEq := msg.IP == nil || msg.IP.Equal(ip)
+	urlEq := msg.URL == "" || msg.URL == url
+	shardEq := msg.Shard == shardID
+	return ipEq && urlEq && shardEq
 }
 
 func (msg *EADAddress) Command() string {
@@ -177,92 +149,76 @@ func (msg *EADAddress) Command() string {
 }
 
 func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {
-	return 16 + 4 + 8
+	return 16 + 4 + 8 // todo: fix this
 }
 
 func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
-	var ip [16]byte
-
-	err := encoder.ReadElements(r, (*encoder.Uint32Time)(&msg.ExpiresAt), &ip)
-	if err != nil {
-		return err
-	}
-	count, err := encoder.ReadVarInt(r, pver)
-	if err != nil {
-		return err
-	}
-	msg.Shards = make([]uint32, count)
-	for i := range msg.Shards {
-		id, err := encoder.ReadVarInt(r, pver)
-		if err != nil {
-			return err
-		}
-		msg.Shards[i] = uint32(id)
-	}
-
-	// Sigh. Bitcoin protocol mixes little and big endian.
-	port, err := encoder.BinarySerializer.Uint16(r, bigEndian)
-	if err != nil {
-		return err
-	}
-	rawHash, err := encoder.ReadVarBytes(r, pver, chainhash.HashSize, "TxHash")
-	if err != nil {
-		return err
-	}
-
-	msg.TxHash, err = chainhash.NewHash(rawHash)
-	if err != nil {
-		return err
-	}
-
-	txOutId, err := encoder.ReadVarInt(r, pver)
+	var port uint32
+	var txOutIndex uint64
+	var isURL bool
+	msg.TxHash = new(chainhash.Hash)
+	err := encoder.ReadElements(r,
+		(*encoder.Uint32Time)(&msg.ExpiresAt),
+		&msg.Shard,
+		msg.TxHash,
+		&port,
+		&txOutIndex,
+		&isURL,
+	)
 	if err != nil {
 		return err
 	}
 	*msg = EADAddress{
 		ExpiresAt:  msg.ExpiresAt,
-		IP:         ip[:],
-		Port:       port,
-		Shards:     msg.Shards,
+		Port:       uint16(port),
+		Shard:      msg.Shard,
 		TxHash:     msg.TxHash,
-		TxOutIndex: int(txOutId),
-	}
-	return nil
-}
-
-func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	// Ensure to always write 16 bytes even if the ip is nil.
-	var ip [16]byte
-	if msg.IP != nil {
-		copy(ip[:], msg.IP.To16())
-	}
-	err := encoder.WriteElements(w, uint32(msg.ExpiresAt.Unix()), ip)
-	if err != nil {
-		return err
-	}
-	shardsCount := len(msg.Shards)
-	err = encoder.WriteVarInt(w, uint64(shardsCount))
-	if err != nil {
-		return err
+		TxOutIndex: int(txOutIndex),
 	}
 
-	for _, na := range msg.Shards {
-		err := encoder.WriteVarInt(w, uint64(na))
+	if !isURL {
+		var ip [16]byte
+		err := encoder.ReadElement(r, &ip)
 		if err != nil {
 			return err
 		}
+		msg.IP = ip[:]
+	} else {
+		domain, err := encoder.ReadVarBytes(r, pver, MaxEADDomainLen, "TxHash")
+		if err != nil {
+			return err
+		}
+		msg.URL = string(domain)
 	}
-	// Sigh.  Bitcoin protocol mixes little and big endian.
-	err = binary.Write(w, bigEndian, msg.Port)
-	if err != nil {
-		return err
-	}
-	err = encoder.WriteVarBytes(w, pver, msg.TxHash.CloneBytes())
+
+	return nil
+}
+
+func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
+	err := encoder.WriteElements(w,
+		uint32(msg.ExpiresAt.Unix()),
+		msg.Shard,
+		msg.TxHash,
+		uint32(msg.Port),
+		uint64(msg.TxOutIndex),
+		msg.IP == nil, // isDomain
+	)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteVarInt(w, uint64(msg.TxOutIndex))
+	// Ensure to always write 16 bytes even if the ip is nil.
+	if msg.IP != nil {
+		var ip [16]byte
+		copy(ip[:], msg.IP.To16())
+		err = encoder.WriteElement(w, ip)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	err = encoder.WriteVarBytes(w, pver, []byte(msg.URL))
 	if err != nil {
 		return err
 	}

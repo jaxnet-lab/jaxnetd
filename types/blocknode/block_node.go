@@ -1,14 +1,15 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blocknode
 
 import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -33,16 +34,16 @@ const (
 )
 
 type IBlockNode interface {
-	NewNode() IBlockNode
 	GetHash() chainhash.Hash
-	GetHeight() int32
 	Height() int32
+	SerialID() int64
 	Version() int32
 	Bits() uint32
-	SetBits(uint32)
+	K() uint32
 	Status() BlockStatus
 	SetStatus(status BlockStatus)
-	NewHeader() wire.BlockHeader
+
+	NewHeader() wire.BlockHeader // required only for tests
 
 	Header() wire.BlockHeader
 	Parent() IBlockNode
@@ -53,7 +54,7 @@ type IBlockNode interface {
 	Timestamp() int64
 }
 
-// blockStatus is a bit field representing the validation state of the block.
+// BlockStatus is a bit field representing the validation state of the block.
 type BlockStatus byte
 
 // HaveData returns whether the full block data is stored in the database. This

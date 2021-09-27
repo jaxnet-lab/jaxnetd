@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // defaultInvListAlloc is the default size used for the backing array for an

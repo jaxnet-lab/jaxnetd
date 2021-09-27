@@ -8,18 +8,15 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"log"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcclient"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type Transaction struct {
@@ -40,12 +37,12 @@ func CreateTransaction(destination string, amount int64, txHash string, netParam
 	}
 	privKey, pb := btcec.PrivKeyFromBytes(btcec.S256(), pkBytes)
 
-	addresspubkey, _ := btcutil.NewAddressPubKey(pb.SerializeUncompressed(), netParams)
+	addresspubkey, _ := jaxutil.NewAddressPubKey(pb.SerializeUncompressed(), netParams)
 
 	sourceUtxoHash, _ := chainhash.NewHashFromStr(txHash)
 
-	destinationAddress, err := btcutil.DecodeAddress(destination, &chaincfg.MainNetParams)
-	sourceAddress, err := btcutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
+	destinationAddress, err := jaxutil.DecodeAddress(destination, &chaincfg.MainNetParams)
+	sourceAddress, err := jaxutil.DecodeAddress(addresspubkey.EncodeAddress(), netParams)
 	if err != nil {
 		return nil, Transaction{}, err
 	}
@@ -83,14 +80,14 @@ func CreateTransaction(destination string, amount int64, txHash string, netParam
 }
 
 func main() {
-	ch := chain.BeaconChain
-	trx, transaction, err := CreateTransaction("1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", 1000,
-		"ca0b8007c6a5751f6fdabc0c9341b75940914c14172c57a91338bbbba1e95f3d", ch.Params())
-	if err != nil {
-		return
-	}
-	data, _ := json.Marshal(transaction)
-	fmt.Println(string(data))
+	// ch := chain.BeaconChain
+	// trx, transaction, err := CreateTransaction("1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", 1000,
+	// 	"ca0b8007c6a5751f6fdabc0c9341b75940914c14172c57a91338bbbba1e95f3d", ch.Params())
+	// if err != nil {
+	// 	return
+	// }
+	// data, _ := json.Marshal(transaction)
+	// fmt.Println(string(data))
 
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
@@ -100,6 +97,9 @@ func main() {
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}
+
+	connCfg.Params = "fastnet"
+
 	// Notice the notification parameter is nil since notifications are
 	// not supported in HTTP POST mode.
 	client, err := rpcclient.New(connCfg, nil)
@@ -116,32 +116,83 @@ func main() {
 	// trx, err := client.DecodeRawTransaction(data2)
 	// fmt.Println(trx, err)
 	//
-	h, err := client.SendRawTransaction(trx, true)
-	fmt.Println("SendRawTransaction ", h, err)
+	// h, err := client.SendRawTransaction(trx, true)
+	// fmt.Println("SendRawTransaction ", h, err)
 
-	// // Get the current block count.
-	// blockCount, err := client.GetBlockCount()
-	// if err != nil {
-	//	log.Fatal(err)
-	//	return
-	// }
-	// log.Printf("Block count: %d", blockCount)
+	// Get the current block count.
+	blockCount, err := client.GetBlockCount()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Block count: %d", blockCount)
+
+	blockCountNumber, err := client.GetLastSerialBlockNumber()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Block count: %d", blockCountNumber)
+
+	block, err := client.GetBeaconBlockBySerialNumber(0)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Beacon id:0 block hash: %v, serial_id: %v, prev_serial_id: %v ",
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
+	)
+
+	block, err = client.GetBeaconBlockBySerialNumber(1)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Beacon id:1 block hash: %v, serial_id: %v, prev_serial_id: %v ",
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
+	)
+
+	block, err = client.GetBeaconBlockBySerialNumber(2)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Beacon id:2 block hash: %v, serial_id: %v, prev_serial_id: %v ",
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
+	)
+
+	block, err = client.ForShard(1).GetShardBlockBySerialNumber(0)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Printf("Shard:1 id:0 block hash: %v, serial_id: %v, prev_serial_id: %v ",
+		block.Block.BlockHash().String(),
+		block.SerialID,
+		block.PrevSerialID,
+	)
 
 	// secret, err := btcec.NewPrivateKey(btcec.S256())
 	// if err != nil {
 	//	return
 	// }
-	// wif, err := btcutil.NewWIF(secret, &chaincfg.JaxNetParams, true)
+	// wif, err := jaxutil.NewWIF(secret, &chaincfg.JaxNetParams, true)
 	// fmt.Println()
 	// fmt.Println(string(wif.SerializePubKey()))
 
 	//
 	//
-	// addr, err := btcutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), &chaincfg.JaxNetParams)
+	// addr, err := jaxutil.NewAddressPubKey(wif.PrivKey.PubKey().SerializeCompressed(), &chaincfg.JaxNetParams)
 	// fmt.Println(addr.String(), addr.AddressPubKeyHash())
 	//
 
-	// btcutil.
+	// jaxutil.
 
 	// params := &chaincfg.JaxNetParams
 	// params.Name = "jaxnet"
@@ -154,7 +205,7 @@ func main() {
 	// fmt.Println(params.PubKeyHashAddrID, activeNetParams.PubKeyHashAddrID)
 	// fmt.Println(params.PrivateKeyID, activeNetParams.PrivateKeyID)
 	// 1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh
-	// jaxAddres, err := btcutil.DecodeAddress("15VS71vPzPMxY5fXwJUVkqyHge94g4Uub4", &chaincfg.JaxNetParams)
+	// jaxAddres, err := jaxutil.DecodeAddress("15VS71vPzPMxY5fXwJUVkqyHge94g4Uub4", &chaincfg.JaxNetParams)
 	//
 	// //fmt.Println("ImportAddress")
 	// //if err := client.ImportAddress("1CzWYLMRUt2dUnvirRtS68vQjgVjYDxsZh"); err != nil{
@@ -215,7 +266,7 @@ func main() {
 	//
 	// toAddr, _ := client.GetAccountAddress("MainAccount")
 	//
-	// amount, _ := btcutil.NewAmount(0.0001)
+	// amount, _ := jaxutil.NewAmount(0.0001)
 	// h, err := client.SendFrom("JaxMiner", toAddr, amount)
 	// fmt.Println("Send result: ", h, err)
 	// //

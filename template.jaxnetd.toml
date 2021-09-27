@@ -1,0 +1,111 @@
+cpu_profile = ""
+data_dir = "core/fastnet"
+debug_level = "debug"
+drop_addr_index = false
+drop_cf_index = false
+drop_tx_index = false
+log_dir = "core/logs/fastnet"
+profile = ""
+tor_isolation = false
+whitelists = []
+
+[btcd]
+  enable = false
+  network = "simnet"
+
+  [btcd.rpc]
+    host = "127.0.0.1:18556"
+    pass = "jax"
+    user = "jax"
+
+[log_config]
+  directory = "core/logs/fastnet"
+  disable_console_log = false
+  file_logging_enabled = true
+  filename = "core/logs/fastnet/jaxnetd.log"
+  logs_as_json = true
+  max_age = 0
+  max_backups = 0
+  max_size = 0
+
+[metrics]
+  enable = false
+  interval = 0
+  port = 0
+
+[node]
+  db_type = "ffldb"
+  enable_cpu_miner = false
+  net = "fastnet"
+
+  [node.beacon_chain]
+    add_checkpoints = []
+    addr_index = true
+    auto_expand = true
+    block_max_size = 750000
+    block_max_weight = 3000000
+    block_min_size = 0
+    block_min_weight = 0
+    block_priority_size = 50000
+    disable_checkpoints = false
+    expansion_limit = 2
+    expansion_rule = 1
+    free_tx_relay_limit = 15.0
+    max_orphan_txs = 100
+    max_peers = 1000
+    min_relay_tx_fee = 0
+    mining_addresses = ["mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz"]
+    no_c_filters = false
+    no_relay_priority = true
+    reject_replacement = false
+    relay_non_std = true
+    sig_cache_max_size = 100000
+    tx_index = true
+
+  [node.p2p]
+    NoPeerBloomFilters = false
+    agent_blacklist = []
+    agent_whitelist = []
+    ban_duration = "24h0m0s"
+    ban_threshold = 100
+    blocks_only = false
+    connect_peers = []
+    disable_banning = false
+    disable_dns_seed = false
+    disable_listen = false
+    disable_outbound = false
+    disable_tls = false
+    external_ips = []
+    listeners = ["0.0.0.0:18444"]
+    no_onion = false
+    onion_proxy = ""
+    onion_proxy_pass = ""
+    onion_proxy_user = ""
+    peers = []
+    proxy = ""
+    proxy_pass = ""
+    proxy_user = ""
+    reject_non_std = false
+    shard_default_port = 0
+    trickle_interval = "10s"
+    upnp = false
+
+  [node.rpc]
+    disable = false
+    limit_pass = ""
+    limit_user = ""
+    listeners = ["0.0.0.0:18333"]
+    maxclients = 1000
+    password = "somerpc"
+    rpc_cert = ""
+    rpc_key = ""
+    rpc_max_concurrent_reqs = 20
+    rpc_max_websockets = 25
+    user = "somerpc"
+    ws_enable = false
+
+  [node.shards]
+    autorun = true
+    enable = true
+
+    [node.shards.chain_params]

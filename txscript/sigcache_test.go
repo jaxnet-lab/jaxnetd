@@ -9,8 +9,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"gitlab.com/jaxnet/core/shard.core/btcec"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/btcec"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // genRandomSig returns a random message, a signature of the message under the

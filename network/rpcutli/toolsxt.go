@@ -13,15 +13,15 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/node/blockchain"
-	"gitlab.com/jaxnet/core/shard.core/node/chaindata"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chaincfg"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/pow"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // MaxProtocolVersion is the max protocol version the server supports.
@@ -35,7 +35,7 @@ func (xt ToolsXt) MessageToHex(msg wire.Message) (string, error) {
 	var buf bytes.Buffer
 	if err := msg.BtcEncode(&buf, MaxProtocolVersion, wire.WitnessEncoding); err != nil {
 		context := errors.Wrapf(err, "Failed to encode msg of type %T", msg)
-		return "", btcjson.NewRPCError(btcjson.ErrRPCInternal.Code, context.Error())
+		return "", jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code, context.Error())
 	}
 	return hex.EncodeToString(buf.Bytes()), nil
 }
@@ -59,14 +59,15 @@ func (xt ToolsXt) WitnessToHex(witness wire.TxWitness) []string {
 
 // CreateVinList returns a slice of JSON objects for the inputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
+func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx, age int32) []jaxjson.Vin {
 	// Coinbase transactions only have a single txin by definition.
-	vinList := make([]btcjson.Vin, len(mtx.TxIn))
+	vinList := make([]jaxjson.Vin, len(mtx.TxIn))
 	if chaindata.IsCoinBaseTx(mtx) {
 		txIn := mtx.TxIn[0]
 		vinList[0].Coinbase = hex.EncodeToString(txIn.SignatureScript)
 		vinList[0].Sequence = txIn.Sequence
 		vinList[0].Witness = xt.WitnessToHex(txIn.Witness)
+		vinList[0].Age = txIn.Age
 		return vinList
 	}
 
@@ -80,9 +81,13 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
 		vinEntry.Txid = txIn.PreviousOutPoint.Hash.String()
 		vinEntry.Vout = txIn.PreviousOutPoint.Index
 		vinEntry.Sequence = txIn.Sequence
-		vinEntry.ScriptSig = &btcjson.ScriptSig{
+		vinEntry.ScriptSig = &jaxjson.ScriptSig{
 			Asm: disbuf,
 			Hex: hex.EncodeToString(txIn.SignatureScript),
+		}
+		vinEntry.Age = txIn.Age
+		if txIn.Age == 0 {
+			vinEntry.Age = age
 		}
 
 		if mtx.HasWitness() {
@@ -95,8 +100,8 @@ func (xt ToolsXt) CreateVinList(mtx *wire.MsgTx) []btcjson.Vin {
 
 // CreateVoutList returns a slice of JSON objects for the outputs of the passed
 // transaction.
-func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []btcjson.Vout {
-	voutList := make([]btcjson.Vout, 0, len(mtx.TxOut))
+func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, filterAddrMap map[string]struct{}) []jaxjson.Vout {
+	voutList := make([]jaxjson.Vout, 0, len(mtx.TxOut))
 	for i, v := range mtx.TxOut {
 		// The disassembled string will contain [error] inline if the
 		// script doesn't fully parse, so ignore the error here.
@@ -130,9 +135,10 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, 
 			continue
 		}
 
-		var vout btcjson.Vout
+		var vout jaxjson.Vout
 		vout.N = uint32(i)
-		vout.Value = btcutil.Amount(v.Value).ToBTC()
+		vout.Value = jaxutil.Amount(v.Value).ToCoin(chainParams.IsBeacon)
+		vout.PreciseValue = v.Value
 		vout.ScriptPubKey.Addresses = encodedAddrs
 		vout.ScriptPubKey.Asm = disbuf
 		vout.ScriptPubKey.Hex = hex.EncodeToString(v.PkScript)
@@ -149,28 +155,38 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, 
 // to a raw transaction JSON object.
 func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader wire.BlockHeader, blkHash string,
-	blkHeight int32, chainHeight int32) (*btcjson.TxRawResult, error) {
+	blkHeight int32, chainHeight int32) (*jaxjson.TxRawResult, error) {
 
 	mtxHex, err := xt.MessageToHex(mtx)
 	if err != nil {
 		return nil, err
 	}
 
-	txReply := &btcjson.TxRawResult{
-		Hex:      mtxHex,
-		Txid:     txHash,
-		Hash:     mtx.WitnessHash().String(),
-		Size:     int32(mtx.SerializeSize()),
-		Vsize:    int32(GetTxVirtualSize(btcutil.NewTx(mtx))),
-		Weight:   int32(chaindata.GetTransactionWeight(btcutil.NewTx(mtx))),
-		Vin:      xt.CreateVinList(mtx),
-		Vout:     xt.CreateVoutList(mtx, chainParams, nil),
-		Version:  mtx.Version,
-		LockTime: mtx.LockTime,
+	txReply := &jaxjson.TxRawResult{
+		Hex:        mtxHex,
+		Txid:       txHash,
+		ChainName:  chainParams.Name,
+		Hash:       mtx.WitnessHash().String(),
+		Size:       int32(mtx.SerializeSize()),
+		Vsize:      int32(GetTxVirtualSize(jaxutil.NewTx(mtx))),
+		Weight:     int32(chaindata.GetTransactionWeight(jaxutil.NewTx(mtx))),
+		Vin:        xt.CreateVinList(mtx, 1+chainHeight-blkHeight),
+		Vout:       xt.CreateVoutList(mtx, chainParams, nil),
+		InAmount:   0,
+		OutAmount:  0,
+		Fee:        0,
+		Version:    mtx.Version,
+		LockTime:   mtx.LockTime,
+		CoinbaseTx: chaindata.IsCoinBaseTx(mtx),
+		OrphanTx:   blkHeight == -1,
+	}
+
+	for _, vout := range mtx.TxOut {
+		txReply.OutAmount += vout.Value
 	}
 
 	if blkHeader != nil {
-		// This is not a typo, they are identical in bitcoind as well.
+		// This is not a typo, they are identical in jaxnetd as well.
 		txReply.Time = blkHeader.Timestamp().Unix()
 		txReply.Blocktime = blkHeader.Timestamp().Unix()
 		txReply.BlockHash = blkHash
@@ -187,7 +203,7 @@ func (xt ToolsXt) GetDifficultyRatio(bits uint32, params *chaincfg.Params) (floa
 	// converted back to a number.  Note this is not the same as the proof of
 	// work limit directly because the block difficulty is encoded in a block
 	// with the compact form which loses precision.
-	max := pow.CompactToBig(params.PowLimitBits)
+	max := pow.CompactToBig(params.PowParams.PowLimitBits)
 	target := pow.CompactToBig(bits)
 
 	difficulty := new(big.Rat).SetFrac(max, target)
@@ -354,7 +370,7 @@ func (xt ToolsXt) ChainErrToGBTErrString(err error) string {
 // transaction's virtual size is based off its weight, creating a discount for
 // any witness data it contains, proportional to the current
 // blockchain.WitnessScaleFactor value.
-func GetTxVirtualSize(tx *btcutil.Tx) int64 {
+func GetTxVirtualSize(tx *jaxutil.Tx) int64 {
 	// vSize := (weight(tx) + 3) / 4
 	//       := (((baseSize * 3) + totalSize) + 3) / 4
 	// We add 3 here as a way to compute the ceiling of the prior arithmetic

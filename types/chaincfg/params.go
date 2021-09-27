@@ -12,9 +12,17 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
+)
+
+const (
+	BeaconEpochLength = 2048
+	BeaconTimeDelta   = 600 // in seconds
+
+	ShardEpochLength = 4 * 60 * 24 // (4 blocks/per minute * 1 hour * 1 day) in seconds
+	ShardTimeDelta   = 15          // in seconds
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -27,8 +35,10 @@ var (
 	// shardChainPowLimit is the highest proof of work value a Bitcoin block
 	// can have for the test network (version 3).  It is the value
 	// 2^255 - 1.
-	shardChainPowLimit        = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
-	shardPoWBits       uint32 = 0x1e0dffff
+	shardChainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+
+	// ShardPoWBits is basic target for shard chain.
+	ShardPoWBits uint32 = 0x1e0dffff
 )
 
 var (
@@ -44,7 +54,7 @@ var (
 )
 
 var (
-	registeredNets       = make(map[types.BitcoinNet]struct{})
+	registeredNets       = make(map[types.JaxNet]struct{})
 	pubKeyHashAddrIDs    = make(map[byte]struct{})
 	scriptHashAddrIDs    = make(map[byte]struct{})
 	bech32SegwitPrefixes = make(map[string]struct{})
@@ -122,52 +132,17 @@ type GenesisBlockOpts struct {
 	Timestamp  time.Time
 	Bits       uint32
 	Nonce      uint32
-	BCHeader   *wire.BeaconHeader
+	BCHeader   wire.BeaconHeader
 }
-
-// Params defines a Bitcoin network by its parameters.  These parameters may be
-// used by Bitcoin applications to differentiate networks as well as addresses
-// and keys for one network from those intended for use on another network.
-type Params struct {
-	// Name defines a human-readable identifier for the network.
-	Name string
-
-	// Net defines the magic bytes used to identify the network.
-	Net types.BitcoinNet
-
-	// DefaultPort defines the default peer-to-peer port for the network.
-	DefaultPort string
-
-	// DNSSeeds defines a list of DNS seeds for the network that are used
-	// as one method to discover peers.
-	DNSSeeds []DNSSeed
-
-	// GenesisBlock defines the first block of the chain.
-	GenesisBlock GenesisBlockOpts
-	// GenesisHash is the starting block hash.
-	GenesisHash *chainhash.Hash
+type PowParams struct {
 
 	// PowLimit defines the highest allowed proof of work value for a block
-	// as a uint256.
+	// as an uint256.
 	PowLimit *big.Int
 
 	// PowLimitBits defines the highest allowed proof of work value for a
 	// block in compact form.
 	PowLimitBits uint32
-
-	// These fields define the block heights at which the specified softfork
-	// BIP became active.
-	BIP0034Height int32
-	BIP0065Height int32
-	BIP0066Height int32
-
-	// CoinbaseMaturity is the number of blocks required before newly mined
-	// coins (coinbase transactions) can be spent.
-	CoinbaseMaturity uint16
-
-	// SubsidyReductionInterval is the interval of blocks before the subsidy
-	// is reduced.
-	SubsidyReductionInterval int32
 
 	// TargetTimespan is the desired amount of time that should elapse
 	// before the block difficulty requirement is examined to determine how
@@ -198,6 +173,51 @@ type Params struct {
 
 	// GenerateSupported specifies whether or not CPU mining is allowed.
 	GenerateSupported bool
+}
+
+// Params defines a Bitcoin network by its parameters.  These parameters may be
+// used by Bitcoin applications to differentiate networks as well as addresses
+// and keys for one network from those intended for use on another network.
+type Params struct {
+	// Name defines a human-readable identifier for the network.
+	Name string
+
+	// Net defines the magic bytes used to identify the network.
+	Net types.JaxNet
+
+	// ChainName defines a human-readable identifier for the chain.
+	ChainName string
+	// ChainID defines unique identifier of the chain.
+	// O value is identifies the Beacon, 1...math.MaxUint32 - Shards.
+	ChainID  uint32
+	IsBeacon bool
+	// These fields related to jaxnet expansion policies and shard-chains mechanism.
+	AutoExpand     bool
+	ExpansionRule  int32
+	ExpansionLimit int32
+
+	// DefaultPort defines the default peer-to-peer port for the network.
+	DefaultPort string
+
+	// DNSSeeds defines a list of DNS seeds for the network that are used
+	// as one method to discover peers.
+	DNSSeeds []DNSSeed
+
+	// GenesisBlock defines the first block of the chain.
+	GenesisBlock GenesisBlockOpts
+
+	// GenesisHash is the starting block hash.
+	GenesisHash *chainhash.Hash
+
+	PowParams PowParams
+
+	// CoinbaseMaturity is the number of blocks required before newly mined
+	// coins (coinbase transactions) can be spent.
+	CoinbaseMaturity uint16
+
+	// SubsidyReductionInterval is the interval of blocks before the subsidy
+	// is reduced.
+	SubsidyReductionInterval int32
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints []Checkpoint
@@ -217,10 +237,17 @@ type Params struct {
 	// on.
 	RuleChangeActivationThreshold uint32
 	MinerConfirmationWindow       uint32
-	Deployments                   [DefinedDeployments]ConsensusDeployment
 
 	// Mempool parameters
 	RelayNonStdTxs bool
+
+	// We don't need this. Because the network launched from scratch.
+	// These fields define the block heights at which the specified softfork
+	// BIP became active.
+	// BIP0034Height int32
+	// BIP0065Height int32
+	// BIP0066Height int32
+	Deployments [DefinedDeployments]ConsensusDeployment
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined
 	// in BIP 173.
@@ -241,10 +268,6 @@ type Params struct {
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
 	HDCoinType uint32
-
-	AutoExpand     bool
-	ExpansionRule  int32
-	ExpansionLimit int32
 }
 
 // ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
@@ -252,15 +275,13 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 	// shard's exclusive info
 	cfg.Name = "shard_" + strconv.FormatUint(uint64(shard), 10)
 	cfg.GenesisHash = hash
+	cfg.IsBeacon = false
 
-	cfg.TargetTimespan = time.Second * 60 * 60 * 24
-	cfg.TargetTimePerBlock = time.Second * 15
+	cfg.PowParams.TargetTimePerBlock = time.Second * ShardTimeDelta
+	cfg.PowParams.TargetTimespan = time.Second * ShardTimeDelta * ShardEpochLength
 
-	cfg.PowLimit = shardChainPowLimit
-	cfg.PowLimitBits = shardPoWBits
-
-	cfg.ReduceMinDifficulty = true
-	cfg.MinDiffReductionTime = cfg.TargetTimePerBlock * 2
+	cfg.PowParams.PowLimit = shardChainPowLimit
+	cfg.PowParams.PowLimitBits = ShardPoWBits
 
 	return &cfg
 }
@@ -371,8 +392,6 @@ func (net NetName) Params() *Params {
 	switch string(net) {
 	case SimNetParams.Name:
 		return &SimNetParams
-	case RegressionNetParams.Name:
-		return &RegressionNetParams
 	case TestNet3Params.Name:
 		return &TestNet3Params
 	case MainNetParams.Name:
@@ -387,7 +406,6 @@ func init() {
 	// Register all default networks when the package is initialized.
 	mustRegister(&MainNetParams)
 	mustRegister(&TestNet3Params)
-	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
 	mustRegister(&FastNetParams)
 }

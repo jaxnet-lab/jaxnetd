@@ -12,22 +12,22 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil/bloom"
-	"gitlab.com/jaxnet/core/shard.core/database"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/node/encoder"
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type PeersConfig struct {
-	DisableBanning  bool          `yaml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
-	BanThreshold    uint32        `yaml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
-	BlocksOnly      bool          `yaml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
-	Proxy           string        `yaml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
-	TrickleInterval time.Duration `yaml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
+	DisableBanning  bool          `yaml:"disable_banning" toml:"disable_banning" long:"nobanning" description:"Disable banning of misbehaving peers"`
+	BanThreshold    uint32        `yaml:"ban_threshold" toml:"ban_threshold" long:"banthreshold" description:"Maximum allowed ban score before disconnecting and banning misbehaving peers."`
+	BlocksOnly      bool          `yaml:"blocks_only" toml:"blocks_only" long:"blocksonly" description:"Do not accept transactions from remote peers."`
+	Proxy           string        `yaml:"proxy" toml:"proxy" long:"proxy" description:"Connect via SOCKS5 proxy (eg. 127.0.0.1:9050)"`
+	TrickleInterval time.Duration `yaml:"trickle_interval" toml:"trickle_interval" long:"trickleinterval" description:"Minimum time between attempts to send new inventory to a connected Server"`
 }
 
 type serverPeerHandler struct {

@@ -1,27 +1,23 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package node
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"math/big"
 	"net"
-	"path"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/addrmgr"
-	"gitlab.com/jaxnet/core/shard.core/network/p2p"
-	"gitlab.com/jaxnet/core/shard.core/node/chain"
-	"gitlab.com/jaxnet/core/shard.core/node/chain/shard"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
-	"gitlab.com/jaxnet/core/shard.core/utils/mmr"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/network/p2p"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type ShardInfo struct {
@@ -39,7 +35,7 @@ type Index struct {
 	Shards           map[uint32]ShardInfo `json:"shards"`
 }
 
-func (index *Index) AddShard(block *btcutil.Block, opts p2p.ListenOpts) uint32 {
+func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
 	if index.LastBeaconHeight < block.Height() {
 		index.LastBeaconHeight = block.Height()
 	}
@@ -92,7 +88,7 @@ func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	}
 }
 
-func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRun bool) error {
+func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider) error {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
@@ -100,20 +96,8 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider, firstRu
 		return err
 	}
 
-	mmrDb, err := mmr.BadgerDB(path.Join(shardCtl.cfg.DataDir,
-		"shard_"+strconv.FormatUint(uint64(shardCtl.chain.ShardID()), 10), "mmr"))
-	if err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't init shard mmr DB")
-		return err
-	}
+	blockGen := shard.NewChainBlockGenerator(beaconBlockGen)
 
-	mountainRange := mmr.Mmr(sha256.New, mmrDb)
-	if firstRun {
-		hash := shardCtl.chain.GenesisBlock().BlockHash()
-		mountainRange.Set(0, big.NewInt(0), hash.CloneBytes())
-	}
-
-	blockGen := shard.NewChainBlockGenerator(beaconBlockGen, mountainRange)
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
 	if err != nil {

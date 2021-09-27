@@ -9,10 +9,11 @@ package rpcclient
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // FutureGetBestBlockHashResult is a future promise to deliver the result of a
@@ -42,7 +43,7 @@ func (r FutureGetBestBlockHashResult) Receive() (*chainhash.Hash, error) {
 //
 // See GetBestBlockHash for the blocking version and more details.
 func (c *Client) GetBestBlockHashAsync() FutureGetBestBlockHashResult {
-	cmd := btcjson.NewGetBestBlockHashCmd()
+	cmd := jaxjson.NewGetBestBlockHashCmd()
 	return c.sendCmd(cmd)
 }
 
@@ -62,11 +63,11 @@ func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
 	if err != nil {
 		return nil, err
 	}
-	verboseJSON, err := json.Marshal(btcjson.Bool(verbose))
+	verboseJSON, err := json.Marshal(jaxjson.Bool(verbose))
 	if err != nil {
 		return nil, err
 	}
-	verboseTxJSON, err := json.Marshal(btcjson.Bool(verboseTx))
+	verboseTxJSON, err := json.Marshal(jaxjson.Bool(verboseTx))
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +85,10 @@ func (c *Client) waitForGetBlockRes(respChan chan *response, cmd, hash string,
 	res, err := receiveFuture(respChan)
 
 	// If we receive an invalid parameter error, then we may be
-	// communicating with a btcd node which only understands the legacy
+	// communicating with a jaxnetd node which only understands the legacy
 	// request, so we'll try that.
-	if err, ok := err.(*btcjson.RPCError); ok &&
-		err.Code == btcjson.ErrRPCInvalidParams.Code {
+	if err, ok := err.(*jaxjson.RPCError); ok &&
+		err.Code == jaxjson.ErrRPCInvalidParams.Code {
 		return c.legacyGetBlockRequest(cmd, hash, verbose, verboseTx)
 	}
 
@@ -122,7 +123,7 @@ func (r FutureGetBlockCountResult) Receive() (int64, error) {
 //
 // See GetBlockCount for the blocking version and more details.
 func (c *Client) GetBlockCountAsync() FutureGetBlockCountResult {
-	cmd := btcjson.NewGetBlockCountCmd()
+	cmd := jaxjson.NewGetBlockCountCmd()
 	return c.sendCmd(cmd)
 }
 
@@ -158,7 +159,7 @@ func (r FutureGetDifficultyResult) Receive() (float64, error) {
 //
 // See GetDifficulty for the blocking version and more details.
 func (c *Client) GetDifficultyAsync() FutureGetDifficultyResult {
-	cmd := btcjson.NewGetDifficultyCmd()
+	cmd := jaxjson.NewGetDifficultyCmd()
 	return c.sendCmd(cmd)
 }
 
@@ -178,8 +179,8 @@ type FutureGetBlockChainInfoResult struct {
 // unmarshalPartialGetBlockChainInfoResult unmarshals the response into an
 // instance of GetBlockChainInfoResult without populating the SoftForks and
 // UnifiedSoftForks fields.
-func unmarshalPartialGetBlockChainInfoResult(res []byte) (*btcjson.GetBlockChainInfoResult, error) {
-	var chainInfo btcjson.GetBlockChainInfoResult
+func unmarshalPartialGetBlockChainInfoResult(res []byte) (*jaxjson.GetBlockChainInfoResult, error) {
+	var chainInfo jaxjson.GetBlockChainInfoResult
 	if err := json.Unmarshal(res, &chainInfo); err != nil {
 		return nil, err
 	}
@@ -188,13 +189,13 @@ func unmarshalPartialGetBlockChainInfoResult(res []byte) (*btcjson.GetBlockChain
 
 // unmarshalGetBlockChainInfoResultSoftForks properly unmarshals the softforks
 // related fields into the GetBlockChainInfoResult instance.
-func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *btcjson.GetBlockChainInfoResult,
+func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *jaxjson.GetBlockChainInfoResult,
 	version BackendVersion, res []byte) error {
 
 	switch version {
-	// Versions of bitcoind on or after v0.19.0 use the unified format.
-	case BitcoindPost19:
-		var softForks btcjson.UnifiedSoftForks
+	// Versions of jaxnetd on or after v0.19.0 use the unified format.
+	case JaxnetdPost19:
+		var softForks jaxjson.UnifiedSoftForks
 		if err := json.Unmarshal(res, &softForks); err != nil {
 			return err
 		}
@@ -202,7 +203,7 @@ func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *btcjson.GetBlockChainI
 
 	// All other versions use the original format.
 	default:
-		var softForks btcjson.SoftForks
+		var softForks jaxjson.SoftForks
 		if err := json.Unmarshal(res, &softForks); err != nil {
 			return err
 		}
@@ -214,7 +215,7 @@ func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *btcjson.GetBlockChainI
 
 // Receive waits for the response promised by the future and returns chain info
 // result provided by the server.
-func (r FutureGetBlockChainInfoResult) Receive() (*btcjson.GetBlockChainInfoResult, error) {
+func (r FutureGetBlockChainInfoResult) Receive() (*jaxjson.GetBlockChainInfoResult, error) {
 	res, err := receiveFuture(r.Response)
 	if err != nil {
 		return nil, err
@@ -245,7 +246,7 @@ func (r FutureGetBlockChainInfoResult) Receive() (*btcjson.GetBlockChainInfoResu
 //
 // See GetBlockChainInfo for the blocking version and more details.
 func (c *Client) GetBlockChainInfoAsync() FutureGetBlockChainInfoResult {
-	cmd := btcjson.NewGetBlockChainInfoCmd()
+	cmd := jaxjson.NewGetBlockChainInfoCmd()
 	return FutureGetBlockChainInfoResult{
 		client:   c,
 		Response: c.sendCmd(cmd),
@@ -255,7 +256,7 @@ func (c *Client) GetBlockChainInfoAsync() FutureGetBlockChainInfoResult {
 // GetBlockChainInfo returns information related to the processing state of
 // various chain-specific details such as the current difficulty from the tip
 // of the main chain.
-func (c *Client) GetBlockChainInfo() (*btcjson.GetBlockChainInfoResult, error) {
+func (c *Client) GetBlockChainInfo() (*jaxjson.GetBlockChainInfoResult, error) {
 	return c.GetBlockChainInfoAsync().Receive()
 }
 
@@ -286,7 +287,7 @@ func (r FutureGetBlockHashResult) Receive() (*chainhash.Hash, error) {
 //
 // See GetBlockHash for the blocking version and more details.
 func (c *Client) GetBlockHashAsync(blockHeight int64) FutureGetBlockHashResult {
-	cmd := btcjson.NewGetBlockHashCmd(blockHeight)
+	cmd := jaxjson.NewGetBlockHashCmd(blockHeight)
 	return c.sendCmd(cmd)
 }
 
@@ -303,14 +304,14 @@ type FutureGetMempoolEntryResult chan *response
 // Receive waits for the response promised by the future and returns a data
 // structure with information about the transaction in the memory pool given
 // its hash.
-func (r FutureGetMempoolEntryResult) Receive() (*btcjson.GetMempoolEntryResult, error) {
+func (r FutureGetMempoolEntryResult) Receive() (*jaxjson.GetMempoolEntryResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the result as an array of strings.
-	var mempoolEntryResult btcjson.GetMempoolEntryResult
+	var mempoolEntryResult jaxjson.GetMempoolEntryResult
 	err = json.Unmarshal(res, &mempoolEntryResult)
 	if err != nil {
 		return nil, err
@@ -325,13 +326,13 @@ func (r FutureGetMempoolEntryResult) Receive() (*btcjson.GetMempoolEntryResult, 
 //
 // See GetMempoolEntry for the blocking version and more details.
 func (c *Client) GetMempoolEntryAsync(txHash string) FutureGetMempoolEntryResult {
-	cmd := btcjson.NewGetMempoolEntryCmd(txHash)
+	cmd := jaxjson.NewGetMempoolEntryCmd(txHash)
 	return c.sendCmd(cmd)
 }
 
 // GetMempoolEntry returns a data structure with information about the
 // transaction in the memory pool given its hash.
-func (c *Client) GetMempoolEntry(txHash string) (*btcjson.GetMempoolEntryResult, error) {
+func (c *Client) GetMempoolEntry(txHash string) (*jaxjson.GetMempoolEntryResult, error) {
 	return c.GetMempoolEntryAsync(txHash).Receive()
 }
 
@@ -373,7 +374,7 @@ func (r FutureGetRawMempoolResult) Receive() ([]*chainhash.Hash, error) {
 //
 // See GetRawMempool for the blocking version and more details.
 func (c *Client) GetRawMempoolAsync() FutureGetRawMempoolResult {
-	cmd := btcjson.NewGetRawMempoolCmd(btcjson.Bool(false))
+	cmd := jaxjson.NewGetRawMempoolCmd(jaxjson.Bool(false))
 	return c.sendCmd(cmd)
 }
 
@@ -392,7 +393,7 @@ type FutureGetRawMempoolVerboseResult chan *response
 // Receive waits for the response promised by the future and returns a map of
 // transaction hashes to an associated data structure with information about the
 // transaction for all transactions in the memory pool.
-func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]btcjson.GetRawMempoolVerboseResult, error) {
+func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]jaxjson.GetRawMempoolVerboseResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -400,7 +401,7 @@ func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]btcjson.GetRawMe
 
 	// Unmarshal the result as a map of strings (tx shas) to their detailed
 	// results.
-	var mempoolItems map[string]btcjson.GetRawMempoolVerboseResult
+	var mempoolItems map[string]jaxjson.GetRawMempoolVerboseResult
 	err = json.Unmarshal(res, &mempoolItems)
 	if err != nil {
 		return nil, err
@@ -414,7 +415,7 @@ func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]btcjson.GetRawMe
 //
 // See GetRawMempoolVerbose for the blocking version and more details.
 func (c *Client) GetRawMempoolVerboseAsync() FutureGetRawMempoolVerboseResult {
-	cmd := btcjson.NewGetRawMempoolCmd(btcjson.Bool(true))
+	cmd := jaxjson.NewGetRawMempoolCmd(jaxjson.Bool(true))
 	return c.sendCmd(cmd)
 }
 
@@ -423,7 +424,7 @@ func (c *Client) GetRawMempoolVerboseAsync() FutureGetRawMempoolVerboseResult {
 // the memory pool.
 //
 // See GetRawMempool to retrieve only the transaction hashes instead.
-func (c *Client) GetRawMempoolVerbose() (map[string]btcjson.GetRawMempoolVerboseResult, error) {
+func (c *Client) GetRawMempoolVerbose() (map[string]jaxjson.GetRawMempoolVerboseResult, error) {
 	return c.GetRawMempoolVerboseAsync().Receive()
 }
 
@@ -455,7 +456,7 @@ func (r FutureEstimateFeeResult) Receive() (float64, error) {
 //
 // See EstimateFee for the blocking version and more details.
 func (c *Client) EstimateFeeAsync(numBlocks int64) FutureEstimateFeeResult {
-	cmd := btcjson.NewEstimateFeeCmd(numBlocks)
+	cmd := jaxjson.NewEstimateFeeCmd(numBlocks)
 	return c.sendCmd(cmd)
 }
 
@@ -464,19 +465,19 @@ func (c *Client) EstimateFee(numBlocks int64) (float64, error) {
 	return c.EstimateFeeAsync(numBlocks).Receive()
 }
 
-// FutureEstimateFeeResult is a future promise to deliver the result of a
+// FutureEstimateSmartFeeResult is a future promise to deliver the result of a
 // EstimateSmartFeeAsync RPC invocation (or an applicable error).
 type FutureEstimateSmartFeeResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // estimated fee.
-func (r FutureEstimateSmartFeeResult) Receive() (*btcjson.EstimateSmartFeeResult, error) {
+func (r FutureEstimateSmartFeeResult) Receive() (*jaxjson.EstimateSmartFeeResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
-	var verified btcjson.EstimateSmartFeeResult
+	var verified jaxjson.EstimateSmartFeeResult
 	err = json.Unmarshal(res, &verified)
 	if err != nil {
 		return nil, err
@@ -489,14 +490,49 @@ func (r FutureEstimateSmartFeeResult) Receive() (*btcjson.EstimateSmartFeeResult
 // returned instance.
 //
 // See EstimateSmartFee for the blocking version and more details.
-func (c *Client) EstimateSmartFeeAsync(confTarget int64, mode *btcjson.EstimateSmartFeeMode) FutureEstimateSmartFeeResult {
-	cmd := btcjson.NewEstimateSmartFeeCmd(confTarget, mode)
+func (c *Client) EstimateSmartFeeAsync(confTarget int64, mode *jaxjson.EstimateSmartFeeMode) FutureEstimateSmartFeeResult {
+	cmd := jaxjson.NewEstimateSmartFeeCmd(confTarget, mode)
 	return c.sendCmd(cmd)
 }
 
 // EstimateSmartFee requests the server to estimate a fee level based on the given parameters.
-func (c *Client) EstimateSmartFee(confTarget int64, mode *btcjson.EstimateSmartFeeMode) (*btcjson.EstimateSmartFeeResult, error) {
+func (c *Client) EstimateSmartFee(confTarget int64, mode *jaxjson.EstimateSmartFeeMode) (*jaxjson.EstimateSmartFeeResult, error) {
 	return c.EstimateSmartFeeAsync(confTarget, mode).Receive()
+}
+
+// FutureGetExtendedFeeResult is a future promise to deliver the result of a
+// EstimateSmartFeeAsync RPC invocation (or an applicable error).
+type FutureGetExtendedFeeResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// estimated fee.
+func (r FutureGetExtendedFeeResult) Receive() (*jaxjson.ExtendedFeeFeeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var result jaxjson.ExtendedFeeFeeResult
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetExtendedFeeAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See EstimateSmartFee for the blocking version and more details.
+func (c *Client) GetExtendedFeeAsync() FutureGetExtendedFeeResult {
+	cmd := &jaxjson.GetExtendedFee{}
+	return c.sendCmd(cmd)
+}
+
+// GetExtendedFee requests the server to estimate a fee level based on the given parameters.
+func (c *Client) GetExtendedFee() (*jaxjson.ExtendedFeeFeeResult, error) {
+	return c.GetExtendedFeeAsync().Receive()
 }
 
 // FutureVerifyChainResult is a future promise to deliver the result of a
@@ -528,7 +564,7 @@ func (r FutureVerifyChainResult) Receive() (bool, error) {
 //
 // See VerifyChain for the blocking version and more details.
 func (c *Client) VerifyChainAsync() FutureVerifyChainResult {
-	cmd := btcjson.NewVerifyChainCmd(nil, nil)
+	cmd := jaxjson.NewVerifyChainCmd(nil, nil)
 	return c.sendCmd(cmd)
 }
 
@@ -546,7 +582,7 @@ func (c *Client) VerifyChain() (bool, error) {
 //
 // See VerifyChainLevel for the blocking version and more details.
 func (c *Client) VerifyChainLevelAsync(checkLevel int32) FutureVerifyChainResult {
-	cmd := btcjson.NewVerifyChainCmd(&checkLevel, nil)
+	cmd := jaxjson.NewVerifyChainCmd(&checkLevel, nil)
 	return c.sendCmd(cmd)
 }
 
@@ -569,7 +605,7 @@ func (c *Client) VerifyChainLevel(checkLevel int32) (bool, error) {
 //
 // See VerifyChainBlocks for the blocking version and more details.
 func (c *Client) VerifyChainBlocksAsync(checkLevel, numBlocks int32) FutureVerifyChainResult {
-	cmd := btcjson.NewVerifyChainCmd(&checkLevel, &numBlocks)
+	cmd := jaxjson.NewVerifyChainCmd(&checkLevel, &numBlocks)
 	return c.sendCmd(cmd)
 }
 
@@ -594,7 +630,7 @@ type FutureGetTxOutResult chan *response
 
 // Receive waits for the response promised by the future and returns a
 // transaction given its hash.
-func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, error) {
+func (r FutureGetTxOutResult) Receive() (*jaxjson.GetTxOutResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -607,7 +643,7 @@ func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, error) {
 	}
 
 	// Unmarshal result as an gettxout result object.
-	var txOutInfo *btcjson.GetTxOutResult
+	var txOutInfo *jaxjson.GetTxOutResult
 	err = json.Unmarshal(res, &txOutInfo)
 	if err != nil {
 		return nil, err
@@ -621,29 +657,27 @@ func (r FutureGetTxOutResult) Receive() (*btcjson.GetTxOutResult, error) {
 // the returned instance.
 //
 // See GetTxOut for the blocking version and more details.
-func (c *Client) GetTxOutAsync(txHash *chainhash.Hash, index uint32, mempool bool) FutureGetTxOutResult {
+func (c *Client) GetTxOutAsync(txHash *chainhash.Hash, index uint32, mempool, orphan bool) FutureGetTxOutResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.NewGetTxOutCmd(hash, index, &mempool)
+	cmd := jaxjson.NewGetTxOutCmd(hash, index, &mempool, &orphan)
 	return c.sendCmd(cmd)
 }
 
 // GetTxOut returns the transaction output info if it's unspent and
 // nil, otherwise.
-func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, error) {
-	return c.GetTxOutAsync(txHash, index, mempool).Receive()
+func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool, orphan bool) (*jaxjson.GetTxOutResult, error) {
+	return c.GetTxOutAsync(txHash, index, mempool, orphan).Receive()
 }
 
-// FutureGetTxOutResult is a future promise to deliver the result of a
-// GetTxOutAsync RPC invocation (or an applicable error).
-type FutureListTxOutResult chan *response
+type FutureGetTxOutStatusResult chan *response
 
 // Receive waits for the response promised by the future and returns a
 // transaction given its hash.
-func (r FutureListTxOutResult) Receive() (*btcjson.ListTxOutResult, error) {
+func (r FutureGetTxOutStatusResult) Receive() ([]jaxjson.TxOutStatus, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -656,7 +690,44 @@ func (r FutureListTxOutResult) Receive() (*btcjson.ListTxOutResult, error) {
 	}
 
 	// Unmarshal result as an gettxout result object.
-	listTxOut := &btcjson.ListTxOutResult{}
+	var result = make([]jaxjson.TxOutStatus, 0)
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *Client) GetTxOutStatusAsync(outs []jaxjson.TxOutKey, onlyMempool bool) FutureGetTxOutStatusResult {
+	cmd := &jaxjson.GetTxOutStatus{Outs: outs, OnlyMempool: &onlyMempool}
+	return c.sendCmd(cmd)
+}
+
+func (c *Client) GetTxOutStatus(outs []jaxjson.TxOutKey, onlyMempool bool) ([]jaxjson.TxOutStatus, error) {
+	return c.GetTxOutStatusAsync(outs, onlyMempool).Receive()
+}
+
+// FutureListTxOutResult is a future promise to deliver the result of a
+// GetTxOutAsync RPC invocation (or an applicable error).
+type FutureListTxOutResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureListTxOutResult) Receive() (*jaxjson.ListTxOutResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettxout result object.
+	listTxOut := &jaxjson.ListTxOutResult{}
 	err = json.Unmarshal(res, listTxOut)
 	if err != nil {
 		return nil, err
@@ -665,19 +736,19 @@ func (r FutureListTxOutResult) Receive() (*btcjson.ListTxOutResult, error) {
 	return listTxOut, nil
 }
 
-// GetTxOutAsync returns an instance of a type that can be used to get
+// ListTxOutAsync returns an instance of a type that can be used to get
 // the result of the RPC at some future time by invoking the Receive function on
 // the returned instance.
 //
 // See GetTxOut for the blocking version and more details.
 func (c *Client) ListTxOutAsync() FutureListTxOutResult {
-	cmd := btcjson.NewListTxOutCmd()
+	cmd := jaxjson.NewListTxOutCmd()
 	return c.sendCmd(cmd)
 }
 
-// GetTxOut returns the transaction output info if it's unspent and
+// ListTxOut returns the transaction output info if it's unspent and
 // nil, otherwise.
-func (c *Client) ListTxOut() (*btcjson.ListTxOutResult, error) {
+func (c *Client) ListTxOut() (*jaxjson.ListTxOutResult, error) {
 	return c.ListTxOutAsync().Receive()
 }
 
@@ -687,7 +758,7 @@ type FutureListEADAddressesResult chan *response
 
 // Receive waits for the response promised by the future and returns a
 // transaction given its hash.
-func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, error) {
+func (r FutureListEADAddressesResult) Receive() (*jaxjson.ListEADAddresses, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
@@ -700,7 +771,7 @@ func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, erro
 	}
 
 	// Unmarshal result as an ListEADAddresses result object.
-	listTxOut := &btcjson.ListEADAddresses{}
+	listTxOut := &jaxjson.ListEADAddresses{}
 	err = json.Unmarshal(res, listTxOut)
 	if err != nil {
 		return nil, err
@@ -711,12 +782,12 @@ func (r FutureListEADAddressesResult) Receive() (*btcjson.ListEADAddresses, erro
 
 // EADAddressesAsync ...
 func (c *Client) ListEADAddressesAsync(shards []uint32, eadPublicKey *string) FutureListEADAddressesResult {
-	cmd := btcjson.NewListEADAddressesCmd(shards, eadPublicKey)
+	cmd := jaxjson.NewListEADAddressesCmd(shards, eadPublicKey)
 	return c.sendCmd(cmd)
 }
 
 // ListEADAddresses ...
-func (c *Client) ListEADAddresses(shards []uint32, eadPublicKey *string) (*btcjson.ListEADAddresses, error) {
+func (c *Client) ListEADAddresses(shards []uint32, eadPublicKey *string) (*jaxjson.ListEADAddresses, error) {
 	return c.ListEADAddressesAsync(shards, eadPublicKey).Receive()
 }
 
@@ -732,13 +803,13 @@ type FutureRescanBlocksResult chan *response
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (r FutureRescanBlocksResult) Receive() ([]btcjson.RescannedBlock, error) {
+func (r FutureRescanBlocksResult) Receive() ([]jaxjson.RescannedBlock, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
-	var rescanBlocksResult []btcjson.RescannedBlock
+	var rescanBlocksResult []jaxjson.RescannedBlock
 	err = json.Unmarshal(res, &rescanBlocksResult)
 	if err != nil {
 		return nil, err
@@ -761,7 +832,7 @@ func (c *Client) RescanBlocksAsync(blockHashes []chainhash.Hash) FutureRescanBlo
 		strBlockHashes[i] = blockHashes[i].String()
 	}
 
-	cmd := btcjson.NewRescanBlocksCmd(strBlockHashes)
+	cmd := jaxjson.NewRescanBlocksCmd(strBlockHashes)
 	return c.sendCmd(cmd)
 }
 
@@ -771,7 +842,7 @@ func (c *Client) RescanBlocksAsync(blockHashes []chainhash.Hash) FutureRescanBlo
 //
 // NOTE: This is a btcsuite extension ported from
 // github.com/decred/dcrrpcclient.
-func (c *Client) RescanBlocks(blockHashes []chainhash.Hash) ([]btcjson.RescannedBlock, error) {
+func (c *Client) RescanBlocks(blockHashes []chainhash.Hash) ([]jaxjson.RescannedBlock, error) {
 	return c.RescanBlocksAsync(blockHashes).Receive()
 }
 
@@ -798,7 +869,7 @@ func (c *Client) InvalidateBlockAsync(blockHash *chainhash.Hash) FutureInvalidat
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewInvalidateBlockCmd(hash)
+	cmd := jaxjson.NewInvalidateBlockCmd(hash)
 	return c.sendCmd(cmd)
 }
 
@@ -852,7 +923,7 @@ func (c *Client) GetCFilterAsync(blockHash *chainhash.Hash,
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewGetCFilterCmd(hash, filterType)
+	cmd := jaxjson.NewGetCFilterCmd(hash, filterType)
 	return c.sendCmd(cmd)
 }
 
@@ -905,7 +976,7 @@ func (c *Client) GetCFilterHeaderAsync(blockHash *chainhash.Hash,
 		hash = blockHash.String()
 	}
 
-	cmd := btcjson.NewGetCFilterHeaderCmd(hash, filterType)
+	cmd := jaxjson.NewGetCFilterHeaderCmd(hash, filterType)
 	return c.sendCmd(cmd)
 }
 
@@ -922,13 +993,13 @@ type FutureGetBlockStatsResult chan *response
 
 // Receive waits for the response promised by the future and returns statistics
 // of a block at a certain height.
-func (r FutureGetBlockStatsResult) Receive() (*btcjson.GetBlockStatsResult, error) {
+func (r FutureGetBlockStatsResult) Receive() (*jaxjson.GetBlockStatsResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
-	var blockStats btcjson.GetBlockStatsResult
+	var blockStats jaxjson.GetBlockStatsResult
 	err = json.Unmarshal(res, &blockStats)
 	if err != nil {
 		return nil, err
@@ -947,13 +1018,13 @@ func (c *Client) GetBlockStatsAsync(hashOrHeight interface{}, stats *[]string) F
 		hashOrHeight = hash.String()
 	}
 
-	cmd := btcjson.NewGetBlockStatsCmd(btcjson.HashOrHeight{Value: hashOrHeight}, stats)
+	cmd := jaxjson.NewGetBlockStatsCmd(jaxjson.HashOrHeight{Value: hashOrHeight}, stats)
 	return c.sendCmd(cmd)
 }
 
 // GetBlockStats returns block statistics. First argument specifies height or hash of the target block.
 // Second argument allows to select certain stats to return.
-func (c *Client) GetBlockStats(hashOrHeight interface{}, stats *[]string) (*btcjson.GetBlockStatsResult, error) {
+func (c *Client) GetBlockStats(hashOrHeight interface{}, stats *[]string) (*jaxjson.GetBlockStatsResult, error) {
 	return c.GetBlockStatsAsync(hashOrHeight, stats).Receive()
 }
 
@@ -963,9 +1034,9 @@ type FutureListShards chan *response
 
 // Receive waits for the response promised by the future and returns statistics
 // of a block at a certain height.
-func (r FutureListShards) Receive() (*btcjson.ShardListResult, error) {
+func (r FutureListShards) Receive() (*jaxjson.ShardListResult, error) {
 	res, err := receiveFuture(r)
-	var list btcjson.ShardListResult
+	var list jaxjson.ShardListResult
 	err = json.Unmarshal(res, &list)
 	if err != nil {
 		return nil, err
@@ -974,12 +1045,12 @@ func (r FutureListShards) Receive() (*btcjson.ShardListResult, error) {
 	return &list, nil
 }
 
-// todo(mike)
 func (c *Client) ListShardsAsync() FutureListShards {
-	cmd := &btcjson.ListShardsCmd{}
+	cmd := &jaxjson.ListShardsCmd{}
 	return c.sendCmd(cmd)
 }
-func (c *Client) ListShards() (*btcjson.ShardListResult, error) {
+
+func (c *Client) ListShards() (*jaxjson.ShardListResult, error) {
 	return c.ListShardsAsync().Receive()
 }
 
@@ -995,11 +1066,229 @@ func (r FutureManageShards) Receive() error {
 	return err
 }
 
-// todo(mike)
 func (c *Client) ManageShardsAsync(action string, shardID uint32) FutureManageShards {
-	cmd := btcjson.NewManageShardsCmd(shardID, action, nil)
+	cmd := jaxjson.NewManageShardsCmd(shardID, action, nil)
 	return c.sendCmd(cmd)
 }
+
 func (c *Client) ManageShards(action string, shardID uint32) error {
 	return c.ManageShardsAsync(action, shardID).Receive()
+}
+
+// FutureGetLastSerialBlockNumberResult is a future promise to deliver the result of a
+// GetLastSerialBlockNumberAsync RPC invocation (or an applicable error).
+type FutureGetLastSerialBlockNumberResult chan *response
+
+// Receive waits for the response promised by the future and returns the number
+// of blocks in the longest block chain.
+func (r FutureGetLastSerialBlockNumberResult) Receive() (int64, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return 0, err
+	}
+
+	// Unmarshal the result as an map.
+	var resmap map[string]int64
+	err = json.Unmarshal(res, &resmap)
+	if err != nil {
+		return 0, err
+	}
+	if _, ok := resmap["lastserial"]; !ok {
+		return 0, errors.New("bad response format")
+	}
+	return resmap["lastserial"], nil
+}
+
+// GetLastSerialBlockNumberAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+func (c *Client) GetLastSerialBlockNumberAsync() FutureGetLastSerialBlockNumberResult {
+	cmd := jaxjson.NewGetLastSerialBlockNumberCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetLastSerialBlockNumber returns the number of blocks in the longest block chain.
+func (c *Client) GetLastSerialBlockNumber() (int64, error) {
+	return c.GetLastSerialBlockNumberAsync().Receive()
+}
+
+// FutureGetBlockTxOpsResult is a future promise to deliver the result of a
+// GetBlockTxOps RPC invocation (or an applicable error).
+type FutureGetBlockTxOpsResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetBlockTxOpsResult) Receive() (*jaxjson.BlockTxOperations, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as an getblocktxops result object.
+	listTxOut := &jaxjson.BlockTxOperations{}
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// GetBlockTxOperationsAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetBlockTxOperations for the blocking version and more details.
+func (c *Client) GetBlockTxOperationsAsync(blockHash *chainhash.Hash) FutureGetBlockTxOpsResult {
+	return c.sendCmd(&jaxjson.GetBlockTxOpsCmd{BlockHash: blockHash.String()})
+}
+
+// GetBlockTxOperations returns the transaction output info if it's unspent and
+// nil, otherwise.
+func (c *Client) GetBlockTxOperations(blockHash *chainhash.Hash) (*jaxjson.BlockTxOperations, error) {
+	return c.GetBlockTxOperationsAsync(blockHash).Receive()
+}
+
+// FutureGetMempoolUTXOs ...
+type FutureGetMempoolUTXOs chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetMempoolUTXOs) Receive() ([]jaxjson.MempoolUTXO, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := make([]jaxjson.MempoolUTXO, 0)
+	err = json.Unmarshal(res, &listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// GetMempoolUTXOsAsync ...
+func (c *Client) GetMempoolUTXOsAsync() FutureGetMempoolUTXOs {
+	return c.sendCmd(&jaxjson.GetMempoolUTXOs{})
+}
+
+// GetMempoolUTXOs ...
+func (c *Client) GetMempoolUTXOs() ([]jaxjson.MempoolUTXO, error) {
+	return c.GetMempoolUTXOsAsync().Receive()
+}
+
+// FutureEstimateLockTime ...
+type FutureEstimateLockTime chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureEstimateLockTime) Receive() (*jaxjson.EstimateLockTimeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := new(jaxjson.EstimateLockTimeResult)
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// EstimateLockTimeAsync ...
+func (c *Client) EstimateLockTimeAsync(amount int64) FutureEstimateLockTime {
+	return c.sendCmd(&jaxjson.EstimateLockTime{Amount: amount})
+}
+
+// EstimateLockTime estimates desired period in block for locking funds
+// // in shard during the CrossShard Swap Tx.
+func (c *Client) EstimateLockTime(amount int64) (*jaxjson.EstimateLockTimeResult, error) {
+	return c.EstimateLockTimeAsync(amount).Receive()
+}
+
+type FutureSwapEstimateLockTime chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureSwapEstimateLockTime) Receive() (*jaxjson.EstimateSwapLockTimeResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	listTxOut := new(jaxjson.EstimateSwapLockTimeResult)
+	err = json.Unmarshal(res, listTxOut)
+	if err != nil {
+		return nil, err
+	}
+
+	return listTxOut, nil
+}
+
+// EstimateSwapLockTimeAsync ...
+func (c *Client) EstimateSwapLockTimeAsync(source, dest uint32, amount int64) FutureSwapEstimateLockTime {
+	return c.sendCmd(&jaxjson.EstimateSwapLockTime{
+		Amount:           amount,
+		SourceShard:      source,
+		DestinationShard: dest,
+	})
+}
+
+// EstimateSwapLockTime estimates desired period in block for locking funds
+// in source and destination shards during the CrossShard Swap Tx.
+func (c *Client) EstimateSwapLockTime(source, dest uint32, amount int64) (*jaxjson.EstimateSwapLockTimeResult, error) {
+	return c.EstimateSwapLockTimeAsync(source, dest, amount).Receive()
+}
+
+// FutureGetTxResult is a future promise to deliver the result of a
+// GetTxOutAsync RPC invocation (or an applicable error).
+type FutureGetTxResult chan *response
+
+// Receive waits for the response promised by the future and returns a
+// transaction given its hash.
+func (r FutureGetTxResult) Receive() (*jaxjson.GetTxResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettx result object.
+	var txInfo *jaxjson.GetTxResult
+	err = json.Unmarshal(res, &txInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return txInfo, nil
+}
+
+// GetTxAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetTxOut for the blocking version and more details.
+func (c *Client) GetTxAsync(txHash *chainhash.Hash, mempool, orphan bool) FutureGetTxResult {
+	hash := ""
+	if txHash != nil {
+		hash = txHash.String()
+	}
+
+	cmd := &jaxjson.GetTxCmd{Txid: hash, IncludeMempool: &mempool, IncludeOrphan: &orphan}
+	return c.sendCmd(cmd)
+}
+
+// GetTx returns the transaction info
+func (c *Client) GetTx(txHash *chainhash.Hash, mempool, orphan bool) (*jaxjson.GetTxResult, error) {
+	return c.GetTxAsync(txHash, mempool, orphan).Receive()
 }

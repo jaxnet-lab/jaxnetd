@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
@@ -25,8 +25,10 @@ const (
 	// list to use for binary serialization and deserialization.
 	binaryFreeListMaxItems = 1024
 
-	CommandSize       = 12
-	MaxMessagePayload = 1024 * 1024 * 32 // 32MB
+	CommandSize = 12
+	// MaxMessagePayload = 1024 * 1024 * 32 // 32MB
+	MaxMessagePayload = (1024 * 1024 * 1024 * 2) // 2 GB
+
 )
 
 type MessageEncoding uint32
@@ -40,38 +42,6 @@ var (
 	// long.
 	bigEndian = binary.BigEndian
 )
-
-//
-// type Encoder interface {
-//	ReadElements(r io.Reader, elements ...interface{}) error
-//	WriteElements(w io.Writer, elements ...interface{}) error
-//
-//	ReadElement(r io.Reader, element interface{}) error
-//	WriteElement(w io.Writer, element interface{}) error
-//
-//	ReadVarInt(r io.Reader, pver uint32) (uint64, error)
-//	WriteVarInt(w io.Writer, val uint64) error
-//
-//	ReadInvVect(r io.Reader, iv *types.InvVect) error
-//	WriteInvVect(w io.Writer, iv *types.InvVect) error
-//
-//	ReadVarString(r io.Reader, pver uint32) (string, error)
-//	WriteVarString(w io.Writer, pver uint32, str string) error
-//
-//	ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) error
-//	WriteNetAddress(w io.Writer, pver uint32, na *types.NetAddress, ts bool) error
-//
-//	ReadVarBytes(r io.Reader, pver uint32, maxAllowed uint32, fieldName string) ([]byte, error)
-//	WriteVarBytes(w io.Writer, pver uint32, bytes []byte) error
-//
-//	VarIntSerializeSize(val uint64) int
-//
-//	Uint32(r io.Reader, ) (uint32, error)
-//	PutUint32(w io.Writer, val uint32) error
-//
-//	Uint64(r io.Reader, ) (uint64, error)
-//	PutUint64(w io.Writer, val uint64) error
-// }
 
 // errNonCanonicalVarInt is the common format string used for non-canonically
 // encoded variable length integer errors.
@@ -88,7 +58,7 @@ type Uint32Time time.Time
 // time.Time since it is otherwise ambiguous.
 type Int64Time time.Time
 
-// readElement reads the next sequence of bytes from r using little endian
+// ReadElement reads the next sequence of bytes from r using little endian
 // depending on the concrete type of element pointed to.
 func ReadElement(r io.Reader, element interface{}) error {
 
@@ -180,12 +150,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = types.InvType(rv)
 		return nil
 
-	case *types.BitcoinNet:
+	case *types.JaxNet:
 		rv, err := BinarySerializer.Uint32(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = types.BitcoinNet(rv)
+		*e = types.JaxNet(rv)
 		return nil
 
 	case *types.BloomUpdateType:
@@ -231,7 +201,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 	return binary.Read(r, littleEndian, element)
 }
 
-// readElements reads multiple items from r.  It is equivalent to multiple
+// ReadElements reads multiple items from r.  It is equivalent to multiple
 // calls to readElement.
 func ReadElements(r io.Reader, elements ...interface{}) error {
 	for _, element := range elements {
@@ -243,7 +213,7 @@ func ReadElements(r io.Reader, elements ...interface{}) error {
 	return nil
 }
 
-// writeElement writes the little endian representation of element to w.
+// WriteElement writes the little endian representation of element to w.
 func WriteElement(w io.Writer, element interface{}) error {
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
@@ -311,7 +281,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 		return nil
 
-	case types.BitcoinNet:
+	case types.JaxNet:
 		err := BinarySerializer.PutUint32(w, littleEndian, uint32(e))
 		if err != nil {
 			return err
@@ -352,7 +322,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 	return binary.Write(w, littleEndian, element)
 }
 
-// writeElements writes multiple items to w.  It is equivalent to multiple
+// WriteElements writes multiple items to w.  It is equivalent to multiple
 // calls to writeElement.
 func WriteElements(w io.Writer, elements ...interface{}) error {
 	for _, element := range elements {
@@ -608,7 +578,7 @@ func WriteInvVect(w io.Writer, iv *types.InvVect) error {
 	return WriteElements(w, iv.Type, &iv.Hash)
 }
 
-// readNetAddress reads an encoded NetAddress from r depending on the protocol
+// ReadNetAddress reads an encoded NetAddress from r depending on the protocol
 // version and whether or not the timestamp is included per ts.  Some messages
 // like version do not include the timestamp.
 func ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) error {
@@ -644,7 +614,7 @@ func ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) err
 	return nil
 }
 
-// writeNetAddress serializes a NetAddress to w depending on the protocol
+// WriteNetAddress serializes a NetAddress to w depending on the protocol
 // version and whether or not the timestamp is included per ts.  Some messages
 // like version do not include the timestamp.
 func WriteNetAddress(w io.Writer, pver uint32, na *types.NetAddress, ts bool) error {

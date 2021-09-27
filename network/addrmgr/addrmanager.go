@@ -24,8 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // AddrManager provides a concurrency safe address manager for caching potential
@@ -243,7 +243,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 func (a *AddrManager) expireNew(bucket int) {
 	// First see if there are any entries that are so bad we can just throw
 	// them away. otherwise we throw away the oldest entry in the cache.
-	// Bitcoind here chooses four random and just throws the oldest of
+	// Jaxnetd here chooses four random and just throws the oldest of
 	// those away, but we keep track of oldest in the initial traversal and
 	// use that information instead.
 	var oldest *KnownAddress
@@ -279,7 +279,7 @@ func (a *AddrManager) expireNew(bucket int) {
 }
 
 // pickTried selects an address from the tried bucket to be evicted.
-// We just choose the eldest. Bitcoind selects 4 random entries and throws away
+// We just choose the eldest. Jaxnetd selects 4 random entries and throws away
 // the older of them.
 func (a *AddrManager) pickTried(bucket int) *list.Element {
 	var oldest *KnownAddress
@@ -296,7 +296,7 @@ func (a *AddrManager) pickTried(bucket int) *list.Element {
 }
 
 func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
-	// bitcoind:
+	// jaxnetd:
 	// doublesha256(key + sourcegroup + int64(doublesha256(key + group + sourcegroup))%bucket_per_source_group) % num_new_buckets
 
 	data1 := []byte{}
@@ -318,7 +318,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 }
 
 func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
-	// bitcoind hashes this as:
+	// jaxnetd hashes this as:
 	// doublesha256(key + group + truncate_to_64bits(doublesha256(key)) % buckets_per_group) % num_buckets
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
@@ -726,7 +726,7 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.S
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
 		// go base32 encoding uses capitals (as does the rfc
-		// but Tor and bitcoind tend to user lowercase, so we switch
+		// but Tor and jaxnetd tend to user lowercase, so we switch
 		// case here.
 		data, err := base32.StdEncoding.DecodeString(
 			strings.ToUpper(host[:16]))

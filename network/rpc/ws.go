@@ -11,15 +11,16 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/core/shard.core/btcutil"
-	"gitlab.com/jaxnet/core/shard.core/network/rpcutli"
-	"gitlab.com/jaxnet/core/shard.core/node/cprovider"
-	"gitlab.com/jaxnet/core/shard.core/txscript"
-	"gitlab.com/jaxnet/core/shard.core/types/btcjson"
-	"gitlab.com/jaxnet/core/shard.core/types/chainhash"
-	"gitlab.com/jaxnet/core/shard.core/types/wire"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -280,7 +281,7 @@ type wsBlockNotification struct {
 type wsTransactionNotification struct {
 	Client *wsClient
 	isNew  bool
-	tx     *btcutil.Tx
+	tx     *jaxutil.Tx
 	Chain  *cprovider.ChainProvider
 }
 
@@ -526,10 +527,10 @@ func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 			if txHex == "" {
 				txHex = txHexString(tx.MsgTx())
 			}
-			ntfn := btcjson.NewRecvTxNtfn(txHex, blockDetails(block,
+			ntfn := jaxjson.NewRecvTxNtfn(txHex, blockDetails(block,
 				tx.Index()))
 
-			marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+			marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 			if err != nil {
 				m.logger.Error().Err(err).Msg("Failed to marshal processedtx notification")
 				continue
@@ -596,19 +597,19 @@ func txHexString(tx *wire.MsgTx) string {
 
 // newRedeemingTxNotification returns a new marshalled redeemingtx notification
 // with the passed parameters.
-func newRedeemingTxNotification(chain *cprovider.ChainProvider, txHex string, index int, block *btcutil.Block) ([]byte, error) {
+func newRedeemingTxNotification(chain *cprovider.ChainProvider, txHex string, index int, block *jaxutil.Block) ([]byte, error) {
 	// Create and marshal the notification.
-	ntfn := btcjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
-	return btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	ntfn := jaxjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
+	return jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 }
 
 // blockDetails creates a BlockDetails struct to include in btcws notifications
 // from a block and a transaction's block index.
-func blockDetails(block *btcutil.Block, txIndex int) *btcjson.BlockDetails {
+func blockDetails(block *jaxutil.Block, txIndex int) *jaxjson.BlockDetails {
 	if block == nil {
 		return nil
 	}
-	return &btcjson.BlockDetails{
+	return &jaxjson.BlockDetails{
 		Height: block.Height(),
 		Hash:   block.Hash().String(),
 		Index:  txIndex,
@@ -664,7 +665,7 @@ func (m *WsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 
 	// Check if any transactions spending these outputs already exists in
 	// the mempool, if so send the notification immediately.
-	spends := make(map[chainhash.Hash]*btcutil.Tx)
+	spends := make(map[chainhash.Hash]*jaxutil.Tx)
 	for _, op := range ops {
 		spend := chain.TxMemPool.CheckSpend(*op)
 		if spend != nil {
@@ -689,14 +690,14 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 		amount += txOut.Value
 	}
 
-	ntfn := btcjson.NewTxAcceptedNtfn(txHashStr, btcutil.Amount(amount).ToBTC())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	ntfn := jaxjson.NewTxAcceptedNtfn(txHashStr, jaxutil.Amount(amount).ToCoin(chain.ChainCtx.IsBeacon()))
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal tx notification")
 		return
 	}
 
-	var verboseNtfn *btcjson.TxAcceptedVerboseNtfn
+	var verboseNtfn *jaxjson.TxAcceptedVerboseNtfn
 	var marshalledJSONVerbose []byte
 	for _, wsc := range clients {
 		if wsc.verboseTxUpdates {
@@ -705,15 +706,14 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 				continue
 			}
 
-			net := chain.ChainParams
-			rawTx, err := m.CreateTxRawResult(net, mtx, txHashStr, nil,
+			rawTx, err := m.CreateTxRawResult(chain.ChainCtx.Params(), mtx, txHashStr, nil,
 				"", 0, 0)
 			if err != nil {
 				return
 			}
 
-			verboseNtfn = btcjson.NewTxAcceptedVerboseNtfn(*rawTx)
-			marshalledJSONVerbose, err = btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), verboseNtfn)
+			verboseNtfn = jaxjson.NewTxAcceptedVerboseNtfn(*rawTx)
+			marshalledJSONVerbose, err = jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), verboseNtfn)
 			if err != nil {
 				m.logger.Error().Err(err).Msg("Failed to marshal verbose tx notification")
 				return
@@ -731,9 +731,9 @@ func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 	block *btcutil.Block) {
 
 	// Notify interested websocket clients about the connected block.
-	ntfn := btcjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
+	ntfn := jaxjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
 		block.MsgBlock().Header.Timestamp().Unix())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal block connected notification")
 		return
@@ -756,7 +756,7 @@ func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block")
 		return
 	}
-	ntfn := btcjson.NewFilteredBlockConnectedNtfn(block.Height(),
+	ntfn := jaxjson.NewFilteredBlockConnectedNtfn(block.Height(),
 		hex.EncodeToString(w.Bytes()), nil)
 
 	// Search for relevant transactions for each client and save them
@@ -777,7 +777,7 @@ func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 		ntfn.SubscribedTxs = subscribedTxs[quitChan]
 
 		// Marshal and queue notification.
-		marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+		marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 		if err != nil {
 			m.logger.Error().Err(err).Msg("Failed to marshal filtered block connected notification")
 			return
@@ -794,9 +794,9 @@ func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clie
 	}
 
 	// Notify interested websocket clients about the disconnected block.
-	ntfn := btcjson.NewBlockDisconnectedNtfn(block.Hash().String(),
+	ntfn := jaxjson.NewBlockDisconnectedNtfn(block.Hash().String(),
 		block.Height(), block.MsgBlock().Header.Timestamp().Unix())
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal block disconnected notification")
 		return
@@ -892,9 +892,9 @@ func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 		m.logger.Error().Err(err).Msg("Failed to serialize header for filtered block disconnected notification")
 		return
 	}
-	ntfn := btcjson.NewFilteredBlockDisconnectedNtfn(block.Height(),
+	ntfn := jaxjson.NewFilteredBlockDisconnectedNtfn(block.Height(),
 		hex.EncodeToString(w.Bytes()))
-	marshalledJSON, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
+	marshalledJSON, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), ntfn)
 	if err != nil {
 		m.logger.Error().Err(err).Msg("Failed to marshal filtered block disconnected notification")
 		return
@@ -915,8 +915,8 @@ func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx 
 	clientsToNotify := m.subscribedClients(chain, tx, clients)
 
 	if len(clientsToNotify) != 0 {
-		n := btcjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
-		marshalled, err := btcjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), n)
+		n := jaxjson.NewRelevantTxAcceptedNtfn(txHexString(tx.MsgTx()))
+		marshalled, err := jaxjson.MarshalCmd(nil, chain.ChainCtx.ShardID(), n)
 		if err != nil {
 			m.logger.Error().Err(err).Msg("Failed to marshal notification")
 			return
@@ -984,7 +984,7 @@ type wsResponse struct {
 
 // ErrRescanReorg defines the error that is returned when an unrecoverable
 // reorganize is detected during a rescan.
-var ErrRescanReorg = btcjson.RPCError{
-	Code:    btcjson.ErrRPCDatabase,
+var ErrRescanReorg = jaxjson.RPCError{
+	Code:    jaxjson.ErrRPCDatabase,
 	Message: "Reorganize",
 }
