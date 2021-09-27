@@ -43,10 +43,10 @@ func main() {
 		User:       "somerpc",
 		Pass:       "somerpc",
 		DisableTLS: true, // Bitcoin core does not provide TLS by default
-		//Certificates: certs,
+		// Certificates: certs,
 	}
 
-    connCfg.Params = "fastnet"
+	connCfg.Params = "fastnet"
 
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)
 	if err != nil {
