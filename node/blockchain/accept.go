@@ -28,14 +28,13 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	// The height of this block is one more than the referenced previous
 	// block.
 
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-	prevNode := b.index.LookupNode(&prevHash)
-
+	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevNode := b.index.LookupNodeByMMRRoot(&prevMMRRoot)
 	if prevNode == nil {
-		str := fmt.Sprintf("previous block %s is unknown", prevHash)
+		str := fmt.Sprintf("previous block %s is unknown", prevMMRRoot)
 		return false, chaindata.NewRuleError(chaindata.ErrPreviousBlockUnknown, str)
 	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
-		str := fmt.Sprintf("previous block %s is known to be invalid", prevHash)
+		str := fmt.Sprintf("previous block %s is known to be invalid", prevMMRRoot)
 		return false, chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
 	}
 

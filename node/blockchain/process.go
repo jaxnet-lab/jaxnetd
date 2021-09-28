@@ -170,6 +170,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 				blockHash, blockHeader.Timestamp(), checkpointTime)
 			return false, false, chaindata.NewRuleError(chaindata.ErrCheckpointTimeTooOld, str)
 		}
+
 		if !fastAdd {
 			// Even though the checks prior to now have already ensured the
 			// proof of work exceeds the claimed amount, the claimed amount
@@ -178,9 +179,10 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 			// expected based on elapsed time since the last checkpoint and
 			// maximum adjustment allowed by the retarget rules.
 			duration := blockHeader.Timestamp().Sub(checkpointTime)
-			requiredTarget := pow.CompactToBig(b.calcEasiestDifficulty(
-				checkpointNode.Bits(), duration))
+
+			requiredTarget := pow.CompactToBig(b.calcEasiestDifficulty(checkpointNode.Bits(), duration))
 			currentTarget := pow.CompactToBig(blockHeader.Bits())
+
 			if currentTarget.Cmp(requiredTarget) > 0 {
 				str := fmt.Sprintf("block target difficulty of %064x is too low when compared to the previous "+
 					"checkpoint", currentTarget)
@@ -190,10 +192,13 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// Handle orphan blocks.
-	prevHash := blockHeader.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if err := b.blockGen.ValidateBlockHeader(blockHeader); err != nil {
 		return false, false, err
 	}
+
+	prevMMRRoot := blockHeader.BlocksMerkleMountainRoot()
+	prevHash := b.index.HashByMMR(&prevMMRRoot)
+
 	prevHashExists, err := b.blockExists(&prevHash)
 	if err != nil {
 		return false, false, err

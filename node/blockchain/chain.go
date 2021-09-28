@@ -16,6 +16,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -255,7 +256,7 @@ type ChainBlockGenerator interface {
 	ValidateBlockHeader(blockHeader wire.BlockHeader) error
 	ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error
 
-	CalcBlockSubsidy(height int32, header wire.BlockHeader) int64
+	CalcBlockSubsidy(height int32, params chaincfg.PowParams, header wire.BlockHeader) int64
 }
 
 // BlockChain provides functions for working with the bitcoin block chain.
@@ -510,7 +511,7 @@ func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
 	b.orphans[*block.Hash()] = oBlock
 
 	// Add to previous hash lookup index for faster dependency lookups.
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }
 
@@ -749,8 +750,9 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	bestBlockHash := b.bestChain.Tip().GetHash()
+	prevHash := b.index.HashByMMR(&prevMMRRoot)
 	if !prevHash.IsEqual(&bestBlockHash) {
 		return chaindata.AssertError("connectBlock must be called with a block that extends the main chain")
 	}
@@ -791,7 +793,8 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	numTxns := uint64(len(block.MsgBlock().Transactions))
 	blockSize := uint64(block.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(block))
-	state := chaindata.NewBestState(node, blockSize, blockWeight, numTxns,
+
+	state := chaindata.NewBestState(node, b.index.MMRTreeRoot(), blockSize, blockWeight, numTxns,
 		curTotalTxns+numTxns, node.CalcPastMedianTime())
 
 	// Atomically insert info into the database.
@@ -945,7 +948,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 	blockSize := uint64(prevBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(prevBlock))
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
-	state := chaindata.NewBestState(prevNode, blockSize, blockWeight, numTxns,
+
+	state := chaindata.NewBestState(prevNode, node.ParentBlocksMMRRoot(), blockSize, blockWeight, numTxns,
 		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
@@ -1349,8 +1353,14 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	}
 
 	// We are extending the main (best) chain with a new block.  This is the
-	// most common case.
-	parentHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	// most common case. //todo: refactor this validation
+	parentMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevBNode := b.index.mmrTree.LookupNodeByRoot(parentMMRRoot)
+	if prevBNode == nil {
+		prevBNode = &mmr.BlockNode{}
+	}
+	parentHash := prevBNode.Hash
+
 	h := b.bestChain.Tip().GetHash()
 	if parentHash.IsEqual(&h) {
 		// Skip checks if node has already been fully validated.

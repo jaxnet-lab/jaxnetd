@@ -1,6 +1,8 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
 package blocknode
 
@@ -30,13 +32,14 @@ type BeaconBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	parent    IBlockNode     // parent is the parent block for this node.
-	hash      chainhash.Hash // hash is the double sha 256 of the block.
-	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	height    int32          // height is the position in the block chain.
-	serialID  int64          // serialID is the absolute unique id of current block.
-	timestamp int64
-	header    wire.BlockHeader
+	parent     IBlockNode     // parent is the parent block for this node.
+	hash       chainhash.Hash // hash is the double sha 256 of the block.
+	workSum    *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	height     int32          // height is the position in the block chain.
+	serialID   int64          // serialID is the absolute unique id of current block.
+	timestamp  int64
+	difficulty uint64
+	header     wire.BlockHeader
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -44,17 +47,16 @@ type BeaconBlockNode struct {
 	status BlockStatus
 }
 
-// initBeaconBlockNode initializes a block node from the given header and parent node,
-// calculating the height and workSum from the respective fields on the parent.
-// This function is NOT safe for concurrent access.  It must only be called when
-// initially creating a node.
-func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
+// NewBeaconBlockNode returns a new block node for the given block header and parent
+// node, calculating the height and workSum from the respective fields on the
+// parent. This function is NOT safe for concurrent access.
+func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, genesisBits uint32) *BeaconBlockNode {
 	node := &BeaconBlockNode{
-		hash:      blockHeader.BlockHash(),
-		workSum:   pow.CalcWork(blockHeader.Bits()),
-		timestamp: blockHeader.Timestamp().Unix(),
-		header:    blockHeader,
-		// header: blockHeader.Copy(),
+		hash:       blockHeader.BlockHash(),
+		workSum:    pow.CalcWork(blockHeader.Bits()),
+		timestamp:  blockHeader.Timestamp().Unix(),
+		header:     blockHeader,
+		difficulty: pow.GetDifficulty(genesisBits, blockHeader.Bits()).Uint64(),
 	}
 	if parent != nil {
 		node.parent = parent
@@ -65,18 +67,15 @@ func initBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *Beaco
 	return node
 }
 
-// NewBeaconBlockNode returns a new block node for the given block header and parent
-// node, calculating the height and workSum from the respective fields on the
-// parent. This function is NOT safe for concurrent access.
-func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *BeaconBlockNode {
-	return initBeaconBlockNode(blockHeader, parent)
+func (node *BeaconBlockNode) GetHash() chainhash.Hash { return node.hash }
+func (node *BeaconBlockNode) ParentBlocksMMRRoot() chainhash.Hash {
+	return node.header.BlocksMerkleMountainRoot()
 }
-
-func (node *BeaconBlockNode) GetHash() chainhash.Hash      { return node.hash }
 func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *BeaconBlockNode) Height() int32                { return node.height }
 func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                 { return node.header.Bits() }
+func (node *BeaconBlockNode) Difficulty() uint64           { return node.difficulty }
 func (node *BeaconBlockNode) K() uint32                    { return node.header.K() }
 func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }

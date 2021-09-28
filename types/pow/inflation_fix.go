@@ -53,6 +53,20 @@ func ShardEpoch(height int32) int32 {
 	return (height / ShardEpochLen) + 1
 }
 
+// ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
+//
+func ValidateVoteK(prevK, newK uint32) int64 {
+	bPrevK := CompactToBig(prevK)
+	bNewK := CompactToBig(newK)
+	// ( (prevK - newK) * 100 ) / prevK = deltaPercent
+
+	// (prevK - newK) * 100 = delta
+	delta := new(big.Int).Mul(new(big.Int).Sub(bPrevK, bNewK), big.NewInt(100))
+	// delta / prevK
+	deltaPercent := new(big.Int).Div(delta, bPrevK).Int64()
+	return deltaPercent
+}
+
 func CalcKCoefficient(height int32, prevK uint32) uint32 {
 	if BeaconEpoch(height) == 1 {
 		return PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
@@ -67,57 +81,38 @@ func CalcKCoefficient(height int32, prevK uint32) uint32 {
 	}
 
 	return prevK
-
 }
 
-func PackRat(val *big.Rat) uint32 {
-	mult, _ := new(big.Rat).SetString("10000000000000000000")
+const kValMask = "10000000000000000000"
+
+func KValRatToInt(val *big.Rat) *big.Int {
+	mult, _ := new(big.Rat).SetString(kValMask)
 	nVal := new(big.Rat).Mul(val, mult)
 	intPart := strings.Split(nVal.FloatString(18), ".")[0]
 
 	bigVal, _ := new(big.Int).SetString(intPart, 10)
-	return BigToCompact(bigVal)
+	return bigVal
 }
 
-func UnpackRat(val uint32) *big.Rat {
-	nVal := CompactToBig(val)
+func PackRat(val *big.Rat) uint32 {
+	return BigToCompact(KValRatToInt(val))
+}
 
-	mult, _ := new(big.Rat).SetString("10000000000000000000")
+func KValIntToRat(nVal *big.Int) *big.Rat {
+	mult, _ := new(big.Rat).SetString(kValMask)
 	rVal, _ := new(big.Rat).SetString(nVal.String())
 	return new(big.Rat).Quo(rVal, mult)
 }
 
-func GetDifficultyF(bits uint32) (float64, error) {
-	// The minimum difficulty is the max possible proof-of-work limit bits
-	// converted back to a number.  Note this is not the same as the proof of
-	// work limit directly because the block difficulty is encoded in a block
-	// with the compact form which loses precision.
-	twoPow256 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
-	target := CompactToBig(bits)
-
-	difficulty := new(big.Rat).SetFrac(twoPow256, target)
-
-	outString := difficulty.FloatString(8)
-	diff, err := strconv.ParseFloat(outString, 64)
-	if err != nil {
-		return 0, err
-	}
-	return diff, nil
+func UnpackRat(val uint32) *big.Rat {
+	return KValIntToRat(CompactToBig(val))
 }
 
-func GetDifficulty(bits uint32) *big.Rat {
-	twoPow180 := new(big.Int).Exp(big.NewInt(2), big.NewInt(180), nil)
-
-	target := CompactToBig(bits)
-	// D =  Target / 2^180
-	return new(big.Rat).SetFrac(target, twoPow180)
-}
-
-func MultBitsAndK(bits, k uint32) float64 {
+func MultBitsAndK(genesisBits, bits, k uint32) float64 {
 	// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-	d := GetDifficulty(bits)
+	d := GetDifficulty(genesisBits, bits)
 	k1 := UnpackRat(k)
-	rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
+	rewardStr := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1).FloatString(4)
 	reward, err := strconv.ParseFloat(rewardStr, 64)
 	if err != nil {
 		return 20
@@ -130,13 +125,15 @@ func MultBitsAndK(bits, k uint32) float64 {
 // - shards is a number of shards that were mined by a miner at the time;
 // - bits is current target;
 // - k is inflation-fix-coefficient.
-func CalcShardBlockSubsidy(height int32, shards, bits, k uint32) int64 {
+func CalcShardBlockSubsidy(height int32, shards, genesisBits, bits, k uint32) int64 {
 	switch ShardEpoch(height) {
 	case 1:
 		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-		d := GetDifficulty(bits)
+		d := GetDifficulty(genesisBits, bits)
 		k1 := UnpackRat(k)
-		rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
+
+		// fixme
+		rewardStr := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1).FloatString(4)
 		reward, err := strconv.ParseFloat(rewardStr, 64)
 		if err != nil {
 			return (20 * 1000) >> uint(height/210000)

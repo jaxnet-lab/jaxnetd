@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -30,6 +31,8 @@ type blockIndex struct {
 	sync.RWMutex
 	index map[chainhash.Hash]blocknode.IBlockNode
 	dirty map[blocknode.IBlockNode]struct{}
+
+	mmrTree mmr.BlocksMMRTree
 }
 
 // newBlockIndex returns a new empty instance of a block index.  The index will
@@ -41,6 +44,7 @@ func newBlockIndex(db database.DB, chainParams *chaincfg.Params) *blockIndex {
 		chainParams: chainParams,
 		index:       make(map[chainhash.Hash]blocknode.IBlockNode),
 		dirty:       make(map[blocknode.IBlockNode]struct{}),
+		mmrTree:     mmr.NewTree(),
 	}
 }
 
@@ -52,6 +56,49 @@ func (bi *blockIndex) HaveBlock(hash *chainhash.Hash) bool {
 	_, hasBlock := bi.index[*hash]
 	bi.RUnlock()
 	return hasBlock
+}
+
+// HaveBlockWithMMRoot returns whether or not the block index contains the provided MMR root.
+//
+// This function is safe for concurrent access.
+func (bi *blockIndex) HaveBlockWithMMRoot(root *chainhash.Hash) bool {
+	bi.RLock()
+	var hasBlock bool
+	bNode := bi.mmrTree.LookupNodeByRoot(*root)
+	if bNode != nil {
+		_, hasBlock = bi.index[bNode.Hash]
+	}
+	bi.RUnlock()
+	return hasBlock
+}
+
+// HashByMMR returns hash of block, that has provided MMR root.
+//
+// This function is safe for concurrent access.
+func (bi *blockIndex) HashByMMR(root *chainhash.Hash) chainhash.Hash {
+	bi.RLock()
+	var hash chainhash.Hash
+	bNode := bi.mmrTree.LookupNodeByRoot(*root)
+	if bNode != nil {
+		hash = bNode.Hash
+	}
+	bi.RUnlock()
+	return hash
+}
+
+// LookupNodeByMMRRoot returns the block node identified by the provided MMR Root hash. It will
+// return nil if there is no entry for the hash.
+//
+// This function is safe for concurrent access.
+func (bi *blockIndex) LookupNodeByMMRRoot(root *chainhash.Hash) blocknode.IBlockNode {
+	bi.RLock()
+	var node blocknode.IBlockNode
+	bNode := bi.mmrTree.LookupNodeByRoot(*root)
+	if bNode != nil {
+		node = bi.index[bNode.Hash]
+	}
+	bi.RUnlock()
+	return node
 }
 
 // LookupNode returns the block node identified by the provided hash.  It will
@@ -82,6 +129,8 @@ func (bi *blockIndex) AddNode(node blocknode.IBlockNode) {
 // This function is NOT safe for concurrent access.
 func (bi *blockIndex) addNode(node blocknode.IBlockNode) {
 	bi.index[node.GetHash()] = node
+
+	bi.mmrTree.AddBlock(node.GetHash(), node.Difficulty(), node.Height())
 }
 
 // NodeStatus provides concurrent-safe access to the status field of a node.
@@ -120,6 +169,13 @@ func (bi *blockIndex) UnsetStatusFlags(node blocknode.IBlockNode, flags blocknod
 
 	bi.dirty[node] = struct{}{}
 	bi.Unlock()
+}
+
+func (bi *blockIndex) MMRTreeRoot() chainhash.Hash {
+	bi.RLock()
+	root := bi.mmrTree.CurrentRoot()
+	bi.RUnlock()
+	return root
 }
 
 // flushToDB writes all dirty block nodes to the database. If all writes

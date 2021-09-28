@@ -1,6 +1,8 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
 package blocknode
 
@@ -35,10 +37,12 @@ const (
 
 type IBlockNode interface {
 	GetHash() chainhash.Hash
+	ParentBlocksMMRRoot() chainhash.Hash
 	Height() int32
 	SerialID() int64
 	Version() int32
 	Bits() uint32
+	Difficulty() uint64
 	K() uint32
 	Status() BlockStatus
 	SetStatus(status BlockStatus)

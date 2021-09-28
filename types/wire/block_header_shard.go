@@ -23,8 +23,8 @@ const (
 // ShardHeader defines information about a block and is used in the bitcoin
 // block (MsgBlock) and headers (MsgHeaders) messages.
 type ShardHeader struct {
-	// blocksMerkleMountainRoot is an actual root of the MMR tree for current block
-	blocksMerkleMountainRoot chainhash.Hash
+	// blocksMMRRoot is an actual root of the MerkleMountainRange tree for current block
+	blocksMMRRoot chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
@@ -52,11 +52,11 @@ func NewShardBlockHeader(blocksMerkleMountainRoot, merkleRootHash chainhash.Hash
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &ShardHeader{
-		blocksMerkleMountainRoot: blocksMerkleMountainRoot,
-		merkleRoot:               merkleRootHash,
-		bits:                     bits,
-		bCHeader:                 bcHeader,
-		CoinbaseAux:              aux,
+		blocksMMRRoot: blocksMerkleMountainRoot,
+		merkleRoot:    merkleRootHash,
+		bits:          bits,
+		bCHeader:      bcHeader,
+		CoinbaseAux:   aux,
 	}
 }
 
@@ -81,9 +81,9 @@ func (h *ShardHeader) SetBits(bits uint32) { h.bits = bits }
 func (h *ShardHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
 func (h *ShardHeader) SetMerkleRoot(hash chainhash.Hash) { h.merkleRoot = hash }
 
-func (h *ShardHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMerkleMountainRoot }
+func (h *ShardHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMMRRoot }
 func (h *ShardHeader) SetBlocksMerkleMountainRoot(root chainhash.Hash) {
-	h.blocksMerkleMountainRoot = root
+	h.blocksMMRRoot = root
 }
 
 func (h *ShardHeader) Timestamp() time.Time     { return h.bCHeader.btcAux.Timestamp }
@@ -185,7 +185,7 @@ func (h *ShardHeader) Write(w io.Writer) error {
 // decoding from the wire.
 func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 	err := encoder.ReadElements(r,
-		&bh.blocksMerkleMountainRoot,
+		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
 		&bh.mergeMiningNumber,
@@ -205,7 +205,7 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 // opposed to encoding for the wire.
 func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 	err := encoder.WriteElements(w,
-		&bh.blocksMerkleMountainRoot,
+		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
 		bh.mergeMiningNumber,
@@ -227,7 +227,7 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 // opposed to encoding for the wire.
 func writeShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
 	return encoder.WriteElements(w,
-		&bh.blocksMerkleMountainRoot,
+		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
 		bh.mergeMiningNumber,

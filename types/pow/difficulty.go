@@ -150,3 +150,10 @@ func CalcWork(bits uint32) *big.Int {
 	denominator := new(big.Int).Add(difficultyNum, bigOne)
 	return new(big.Int).Div(oneLsh256, denominator)
 }
+
+func GetDifficulty(genesisBits, bits uint32) *big.Int {
+	genesisTarget := CompactToBig(genesisBits)
+	target := CompactToBig(bits)
+
+	return new(big.Int).Div(genesisTarget, target)
+}

@@ -15,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -44,14 +45,14 @@ func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
 	}
 }
 
-func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	header := wire.NewBeaconBlockHeader(
 		version,
-		prevHash, // TODO: FIX MMR ROOT
+		mmrRoot,
 		merkleRootHash,
 		chainhash.Hash{},
 		timestamp,
@@ -156,7 +157,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
+func (c *BlockGenerator) CalcBlockSubsidy(height int32, params chaincfg.PowParams, header wire.BlockHeader) int64 {
 	return calcBlockSubsidy(height)
 }
 

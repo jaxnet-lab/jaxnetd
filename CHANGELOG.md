@@ -11,6 +11,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Keep only one timestamp filed for all block headers.
 - Removed redundant fields and Copy operations from `blocknode.BeaconBlockNode` and `blocknode.ShardBlockNode`
 - Enabled hash-sorting.
+- Added `ListBeaconBlocksBySerialNumber`, `ListShardBlocksBySerialNumber` RPC calls.
+- 
 
 
 ## [0.3.12-14]

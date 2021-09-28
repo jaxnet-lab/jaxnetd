@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package blockchain
 
 import (
@@ -59,7 +60,7 @@ func (b *BlockChain) createChainState() error {
 	numTxns := uint64(len(genesisBlock.MsgBlock().Transactions))
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(genesisBlock))
-	b.stateSnapshot = chaindata.NewBestState(node, blockSize, blockWeight, numTxns,
+	b.stateSnapshot = chaindata.NewBestState(node, b.index.MMRTreeRoot(), blockSize, blockWeight, numTxns,
 		numTxns, time.Unix(node.Timestamp(), 0))
 
 	// Create the initial the database chain state including creating the
@@ -91,12 +92,6 @@ func (b *BlockChain) createChainState() error {
 		if b.chain.IsBeacon() {
 			// Create the bucket that houses the EAD addresses index.
 			_, err = meta.CreateBucket(chaindata.EADAddressesBucketNameV2)
-			if err != nil {
-				return err
-			}
-		} else { // for shard chain MMR bucket is required.
-			// Create the bucket that houses the MerkleMountainRange for Merged Mining Tree..
-			_, err = meta.CreateBucket(chaindata.ShardsMMRBucketName)
 			if err != nil {
 				return err
 			}
@@ -222,17 +217,6 @@ func (b *BlockChain) initChainState() error {
 		}
 	}
 
-	err = b.db.Update(func(dbTx database.Tx) error {
-		// gracefully apply migrations
-		if err = chaindata.MigrateEADAddresses(dbTx); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return nil
-	}
-
 	// Attempt to load the chain state from the database.
 	err = b.db.View(func(dbTx database.Tx) error {
 
@@ -259,6 +243,7 @@ func (b *BlockChain) initChainState() error {
 		var i int32
 		var lastNode blocknode.IBlockNode
 		cursor := blockIndexBucket.Cursor()
+
 		for ok := cursor.First(); ok; ok = cursor.Next() {
 			header, status, err := chaindata.DeserializeBlockRow(b.chain, cursor.Value())
 			if err != nil {
@@ -269,23 +254,23 @@ func (b *BlockChain) initChainState() error {
 			// in order of height, if the blocks are mostly linear there is a
 			// very good chance the previous header processed is the parent.
 			var parent blocknode.IBlockNode
+
 			if lastNode == nil {
 				blockHash := header.BlockHash()
-				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
 
+				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chainParams.GenesisHash, blockHash))
 				}
-				// TODO: FiX MMR ROOT
-			} else if header.BlocksMerkleMountainRoot() == lastNode.GetHash() {
+			} else if header.BlocksMerkleMountainRoot() == b.index.MMRTreeRoot() {
 				// Since we iterate block headers in order of height, if the
 				// blocks are mostly linear there is a very good chance the
 				// previous header processed is the parent.
 				parent = lastNode
 			} else {
-				prev := header.BlocksMerkleMountainRoot() // TODO: FiX MMR ROOT
-				parent = b.index.LookupNode(&prev)
+				prev := header.BlocksMerkleMountainRoot()
+				parent = b.index.LookupNodeByMMRRoot(&prev)
 				if parent == nil {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Could not find parent for block %s", header.BlockHash()))
@@ -344,7 +329,7 @@ func (b *BlockChain) initChainState() error {
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(&block)))
 		numTxns := uint64(len(block.Transactions))
-		b.stateSnapshot = chaindata.NewBestState(tip, blockSize, blockWeight,
+		b.stateSnapshot = chaindata.NewBestState(tip, b.index.MMRTreeRoot(), blockSize, blockWeight,
 			numTxns, state.TotalTxns, tip.CalcPastMedianTime())
 
 		return nil

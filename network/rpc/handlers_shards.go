@@ -568,7 +568,7 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *jaxjson.Template
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevHash := server.chainProvider.BlockChain().BestSnapshot().Hash
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	if !expectedPrevHash.IsEqual(&prevHash) {
 		return "bad-prevblk", nil
 	}
@@ -629,7 +629,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.Template.Block.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	prevTemplateHash := state.Template.Block.Header.BlocksMerkleMountainRoot()
 	if !prevHash.IsEqual(&prevTemplateHash) ||
 		lastGenerated != state.LastGenerated.Unix() {
 
@@ -676,7 +676,7 @@ func (server *ShardRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoi
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block BlockChain.
-	h := state.Template.Block.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	h := state.Template.Block.Header.BlocksMerkleMountainRoot()
 	submitOld := prevHash.IsEqual(&h)
 	result, err := state.ShardBlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {

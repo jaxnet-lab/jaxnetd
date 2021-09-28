@@ -21,30 +21,32 @@ import (
 // However, the returned snapshot must be treated as immutable since it is
 // shared by all callers.
 type BestState struct {
-	Hash        chainhash.Hash // The hash of the block.
-	Height      int32          // The height of the block.
-	Bits        uint32         // The difficulty bits of the block.
-	K           uint32         // The K coefficient.
-	BlockSize   uint64         // The size of the block.
-	BlockWeight uint64         // The weight of the block.
-	NumTxns     uint64         // The number of txns in the block.
-	TotalTxns   uint64         // The total number of txns in the chain.
-	MedianTime  time.Time      // Median time as per CalcPastMedianTime.
+	Hash          chainhash.Hash // The hash of the block.
+	Height        int32          // The height of the block.
+	Bits          uint32         // The difficulty bits of the block.
+	K             uint32         // The K coefficient.
+	BlockSize     uint64         // The size of the block.
+	BlockWeight   uint64         // The weight of the block.
+	NumTxns       uint64         // The number of txns in the block.
+	TotalTxns     uint64         // The total number of txns in the chain.
+	MedianTime    time.Time      // Median time as per CalcPastMedianTime.
+	BlocksMMRRoot chainhash.Hash // Actual root of the MMR Tree.
 }
 
 // NewBestState returns a new best stats instance for the given parameters.
-func NewBestState(node blocknode.IBlockNode, blockSize, blockWeight, numTxns,
+func NewBestState(node blocknode.IBlockNode, actualMMRRoot chainhash.Hash, blockSize, blockWeight, numTxns,
 	totalTxns uint64, medianTime time.Time) *BestState {
 
 	return &BestState{
-		Hash:        node.GetHash(),
-		Height:      node.Height(),
-		Bits:        node.Bits(),
-		K:           node.K(),
-		BlockSize:   blockSize,
-		BlockWeight: blockWeight,
-		NumTxns:     numTxns,
-		TotalTxns:   totalTxns,
-		MedianTime:  medianTime,
+		Hash:          node.GetHash(),
+		BlocksMMRRoot: actualMMRRoot,
+		Height:        node.Height(),
+		Bits:          node.Bits(),
+		K:             node.K(),
+		BlockSize:     blockSize,
+		BlockWeight:   blockWeight,
+		NumTxns:       numTxns,
+		TotalTxns:     totalTxns,
+		MedianTime:    medianTime,
 	}
 }

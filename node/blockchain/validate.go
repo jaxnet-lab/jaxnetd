@@ -152,8 +152,7 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 		// Query for the Version Bits state for the segwit soft-fork
 		// deployment. If segwit is active, we'll switch over to
 		// enforcing all the new rules.
-		segwitState, err := b.deploymentState(prevNode,
-			chaincfg.DeploymentSegwit)
+		segwitState, err := b.deploymentState(prevNode, chaincfg.DeploymentSegwit)
 		if err != nil {
 			return err
 		}
@@ -182,57 +181,6 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 					blockWeight, chaindata.MaxBlockWeight)
 				return chaindata.NewRuleError(chaindata.ErrBlockWeightTooHigh, str)
 			}
-		}
-	}
-
-	return nil
-}
-
-// checkBIP0030 ensures blocks do not contain duplicate transactions which
-// 'overwrite' older transactions that are not fully spent.  This prevents an
-// attack where a coinbase and all of its dependent transactions could be
-// duplicated to effectively revert the overwritten transactions to a single
-// confirmation thereby making them vulnerable to a double spend.
-//
-// For more details, see
-// https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki and
-// http://r6.ca/blog/20120206T005236Z.html.
-//
-// This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint) error {
-	// Fetch utxos for all of the transaction ouputs in this block.
-	// Typically, there will not be any utxos for any of the outputs.
-	fetchSet := make(map[wire.OutPoint]struct{})
-	txMarkers := make(map[wire.OutPoint]int32)
-
-	for _, tx := range block.Transactions() {
-		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		txMarkers[prevOut] = tx.MsgTx().Version
-
-		for txOutIdx := range tx.MsgTx().TxOut {
-			prevOut.Index = uint32(txOutIdx)
-			fetchSet[prevOut] = struct{}{}
-		}
-	}
-	err := view.FetchUtxos(b.db, fetchSet)
-	if err != nil {
-		return err
-	}
-
-	// Duplicate transactions are only allowed if the previous transaction
-	// is fully spent.
-	for outpoint := range fetchSet {
-		thisIsSwapTx := txMarkers[outpoint] == wire.TxVerCrossShardSwap
-		utxo := view.LookupEntry(outpoint)
-		if utxo != nil && thisIsSwapTx {
-			continue
-		}
-
-		if utxo != nil && !utxo.IsSpent() {
-			str := fmt.Sprintf(
-				"tried to overwrite transaction %v at block height %d that is not fully spent",
-				outpoint.Hash, utxo.BlockHeight())
-			return chaindata.NewRuleError(chaindata.ErrOverwriteTx, str)
 		}
 	}
 
@@ -276,7 +224,8 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	}
 
 	// Ensure the view is for the node being checked.
-	parentHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	parentMMR := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	parentHash := b.index.HashByMMR(&parentMMR)
 	if !view.BestHash().IsEqual(&parentHash) {
 		return chaindata.AssertError(fmt.Sprintf("inconsistent view when "+
 			"checking block connection: best hash is %v instead "+
@@ -388,7 +337,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 		totalSatoshiOut += txOut.Value
 	}
 
-	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header())
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), b.chain.Params().PowParams, node.Header())
 	// chaindata.CalcBlockSubsidy(node.Height(), b.chainParams)
 
 	expectedSatoshiOut := reward + totalFees
@@ -514,9 +463,11 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	// current chain.
 	tip := b.bestChain.Tip()
 	header := block.MsgBlock().Header
-	if tip.GetHash() != header.BlocksMerkleMountainRoot() { // TODO: FIX MMR ROOT
+	prevMMRRoot := header.BlocksMerkleMountainRoot()
+	prevHash := b.index.HashByMMR(&prevMMRRoot)
+	if tip.GetHash() != prevHash {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
-			"instead got %v", tip.GetHash(), header.BlocksMerkleMountainRoot())
+			"instead got %v", tip.GetHash(), prevHash)
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 

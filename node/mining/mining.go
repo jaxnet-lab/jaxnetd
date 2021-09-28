@@ -520,8 +520,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
 	var msgBlock = g.chainCtx.EmptyBlock()
-	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(nextBlockVersion,
-		best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
+	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().
+		NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +572,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 
-	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader)
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, g.chainCtx.Params().PowParams, prevHeader)
 
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {

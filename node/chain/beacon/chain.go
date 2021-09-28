@@ -5,7 +5,7 @@
 package beacon
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	blocknode2 "gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -52,8 +52,8 @@ func (c *beaconChain) Name() string {
 	return c.chainParams.Name
 }
 
-func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewBeaconBlockNode(blockHeader, parent)
+func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode2.IBlockNode) blocknode2.IBlockNode {
+	return blocknode2.NewBeaconBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }
 
 func (c *beaconChain) EmptyBlock() wire.MsgBlock {

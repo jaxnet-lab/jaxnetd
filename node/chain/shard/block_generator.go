@@ -16,6 +16,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -156,9 +157,11 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
+func (c *BlockGenerator) CalcBlockSubsidy(height int32, params chaincfg.PowParams, header wire.BlockHeader) int64 {
 	return pow.CalcShardBlockSubsidy(height,
-		header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+		header.(*wire.ShardHeader).MergeMiningNumber(),
+		params.PowLimitBits,
+		header.Bits(), header.K())
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {

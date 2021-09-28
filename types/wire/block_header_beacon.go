@@ -27,8 +27,8 @@ type BeaconHeader struct {
 	// Version of the block.  This is not the same as the protocol version.
 	version BVersion
 
-	// blocksMerkleMountainRoot is an actual root of the MMR tree for current block
-	blocksMerkleMountainRoot chainhash.Hash
+	// blocksMMRRoot is an actual root of the MerkleMountainRange tree for current block
+	blocksMMRRoot chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
@@ -67,11 +67,11 @@ func NewBeaconBlockHeader(version BVersion, blocksMerkleMountainRoot, merkleRoot
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &BeaconHeader{
-		version:                  version,
-		blocksMerkleMountainRoot: blocksMerkleMountainRoot,
-		merkleRoot:               merkleRootHash,
-		mergeMiningRoot:          mergeMiningRoot,
-		bits:                     bits,
+		version:         version,
+		blocksMMRRoot:   blocksMerkleMountainRoot,
+		merkleRoot:      merkleRootHash,
+		mergeMiningRoot: mergeMiningRoot,
+		bits:            bits,
 		btcAux: BTCBlockAux{
 			Version:     0,
 			PrevBlock:   chainhash.Hash{},
@@ -94,9 +94,9 @@ func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
 func (h *BeaconHeader) Nonce() uint32     { return h.btcAux.Nonce }
 func (h *BeaconHeader) SetNonce(n uint32) { h.btcAux.Nonce = n }
 
-func (h *BeaconHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMerkleMountainRoot }
+func (h *BeaconHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMMRRoot }
 func (h *BeaconHeader) SetBlocksMerkleMountainRoot(root chainhash.Hash) {
-	h.blocksMerkleMountainRoot = root
+	h.blocksMMRRoot = root
 }
 
 func (h *BeaconHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
@@ -181,7 +181,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
 	encoder.WriteElements(buf,
 		h.version,
-		&h.blocksMerkleMountainRoot,
+		&h.blocksMMRRoot,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
 		h.bits,
@@ -264,7 +264,7 @@ func (h *BeaconHeader) Copy() BlockHeader {
 // decoding from the wire.
 func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 	err := encoder.ReadElements(r, &bh.version,
-		&bh.blocksMerkleMountainRoot,
+		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		&bh.bits,
@@ -285,7 +285,7 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 	err := encoder.WriteElements(w,
 		bh.version,
-		&bh.blocksMerkleMountainRoot,
+		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		bh.bits,

@@ -1,6 +1,8 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
 package blocknode
 
@@ -30,12 +32,13 @@ type ShardBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	parent    IBlockNode     // parent is the parent block for this node.
-	hash      chainhash.Hash // hash is the double sha 256 of the block.
-	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	height    int32          // height is the position in the block chain.
-	serialID  int64          // serialID is the absolute unique id of current block.
-	timestamp int64
+	parent     IBlockNode     // parent is the parent block for this node.
+	hash       chainhash.Hash // hash is the double sha 256 of the block.
+	workSum    *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	height     int32          // height is the position in the block chain.
+	serialID   int64          // serialID is the absolute unique id of current block.
+	difficulty uint64
+	timestamp  int64
 
 	header wire.BlockHeader
 	// status is a bitfield representing the validation state of the block. The
@@ -48,22 +51,15 @@ type ShardBlockNode struct {
 // NewShardBlockNode returns a new block node for the given block ShardHeader and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardBlockNode {
-	return initShardBlockNode(blockHeader, parent)
-}
-
-// initShardBlockNode initializes a block node from the given ShardHeader and parent node,
-// calculating the height and workSum from the respective fields on the parent.
-// This function is NOT safe for concurrent access.  It must only be called when
-// initially creating a node.
-func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardBlockNode {
+func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, genesisBits uint32) *ShardBlockNode {
 	node := &ShardBlockNode{
-		hash:      blockHeader.BlockHash(),
-		workSum:   pow.CalcWork(blockHeader.Bits()),
-		timestamp: blockHeader.Timestamp().Unix(),
-		// header:    blockHeader.Copy(),
-		header: blockHeader,
+		hash:       blockHeader.BlockHash(),
+		workSum:    pow.CalcWork(blockHeader.Bits()),
+		timestamp:  blockHeader.Timestamp().Unix(),
+		header:     blockHeader,
+		difficulty: pow.GetDifficulty(genesisBits, blockHeader.Bits()).Uint64(),
 	}
+
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
@@ -74,10 +70,14 @@ func initShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode) *ShardB
 	return node
 }
 
-func (node *ShardBlockNode) GetHash() chainhash.Hash      { return node.hash }
+func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
+func (node *ShardBlockNode) ParentBlocksMMRRoot() chainhash.Hash {
+	return node.header.BlocksMerkleMountainRoot()
+}
 func (node *ShardBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *ShardBlockNode) Height() int32                { return node.height }
 func (node *ShardBlockNode) SerialID() int64              { return node.serialID }
+func (node *ShardBlockNode) Difficulty() uint64           { return node.difficulty }
 func (node *ShardBlockNode) Bits() uint32                 { return node.header.Bits() }
 func (node *ShardBlockNode) K() uint32                    { return node.header.K() }
 func (node *ShardBlockNode) Parent() IBlockNode           { return node.parent }

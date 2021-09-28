@@ -7,7 +7,6 @@
 package mmr
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"math"
 
@@ -48,7 +47,7 @@ func (b *Block) Value() Value {
 func BuildMerkleTreeStore(blocks []Block) []*Block {
 	// Calculate how many entries are required to hold the binary merkle
 	// tree as a linear array and create an array of that size.
-	nextPoT := nextPowerOfTwo(len(blocks))
+	nextPoT := nextPowerOfTwo(uint32(len(blocks)))
 	arraySize := nextPoT*2 - 1
 	merkles := make([]*Block, arraySize)
 
@@ -92,7 +91,7 @@ func HashMerkleBranches(left, right *Block) *Block {
 	copy(data[ValueSize:], rv[:])
 
 	return &Block{
-		Hash:   sha256.Sum256(data[:]),
+		Hash:   chainhash.HashH(data[:]),
 		Weight: left.Weight + right.Weight,
 	}
 }
@@ -100,10 +99,10 @@ func HashMerkleBranches(left, right *Block) *Block {
 // nextPowerOfTwo returns the next highest power of two from a given number if
 // it is not already a power of two.  This is a helper function used during the
 // calculation of a merkle tree.
-func nextPowerOfTwo(n int) int {
+func nextPowerOfTwo(n uint32) int {
 	// Return the number if it's already a power of 2.
 	if n&(n-1) == 0 {
-		return n
+		return int(n)
 	}
 
 	// Figure out and return the next power of two.

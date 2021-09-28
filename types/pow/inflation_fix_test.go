@@ -9,7 +9,6 @@ package pow
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 	"testing"
 )
 
@@ -22,14 +21,15 @@ func TestGetDifficulty(t *testing.T) {
 		fmt.Printf("(%064x) target %08x %d/%d \n", CompactToBig(newBits), newBits, i, 1<<i)
 	}
 
-	comp := PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
-	k1 := UnpackRat(comp)
+	// comp := PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
+	// k1 := UnpackRat(comp)
 
-	d := GetDifficulty(0x1e00ffff)
-	println(d.FloatString(64))
-	println(new(big.Rat).Mul(d, k1).FloatString(4))
-	reward, err := strconv.ParseFloat(new(big.Rat).Mul(d, k1).FloatString(4), 64)
-	println(err)
-	println(reward)
-	println(int64(reward * 1000))
+	d := GetDifficulty(0x1e0dffff, 0x1b0ED0EB)
+	println(d.Uint64())
+
+	// println(new(big.Rat).Mul(d, k1).FloatString(4))
+	// reward, err := strconv.ParseFloat(new(big.Rat).Mul(d, k1).FloatString(4), 64)
+	// println(err)
+	// println(reward)
+	// println(int64(reward * 1000))
 }

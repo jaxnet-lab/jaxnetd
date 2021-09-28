@@ -914,35 +914,34 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 		// add it to the list of headers.
 		node := headerNode{hash: &blockHash}
 		prevNode := prevNodeEl.Value.(*headerNode)
-		h := blockHeader.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-		if prevNode.hash.IsEqual(&h) {
-			node.height = prevNode.height + 1
-			e := sm.headerList.PushBack(&node)
-			if sm.startHeader == nil {
-				sm.startHeader = e
-			}
-		} else {
-			sm.progressLogger.subsystemLogger.Warn().Msgf("Received block header that does not "+
-				"properly connect to the chain from peer %s "+
-				"-- disconnecting", peer.Addr())
-			peer.Disconnect()
-			return
+
+		// TODO: DISCUSS WITH Iurii Shyshatskyi HOW TO SOLVE THIS!!!!
+		// h := blockHeader.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+
+		// if prevNode.hash.IsEqual(&h) {
+		node.height = prevNode.height + 1
+
+		e := sm.headerList.PushBack(&node)
+		if sm.startHeader == nil {
+			sm.startHeader = e
 		}
+		// } else {
+		// 	sm.progressLogger.subsystemLogger.Warn().Msgf("Received block header that does not "+
+		// 		"properly connect to the chain from peer %s -- disconnecting", peer.Addr())
+		// 	peer.Disconnect()
+		// 	return
+		// }
 
 		// Verify the header at the next checkpoint height matches.
 		if node.height == sm.nextCheckpoint.Height {
 			if node.hash.IsEqual(sm.nextCheckpoint.Hash) {
 				receivedCheckpoint = true
 				sm.progressLogger.subsystemLogger.Info().Msgf("Verified downloaded block "+
-					"header against checkpoint at height "+
-					"%d/hash %s", node.height, node.hash)
+					"header against checkpoint at height %d/hash %s", node.height, node.hash)
 			} else {
 				sm.progressLogger.subsystemLogger.Warn().Msgf("Block header at height %d/hash "+
-					"%s from peer %s does NOT match "+
-					"expected checkpoint hash of %s -- "+
-					"disconnecting", node.height,
-					node.hash, peer.Addr(),
-					sm.nextCheckpoint.Hash)
+					"%s from peer %s does NOT match expected checkpoint hash of %s -- disconnecting",
+					node.height, node.hash, peer.Addr(), sm.nextCheckpoint.Hash)
 				peer.Disconnect()
 				return
 			}

@@ -6,7 +6,7 @@ package shard
 
 import (
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	blocknode2 "gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -52,8 +52,8 @@ func (c *shardChain) SetChainParams(params chaincfg.Params) {
 	c.chainParams.GenesisHash = &genesis
 }
 
-func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewShardBlockNode(blockHeader, parent)
+func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode2.IBlockNode) blocknode2.IBlockNode {
+	return blocknode2.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }
 
 func (c *shardChain) Params() *chaincfg.Params  { return &c.chainParams }
