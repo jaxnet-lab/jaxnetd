@@ -540,10 +540,6 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		return 0, nil, nil, wrongNumParams(len(params))
 	}
 
-	fmt.Println("parseFilteredBlockConnectedParams: 0 param ", string(params[0]))
-	fmt.Println("parseFilteredBlockConnectedParams: 1 param ", string(params[1]))
-	fmt.Println("parseFilteredBlockConnectedParams: 2 param ", string(params[2]))
-
 	// Unmarshal first parameter as an integer.
 	var blockHeight int32
 	err := json.Unmarshal(params[0], &blockHeight)

@@ -33,11 +33,8 @@ func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
-	fmt.Printf("before the world was created: %+v\n", rpc.nodeRPC.handlers)
 	wsManager = WebSocketManager(rpc)
 	rpc.wsManager = wsManager
-
-	fmt.Printf("a little after: %+v\n", rpc.wsManager.server.nodeRPC.handlers)
 	return rpc
 }
 
@@ -73,7 +70,6 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 		}
 		_, _, _ = ws, authenticated, isAdmin
 		server.logger.Info().Msg("WebsocketHandler")
-		fmt.Printf("at some other point: %+v\n", server.nodeRPC.handlers)
 		server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
 	}
 }
@@ -132,7 +128,6 @@ func (server *Mux) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (
 	if cmd.Scope == "" {
 		method = jaxjson.LegacyMethod(cmd.Method)
 	}
-	fmt.Printf("all handlers %+v\n", server.handlers)
 	handler, ok := server.handlers[method]
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {

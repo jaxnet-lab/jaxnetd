@@ -38,33 +38,6 @@ func WebSocketHandlers(core *MultiChainRPC) *wsHandler {
 	res.handlers["stopnotifyreceived"] = res.handleStopNotifyReceived
 	res.handlers["rescan"] = res.handleRescan
 	res.handlers["rescanblocks"] = res.handleRescanBlocks
-	//res.handlers["getbeaconblockbyserialnumber"] = func(provider *cprovider.ChainProvider, client *wsClient, i interface{}) (interface{}, error) {
-	//	return jaxjson.GetBeaconBlockResult{
-	//		Block: hex.EncodeToString([]byte{ // Make go vet happy.
-	//			0x66, 0x57, 0xa9, 0x25, 0x2a, 0xac, 0xd5, 0xc0,
-	//			0xb2, 0x94, 0x09, 0x96, 0xec, 0xff, 0x95, 0x22,
-	//			0x28, 0xc3, 0x06, 0x7c, 0xc3, 0x8d, 0x48, 0x85,
-	//			0xef, 0xb5, 0xa4, 0xac, 0x42, 0x47, 0xe9, 0xf3,
-	//		}),
-	//		Height:       12,
-	//		SerialID:     1000,
-	//		PrevSerialID: 999,
-	//	}, nil
-	//}
-	//res.handlers["listshards"] = func(provider *cprovider.ChainProvider, client *wsClient, i interface{}) (interface{}, error) {
-	//	return jaxjson.ShardListResult{
-	//		Shards: map[uint32]jaxjson.ShardInfo{
-	//			1: {
-	//				ID:            1,
-	//				LastVersion:   1,
-	//				GenesisHeight: 2,
-	//				GenesisHash:   "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
-	//				Enabled:       true,
-	//				P2PPort:       18444,
-	//			},
-	//		},
-	//	}, nil
-	//}
 	return res
 }
 

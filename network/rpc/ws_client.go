@@ -170,7 +170,6 @@ out:
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {
-				fmt.Printf("Here, err = %v\n", err)
 				c.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
 			}
 			break out

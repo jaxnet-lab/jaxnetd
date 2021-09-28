@@ -467,7 +467,6 @@ out:
 		}
 
 		_, msg, err := c.wsConn.ReadMessage()
-		fmt.Println(string(msg))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {
@@ -505,7 +504,6 @@ out:
 		// disconnected closed.
 		select {
 		case msg := <-c.sendChan:
-			fmt.Println("####### ws_client write msg", string(msg))
 			err := c.wsConn.WriteMessage(websocket.TextMessage, msg)
 			if err != nil {
 				c.Disconnect()
