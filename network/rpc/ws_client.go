@@ -8,15 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"sync"
-
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"io"
+	"net"
 	"sync"
 )
 
@@ -133,6 +134,25 @@ func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
 	return client, nil
 }
 
+func (c *wsClient) shouldLogReadError(err error) bool {
+	// No logging when the connetion is being forcibly disconnected.
+	select {
+	case <-c.quit:
+		return false
+	default:
+	}
+
+	// No logging when the connection has been disconnected.
+	if err == io.EOF {
+		return false
+	}
+	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+		return false
+	}
+
+	return true
+}
+
 // inHandler handles all incoming messages for the websocket connection.  It
 // must be run as a goroutine.
 func (c *wsClient) inHandler() {
@@ -147,10 +167,10 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
-		c.logger.Debug().Err(err).Msg(fmt.Sprintf("read message <%s>", string(msg)))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
-			if err != io.EOF {
+			if c.shouldLogReadError(err) {
+				fmt.Printf("Here, err = %v\n", err)
 				c.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
 			}
 			break out
@@ -224,7 +244,7 @@ out:
 			continue
 		}
 		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
-		fmt.Println(fmt.Sprintf("############### Received command <%s> from %s for shard %d", cmd.method, c.addr, cmd.shardID))
+		fmt.Println(fmt.Sprintf("############### Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
@@ -307,6 +327,8 @@ out:
 		}()
 	}
 
+	fmt.Println("broke out")
+
 	// Ensure the connection is closed.
 	c.Disconnect()
 	c.wg.Done()
@@ -322,19 +344,19 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 		err    error
 	)
 
-	fmt.Println("############## WsClient:serviceRequest: incoming cmd for shard id ", r.method, " ", r.shardID)
+	fmt.Println("############## WsClient:serviceRequest: incoming cmd for shard id ", r.Method, " ", r.ShardID)
 	fmt.Println("############## WsClient:serviceRequest: known shards", c.manager.server.shardRPCs)
 
 	var provider *cprovider.ChainProvider
-	if r.shardID != 0 {
-		shard, ok := c.manager.server.shardRPCs[r.shardID]
+	if r.ShardID != 0 {
+		shard, ok := c.manager.server.shardRPCs[r.ShardID]
 		if !ok {
 			jsonErr := &btcjson.RPCError{
 				Code:    btcjson.ErrRPCInvalidParams.Code,
 				Message: "Shard is not found by provided shard id",
 			}
 			// Marshal and send error response.
-			reply, err := c.manager.server.createMarshalledReply(r.id, nil, jsonErr)
+			reply, err := c.manager.server.createMarshalledReply(r.ID, nil, jsonErr)
 			if err != nil {
 				c.logger.Error().Msg("Failed to marshal parse failure ")
 				return
@@ -351,10 +373,10 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	// exist fallback to handling the command as a standard command.
 	wsHandler, ok := c.manager.handler.handlers[r.Method]
 	if ok {
-		result, err = wsHandler(shard.chainProvider, c, r.Cmd)
+		result, err = wsHandler(provider, c, r.Cmd)
 	} else {
 		//TODO: implement
-		//result, Err = c.manager.server.HandleCommand(r, nil)
+		//	result, Err = c.manager.server.HandleCommand(r, nil)
 	}
 	reply, err := c.manager.server.createMarshalledReply(r.ID, result, err)
 	if err != nil {
@@ -493,7 +515,7 @@ func (c *wsClient) SendMessage(marshalledJSON []byte, doneChan chan bool) {
 		}
 		return
 	}
- 	c.sendChan <- wsResponse{msg: marshalledJSON, doneChan: doneChan}
+	c.sendChan <- wsResponse{msg: marshalledJSON, doneChan: doneChan}
 }
 
 //

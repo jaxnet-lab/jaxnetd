@@ -274,7 +274,7 @@ func (m *WsManager) queueHandler(ctx context.Context) {
 }
 
 type wsBlockNotification struct {
-	Block *btcutil.Block
+	Block *jaxutil.Block
 	Chain *cprovider.ChainProvider
 }
 
@@ -488,7 +488,7 @@ out:
 // notifying websocket clients of outputs spending to a watched address
 // and inputs spending a watched outpoint.
 func (m *WsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient,
-	addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+	addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	if len(ops) != 0 {
 		m.notifyForTxIns(chain, ops, tx, block)
@@ -502,7 +502,7 @@ func (m *WsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.Out
 // websocket clients of the transaction if an output spends to a watched
 // address.  A spent notification request is automatically registered for
 // the client for each matching output.
-func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	// Nothing to do if nobody is listening for address notifications.
 	if len(addrs) == 0 {
@@ -553,7 +553,7 @@ func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 // interested websocket clients a redeemingtx notification if any inputs
 // spend a watched output.  If block is non-nil, any matching spent
 // requests are removed.
-func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *btcutil.Tx, block *btcutil.Block) {
+func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
 
 	// Nothing to do if nobody is watching outpoints.
 	if len(ops) == 0 {
@@ -681,7 +681,7 @@ func (m *WsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[w
 
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
-func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *btcutil.Tx) {
+func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, tx *jaxutil.Tx) {
 	txHashStr := tx.Hash().String()
 	mtx := tx.MsgTx()
 
@@ -728,7 +728,7 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 // notifyBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
 func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
-	block *btcutil.Block) {
+	block *jaxutil.Block) {
 
 	// Notify interested websocket clients about the connected block.
 	ntfn := jaxjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
@@ -746,7 +746,7 @@ func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 // notifyFilteredBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
 func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
-	block *btcutil.Block) {
+	block *jaxutil.Block) {
 
 	// Create the common portion of the notification that is the same for
 	// every client.
@@ -786,7 +786,7 @@ func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 	}
 }
 
-func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *jaxutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -817,7 +817,7 @@ func (m *WsManager) NumClients() (n int) {
 // spending a watched output or outputting to a watched address.  Matching
 // client's filters are updated based on this transaction's outputs and output
 // addresses that may be relevant for a client.
-func (m *WsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
+func (m *WsManager) subscribedClients(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
 
 	// Use a map of client quit channels as keys to prevent duplicates when
 	// multiple inputs and/or outputs are relevant to the client.
@@ -878,7 +878,7 @@ func (m *WsManager) subscribedClients(chain *cprovider.ChainProvider, tx *btcuti
 // notifyFilteredBlockDisconnected notifies websocket clients that have registered for
 // block updates when a block is disconnected from the main BlockChain (due to a
 // reorganize).
-func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *btcutil.Block) {
+func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *jaxutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
 	if len(clients) == 0 {
@@ -910,7 +910,7 @@ func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 // address and inputs spending a watched outpoint.  Any outputs paying to a
 // watched address result in the output being watched as well for future
 // notifications.
-func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *btcutil.Tx, clients map[chan struct{}]*wsClient) {
+func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) {
 
 	clientsToNotify := m.subscribedClients(chain, tx, clients)
 

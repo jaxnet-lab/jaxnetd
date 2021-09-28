@@ -332,9 +332,9 @@ type inMessage struct {
 
 // rawNotification is a partially-unmarshaled JSON-RPC notification.
 type rawNotification struct {
-	Method string            `json:"method"`
-	ShardID uint32           `json:"shard_id"` 
-	Params []json.RawMessage `json:"params"`
+	Method  string            `json:"method"`
+	ShardID uint32            `json:"shard_id"`
+	Params  []json.RawMessage `json:"params"`
 }
 
 // rawResponse is a partially-unmarshaled JSON-RPC response.  For this
@@ -467,6 +467,7 @@ out:
 		}
 
 		_, msg, err := c.wsConn.ReadMessage()
+		fmt.Println(string(msg))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {
@@ -1026,6 +1027,11 @@ func (c *Client) doDisconnect() bool {
 	// Nothing to do if already disconnected.
 	if c.disconnected {
 		return false
+	}
+
+	err := c.wsConn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "closing connection"), time.Now().Add(time.Second*5))
+	if err != nil {
+		log.Trace().Msgf("Error sending close message to WS server %s", err)
 	}
 
 	log.Trace().Msgf("Disconnecting RPC client %s", c.config.Host)

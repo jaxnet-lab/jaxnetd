@@ -12,12 +12,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcjson"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -539,7 +540,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		return 0, nil, nil, wrongNumParams(len(params))
 	}
 
-	fmt.Println("parseFilteredBlockConnectedParams: 0 param ", string(params[0]))	
+	fmt.Println("parseFilteredBlockConnectedParams: 0 param ", string(params[0]))
 	fmt.Println("parseFilteredBlockConnectedParams: 1 param ", string(params[1]))
 	fmt.Println("parseFilteredBlockConnectedParams: 2 param ", string(params[2]))
 
@@ -898,7 +899,7 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 }
 
 // NotifyBlocks registers the client to receive notifications when blocks are
-// connected and disconnected from the existing chains. Corresponding shard is is taken 
+// connected and disconnected from the existing chains. Corresponding shard is is taken
 // from the request context.   The notifications are
 // delivered to the notification handlers associated with the client.  Calling
 // this function has no effect if there are no notification handlers and will
