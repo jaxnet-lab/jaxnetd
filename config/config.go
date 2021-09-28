@@ -76,9 +76,9 @@ var (
 	defaultHomeDir = jaxutil.AppDataDir("jaxnetd", false)
 	// defaultConfigFile  =  defaultConfigFilename
 	// defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
-	knownDbTypes = database.SupportedDrivers()
-	// defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	// defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
+	knownDbTypes       = database.SupportedDrivers()
+	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
+	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
 	// defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 )
 
@@ -364,14 +364,14 @@ func LoadConfig() (*node.Config, []string, error) {
 				MaxClients:        defaultMaxRPCClients,
 				MaxWebsockets:     defaultMaxRPCWebsockets,
 				MaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+				RPCKey:            defaultRPCKeyFile,
+				RPCCert:           defaultRPCCertFile,
 			},
 		},
 
 		ConfigFile: configFile,
 		DebugLevel: defaultLogLevel,
 		DataDir:    dataDir,
-		// RPCKey:               defaultRPCKeyFile,
-		// RPCCert:              defaultRPCCertFile,
 		// Generate:             defaultGenerate,
 	}
 
