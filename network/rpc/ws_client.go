@@ -176,8 +176,6 @@ out:
 			break out
 		}
 
-		fmt.Println("############## wsClient:inHandler incoming msg ", string(msg))
-
 		var request jaxjson.Request
 		err = json.Unmarshal(msg, &request)
 		if err != nil {
@@ -244,7 +242,6 @@ out:
 			continue
 		}
 		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
-		fmt.Println(fmt.Sprintf("############### Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
@@ -327,8 +324,6 @@ out:
 		}()
 	}
 
-	fmt.Println("broke out")
-
 	// Ensure the connection is closed.
 	c.Disconnect()
 	c.wg.Done()
@@ -343,9 +338,6 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 		result interface{}
 		err    error
 	)
-
-	fmt.Println("############## WsClient:serviceRequest: incoming cmd for shard id ", r.Method, " ", r.ShardID)
-	fmt.Println("############## WsClient:serviceRequest: known shards", c.manager.server.shardRPCs)
 
 	var provider *cprovider.ChainProvider
 	if r.ShardID != 0 {
@@ -375,8 +367,7 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	if ok {
 		result, err = wsHandler(provider, c, r.Cmd)
 	} else {
-		//TODO: implement
-		//	result, Err = c.manager.server.HandleCommand(r, nil)
+		result, err = c.handleRequestScope(r)
 	}
 	reply, err := c.manager.server.createMarshalledReply(r.ID, result, err)
 	if err != nil {
@@ -583,4 +574,29 @@ func (c *wsClient) Start() {
 // and the connection is closed.
 func (c *wsClient) WaitForShutdown() {
 	c.wg.Wait()
+}
+
+func (c *wsClient) handleRequestScope(r *ParsedRPCCmd) (interface{}, error) {
+	var (
+		mux Mux
+	)
+
+	switch r.Scope {
+	case "node":
+		mux = c.manager.server.nodeRPC.Mux
+	case "beacon", "chain":
+		mux = c.manager.server.beaconRPC.Mux
+	case "shard":
+		shardRPC, ok := c.manager.server.shardRPCs[r.ShardID]
+		if !ok {
+			log.Debug().Msgf("Not existing shardID in RPC request %d", r.ShardID)
+			return nil, fmt.Errorf("unknown shardID %d", r.ShardID)
+		}
+		mux = shardRPC.Mux
+	default:
+		log.Debug().Msgf("Unknown RPC request scope %s", r.Scope)
+		return nil, fmt.Errorf("unknown scope %s", r.Scope)
+	}
+
+	return mux.HandleCommand(r, nil)
 }
