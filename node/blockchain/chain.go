@@ -69,13 +69,13 @@ type IndexManager interface {
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the previous output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
+	ConnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block.
-	DisconnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
+	DisconnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -240,7 +240,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	bestNode := b.bestChain.Tip()
-	log.Info().Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
+	log.Info().Str("chain", b.chain.Name()).Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
 		bestNode.Height(), bestNode.GetHash(), b.stateSnapshot.TotalTxns,
 		bestNode.WorkSum())
 
@@ -418,6 +418,7 @@ func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 		}
 		orphanRoot = prevHash
 		h := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+		// b.MMRTree().LookupNodeByRoot()
 		prevHash = &h
 	}
 
@@ -439,7 +440,8 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	prevHash := b.MMRTree().LookupNodeByRoot(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+
 	orphans := b.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
@@ -461,6 +463,10 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 
 func (b *BlockChain) Chain() chain2.IChainCtx {
 	return b.chain
+}
+
+func (b *BlockChain) MMRTree() mmr.BlocksMMRTree {
+	return b.index.mmrTree
 }
 
 func (b *BlockChain) ChainBlockGenerator() ChainBlockGenerator {
@@ -753,6 +759,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	bestBlockHash := b.bestChain.Tip().GetHash()
 	prevHash := b.index.HashByMMR(&prevMMRRoot)
+
 	if !prevHash.IsEqual(&bestBlockHash) {
 		return chaindata.AssertError("connectBlock must be called with a block that extends the main chain")
 	}
@@ -869,7 +876,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+			err := b.indexManager.ConnectBlock(dbTx, block, prevHash, stxos)
 			if err != nil {
 				return err
 			}
@@ -949,7 +956,7 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 	blockWeight := uint64(chaindata.GetBlockWeight(prevBlock))
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
 
-	state := chaindata.NewBestState(prevNode, node.ParentBlocksMMRRoot(), blockSize, blockWeight, numTxns,
+	state := chaindata.NewBestState(prevNode, node.BlocksMMRRoot(), blockSize, blockWeight, numTxns,
 		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
@@ -1024,7 +1031,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 		// optional indexes with the block being disconnected so they
 		// can update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.DisconnectBlock(dbTx, block, stxos)
+			prevNode := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
+			err := b.indexManager.DisconnectBlock(dbTx, block, prevNode.Hash, stxos)
 			if err != nil {
 				return err
 			}
@@ -1039,6 +1047,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.Commit()
+
+	b.index.mmrTree.RmBlock(node.GetHash(), node.Height())
 
 	// This node's parent is now the end of the best chain.
 	b.bestChain.SetTip(node.Parent())
@@ -1160,8 +1170,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// Store the loaded block and spend journal entry for later.
 		detachBlocks = append(detachBlocks, block)
 		detachSpentTxOuts = append(detachSpentTxOuts, stxos)
-
-		err = view.DisconnectTransactions(b.db, block, stxos)
+		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+		err = view.DisconnectTransactions(b.db, block, prevHash, stxos)
 		if err != nil {
 			return err
 		}
@@ -1268,8 +1278,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 		// Update the view to unspend all of the spent txos and remove
 		// the utxos created by the block.
-		err = view.DisconnectTransactions(b.db, block,
-			detachSpentTxOuts[i])
+		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+		err = view.DisconnectTransactions(b.db, block, prevHash, detachSpentTxOuts[i])
 		if err != nil {
 			return err
 		}
@@ -1442,11 +1452,11 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 		// Log information about how the block is forking the chain.
 		fork := b.bestChain.FindFork(node)
 		if fork.GetHash() == parentHash {
-			log.Info().Msgf("FORK: Block %v forks the chain at height %d"+
+			log.Info().Str("chain", b.chain.Name()).Msgf("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		} else {
-			log.Info().Msgf("EXTEND FORK: Block %v extends a side chain "+
+			log.Info().Str("chain", b.chain.Name()).Msgf("EXTEND FORK: Block %v extends a side chain "+
 				"which forks the chain at height %d/block %v",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		}
@@ -1464,7 +1474,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	detachNodes, attachNodes := b.getReorganizeNodes(node)
 
 	// Reorganize the chain.
-	log.Info().Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
+	log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
 	err := b.reorganizeChain(detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
@@ -1472,7 +1482,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
 	if writeErr := b.index.flushToDB(); writeErr != nil {
-		log.Warn().Msgf("Error flushing block index changes to disk: %v", writeErr)
+		log.Warn().Str("chain", b.chain.Name()).Msgf("Error flushing block index changes to disk: %v", writeErr)
 	}
 
 	return err == nil, err

@@ -521,7 +521,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 
 	var msgBlock = g.chainCtx.EmptyBlock()
 	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().
-		NewBlockHeader(nextBlockVersion, best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
+		NewBlockHeader(nextBlockVersion, g.blockChain.MMRTree().CurrentRoot(),
+			*merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
 	if err != nil {
 		return nil, err
 	}

@@ -68,7 +68,7 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, genesis
 }
 
 func (node *BeaconBlockNode) GetHash() chainhash.Hash { return node.hash }
-func (node *BeaconBlockNode) ParentBlocksMMRRoot() chainhash.Hash {
+func (node *BeaconBlockNode) BlocksMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
 }
 func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }

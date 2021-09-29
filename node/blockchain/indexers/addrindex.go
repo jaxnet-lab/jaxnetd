@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"sync"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -745,8 +745,7 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *jaxutil.Block,
 // the transactions in the block involve.
 //
 // This is part of the Indexer interface.
-func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut) error {
+func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
 
 	// The offset and length of the transactions within the serialized
 	// block.

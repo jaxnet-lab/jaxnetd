@@ -71,7 +71,7 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, genesisB
 }
 
 func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
-func (node *ShardBlockNode) ParentBlocksMMRRoot() chainhash.Hash {
+func (node *ShardBlockNode) BlocksMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
 }
 func (node *ShardBlockNode) Version() int32               { return node.header.Version().Version() }

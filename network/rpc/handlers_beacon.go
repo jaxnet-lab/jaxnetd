@@ -222,13 +222,14 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	if err != nil {
 		return nil, err
 	}
-
+	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
 		Version:             int32(blockHeader.Version()),
 		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		PreviousHash:        blockHeader.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
+		PreviousHash:        prevHash.Hash.String(),
+		BlocksMMRRoot:       blockHeader.BlocksMerkleMountainRoot().String(),
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		Nonce:               blockHeader.Nonce(),
 		Time:                blockHeader.Timestamp().Unix(),
@@ -333,6 +334,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
 		return err
 	})
+	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 
 	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:                c.Hash,
@@ -345,7 +347,8 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		NextHash:            nextHashString,
-		PreviousHash:        blockHeader.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
+		PreviousHash:        prevHash.Hash.String(),
+		BlocksMMRRoot:       blockHeader.BlocksMerkleMountainRoot().String(),
 		Nonce:               uint64(blockHeader.Nonce()),
 		Time:                blockHeader.Timestamp().Unix(),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),

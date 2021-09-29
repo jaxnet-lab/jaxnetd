@@ -459,7 +459,8 @@ func CountSpentOutputs(block *jaxutil.Block) int {
 // created by the passed block, restoring all utxos the transactions spent by
 // using the provided spent txo information, and setting the best Hash for the
 // view to the block before the passed block.
-func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block, stxos []SpentTxOut) error {
+func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block,
+	prevHash chainhash.Hash, stxos []SpentTxOut) error {
 	// Sanity check the correct number of stxos are provided.
 	if len(stxos) != CountSpentOutputs(block) {
 		return AssertError("DisconnectTransactions called with bad " +
@@ -591,8 +592,7 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil
 
 	// Update the best Hash for view to the previous block since all of the
 	// transactions for the current block have been disconnected.
-	h := block.MsgBlock().Header.MerkleRoot() // todo: FIX MMR ROOT
-	view.SetBestHash(&h)
+	view.SetBestHash(&prevHash)
 	return nil
 }
 

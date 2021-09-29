@@ -414,7 +414,8 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
-	prevHash := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	mmrRoot := header.BlocksMerkleMountainRoot()
+	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -436,23 +437,25 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
-		Height:       int64(template.Height),
-		SerialID:     prevSerialID + 1,
-		PrevSerialID: prevSerialID,
-		Version:      int32(header.Version()),
-		Shards:       header.BeaconHeader().Shards(),
-		WeightLimit:  chaindata.MaxBlockWeight,
-		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
-		SizeLimit:    wire.MaxBlockPayload,
-		Transactions: transactions,
-		LongPollID:   templateID,
-		SubmitOld:    submitOld,
-		Target:       targetDifficulty,
-		MinTime:      state.minTimestamp.Unix(),
-		MaxTime:      maxTime.Unix(),
-		Mutable:      gbtMutableFields,
-		NonceRange:   gbtNonceRange,
-		Capabilities: gbtCapabilities,
+		// PreviousHash:  prevHash.String(),
+		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
+		Height:        int64(template.Height),
+		SerialID:      prevSerialID + 1,
+		PrevSerialID:  prevSerialID,
+		Version:       int32(header.Version()),
+		Shards:        header.BeaconHeader().Shards(),
+		WeightLimit:   chaindata.MaxBlockWeight,
+		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
+		SizeLimit:     wire.MaxBlockPayload,
+		Transactions:  transactions,
+		LongPollID:    templateID,
+		SubmitOld:     submitOld,
+		Target:        targetDifficulty,
+		MinTime:       state.minTimestamp.Unix(),
+		MaxTime:       maxTime.Unix(),
+		Mutable:       gbtMutableFields,
+		NonceRange:    gbtNonceRange,
+		Capabilities:  gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),
@@ -506,7 +509,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if err != nil {
 		return nil, err
 	}
-	prevHash := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+	mmrRoot := header.BlocksMerkleMountainRoot()
+	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -528,22 +532,24 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:      header.Timestamp().Unix(),
 		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
-		Height:       int64(template.Height),
-		SerialID:     prevSerialID + 1,
-		PrevSerialID: prevSerialID,
-		Version:      int32(header.Version()),
-		WeightLimit:  chaindata.MaxBlockWeight,
-		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
-		SizeLimit:    wire.MaxBlockPayload,
-		Transactions: transactions,
-		LongPollID:   templateID,
-		SubmitOld:    submitOld,
-		Target:       targetDifficulty,
-		MinTime:      state.minTimestamp.Unix(),
-		MaxTime:      maxTime.Unix(),
-		Mutable:      gbtMutableFields,
-		NonceRange:   gbtNonceRange,
-		Capabilities: gbtCapabilities,
+		// PreviousHash:  prevHash.String(),
+		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
+		Height:        int64(template.Height),
+		SerialID:      prevSerialID + 1,
+		PrevSerialID:  prevSerialID,
+		Version:       int32(header.Version()),
+		WeightLimit:   chaindata.MaxBlockWeight,
+		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
+		SizeLimit:     wire.MaxBlockPayload,
+		Transactions:  transactions,
+		LongPollID:    templateID,
+		SubmitOld:     submitOld,
+		Target:        targetDifficulty,
+		MinTime:       state.minTimestamp.Unix(),
+		MaxTime:       maxTime.Unix(),
+		Mutable:       gbtMutableFields,
+		NonceRange:    gbtNonceRange,
+		Capabilities:  gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),

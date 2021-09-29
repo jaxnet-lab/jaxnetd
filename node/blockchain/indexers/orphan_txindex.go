@@ -143,7 +143,7 @@ func (idx *OrphanTxIndex) Init() error {
 	return nil
 }
 
-func (idx *OrphanTxIndex) ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error {
+func (idx *OrphanTxIndex) ConnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error {
 	return nil
 }
 

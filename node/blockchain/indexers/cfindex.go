@@ -150,8 +150,7 @@ func (idx *CfIndex) Create(dbTx database.Tx) error {
 
 // storeFilter stores a given filter, and performs the steps needed to
 // generate the filter's header.
-func storeFilter(dbTx database.Tx, block *jaxutil.Block, f *gcs.Filter,
-	filterType wire.FilterType) error {
+func storeFilter(dbTx database.Tx, block *jaxutil.Block, ph chainhash.Hash, f *gcs.Filter, filterType wire.FilterType) error {
 	if uint8(filterType) > maxFilterType {
 		return errors.New("unsupported filter type")
 	}
@@ -184,7 +183,6 @@ func storeFilter(dbTx database.Tx, block *jaxutil.Block, f *gcs.Filter,
 
 	// Then fetch the previous block's filter header.
 	var prevHeader *chainhash.Hash
-	ph := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	if ph.IsEqual(&zeroHash) {
 		prevHeader = &zeroHash
 	} else {
@@ -210,8 +208,7 @@ func storeFilter(dbTx database.Tx, block *jaxutil.Block, f *gcs.Filter,
 // ConnectBlock is invoked by the index manager when a new block has been
 // connected to the main chain. This indexer adds a hash-to-cf mapping for
 // every passed block. This is part of the Indexer interface.
-func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut) error {
+func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
 
 	prevScripts := make([][]byte, len(stxos))
 	for i, stxo := range stxos {
@@ -223,7 +220,7 @@ func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
 		return err
 	}
 
-	return storeFilter(dbTx, block, f, wire.GCSFilterRegular)
+	return storeFilter(dbTx, block, hash, f, wire.GCSFilterRegular)
 }
 
 // DisconnectBlock is invoked by the index manager when a block has been

@@ -168,8 +168,8 @@ func (miner *CPUMiner) submitBlock(block *jaxutil.Block) bool {
 	// a new block, but the check only happens periodically, so it is
 	// possible a block was found and submitted in between.
 	msgBlock := block.MsgBlock()
-	h := msgBlock.Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-	if !h.IsEqual(&miner.generator.BestSnapshot().Hash) {
+	h := msgBlock.Header.BlocksMerkleMountainRoot()
+	if !h.IsEqual(&miner.generator.BestSnapshot().BlocksMMRRoot) {
 		miner.log.Debug().Msgf("Block submitted via CPU miner with previous block %s is stale",
 			msgBlock.Header.BlocksMerkleMountainRoot())
 		return false
@@ -257,7 +257,7 @@ func (miner *CPUMiner) solveBlock(msgBlock *wire.MsgBlock, blockHeight int32,
 				// has changed.
 				best := miner.generator.BestSnapshot()
 				h := header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-				if !(&h).IsEqual(&best.Hash) {
+				if !(&h).IsEqual(&best.BlocksMMRRoot) {
 					return false
 				}
 

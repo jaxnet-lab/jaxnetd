@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -70,9 +71,7 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
-	stxo []chaindata.SpentTxOut) error {
-
+func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block, prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
 	idxKey := indexer.Key()
@@ -80,8 +79,8 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 	if err != nil {
 		return err
 	}
-	h := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-	if !curTipHash.IsEqual(&h) {
+
+	if !curTipHash.IsEqual(&prevHash) {
 		return AssertError(fmt.Sprintf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
 			"tip (%s, tip %s, block %s)", indexer.Name(),
@@ -89,7 +88,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 	}
 
 	// Notify the indexer with the connected block so it can index it.
-	if err := indexer.ConnectBlock(dbTx, block, stxo); err != nil {
+	if err := indexer.ConnectBlock(dbTx, block, prevHash, stxo); err != nil {
 		return err
 	}
 
@@ -102,7 +101,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
 func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
-	stxo []chaindata.SpentTxOut) error {
+	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
 
 	// Assert that the block being disconnected is the current tip of the
 	// index.
@@ -125,7 +124,6 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Bl
 	}
 
 	// Update the current index tip.
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	return dbPutIndexerTip(dbTx, idxKey, &prevHash, block.Height()-1)
 }
 
@@ -336,15 +334,16 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			err = m.db.Update(func(dbTx database.Tx) error {
 				// Remove all of the index entries associated
 				// with the block and update the indexer tip.
+				prevNode := chain.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
 				err = dbIndexDisconnectBlock(
-					dbTx, indexer, block, spentTxos,
+					dbTx, indexer, block, prevNode.Hash, spentTxos,
 				)
 				if err != nil {
 					return err
 				}
 
 				// Update the tip to the previous block.
-				h := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+				h := prevNode.Hash
 				hash = &h
 				height--
 
@@ -438,10 +437,17 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				}
 			}
 
+			mmrRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+			bNode := chain.MMRTree().LookupNodeByRoot(mmrRoot)
+			if bNode == nil {
+				bNode = &mmr.BlockNode{}
+			}
+			prevHash := bNode.Hash
+			if mmrRoot.IsEqual(&zeroHash) {
+				prevHash = zeroHash
+			}
 			err := m.db.Update(func(dbTx database.Tx) error {
-				return dbIndexConnectBlock(
-					dbTx, indexer, block, spentTxos,
-				)
+				return dbIndexConnectBlock(dbTx, indexer, block, prevHash, spentTxos)
 			})
 			if err != nil {
 				return err
@@ -504,13 +510,12 @@ func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, error) {
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut) error {
+func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
-		err := dbIndexConnectBlock(dbTx, index, block, stxos)
+		err := dbIndexConnectBlock(dbTx, index, block, hash, stxos)
 		if err != nil {
 			return err
 		}
@@ -525,12 +530,12 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block,
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxo []chaindata.SpentTxOut) error {
+	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
 
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
-		err := dbIndexDisconnectBlock(dbTx, index, block, stxo)
+		err := dbIndexDisconnectBlock(dbTx, index, block, prevHash, stxo)
 		if err != nil {
 			return err
 		}

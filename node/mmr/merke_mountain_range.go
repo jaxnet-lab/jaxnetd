@@ -32,7 +32,7 @@ type Block struct {
 }
 
 func (b *Block) Value() Value {
-	if !b.filled {
+	if b.filled {
 		return b.v
 	}
 

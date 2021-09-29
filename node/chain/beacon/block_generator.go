@@ -97,9 +97,6 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	if len(aux.Tx.TxOut) != 3 {
 		return errors.New("invalid format of btc aux coinbase tx: less than 3 out")
 	}
-	if len(block.Transactions[0].TxOut) != 3 {
-		return errors.New("invalid format of beacon coinbase tx: less than 3 out")
-	}
 
 	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
 	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
@@ -107,13 +104,29 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) 
 	var btcBurnReward = false
 
 	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
+		const errMsg = "invalid format of btc aux coinbase tx: "
 		btcCoinbaseTx := aux.CoinbaseAux.Tx
 		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
 			btcCoinbaseTx.TxOut[0].Value == 0
 		if !btcJaxNetLinkOut {
-			return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
+			return errors.New(errMsg + "first out must be zero and have JaxNetLink")
 		}
+
+		if btcCoinbaseTx.TxOut[1].Value > 6_2500_0000 {
+			return errors.New(errMsg + "reward greater than 6.25 BTC")
+		}
+
+		if btcCoinbaseTx.TxOut[1].Value < 6_2500_0000 {
+			if btcCoinbaseTx.TxOut[1].Value > 5000_0000 {
+				return errors.New(errMsg + "fee greater than 0.5 BTC")
+			}
+		}
+
 		btcBurnReward = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+	}
+
+	if len(block.Transactions[0].TxOut) != 3 {
+		return errors.New("invalid format of beacon coinbase tx: less than 3 out")
 	}
 
 	beaconCoinbaseTx := block.Transactions[0]
