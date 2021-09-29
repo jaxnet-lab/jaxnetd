@@ -167,6 +167,7 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
+		fmt.Printf("msg: %s, c.InHandler\n", string(msg))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {

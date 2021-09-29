@@ -270,3 +270,14 @@ func NewBlockFromBlockAndBytes(msgBlock *wire.MsgBlock, serializedBlock []byte) 
 		blockHeight:     BlockHeightUnknown,
 	}
 }
+
+func NewEmptyBlockHeaderByShardID(shardID uint32) wire.BlockHeader {
+	var blockHeader wire.BlockHeader
+	if shardID == 0 {
+		blockHeader = wire.EmptyBeaconHeader()
+	} else {
+		blockHeader = wire.EmptyShardHeader()
+	}
+
+	return blockHeader
+}

@@ -11,7 +11,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -355,8 +354,10 @@ out:
 				// queueHandler quit.
 				break out
 			}
+			fmt.Println("there is notificatio")
 			switch n := n.(type) {
 			case *notificationBlockConnected:
+				fmt.Println("there is notification blockconnected")
 				block := n.Block
 
 				// Skip iterating through all txs if no
@@ -385,6 +386,7 @@ out:
 					}
 				}
 			case *notificationTxAcceptedByMempool:
+				fmt.Println("heree")
 				if n.isNew && len(txNotifications) != 0 {
 					m.notifyForNewTx(n.Chain, txNotifications, n.tx)
 				}
@@ -460,6 +462,7 @@ out:
 				m.removeAddrRequest(watchedAddrs, n.wsc, n.addr)
 
 			case *notificationRegisterNewMempoolTxs:
+				fmt.Println("we registered")
 				wsc := (*wsClient)(n)
 				txNotifications[wsc.quit] = wsc
 
@@ -973,6 +976,24 @@ func (m *WsManager) removeAddrRequest(addrs map[string]map[chan struct{}]*wsClie
 	if len(cmap) == 0 {
 		delete(addrs, addr)
 	}
+}
+
+// notifyMempoolTx passes a transaction accepted by mempool to the
+// notification manager for transaction notification processing.  If
+// isNew is true, the tx is is a new transaction, rather than one
+// added to the mempool during a reorg.
+func (m *WsManager) notifyMempoolTx(tx *jaxutil.Tx, isNew bool, provider *cprovider.ChainProvider) {
+	n := &notificationTxAcceptedByMempool{
+		isNew: isNew,
+		tx:    tx,
+		Chain: provider, // todo
+	}
+
+	// As notifyMempoolTx will be called by mempool and the RPC server
+	// may no longer be running, use a select statement to unblock
+	// enqueuing the notification once the RPC server has begun
+	// shutting down.
+	m.queueNotification <- n
 }
 
 // wsResponse houses a message to send to a connected websocket client as

@@ -27,12 +27,12 @@ func WebSocketHandlers(core *MultiChainRPC) *wsHandler {
 	}
 	res.handlers["loadtxfilter"] = res.handleLoadTxFilter
 	res.handlers["help"] = res.handleWebsocketHelp
-	res.handlers["notifyblocks"] = res.handleNotifyBlocks
+	res.handlers["notifyblocks"] = res.handleNotifyBlocks // ok
 	res.handlers["notifynewtransactions"] = res.handleNotifyNewTransactions
 	res.handlers["notifyreceived"] = res.handleNotifyReceived
 	res.handlers["notifyspent"] = res.handleNotifySpent
 	res.handlers["session"] = res.handleSession
-	res.handlers["stopnotifyblocks"] = res.handleStopNotifyBlocks
+	res.handlers["stopnotifyblocks"] = res.handleStopNotifyBlocks // ok
 	res.handlers["stopnotifynewtransactions"] = res.handleStopNotifyNewTransactions
 	res.handlers["stopnotifyspent"] = res.handleStopNotifySpent
 	res.handlers["stopnotifyreceived"] = res.handleStopNotifyReceived

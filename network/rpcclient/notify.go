@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -239,23 +238,23 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		c.ntfnHandlers.OnBlockConnected(ntfn.ShardID, blockHash, blockHeight, blockTime)
 
 	// OnFilteredBlockConnected
-	// case btcjson.FilteredBlockConnectedNtfnMethod:
-	// 	// Ignore the notification if the client is not interested in
-	// 	// it.
-	// 	if c.ntfnHandlers.OnFilteredBlockConnected == nil {
-	// 		return
-	// 	}
+	case jaxjson.FilteredBlockConnectedNtfnMethod:
+		// Ignore the notification if the client is not interested in
+		// it.
+		if c.ntfnHandlers.OnFilteredBlockConnected == nil {
+			return
+		}
 
-	// 	blockHeight, blockHeader, transactions, err :=
-	// 		parseFilteredBlockConnectedParams(ntfn.Params)
-	// 	if err != nil {
-	// 		log.Warn().Msgf("Received invalid filtered block "+
-	// 			"connected notification: %v", err)
-	// 		return
-	// 	}
+		blockHeight, blockHeader, transactions, err :=
+			parseFilteredBlockConnectedParams(ntfn.Params, ntfn.ShardID)
+		if err != nil {
+			log.Warn().Msgf("Received invalid filtered block "+
+				"connected notification: %v", err)
+			return
+		}
 
-	// 	c.ntfnHandlers.OnFilteredBlockConnected(blockHeight,
-	// 		blockHeader, transactions)
+		c.ntfnHandlers.OnFilteredBlockConnected(blockHeight,
+			blockHeader, transactions)
 
 	// OnBlockDisconnected
 	case jaxjson.BlockDisconnectedNtfnMethod:
@@ -283,7 +282,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		}
 
 		blockHeight, blockHeader, err :=
-			parseFilteredBlockDisconnectedParams(ntfn.Params)
+			parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
@@ -380,18 +379,21 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAccepted
 	case jaxjson.TxAcceptedNtfnMethod:
+		fmt.Println("accepted")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAccepted == nil {
 			return
 		}
 
+		fmt.Println("accepted 2")
 		hash, amt, err := parseTxAcceptedNtfnParams(ntfn.Params)
 		if err != nil {
 			log.Warn().Msgf("Received invalid tx accepted "+
 				"notification: %v", err)
 			return
 		}
+		fmt.Println("accepted 3")
 
 		c.ntfnHandlers.OnTxAccepted(hash, amt)
 
@@ -533,7 +535,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 //
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockConnectedParams(params []json.RawMessage, shardID uint32) (int32,
 	wire.BlockHeader, []*jaxutil.Tx, error) {
 
 	if len(params) < 3 {
@@ -553,8 +555,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		return 0, nil, nil, err
 	}
 
-	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.EmptyHeader()
+	blockHeader := jaxutil.NewEmptyBlockHeaderByShardID(shardID)
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, nil, err
@@ -592,7 +593,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 //
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockDisconnectedParams(params []json.RawMessage, shardID uint32) (int32,
 	wire.BlockHeader, error) {
 	if len(params) < 2 {
 		return 0, nil, wrongNumParams(len(params))
@@ -612,7 +613,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.EmptyHeader()
+	blockHeader := jaxutil.NewEmptyBlockHeaderByShardID(shardID)
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, err

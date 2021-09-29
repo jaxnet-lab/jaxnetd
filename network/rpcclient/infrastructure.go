@@ -467,6 +467,7 @@ out:
 		}
 
 		_, msg, err := c.wsConn.ReadMessage()
+		fmt.Printf("msg: %s, wsInHandler\n", string(msg))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if c.shouldLogReadError(err) {

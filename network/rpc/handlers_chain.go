@@ -157,7 +157,7 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 
 		if wsManager != nil {
 			wsManager.queueNotification <- ntf
-		} 
+		}
 	case blockchain.NTBlockDisconnected:
 		block, ok := notification.Data.(*jaxutil.Block)
 		if !ok {
@@ -705,17 +705,15 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr jaxutil.Address, n
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
 
 	fmt.Println("####################### NotifyNewTransaction ######################")
-	// if server.ntfnMgr == nil {
-	// 	return
-	// }
-	// for _, txD := range txns {
-	// 	// Notify websocket clients about mempool transactions.
-	// 	server.ntfnMgr.NotifyMempoolTx(txD.Tx, true)
-	// }
+	if wsManager == nil {
+		return
+	}
+	for _, txD := range txns {
+		// Notify websocket clients about mempool transactions.
+		wsManager.notifyMempoolTx(txD.Tx, true, server.chainProvider)
 
-	// if wsManager != nil {
-	// 	wsManager.queueNotification <- ntf
-	// } 
+		server.gbtWorkState.NotifyMempoolTx(server.gbtWorkState.LastGenerated)
+	}
 }
 
 // handleSubmitBlock implements the submitblock command.
