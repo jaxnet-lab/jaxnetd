@@ -8,11 +8,11 @@ import (
 
 // HTLCScript is a multi-signature lock script is of the form:
 //
-// OP_INPUTAGE <required_age_for_refund>  OP_LESSTHAN
+// OP_INPUTAGE <lockPeriod> OP_LESSTHAN
 // OP_IF
 //     OP_RETURN
 // OP_ELSE
-//     <refund_pubkey> OP_CHECKSIG OP_NIP
+//     <address_script> OP_NIP
 // OP_ENDIF
 // ...
 func HTLCScript(pubkey jaxutil.Address, lockPeriod int32) ([]byte, error) {
@@ -25,7 +25,7 @@ func HTLCScript(pubkey jaxutil.Address, lockPeriod int32) ([]byte, error) {
 	builder.AddOp(OP_CHECKMULTISIG)
 	builder.AddOp(OP_ELSE)
 	builder.AddData(pubkey.ScriptAddress())
-	builder.AddOp(OP_CHECKSIG)
+	builder.AddOp(OP_CHECKSIG) // todo: remove this
 	builder.AddOp(OP_NIP)
 	builder.AddOp(OP_ENDIF)
 
@@ -88,4 +88,26 @@ func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 	}
 
 	return NewScriptBuilder().AddData(sig).Script()
+}
+
+func ExtractHTLCLockTime(data []byte) (int32, error) {
+	pops, err := parseScript(data)
+	if err != nil {
+		return 0, err
+	}
+
+	var lockTime int32
+	if isSmallInt(pops[1].opcode) {
+		rawShardID := asSmallInt(pops[1].opcode)
+		lockTime = int32(rawShardID)
+	} else {
+		var rawShardID scriptNum
+		rawShardID, err = makeScriptNum(pops[1].data, true, 1)
+		if err != nil {
+			return 0, err
+		}
+		lockTime = int32(rawShardID)
+	}
+
+	return lockTime, nil
 }

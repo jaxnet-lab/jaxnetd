@@ -82,7 +82,7 @@ func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
 
 	feeAddress, err := txscript.PayToAddrScript(addr)
 	if err != nil {
-		feeAddress, _ = txscript.NewScriptBuilder().AddOp(txscript.OP_TRUE).Script()
+		return nil, err
 	}
 
 	jaxBurnAddr, err := jaxutil.DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
