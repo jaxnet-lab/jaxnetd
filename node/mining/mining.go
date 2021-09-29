@@ -491,7 +491,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	}
 
 	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress,
-		burnReward, g.chainCtx.Params().IsBeacon)
+		burnReward, g.blockChain.Chain().IsBeacon())
 	if err != nil {
 		return nil, err
 	}

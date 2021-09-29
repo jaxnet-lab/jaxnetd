@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -84,7 +85,10 @@ func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
 		feeAddress, _ = txscript.NewScriptBuilder().AddOp(txscript.OP_TRUE).Script()
 	}
 
-	jaxBurnAddr, _ := jaxutil.DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
+	jaxBurnAddr, err := jaxutil.DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
 	jaxBurn := jaxBurnAddr.ScriptAddress()
 
 	var pkScript = feeAddress
@@ -158,7 +162,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	return
 }
 
-func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (rewardBurned bool, err error) {
+func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
 	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
 	if err != nil {
 		return false, err
@@ -196,7 +200,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 
 	if expectedReward == -1 {
 		// skip reward validation if we don't know required reward
-		return
+		return jaxBurnReward, nil
 	}
 
 	const baseReward = chaincfg.BeaconBaseReward * int64(jaxutil.SatoshiPerJAXNETCoin)
@@ -247,6 +251,8 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 	}
 
 	if !beaconBurned && !shardJaxBurnReward {
+		spew.Dump(shardHeader)
+		spew.Dump(shardCoinbaseTx)
 		return errors.New(errMsg + "BTC & JaxNet not burned, Jax reward prohibited")
 	}
 	if beaconBurned && shardJaxBurnReward {

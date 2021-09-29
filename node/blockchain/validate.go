@@ -466,10 +466,6 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	prevMMRRoot := header.BlocksMerkleMountainRoot()
 	prevHash := b.index.HashByMMR(&prevMMRRoot)
 	if tip.GetHash() != prevHash {
-		fmt.Println("MMR_ROOT", prevMMRRoot.String())
-		fmt.Println("PrevHash", prevHash.String())
-		fmt.Println("tip.GetHash()", tip.GetHash().String())
-
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
 			"instead got %v", tip.GetHash(), prevHash)
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)

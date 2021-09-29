@@ -119,7 +119,7 @@ func TestCreateJaxCoinbaseTx(t *testing.T) {
 		return
 	}
 
-	got, err := CreateJaxCoinbaseTx(100_0000, 100, 0, 43, address, true)
+	got, err := CreateJaxCoinbaseTx(100_0000, 100, 0, 43, address, true, false)
 	if err != nil {
 		t.Errorf("CreateJaxCoinbaseTx() error = %v", err)
 		return
