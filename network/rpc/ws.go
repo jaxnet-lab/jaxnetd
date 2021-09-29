@@ -354,10 +354,8 @@ out:
 				// queueHandler quit.
 				break out
 			}
-			fmt.Println("there is notificatio")
 			switch n := n.(type) {
 			case *notificationBlockConnected:
-				fmt.Println("there is notification blockconnected")
 				block := n.Block
 
 				// Skip iterating through all txs if no
@@ -386,7 +384,6 @@ out:
 					}
 				}
 			case *notificationTxAcceptedByMempool:
-				fmt.Println("heree")
 				if n.isNew && len(txNotifications) != 0 {
 					m.notifyForNewTx(n.Chain, txNotifications, n.tx)
 				}
