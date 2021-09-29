@@ -154,7 +154,6 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashTyp
 	return script, signed == nRequired
 }
 
-
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
 	ScriptClass, []jaxutil.Address, int, error) {
@@ -219,6 +218,9 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		}
 
 		return script, class, addresses, nrequired, nil
+	case HTLCScriptTy:
+		script, err := signHTLC(tx, idx, subScript, hashType, addresses[0], kdb)
+		return script, class, addresses, 1, err
 	case NullDataTy:
 		return nil, class, nil, 0,
 			errors.New("can't sign NULLDATA transactions")

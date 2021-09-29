@@ -16,6 +16,7 @@ import (
 )
 
 func init() {
+	jaxjson.DropAllCmds()
 	jaxjson.MustRegisterLegacyCmd("getblocktemplate", (*btcdjson.GetBlockTemplateCmd)(nil), jaxjson.UsageFlag(0))
 }
 

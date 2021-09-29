@@ -65,7 +65,7 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
 		burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-		tx, err := mining.CreateJaxCoinbaseTx(6, 0, int32(-1), 0, bg.minerAddress, burnReward)
+		tx, err := mining.CreateJaxCoinbaseTx(6_2500_0000, 0, int32(-1), 0, bg.minerAddress, burnReward, false)
 		if err != nil {
 			return wire.BTCBlockAux{}, false, err
 		}
@@ -120,7 +120,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux,
 	}
 
 	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-	tx, err := mining.CreateJaxCoinbaseTx(reward, totalFee, int32(height), 0, bg.minerAddress, burnReward)
+	tx, err := mining.CreateJaxCoinbaseTx(reward, totalFee, int32(height), 0, bg.minerAddress, burnReward, false)
 	if err != nil {
 		return wire.BTCBlockAux{}, false, err
 	}

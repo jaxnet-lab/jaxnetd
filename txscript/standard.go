@@ -63,8 +63,9 @@ const (
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
 	MultiSigLockTy                           // Multi signature with time lock (msl).
-	NullDataTy                               // Empty data-only (provably prunable).
 	EADAddressTy                             // Management of the EAD Net Address.
+	HTLCScriptTy                             // script with time-lock
+	NullDataTy                               // Empty data-only (provably prunable).
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -79,6 +80,7 @@ var scriptClassToName = []string{
 	MultiSigTy:            "multisig",
 	MultiSigLockTy:        "multisig_lock",
 	NullDataTy:            "nulldata",
+	HTLCScriptTy:          "htlc",
 	EADAddressTy:          "ead_address",
 }
 
@@ -184,6 +186,8 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
 		return EADAddressTy
+	} else if isHTLC(pops) {
+		return HTLCScriptTy
 	} else if isNullData(pops) {
 		return NullDataTy
 	}
@@ -239,7 +243,8 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 
 	case EADAddressTy:
 		return 1
-
+	case HTLCScriptTy:
+		return 1
 	case NullDataTy:
 		fallthrough
 	default:
@@ -781,7 +786,12 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
-
+	case HTLCScriptTy:
+		requiredSigs = 1
+		addr, err := extractHTLCAddrs(pops, chainParams)
+		if err == nil {
+			addrs = append(addrs, addr)
+		}
 	case NullDataTy:
 		// Null data transactions have no addresses or required
 		// signatures.

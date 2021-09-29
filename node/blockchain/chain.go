@@ -256,7 +256,7 @@ type ChainBlockGenerator interface {
 	ValidateBlockHeader(blockHeader wire.BlockHeader) error
 	ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error
 
-	CalcBlockSubsidy(height int32, params chaincfg.PowParams, header wire.BlockHeader) int64
+	CalcBlockSubsidy(height int32, genesisBits uint32, header wire.BlockHeader) int64
 }
 
 // BlockChain provides functions for working with the bitcoin block chain.

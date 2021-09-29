@@ -7,15 +7,11 @@
 package beacon
 
 import (
-	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -93,64 +89,8 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error { return nil }
 
 func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
-	aux := block.Header.BeaconHeader().BTCAux()
-	if len(aux.Tx.TxOut) != 3 {
-		return errors.New("invalid format of btc aux coinbase tx: less than 3 out")
-	}
-
-	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
-	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
-
-	var btcBurnReward = false
-
-	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
-		const errMsg = "invalid format of btc aux coinbase tx: "
-		btcCoinbaseTx := aux.CoinbaseAux.Tx
-		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-			btcCoinbaseTx.TxOut[0].Value == 0
-		if !btcJaxNetLinkOut {
-			return errors.New(errMsg + "first out must be zero and have JaxNetLink")
-		}
-
-		if btcCoinbaseTx.TxOut[1].Value > 6_2500_0000 {
-			return errors.New(errMsg + "reward greater than 6.25 BTC")
-		}
-
-		if btcCoinbaseTx.TxOut[1].Value < 6_2500_0000 {
-			if btcCoinbaseTx.TxOut[1].Value > 5000_0000 {
-				return errors.New(errMsg + "fee greater than 0.5 BTC")
-			}
-		}
-
-		btcBurnReward = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	}
-
-	if len(block.Transactions[0].TxOut) != 3 {
-		return errors.New("invalid format of beacon coinbase tx: less than 3 out")
-	}
-
-	beaconCoinbaseTx := block.Transactions[0]
-	jaxNetLinkOut := bytes.Equal(beaconCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-		beaconCoinbaseTx.TxOut[0].Value == 0
-	if !jaxNetLinkOut {
-		return errors.New("invalid format of beacon coinbase tx: first out must be zero and have JaxNetLink")
-	}
-
-	jaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	if btcBurnReward && !jaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC burned, JaxNet reward prohibited")
-	}
-	if !btcBurnReward && jaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
-	}
-
-	properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
-	if !properReward {
-		return fmt.Errorf("invalid format of beacon coinbase tx: invalid value of second out - has(%d) expected(%d) height(%d)",
-			beaconCoinbaseTx.TxOut[1].Value, calcBlockSubsidy(height), height)
-	}
-
-	return nil
+	_, err := mining.ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
+	return err
 }
 
 func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
@@ -170,7 +110,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, params chaincfg.PowParams, header wire.BlockHeader) int64 {
+func (c *BlockGenerator) CalcBlockSubsidy(height int32, genesisBits uint32, header wire.BlockHeader) int64 {
 	return calcBlockSubsidy(height)
 }
 
