@@ -53,6 +53,7 @@ type IBlockNode interface {
 	Parent() IBlockNode
 	Ancestor(height int32) IBlockNode
 	CalcPastMedianTime() time.Time
+	CalcPastMedianTimeForN(nBlocks int) time.Time
 	RelativeAncestor(distance int32) IBlockNode
 	WorkSum() *big.Int
 	Timestamp() int64

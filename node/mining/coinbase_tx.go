@@ -167,13 +167,23 @@ func jaxnetBurnRawAddress() []byte {
 	return addr.ScriptAddress()
 }
 
+func btcJaxPrefix(pkScript []byte) bool {
+	addr, err := jaxutil.NewAddressPubKeyHash(pkScript, &chaincfg.MainNetParams)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(addr.String(), "1JAX")
+}
+
+func bchJaxPrefix(pkScript []byte) bool {
+	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
+}
+
 func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	if len(aux.Tx.TxOut) != 3 {
-		// TODO: check that first out starts with 1JAX.... or bitcoincash:qqjax....
-		// btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxBurn)
-		// if !btcJaxNetLinkOut {
-		// return false, errors.New(errMsg + "first out must start with 1Jax...")
-		// }
+		if !btcJaxPrefix(aux.Tx.TxOut[0].PkScript) && !bchJaxPrefix(aux.Tx.TxOut[0].PkScript) {
+			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
+		}
 
 		return false, nil
 	}
@@ -220,11 +230,6 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 	hashPresent := false
 	chunks := strings.Split(asmString, " ")
 	for i, chunk := range chunks {
-		// if chunk == exclusiveHash {
-		// 	hashPresent = true
-		// 	break
-		// }
-
 		if chunk != JaxnetScriptSigMarker {
 			continue
 		}
@@ -279,13 +284,17 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		err = errors.New(errMsg + "BTC not burned, JaxNet burn prohibited")
 		return false, err
 	}
+	const baseReward = chaincfg.BeaconBaseReward * int64(jaxutil.HaberStornettaPerJAXNETCoin)
 
 	if expectedReward == -1 {
-		// skip reward validation if we don't know required reward
+		if coinbase.TxOut[1].Value != baseReward {
+			err = fmt.Errorf(errMsg+"invalid value of second out - has(%d) expected(%d)",
+				coinbase.TxOut[1].Value, baseReward)
+			return false, err
+		}
+
 		return jxnBurnReward, nil
 	}
-
-	const baseReward = chaincfg.BeaconBaseReward * int64(jaxutil.HaberStornettaPerJAXNETCoin)
 
 	properReward := coinbase.TxOut[1].Value == baseReward &&
 		coinbase.TxOut[2].Value == expectedReward-baseReward

@@ -33,11 +33,11 @@ const (
 	// LM is a length of the mining epoch on any SC.
 	LM = L * M
 
-	// SupplementaryK1 is supplementary reward coefficient for the first mining epoch.
-	// SupplementaryK1 = Lambda ^ 12
-	SupplementaryK1 = LambdaPow12
-	// K1 is inflation coefficient for the first mining epoch.
-	K1 = 3.552713678800501e-15 // 2^−48
+	// SmallK1 is supplementary reward coefficient for the first mining epoch.
+	// SmallK1 = Lambda ^ 12
+	SmallK1 = LambdaPow12
+	// BigK1 is inflation coefficient for the first mining epoch.
+	BigK1 = 3.552713678800501e-15 // 2^−48
 
 	BeaconEpochLen = 2048
 	ShardEpochLen  = 4 * 60 * 24
@@ -65,17 +65,41 @@ func ValidateVoteK(prevK, newK uint32) bool {
 	return deltaPercent <= 1 && deltaPercent >= -3
 }
 
-func CalcKCoefficient(height int32, prevK uint32) uint32 {
+func CalcKCoefficient(height int32, prevK uint32, prevTarget, currentTarget uint32) uint32 {
 	if BeaconEpoch(height) == 1 {
-		return PackK(new(big.Float).SetFloat64(K1 * SupplementaryK1))
+		return PackK(new(big.Float).SetFloat64(BigK1 * SmallK1))
 	}
-
 	k := UnpackK(prevK)
-	if k.Cmp(new(big.Float).SetFloat64(1)) >= 0 {
-		return PackK(new(big.Float).SetFloat64(1))
+
+	calcSmallK := func() *big.Float {
+		dPrev := new(big.Float).SetInt(CalcWork(prevTarget))
+		dCurrent := new(big.Float).SetInt(CalcWork(currentTarget))
+
+		lamdaF := new(big.Float).SetFloat64(LambdaPow2)
+
+		// k == 1
+		if k.Cmp(new(big.Float).SetFloat64(1)) > 0 {
+			return new(big.Float).SetFloat64(1)
+		}
+
+		// (Lambda^-2) * k^(3/2) // TODO: fix pow of k
+		lK := new(big.Float).Mul(lamdaF, k)
+
+		// D(i-1) / D(i)
+		dd := new(big.Float).Quo(dPrev, dCurrent)
+
+		// [ D(i-1) / D(i) ] < [ (Lambda^2) * k^(3/2) ]
+		if dd.Cmp(lK) < 0 {
+			return k
+		}
+
+		// k * (Lambda^-2)
+		lamdaMin2F := new(big.Float).SetFloat64(LambdaPowMin2)
+		return new(big.Float).Mul(k, lamdaMin2F)
 	}
 
-	return prevK
+	nextSmallK := calcSmallK()
+	return PackK(new(big.Float).Mul(nextSmallK, k))
 }
 
 var (

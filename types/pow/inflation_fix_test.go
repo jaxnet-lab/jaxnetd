@@ -29,4 +29,21 @@ func TestGetDifficulty(t *testing.T) {
 	// println(err)
 	// println(reward)
 	// println(int64(reward * 1000))
+
+	lPow2 := new(big.Float).SetFloat64(LambdaPow2)
+	lPow12 := new(big.Float).SetFloat64(LambdaPow12)
+
+	x1 := new(big.Float).Mul(lPow2, lPow2)
+	x2 := new(big.Float).Mul(x1, lPow2)
+	x3 := new(big.Float).Mul(x2, lPow2)
+	x4 := new(big.Float).Mul(x3, lPow2)
+	x5 := new(big.Float).Mul(x4, lPow2)
+	x6 := new(big.Float).Mul(x5, lPow2)
+
+	println(x6.String())
+	println(lPow12.String())
+
+	xx := LambdaPow2 * LambdaPow2 * LambdaPow2 * LambdaPow2 * LambdaPow2 * LambdaPow2
+	println(xx)
+	println(LambdaPow12)
 }

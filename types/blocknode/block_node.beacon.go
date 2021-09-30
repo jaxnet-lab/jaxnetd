@@ -125,12 +125,20 @@ func (node *BeaconBlockNode) RelativeAncestor(distance int32) IBlockNode {
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) CalcPastMedianTime() time.Time {
+	return node.CalcPastMedianTimeForN(beaconMedianTimeBlocks)
+}
+
+// CalcPastMedianTimeForN calculates the median time of the previous N blocks
+// prior to, and including, the block node.
+//
+// This function is safe for concurrent access.
+func (node *BeaconBlockNode) CalcPastMedianTimeForN(nBlocks int) time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
 	// the median per the number defined by the constant beaconMedianTimeBlocks.
-	timestamps := make([]int64, beaconMedianTimeBlocks)
+	timestamps := make([]int64, nBlocks)
 	numNodes := 0
 	iterNode := IBlockNode(node)
-	for i := 0; i < beaconMedianTimeBlocks && iterNode != nil; i++ {
+	for i := 0; i < nBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.Timestamp()
 		numNodes++
 

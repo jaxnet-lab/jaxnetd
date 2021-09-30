@@ -432,6 +432,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	if err != nil {
 		return nil, err
 	}
+
 	if g.chainCtx.IsBeacon() {
 		k := g.blockChain.CalcNextK()
 		msgBlock.Header.SetK(k)

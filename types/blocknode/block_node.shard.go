@@ -128,12 +128,20 @@ func (node *ShardBlockNode) RelativeAncestor(distance int32) IBlockNode {
 //
 // This function is safe for concurrent access.
 func (node *ShardBlockNode) CalcPastMedianTime() time.Time {
+	return node.CalcPastMedianTimeForN(shardMedianTimeBlocks)
+}
+
+// CalcPastMedianTimeForN calculates the median time of the previous N blocks
+// prior to, and including, the block node.
+//
+// This function is safe for concurrent access.
+func (node *ShardBlockNode) CalcPastMedianTimeForN(nBlocks int) time.Time {
 	// Create a slice of the previous few block timestamps used to calculate
 	// the median per the number defined by the constant shardMedianTimeBlocks.
-	timestamps := make([]int64, shardMedianTimeBlocks)
+	timestamps := make([]int64, nBlocks)
 	numNodes := 0
 	iterNode := IBlockNode(node)
-	for i := 0; i < shardMedianTimeBlocks && iterNode != nil; i++ {
+	for i := 0; i < nBlocks && iterNode != nil; i++ {
 		timestamps[i] = iterNode.Timestamp()
 		numNodes++
 

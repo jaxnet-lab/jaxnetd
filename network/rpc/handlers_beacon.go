@@ -222,7 +222,9 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	if err != nil {
 		return nil, err
 	}
+
 	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
+
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
 		Version:             int32(blockHeader.Version()),

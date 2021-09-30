@@ -86,7 +86,10 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 	return header, nil
 }
 
-func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error { return nil }
+func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
+	// pow.ValidateVoteK(header.VoteK())
+	return nil
+}
 
 func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
 	_, err := mining.ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))

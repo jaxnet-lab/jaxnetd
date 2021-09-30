@@ -39,3 +39,7 @@ jaxnetd
 !/tmp/core_2/jaxcore.yaml
 
 .directory
+
+tracer
+sync.sh
+jaxnetd.toml
