@@ -30,9 +30,9 @@ func TestBlockHeader(t *testing.T) {
 	bh := NewBeaconBlockHeader(1, hash, merkleHash, hash, time.Now(), bits, nonce)
 
 	// Ensure we get the same data back out.
-	if bh.PrevBlock() != hash {
+	if bh.BlocksMerkleMountainRoot() != hash {
 		t.Errorf("NewShardBlockHeader: wrong prev hash - got %v, want %v",
-			spew.Sprint(bh.PrevBlock), spew.Sprint(hash))
+			spew.Sprint(bh.BlocksMerkleMountainRoot), spew.Sprint(hash))
 	}
 	if bh.MerkleRoot() != merkleHash {
 		t.Errorf("NewShardBlockHeader: wrong merkle root - got %v, want %v",
@@ -193,10 +193,9 @@ func TestBeaconBlockHeaderSerialize(t *testing.T) {
 	bits := uint32(0x1d00ffff)
 	baseBlockHdr := &BeaconHeader{
 		version:         1,
-		prevBlock:       mainNetGenesisHash,
+		blocksMMRRoot:   mainNetGenesisHash,
 		merkleRoot:      mainNetGenesisMerkleRoot,
 		mergeMiningRoot: chainhash.Hash{},
-		timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 		bits:            bits,
 		shards:          0,
 		treeEncoding:    nil,
@@ -289,17 +288,15 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 	// baseBlockHdr is used in the various tests as a baseline BlockHeader.
 	bits := uint32(0x1d00ffff)
 	baseBlockHdr := ShardHeader{
-		prevBlock:         mainNetGenesisHash,
+		blocksMMRRoot:     mainNetGenesisHash,
 		merkleRoot:        mainNetGenesisMerkleRoot,
-		timestamp:         time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 		bits:              bits,
 		mergeMiningNumber: 0,
 		bCHeader: BeaconHeader{
 			version:         1,
-			prevBlock:       mainNetGenesisHash,
+			blocksMMRRoot:   mainNetGenesisHash,
 			merkleRoot:      mainNetGenesisMerkleRoot,
 			mergeMiningRoot: chainhash.Hash{},
-			timestamp:       time.Unix(0x495fab29, 0), // 2009-01-03 12:15:05 -0600 CST
 			bits:            bits,
 			shards:          0,
 			treeEncoding:    nil,
