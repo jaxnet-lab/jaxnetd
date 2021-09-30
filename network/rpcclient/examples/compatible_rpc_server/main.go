@@ -65,7 +65,6 @@ func main() {
 			return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())
 
 		}))
-	fmt.Println("here")
 	serverCore.StartRPC(context.TODO(), rpcServeMux)
 }
 
