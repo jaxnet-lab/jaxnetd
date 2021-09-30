@@ -5,24 +5,24 @@ import (
 	"fmt"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // wsCommandHandler describes a callback function used to handle a specific
 // command.
-type wsCommandHandler func(*cprovider.ChainProvider,*wsClient, interface{}) (interface{}, error)
+type wsCommandHandler func(*cprovider.ChainProvider, *wsClient, interface{}) (interface{}, error)
 
 type wsHandler struct {
-	core   *MultiChainRPC
+	core     *MultiChainRPC
 	handlers map[string]wsCommandHandler
 }
 
 func WebSocketHandlers(core *MultiChainRPC) *wsHandler {
 	res := &wsHandler{
-		core:   core,
+		core:     core,
 		handlers: make(map[string]wsCommandHandler),
 	}
 	res.handlers["loadtxfilter"] = res.handleLoadTxFilter
@@ -129,7 +129,7 @@ func (h *wsHandler) handleWebsocketHelp(chain *cprovider.ChainProvider, wsc *wsC
 }
 
 func (h *wsHandler) handleNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	wsc.manager.RegisterBlockUpdates(wsc)
+	wsc.manager.RegisterBlockUpdates(wsc, chain.ChainCtx.ShardID())
 	return nil, nil
 }
 
@@ -181,7 +181,7 @@ func (h *wsHandler) handleSession(chain *cprovider.ChainProvider, wsc *wsClient,
 }
 
 func (h *wsHandler) handleStopNotifyBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	wsc.manager.UnregisterBlockUpdates(wsc)
+	wsc.manager.UnregisterBlockUpdates(wsc, chain.ChainCtx.ShardID())
 	return nil, nil
 }
 

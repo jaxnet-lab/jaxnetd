@@ -465,7 +465,8 @@ func (c *Client) GetBeaconBlockBySerialNumberAsync(serialID int64) FutureGetBeac
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
 func (c *Client) GetBeaconBlockBySerialNumber(serialID int64) (*BlockResult, error) {
-	return c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
+	br, err := c.GetBeaconBlockBySerialNumberAsync(serialID).Receive()
+	return br, err
 }
 
 // FutureListBeaconBlocksBySerialNumberResult is a future promise to deliver the result of a
