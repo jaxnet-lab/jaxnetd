@@ -237,7 +237,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 // in shard during the CrossShard Swap Tx.
 func EstimateLockInChain(genesisBits, bits, k uint32, amount int64) (int64, error) {
 	kd := pow.MultBitsAndK(genesisBits, bits, k)
-	n := amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
+	n := amount / int64(kd*jaxutil.JuroPerJAXCoin)
 
 	if n < 4 {
 		n = 4 * 30

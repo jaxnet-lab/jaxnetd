@@ -21,7 +21,7 @@ const (
 	BeaconEpochLength = 2048
 	BeaconTimeDelta   = 600 // in seconds
 
-	BeaconRewardLockPeriod = 25000 // in blocks
+	BeaconRewardLockPeriod = 24000 // in blocks
 	BeaconBaseReward       = 20    // In JXN
 
 	// ShardEpochLength = 2304  // (1.6 blocks/per hour * 1 day) in blocks

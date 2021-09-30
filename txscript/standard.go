@@ -497,8 +497,7 @@ func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
 	}
 
-	str := fmt.Sprintf("unable to generate payment script for unsupported "+
-		"address type %T", addr)
+	str := fmt.Sprintf("unable to generate payment script for unsupported address type %T", addr)
 	return nil, scriptError(ErrUnsupportedAddress, str)
 }
 
@@ -787,10 +786,9 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			addrs = append(addrs, addr)
 		}
 	case HTLCScriptTy:
-		requiredSigs = 1
-		addr, err := extractHTLCAddrs(pops, chainParams)
-		if err == nil {
-			addrs = append(addrs, addr)
+		_, addrs, requiredSigs, err = extractHTLCAddrs(pops, chainParams)
+		if err != nil {
+			return NonStandardTy, nil, 0, err
 		}
 	case NullDataTy:
 		// Null data transactions have no addresses or required

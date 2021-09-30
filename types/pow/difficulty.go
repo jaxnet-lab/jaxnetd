@@ -154,6 +154,11 @@ func CalcWork(bits uint32) *big.Int {
 func GetDifficulty(genesisBits, bits uint32) *big.Int {
 	genesisTarget := CompactToBig(genesisBits)
 	target := CompactToBig(bits)
+	d := new(big.Int).Div(genesisTarget, target)
 
-	return new(big.Int).Div(genesisTarget, target)
+	//   -1 if x <  y
+	if d.Cmp(big.NewInt(1)) < 0 {
+		return big.NewInt(1)
+	}
+	return d
 }

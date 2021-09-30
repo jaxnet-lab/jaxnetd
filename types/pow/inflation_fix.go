@@ -73,9 +73,6 @@ func CalcKCoefficient(height int32, prevK uint32) uint32 {
 	}
 
 	k := UnpackRat(prevK)
-	//   -1 if x <  y
-	//    0 if x == y
-	//   +1 if x >  y
 	if k.Cmp(new(big.Rat).SetFloat64(1)) >= 0 {
 		return PackRat(new(big.Rat).SetFloat64(1))
 	}
@@ -126,22 +123,23 @@ func MultBitsAndK(genesisBits, bits, k uint32) float64 {
 // - bits is current target;
 // - k is inflation-fix-coefficient.
 func CalcShardBlockSubsidy(height int32, shards, genesisBits, bits, k uint32) int64 {
-	switch ShardEpoch(height) {
-	case 1:
-		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-		d := GetDifficulty(genesisBits, bits)
-		k1 := UnpackRat(k)
+	// ((Di * Ki) / n)  * jaxutil.SatoshiPerJAXCoin
+	d := GetDifficulty(genesisBits, bits)
+	k1 := UnpackRat(k)
 
-		// fixme
-		rewardStr := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1).FloatString(4)
-		reward, err := strconv.ParseFloat(rewardStr, 64)
-		if err != nil {
-			return (20 * 1000) >> uint(height/210000)
-		}
-		return int64(reward * 1000)
-
-	default:
-		// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-		return (20 * 1000) >> uint(height/210000)
+	if shards == 0 {
+		shards = 1
 	}
+	dk := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1)
+	shardsN := new(big.Rat).SetInt64(int64(shards))
+	rewardStr := new(big.Rat).Quo(dk, shardsN).FloatString(4)
+	reward, err := strconv.ParseFloat(rewardStr, 64)
+	if err != nil {
+		return (20 * 1_0000) >> uint(height/210000)
+	}
+	if reward == 0 {
+		return 20 * 1_0000
+	}
+	return int64(reward * 1_0000)
+
 }

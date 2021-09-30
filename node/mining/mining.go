@@ -27,9 +27,9 @@ import (
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority       = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityBeacon = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityShard  = jaxutil.SatoshiPerJAXCoin * 144.0 / 250
+	MinHighPriority       = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityBeacon = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityShard  = jaxutil.JuroPerJAXCoin * 144.0 / 250
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
 	// generated via jaxnetd.

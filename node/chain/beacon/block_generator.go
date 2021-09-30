@@ -32,7 +32,7 @@ type BlockGenerator struct {
 }
 
 type btcGen interface {
-	NewBlockTemplate(burnReward int) (wire.BTCBlockAux, bool, error)
+	NewBlockTemplate(burnReward int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error)
 }
 
 func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
@@ -72,7 +72,7 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 	header.SetK(header.Bits() / 2)
 	header.SetVoteK(header.Bits() / 2)
 
-	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward)
+	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward, header.BeaconExclusiveHash())
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to generate btc block aux")
 	}
@@ -126,29 +126,29 @@ func calcBlockSubsidy(height int32) int64 {
 
 	// Year 1
 	case height >= 0 && height <= endOfEpoch:
-		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 2
 	case height > endOfEpoch && height <= endOfEpoch*2:
-		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 3
 	case height > endOfEpoch*2 && height <= endOfEpoch*3:
-		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 4
 	case height > endOfEpoch*3 && height <= endOfEpoch*4:
-		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 5
 	case height > endOfEpoch*4 && height <= endOfEpoch*5:
-		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 6+
 	case height > endOfEpoch*5:
-		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
+		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
 	default:
-		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
+		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
 	}
 
 }
