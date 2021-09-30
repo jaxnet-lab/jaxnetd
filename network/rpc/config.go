@@ -6,6 +6,7 @@ package rpc
 
 import (
 	"net"
+	"net/http"
 
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
@@ -26,6 +27,10 @@ type Config struct {
 	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" toml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	MaxWebsockets     int      `yaml:"rpc_max_websockets" toml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
 	WSEnable          bool     `yaml:"ws_enable" toml:"ws_enable"`
+	// custom handler for auth, instead of standard login and password. First return value indicates if user is authorized or not.
+	// Second return value indicated is it is a limited user
+	// All standard password checks are ignored if this function is provided when creating RPC server
+	AuthProvider func(http.Header) (bool, bool)
 
 	// Listeners defines a slice of listeners for which the RPC Server will
 	// take ownership of and accept connections.  Since the RPC Server takes

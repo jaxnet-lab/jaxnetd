@@ -72,6 +72,10 @@ func NewRPCCore(config *Config) *ServerCore {
 		wg:           sync.WaitGroup{},
 	}
 
+	if rpc.cfg.AuthProvider != nil {
+		return rpc
+	}
+
 	if rpc.cfg.User != "" && rpc.cfg.Password != "" {
 		login := rpc.cfg.User + ":" + rpc.cfg.Password
 		auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(login))
@@ -477,6 +481,16 @@ func (server *ServerCore) ActiveClients() int32 {
 // of the server (true) or whether the user is limited (false). The second is
 // always false if the first is.
 func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, error) {
+	if server.cfg.AuthProvider != nil {
+		isAuthorized, isLimited := server.cfg.AuthProvider(r.Header)
+		if !isAuthorized {
+			server.logger.Warn().Msgf("RPC authentication failure from %s", r.RemoteAddr)
+			return false, isLimited, errors.New("auth failure")
+		}
+
+		return true, isLimited, nil
+	}
+
 	authhdr := r.Header["Authorization"]
 	if len(authhdr) <= 0 {
 		if require {
