@@ -204,8 +204,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 			fmt.Sprintf("shard %d not exist", c.SourceShard))
 	}
 	sourceBest := sourceShard.BlockChain().BestSnapshot()
-	sN, err := EstimateLockInChain(sourceShard.ChainCtx.Params().PowParams.PowLimitBits,
-		sourceBest.Bits, sourceBest.K, c.Amount)
+	sN, err := EstimateLockInChain(sourceBest.Bits, sourceBest.K, c.Amount)
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +216,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 	}
 
 	destBest := destinationShard.BlockChain().BestSnapshot()
-	dN, err := EstimateLockInChain(destinationShard.ChainCtx.Params().PowParams.PowLimitBits,
-		destBest.Bits, destBest.K, c.Amount)
+	dN, err := EstimateLockInChain(destBest.Bits, destBest.K, c.Amount)
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +233,8 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 
 // EstimateLockInChain estimates desired period in block for locking funds
 // in shard during the CrossShard Swap Tx.
-func EstimateLockInChain(genesisBits, bits, k uint32, amount int64) (int64, error) {
-	kd := pow.MultBitsAndK(genesisBits, bits, k)
+func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
+	kd := pow.MultBitsAndK(bits, k)
 	n := amount / int64(kd*jaxutil.JuroPerJAXCoin)
 
 	if n < 4 {

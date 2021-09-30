@@ -57,7 +57,7 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, genesisB
 		workSum:    pow.CalcWork(blockHeader.Bits()),
 		timestamp:  blockHeader.Timestamp().Unix(),
 		header:     blockHeader,
-		difficulty: pow.GetDifficulty(genesisBits, blockHeader.Bits()).Uint64(),
+		difficulty: pow.GetDifficultyRatio(genesisBits, blockHeader.Bits()).Uint64(),
 	}
 
 	if parent != nil {

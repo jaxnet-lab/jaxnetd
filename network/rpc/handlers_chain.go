@@ -1044,7 +1044,7 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
-	kd := pow.MultBitsAndK(server.chainProvider.ChainCtx.Params().PowParams.PowLimitBits, best.Bits, best.K)
+	kd := pow.MultBitsAndK(best.Bits, best.K)
 	n := c.Amount / int64(kd*jaxutil.JuroPerJAXCoin)
 
 	if n < 4 {

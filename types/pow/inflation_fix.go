@@ -8,8 +8,6 @@ package pow
 
 import (
 	"math/big"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -55,7 +53,7 @@ func ShardEpoch(height int32) int32 {
 
 // ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
 //
-func ValidateVoteK(prevK, newK uint32) int64 {
+func ValidateVoteK(prevK, newK uint32) bool {
 	bPrevK := CompactToBig(prevK)
 	bNewK := CompactToBig(newK)
 	// ( (prevK - newK) * 100 ) / prevK = deltaPercent
@@ -64,56 +62,59 @@ func ValidateVoteK(prevK, newK uint32) int64 {
 	delta := new(big.Int).Mul(new(big.Int).Sub(bPrevK, bNewK), big.NewInt(100))
 	// delta / prevK
 	deltaPercent := new(big.Int).Div(delta, bPrevK).Int64()
-	return deltaPercent
+	return deltaPercent <= 1 && deltaPercent >= -3
 }
 
 func CalcKCoefficient(height int32, prevK uint32) uint32 {
 	if BeaconEpoch(height) == 1 {
-		return PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
+		return PackK(new(big.Float).SetFloat64(K1 * SupplementaryK1))
 	}
 
-	k := UnpackRat(prevK)
-	if k.Cmp(new(big.Rat).SetFloat64(1)) >= 0 {
-		return PackRat(new(big.Rat).SetFloat64(1))
+	k := UnpackK(prevK)
+	if k.Cmp(new(big.Float).SetFloat64(1)) >= 0 {
+		return PackK(new(big.Float).SetFloat64(1))
 	}
 
 	return prevK
 }
 
-const kValMask = "10000000000000000000"
+var (
+	kValMask   = new(big.Int).Exp(big.NewInt(10), big.NewInt(19), nil)
+	kPrecision = new(big.Float).SetInt(kValMask)
 
-func KValRatToInt(val *big.Rat) *big.Int {
-	mult, _ := new(big.Rat).SetString(kValMask)
-	nVal := new(big.Rat).Mul(val, mult)
-	intPart := strings.Split(nVal.FloatString(18), ".")[0]
+	oneLsh64 = new(big.Int).Lsh(bigOne, 64)
 
-	bigVal, _ := new(big.Int).SetString(intPart, 10)
-	return bigVal
+	jCoefficient = new(big.Float).Quo(
+		new(big.Float).SetInt64(1),
+		new(big.Float).SetInt(oneLsh64),
+	)
+)
+
+func KValFloatToInt(val *big.Float) *big.Int {
+	nVal := new(big.Float).Mul(val, kPrecision)
+	res, _ := nVal.Int(nil)
+	return res
 }
 
-func PackRat(val *big.Rat) uint32 {
-	return BigToCompact(KValRatToInt(val))
+func KValIntToFloat(nVal *big.Int) *big.Float {
+	rVal := new(big.Float).SetInt(nVal)
+	return new(big.Float).Quo(rVal, kPrecision)
 }
 
-func KValIntToRat(nVal *big.Int) *big.Rat {
-	mult, _ := new(big.Rat).SetString(kValMask)
-	rVal, _ := new(big.Rat).SetString(nVal.String())
-	return new(big.Rat).Quo(rVal, mult)
+func UnpackK(val uint32) *big.Float {
+	return KValIntToFloat(CompactToBig(val))
 }
 
-func UnpackRat(val uint32) *big.Rat {
-	return KValIntToRat(CompactToBig(val))
+func PackK(val *big.Float) uint32 {
+	return BigToCompact(KValFloatToInt(val))
 }
 
-func MultBitsAndK(genesisBits, bits, k uint32) float64 {
+func MultBitsAndK(bits, k uint32) float64 {
 	// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-	d := GetDifficulty(genesisBits, bits)
-	k1 := UnpackRat(k)
-	rewardStr := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1).FloatString(4)
-	reward, err := strconv.ParseFloat(rewardStr, 64)
-	if err != nil {
-		return 20
-	}
+	d := CalcWork(bits)
+	k1 := UnpackK(k)
+	dFloat := new(big.Float).SetInt(d)
+	reward, _ := new(big.Float).Mul(dFloat, k1).Float64()
 	return reward
 }
 
@@ -122,24 +123,25 @@ func MultBitsAndK(genesisBits, bits, k uint32) float64 {
 // - shards is a number of shards that were mined by a miner at the time;
 // - bits is current target;
 // - k is inflation-fix-coefficient.
-func CalcShardBlockSubsidy(height int32, shards, genesisBits, bits, k uint32) int64 {
+func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
 	// ((Di * Ki) / n)  * jaxutil.SatoshiPerJAXCoin
-	d := GetDifficulty(genesisBits, bits)
-	k1 := UnpackRat(k)
+	d := CalcWork(bits)
+	k1 := UnpackK(k)
 
 	if shards == 0 {
 		shards = 1
 	}
-	dk := new(big.Rat).Mul(new(big.Rat).SetInt64(d.Int64()), k1)
-	shardsN := new(big.Rat).SetInt64(int64(shards))
-	rewardStr := new(big.Rat).Quo(dk, shardsN).FloatString(4)
-	reward, err := strconv.ParseFloat(rewardStr, 64)
-	if err != nil {
-		return (20 * 1_0000) >> uint(height/210000)
-	}
-	if reward == 0 {
-		return 20 * 1_0000
-	}
-	return int64(reward * 1_0000)
 
+	dRat := new(big.Float).SetInt64(d.Int64())
+	shardsN := new(big.Float).SetInt64(int64(shards))
+
+	// (Di * Ki)
+	dk := new(big.Float).Mul(dRat, k1)
+	// ((Di * Ki) / n)
+	reward, _ := new(big.Float).Quo(dk, shardsN).Float64()
+	if reward == 0 {
+		return 0
+	}
+
+	return int64(reward * 1_0000)
 }

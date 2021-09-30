@@ -15,7 +15,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-const JaxnetScriptSigMarker = "jaxnet"
+const JaxnetScriptSigMarker = "6a61786e6574" // "jaxnet" in hex
+var JaxnetScriptSigMarkerBytes = []byte{0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74}
 
 // StandardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
@@ -38,9 +39,9 @@ func BTCCoinbaseScript(nextBlockHeight int64, extraNonce, beaconHash []byte) ([]
 	return txscript.NewScriptBuilder().
 		AddInt64(nextBlockHeight).
 		AddData(extraNonce).
-		AddData([]byte(JaxnetScriptSigMarker)).
+		AddData(JaxnetScriptSigMarkerBytes).
 		AddData(beaconHash).
-		AddData([]byte(JaxnetScriptSigMarker)).
+		AddData(JaxnetScriptSigMarkerBytes).
 		AddData([]byte(CoinbaseFlags)).
 		Script()
 }
@@ -215,25 +216,25 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 	beaconExclusiveHash := aux.BeaconExclusiveHash()
 	exclusiveHash := hex.EncodeToString(beaconExclusiveHash.CloneBytes())
 	asmString, _ := txscript.DisasmString(aux.BTCAux().Tx.TxIn[0].SignatureScript)
-
+	//
 	hashPresent := false
 	chunks := strings.Split(asmString, " ")
-	for _, chunk := range chunks {
-		if chunk == exclusiveHash {
-			hashPresent = true
-			break
-		}
-
-		// if chunk != JaxnetScriptSigMarker {
-		// 	continue
-		// }
-		//
-		// if len(chunks) < i+2 {
+	for i, chunk := range chunks {
+		// if chunk == exclusiveHash {
+		// 	hashPresent = true
 		// 	break
 		// }
 
-		// hashPresent = (chunks[i+1] == exclusiveHash) && (chunks[i+2] == JaxnetScriptSigMarker)
-		// break
+		if chunk != JaxnetScriptSigMarker {
+			continue
+		}
+
+		if len(chunks) < i+2 {
+			break
+		}
+
+		hashPresent = (chunks[i+1] == exclusiveHash) && (chunks[i+2] == JaxnetScriptSigMarker)
+		break
 	}
 
 	if !hashPresent {
@@ -303,7 +304,7 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 
 	const errMsg = "invalid format of shard coinbase tx: "
 
-	if len(shardCoinbaseTx.TxOut) != 3 {
+	if len(shardCoinbaseTx.TxOut) < 3 {
 		return errors.New(errMsg + "less than 3 out")
 	}
 
@@ -333,9 +334,10 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 	if !beaconBurned && !shardJaxBurnReward {
 		return errors.New(errMsg + "BTC & JaxNet not burned, Jax reward prohibited")
 	}
-	if beaconBurned && shardJaxBurnReward {
-		return errors.New(errMsg + "BTC & JaxNet burned, Jax burn prohibited")
-	}
+
+	// if beaconBurned && shardJaxBurnReward {
+	// 	return errors.New(errMsg + "BTC & JaxNet burned, Jax burn prohibited")
+	// }
 
 	return nil
 }

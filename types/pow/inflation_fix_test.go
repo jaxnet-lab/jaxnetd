@@ -7,25 +7,22 @@
 package pow
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 )
 
 func TestGetDifficulty(t *testing.T) {
-	oldTarget := CompactToBig(0x1d00ffff)
-	fmt.Printf("(%064x) target %08x \n", CompactToBig(0x1d00ffff), 0x1d00ffff)
+	d := CalcWork(0x1d0ffff0)
+	println(d.String())
+	d = CalcWork(0x1e0dffff)
+	println(d.String())
+	d = CalcWork(0x170ED0EB)
 
-	for i := 1; i <= 32; i += 1 {
-		newBits := BigToCompact(new(big.Int).Mul(oldTarget, big.NewInt(1<<i)))
-		fmt.Printf("(%064x) target %08x %d/%d \n", CompactToBig(newBits), newBits, i, 1<<i)
-	}
-
-	// comp := PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
-	// k1 := UnpackRat(comp)
-
-	d := GetDifficulty(0x1e0dffff, 0x1b0ED0EB)
-	println(d.Uint64())
+	println(d.String())
+	println(new(big.Int).Div(d, new(big.Int).Lsh(bigOne, 32)).String())
+	// 81595492539307259101866
+	// 18997641161758.95
+	// 18997931047181
 
 	// println(new(big.Rat).Mul(d, k1).FloatString(4))
 	// reward, err := strconv.ParseFloat(new(big.Rat).Mul(d, k1).FloatString(4), 64)
