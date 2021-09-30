@@ -38,7 +38,6 @@ func HTLCScript(address *jaxutil.AddressPubKeyHash, lockPeriod int32) ([]byte, e
 	// 	return nil, err
 	// }
 
-	// println(DisasmString(payScript))
 	// builder.AddData(payScript)
 
 	// builder.AddOp(OP_NIP)
@@ -90,7 +89,6 @@ func isHTLC(pops []parsedOpcode) bool {
 
 // extractHTLCAddrs
 func extractHTLCAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (ScriptClass, []jaxutil.Address, int, error) {
-	println(DisasmString(pops[4].data))
 	// A pay-to-pubkey-hash script is of the form:
 	//  OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG
 	// Therefore the pubkey hash is the 3rd item on the stack.
