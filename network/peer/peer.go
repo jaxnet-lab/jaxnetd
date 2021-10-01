@@ -1503,7 +1503,6 @@ out:
 			if peer.cfg.Listeners.OnMemPool != nil {
 				peer.cfg.Listeners.OnMemPool(peer, msg)
 			}
-
 		case *wire.MsgTx:
 			if peer.cfg.Listeners.OnTx != nil {
 				peer.cfg.Listeners.OnTx(peer, msg)
@@ -1680,6 +1679,10 @@ out:
 			peer.sendQueue <- val.(outMsg)
 
 		case iv := <-peer.outputInvChan:
+			if iv.Type == types.InvTypeTx {
+				// fmt.Println("well we are all the way near the chan")
+			}
+
 			// No handshake?  They'll find out soon enough.
 			if peer.VersionKnown() {
 				// If this is a new block, then we'll blast it
@@ -1687,6 +1690,7 @@ out:
 				// queue.
 				if iv.Type == types.InvTypeBlock ||
 					iv.Type == types.InvTypeWitnessBlock {
+					// fmt.Println("in the iv.Type == types.InvTypeBlock || tiv.Type == types.InvTypeWitnessBlock")
 
 					invMsg := wire.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
@@ -1712,9 +1716,12 @@ out:
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
 				iv := invSendQueue.Remove(e).(*types.InvVect)
 
+				// fmt.Println("we read from the queue")
+
 				// Don't send inventory that became known after
 				// the initial check.
 				if peer.knownInventory.Exists(iv) {
+					fmt.Println("ALREADY KNOWN")
 					continue
 				}
 
@@ -1809,6 +1816,7 @@ out:
 					peer.lastPingTime = time.Now()
 					peer.statsMtx.Unlock()
 				}
+			default:
 			}
 
 			peer.stallControl <- stallControlMsg{sccSendMessage, msg.msg}
@@ -2165,7 +2173,7 @@ func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	//
 	// Older nodes previously added the IP and port information to the
 	// address manager which proved to be unreliable as an inbound
-	// connection from a peer didn't necessarily mean the peer itself
+	// connection from a peer didn't necessarily mean the peer itselfwe
 	// accepted inbound connections.
 	//
 	// Also, the timestamp is unused in the version message.
@@ -2217,6 +2225,7 @@ func (peer *Peer) writeLocalVersionMsg() error {
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
 	if err := peer.readRemoteVersionMsg(); err != nil {
+		fmt.Printf("peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
@@ -2226,6 +2235,7 @@ func (peer *Peer) negotiateInboundProtocol() error {
 
 	err := peer.writeMessage(wire.NewMsgVerAck(), wire.LatestEncoding)
 	if err != nil {
+		fmt.Printf("peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
@@ -2243,14 +2253,17 @@ func (peer *Peer) negotiateInboundProtocol() error {
 //   4. We send our verack.
 func (peer *Peer) negotiateOutboundProtocol() error {
 	if err := peer.writeLocalVersionMsg(); err != nil {
+		fmt.Printf("1 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
 	if err := peer.readRemoteVersionMsg(); err != nil {
+		fmt.Printf("2 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
 	if err := peer.readRemoteVerAckMsg(); err != nil {
+		fmt.Printf("3 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
@@ -2259,6 +2272,7 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 
 // start begins processing input and output messages.
 func (peer *Peer) start() error {
+	fmt.Printf("Starting peer %+v\n", peer.chain.ShardID())
 	log.Trace().Msgf("Starting peer %s", peer)
 
 	negotiateErr := make(chan error, 1)

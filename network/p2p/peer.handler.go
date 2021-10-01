@@ -8,6 +8,7 @@ package p2p
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"time"
 
@@ -97,6 +98,7 @@ func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash,
 	// to fetch a missing transaction results in the same behavior.
 	tx, err := server.chain.TxMemPool.FetchTransaction(hash)
 	if err != nil {
+		fmt.Printf("err != nil: err = %v, hash = %v, chain = %v\n", err, hash, server.chain.ChainCtx.ShardID())
 		server.logger.Trace().Msgf("Unable to fetch tx %v from transaction "+
 			"pool: %v", hash, err)
 
@@ -108,6 +110,7 @@ func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash,
 
 	// Once we have fetched data wait for any previous operation to finish.
 	if waitChan != nil {
+		fmt.Println("waitChan != nil")
 		<-waitChan
 	}
 

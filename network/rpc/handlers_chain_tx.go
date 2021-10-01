@@ -496,6 +496,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.SendRawTransactionCmd)
 
+	fmt.Println("Handle send raw transaction, shardID:", server.chainProvider.ChainCtx.ShardID())
 	// Deserialize and send off to tx relay
 	hexStr := c.HexTx
 	if len(hexStr)%2 != 0 {
@@ -599,7 +600,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 	// newly accepted transactions.
 	server.NotifyNewTransactions(acceptedTxs)
 
-	// Keep track of all the sendrawtransaction request txns so that they
+	// Keep track of all the sendrawtransaction request intxns so that they
 	// can be rebroadcast if they don't make their way into a block.
 	txD := acceptedTxs[0]
 	iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())

@@ -5,6 +5,7 @@
 package p2p
 
 import (
+	"fmt"
 	"net"
 	"sync/atomic"
 	"time"
@@ -274,7 +275,9 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 			// Don't relay the transaction if there is a bloom
 			// filter loaded and the transaction doesn't match it.
 			if sp.filter.IsLoaded() {
+				fmt.Println("sp.filter.IsLoaded()")
 				if !sp.filter.MatchTxAndUpdate(txD.Tx) {
+					fmt.Println("MATCH")
 					return
 				}
 			}

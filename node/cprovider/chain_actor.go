@@ -6,6 +6,7 @@ package cprovider
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -312,6 +313,12 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 	}
 
 	chainProvider.TxMemPool = mempool.New(&txC)
+	go func() {
+		for {
+			fmt.Printf("#####TXMEMPOOL#####: %+v, chainID: %v\n", chainProvider.TxMemPool.RawMempoolVerbose(true), chainProvider.ChainCtx.ShardID())
+			time.Sleep(5 * time.Second)
+		}
+	}()
 	return nil
 }
 

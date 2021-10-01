@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -90,21 +91,25 @@ func (chainCtl *chainController) runShards() error {
 
 func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notification) {
 	if not.Type != blockchain.NTBlockConnected {
+		fmt.Println("babah")
 		return
 	}
 
 	block, ok := not.Data.(*jaxutil.Block)
 	if !ok {
+		fmt.Println("exit before")
 		chainCtl.logger.Warn().Msg("block notification data is not a *jaxutil.Block")
 		return
 	}
 
 	version := block.MsgBlock().Header.Version()
 	if !version.ExpansionMade() {
+		fmt.Println("exit here")
 		return
 	}
 
 	opts := p2p.ListenOpts{}
+	fmt.Println("########TROUBLE CAN BE HERE: ", block.MsgBlock().Header.BeaconHeader().Shards())
 	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners,
 		block.MsgBlock().Header.BeaconHeader().Shards(), // todo: change this
 		chainCtl.cfg.Node.P2P.ShardDefaultPort); err != nil {
