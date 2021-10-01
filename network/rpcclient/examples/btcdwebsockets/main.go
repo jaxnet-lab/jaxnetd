@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -22,10 +23,10 @@ func main() {
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
 		OnBlockConnected: func(shardId uint32, hash *chainhash.Hash, height int32, t time.Time) {
-			fmt.Printf("Block connected: shard_id %d : %v (%d) %v \n",shardId, hash, height, t)			
+			fmt.Printf("Block connected: shard_id %d : %v (%d) %v \n", shardId, hash, height, t)
 		},
 
-		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*btcutil.Tx) {
+		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*jaxutil.Tx) {
 			fmt.Println("Filtered Block connected")
 			log.Printf("Filtered Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp())
@@ -37,11 +38,11 @@ func main() {
 	}
 
 	// Connect to local jaxnetd RPC server using websockets.
-	//jaxnetdHomeDir := jaxutil.AppDataDir("jaxnetd", false)
-	//certs, err := ioutil.ReadFile(filepath.Join(jaxnetdHomeDir, "rpc.cert"))
-	//if err != nil {
+	// jaxnetdHomeDir := jaxutil.AppDataDir("jaxnetd", false)
+	// certs, err := ioutil.ReadFile(filepath.Join(jaxnetdHomeDir, "rpc.cert"))
+	// if err != nil {
 	//	log.Fatal(err)
-	//}
+	// }
 	connCfg := &rpcclient.ConnConfig{
 		Endpoint:   "ws",
 		Host:       "0.0.0.0:8334",
@@ -111,7 +112,7 @@ func main() {
 	balance, err := client.GetBalance("mijhw2WHeqgimoTqoKMWSCRVs8XFXxk9qx")
 	fmt.Println(balance, err)
 
-	//client.EstimateSmartFee(1, )
+	// client.EstimateSmartFee(1, )
 
 	// Wait until the client either shuts down gracefully (or the user
 	// terminates the process with Ctrl+C).

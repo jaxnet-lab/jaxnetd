@@ -9,9 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"sync"
 
-	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
@@ -342,8 +342,8 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	if r.ShardID != 0 {
 		shard, ok := c.manager.server.shardRPCs[r.ShardID]
 		if !ok {
-			jsonErr := &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidParams.Code,
+			jsonErr := &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidParams.Code,
 				Message: "Shard is not found by provided shard id",
 			}
 			// Marshal and send error response.
