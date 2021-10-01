@@ -169,10 +169,27 @@ func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 
 // BlockHash computes the block identifier hash for the given block BeaconHeader.
 func (h *BeaconHeader) BlockHash() chainhash.Hash {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	_ = writeBeaconBlockHeader(buf, h)
+	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
+	sec := uint32(h.btcAux.Timestamp.Unix())
 
-	return chainhash.DoubleHashH(buf.Bytes())
+	_ = encoder.WriteElements(w,
+		h.version,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.mergeMiningRoot,
+		h.bits,
+		&h.shards,
+		&h.k,
+		&h.voteK,
+		&h.treeEncoding,
+		h.btcAux.Version,
+		&h.btcAux.PrevBlock,
+		&h.btcAux.MerkleRoot,
+		sec,
+		h.btcAux.Bits,
+		h.btcAux.Nonce,
+	)
+	return chainhash.DoubleHashH(w.Bytes())
 }
 
 // BeaconExclusiveHash computes the hash of the BeaconHeader without BtcAux.

@@ -7,13 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.0]
+
 - Removed TxMark, now CSTX (CrossShard Swap Tx aka SwapTx) has own version - `wire.TxVerCrossShardSwap` = 4.
 - Keep only one timestamp filed for all block headers.
-- Removed redundant fields and Copy operations from `blocknode.BeaconBlockNode` and `blocknode.ShardBlockNode`
+- Removed redundant fields and Copy operations at the `blocknode.BeaconBlockNode` and `blocknode.ShardBlockNode` impl.
 - Enabled hash-sorting.
 - Added `ListBeaconBlocksBySerialNumber`, `ListShardBlocksBySerialNumber` RPC calls.
-- 
-
+- Changed precision of JAX to 4 digit.
+- Fix the Tx Mempool Relay.
+- Added HTLC transaction.
+- Added special markers in coinbase SignatureScript of BTC for the safe merge-mining.
+- Changed validation rules of CoinbaseAux (Proof of Burn) at the beacon and shard chains.
+- Introduced the Merkle Mountain Range for the chains. Replaced PrevBlockHash by the BlocksMMRRoot.
+- Removed of some BTC historical&outdated features.
+- Proper implementation of K and VoteK function.
 
 ## [0.3.12-14]
 
@@ -28,7 +36,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added support of the `toml` config format, fixed json-mode for log output;
 - Fixed comparing of EADAddresses and record update of EADAddress when connecting tx;
-- Added optional sorting of the pubkeys in Multisig and MultisigLock scripts. 
+- Added optional sorting of the pubkeys in Multisig and MultisigLock scripts.
 
 ## [0.3.10]
 
@@ -39,7 +47,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.3.9]
 
 - Upgraded format of the EADAddress and script: now is possible to set OR `IP`, OR `URL` of the Agent.
-
 
 ## [0.3.8]
 

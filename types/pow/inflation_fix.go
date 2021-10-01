@@ -61,7 +61,8 @@ func ShardEpoch(height int32) int32 {
 }
 
 var (
-	kValMask   = new(big.Int).Exp(big.NewInt(10), big.NewInt(19), nil)
+	// todo: review this
+	kValMask   = new(big.Int).Lsh(bigOne, 1000) // 1 << 100 == 2^100
 	kPrecision = new(big.Float).SetInt(kValMask)
 
 	oneLsh64 = new(big.Int).Lsh(bigOne, 64)

@@ -31,13 +31,13 @@ type Config struct {
 	LimitUser         string   `yaml:"limit_user" toml:"limit_user"`
 	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" toml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
 	MaxWebsockets     int      `yaml:"rpc_max_websockets" toml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
+	DisableTLS        bool     `yaml:"disable_tls" toml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
 	WSEnable          bool     `yaml:"ws_enable" toml:"ws_enable"`
+
 	// custom handler for auth, instead of standard login and password. First return value indicates if user is authorized or not.
 	// Second return value indicated is it is a limited user
 	// All standard password checks are ignored if this function is provided when creating RPC server
 	AuthProvider func(http.Header) (bool, bool)
-	DisableTLS        bool     `yaml:"disable_tls" toml:"disable_tls"`
-
 	// Listeners defines a slice of listeners for which the RPC Server will
 	// take ownership of and accept connections.  Since the RPC Server takes
 	// ownership of these listeners, they will be closed when the RPC Server

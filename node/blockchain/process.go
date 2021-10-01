@@ -191,7 +191,6 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		}
 	}
 
-	// Handle orphan blocks.
 	if err := b.blockGen.ValidateBlockHeader(blockHeader); err != nil {
 		return false, false, err
 	}
@@ -217,6 +216,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 
+	// Handle orphan blocks.
 	// Accept any orphan blocks that depend on this block (they are
 	// no longer orphans) and repeat for those accepted blocks until
 	// there are no more.

@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -69,8 +70,8 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 		header.SetShards(count + 1)
 	}
 
-	header.SetK(header.Bits() / 2)
-	header.SetVoteK(header.Bits() / 2)
+	header.SetK(pow.PackK(pow.K1))
+	header.SetVoteK(pow.PackK(pow.K1))
 
 	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward, header.BeaconExclusiveHash())
 	if err != nil {
@@ -87,7 +88,6 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 }
 
 func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
-	// pow.ValidateVoteK(header.VoteK())
 	return nil
 }
 

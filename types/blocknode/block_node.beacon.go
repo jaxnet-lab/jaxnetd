@@ -171,7 +171,7 @@ func (node *BeaconBlockNode) CalcPastMedianTimeForN(nBlocks int) time.Time {
 func (node *BeaconBlockNode) CalcMedianVoteK() uint32 {
 	// Create a slice of the previous few block voteKs used to calculate
 	// the median per the number defined by the constant beaconMedianTimeBlocks.
-	nBlocks := pow.KBeaconEpochLen * 2
+	nBlocks := pow.KBeaconEpochLen
 
 	voteKs := make([]*big.Float, nBlocks)
 	numNodes := 0

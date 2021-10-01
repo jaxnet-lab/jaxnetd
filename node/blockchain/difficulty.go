@@ -94,7 +94,8 @@ func (b *BlockChain) calcNextK(lastNode blocknode.IBlockNode) uint32 {
 		return pow.PackK(pow.K1)
 	}
 
-	return lastNode.CalcMedianVoteK()
+	ancestor := lastNode.RelativeAncestor(pow.KBeaconEpochLen)
+	return ancestor.CalcMedianVoteK()
 }
 
 // CalcNextK calculates the required k coefficient

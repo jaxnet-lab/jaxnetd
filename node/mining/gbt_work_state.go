@@ -434,10 +434,9 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetBeaconBlockTemplateResult{
-		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
-		// PreviousHash:  prevHash.String(),
+		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:       header.Timestamp().Unix(),
+		PreviousHash:  prevHash.String(),
 		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
 		Height:        int64(template.Height),
 		SerialID:      prevSerialID + 1,
@@ -529,10 +528,9 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetShardBlockTemplateResult{
-		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.BlocksMerkleMountainRoot().String(), // TODO: FIX MMR ROOT
-		// PreviousHash:  prevHash.String(),
+		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:       header.Timestamp().Unix(),
+		PreviousHash:  prevHash.String(),
 		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
 		Height:        int64(template.Height),
 		SerialID:      prevSerialID + 1,

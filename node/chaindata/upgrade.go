@@ -69,7 +69,7 @@ func MigrateBlockIndex(db database.DB) error {
 	err := db.Update(func(dbTx database.Tx) error {
 		v1BlockIdxBucket := dbTx.Metadata().Bucket(v1BucketName)
 		if v1BlockIdxBucket == nil {
-			return fmt.Errorf("ducket %s does not exist", v1BucketName)
+			return fmt.Errorf("bucket %s does not exist", v1BucketName)
 		}
 
 		log.Info().Msg("Re-indexing block information in the database. This might take a while...")

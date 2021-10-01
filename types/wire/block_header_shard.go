@@ -118,9 +118,31 @@ func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 
 // BlockHash computes the block identifier hash for the BeaconChain Container for the given block.
 func (h *ShardHeader) BlockHash() chainhash.Hash {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteShardBlockHeader(buf, h)
-	return chainhash.DoubleHashH(buf.Bytes())
+	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
+
+	sec := uint32(h.bCHeader.btcAux.Timestamp.Unix())
+	_ = encoder.WriteElements(w,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.bits,
+		h.mergeMiningNumber,
+		h.bCHeader.version,
+		&h.bCHeader.blocksMMRRoot,
+		&h.bCHeader.merkleRoot,
+		&h.bCHeader.mergeMiningRoot,
+		h.bCHeader.bits,
+		&h.bCHeader.shards,
+		&h.bCHeader.k,
+		&h.bCHeader.voteK,
+		&h.bCHeader.treeEncoding,
+		h.bCHeader.btcAux.Version,
+		&h.bCHeader.btcAux.PrevBlock,
+		&h.bCHeader.btcAux.MerkleRoot,
+		sec,
+		h.bCHeader.btcAux.Bits,
+		h.bCHeader.btcAux.Nonce,
+	)
+	return chainhash.DoubleHashH(w.Bytes())
 }
 
 // PoWHash computes the hash for block that will be used to check ProofOfWork.

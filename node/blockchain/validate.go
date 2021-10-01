@@ -63,9 +63,10 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, str)
 			}
 
-			err := chaindata.ValidateVoteK(header)
-			if err != nil {
-				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, err.Error())
+			if prevNode != nil && prevNode.Height() > 3 {
+				if err := chaindata.ValidateVoteK(header); err != nil {
+					return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, err.Error())
+				}
 			}
 		}
 	}

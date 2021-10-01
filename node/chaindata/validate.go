@@ -7,7 +7,6 @@ package chaindata
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -828,25 +827,37 @@ func ValidateVoteK(header wire.BlockHeader) error {
 // ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
 //
 func validateVoteK(prevK, newVoteK uint32) error {
-	voteK := pow.UnpackK(newVoteK)
+	unpackedNewVoteK := pow.UnpackK(newVoteK)
 	// 0 < vote_K < 2^-60
-	if voteK.Sign() < 0 || voteK.Cmp(pow.K1) > 0 {
-		return errors.New("")
+	if unpackedNewVoteK.Sign() < 0 || pow.K1.Cmp(unpackedNewVoteK) < 0 {
+		return fmt.Errorf("voteK is out of bounds 0 < (%v) <= 2^-60", unpackedNewVoteK)
 	}
 
-	bPrevK := pow.CompactToBig(prevK)
-	bNewK := pow.CompactToBig(newVoteK)
+	unpackedPrevK := pow.UnpackK(prevK)
 
-	// ( (prevK - newVoteK) * 100 ) / prevK = deltaPercent
+	switch unpackedPrevK.Cmp(unpackedNewVoteK) {
 
-	// (prevK - newVoteK) * 100 = delta
-	delta := new(big.Int).Mul(new(big.Int).Sub(bPrevK, bNewK), big.NewInt(100))
-	// delta / prevK
-	deltaPercent := new(big.Int).Div(delta, bPrevK).Int64()
+	// -1 if PrevK <  NewK
+	case -1:
+		delta, _ := new(big.Float).Quo(unpackedPrevK, unpackedNewVoteK).Float64()
+		delta = math.Round(delta * 1000)
+		if int(delta) < 990 { // NewK > 1.01*K  /// PrevK / NewK = delta
+			return fmt.Errorf("voteK is out of bounds (%0x) <= 1.01*K; prev K(%0x), delta(%v) ",
+				newVoteK, prevK, delta)
+		}
 
-	matchBounds := deltaPercent <= 1 && deltaPercent >= -3
-	if !matchBounds {
-		return fmt.Errorf("delta between k and voteK is not match bounds -3 <= %v <= 1", deltaPercent)
+	// 0 if PrevK == NewK
+	case 0:
+		return nil
+
+	// +1 if PrevK >  PrevK
+	case 1:
+		delta, _ := new(big.Float).Quo(unpackedNewVoteK, unpackedPrevK).Float64()
+		delta = math.Round(delta * 1000)
+		if int(delta) < 970 { //  delta < 0.97
+			return fmt.Errorf("voteK is out of bounds 0.97*K <= (%0x); prev K(%0x), delta(%v) ",
+				newVoteK, prevK, delta)
+		}
 	}
 
 	return nil
