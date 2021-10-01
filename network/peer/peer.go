@@ -1503,6 +1503,7 @@ out:
 			if peer.cfg.Listeners.OnMemPool != nil {
 				peer.cfg.Listeners.OnMemPool(peer, msg)
 			}
+
 		case *wire.MsgTx:
 			if peer.cfg.Listeners.OnTx != nil {
 				peer.cfg.Listeners.OnTx(peer, msg)
@@ -1686,6 +1687,7 @@ out:
 				// queue.
 				if iv.Type == types.InvTypeBlock ||
 					iv.Type == types.InvTypeWitnessBlock {
+
 					invMsg := wire.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
 					waiting = queuePacket(outMsg{msg: invMsg},
@@ -1807,7 +1809,6 @@ out:
 					peer.lastPingTime = time.Now()
 					peer.statsMtx.Unlock()
 				}
-			default:
 			}
 
 			peer.stallControl <- stallControlMsg{sccSendMessage, msg.msg}
@@ -2164,7 +2165,7 @@ func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	//
 	// Older nodes previously added the IP and port information to the
 	// address manager which proved to be unreliable as an inbound
-	// connection from a peer didn't necessarily mean the peer itselfwe
+	// connection from a peer didn't necessarily mean the peer itself
 	// accepted inbound connections.
 	//
 	// Also, the timestamp is unused in the version message.
@@ -2258,7 +2259,6 @@ func (peer *Peer) negotiateOutboundProtocol() error {
 
 // start begins processing input and output messages.
 func (peer *Peer) start() error {
-	fmt.Printf("Starting peer %+v\n", peer.chain.ShardID())
 	log.Trace().Msgf("Starting peer %s", peer)
 
 	negotiateErr := make(chan error, 1)
