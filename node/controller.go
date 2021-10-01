@@ -190,7 +190,7 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
 	for shardID, ro := range chainCtl.shardsCtl {
-		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), connMgr, chainCtl.logger)
+		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), ro.ctl.p2pServer.P2PConnManager(), chainCtl.logger)
 	}
 
 	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
