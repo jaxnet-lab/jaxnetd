@@ -22,7 +22,7 @@ type MultiChainRPC struct {
 	shardRPCs   map[uint32]*ShardRPC
 	chainsMutex sync.RWMutex
 	helpCache   *helpCacher
-	wsManager   *wsManager
+	wsManager   *WsManager
 }
 
 func NewMultiChainRPC(config *Config, logger zerolog.Logger,
@@ -33,8 +33,8 @@ func NewMultiChainRPC(config *Config, logger zerolog.Logger,
 		beaconRPC:  beaconRPC,
 		shardRPCs:  shardRPCs,
 	}
-	rpc.wsManager = WebSocketManager(rpc)
-
+	wsManager = WebSocketManager(rpc)
+	rpc.wsManager = wsManager
 	return rpc
 }
 
@@ -102,7 +102,7 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			return prcPtr.HandleCommand(cmd, closeChan)
 		}))
 
-	server.wsManager.Start(ctx)
+	wsManager.Start(ctx)
 	server.StartRPC(ctx, rpcServeMux)
 }
 
@@ -128,7 +128,6 @@ func (server *Mux) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (
 	if cmd.Scope == "" {
 		method = jaxjson.LegacyMethod(cmd.Method)
 	}
-
 	handler, ok := server.handlers[method]
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {

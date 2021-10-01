@@ -11,8 +11,11 @@ import (
 	"io"
 	"sync"
 
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/websocket"
+	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -45,7 +48,7 @@ func (s semaphore) release() { <-s }
 type wsClient struct {
 	sync.Mutex
 
-	manager *wsManager
+	manager *WsManager
 	chain   chain.IChainCtx
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
@@ -89,6 +92,8 @@ type wsClient struct {
 	// `rescanblocks` methods.
 	filterData *wsClientFilter
 
+	logger zerolog.Logger
+
 	// Networking infrastructure.
 	serviceRequestSem semaphore
 	ntfnChan          chan []byte
@@ -103,7 +108,7 @@ type wsClient struct {
 // returned client is ready to start.  Once started, the client will process
 // incoming and outgoing messages in separate goroutines complete with queuing
 // and asynchrous handling for long-running operations.
-func newWebsocketClient(manager *wsManager, conn *websocket.Conn,
+func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
 	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 
 	sessionID, err := encoder.RandomUint64()
@@ -112,20 +117,40 @@ func newWebsocketClient(manager *wsManager, conn *websocket.Conn,
 	}
 
 	client := &wsClient{
-		conn:          conn,
-		addr:          remoteAddr,
-		authenticated: authenticated,
-		isAdmin:       isAdmin,
-		sessionID:     sessionID,
-		manager:       manager,
-		addrRequests:  make(map[string]struct{}),
-		spentRequests: make(map[wire.OutPoint]struct{}),
-		// serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
-		ntfnChan: make(chan []byte, 1), // nonblocking sync
-		sendChan: make(chan wsResponse, websocketSendBufferSize),
-		quit:     make(chan struct{}),
+		conn:              conn,
+		addr:              remoteAddr,
+		authenticated:     authenticated,
+		isAdmin:           isAdmin,
+		sessionID:         sessionID,
+		manager:           manager,
+		addrRequests:      make(map[string]struct{}),
+		spentRequests:     make(map[wire.OutPoint]struct{}),
+		logger:            log,
+		serviceRequestSem: makeSemaphore(manager.server.cfg.MaxConcurrentReqs),
+		ntfnChan:          make(chan []byte, 1), // nonblocking sync
+		sendChan:          make(chan wsResponse, websocketSendBufferSize),
+		quit:              make(chan struct{}),
 	}
 	return client, nil
+}
+
+func (c *wsClient) shouldLogReadError(err error) bool {
+	// No logging when the connetion is being forcibly disconnected.
+	select {
+	case <-c.quit:
+		return false
+	default:
+	}
+
+	// No logging when the connection has been disconnected.
+	if err == io.EOF {
+		return false
+	}
+	if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+		return false
+	}
+
+	return true
 }
 
 // inHandler handles all incoming messages for the websocket connection.  It
@@ -142,11 +167,10 @@ out:
 		}
 
 		_, msg, err := c.conn.ReadMessage()
-		c.manager.logger.Debug().Err(err).Msg(fmt.Sprintf("read message <%s>", string(msg)))
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
-			if err != io.EOF {
-				c.manager.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
+			if c.shouldLogReadError(err) {
+				c.logger.Error().Str("address", c.addr).Err(err).Msg("Websocket receive error from")
 			}
 			break out
 		}
@@ -162,9 +186,15 @@ out:
 				Code:    jaxjson.ErrRPCParse.Code,
 				Message: "Failed to parse request: " + err.Error(),
 			}
+
+			if c.manager == nil {
+				c.logger.Error().Msg("WsManager is not initialized")
+				continue
+			}
+
 			reply, err := c.manager.server.createMarshalledReply(nil, nil, jsonErr)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure")
+				c.logger.Error().Err(err).Msg("Failed to marshal parse failure")
 				continue
 			}
 			c.SendMessage(reply, nil)
@@ -204,14 +234,13 @@ out:
 
 			reply, err := c.manager.server.createMarshalledReply(cmd.ID, nil, cmd.Err)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
+				c.logger.Error().Err(err).Msg("Failed to marshal parse failure ")
 				continue
 			}
 			c.SendMessage(reply, nil)
 			continue
 		}
 		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
-
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
@@ -219,10 +248,10 @@ out:
 		// authentication credentials are provided in the request.
 		switch authCmd, ok := cmd.Cmd.(*jaxjson.AuthenticateCmd); {
 		case c.authenticated && ok:
-			c.manager.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
+			c.logger.Warn().Msg(fmt.Sprintf("Websocket client %s is already authenticated", c.addr))
 			break out
 		case !c.authenticated && !ok:
-			c.manager.logger.Warn().Msg("Unauthenticated websocket message received")
+			c.logger.Warn().Msg("Unauthenticated websocket message received")
 			break out
 		case !c.authenticated:
 			// Check credentials.
@@ -232,7 +261,7 @@ out:
 			cmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.authSHA[:])
 			limitcmp := subtle.ConstantTimeCompare(authSha[:], c.manager.server.limitAuthSHA[:])
 			if cmp != 1 && limitcmp != 1 {
-				c.manager.logger.Warn().Msg("Auth failure.")
+				c.logger.Warn().Msg("Auth failure.")
 				break out
 			}
 			c.authenticated = true
@@ -241,7 +270,7 @@ out:
 			// Marshal and send response.
 			reply, err := c.manager.server.createMarshalledReply(cmd.ID, nil, nil)
 			if err != nil {
-				c.manager.logger.Error().Err(err).Msg("Failed to marshal authenticate")
+				c.logger.Error().Err(err).Msg("Failed to marshal authenticate")
 				continue
 			}
 			c.SendMessage(reply, nil)
@@ -309,20 +338,35 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 		err    error
 	)
 
-	shard, ok := c.manager.server.shardRPCs[r.ShardID]
-	if ok {
-		// result, err = c.manager.server.HandleCommand(r, nil)
-		return
+	var provider *cprovider.ChainProvider
+	if r.ShardID != 0 {
+		shard, ok := c.manager.server.shardRPCs[r.ShardID]
+		if !ok {
+			jsonErr := &btcjson.RPCError{
+				Code:    btcjson.ErrRPCInvalidParams.Code,
+				Message: "Shard is not found by provided shard id",
+			}
+			// Marshal and send error response.
+			reply, err := c.manager.server.createMarshalledReply(r.ID, nil, jsonErr)
+			if err != nil {
+				c.logger.Error().Msg("Failed to marshal parse failure ")
+				return
+			}
+			c.SendMessage(reply, nil)
+			return
+		}
+		provider = shard.chainProvider
+	} else {
+		provider = c.manager.server.beaconRPC.chainProvider
 	}
 
 	// Lookup the websocket extension for the command and if it doesn't
 	// exist fallback to handling the command as a standard command.
 	wsHandler, ok := c.manager.handler.handlers[r.Method]
 	if ok {
-		result, err = wsHandler(shard.chainProvider, c, r.Cmd)
+		result, err = wsHandler(provider, c, r.Cmd)
 	} else {
-		// TODO: implement
-		// result, err = c.manager.server.HandleCommand(r, nil)
+		result, err = c.handleRequestScope(r)
 	}
 	reply, err := c.manager.server.createMarshalledReply(r.ID, result, err)
 	if err != nil {
@@ -461,7 +505,6 @@ func (c *wsClient) SendMessage(marshalledJSON []byte, doneChan chan bool) {
 		}
 		return
 	}
-
 	c.sendChan <- wsResponse{msg: marshalledJSON, doneChan: doneChan}
 }
 
@@ -530,4 +573,27 @@ func (c *wsClient) Start() {
 // and the connection is closed.
 func (c *wsClient) WaitForShutdown() {
 	c.wg.Wait()
+}
+
+func (c *wsClient) handleRequestScope(r *ParsedRPCCmd) (interface{}, error) {
+	var mux Mux
+
+	switch r.Scope {
+	case "node":
+		mux = c.manager.server.nodeRPC.Mux
+	case "beacon", "chain":
+		mux = c.manager.server.beaconRPC.Mux
+	case "shard":
+		shardRPC, ok := c.manager.server.shardRPCs[r.ShardID]
+		if !ok {
+			log.Debug().Msgf("Not existing shardID in RPC request %d", r.ShardID)
+			return nil, fmt.Errorf("unknown shardID %d", r.ShardID)
+		}
+		mux = shardRPC.Mux
+	default:
+		log.Debug().Msgf("Unknown RPC request scope %s", r.Scope)
+		return nil, fmt.Errorf("unknown scope %s", r.Scope)
+	}
+
+	return mux.HandleCommand(r, nil)
 }

@@ -12,12 +12,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcjson"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -98,7 +98,7 @@ type NotificationHandlers struct {
 	// function is non-nil.
 	//
 	// Deprecated: Use OnFilteredBlockConnected instead.
-	OnBlockConnected func(hash *chainhash.Hash, height int32, t time.Time)
+	OnBlockConnected func(shardId uint32, hash *chainhash.Hash, height int32, t time.Time)
 
 	// OnFilteredBlockConnected is invoked when a block is connected to the
 	// longest (best) chain.  It will only be invoked if a preceding call to
@@ -235,7 +235,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnBlockConnected(blockHash, blockHeight, blockTime)
+		c.ntfnHandlers.OnBlockConnected(ntfn.ShardID, blockHash, blockHeight, blockTime)
 
 	// OnFilteredBlockConnected
 	case jaxjson.FilteredBlockConnectedNtfnMethod:
@@ -246,7 +246,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		}
 
 		blockHeight, blockHeader, transactions, err :=
-			parseFilteredBlockConnectedParams(ntfn.Params)
+			parseFilteredBlockConnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"connected notification: %v", err)
@@ -282,7 +282,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 		}
 
 		blockHeight, blockHeader, err :=
-			parseFilteredBlockDisconnectedParams(ntfn.Params)
+			parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
@@ -379,18 +379,21 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAccepted
 	case jaxjson.TxAcceptedNtfnMethod:
+		fmt.Println("accepted")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAccepted == nil {
 			return
 		}
 
+		fmt.Println("accepted 2")
 		hash, amt, err := parseTxAcceptedNtfnParams(ntfn.Params)
 		if err != nil {
 			log.Warn().Msgf("Received invalid tx accepted "+
 				"notification: %v", err)
 			return
 		}
+		fmt.Println("accepted 3")
 
 		c.ntfnHandlers.OnTxAccepted(hash, amt)
 
@@ -532,7 +535,7 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 //
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockConnectedParams(params []json.RawMessage, shardID uint32) (int32,
 	wire.BlockHeader, []*jaxutil.Tx, error) {
 
 	if len(params) < 3 {
@@ -552,14 +555,16 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 		return 0, nil, nil, err
 	}
 
-	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.EmptyHeader()
+	blockHeader := jaxutil.NewEmptyBlockHeaderByShardID(shardID)
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, nil, err
 	}
 
 	// Unmarshal third parameter as a slice of hex-encoded strings.
+	if params[2] == nil {
+		return 0, nil, nil, errors.New("hexTransactions is null")
+	}
 	var hexTransactions []string
 	err = json.Unmarshal(params[2], &hexTransactions)
 	if err != nil {
@@ -588,7 +593,7 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage) (int32,
 //
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
-func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
+func parseFilteredBlockDisconnectedParams(params []json.RawMessage, shardID uint32) (int32,
 	wire.BlockHeader, error) {
 	if len(params) < 2 {
 		return 0, nil, wrongNumParams(len(params))
@@ -608,7 +613,7 @@ func parseFilteredBlockDisconnectedParams(params []json.RawMessage) (int32,
 	}
 
 	// Deserialize block header from slice of bytes.
-	blockHeader := chain.BeaconChain.EmptyHeader()
+	blockHeader := jaxutil.NewEmptyBlockHeaderByShardID(shardID)
 	err = blockHeader.Read(bytes.NewReader(blockHeaderBytes))
 	if err != nil {
 		return 0, nil, err
@@ -891,7 +896,8 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 }
 
 // NotifyBlocks registers the client to receive notifications when blocks are
-// connected and disconnected from the main chain.  The notifications are
+// connected and disconnected from the existing chains. Corresponding shard is is taken
+// from the request context.   The notifications are
 // delivered to the notification handlers associated with the client.  Calling
 // this function has no effect if there are no notification handlers and will
 // result in an error if the client is configured to run in HTTP POST mode.
@@ -902,6 +908,31 @@ func (c *Client) NotifyBlocksAsync() FutureNotifyBlocksResult {
 // NOTE: This is a jaxnetd extension and requires a websocket connection.
 func (c *Client) NotifyBlocks() error {
 	return c.NotifyBlocksAsync().Receive()
+}
+
+func (c *Client) StopNotifyBlocksAsync() FutureNotifyBlocksResult {
+	// Not supported in HTTP POST mode.
+	if c.config.HTTPPostMode {
+		return newFutureError(ErrWebsocketsRequired)
+	}
+
+	// Ignore the notification if the client is not interested in
+	// notifications.
+	if c.ntfnHandlers == nil {
+		return newNilFutureResult()
+	}
+
+	cmd := btcjson.NewStopNotifyBlocksCmd()
+	return c.sendCmd(cmd)
+}
+
+// StopNotifyBlocks stops to receive notifications when blocks are
+// connected and disconnected from the existing chains which were previously subscribed
+// by NotifyBlocks request. Corresponding shard is taken from the request context.
+// Calling this function has no effect if there were no previous subscriptions and will
+// result in an error if the client is configured to run in HTTP POST mode.
+func (c *Client) StopNotifyBlocks() error {
+	return c.StopNotifyBlocksAsync().Receive()
 }
 
 // FutureNotifySpentResult is a future promise to deliver the result of a

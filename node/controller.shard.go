@@ -82,7 +82,7 @@ func (chainCtl *chainController) runShards() error {
 			return err
 		}
 
-		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, false)
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true)
 	}
 
 	return nil
