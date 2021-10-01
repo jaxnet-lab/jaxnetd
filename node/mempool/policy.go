@@ -62,7 +62,7 @@ func MinRelayFee(isBeacon bool) float64 {
 		return DefaultMinRelayTxFee.ToCoin(isBeacon)
 	}
 
-	return jaxutil.Amount(1).ToCoin(isBeacon)
+	return jaxutil.Amount(2).ToCoin(isBeacon)
 }
 
 func MinRelayFeeAmount(isBeacon bool) jaxutil.Amount {

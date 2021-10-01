@@ -50,6 +50,15 @@ func HTLCScript(address *jaxutil.AddressPubKeyHash, lockPeriod int32) ([]byte, e
 	return builder.Script()
 }
 
+func HTLCScriptAddress(address *jaxutil.AddressPubKeyHash, lockPeriod int32, params *chaincfg.Params) (*jaxutil.HTLCAddress, error) {
+	script, err := HTLCScript(address, lockPeriod)
+	if err != nil {
+		return nil, err
+	}
+
+	return jaxutil.NewHTLCAddress(script, params)
+}
+
 // isMultiSigLock returns true if the passed script is a MultiSigLockTy transaction, false
 // otherwise.
 // The minimal valid MultiSigLockTy:
@@ -84,7 +93,6 @@ func isHTLC(pops []parsedOpcode) bool {
 		isOpCode(pops[10], OP_RETURN) &&
 		// isOpCode(pops[11], OP_NIP) &&
 		isOpCode(pops[11], OP_ENDIF)
-
 }
 
 // extractHTLCAddrs

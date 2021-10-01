@@ -575,6 +575,9 @@ func addrToKey(addr jaxutil.Address) ([addrKeySize]byte, error) {
 		copy(result[1:], addr.Hash160()[:])
 		return result, nil
 
+		// TODO: fix this for index
+		// case *jaxutil.HTLCAddress:
+
 		// case *jaxutil.EADAddressTy:
 		// 	var result [addrKeySize]byte
 		// 	result[0] = addrKeyTypePubKeyHash

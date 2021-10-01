@@ -495,6 +495,13 @@ func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 				nilAddrErrStr)
 		}
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
+
+	case *jaxutil.HTLCAddress:
+		if addr == nil {
+			return nil, scriptError(ErrUnsupportedAddress,
+				nilAddrErrStr)
+		}
+		return addr.ScriptAddress(), nil
 	}
 
 	str := fmt.Sprintf("unable to generate payment script for unsupported address type %T", addr)

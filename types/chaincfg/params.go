@@ -271,6 +271,7 @@ type Params struct {
 	WitnessPubKeyHashAddrID byte // First byte of a P2WPKH address
 	WitnessScriptHashAddrID byte // First byte of a P2WSH address
 	EADAddressID            byte // First byte of a P2EAD address
+	HTLCAddressID           byte // First byte of a P2HTCL address
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID [4]byte

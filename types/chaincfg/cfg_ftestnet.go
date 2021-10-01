@@ -88,8 +88,9 @@ var FastNetParams = Params{
 	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x03, // starts with QW
 	WitnessScriptHashAddrID: 0x28, // starts with T7n
-	EADAddressID:            0x25, // starts with todo
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	EADAddressID:            0xd8, // starts with B
+	HTLCAddressID:           0x05, // starts with H
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv

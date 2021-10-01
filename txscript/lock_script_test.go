@@ -8,6 +8,7 @@ import (
 	"math"
 	"testing"
 
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -19,20 +20,13 @@ func TestHTLCScript(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addrPubKeyHash := addrPubKey.AddressPubKeyHash()
+	// addrPubKeyHash := addrPubKey.AddressPubKeyHash()
 
 	htlc1, err := HTLCScript(addrPubKey.AddressPubKeyHash(), 2400000)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	htlc2, err := HTLCScript(addrPubKeyHash, 2400000)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	println(DisasmString(htlc1))
-	println(DisasmString(htlc2))
 	pops, err := parseScript(htlc1)
 	if err != nil {
 		t.Fatal(err)
@@ -46,8 +40,30 @@ func TestHTLCScript(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if lockTime != 2400000 {
 		t.Fatal(errors.New("invalid locktime"))
+	}
+
+	for i := 1; i <= 10; i++ {
+		_, addrPubKey, err := genKeys(t, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		htlc1, err := HTLCScript(addrPubKey.AddressPubKeyHash(), int32(2400000+i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		addr, _ := jaxutil.NewHTLCAddress(htlc1, &chaincfg.MainNetParams)
+		fmt.Printf("%x:\t", i)
+		fmt.Println(addr.String())
+		a, err := jaxutil.DecodeAddress(addr.String(), &chaincfg.MainNetParams)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if a.String() != addr.String() {
+			t.Fatal(errors.New("failed"))
+		}
 	}
 
 }
