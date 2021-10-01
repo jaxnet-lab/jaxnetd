@@ -39,67 +39,25 @@ const (
 	// BigK1 is inflation coefficient for the first mining epoch.
 	BigK1 = 3.552713678800501e-15 // 2^−48
 
-	BeaconEpochLen = 2048
-	ShardEpochLen  = 4 * 60 * 24
+	DifficultyBeaconEpochLen = 2048
+	KBeaconEpochLen          = 4096
+	ShardEpochLen            = 16 * 4096
+)
+
+var (
+	// K1 = 1 / (1 << 60 ) == 2^-60
+	K1 = new(big.Float).Quo(
+		new(big.Float).SetFloat64(1),
+		new(big.Float).SetInt(oneLsh60),
+	)
 )
 
 func BeaconEpoch(height int32) int32 {
-	return (height / BeaconEpochLen) + 1
+	return (height / KBeaconEpochLen) + 1
 }
 
 func ShardEpoch(height int32) int32 {
 	return (height / ShardEpochLen) + 1
-}
-
-// ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
-//
-func ValidateVoteK(prevK, newK uint32) bool {
-	bPrevK := CompactToBig(prevK)
-	bNewK := CompactToBig(newK)
-	// ( (prevK - newK) * 100 ) / prevK = deltaPercent
-
-	// (prevK - newK) * 100 = delta
-	delta := new(big.Int).Mul(new(big.Int).Sub(bPrevK, bNewK), big.NewInt(100))
-	// delta / prevK
-	deltaPercent := new(big.Int).Div(delta, bPrevK).Int64()
-	return deltaPercent <= 1 && deltaPercent >= -3
-}
-
-func CalcKCoefficient(height int32, prevK uint32, prevTarget, currentTarget uint32) uint32 {
-	if BeaconEpoch(height) == 1 {
-		return PackK(new(big.Float).SetFloat64(BigK1 * SmallK1))
-	}
-	k := UnpackK(prevK)
-
-	calcSmallK := func() *big.Float {
-		dPrev := new(big.Float).SetInt(CalcWork(prevTarget))
-		dCurrent := new(big.Float).SetInt(CalcWork(currentTarget))
-
-		lamdaF := new(big.Float).SetFloat64(LambdaPow2)
-
-		// k == 1
-		if k.Cmp(new(big.Float).SetFloat64(1)) > 0 {
-			return new(big.Float).SetFloat64(1)
-		}
-
-		// (Lambda^-2) * k^(3/2) // TODO: fix pow of k
-		lK := new(big.Float).Mul(lamdaF, k)
-
-		// D(i-1) / D(i)
-		dd := new(big.Float).Quo(dPrev, dCurrent)
-
-		// [ D(i-1) / D(i) ] < [ (Lambda^2) * k^(3/2) ]
-		if dd.Cmp(lK) < 0 {
-			return k
-		}
-
-		// k * (Lambda^-2)
-		lamdaMin2F := new(big.Float).SetFloat64(LambdaPowMin2)
-		return new(big.Float).Mul(k, lamdaMin2F)
-	}
-
-	nextSmallK := calcSmallK()
-	return PackK(new(big.Float).Mul(nextSmallK, k))
 }
 
 var (
@@ -107,6 +65,7 @@ var (
 	kPrecision = new(big.Float).SetInt(kValMask)
 
 	oneLsh64 = new(big.Int).Lsh(bigOne, 64)
+	oneLsh60 = new(big.Int).Lsh(bigOne, 60)
 
 	jCoefficient = new(big.Float).Quo(
 		new(big.Float).SetInt64(1),
@@ -140,32 +99,4 @@ func MultBitsAndK(bits, k uint32) float64 {
 	dFloat := new(big.Float).SetInt(d)
 	reward, _ := new(big.Float).Mul(dFloat, k1).Float64()
 	return reward
-}
-
-// CalcShardBlockSubsidy returns reward for shard block.
-// - height is block height;
-// - shards is a number of shards that were mined by a miner at the time;
-// - bits is current target;
-// - k is inflation-fix-coefficient.
-func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
-	// ((Di * Ki) / n)  * jaxutil.SatoshiPerJAXCoin
-	d := CalcWork(bits)
-	k1 := UnpackK(k)
-
-	if shards == 0 {
-		shards = 1
-	}
-
-	dRat := new(big.Float).SetInt64(d.Int64())
-	shardsN := new(big.Float).SetInt64(int64(shards))
-
-	// (Di * Ki)
-	dk := new(big.Float).Mul(dRat, k1)
-	// ((Di * Ki) / n)
-	reward, _ := new(big.Float).Quo(dk, shardsN).Float64()
-	if reward == 0 {
-		return 0
-	}
-
-	return int64(reward * 1_0000)
 }

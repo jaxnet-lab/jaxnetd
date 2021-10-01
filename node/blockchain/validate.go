@@ -31,8 +31,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		// Ensure the difficulty specified in the block header matches
 		// the calculated difficulty based on the previous block and
 		// difficulty retarget rules.
-		expectedDifficulty, err := b.calcNextRequiredDifficulty(prevNode,
-			header.Timestamp())
+		expectedDifficulty, err := b.calcNextRequiredDifficulty(prevNode, header.Timestamp())
 		if err != nil {
 			return err
 		}
@@ -53,6 +52,21 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 			str := "block timestamp of %v is not after expected %v"
 			str = fmt.Sprintf(str, header.Timestamp, medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
+		}
+
+		if b.chain.IsBeacon() {
+			expectedK := b.calcNextK(prevNode)
+
+			if expectedK != header.K() {
+				str := fmt.Sprintf("block K value of %0x is not the expected value of %0x, with time(%s) at height(%v)",
+					header.K(), expectedK, header.Timestamp(), prevNode.Height()+1)
+				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, str)
+			}
+
+			err := chaindata.ValidateVoteK(header)
+			if err != nil {
+				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, err.Error())
+			}
 		}
 	}
 

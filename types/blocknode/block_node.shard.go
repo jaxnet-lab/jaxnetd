@@ -80,6 +80,7 @@ func (node *ShardBlockNode) SerialID() int64              { return node.serialID
 func (node *ShardBlockNode) Difficulty() uint64           { return node.difficulty }
 func (node *ShardBlockNode) Bits() uint32                 { return node.header.Bits() }
 func (node *ShardBlockNode) K() uint32                    { return node.header.K() }
+func (node *ShardBlockNode) VoteK() uint32                { return node.header.VoteK() }
 func (node *ShardBlockNode) Parent() IBlockNode           { return node.parent }
 func (node *ShardBlockNode) WorkSum() *big.Int            { return node.workSum }
 func (node *ShardBlockNode) Timestamp() int64             { return node.timestamp }
@@ -168,4 +169,41 @@ func (node *ShardBlockNode) CalcPastMedianTimeForN(nBlocks int) time.Time {
 	// even number, this code will be wrong.
 	medianTimestamp := timestamps[numNodes/2]
 	return time.Unix(medianTimestamp, 0)
+}
+
+func (node *ShardBlockNode) CalcMedianVoteK() uint32 {
+	// Create a slice of the previous few block voteKs used to calculate
+	// the median per the number defined by the constant beaconMedianTimeBlocks.
+	nBlocks := pow.KBeaconEpochLen * 2
+
+	voteKs := make([]*big.Float, nBlocks)
+	numNodes := 0
+	iterNode := IBlockNode(node)
+	for i := 0; i < nBlocks && iterNode != nil; i++ {
+		voteKs[i] = pow.UnpackK(iterNode.VoteK())
+		numNodes++
+
+		iterNode = iterNode.Parent()
+	}
+
+	// Prune the slice to the actual number of available voteKs which
+	// will be fewer than desired near the beginning of the block chain
+	// and sort them.
+	voteKs = voteKs[:numNodes]
+	sort.Sort(bigFloatSorter(voteKs))
+
+	// NOTE: The consensus rules incorrectly calculate the median for even
+	// numbers of blocks.  A true median averages the middle two elements
+	// for a set with an even number of elements in it.   Since the constant
+	// for the previous number of blocks to be used is odd, this is only an
+	// issue for a few blocks near the beginning of the chain.  I suspect
+	// this is an optimization even though the result is slightly wrong for
+	// a few of the first blocks since after the first few blocks, there
+	// will always be an odd number of blocks in the set per the constant.
+	//
+	// This code follows suit to ensure the same rules are used, however, be
+	// aware that should the beaconMedianTimeBlocks constant ever be changed to an
+	// even number, this code will be wrong.
+	medianVoteK := voteKs[numNodes/2]
+	return pow.PackK(medianVoteK)
 }

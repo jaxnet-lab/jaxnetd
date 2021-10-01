@@ -178,8 +178,25 @@ func btcJaxPrefix(pkScript []byte) bool {
 func bchJaxPrefix(pkScript []byte) bool {
 	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
 }
+func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error {
+	coinbaseHash := aux.Tx.TxHash()
+	if !aux.TxMerkle[0].IsEqual(&coinbaseHash) {
+		return errors.New("coinbase hash is not in tx_merkle tree")
+	}
+
+	merkleTree := chainhash.BuildMerkleTreeStore(aux.TxMerkle)
+	root := merkleTree[len(merkleTree)-1]
+	if !root.IsEqual(&merkleRoot) {
+		return errors.New("root of the tx_merkle tree root is not match with blockMerkle root ")
+	}
+	return nil
+}
 
 func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
+	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
+		return false, err
+	}
+
 	if len(aux.Tx.TxOut) != 3 {
 		if !btcJaxPrefix(aux.Tx.TxOut[0].PkScript) && !bchJaxPrefix(aux.Tx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
@@ -309,6 +326,10 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 }
 
 func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.MsgTx, expectedReward int64) error {
+	if err := validateCoinbaseAux(shardHeader.BeaconHeader().MerkleRoot(), &shardHeader.CoinbaseAux); err != nil {
+		return err
+	}
+
 	jaxBurn := jaxnetBurnRawAddress()
 
 	const errMsg = "invalid format of shard coinbase tx: "

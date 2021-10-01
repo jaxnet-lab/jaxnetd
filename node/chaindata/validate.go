@@ -1,18 +1,20 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package chaindata
 
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -38,18 +40,6 @@ const (
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
 	baseSubsidy = 50 * jaxutil.SatoshiPerBitcoin
-)
-
-var (
-	// block91842Hash is one of the two nodes which violate the rules
-	// set forth in BIP0030.  It is defined as a package level variable to
-	// avoid the need to create a new instance every time a check is needed.
-	block91842Hash = newHashFromStr("00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec")
-
-	// block91880Hash is one of the two nodes which violate the rules
-	// set forth in BIP0030.  It is defined as a package level variable to
-	// avoid the need to create a new instance every time a check is needed.
-	block91880Hash = newHashFromStr("00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")
 )
 
 // isNullOutpoint determines whether or not a previous transaction output point
@@ -190,22 +180,6 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	}
 
 	return true
-}
-
-// isBIP0030Node returns whether or not the passed node represents one of the
-// two blocks that violate the BIP0030 rule which prevents transactions from
-// overwriting old ones.
-func IsBIP0030Node(node blocknode.IBlockNode) bool {
-	h := node.GetHash()
-	if node.Height() == 91842 && h.IsEqual(block91842Hash) {
-		return true
-	}
-
-	if node.Height() == 91880 && h.IsEqual(block91880Hash) {
-		return true
-	}
-
-	return false
 }
 
 // CalcBlockSubsidy returns the subsidy amount a block at the provided height
@@ -842,5 +816,38 @@ func ValidateSwapTxStructure(tx *wire.MsgTx, missedUTXO int) error {
 			inLen, outLen, missedUTXO)
 		return NewRuleError(ErrInvalidShardSwapInOuts, str)
 	}
+	return nil
+}
+
+func ValidateVoteK(header wire.BlockHeader) error {
+	err := validateVoteK(header.K(), header.VoteK())
+
+	return err
+}
+
+// ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
+//
+func validateVoteK(prevK, newVoteK uint32) error {
+	voteK := pow.UnpackK(newVoteK)
+	// 0 < vote_K < 2^-60
+	if voteK.Sign() < 0 || voteK.Cmp(pow.K1) > 0 {
+		return errors.New("")
+	}
+
+	bPrevK := pow.CompactToBig(prevK)
+	bNewK := pow.CompactToBig(newVoteK)
+
+	// ( (prevK - newVoteK) * 100 ) / prevK = deltaPercent
+
+	// (prevK - newVoteK) * 100 = delta
+	delta := new(big.Int).Mul(new(big.Int).Sub(bPrevK, bNewK), big.NewInt(100))
+	// delta / prevK
+	deltaPercent := new(big.Int).Div(delta, bPrevK).Int64()
+
+	matchBounds := deltaPercent <= 1 && deltaPercent >= -3
+	if !matchBounds {
+		return fmt.Errorf("delta between k and voteK is not match bounds -3 <= %v <= 1", deltaPercent)
+	}
+
 	return nil
 }

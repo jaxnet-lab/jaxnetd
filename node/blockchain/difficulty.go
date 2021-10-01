@@ -81,14 +81,20 @@ func findPrevTestNetDifficulty(startNode blocknode.IBlockNode, blocksPerRetarget
 
 func (b *BlockChain) calcNextK(lastNode blocknode.IBlockNode) uint32 {
 	if lastNode == nil {
-		return pow.CalcKCoefficient(1, 0, lastNode.Bits(), lastNode.Bits())
+		return pow.PackK(pow.K1)
 	}
 
-	ancestor := lastNode.RelativeAncestor(pow.BeaconEpochLen - 1)
-	if ancestor == nil {
-		ancestor = lastNode
+	// Return the previous block's difficulty requirements if this block
+	// is not at a difficulty retarget interval.
+	if (lastNode.Height()+1)%pow.KBeaconEpochLen != 0 {
+		return lastNode.K()
 	}
-	return pow.CalcKCoefficient(lastNode.Height()+1, lastNode.K(), ancestor.Bits(), lastNode.Bits())
+
+	if pow.BeaconEpoch(lastNode.Height()+1) <= 2 {
+		return pow.PackK(pow.K1)
+	}
+
+	return lastNode.CalcMedianVoteK()
 }
 
 // CalcNextK calculates the required k coefficient

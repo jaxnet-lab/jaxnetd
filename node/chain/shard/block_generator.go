@@ -8,6 +8,7 @@ package shard
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
@@ -95,7 +96,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(_ int32, _ uint32, header wire.BlockHeader) int64 {
-	return pow.CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+	return CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
@@ -118,4 +119,32 @@ func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time,
 	beaconHeader.SetTimestamp(timestamp)
 
 	return beaconHeader, coinbaseAux, nil
+}
+
+// CalcShardBlockSubsidy returns reward for shard block.
+// - height is block height;
+// - shards is a number of shards that were mined by a miner at the time;
+// - bits is current target;
+// - k is inflation-fix-coefficient.
+func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
+	// ((Di * Ki) / n)  * jaxutil.SatoshiPerJAXCoin
+	d := pow.CalcWork(bits)
+	k1 := pow.UnpackK(k)
+
+	if shards == 0 {
+		shards = 1
+	}
+
+	dRat := new(big.Float).SetInt64(d.Int64())
+	shardsN := new(big.Float).SetInt64(int64(shards))
+
+	// (Di * Ki)
+	dk := new(big.Float).Mul(dRat, k1)
+	// ((Di * Ki) / n)
+	reward, _ := new(big.Float).Quo(dk, shardsN).Float64()
+	if reward == 0 {
+		return 0
+	}
+
+	return int64(reward * 1_0000)
 }
