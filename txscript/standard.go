@@ -792,6 +792,10 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
+
+		lockAddr, _ := jaxutil.NewHTLCAddress(pkScript, chainParams)
+		addrs = append(addrs, lockAddr)
+
 	case HTLCScriptTy:
 		_, addrs, requiredSigs, err = extractHTLCAddrs(pops, chainParams)
 		if err != nil {
