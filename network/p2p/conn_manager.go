@@ -5,7 +5,6 @@
 package p2p
 
 import (
-	"fmt"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -171,6 +170,5 @@ func (cm *ConnManager) AddRebroadcastInventory(iv *types.InvVect, data interface
 // RelayTransactions generates and relays inventory vectors for all of the
 // passed transactions to all connected peers.
 func (cm *ConnManager) RelayTransactions(txns []*mempool.TxDesc) {
-	fmt.Printf("relay: shardID", cm.server.chain.ChainCtx.ShardID())
 	cm.server.RelayTransactions(txns)
 }

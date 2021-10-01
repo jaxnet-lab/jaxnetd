@@ -346,7 +346,6 @@ func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 // handler this does not serialize all transactions through a single thread
 // transactions don't rely on the previous one in a linear fashion like blocks.
 func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
-	fmt.Println("OnTx is called")
 	if sp.serverPeerHandler.cfg.BlocksOnly {
 		sp.logger.Trace().Msgf("Ignoring tx %v from %v - blocksonly enabled",
 			msg.TxHash(), sp)
@@ -410,11 +409,9 @@ func (sp *serverPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
 	for _, invVect := range msg.InvList {
 		if invVect.Type == types.InvTypeTx {
-			fmt.Println("inside InvTypeTx yaaay")
 			sp.logger.Trace().Msgf("Ignoring tx %v in inv from %v -- "+
 				"blocksonly enabled", invVect.Hash, sp)
 			if sp.ProtocolVersion() >= wire.BIP0037Version {
-				fmt.Println("well we enter here not good")
 				sp.logger.Info().Msgf("Peer %v is announcing "+
 					"transactions -- disconnecting", sp)
 				sp.Disconnect()
@@ -475,7 +472,6 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 		var err error
 		switch iv.Type {
 		case types.InvTypeWitnessTx:
-			fmt.Println("witness request, shardID:", sp.AssociatedShardID)
 			err = sp.serverPeerHandler.pushTxMsg(sp, &iv.Hash, c, waitChan, wire.WitnessEncoding)
 		case types.InvTypeTx:
 			err = sp.serverPeerHandler.pushTxMsg(sp, &iv.Hash, c, waitChan, wire.BaseEncoding)

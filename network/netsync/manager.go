@@ -7,7 +7,6 @@ package netsync
 
 import (
 	"container/list"
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -1035,7 +1034,6 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	peer := imsg.peer
 	state, exists := sm.peerStates[peer]
 	if !exists {
-		fmt.Println("UNKNOWN PEER")
 		sm.progressLogger.subsystemLogger.Warn().Msgf("Received inv message from unknown peer %s", peer)
 		return
 	}
@@ -1063,7 +1061,6 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	// Ignore invs from peers that aren't the sync if we are not current.
 	// Helps prevent fetching a mass of orphans.
 	if peer != sm.syncPeer && !sm.current() {
-		fmt.Println("no syncronization")
 		return
 	}
 
@@ -1113,7 +1110,6 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
-					fmt.Println("exists")
 					continue
 				}
 			}
@@ -1206,9 +1202,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 		case types.InvTypeTx:
 			// Request the transaction if there is not already a
 			// pending request.
-			fmt.Printf("sm.requestedTxns: %+v\n", sm.requestedTxns)
 			if _, exists := sm.requestedTxns[iv.Hash]; !exists {
-				fmt.Println("!exists, requesting")
 				sm.requestedTxns[iv.Hash] = struct{}{}
 				sm.limitMap(sm.requestedTxns, maxRequestedTxns)
 				state.requestedTxns[iv.Hash] = struct{}{}
@@ -1230,12 +1224,6 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	}
 	state.requestQueue = requestQueue
 	if len(gdmsg.InvList) > 0 {
-		for _, v := range gdmsg.InvList {
-			if v.Type == types.InvTypeWitnessTx {
-				fmt.Printf("######gdmsg.InvList: %v\n", v.Type)
-				fmt.Println("for shardID: ", sm.chain.Chain().ShardID())
-			}
-		}
 		peer.QueueMessage(gdmsg, nil)
 	}
 }

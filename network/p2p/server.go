@@ -719,7 +719,6 @@ out:
 
 		// New inventory to potentially be relayed to other peers.
 		case invMsg := <-server.relayInv:
-			// fmt.Printf("relay tx: %+v\n", invMsg.InvVect)
 			server.handleRelayInvMsg(state, invMsg)
 
 		// Message to broadcast to all connected peers except those

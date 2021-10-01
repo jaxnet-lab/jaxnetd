@@ -1679,10 +1679,6 @@ out:
 			peer.sendQueue <- val.(outMsg)
 
 		case iv := <-peer.outputInvChan:
-			if iv.Type == types.InvTypeTx {
-				// fmt.Println("well we are all the way near the chan")
-			}
-
 			// No handshake?  They'll find out soon enough.
 			if peer.VersionKnown() {
 				// If this is a new block, then we'll blast it
@@ -1690,8 +1686,6 @@ out:
 				// queue.
 				if iv.Type == types.InvTypeBlock ||
 					iv.Type == types.InvTypeWitnessBlock {
-					// fmt.Println("in the iv.Type == types.InvTypeBlock || tiv.Type == types.InvTypeWitnessBlock")
-
 					invMsg := wire.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
 					waiting = queuePacket(outMsg{msg: invMsg},
@@ -1716,12 +1710,9 @@ out:
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
 				iv := invSendQueue.Remove(e).(*types.InvVect)
 
-				// fmt.Println("we read from the queue")
-
 				// Don't send inventory that became known after
 				// the initial check.
 				if peer.knownInventory.Exists(iv) {
-					fmt.Println("ALREADY KNOWN")
 					continue
 				}
 
@@ -2225,7 +2216,6 @@ func (peer *Peer) writeLocalVersionMsg() error {
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
 	if err := peer.readRemoteVersionMsg(); err != nil {
-		fmt.Printf("peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
@@ -2235,7 +2225,6 @@ func (peer *Peer) negotiateInboundProtocol() error {
 
 	err := peer.writeMessage(wire.NewMsgVerAck(), wire.LatestEncoding)
 	if err != nil {
-		fmt.Printf("peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
@@ -2253,17 +2242,14 @@ func (peer *Peer) negotiateInboundProtocol() error {
 //   4. We send our verack.
 func (peer *Peer) negotiateOutboundProtocol() error {
 	if err := peer.writeLocalVersionMsg(); err != nil {
-		fmt.Printf("1 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
 	if err := peer.readRemoteVersionMsg(); err != nil {
-		fmt.Printf("2 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
 	if err := peer.readRemoteVerAckMsg(); err != nil {
-		fmt.Printf("3 peer: %+v, err = %v\n", peer, err)
 		return err
 	}
 
