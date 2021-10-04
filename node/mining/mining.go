@@ -482,6 +482,10 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 
 	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight,
 		g.chainCtx.Params().PowParams.PowLimitBits, prevHeader)
+	if !g.blockChain.Chain().IsBeacon() && g.blockChain.Chain().Params().Net != types.MainNet && reward < 10_0000 {
+		// this basic reward in shards for the testnets.
+		reward = 10_000
+	}
 
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {
