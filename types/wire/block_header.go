@@ -21,7 +21,7 @@ const (
 
 type BlockHeader interface {
 	BeaconHeader() *BeaconHeader
-	SetBeaconHeader(bh *BeaconHeader)
+	SetBeaconHeader(bh *BeaconHeader, beaconAux CoinbaseAux)
 
 	Version() BVersion
 
@@ -126,7 +126,7 @@ func (b BeaconHeaderConstructor) BlockHeaderOverhead() int {
 type ShardHeaderConstructor struct{ ID uint32 }
 
 func (b ShardHeaderConstructor) EmptyHeader() BlockHeader {
-	return &ShardHeader{bCHeader: BeaconHeader{}}
+	return &ShardHeader{beaconHeader: BeaconHeader{}}
 }
 func (b ShardHeaderConstructor) IsBeacon() bool             { return false }
 func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }

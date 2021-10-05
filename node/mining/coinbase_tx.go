@@ -178,6 +178,7 @@ func btcJaxPrefix(pkScript []byte) bool {
 func bchJaxPrefix(pkScript []byte) bool {
 	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
 }
+
 func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error {
 	coinbaseHash := aux.Tx.TxHash()
 	if !aux.TxMerkle[0].IsEqual(&coinbaseHash) {
@@ -317,8 +318,8 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		coinbase.TxOut[2].Value == expectedReward-baseReward
 
 	if !properReward {
-		err = fmt.Errorf(errMsg+"invalid value of second out - has(%d) expected(%d)",
-			coinbase.TxOut[1].Value, baseReward)
+		err = fmt.Errorf(errMsg+"invalid value of second out - has(%d, %d) expected(%d)",
+			coinbase.TxOut[1].Value, coinbase.TxOut[2].Value, expectedReward)
 		return false, err
 	}
 
@@ -326,7 +327,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 }
 
 func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.MsgTx, expectedReward int64) error {
-	if err := validateCoinbaseAux(shardHeader.BeaconHeader().MerkleRoot(), &shardHeader.CoinbaseAux); err != nil {
+	if err := validateCoinbaseAux(shardHeader.BeaconHeader().MerkleRoot(), shardHeader.BeaconCoinbaseAux()); err != nil {
 		return err
 	}
 
@@ -355,7 +356,7 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 		return nil
 	}
 
-	beaconCoinbase := shardHeader.CoinbaseAux.Tx
+	beaconCoinbase := shardHeader.BeaconCoinbaseAux().Tx
 	beaconBurned, err := ValidateBeaconCoinbase(shardHeader.BeaconHeader(), &beaconCoinbase, -1)
 	if err != nil {
 		return err
@@ -364,10 +365,6 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 	if !beaconBurned && !shardJaxBurnReward {
 		return errors.New(errMsg + "BTC & JaxNet not burned, Jax reward prohibited")
 	}
-
-	// if beaconBurned && shardJaxBurnReward {
-	// 	return errors.New(errMsg + "BTC & JaxNet burned, Jax burn prohibited")
-	// }
 
 	return nil
 }

@@ -167,4 +167,8 @@ var MainNetParams = Params{
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
 	HDCoinType: 0x4A, // ASCII for J
+
+	AutoExpand:            true,
+	InitialExpansionRule:  2,
+	InitialExpansionLimit: 4,
 }

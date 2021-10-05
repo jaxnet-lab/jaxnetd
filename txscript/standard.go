@@ -708,8 +708,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -743,8 +742,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the script hash is the 2nd item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -793,14 +791,13 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			addrs = append(addrs, addr)
 		}
 
-		lockAddr, _ := jaxutil.NewHTLCAddress(pkScript, chainParams)
-		addrs = append(addrs, lockAddr)
-
 	case HTLCScriptTy:
 		_, addrs, requiredSigs, err = extractHTLCAddrs(pops, chainParams)
 		if err != nil {
 			return NonStandardTy, nil, 0, err
 		}
+		lockAddr, _ := jaxutil.NewHTLCAddress(pkScript, chainParams)
+		addrs = append(addrs, lockAddr)
 	case NullDataTy:
 		// Null data transactions have no addresses or required
 		// signatures.

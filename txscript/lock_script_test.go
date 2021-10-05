@@ -22,7 +22,7 @@ func TestHTLCScript(t *testing.T) {
 
 	// addrPubKeyHash := addrPubKey.AddressPubKeyHash()
 
-	htlc1, err := HTLCScript(addrPubKey.AddressPubKeyHash(), 2400000)
+	htlc1, err := HTLCScript(addrPubKey, 2400000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func testhtlc(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hashType SigHa
 
 	lockPeriod := int32(24000)
 
-	htlcScript, err := HTLCScript(address.AddressPubKeyHash(), lockPeriod)
+	htlcScript, err := HTLCScript(address, lockPeriod)
 	if err != nil {
 		t.Errorf("failed to make pkscript for %s: %v", msg, err)
 	}

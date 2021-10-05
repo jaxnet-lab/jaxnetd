@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -91,7 +92,7 @@ func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
+func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, _ types.JaxNet) error {
 	_, err := mining.ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
 	return err
 }
@@ -113,7 +114,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, genesisBits uint32, header wire.BlockHeader) int64 {
+func (c *BlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader, _ types.JaxNet) int64 {
 	return calcBlockSubsidy(height)
 }
 

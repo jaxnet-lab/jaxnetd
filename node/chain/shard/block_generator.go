@@ -13,6 +13,7 @@ import (
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -83,8 +84,9 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
-	expectedReward := c.CalcBlockSubsidy(height, chaincfg.ShardPoWBits, block.Header)
+func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error {
+	expectedReward := c.CalcBlockSubsidy(height, block.Header, net)
+
 	shardHeader := block.Header.(*wire.ShardHeader)
 	shardCoinbaseTx := block.Transactions[0]
 
@@ -95,8 +97,14 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) CalcBlockSubsidy(_ int32, _ uint32, header wire.BlockHeader) int64 {
-	return CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
+	reward := CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+
+	if net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
+		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
+	}
+
+	return reward
 }
 
 func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {

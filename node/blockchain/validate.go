@@ -11,7 +11,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -353,11 +352,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 		totalSatoshiOut += txOut.Value
 	}
 
-	reward := b.blockGen.CalcBlockSubsidy(node.Height(), b.chain.Params().PowParams.PowLimitBits, node.Header())
-	if !b.chain.IsBeacon() && b.chain.Params().Net != types.MainNet && reward < 10_0000 {
-		// this basic reward in shards for the testnets.
-		reward = 10_000
-	}
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header(), b.chain.Params().Net)
 
 	expectedSatoshiOut := reward + totalFees
 	if totalSatoshiOut > expectedSatoshiOut {

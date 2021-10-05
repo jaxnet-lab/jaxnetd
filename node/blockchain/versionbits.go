@@ -8,6 +8,7 @@ package blockchain
 import (
 	"math"
 
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -206,6 +207,13 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.B
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
 	expectedVersion := uint32(vbLegacyBlockVersion)
+	if !b.chain.IsBeacon() {
+		if prevNode != nil {
+			return prevNode.Header().Version(), nil
+		}
+		return wire.BVersion(expectedVersion), nil
+	}
+
 	// todo: return this logic in future
 	// for id := 0; id < len(b.chainParams.Deployments); id++ {
 	// 	deployment := &b.chainParams.Deployments[id]
@@ -228,16 +236,33 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.B
 	var limitExceeded bool
 	if prevNode != nil {
 		prevHeight = prevNode.Height()
-		limitExceeded = b.chain.Params().ExpansionLimit > 0 &&
-			(uint32(b.chain.Params().ExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
+		limitExceeded = b.chain.Params().InitialExpansionLimit > 0 &&
+			(uint32(b.chain.Params().InitialExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
 	}
 
-	allowed := !limitExceeded && prevHeight%b.chain.Params().ExpansionRule == 0 && prevHeight != 0
+	// if b.chain.Params().Net != types.MainNet {
+	if b.chain.Params().Net != types.FastTestNet {
+		// at the testnet and dev-nets number of shards must be strictly limited
+		allowed := !limitExceeded && prevHeight%b.chain.Params().InitialExpansionRule == 0 && prevHeight != 0
+		if b.chain.Params().AutoExpand && allowed {
+			version = wire.BVersion(expectedVersion).SetExpansionMade()
+		}
 
-	if b.chain.Params().AutoExpand && allowed {
-		version = wire.BVersion(expectedVersion).
-			SetExpansionApproved().
-			SetExpansionMade()
+		return version, nil
+	}
+
+	if !limitExceeded {
+		// in main-net we launch first shards automatically until InitialExpansionLimit reached
+		allowed := !limitExceeded && prevHeight%b.chain.Params().InitialExpansionRule == 0 && prevHeight != 0
+		if b.chain.Params().AutoExpand && allowed {
+			version = wire.BVersion(expectedVersion).SetExpansionMade()
+			return version, nil
+		}
+	}
+
+	if prevNode != nil && prevNode.ExpansionApproved() {
+		version = wire.BVersion(expectedVersion).SetExpansionMade()
+		return version, nil
 	}
 
 	return version, nil

@@ -74,19 +74,20 @@ func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
 func (node *ShardBlockNode) BlocksMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
 }
-func (node *ShardBlockNode) Version() int32               { return node.header.Version().Version() }
-func (node *ShardBlockNode) Height() int32                { return node.height }
-func (node *ShardBlockNode) SerialID() int64              { return node.serialID }
-func (node *ShardBlockNode) Difficulty() uint64           { return node.difficulty }
-func (node *ShardBlockNode) Bits() uint32                 { return node.header.Bits() }
-func (node *ShardBlockNode) K() uint32                    { return node.header.K() }
-func (node *ShardBlockNode) VoteK() uint32                { return node.header.VoteK() }
-func (node *ShardBlockNode) Parent() IBlockNode           { return node.parent }
-func (node *ShardBlockNode) WorkSum() *big.Int            { return node.workSum }
-func (node *ShardBlockNode) Timestamp() int64             { return node.timestamp }
-func (node *ShardBlockNode) Status() BlockStatus          { return node.status }
-func (node *ShardBlockNode) SetStatus(status BlockStatus) { node.status = status }
-func (node *ShardBlockNode) NewHeader() wire.BlockHeader  { return wire.EmptyShardHeader() }
+func (node *ShardBlockNode) Version() int32                { return node.header.Version().Version() }
+func (node *ShardBlockNode) Height() int32                 { return node.height }
+func (node *ShardBlockNode) SerialID() int64               { return node.serialID }
+func (node *ShardBlockNode) Difficulty() uint64            { return node.difficulty }
+func (node *ShardBlockNode) Bits() uint32                  { return node.header.Bits() }
+func (node *ShardBlockNode) K() uint32                     { return node.header.K() }
+func (node *ShardBlockNode) VoteK() uint32                 { return node.header.VoteK() }
+func (node *ShardBlockNode) Parent() IBlockNode            { return node.parent }
+func (node *ShardBlockNode) WorkSum() *big.Int             { return node.workSum }
+func (node *ShardBlockNode) Timestamp() int64              { return node.timestamp }
+func (node *ShardBlockNode) Status() BlockStatus           { return node.status }
+func (node *ShardBlockNode) SetStatus(status BlockStatus)  { node.status = status }
+func (node *ShardBlockNode) NewHeader() wire.BlockHeader { return wire.EmptyShardHeader() }
+func (node *ShardBlockNode) ExpansionApproved() bool     { return false }
 
 // Header constructs a block ShardHeader from the node and returns it.
 //

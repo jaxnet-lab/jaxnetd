@@ -17,18 +17,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-const (
-	BeaconEpochLength = 2048
-	BeaconTimeDelta   = 600 // in seconds
-
-	BeaconRewardLockPeriod = 24000 // in blocks
-	BeaconBaseReward       = 20    // In JXN
-
-	// ShardEpochLength = 2304  // (1.6 blocks/per hour * 1 day) in blocks
-	ShardEpochLength = 2048
-	ShardTimeDelta   = 37500 // 37.5s in milliseconds
-)
-
 // These variables are the chain proof-of-work limit parameters for each default
 // network.
 var (
@@ -203,9 +191,9 @@ type Params struct {
 	ChainID  uint32
 	IsBeacon bool
 	// These fields related to jaxnet expansion policies and shard-chains mechanism.
-	AutoExpand     bool
-	ExpansionRule  int32
-	ExpansionLimit int32
+	AutoExpand            bool
+	InitialExpansionRule  int32
+	InitialExpansionLimit int32
 
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string

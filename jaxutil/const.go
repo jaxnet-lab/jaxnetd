@@ -5,16 +5,18 @@
 
 package jaxutil
 
+import "gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+
 const (
 	// SatoshiPerBitcoin is the number of satoshi in one bitcoin (1 BTC).
-	SatoshiPerBitcoin = 1e8
+	SatoshiPerBitcoin = chaincfg.SatoshiPerBitcoin
 
 	// MaxSatoshi is the maximum transaction amount allowed in satoshi.
-	MaxSatoshi = 21e6 * SatoshiPerBitcoin
+	MaxSatoshi = chaincfg.MaxSatoshi
 
 	// HaberStornettaPerJAXNETCoin is the number of satoshi in one Beacon Chain coin (1 JAXNET).
-	HaberStornettaPerJAXNETCoin = 1e8
+	HaberStornettaPerJAXNETCoin = chaincfg.HaberStornettaPerJAXNETCoin
 
 	// JuroPerJAXCoin is the number of satoshi in one Shard Chain coin (1 JAX).
-	JuroPerJAXCoin = 1e4
+	JuroPerJAXCoin = chaincfg.JuroPerJAXCoin
 )

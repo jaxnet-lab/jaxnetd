@@ -292,7 +292,7 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 		merkleRoot:        mainNetGenesisMerkleRoot,
 		bits:              bits,
 		mergeMiningNumber: 0,
-		bCHeader: BeaconHeader{
+		beaconHeader: BeaconHeader{
 			version:         1,
 			blocksMMRRoot:   mainNetGenesisHash,
 			merkleRoot:      mainNetGenesisMerkleRoot,
@@ -331,7 +331,7 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 		0xff, 0xff, 0x00, 0x1d, // Bits
 		0x00, 0x00, 0x00, 0x00, // mergeMiningNumber
 
-		// bCHeader
+		// beaconHeader
 		0x01, 0x00, 0x00, 0x00, // Version 1
 		0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 		0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,

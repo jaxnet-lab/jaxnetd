@@ -57,6 +57,7 @@ type IBlockNode interface {
 	CalcPastMedianTimeForN(nBlocks int) time.Time
 	CalcMedianVoteK() uint32
 	RelativeAncestor(distance int32) IBlockNode
+	ExpansionApproved() bool
 	WorkSum() *big.Int
 	Timestamp() int64
 }

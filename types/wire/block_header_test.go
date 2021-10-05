@@ -10,7 +10,6 @@ import (
 	"fmt"
 	rand2 "math/rand"
 	"testing"
-	"time"
 )
 
 func TestBVersion_ExpansionMade(t *testing.T) {
@@ -162,21 +161,20 @@ func TestTreeEncoding(t *testing.T) {
 
 func TestShardHeaderEncoding(t *testing.T) {
 	sh := ShardHeader{}
-	sh.timestamp = time.Now()
-	sh.bCHeader = BeaconHeader{
+	sh.beaconHeader = BeaconHeader{
 		bits: 1,
 	}
 	sh.bits = 3
 	sh.mergeMiningNumber = 4
 	rand.Read(sh.merkleRoot[:])
-	rand.Read(sh.prevBlock[:])
+	rand.Read(sh.blocksMMRRoot[:])
 	sh.mergeMiningNumber = 5
 
 	hashes := make([]byte, 400)
 	coding := make([]byte, 300)
 	var bits uint32 = 222
 
-	sh.bCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+	sh.beaconHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
 
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
@@ -191,11 +189,6 @@ func TestShardHeaderEncoding(t *testing.T) {
 	reader := bufio.NewReader(&b)
 	if err := readShardBlockHeader(reader, &sh2); err != nil {
 		t.Error(err)
-		return
-	}
-
-	if sh.timestamp.Unix() != sh2.timestamp.Unix() {
-		t.Error("Timestamp not equal")
 		return
 	}
 
@@ -214,12 +207,12 @@ func TestShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.prevBlock[:], sh2.prevBlock[:]) != 0 {
+	if bytes.Compare(sh.blocksMMRRoot[:], sh2.blocksMMRRoot[:]) != 0 {
 		t.Error("prevBlock Root not equal")
 		return
 	}
 
-	hashes2, coding2, bits2 := sh.bCHeader.MergedMiningTreeCodingProof()
+	hashes2, coding2, bits2 := sh.beaconHeader.MergedMiningTreeCodingProof()
 
 	if bytes.Compare(hashes, hashes2) != 0 {
 		t.Error("Proof hashes not equal")
@@ -246,16 +239,14 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		Header:     sh,
 	}
 
-	sh.timestamp = time.Now()
-	sh.bCHeader = BeaconHeader{
-		version:   BVersion(7),
-		bits:      1,
-		timestamp: time.Now().Add(1 * time.Hour),
+	sh.beaconHeader = BeaconHeader{
+		version: BVersion(7),
+		bits:    1,
 	}
 	sh.bits = 3
 	sh.mergeMiningNumber = 4
 	rand.Read(sh.merkleRoot[:])
-	rand.Read(sh.prevBlock[:])
+	rand.Read(sh.blocksMMRRoot[:])
 	sh.mergeMiningNumber = 5
 
 	hashes := make([]byte, 400)
@@ -265,14 +256,14 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	var bits uint32 = 222
 
-	sh.bCHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
+	sh.beaconHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
 
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
 
 	bCopy := block.Copy()
 
-	fmt.Println("Clone 1", sh.bCHeader.treeEncoding)
+	fmt.Println("Clone 1", sh.beaconHeader.treeEncoding)
 	fmt.Println("Clone 2", bCopy.Header.BeaconHeader().treeEncoding)
 
 	if err := bCopy.BtcEncode(wr, 0, BaseEncoding); err != nil {
@@ -294,11 +285,6 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	sh2 := block2.Header.(*ShardHeader)
 
-	if sh.timestamp.Unix() != sh2.timestamp.Unix() {
-		t.Error("Timestamp not equal")
-		return
-	}
-
 	if sh.bits != sh2.bits {
 		t.Error("Bits not equal")
 		return
@@ -314,12 +300,12 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.prevBlock[:], sh2.prevBlock[:]) != 0 {
+	if bytes.Compare(sh.blocksMMRRoot[:], sh2.blocksMMRRoot[:]) != 0 {
 		t.Error("prevBlock Root not equal")
 		return
 	}
 
-	hashes2, coding2, bits2 := sh2.bCHeader.MergedMiningTreeCodingProof()
+	hashes2, coding2, bits2 := sh2.beaconHeader.MergedMiningTreeCodingProof()
 
 	fmt.Println(hashes2, coding2, bits2)
 	if bytes.Compare(hashes, hashes2) != 0 {

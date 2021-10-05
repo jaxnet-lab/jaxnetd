@@ -90,7 +90,6 @@ func (node *BeaconBlockNode) NewHeader() wire.BlockHeader  { return new(wire.Bea
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) Header() wire.BlockHeader {
 	return node.header
-	// return node.header.Copy()
 }
 
 // Ancestor returns the ancestor block node at the provided height by following
@@ -203,4 +202,23 @@ func (node *BeaconBlockNode) CalcMedianVoteK() uint32 {
 	// even number, this code will be wrong.
 	medianVoteK := voteKs[numNodes/2]
 	return pow.PackK(medianVoteK)
+}
+
+func (node *BeaconBlockNode) ExpansionApproved() bool {
+	nBlocks := 1024
+
+	numNodes := 0
+	iterNode := IBlockNode(node)
+	expansionApprove := 0
+	for i := 0; i < nBlocks && iterNode != nil; i++ {
+		version := iterNode.Header().Version()
+		if version.ExpansionApproved() {
+			expansionApprove += 1
+		}
+		numNodes++
+
+		iterNode = iterNode.Parent()
+	}
+
+	return expansionApprove >= 768
 }

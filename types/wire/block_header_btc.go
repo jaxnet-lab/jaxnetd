@@ -98,16 +98,7 @@ func (h *BTCBlockAux) Serialize(w io.Writer) error {
 // and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 func (h *BTCBlockAux) UpdateCoinbaseScript(coinbaseScript []byte) {
 	h.Tx.TxIn[0].SignatureScript = coinbaseScript
-	if len(h.TxMerkle) < 1 {
-		h.TxMerkle = []chainhash.Hash{h.Tx.TxHash()}
-		return
-	} else {
-		h.TxMerkle[0] = h.Tx.TxHash()
-	}
-
-	merkleTree := chainhash.BuildMerkleTreeStore(h.TxMerkle)
-	h.MerkleRoot = *merkleTree[len(merkleTree)-1]
-
+	h.MerkleRoot = h.CoinbaseAux.UpdatedMerkleRoot()
 }
 
 // Copy creates a deep copy of a BlockHeader so that the original does not get
@@ -186,6 +177,31 @@ func (CoinbaseAux) New() CoinbaseAux {
 		Tx:       tx,
 		TxMerkle: []chainhash.Hash{tx.TxHash()},
 	}
+}
+
+func (CoinbaseAux) FromBlock(block *MsgBlock) CoinbaseAux {
+	tx := block.Transactions[0].Copy()
+	aux := CoinbaseAux{
+		Tx:       *tx,
+		TxMerkle: make([]chainhash.Hash, len(block.Transactions)),
+	}
+	for i, transaction := range block.Transactions {
+		aux.TxMerkle[i] = transaction.TxHash()
+	}
+
+	return aux
+}
+
+func (h *CoinbaseAux) UpdatedMerkleRoot() chainhash.Hash {
+	if len(h.TxMerkle) <= 1 {
+		h.TxMerkle = []chainhash.Hash{h.Tx.TxHash()}
+	} else {
+		h.TxMerkle[0] = h.Tx.TxHash()
+	}
+
+	merkleTree := chainhash.BuildMerkleTreeStore(h.TxMerkle)
+
+	return *merkleTree[len(merkleTree)-1]
 }
 
 // Copy creates a deep copy of a CoinbaseAux so that the original does not get

@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -254,9 +255,9 @@ type ChainBlockGenerator interface {
 	AcceptBlock(blockHeader wire.BlockHeader) error
 
 	ValidateBlockHeader(blockHeader wire.BlockHeader) error
-	ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error
+	ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error
 
-	CalcBlockSubsidy(height int32, genesisBits uint32, header wire.BlockHeader) int64
+	CalcBlockSubsidy(height int32, header wire.BlockHeader, net types.JaxNet) int64
 }
 
 // BlockChain provides functions for working with the bitcoin block chain.

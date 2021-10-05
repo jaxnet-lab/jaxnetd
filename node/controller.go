@@ -44,7 +44,7 @@ type chainController struct {
 
 	// -------------------------------
 
-	miner   *cpuminer.MultiMiner
+	miner   *cpuminer.CPUMiner
 	metrics IMetricManager
 }
 
@@ -99,7 +99,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if chainCtl.cfg.Node.EnableCPUMiner {
-		// chainCtl.InitCPUMiner(chainCtl.beacon.p2pServer.ConnectedCount)
 		chainCtl.InitCPUMiner(func() int32 { return 1 })
 		chainCtl.wg.Add(1)
 		go func() {
@@ -114,20 +113,19 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 }
 
 func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
-	minerSet := map[string]*cpuminer.Config{
-		"beacon": {
-			ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
-			BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
-			MiningAddrs:            chainCtl.beacon.chainProvider.MiningAddrs,
+	miningAddrs := chainCtl.beacon.chainProvider.MiningAddrs
+	beacon := cpuminer.Config{
+		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
+		BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
 
-			ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
-			IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
-			ConnectedCount: connectedCount,
-		},
+		ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
+		IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
+		ConnectedCount: connectedCount,
 	}
 
-	for _, ro := range chainCtl.shardsCtl {
-		minerSet[ro.ctl.chain.Name()] = &cpuminer.Config{
+	shards := map[uint32]cpuminer.Config{}
+	for shardID, ro := range chainCtl.shardsCtl {
+		shards[shardID] = cpuminer.Config{
 			ChainParams:            ro.ctl.chainProvider.ChainParams,
 			BlockTemplateGenerator: ro.ctl.chainProvider.BlkTmplGenerator(),
 			MiningAddrs:            ro.ctl.chainProvider.MiningAddrs,
@@ -137,12 +135,13 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 		}
 	}
 
-	chainCtl.miner = cpuminer.NewMiner(minerSet, chainCtl.logger.With().Str("ctx", "miner").Logger())
+	chainCtl.miner = cpuminer.New(beacon, shards, miningAddrs[0],
+		chainCtl.logger.With().Str("ctx", "miner").Logger())
 	return
 }
 
 func (chainCtl *chainController) runShardMiner(chainProvider *cprovider.ChainProvider) {
-	chainCtl.miner.AddChainMiner(chainProvider.ChainCtx.Name(), &cpuminer.Config{
+	chainCtl.miner.AddChain(chainProvider.ChainCtx.ShardID(), cpuminer.Config{
 		ChainParams:            chainProvider.ChainParams,
 		BlockTemplateGenerator: chainProvider.BlkTmplGenerator(),
 		MiningAddrs:            chainProvider.MiningAddrs,

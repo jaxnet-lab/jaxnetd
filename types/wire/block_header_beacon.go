@@ -85,8 +85,8 @@ func NewBeaconBlockHeader(version BVersion, blocksMerkleMountainRoot, merkleRoot
 
 }
 
-func (h *BeaconHeader) BeaconHeader() *BeaconHeader      { return h }
-func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader) { *h = *bh }
+func (h *BeaconHeader) BeaconHeader() *BeaconHeader                     { return h }
+func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader, _ CoinbaseAux) { *h = *bh }
 
 func (h *BeaconHeader) Bits() uint32        { return h.bits }
 func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
