@@ -249,7 +249,7 @@ func New(config *Config) (*BlockChain, error) {
 }
 
 type ChainBlockGenerator interface {
-	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
 	AcceptBlock(blockHeader wire.BlockHeader) error

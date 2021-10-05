@@ -270,7 +270,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr jaxutil.Address
-		if !useCoinbaseValue && len(miningAddrs) == 0 {
+		if !useCoinbaseValue && len(miningAddrs) <= 1 {
 			payAddr = miningAddrs[0]
 		}
 		if !useCoinbaseValue && len(miningAddrs) > 0 {
@@ -347,7 +347,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			case false:
 				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 			}
-
+			// rare case, impossible with current rules, remove it
 			if len(template.Block.Transactions[0].TxOut) < 2 && !burnReward {
 				template.Block.Transactions[0].TxOut[0].PkScript = pkScript
 			}
@@ -581,9 +581,15 @@ type coinbaseData struct {
 func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
 	reply := new(coinbaseData)
 
+	reply.CoinbaseAux = gbtCoinbaseAux
+	if state.generator.blockChain.Chain().IsBeacon() {
+		value := template.Block.Transactions[0].TxOut[1].Value + template.Block.Transactions[0].TxOut[2].Value
+		reply.CoinbaseValue = &value
+	} else {
+		reply.CoinbaseValue = &template.Block.Transactions[0].TxOut[1].Value
+	}
+
 	if useCoinbaseValue {
-		reply.CoinbaseAux = gbtCoinbaseAux
-		reply.CoinbaseValue = &template.Block.Transactions[0].TxOut[0].Value
 		return reply, nil
 	}
 

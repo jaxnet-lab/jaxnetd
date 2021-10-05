@@ -609,8 +609,7 @@ mempoolLoop:
 		// Calculate the final transaction priority using the input
 		// value age sum as well as the adjusted transaction size.  The
 		// formula is: sum(inputValue * inputAge) / adjustedTxSize
-		prioItem.priority = CalcPriority(tx.MsgTx(), utxos,
-			nextHeight)
+		prioItem.priority = CalcPriority(tx.MsgTx(), utxos, nextHeight)
 
 		// Calculate the fee in Satoshi/kB.
 		prioItem.feePerKB = txDesc.FeePerKB
@@ -677,12 +676,10 @@ mempoolLoop:
 			// witness commitment.
 			coinbaseCopy := jaxutil.NewTx(coinbaseTx.MsgTx().Copy())
 			coinbaseCopy.MsgTx().TxIn[0].Witness = [][]byte{
-				bytes.Repeat([]byte("a"),
-					chaindata.CoinbaseWitnessDataLen),
+				bytes.Repeat([]byte("a"), chaindata.CoinbaseWitnessDataLen),
 			}
 			coinbaseCopy.MsgTx().AddTxOut(&wire.TxOut{
-				PkScript: bytes.Repeat([]byte("a"),
-					chaindata.CoinbaseWitnessPkScriptLength),
+				PkScript: bytes.Repeat([]byte("a"), chaindata.CoinbaseWitnessPkScriptLength),
 			})
 
 			// In order to accurately account for the weight

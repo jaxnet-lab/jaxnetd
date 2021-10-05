@@ -33,15 +33,14 @@ func NewChainBlockGenerator(beacon BeaconBlockProvider) *BlockGenerator {
 	return &BlockGenerator{beacon: beacon}
 }
 
-func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
 	}
 
-	// todo: put actual MMR
-	return wire.NewShardBlockHeader(prevHash, merkleRootHash, bits, *header, cAux), nil
+	return wire.NewShardBlockHeader(blocksMMRRoot, merkleRootHash, bits, *header, cAux), nil
 }
 
 func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
