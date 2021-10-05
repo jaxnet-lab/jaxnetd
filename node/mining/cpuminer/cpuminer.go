@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -214,9 +215,13 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 	}
 
 	// The block was accepted.
-	coinbaseTx := block.MsgBlock().Transactions[0].TxOut[0]
-	miner.log.Info().Msgf("Block submitted via CPU miner accepted (hash %s, amount %v)",
-		block.Hash(), jaxutil.Amount(coinbaseTx.Value))
+	reward := block.MsgBlock().Transactions[0].TxOut[1].Value
+	if chainID == 0 {
+		reward += block.MsgBlock().Transactions[0].TxOut[2].Value
+	}
+
+	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, amount %v)", chainID,
+		block.Hash(), jaxutil.Amount(reward))
 	return true
 }
 
@@ -310,6 +315,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 			atLeastOneMined := false
 			// The block is solved when the new block hash is less
 			// than the target difficulty.  Yay!
+
 			if pow.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 				if miner.beacon.ChainParams.PowParams.HashSorting {
 					if pow.ValidateHashSortingRule(pow.HashToBig(&hash),
@@ -319,6 +325,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 						job.beacon.notSolved = false
 					}
 				} else {
+					fmt.Printf("solution: %+v\n", hash.String())
 					atLeastOneMined = true
 					miner.updateHashes <- hashesCompleted
 					job.beacon.notSolved = false
@@ -437,6 +444,7 @@ out:
 		// submission, since the current block will be changing and
 		// this would otherwise end up building a new block template on
 		// a block that is in the process of becoming stale.
+		fmt.Println("we lock")
 		miner.submitBlockLock.Lock()
 
 		needToSleep := miner.updateTasks(job)
@@ -452,6 +460,7 @@ out:
 			time.Sleep(time.Second)
 			continue
 		}
+		miner.submitBlockLock.Unlock()
 
 		// Attempt to solve the block.  The function will exit early
 		// with false when conditions that trigger a stale block, so
@@ -493,7 +502,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 		}
 
 		if job.shards[shardID].blockHeight < curHeight+1 {
-			template, err := miner.beacon.BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, types.BurnJaxReward)
+			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, types.BurnJaxReward)
 			if err != nil {
 				miner.log.Error().Err(err).Msg("Failed to create new block template")
 				return false
@@ -559,6 +568,7 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 }
 
 func (miner *CPUMiner) submitTask(job *miningJob) {
+	fmt.Println("We submit task!!!!!")
 	if !job.beacon.notSolved && !job.beacon.submitted {
 		block := jaxutil.NewBlock(&job.beacon.block)
 		job.beacon.submitted = miner.submitBlock(0, block)
