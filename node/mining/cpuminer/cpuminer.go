@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -325,7 +324,6 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 						job.beacon.notSolved = false
 					}
 				} else {
-					fmt.Printf("solution: %+v\n", hash.String())
 					atLeastOneMined = true
 					miner.updateHashes <- hashesCompleted
 					job.beacon.notSolved = false
@@ -444,7 +442,6 @@ out:
 		// submission, since the current block will be changing and
 		// this would otherwise end up building a new block template on
 		// a block that is in the process of becoming stale.
-		fmt.Println("we lock")
 		miner.submitBlockLock.Lock()
 
 		needToSleep := miner.updateTasks(job)
@@ -568,7 +565,6 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 }
 
 func (miner *CPUMiner) submitTask(job *miningJob) {
-	fmt.Println("We submit task!!!!!")
 	if !job.beacon.notSolved && !job.beacon.submitted {
 		block := jaxutil.NewBlock(&job.beacon.block)
 		job.beacon.submitted = miner.submitBlock(0, block)
