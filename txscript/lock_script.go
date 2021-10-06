@@ -57,7 +57,7 @@ func HTLCScript(address jaxutil.Address, lockPeriod int32) ([]byte, error) {
 	return builder.Script()
 }
 
-func HTLCScriptAddress(address *jaxutil.AddressPubKeyHash, lockPeriod int32, params *chaincfg.Params) (*jaxutil.HTLCAddress, error) {
+func HTLCScriptAddress(address jaxutil.Address, lockPeriod int32, params *chaincfg.Params) (*jaxutil.HTLCAddress, error) {
 	script, err := HTLCScript(address, lockPeriod)
 	if err != nil {
 		return nil, err
