@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 	"math"
 	"strconv"
 
@@ -152,7 +153,7 @@ func (server *ShardRPC) handleListBlocksBySerialNumber(cmd interface{}, closeCha
 	for offset = 0; offset <= absLimit; offset++ {
 		block, err := server.getBlockBySerialID(c.Verbosity, c.SerialNumber+offset*sign)
 		if err != nil {
-			return nil, err
+			return output, rpcutli.GetErrorBasedOnOutLength(output, err)
 		}
 
 		output = append(output, block)

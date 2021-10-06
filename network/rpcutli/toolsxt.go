@@ -378,3 +378,11 @@ func GetTxVirtualSize(tx *jaxutil.Tx) int64 {
 	return (chaindata.GetTransactionWeight(tx) + (chaindata.WitnessScaleFactor - 1)) /
 		chaindata.WitnessScaleFactor
 }
+
+func GetErrorBasedOnOutLength(out []interface{}, err error) error {
+	if len(out) == 0 {
+		return err
+	}
+
+	return nil
+}
