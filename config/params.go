@@ -22,7 +22,7 @@ type params struct {
 }
 
 // mainNetParams contains parameters specific to the main network
-// (types.TestNet3).  NOTE: The RPC port is intentionally different than the
+// (types.TestNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation because jaxnetd does not handle wallet requests.  The
 // separate wallet process listens on the well-known port and forwards requests
 // it does not handle on to jaxnetd.  This approach allows the wallet process
@@ -33,7 +33,7 @@ var mainNetParams = params{
 }
 
 // testNet3Params contains parameters specific to the test network (version 3)
-// (types.TestNet3).  NOTE: The RPC port is intentionally different than the
+// (types.TestNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
 var testNet3Params = params{
 	Params:  &chaincfg.TestNet3Params,
@@ -51,14 +51,14 @@ var simNetParams = params{
 // time of writing, jaxnetd currently places blocks for testnet version 3 in the
 // data and log directory "testnet", which does not match the Name field of the
 // chaincfg parameters.  This function can be used to override this directory
-// name as "testnet" when the passed active network matches types.TestNet3.
+// name as "testnet" when the passed active network matches types.TestNet.
 //
 // A proper upgrade to move the data and log directories for this network to
 // "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {
-	case types.TestNet3:
+	case types.TestNet:
 		return "testnet"
 	default:
 		return chainParams.Name

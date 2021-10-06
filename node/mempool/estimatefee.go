@@ -50,7 +50,7 @@ const (
 
 	btcPerSatoshi    = 1e-8
 	jaxNetPerSatoshi = 1e-8
-	jaxPerSatoshi    = 1e-3
+	jaxPerSatoshi    = 1e-4
 )
 
 var (

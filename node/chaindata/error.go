@@ -225,6 +225,15 @@ const (
 	// ErrInvalidShardSwapInOuts indicates that tx content not match
 	// with ShardsSwapTx requirements.
 	ErrInvalidShardSwapInOuts
+
+	// ErrHashSortingRuleNotMatch indicates that block hash not match
+	// with hash sorting mask for current chain
+	ErrHashSortingRuleNotMatch
+
+	// ErrUnexpectedKValue indicates specified K value do not align with
+	// the expected value either because it doesn't match the calculated
+	// valued based on protocol rules or it is out of the valid
+	ErrUnexpectedKValue
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -273,6 +282,8 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrInvalidAncestorBlock:      "ErrInvalidAncestorBlock",
 	ErrPrevBlockNotBest:          "ErrPrevBlockNotBest",
 	ErrInvalidShardSwapInOuts:    "ErrInvalidShardSwapInOuts",
+	ErrHashSortingRuleNotMatch:   "ErrHashSortingRuleNotMatch",
+	ErrUnexpectedKValue:          "ErrUnexpectedKValue",
 }
 
 // String returns the ErrorCode as a human-readable name.

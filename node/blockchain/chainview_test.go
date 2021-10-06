@@ -31,10 +31,10 @@ func chainedNodes(parent blocknode.IBlockNode, numNodes int) []blocknode.IBlockN
 		header := parent.NewHeader()
 		header.SetNonce(testNoncePrng.Uint32())
 		if tip != nil {
-			header.SetPrevBlock(tip.GetHash())
+			// header.SetPrevBlock(tip.GetHash())
 		}
 
-		nodes[i] = blocknode.NewBeaconBlockNode(header, tip)
+		// nodes[i] = blocknode.NewBeaconBlockNode(header, tip)
 		tip = nodes[i]
 	}
 	return nodes

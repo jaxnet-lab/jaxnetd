@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2016 The btcsuite developers
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2020-2021 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,14 +15,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
-)
-
-const (
-	BeaconEpochLength = 2048
-	BeaconTimeDelta   = 600 // in seconds
-
-	ShardEpochLength = 4 * 60 * 24 // (4 blocks/per minute * 1 hour * 1 day) in seconds
-	ShardTimeDelta   = 15          // in seconds
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -134,6 +126,7 @@ type GenesisBlockOpts struct {
 	Nonce      uint32
 	BCHeader   wire.BeaconHeader
 }
+
 type PowParams struct {
 
 	// PowLimit defines the highest allowed proof of work value for a block
@@ -173,6 +166,12 @@ type PowParams struct {
 
 	// GenerateSupported specifies whether or not CPU mining is allowed.
 	GenerateSupported bool
+
+	// Enable/disable hash sorting feature
+	HashSorting bool
+
+	// Maximum chain ID count
+	ChainIDCount uint32
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be
@@ -192,9 +191,9 @@ type Params struct {
 	ChainID  uint32
 	IsBeacon bool
 	// These fields related to jaxnet expansion policies and shard-chains mechanism.
-	AutoExpand     bool
-	ExpansionRule  int32
-	ExpansionLimit int32
+	AutoExpand            bool
+	InitialExpansionRule  int32
+	InitialExpansionLimit int32
 
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string
@@ -260,6 +259,7 @@ type Params struct {
 	WitnessPubKeyHashAddrID byte // First byte of a P2WPKH address
 	WitnessScriptHashAddrID byte // First byte of a P2WSH address
 	EADAddressID            byte // First byte of a P2EAD address
+	HTLCAddressID           byte // First byte of a P2HTCL address
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID [4]byte
@@ -277,8 +277,8 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 	cfg.GenesisHash = hash
 	cfg.IsBeacon = false
 
-	cfg.PowParams.TargetTimePerBlock = time.Second * ShardTimeDelta
-	cfg.PowParams.TargetTimespan = time.Second * ShardTimeDelta * ShardEpochLength
+	cfg.PowParams.TargetTimePerBlock = time.Millisecond * ShardTimeDelta
+	cfg.PowParams.TargetTimespan = time.Millisecond * ShardTimeDelta * ShardEpochLength
 
 	cfg.PowParams.PowLimit = shardChainPowLimit
 	cfg.PowParams.PowLimitBits = ShardPoWBits

@@ -56,11 +56,11 @@ type MsgFilterLoad struct {
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterLoad) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	if pver < BIP0037Version {
-		str := fmt.Sprintf("filterload message invalid for protocol "+
-			"version %d", pver)
-		return messageError("MsgFilterLoad.BtcDecode", str)
-	}
+	// if pver < BIP0037Version {
+	// 	str := fmt.Sprintf("filterload message invalid for protocol "+
+	// 		"version %d", pver)
+	// 	return messageError("MsgFilterLoad.BtcDecode", str)
+	// }
 
 	var err error
 	msg.Filter, err = encoder.ReadVarBytes(r, pver, MaxFilterLoadFilterSize,
@@ -86,11 +86,11 @@ func (msg *MsgFilterLoad) BtcDecode(r io.Reader, pver uint32, enc encoder.Messag
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgFilterLoad) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	if pver < BIP0037Version {
-		str := fmt.Sprintf("filterload message invalid for protocol "+
-			"version %d", pver)
-		return messageError("MsgFilterLoad.BtcEncode", str)
-	}
+	// if pver < BIP0037Version {
+	// 	str := fmt.Sprintf("filterload message invalid for protocol "+
+	// 		"version %d", pver)
+	// 	return messageError("MsgFilterLoad.BtcEncode", str)
+	// }
 
 	size := len(msg.Filter)
 	if size > MaxFilterLoadFilterSize {

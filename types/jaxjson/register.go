@@ -302,22 +302,29 @@ func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag) error {
 	return nil
 }
 
+func DropAllCmds() {
+	registerLock.Lock()
+	defer registerLock.Unlock()
+
+	concreteTypeToMethod = map[reflect.Type]MethodName{}
+	methodToConcreteType = map[string]reflect.Type{}
+	methodToInfo = map[string]methodInfo{}
+}
+
 // MustRegisterCmd performs the same function as RegisterCmd except it panics
 // if there is an error.  This should only be called from package init
 // functions.
 func MustRegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) {
 	scopedMethodName := ScopedMethod(scope, method)
 	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
-		panic(fmt.Sprintf("failed to register type %q: %v\n", method,
-			err))
+		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
 	}
 }
 
 func MustRegisterLegacyCmd(method string, cmd interface{}, flags UsageFlag) {
 	scopedMethodName := LegacyMethod(method)
 	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
-		panic(fmt.Sprintf("failed to register type %q: %v\n", method,
-			err))
+		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
 	}
 }
 

@@ -1,4 +1,5 @@
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -117,6 +118,8 @@ var MainNetParams = Params{
 		ReduceMinDifficulty:      false,
 		MinDiffReductionTime:     0,
 		GenerateSupported:        false,
+		HashSorting:              true,
+		ChainIDCount:             4096, // 2^12
 	},
 
 	// Checkpoints ordered from oldest to newest.
@@ -153,8 +156,9 @@ var MainNetParams = Params{
 	ScriptHashAddrID:        0x05, // starts with 3
 	PrivateKeyID:            0x80, // starts with 5 (uncompressed) or K (compressed)
 	WitnessPubKeyHashAddrID: 0x06, // starts with p2
-	EADAddressID:            0x25, // starts with todo
 	WitnessScriptHashAddrID: 0x0A, // starts with 7Xh
+	EADAddressID:            0xd8, // starts with B
+	HTLCAddressID:           0x05, // starts with H
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x88, 0xad, 0xe4}, // starts with xprv
@@ -162,5 +166,9 @@ var MainNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 0,
+	HDCoinType: 0x4A, // ASCII for J
+
+	AutoExpand:            true,
+	InitialExpansionRule:  2,
+	InitialExpansionLimit: 4,
 }

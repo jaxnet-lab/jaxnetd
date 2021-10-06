@@ -125,7 +125,7 @@ func TestRejectLatest(t *testing.T) {
 // before the version which introduced it (RejectVersion).
 func TestRejectBeforeAdded(t *testing.T) {
 	// Use the protocol version just prior to RejectVersion.
-	pver := RejectVersion - 1
+	pver := ProtocolVersion
 	enc := BaseEncoding
 
 	// Create reject message data.
@@ -200,29 +200,6 @@ func TestRejectCrossProtocol(t *testing.T) {
 		t.Errorf("encode of MsgReject failed %v err <%v>", msg, err)
 	}
 
-	// Decode with old protocol version.
-	readMsg := MsgReject{}
-	err = readMsg.BtcDecode(&buf, RejectVersion-1, BaseEncoding)
-	if err == nil {
-		t.Errorf("encode of MsgReject succeeded when it shouldn't "+
-			"have %v", msg)
-	}
-
-	// Since one of the protocol versions doesn't support the reject
-	// message, make sure the various fields didn't get encoded and decoded
-	// back out.
-	if msg.Cmd == readMsg.Cmd {
-		t.Errorf("Should not get same reject command for cross protocol")
-	}
-	if msg.Code == readMsg.Code {
-		t.Errorf("Should not get same reject code for cross protocol")
-	}
-	if msg.Reason == readMsg.Reason {
-		t.Errorf("Should not get same reject reason for cross protocol")
-	}
-	if msg.Hash == readMsg.Hash {
-		t.Errorf("Should not get same reject hash for cross protocol")
-	}
 }
 
 // TestRejectWire tests the MsgReject wire encode and decode for various
@@ -309,8 +286,6 @@ func TestRejectWire(t *testing.T) {
 // of MsgReject to confirm error paths work correctly.
 func TestRejectWireErrors(t *testing.T) {
 	pver := ProtocolVersion
-	pverNoReject := RejectVersion - 1
-	wireErr := &MessageError{}
 
 	baseReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	baseReject.Hash = mainNetGenesisHash
@@ -343,8 +318,6 @@ func TestRejectWireErrors(t *testing.T) {
 		{baseReject, baseRejectEncoded, pver, BaseEncoding, 7, io.ErrShortWrite, io.EOF},
 		// Force error in reject hash.
 		{baseReject, baseRejectEncoded, pver, BaseEncoding, 23, io.ErrShortWrite, io.EOF},
-		// Force error due to unsupported protocol version.
-		{baseReject, baseRejectEncoded, pverNoReject, BaseEncoding, 6, wireErr, wireErr},
 	}
 
 	t.Logf("Running %d tests", len(tests))

@@ -8,6 +8,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/http"
 
 	btcdjson "github.com/btcsuite/btcd/btcjson"
@@ -16,6 +18,7 @@ import (
 )
 
 func init() {
+	// jaxjson.DropAllCmds()
 	jaxjson.MustRegisterLegacyCmd("getblocktemplate", (*btcdjson.GetBlockTemplateCmd)(nil), jaxjson.UsageFlag(0))
 }
 
@@ -25,9 +28,14 @@ func main() {
 		// TODO: ...
 	}
 
+	l, err := net.Listen("tcp", "0.0.0.0:18333")
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	coreRPCCfg := rpc.Config{
-		ListenerAddresses: nil,
-		MaxClients:        0,
+		ListenerAddresses: []string{"0.0.0.0:18333"},
+		MaxClients:        1000,
 		User:              "",
 		Password:          "",
 		Disable:           false,
@@ -35,10 +43,11 @@ func main() {
 		RPCKey:            "",
 		LimitPass:         "",
 		LimitUser:         "",
-		MaxConcurrentReqs: 0,
-		MaxWebsockets:     0,
+		MaxConcurrentReqs: 1000,
+		MaxWebsockets:     1000,
 		WSEnable:          false,
-		Listeners:         nil,
+		AuthProvider:      authProvider,
+		Listeners:         []net.Listener{l},
 	}
 
 	serverCore := rpc.NewRPCCore(&coreRPCCfg)
@@ -56,7 +65,6 @@ func main() {
 			return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())
 
 		}))
-
 	serverCore.StartRPC(context.TODO(), rpcServeMux)
 }
 
@@ -78,4 +86,12 @@ func (srv *CmdHandler) handleGetBlockTemplate(cmd interface{}, closeChan <-chan 
 
 	_ = request
 	return nil, nil
+}
+
+func authProvider(reqHeader http.Header) (isAuthorized bool, isLimited bool) {
+	if reqHeader.Get("isAuth") == "true" {
+		return true, true
+	}
+
+	return false, false
 }

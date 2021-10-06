@@ -108,7 +108,7 @@ func (c *chainView) Tip() blocknode.IBlockNode {
 
 // setTip sets the chain view to use the provided block node as the current tip
 // and ensures the view is consistent by populating it with the nodes obtained
-// by walking backwards all the way to genesis block as necessary.  Further
+// by walking backwards all the way to genesis block as necessary. Further
 // calls will only perform the minimum work needed, so switching between chain
 // tips is efficient.  This only differs from the exported version in that it is
 // up to the caller to ensure the lock is held.

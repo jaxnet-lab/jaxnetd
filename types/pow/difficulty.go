@@ -136,8 +136,9 @@ func BigToCompact(n *big.Int) uint32 {
 // value equates to higher actual difficulty, the work value which will be
 // accumulated must be the inverse of the difficulty.  Also, in order to avoid
 // potential division by zero and really small floating point numbers, the
-// result adds 1 to the denominator and multiplies the numerator by 2^256.
+// result adds 1 to the denominator and multiplies the numerator by 2^256*2^hash_sorting_bits.
 func CalcWork(bits uint32) *big.Int {
+	hashSortingBits := uint(12) // todo: do this func argument
 	// Return a work value of zero if the passed difficulty bits represent
 	// a negative number. Note this should not happen in practice with valid
 	// blocks, but an invalid block could trigger it.
@@ -146,7 +147,26 @@ func CalcWork(bits uint32) *big.Int {
 		return big.NewInt(0)
 	}
 
-	// (1 << 256) / (difficultyNum + 1)
+	// ( (1 << 268) / (difficultyNum + 1) ) * (1 << hashSortingBits)
+
+	// (difficultyNum + 1)
 	denominator := new(big.Int).Add(difficultyNum, bigOne)
-	return new(big.Int).Div(oneLsh256, denominator)
+	// ( (1 << 268) / (difficultyNum + 1) )
+	workWithoutHashSorting := new(big.Int).Div(oneLsh256, denominator)
+
+	// ( (1 << 268) / (difficultyNum + 1) ) * (1 << hashSortingBits)
+	return new(big.Int).Mul(workWithoutHashSorting, new(big.Int).Lsh(bigOne, hashSortingBits))
+}
+
+// GetDifficultyRatio this is ration of initial difficulty and current.
+func GetDifficultyRatio(genesisBits, bits uint32) *big.Int {
+	genesisTarget := CompactToBig(genesisBits)
+	target := CompactToBig(bits)
+	d := new(big.Int).Div(genesisTarget, target)
+
+	//   -1 if x <  y
+	if d.Cmp(big.NewInt(1)) < 0 {
+		return big.NewInt(1)
+	}
+	return d
 }

@@ -31,8 +31,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		// Ensure the difficulty specified in the block header matches
 		// the calculated difficulty based on the previous block and
 		// difficulty retarget rules.
-		expectedDifficulty, err := b.calcNextRequiredDifficulty(prevNode,
-			header.Timestamp())
+		expectedDifficulty, err := b.calcNextRequiredDifficulty(prevNode, header.Timestamp())
 		if err != nil {
 			return err
 		}
@@ -53,6 +52,22 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 			str := "block timestamp of %v is not after expected %v"
 			str = fmt.Sprintf(str, header.Timestamp, medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
+		}
+
+		if b.chain.IsBeacon() {
+			expectedK := b.calcNextK(prevNode)
+
+			if expectedK != header.K() {
+				str := fmt.Sprintf("block K value of %0x is not the expected value of %0x, with time(%s) at height(%v)",
+					header.K(), expectedK, header.Timestamp(), prevNode.Height()+1)
+				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, str)
+			}
+
+			if prevNode != nil && prevNode.Height() > 3 {
+				if err := chaindata.ValidateVoteK(header); err != nil {
+					return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, err.Error())
+				}
+			}
 		}
 	}
 
@@ -129,8 +144,7 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 
 		// Ensure all transactions in the block are finalized.
 		for _, tx := range block.Transactions() {
-			if !chaindata.IsFinalizedTransaction(tx, blockHeight,
-				blockTime) {
+			if !chaindata.IsFinalizedTransaction(tx, blockHeight, blockTime) {
 
 				str := fmt.Sprintf("block contains unfinalized transaction %v", tx.Hash())
 				return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
@@ -153,8 +167,7 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 		// Query for the Version Bits state for the segwit soft-fork
 		// deployment. If segwit is active, we'll switch over to
 		// enforcing all the new rules.
-		segwitState, err := b.deploymentState(prevNode,
-			chaincfg.DeploymentSegwit)
+		segwitState, err := b.deploymentState(prevNode, chaincfg.DeploymentSegwit)
 		if err != nil {
 			return err
 		}
@@ -183,57 +196,6 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 					blockWeight, chaindata.MaxBlockWeight)
 				return chaindata.NewRuleError(chaindata.ErrBlockWeightTooHigh, str)
 			}
-		}
-	}
-
-	return nil
-}
-
-// checkBIP0030 ensures blocks do not contain duplicate transactions which
-// 'overwrite' older transactions that are not fully spent.  This prevents an
-// attack where a coinbase and all of its dependent transactions could be
-// duplicated to effectively revert the overwritten transactions to a single
-// confirmation thereby making them vulnerable to a double spend.
-//
-// For more details, see
-// https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki and
-// http://r6.ca/blog/20120206T005236Z.html.
-//
-// This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) checkBIP0030(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint) error {
-	// Fetch utxos for all of the transaction ouputs in this block.
-	// Typically, there will not be any utxos for any of the outputs.
-	fetchSet := make(map[wire.OutPoint]struct{})
-	txMarkers := make(map[wire.OutPoint]int32)
-
-	for _, tx := range block.Transactions() {
-		prevOut := wire.OutPoint{Hash: *tx.Hash()}
-		txMarkers[prevOut] = tx.MsgTx().Mark()
-
-		for txOutIdx := range tx.MsgTx().TxOut {
-			prevOut.Index = uint32(txOutIdx)
-			fetchSet[prevOut] = struct{}{}
-		}
-	}
-	err := view.FetchUtxos(b.db, fetchSet)
-	if err != nil {
-		return err
-	}
-
-	// Duplicate transactions are only allowed if the previous transaction
-	// is fully spent.
-	for outpoint := range fetchSet {
-		thisIsSwapTx := txMarkers[outpoint] == wire.TxMarkShardSwap
-		utxo := view.LookupEntry(outpoint)
-		if utxo != nil && thisIsSwapTx {
-			continue
-		}
-
-		if utxo != nil && !utxo.IsSpent() {
-			str := fmt.Sprintf(
-				"tried to overwrite transaction %v at block height %d that is not fully spent",
-				outpoint.Hash, utxo.BlockHeight())
-			return chaindata.NewRuleError(chaindata.ErrOverwriteTx, str)
 		}
 	}
 
@@ -277,7 +239,8 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	}
 
 	// Ensure the view is for the node being checked.
-	parentHash := block.MsgBlock().Header.PrevBlock()
+	parentMMR := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	parentHash := b.index.HashByMMR(&parentMMR)
 	if !view.BestHash().IsEqual(&parentHash) {
 		return chaindata.AssertError(fmt.Sprintf("inconsistent view when "+
 			"checking block connection: best hash is %v instead "+
@@ -389,8 +352,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 		totalSatoshiOut += txOut.Value
 	}
 
-	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header())
-	// chaindata.CalcBlockSubsidy(node.Height(), b.chainParams)
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header(), b.chain.Params().Net)
 
 	expectedSatoshiOut := reward + totalFees
 	if totalSatoshiOut > expectedSatoshiOut {
@@ -461,7 +423,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 			if err != nil {
 				return err
 			}
-			switch tx.MsgTx().CleanVersion() {
+			switch tx.MsgTx().Version {
 			case wire.TxVerTimeLock:
 				if !chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
 					str := fmt.Sprintf(
@@ -515,13 +477,15 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	// current chain.
 	tip := b.bestChain.Tip()
 	header := block.MsgBlock().Header
-	if tip.GetHash() != header.PrevBlock() {
+	prevMMRRoot := header.BlocksMerkleMountainRoot()
+	prevHash := b.index.HashByMMR(&prevMMRRoot)
+	if tip.GetHash() != prevHash {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
-			"instead got %v", tip.GetHash(), header.PrevBlock())
+			"instead got %v", tip.GetHash(), prevHash)
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 
-	err := chaindata.CheckBlockSanityWF(block, b.chainParams.PowParams.PowLimit, b.TimeSource, flags)
+	err := chaindata.CheckBlockSanityWF(block, b.chainParams, b.TimeSource, flags)
 	if err != nil {
 		return err
 	}

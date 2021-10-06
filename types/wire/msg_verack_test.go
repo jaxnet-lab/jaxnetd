@@ -7,9 +7,10 @@ package wire
 
 import (
 	"bytes"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"reflect"
 	"testing"
+
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -55,42 +56,6 @@ func TestVerAckWire(t *testing.T) {
 			msgVerAck,
 			msgVerAckEncoded,
 			ProtocolVersion,
-			BaseEncoding,
-		},
-
-		// Protocol version BIP0035Version.
-		{
-			msgVerAck,
-			msgVerAck,
-			msgVerAckEncoded,
-			BIP0035Version,
-			BaseEncoding,
-		},
-
-		// Protocol version BIP0031Version.
-		{
-			msgVerAck,
-			msgVerAck,
-			msgVerAckEncoded,
-			BIP0031Version,
-			BaseEncoding,
-		},
-
-		// Protocol version NetAddressTimeVersion.
-		{
-			msgVerAck,
-			msgVerAck,
-			msgVerAckEncoded,
-			NetAddressTimeVersion,
-			BaseEncoding,
-		},
-
-		// Protocol version MultipleAddressVersion.
-		{
-			msgVerAck,
-			msgVerAck,
-			msgVerAckEncoded,
-			MultipleAddressVersion,
 			BaseEncoding,
 		},
 	}

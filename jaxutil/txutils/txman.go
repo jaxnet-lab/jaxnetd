@@ -387,7 +387,7 @@ prepareUTXO:
 }
 
 // DEPRECATED
-// NewSwapTx creates new transaction with wire.TxMarkShardSwap marker:
+// NewSwapTx creates new transaction with wire.TxVerCrossShardSwap version:
 // 	- data is a map of <Destination Address> => <Source txmodels.UTXO>.
 // 	- redeemScripts is optional, it allows to add proper signatures if source UTXO is a multisig address.
 //
@@ -408,8 +408,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		return nil, errors.New("invalid size of spending map")
 	}
 
-	msgTx := wire.NewMsgTx(wire.TxVerRegular)
-	msgTx.SetMark(wire.TxMarkShardSwap)
+	msgTx := wire.NewMsgTx(wire.TxVerCrossShardSwap)
 
 	ind := 0
 	outIndexes := map[string]int{}
@@ -442,8 +441,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 
 		if client.lockTime != 0 {
-			msgTx.Version = client.txVersion
-			msgTx.SetMark(wire.TxMarkShardSwap)
+			msgTx.Version = wire.TxVerCrossShardSwap
 			txIn.Sequence = blockchain.LockTimeToSequence(false, client.lockTime)
 		}
 

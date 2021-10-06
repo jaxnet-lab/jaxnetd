@@ -11,9 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
@@ -57,26 +57,15 @@ func ExampleBlockChain_ProcessBlock() {
 		DB:          db,
 		ChainParams: &chaincfg.MainNetParams,
 		TimeSource:  chaindata.NewMedianTime(),
-		ChainCtx:    beacon.Chain(&chaincfg.Params{
+		ChainCtx: beacon.Chain(&chaincfg.Params{
 			Name:                          "test",
 			Net:                           0,
 			DefaultPort:                   "",
 			DNSSeeds:                      []chaincfg.DNSSeed{},
 			GenesisBlock:                  chaincfg.GenesisBlockOpts{},
 			GenesisHash:                   hash,
-			PowLimit:                      &big.Int{},
-			PowLimitBits:                  0,
-			BIP0034Height:                 0,
-			BIP0065Height:                 0,
-			BIP0066Height:                 0,
 			CoinbaseMaturity:              0,
 			SubsidyReductionInterval:      0,
-			TargetTimespan:                0,
-			TargetTimePerBlock:            0,
-			RetargetAdjustmentFactor:      0,
-			ReduceMinDifficulty:           false,
-			MinDiffReductionTime:          0,
-			GenerateSupported:             false,
 			Checkpoints:                   []chaincfg.Checkpoint{},
 			RuleChangeActivationThreshold: 0,
 			MinerConfirmationWindow:       0,
@@ -93,8 +82,8 @@ func ExampleBlockChain_ProcessBlock() {
 			HDPublicKeyID:                 [4]byte{},
 			HDCoinType:                    0,
 			AutoExpand:                    false,
-			ExpansionRule:                 0,
-			ExpansionLimit:                0,
+			InitialExpansionRule:          0,
+			InitialExpansionLimit:         0,
 		}),
 	})
 	if err != nil {

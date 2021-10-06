@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"log"
 
-	"gitlab.com/jaxnet/jaxnetd/btcutil"
-	"gitlab.com/jaxnet/jaxnetd/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 var testnet = flag.Bool("testnet", false, "operate on the testnet Bitcoin network")

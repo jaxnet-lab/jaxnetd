@@ -168,11 +168,18 @@ func (collector *UTXORepo) CollectFromRPC(rpcClient *rpcclient.Client, shardID u
 	}
 
 	for _, outResult := range result.List {
+		if outResult.Coinbase && outResult.Confirmations < maturityThreshold {
+			continue
+		}
+		if outResult.ScriptPubKey.Type == txscript.HTLCScriptTy.String() {
+			continue
+		}
+		if outResult.Value == 0 {
+			continue
+		}
+
 	addressLookup:
 		for _, skAddress := range outResult.ScriptPubKey.Addresses {
-			if outResult.Coinbase && outResult.Confirmations < maturityThreshold {
-				continue
-			}
 			if filter[skAddress] {
 				collector.index.AddUTXO(UTXO{
 					ShardID:    shardID,

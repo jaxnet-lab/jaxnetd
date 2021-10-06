@@ -12,9 +12,10 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 var (
@@ -55,7 +56,7 @@ type Indexer interface {
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the pevious output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
+	ConnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within

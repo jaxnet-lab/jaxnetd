@@ -4,8 +4,10 @@ title Jaxnet Headers Hierarchy
 'left to right direction
 
 entity BTC_Header {
-  - BlockHash(): Hash
+  //methods://
+  - BlockHash(): **Hash**
   ---
+  //fields://
   * version: **int32**
   * prev_block: **Hash**
   * merkle_root: **Hash**
@@ -19,13 +21,15 @@ entity BTC_Header {
 
 
 entity Beacon_Header {
-  - BlockHash(): Hash
-  - PowHash: Hash == BTC_Header.Hash()
+  //methods://
+  - BlockHash(): **Hash**
+  - BeaconExclusiveHash(): **Hash** (without **btc_aux**)
+  - PowHash: **Hash** == BTC_Header.Hash()
   --
+  //fields://
   * version: **int32**
   * prev_block: **Hash**
   * merkle_root: **Hash**
-  * timestamp: **uint32**
   * bits: **uint32**
   * merge_mining_root: **Hash**
   * tree_encoding: **[]uint8**
@@ -46,15 +50,14 @@ entity Beacon_Header {
 }
 
 entity Shard_Header {
- - BlockHash(): Hash
- - Beacon(): Hash == Beacon_Header.Hash()
- - PowHash: Hash == BTC_Header.Hash()
-
+  //methods://
+ - BlockHash(): **Hash**
+ - Beacon(): **Hash** == Beacon_Header.Hash()
+ - PowHash: **Hash** == BTC_Header.Hash()
  --
-
+  //fields://
   * prev_block: **Hash**
   * merkle_root: **Hash**
-  * timestamp: **uint32**
   * bits: **uint32**
   * merge_mining_n: **uint32**
   --

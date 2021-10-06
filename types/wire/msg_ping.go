@@ -6,8 +6,9 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
+
+	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MsgPing implements the Message interface and represents a bitcoin ping
@@ -33,11 +34,9 @@ func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
-		err := encoder.ReadElement(r, &msg.Nonce)
-		if err != nil {
-			return err
-		}
+	err := encoder.ReadElement(r, &msg.Nonce)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -49,11 +48,9 @@ func (msg *MsgPing) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncod
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	if pver > BIP0031Version {
-		err := encoder.WriteElement(w, msg.Nonce)
-		if err != nil {
-			return err
-		}
+	err := encoder.WriteElement(w, msg.Nonce)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -68,16 +65,8 @@ func (msg *MsgPing) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgPing) MaxPayloadLength(pver uint32) uint32 {
-	plen := uint32(0)
-	// There was no nonce for BIP0031Version and earlier.
-	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
-	// the version unlike most others.
-	if pver > BIP0031Version {
-		// Nonce 8 bytes.
-		plen += 8
-	}
-
-	return plen
+	// Nonce 8 bytes.
+	return uint32(8)
 }
 
 // NewMsgPing returns a new bitcoin ping message that conforms to the Message

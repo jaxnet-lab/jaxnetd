@@ -32,8 +32,7 @@ func calcEasiestDifficulty(powParams chaincfg.PowParams, opts retargetOpts, bits
 	// than twice the desired amount of time needed to generate a block has
 	// elapsed.
 	if powParams.ReduceMinDifficulty {
-		reductionTime := int64(powParams.MinDiffReductionTime /
-			time.Second)
+		reductionTime := int64(powParams.MinDiffReductionTime / time.Second)
 		if durationVal > reductionTime {
 			return powParams.PowLimitBits
 		}
@@ -82,10 +81,21 @@ func findPrevTestNetDifficulty(startNode blocknode.IBlockNode, blocksPerRetarget
 
 func (b *BlockChain) calcNextK(lastNode blocknode.IBlockNode) uint32 {
 	if lastNode == nil {
-		return pow.CalcKCoefficient(1, 0)
+		return pow.PackK(pow.K1)
 	}
 
-	return pow.CalcKCoefficient(lastNode.Height()+1, lastNode.K())
+	// Return the previous block's difficulty requirements if this block
+	// is not at a difficulty retarget interval.
+	if (lastNode.Height()+1)%pow.KBeaconEpochLen != 0 {
+		return lastNode.K()
+	}
+
+	if pow.BeaconEpoch(lastNode.Height()+1) <= 2 {
+		return pow.PackK(pow.K1)
+	}
+
+	ancestor := lastNode.RelativeAncestor(pow.KBeaconEpochLen)
+	return ancestor.CalcMedianVoteK()
 }
 
 // CalcNextK calculates the required k coefficient
@@ -128,22 +138,6 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 		return chainParams.PowParams.PowLimitBits, nil
 	}
 
-	// fmt.Printf("CURRENT_DIFF_STATE,%v,%v,%08x,%064x,%v,%v,%v,%v\n",
-	// 	chainParams.Name,
-	// 	lastNode.Height()+1,
-	// 	lastNode.Bits(),
-	// 	pow.CompactToBig(lastNode.Bits()),
-	// 	opts.minRetargetTimespan,
-	// 	opts.maxRetargetTimespan,
-	// 	opts.blocksPerRetarget,
-	// 	chainParams.PowParams.TargetTimespan,
-	// )
-
-	// todo: this is a temporally fix; addNode bounds based on block height and remove this
-	// if !chainParams.IsBeacon && chainParams.Net == types.TestNet3 {
-	// 	return chaincfg.ShardPoWBits, nil
-	// }
-
 	// Return the previous block's difficulty requirements if this block
 	// is not at a difficulty retarget interval.
 	if (lastNode.Height()+1)%opts.blocksPerRetarget != 0 {
@@ -170,17 +164,20 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 		return lastNode.Bits(), nil
 	}
 
-	// Get the block node at the previous retarget (targetTimespan days
-	// worth of blocks).
-	firstNode := lastNode.RelativeAncestor(opts.blocksPerRetarget - 1)
+	// Get the block node at the previous retarget (targetTimespan days worth of blocks).
+	firstNode := lastNode.RelativeAncestor(opts.blocksPerRetarget - 1 + 5)
 	if firstNode == nil {
 		return 0, chaindata.AssertError("unable to obtain previous retarget block")
 	}
 
+	epochStartMedianTimestamp := firstNode.CalcPastMedianTimeForN(5).Unix()
+	epochEndMedianTimestamp := lastNode.CalcPastMedianTimeForN(5).Unix()
+
 	// Limit the amount of adjustment that can occur to the previous
 	// difficulty.
-	actualTimespan := lastNode.Timestamp() - firstNode.Timestamp()
+	actualTimespan := epochEndMedianTimestamp - epochStartMedianTimestamp
 	adjustedTimespan := actualTimespan
+
 	if actualTimespan < opts.minRetargetTimespan {
 		adjustedTimespan = opts.minRetargetTimespan
 	} else if actualTimespan > opts.maxRetargetTimespan {
@@ -215,17 +212,6 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 		time.Duration(adjustedTimespan)*time.Second,
 		chainParams.PowParams.TargetTimespan)
 
-	// fmt.Printf("CALC_NEXT_REQ_DIFF,%v,%v,%08x,%064x,%08x,%064x,%v,%v,%v\n",
-	// 	chainParams.Name,
-	// 	lastNode.Height()+1,
-	// 	lastNode.Bits(),
-	// 	oldTarget,
-	// 	newTargetBits,
-	// 	pow.CompactToBig(newTargetBits),
-	// 	time.Duration(actualTimespan)*time.Second,
-	// 	time.Duration(adjustedTimespan)*time.Second,
-	// 	chainParams.PowParams.TargetTimespan,
-	// )
 	return newTargetBits, nil
 }
 

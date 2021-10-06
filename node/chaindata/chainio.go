@@ -69,10 +69,6 @@ var (
 	// unspent transaction output set.
 	UtxoSetBucketName = []byte("utxosetv2")
 
-	// ShardsMMRBucketName is the name of the db bucket used to house the
-	// MerkleMountainRange for Merged Mining Tree.
-	ShardsMMRBucketName = []byte("shardsmmr")
-
 	// EADAddressesBucketNameV1 is the name of the db bucket used to house the
 	// net addresses of Exchange Agents.
 	EADAddressesBucketNameV1 = []byte("ead_addresses")

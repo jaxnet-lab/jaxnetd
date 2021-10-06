@@ -1096,7 +1096,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 		return nil, nil, err
 	}
 
-	switch tx.MsgTx().CleanVersion() {
+	switch tx.MsgTx().Version {
 	case wire.TxVerTimeLock:
 		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
 			medianTimePast) {

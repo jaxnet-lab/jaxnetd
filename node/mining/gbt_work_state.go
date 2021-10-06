@@ -19,8 +19,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -270,7 +270,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr jaxutil.Address
-		if !useCoinbaseValue && len(miningAddrs) == 0 {
+		if !useCoinbaseValue && len(miningAddrs) <= 1 {
 			payAddr = miningAddrs[0]
 		}
 		if !useCoinbaseValue && len(miningAddrs) > 0 {
@@ -345,9 +345,9 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			case true:
 				burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
 			case false:
-				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
+				burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 			}
-
+			// rare case, impossible with current rules, remove it
 			if len(template.Block.Transactions[0].TxOut) < 2 && !burnReward {
 				template.Block.Transactions[0].TxOut[0].PkScript = pkScript
 			}
@@ -414,7 +414,8 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
-	prevHash := header.PrevBlock()
+	mmrRoot := header.BlocksMerkleMountainRoot()
+	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -433,26 +434,27 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetBeaconBlockTemplateResult{
-		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.PrevBlock().String(),
-		Height:       int64(template.Height),
-		SerialID:     prevSerialID + 1,
-		PrevSerialID: prevSerialID,
-		Version:      int32(header.Version()),
-		Shards:       header.BeaconHeader().Shards(),
-		WeightLimit:  chaindata.MaxBlockWeight,
-		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
-		SizeLimit:    wire.MaxBlockPayload,
-		Transactions: transactions,
-		LongPollID:   templateID,
-		SubmitOld:    submitOld,
-		Target:       targetDifficulty,
-		MinTime:      state.minTimestamp.Unix(),
-		MaxTime:      maxTime.Unix(),
-		Mutable:      gbtMutableFields,
-		NonceRange:   gbtNonceRange,
-		Capabilities: gbtCapabilities,
+		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:       header.Timestamp().Unix(),
+		PreviousHash:  prevHash.String(),
+		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
+		Height:        int64(template.Height),
+		SerialID:      prevSerialID + 1,
+		PrevSerialID:  prevSerialID,
+		Version:       int32(header.Version()),
+		Shards:        header.BeaconHeader().Shards(),
+		WeightLimit:   chaindata.MaxBlockWeight,
+		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
+		SizeLimit:     wire.MaxBlockPayload,
+		Transactions:  transactions,
+		LongPollID:    templateID,
+		SubmitOld:     submitOld,
+		Target:        targetDifficulty,
+		MinTime:       state.minTimestamp.Unix(),
+		MaxTime:       maxTime.Unix(),
+		Mutable:       gbtMutableFields,
+		NonceRange:    gbtNonceRange,
+		Capabilities:  gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),
@@ -506,7 +508,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if err != nil {
 		return nil, err
 	}
-	prevHash := header.PrevBlock()
+	mmrRoot := header.BlocksMerkleMountainRoot()
+	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
 	if err != nil {
 		return nil, err
@@ -525,25 +528,26 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetShardBlockTemplateResult{
-		Bits:         strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:      header.Timestamp().Unix(),
-		PreviousHash: header.PrevBlock().String(),
-		Height:       int64(template.Height),
-		SerialID:     prevSerialID + 1,
-		PrevSerialID: prevSerialID,
-		Version:      int32(header.Version()),
-		WeightLimit:  chaindata.MaxBlockWeight,
-		SigOpLimit:   chaindata.MaxBlockSigOpsCost,
-		SizeLimit:    wire.MaxBlockPayload,
-		Transactions: transactions,
-		LongPollID:   templateID,
-		SubmitOld:    submitOld,
-		Target:       targetDifficulty,
-		MinTime:      state.minTimestamp.Unix(),
-		MaxTime:      maxTime.Unix(),
-		Mutable:      gbtMutableFields,
-		NonceRange:   gbtNonceRange,
-		Capabilities: gbtCapabilities,
+		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
+		CurTime:       header.Timestamp().Unix(),
+		PreviousHash:  prevHash.String(),
+		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
+		Height:        int64(template.Height),
+		SerialID:      prevSerialID + 1,
+		PrevSerialID:  prevSerialID,
+		Version:       int32(header.Version()),
+		WeightLimit:   chaindata.MaxBlockWeight,
+		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
+		SizeLimit:     wire.MaxBlockPayload,
+		Transactions:  transactions,
+		LongPollID:    templateID,
+		SubmitOld:     submitOld,
+		Target:        targetDifficulty,
+		MinTime:       state.minTimestamp.Unix(),
+		MaxTime:       maxTime.Unix(),
+		Mutable:       gbtMutableFields,
+		NonceRange:    gbtNonceRange,
+		Capabilities:  gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),
@@ -577,9 +581,15 @@ type coinbaseData struct {
 func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
 	reply := new(coinbaseData)
 
+	reply.CoinbaseAux = gbtCoinbaseAux
+	if state.generator.blockChain.Chain().IsBeacon() {
+		value := template.Block.Transactions[0].TxOut[1].Value + template.Block.Transactions[0].TxOut[2].Value
+		reply.CoinbaseValue = &value
+	} else {
+		reply.CoinbaseValue = &template.Block.Transactions[0].TxOut[1].Value
+	}
+
 	if useCoinbaseValue {
-		reply.CoinbaseAux = gbtCoinbaseAux
-		reply.CoinbaseValue = &template.Block.Transactions[0].TxOut[0].Value
 		return reply, nil
 	}
 

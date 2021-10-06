@@ -284,8 +284,7 @@ func (t *txBuilder) IntoTx(getFee FeeProviderFunc, kdb txscript.KeyDB) (*wire.Ms
 }
 
 func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
-	msgTx := wire.NewMsgTx(t.txVersion)
-	msgTx.SetMark(wire.TxMarkShardSwap)
+	msgTx := wire.NewMsgTx(wire.TxVerCrossShardSwap)
 	msgTx.LockTime = t.lockTime
 
 	for _, dest := range t.destinations {

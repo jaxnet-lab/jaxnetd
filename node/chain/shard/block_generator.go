@@ -7,15 +7,14 @@
 package shard
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -34,14 +33,14 @@ func NewChainBlockGenerator(beacon BeaconBlockProvider) *BlockGenerator {
 	return &BlockGenerator{beacon: beacon}
 }
 
-func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
-	header, cAux, err := c.generateBeaconHeader(nonce, burnReward)
+	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
 	}
 
-	return wire.NewShardBlockHeader(prevHash, merkleRootHash, timestamp, bits, *header, cAux), nil
+	return wire.NewShardBlockHeader(blocksMMRRoot, merkleRootHash, bits, *header, cAux), nil
 }
 
 func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
@@ -84,83 +83,30 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
-	aux := block.Header.BeaconHeader().BTCAux()
-	if len(aux.Tx.TxOut) != 3 {
-		return errors.New("invalid format of btc aux coinbase tx: less than 3 out")
-	}
+func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error {
+	expectedReward := c.CalcBlockSubsidy(height, block.Header, net)
 
 	shardHeader := block.Header.(*wire.ShardHeader)
-	if len(shardHeader.CoinbaseAux.Tx.TxOut) != 3 {
-		return errors.New("invalid format of beacon aux coinbase tx: less than 3 out")
-	}
-
-	if len(block.Transactions[0].TxOut) != 3 {
-		return errors.New("invalid format of shard coinbase tx: less than 3 out")
-	}
-
-	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
-	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
-
-	var btcBurnReward = false
-	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
-		btcCoinbaseTx := aux.CoinbaseAux.Tx
-		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-			btcCoinbaseTx.TxOut[0].Value == 0
-		if !btcJaxNetLinkOut {
-			return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
-		}
-		btcBurnReward = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	}
-
-	beaconCoinbaseTx := block.Header.(*wire.ShardHeader).CoinbaseAux.Tx
-
-	beaconJaxNetLinkOut := bytes.Equal(beaconCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-		beaconCoinbaseTx.TxOut[0].Value == 0
-	if !beaconJaxNetLinkOut {
-		return errors.New("invalid format of beacon coinbase tx: first out must be zero and have JaxNetLink")
-	}
-
 	shardCoinbaseTx := block.Transactions[0]
 
-	shardJaxNetLinkOut := bytes.Equal(shardCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-		shardCoinbaseTx.TxOut[0].Value == 0
-	if !shardJaxNetLinkOut {
-		return errors.New("invalid format of shard coinbase tx: first out must be zero and have JaxNetLink")
-	}
-
-	{
-		beaconJaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-		shardJaxBurnReward := bytes.Equal(shardCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-
-		if btcBurnReward && !beaconJaxBurnReward {
-			return errors.New("invalid format of beacon coinbase tx: BTC burned, JaxNet reward prohibited")
-		}
-		if !btcBurnReward && beaconJaxBurnReward {
-			return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
-		}
-		btcJaxBurn := btcBurnReward && beaconJaxBurnReward
-		if !btcJaxBurn && shardJaxBurnReward {
-			return errors.New("invalid format of shard coinbase tx: BTC & JaxNet not burned, Jax reward prohibited")
-		}
-		if btcJaxBurn && shardJaxBurnReward {
-			return errors.New("invalid format of shard coinbase tx: BTC & JaxNet burned, Jax burn prohibited")
-		}
-	}
-
-	return nil
+	return mining.ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
 }
 
 func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
-	return pow.CalcShardBlockSubsidy(height,
-		header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
+	reward := CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+
+	if net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
+		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
+	}
+
+	return reward
 }
 
-func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
+func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
 	blockTemplate, err := c.beacon.BlockTemplate(false, burnReward)
 	if err != nil {
 		return nil, wire.CoinbaseAux{}, err
@@ -177,6 +123,35 @@ func (c *BlockGenerator) generateBeaconHeader(nonce uint32, burnReward int) (*wi
 
 	beaconHeader := blockTemplate.Block.Header.BeaconHeader()
 	beaconHeader.SetNonce(nonce)
+	beaconHeader.SetTimestamp(timestamp)
 
 	return beaconHeader, coinbaseAux, nil
+}
+
+// CalcShardBlockSubsidy returns reward for shard block.
+// - height is block height;
+// - shards is a number of shards that were mined by a miner at the time;
+// - bits is current target;
+// - k is inflation-fix-coefficient.
+func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
+	// ((Di * Ki) / n)  * jaxutil.SatoshiPerJAXCoin
+	d := pow.CalcWork(bits)
+	k1 := pow.UnpackK(k)
+
+	if shards == 0 {
+		shards = 1
+	}
+
+	dRat := new(big.Float).SetInt64(d.Int64())
+	shardsN := new(big.Float).SetInt64(int64(shards))
+
+	// (Di * Ki)
+	dk := new(big.Float).Mul(dRat, k1)
+	// ((Di * Ki) / n)
+	reward, _ := new(big.Float).Quo(dk, shardsN).Float64()
+	if reward == 0 {
+		return 0
+	}
+
+	return int64(reward * 1_0000)
 }

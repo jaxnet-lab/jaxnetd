@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"reflect"
 	"time"
 
@@ -576,69 +575,4 @@ func ReadInvVect(r io.Reader, iv *types.InvVect) error {
 func WriteInvVect(w io.Writer, iv *types.InvVect) error {
 	// enc := chain.NewEncoder(chain.CommandSize)
 	return WriteElements(w, iv.Type, &iv.Hash)
-}
-
-// ReadNetAddress reads an encoded NetAddress from r depending on the protocol
-// version and whether or not the timestamp is included per ts.  Some messages
-// like version do not include the timestamp.
-func ReadNetAddress(r io.Reader, pver uint32, na *types.NetAddress, ts bool) error {
-	var ip [16]byte
-
-	// enc := chain.NewEncoder(chain.CommandSize)
-	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
-	// stop working somewhere around 2106.  Also timestamp wasn't added until
-	// protocol version >= NetAddressTimeVersion
-	if ts && pver >= types.NetAddressTimeVersion {
-		err := ReadElements(r, (*Uint32Time)(&na.Timestamp))
-		if err != nil {
-			return err
-		}
-	}
-
-	err := ReadElements(r, &na.Services, &ip)
-	if err != nil {
-		return err
-	}
-	// Sigh.  Bitcoin protocol mixes little and big endian.
-	port, err := BinarySerializer.Uint16(r, binary.BigEndian)
-	if err != nil {
-		return err
-	}
-
-	*na = types.NetAddress{
-		Timestamp: na.Timestamp,
-		Services:  na.Services,
-		IP:        net.IP(ip[:]),
-		Port:      port,
-	}
-	return nil
-}
-
-// WriteNetAddress serializes a NetAddress to w depending on the protocol
-// version and whether or not the timestamp is included per ts.  Some messages
-// like version do not include the timestamp.
-func WriteNetAddress(w io.Writer, pver uint32, na *types.NetAddress, ts bool) error {
-	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
-	// stop working somewhere around 2106.  Also timestamp wasn't added until
-	// until protocol version >= NetAddressTimeVersion.
-	// enc := chain.NewEncoder(chain.CommandSize)
-	if ts && pver >= types.NetAddressTimeVersion {
-		err := WriteElements(w, uint32(na.Timestamp.Unix()))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Ensure to always write 16 bytes even if the ip is nil.
-	var ip [16]byte
-	if na.IP != nil {
-		copy(ip[:], na.IP.To16())
-	}
-	err := WriteElements(w, na.Services, ip)
-	if err != nil {
-		return err
-	}
-
-	// Sigh.  Bitcoin protocol mixes little and big endian.
-	return binary.Write(w, binary.BigEndian, na.Port)
 }

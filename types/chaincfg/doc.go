@@ -1,4 +1,4 @@
-// Package chain defines chain configuration parameters.
+// Package chaincfg defines chain configuration parameters.
 //
 // In addition to the main Bitcoin network, which is intended for the transfer
 // of monetary value, there also exists two currently active standard networks:

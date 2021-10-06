@@ -8,8 +8,6 @@ package pow
 
 import (
 	"math/big"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -35,116 +33,71 @@ const (
 	// LM is a length of the mining epoch on any SC.
 	LM = L * M
 
-	// SupplementaryK1 is supplementary reward coefficient for the first mining epoch.
-	// SupplementaryK1 = Lambda ^ 12
-	SupplementaryK1 = LambdaPow12
-	// K1 is inflation coefficient for the first mining epoch.
-	K1 = 3.552713678800501e-15 // 2^−48
+	// SmallK1 is supplementary reward coefficient for the first mining epoch.
+	// SmallK1 = Lambda ^ 12
+	SmallK1 = LambdaPow12
+	// BigK1 is inflation coefficient for the first mining epoch.
+	BigK1 = 3.552713678800501e-15 // 2^−48
 
-	BeaconEpochLen = 2048
-	ShardEpochLen  = 4 * 60 * 24
+	DifficultyBeaconEpochLen = 2048
+	KBeaconEpochLen          = 4096
+	ShardEpochLen            = 16 * 4096
+)
+
+var (
+	// K1 = 1 / (1 << 60 ) == 2^-60
+	K1 = new(big.Float).Quo(
+		new(big.Float).SetFloat64(1),
+		new(big.Float).SetInt(oneLsh60),
+	)
 )
 
 func BeaconEpoch(height int32) int32 {
-	return (height / BeaconEpochLen) + 1
+	return (height / KBeaconEpochLen) + 1
 }
 
 func ShardEpoch(height int32) int32 {
 	return (height / ShardEpochLen) + 1
 }
 
-func CalcKCoefficient(height int32, prevK uint32) uint32 {
-	if BeaconEpoch(height) == 1 {
-		return PackRat(new(big.Rat).SetFloat64(K1 * SupplementaryK1))
-	}
+var (
+	// todo: review this
+	kValMask   = new(big.Int).Lsh(bigOne, 1000) // 1 << 100 == 2^100
+	kPrecision = new(big.Float).SetInt(kValMask)
 
-	k := UnpackRat(prevK)
-	//   -1 if x <  y
-	//    0 if x == y
-	//   +1 if x >  y
-	if k.Cmp(new(big.Rat).SetFloat64(1)) >= 0 {
-		return PackRat(new(big.Rat).SetFloat64(1))
-	}
+	oneLsh64 = new(big.Int).Lsh(bigOne, 64)
+	oneLsh60 = new(big.Int).Lsh(bigOne, 60)
 
-	return prevK
+	jCoefficient = new(big.Float).Quo(
+		new(big.Float).SetInt64(1),
+		new(big.Float).SetInt(oneLsh64),
+	)
+)
 
+func KValFloatToInt(val *big.Float) *big.Int {
+	nVal := new(big.Float).Mul(val, kPrecision)
+	res, _ := nVal.Int(nil)
+	return res
 }
 
-func PackRat(val *big.Rat) uint32 {
-	mult, _ := new(big.Rat).SetString("10000000000000000000")
-	nVal := new(big.Rat).Mul(val, mult)
-	intPart := strings.Split(nVal.FloatString(18), ".")[0]
-
-	bigVal, _ := new(big.Int).SetString(intPart, 10)
-	return BigToCompact(bigVal)
+func KValIntToFloat(nVal *big.Int) *big.Float {
+	rVal := new(big.Float).SetInt(nVal)
+	return new(big.Float).Quo(rVal, kPrecision)
 }
 
-func UnpackRat(val uint32) *big.Rat {
-	nVal := CompactToBig(val)
-
-	mult, _ := new(big.Rat).SetString("10000000000000000000")
-	rVal, _ := new(big.Rat).SetString(nVal.String())
-	return new(big.Rat).Quo(rVal, mult)
+func UnpackK(val uint32) *big.Float {
+	return KValIntToFloat(CompactToBig(val))
 }
 
-func GetDifficultyF(bits uint32) (float64, error) {
-	// The minimum difficulty is the max possible proof-of-work limit bits
-	// converted back to a number.  Note this is not the same as the proof of
-	// work limit directly because the block difficulty is encoded in a block
-	// with the compact form which loses precision.
-	twoPow256 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
-	target := CompactToBig(bits)
-
-	difficulty := new(big.Rat).SetFrac(twoPow256, target)
-
-	outString := difficulty.FloatString(8)
-	diff, err := strconv.ParseFloat(outString, 64)
-	if err != nil {
-		return 0, err
-	}
-	return diff, nil
-}
-
-func GetDifficulty(bits uint32) *big.Rat {
-	twoPow180 := new(big.Int).Exp(big.NewInt(2), big.NewInt(180), nil)
-
-	target := CompactToBig(bits)
-	// D =  Target / 2^180
-	return new(big.Rat).SetFrac(target, twoPow180)
+func PackK(val *big.Float) uint32 {
+	return BigToCompact(KValFloatToInt(val))
 }
 
 func MultBitsAndK(bits, k uint32) float64 {
 	// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-	d := GetDifficulty(bits)
-	k1 := UnpackRat(k)
-	rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
-	reward, err := strconv.ParseFloat(rewardStr, 64)
-	if err != nil {
-		return 20
-	}
+	d := CalcWork(bits)
+	k1 := UnpackK(k)
+	dFloat := new(big.Float).SetInt(d)
+	reward, _ := new(big.Float).Mul(dFloat, k1).Float64()
 	return reward
-}
-
-// CalcShardBlockSubsidy returns reward for shard block.
-// - height is block height;
-// - shards is a number of shards that were mined by a miner at the time;
-// - bits is current target;
-// - k is inflation-fix-coefficient.
-func CalcShardBlockSubsidy(height int32, shards, bits, k uint32) int64 {
-	switch ShardEpoch(height) {
-	case 1:
-		// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
-		d := GetDifficulty(bits)
-		k1 := UnpackRat(k)
-		rewardStr := new(big.Rat).Mul(d, k1).FloatString(4)
-		reward, err := strconv.ParseFloat(rewardStr, 64)
-		if err != nil {
-			return (20 * 1000) >> uint(height/210000)
-		}
-		return int64(reward * 1000)
-
-	default:
-		// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-		return (20 * 1000) >> uint(height/210000)
-	}
 }

@@ -18,11 +18,7 @@ const (
 	// MaxBeaconBlockHeaderPayload is the maximum number of bytes a block BeaconHeader can be.
 	// Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes + Shards 4 bytes +
 	// PrevBlock, MerkleRoot, MergeMiningRoot hashes + tree X bytes. //todo: add treeEncoding len
-	MaxBeaconBlockHeaderPayload = (4 * 5) + (chainhash.HashSize * 3)
-
-	// beaconBlockHeaderLen is a constant that represents the number of bytes for a block
-	// BeaconHeader.
-	beaconBlockHeaderLen = 80
+	MaxBeaconBlockHeaderPayload = 1024
 )
 
 // BeaconHeader defines information about a block and is used in the bitcoin
@@ -31,20 +27,16 @@ type BeaconHeader struct {
 	// Version of the block.  This is not the same as the protocol version.
 	version BVersion
 
-	// Hash of the previous block BeaconHeader in the block chain.
-	prevBlock chainhash.Hash
+	// blocksMMRRoot is an actual root of the MerkleMountainRange tree for current block
+	blocksMMRRoot chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
 
-	// Time the block was created.  This is, unfortunately, encoded as a
-	// uint32 on the wire and therefore is limited to 2106.
-	timestamp time.Time
-
 	// Difficulty target for the block.
 	bits uint32
 
-	// Root of Merge-mining tree
+	// Root of Merge-mining (orange) tree
 	mergeMiningRoot chainhash.Hash
 
 	// Encoding of the Merge-mining tree
@@ -60,7 +52,8 @@ type BeaconHeader struct {
 	voteK uint32
 
 	// btcAux is a container with the bitcoin auxiliary header, required for merge mining.
-	btcAux BTCBlockAux // todo (mike): do not store all hashes, only merkle path to optimize
+	btcAux BTCBlockAux // todo (mike): do not store all hashes, only merkle path
+
 }
 
 func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
@@ -68,24 +61,23 @@ func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 // NewBeaconBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewBeaconBlockHeader(version BVersion, prevHash, merkleRootHash chainhash.Hash,
+func NewBeaconBlockHeader(version BVersion, blocksMerkleMountainRoot, merkleRootHash chainhash.Hash,
 	mergeMiningRoot chainhash.Hash, timestamp time.Time, bits uint32, nonce uint32) *BeaconHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &BeaconHeader{
 		version:         version,
-		prevBlock:       prevHash,
+		blocksMMRRoot:   blocksMerkleMountainRoot,
 		merkleRoot:      merkleRootHash,
 		mergeMiningRoot: mergeMiningRoot,
-		timestamp:       timestamp,
 		bits:            bits,
 		btcAux: BTCBlockAux{
 			Version:     0,
 			PrevBlock:   chainhash.Hash{},
 			MerkleRoot:  chainhash.Hash{},
-			Timestamp:   time.Time{},
-			Bits:        0,
+			Timestamp:   timestamp,
+			Bits:        bits,
 			Nonce:       nonce,
 			CoinbaseAux: CoinbaseAux{}.New(),
 		},
@@ -93,8 +85,8 @@ func NewBeaconBlockHeader(version BVersion, prevHash, merkleRootHash chainhash.H
 
 }
 
-func (h *BeaconHeader) BeaconHeader() *BeaconHeader      { return h }
-func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader) { *h = *bh }
+func (h *BeaconHeader) BeaconHeader() *BeaconHeader                     { return h }
+func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader, _ CoinbaseAux) { *h = *bh }
 
 func (h *BeaconHeader) Bits() uint32        { return h.bits }
 func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
@@ -102,17 +94,16 @@ func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
 func (h *BeaconHeader) Nonce() uint32     { return h.btcAux.Nonce }
 func (h *BeaconHeader) SetNonce(n uint32) { h.btcAux.Nonce = n }
 
+func (h *BeaconHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMMRRoot }
+func (h *BeaconHeader) SetBlocksMerkleMountainRoot(root chainhash.Hash) {
+	h.blocksMMRRoot = root
+}
+
 func (h *BeaconHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
 func (h *BeaconHeader) SetMerkleRoot(hash chainhash.Hash) { h.merkleRoot = hash }
 
-func (h *BeaconHeader) PrevBlock() chainhash.Hash             { return h.prevBlock }
-func (h *BeaconHeader) SetPrevBlock(prevBlock chainhash.Hash) { h.prevBlock = prevBlock }
-
-func (h *BeaconHeader) Timestamp() time.Time { return h.timestamp }
-func (h *BeaconHeader) SetTimestamp(t time.Time) {
-	h.timestamp = t
-	h.btcAux.Timestamp = t
-}
+func (h *BeaconHeader) Timestamp() time.Time     { return h.btcAux.Timestamp }
+func (h *BeaconHeader) SetTimestamp(t time.Time) { h.btcAux.Timestamp = t }
 
 func (h *BeaconHeader) Version() BVersion     { return h.version }
 func (h *BeaconHeader) SetVersion(v BVersion) { h.version = v }
@@ -178,19 +169,44 @@ func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 
 // BlockHash computes the block identifier hash for the given block BeaconHeader.
 func (h *BeaconHeader) BlockHash() chainhash.Hash {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	_ = writeBeaconBlockHeader(buf, h)
+	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
+	sec := uint32(h.btcAux.Timestamp.Unix())
 
-	return chainhash.DoubleHashH(buf.Bytes())
+	_ = encoder.WriteElements(w,
+		h.version,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.mergeMiningRoot,
+		h.bits,
+		&h.shards,
+		&h.k,
+		&h.voteK,
+		&h.treeEncoding,
+		h.btcAux.Version,
+		&h.btcAux.PrevBlock,
+		&h.btcAux.MerkleRoot,
+		sec,
+		h.btcAux.Bits,
+		h.btcAux.Nonce,
+	)
+	return chainhash.DoubleHashH(w.Bytes())
 }
 
 // BeaconExclusiveHash computes the hash of the BeaconHeader without BtcAux.
 // This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
 func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	sec := uint32(h.timestamp.Unix())
-	encoder.WriteElements(buf, h.version, &h.prevBlock, &h.merkleRoot, &h.mergeMiningRoot,
-		sec, h.bits, &h.shards, &h.k, &h.voteK, &h.treeEncoding)
+	encoder.WriteElements(buf,
+		h.version,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.mergeMiningRoot,
+		h.bits,
+		&h.shards,
+		&h.k,
+		&h.voteK,
+		&h.treeEncoding,
+	)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -264,8 +280,15 @@ func (h *BeaconHeader) Copy() BlockHeader {
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
-	err := encoder.ReadElements(r, &bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
-		(*encoder.Uint32Time)(&bh.timestamp), &bh.bits, &bh.shards, &bh.k, &bh.voteK, &bh.treeEncoding)
+	err := encoder.ReadElements(r, &bh.version,
+		&bh.blocksMMRRoot,
+		&bh.merkleRoot,
+		&bh.mergeMiningRoot,
+		&bh.bits,
+		&bh.shards,
+		&bh.k,
+		&bh.voteK,
+		&bh.treeEncoding)
 	if err != nil {
 		return err
 	}
@@ -277,9 +300,16 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
-	sec := uint32(bh.timestamp.Unix())
-	err := encoder.WriteElements(w, bh.version, &bh.prevBlock, &bh.merkleRoot, &bh.mergeMiningRoot,
-		sec, bh.bits, &bh.shards, &bh.k, &bh.voteK, &bh.treeEncoding)
+	err := encoder.WriteElements(w,
+		bh.version,
+		&bh.blocksMMRRoot,
+		&bh.merkleRoot,
+		&bh.mergeMiningRoot,
+		bh.bits,
+		&bh.shards,
+		&bh.k,
+		&bh.voteK,
+		&bh.treeEncoding)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,8 @@
 package shard
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types"
+	blocknode2 "gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -23,19 +24,22 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHe
 		genesisTx:              *tx.Copy(),
 	}
 
+	shardBits := chaincfg.ShardPoWBits
+	if params.Net == types.TestNet {
+		shardBits = 0x1e00ffff
+	}
 	chainParams := params.ShardGenesis(shardID, nil)
 	chainParams.GenesisBlock = chaincfg.GenesisBlockOpts{
 		Version:    int32(beaconGenesis.Version()),
 		Timestamp:  beaconGenesis.Timestamp(),
 		PrevBlock:  chainhash.Hash{},
 		MerkleRoot: chainhash.Hash{},
-		Bits:       0x1e00ffff,
-		// Bits:       chaincfg.ShardPoWBits,
-		Nonce:    beaconGenesis.Nonce(),
-		BCHeader: *beaconGenesis,
+		Bits:       shardBits,
+		Nonce:      beaconGenesis.Nonce(),
+		BCHeader:   *beaconGenesis,
 	}
 
-	chainParams.PowParams.PowLimitBits = chaincfg.ShardPoWBits
+	chainParams.PowParams.PowLimitBits = shardBits
 
 	shard.SetChainParams(*chainParams)
 	return shard
@@ -48,8 +52,8 @@ func (c *shardChain) SetChainParams(params chaincfg.Params) {
 	c.chainParams.GenesisHash = &genesis
 }
 
-func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewShardBlockNode(blockHeader, parent)
+func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode2.IBlockNode) blocknode2.IBlockNode {
+	return blocknode2.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }
 
 func (c *shardChain) Params() *chaincfg.Params  { return &c.chainParams }
@@ -60,9 +64,8 @@ func (c *shardChain) GenesisBlock() *wire.MsgBlock {
 	return &wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
-			c.chainParams.GenesisBlock.PrevBlock,
+			c.chainParams.GenesisBlock.PrevBlock, // todo: Put actual MMR Root
 			c.chainParams.GenesisBlock.MerkleRoot,
-			c.chainParams.GenesisBlock.Timestamp,
 			c.chainParams.GenesisBlock.Bits,
 			c.chainParams.GenesisBlock.BCHeader,
 			wire.CoinbaseAux{

@@ -7,15 +7,14 @@
 package beacon
 
 import (
-	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -35,7 +34,7 @@ type BlockGenerator struct {
 }
 
 type btcGen interface {
-	NewBlockTemplate(burnReward int) (wire.BTCBlockAux, bool, error)
+	NewBlockTemplate(burnReward int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error)
 }
 
 func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
@@ -44,14 +43,14 @@ func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
 	}
 }
 
-func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	header := wire.NewBeaconBlockHeader(
 		version,
-		prevHash,
+		mmrRoot,
 		merkleRootHash,
 		chainhash.Hash{},
 		timestamp,
@@ -72,10 +71,10 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleR
 		header.SetShards(count + 1)
 	}
 
-	header.SetK(header.Bits() / 2)
-	header.SetVoteK(header.Bits() / 2)
+	header.SetK(pow.PackK(pow.K1))
+	header.SetVoteK(pow.PackK(pow.K1))
 
-	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward)
+	aux, full, err := c.stateInfo.BTCGen.NewBlockTemplate(burnReward, header.BeaconExclusiveHash())
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to generate btc block aux")
 	}
@@ -89,54 +88,13 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, prevHash, merkleR
 	return header, nil
 }
 
-func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error { return nil }
-
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error {
-	aux := block.Header.BeaconHeader().BTCAux()
-	if len(aux.Tx.TxOut) != 3 {
-		return errors.New("invalid format of btc aux coinbase tx: less than 3 out")
-	}
-	if len(block.Transactions[0].TxOut) != 3 {
-		return errors.New("invalid format of beacon coinbase tx: less than 3 out")
-	}
-
-	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
-	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
-
-	var btcBurnReward = false
-
-	if len(aux.CoinbaseAux.Tx.TxOut) == 3 {
-		btcCoinbaseTx := aux.CoinbaseAux.Tx
-		btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-			btcCoinbaseTx.TxOut[0].Value == 0
-		if !btcJaxNetLinkOut {
-			return errors.New("invalid format of btc aux coinbase tx: first out must be zero and have JaxNetLink")
-		}
-		btcBurnReward = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	}
-
-	beaconCoinbaseTx := block.Transactions[0]
-	jaxNetLinkOut := bytes.Equal(beaconCoinbaseTx.TxOut[0].PkScript, jaxNetLink) &&
-		beaconCoinbaseTx.TxOut[0].Value == 0
-	if !jaxNetLinkOut {
-		return errors.New("invalid format of beacon coinbase tx: first out must be zero and have JaxNetLink")
-	}
-
-	jaxBurnReward := bytes.Equal(beaconCoinbaseTx.TxOut[1].PkScript, jaxBurn)
-	if btcBurnReward && !jaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC burned, JaxNet reward prohibited")
-	}
-	if !btcBurnReward && jaxBurnReward {
-		return errors.New("invalid format of beacon coinbase tx: BTC not burned, JaxNet burn prohibited")
-	}
-
-	properReward := beaconCoinbaseTx.TxOut[1].Value == calcBlockSubsidy(height)
-	if !properReward {
-		return fmt.Errorf("invalid format of beacon coinbase tx: invalid value of second out - has(%d) expected(%d) height(%d)",
-			beaconCoinbaseTx.TxOut[1].Value, calcBlockSubsidy(height), height)
-	}
-
+func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
 	return nil
+}
+
+func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, _ types.JaxNet) error {
+	_, err := mining.ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
+	return err
 }
 
 func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
@@ -156,7 +114,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
+func (c *BlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader, _ types.JaxNet) int64 {
 	return calcBlockSubsidy(height)
 }
 
@@ -172,29 +130,29 @@ func calcBlockSubsidy(height int32) int64 {
 
 	// Year 1
 	case height >= 0 && height <= endOfEpoch:
-		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 2
 	case height > endOfEpoch && height <= endOfEpoch*2:
-		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 3
 	case height > endOfEpoch*2 && height <= endOfEpoch*3:
-		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 4
 	case height > endOfEpoch*3 && height <= endOfEpoch*4:
-		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 5
 	case height > endOfEpoch*4 && height <= endOfEpoch*5:
-		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.SatoshiPerJAXNETCoin
+		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
 
 	// Year 6+
 	case height > endOfEpoch*5:
-		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
+		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
 	default:
-		return baseSubsidy * jaxutil.SatoshiPerJAXNETCoin
+		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
 	}
 
 }

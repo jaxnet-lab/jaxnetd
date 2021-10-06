@@ -12,5 +12,4 @@ const (
 	BurnJaxReward    = 1 << iota
 )
 
-const JaxNetLink = " https://jax.network "
-const JaxBurnAddr = "        JAX          "
+const JaxBurnAddr = "1JAXNETJAXNETJAXNETJAXNETJAXW3bkUN"

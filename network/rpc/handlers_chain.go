@@ -260,7 +260,7 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 		// Level 1 does basic BlockChain sanity checks.
 		if level > 0 {
 			err := chaindata.CheckBlockSanity(block,
-				server.chainProvider.ChainParams.PowParams.PowLimit, server.chainProvider.TimeSource)
+				server.chainProvider.ChainParams, server.chainProvider.TimeSource)
 			if err != nil {
 				server.Log.Error().Msgf("Verify is unable to validate "+
 					"block at hash %v height %d: %v",
@@ -1042,7 +1042,7 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	kd := pow.MultBitsAndK(best.Bits, best.K)
-	n := c.Amount / int64(kd*jaxutil.SatoshiPerJAXCoin)
+	n := c.Amount / int64(kd*jaxutil.JuroPerJAXCoin)
 
 	if n < 4 {
 		n = 4 * 30

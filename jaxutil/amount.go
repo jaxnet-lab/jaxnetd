@@ -104,12 +104,12 @@ func (a Amount) ToBTC() float64 {
 
 // ToJax ...
 func (a Amount) ToJax() float64 {
-	return float64(a) / math.Pow10(3)
+	return float64(a) / 10_000
 }
 
 // ToJaxNet ...
 func (a Amount) ToJaxNet() float64 {
-	return float64(a) / math.Pow10(8)
+	return float64(a) / 100_000_000
 }
 
 func (a Amount) ToCoin(isBeacon bool) float64 {

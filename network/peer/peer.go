@@ -35,7 +35,7 @@ func init() {
 
 const (
 	// MaxProtocolVersion is the max protocol version the peer supports.
-	MaxProtocolVersion = wire.FeeFilterVersion
+	MaxProtocolVersion = wire.ProtocolVersion
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
@@ -43,7 +43,7 @@ const (
 
 	// MinAcceptableProtocolVersion is the lowest protocol version that a
 	// connected peer may support.
-	MinAcceptableProtocolVersion = wire.MultipleAddressVersion
+	MinAcceptableProtocolVersion = wire.BaseJaxProtocol
 
 	// outputBufferSize is the number of elements the output channels use.
 	outputBufferSize = 50
@@ -1057,11 +1057,11 @@ func (peer *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *c
 //
 // This function is safe for concurrent access.
 func (peer *Peer) PushRejectMsg(command string, code wire.RejectCode, reason string, hash *chainhash.Hash, wait bool) {
-	// Don't bother sending the reject message if the protocol version
-	// is too low.
-	if peer.VersionKnown() && peer.ProtocolVersion() < wire.RejectVersion {
-		return
-	}
+	// // Don't bother sending the reject message if the protocol version
+	// // is too low.
+	// if peer.VersionKnown() && peer.ProtocolVersion() < wire.RejectVersion {
+	// 	return
+	// }
 
 	msg := wire.NewMsgReject(command, code, reason)
 	if command == wire.CmdTx || command == wire.CmdBlock {
@@ -1092,10 +1092,10 @@ func (peer *Peer) PushRejectMsg(command string, code wire.RejectCode, reason str
 // is considered a successful ping.
 func (peer *Peer) handlePingMsg(msg *wire.MsgPing) {
 	// Only reply with pong if the message is from a new enough client.
-	if peer.ProtocolVersion() > wire.BIP0031Version {
-		// Include nonce from ping so pong can be identified.
-		peer.QueueMessage(wire.NewMsgPong(msg.Nonce), nil)
-	}
+	// if peer.ProtocolVersion() > wire.BIP0031Version {
+	// Include nonce from ping so pong can be identified.
+	peer.QueueMessage(wire.NewMsgPong(msg.Nonce), nil)
+	// }
 }
 
 // handlePongMsg is invoked when a peer receives a pong bitcoin message.  It
@@ -1110,15 +1110,15 @@ func (peer *Peer) handlePongMsg(msg *wire.MsgPong) {
 	// and overlapping pings will be ignored. It is unlikely to occur
 	// without large usage of the ping rpc call since we ping infrequently
 	// enough that if they overlap we would have timed out the peer.
-	if peer.ProtocolVersion() > wire.BIP0031Version {
-		peer.statsMtx.Lock()
-		if peer.lastPingNonce != 0 && msg.Nonce == peer.lastPingNonce {
-			peer.lastPingMicros = time.Since(peer.lastPingTime).Nanoseconds()
-			peer.lastPingMicros /= 1000 // convert to usec.
-			peer.lastPingNonce = 0
-		}
-		peer.statsMtx.Unlock()
+	// if peer.ProtocolVersion() > wire.BIP0031Version {
+	peer.statsMtx.Lock()
+	if peer.lastPingNonce != 0 && msg.Nonce == peer.lastPingNonce {
+		peer.lastPingMicros = time.Since(peer.lastPingTime).Nanoseconds()
+		peer.lastPingMicros /= 1000 // convert to usec.
+		peer.lastPingNonce = 0
 	}
+	peer.statsMtx.Unlock()
+	// }
 }
 
 // readMessage reads the next bitcoin message from the peer with logging.
@@ -1803,12 +1803,12 @@ out:
 			case *wire.MsgPing:
 				// Only expects a pong message in later protocol
 				// versions.  Also set up statistics.
-				if peer.ProtocolVersion() > wire.BIP0031Version {
-					peer.statsMtx.Lock()
-					peer.lastPingNonce = m.Nonce
-					peer.lastPingTime = time.Now()
-					peer.statsMtx.Unlock()
-				}
+				// if peer.ProtocolVersion() > wire.BIP0031Version {
+				peer.statsMtx.Lock()
+				peer.lastPingNonce = m.Nonce
+				peer.lastPingTime = time.Now()
+				peer.statsMtx.Unlock()
+				// }
 			}
 
 			peer.stallControl <- stallControlMsg{sccSendMessage, msg.msg}

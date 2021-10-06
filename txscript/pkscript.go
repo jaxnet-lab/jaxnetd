@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package txscript
 
 import (
@@ -102,7 +103,7 @@ func ParsePkScript(pkScript []byte) (PkScript, error) {
 func isSupportedScriptType(class ScriptClass) bool {
 	switch class {
 	case PubKeyHashTy, WitnessV0PubKeyHashTy, ScriptHashTy,
-		WitnessV0ScriptHashTy:
+		WitnessV0ScriptHashTy, EADAddressTy, HTLCScriptTy:
 		return true
 	default:
 		return false

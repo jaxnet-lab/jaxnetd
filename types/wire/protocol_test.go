@@ -47,8 +47,7 @@ func TestBitcoinNetStringer(t *testing.T) {
 		want string
 	}{
 		{types.MainNet, "MainNet"},
-		{types.RegTest, "RegTest"},
-		{types.TestNet3, "TestNet3"},
+		{types.TestNet, "TestNet"},
 		{types.SimNet, "SimNet"},
 		{0xffffffff, "Unknown JaxNet (4294967295)"},
 	}

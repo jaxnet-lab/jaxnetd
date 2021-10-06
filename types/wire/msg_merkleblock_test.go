@@ -24,7 +24,7 @@ func TestMerkleBlock(t *testing.T) {
 	enc := BaseEncoding
 
 	// Block 1 header.
-	prevHash := blockOne.Header.PrevBlock()
+	prevHash := blockOne.Header.BlocksMerkleMountainRoot()
 	merkleHash := blockOne.Header.MerkleRoot()
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
@@ -117,7 +117,7 @@ func TestMerkleBlock(t *testing.T) {
 // the latest protocol version and decoding with BIP0031Version.
 func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// Block 1 header.
-	prevHash := blockOne.Header.PrevBlock()
+	prevHash := blockOne.Header.BlocksMerkleMountainRoot()
 	merkleHash := blockOne.Header.MerkleRoot()
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
@@ -134,13 +134,6 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 			err)
 	}
 
-	// Decode with old protocol version.
-	var readmsg MsgFilterLoad
-	err = readmsg.BtcDecode(&buf, BIP0031Version, BaseEncoding)
-	if err == nil {
-		t.Errorf("decode of MsgFilterLoad succeeded when it shouldn't have %v",
-			msg)
-	}
 }
 
 // TestMerkleBlockWire tests the MsgMerkleBlock wire encode and decode for
@@ -157,12 +150,6 @@ func TestMerkleBlockWire(t *testing.T) {
 		{
 			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
 			ProtocolVersion, BaseEncoding,
-		},
-
-		// Protocol version BIP0037Version.
-		{
-			&merkleBlockOne, &merkleBlockOne, merkleBlockOneBytes,
-			BIP0037Version, BaseEncoding,
 		},
 	}
 
@@ -204,8 +191,6 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	// because the test data is using bytes encoded with that protocol
 	// version.
 	pver := uint32(70001)
-	pverNoMerkleBlock := BIP0037Version - 1
-	wireErr := &MessageError{}
 
 	tests := []struct {
 		in       *MsgMerkleBlock         // Value to encode
@@ -270,11 +255,6 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 		{
 			&merkleBlockOne, merkleBlockOneBytes, pver, BaseEncoding, 118,
 			io.ErrShortWrite, io.EOF,
-		},
-		// Force error due to unsupported protocol version.
-		{
-			&merkleBlockOne, merkleBlockOneBytes, pverNoMerkleBlock,
-			BaseEncoding, 119, wireErr, wireErr,
 		},
 	}
 

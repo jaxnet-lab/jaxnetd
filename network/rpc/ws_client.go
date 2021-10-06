@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/btcjson"
+	"io"
+	"net"
+	"sync"
+
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
@@ -16,9 +19,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
-	"io"
-	"net"
-	"sync"
 )
 
 type semaphore chan struct{}
@@ -342,8 +342,8 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	if r.ShardID != 0 {
 		shard, ok := c.manager.server.shardRPCs[r.ShardID]
 		if !ok {
-			jsonErr := &btcjson.RPCError{
-				Code:    btcjson.ErrRPCInvalidParams.Code,
+			jsonErr := &jaxjson.RPCError{
+				Code:    jaxjson.ErrRPCInvalidParams.Code,
 				Message: "Shard is not found by provided shard id",
 			}
 			// Marshal and send error response.

@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package chaindata
 
 import (
@@ -13,7 +14,6 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -39,18 +39,6 @@ const (
 	// baseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
 	baseSubsidy = 50 * jaxutil.SatoshiPerBitcoin
-)
-
-var (
-	// block91842Hash is one of the two nodes which violate the rules
-	// set forth in BIP0030.  It is defined as a package level variable to
-	// avoid the need to create a new instance every time a check is needed.
-	block91842Hash = newHashFromStr("00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec")
-
-	// block91880Hash is one of the two nodes which violate the rules
-	// set forth in BIP0030.  It is defined as a package level variable to
-	// avoid the need to create a new instance every time a check is needed.
-	block91880Hash = newHashFromStr("00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721")
 )
 
 // isNullOutpoint determines whether or not a previous transaction output point
@@ -193,22 +181,6 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	return true
 }
 
-// isBIP0030Node returns whether or not the passed node represents one of the
-// two blocks that violate the BIP0030 rule which prevents transactions from
-// overwriting old ones.
-func IsBIP0030Node(node blocknode.IBlockNode) bool {
-	h := node.GetHash()
-	if node.Height() == 91842 && h.IsEqual(block91842Hash) {
-		return true
-	}
-
-	if node.Height() == 91880 && h.IsEqual(block91880Hash) {
-		return true
-	}
-
-	return false
-}
-
 // CalcBlockSubsidy returns the subsidy amount a block at the provided height
 // should have. This is mainly used for determining how much the coinbase for
 // newly generated blocks awards as well as validating the coinbase for blocks
@@ -338,7 +310,7 @@ func CheckTransactionSanity(tx *jaxutil.Tx) error {
 // The flags modify the behavior of this function as follows:
 //  - BFNoPoWCheck: The check to ensure the block Hash is less than the target
 //    difficulty is not performed.
-func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags BehaviorFlags) error {
+func checkProofOfWork(header wire.BlockHeader, chainCfg *chaincfg.Params, flags BehaviorFlags) error {
 	// The target difficulty must be larger than zero.
 	target := pow.CompactToBig(header.Bits())
 	if target.Sign() <= 0 {
@@ -347,8 +319,9 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 	}
 
 	// The target difficulty must be less than the maximum allowed.
-	if target.Cmp(powLimit) > 0 {
-		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target, powLimit)
+	if target.Cmp(chainCfg.PowParams.PowLimit) > 0 {
+		str := fmt.Sprintf("block target difficulty of %064x is higher than max of %064x", target,
+			chainCfg.PowParams.PowLimit)
 		return NewRuleError(ErrUnexpectedDifficulty, str)
 	}
 
@@ -364,6 +337,12 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 			str := fmt.Sprintf("block Hash of %064x is higher than expected max of %064x", hashNum, target)
 			return NewRuleError(ErrHighHash, str)
 		}
+
+		if chainCfg.PowParams.HashSorting && !pow.ValidateHashSortingRule(target, chainCfg.PowParams.ChainIDCount, chainCfg.ChainID) {
+			str := fmt.Sprintf("block Hash of %064x is not match for chain %d by hash-sorting rules",
+				hashNum, chainCfg.ChainID)
+			return NewRuleError(ErrHashSortingRuleNotMatch, str)
+		}
 	}
 
 	return nil
@@ -372,8 +351,8 @@ func checkProofOfWork(header wire.BlockHeader, powLimit *big.Int, flags Behavior
 // CheckProofOfWork ensures the block header bits which indicate the target
 // difficulty is in min/max range and that the block Hash is less than the
 // target difficulty as claimed.
-func CheckProofOfWork(block *jaxutil.Block, powLimit *big.Int) error {
-	return checkProofOfWork(block.MsgBlock().Header, powLimit, BFNone)
+func CheckProofOfWork(block *jaxutil.Block, chainCfg *chaincfg.Params) error {
+	return checkProofOfWork(block.MsgBlock().Header, chainCfg, BFNone)
 }
 
 // CountSigOps returns the number of signature operations for all transaction
@@ -474,7 +453,7 @@ func CountP2SHSigOps(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
-func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *chaincfg.Params, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	// Ensure the proof of work bits in the block header is in min/max range
 	// and the block Hash is less than the target value described by the
 	// bits.
@@ -508,10 +487,10 @@ func checkBlockHeaderSanity(header wire.BlockHeader, powLimit *big.Int, timeSour
 //
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
-func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource, flags BehaviorFlags) error {
+func CheckBlockSanityWF(block *jaxutil.Block, chainParams *chaincfg.Params, timeSource MedianTimeSource, flags BehaviorFlags) error {
 	msgBlock := block.MsgBlock()
 	header := msgBlock.Header
-	err := checkBlockHeaderSanity(header, powLimit, timeSource, flags)
+	err := checkBlockHeaderSanity(header, chainParams, timeSource, flags)
 	if err != nil {
 		return err
 	}
@@ -610,8 +589,8 @@ func CheckBlockSanityWF(block *jaxutil.Block, powLimit *big.Int, timeSource Medi
 
 // CheckBlockSanity performs some preliminary checks on a block to ensure it is
 // sane before continuing with block processing.  These checks are context free.
-func CheckBlockSanity(block *jaxutil.Block, powLimit *big.Int, timeSource MedianTimeSource) error {
-	return CheckBlockSanityWF(block, powLimit, timeSource, BFNone)
+func CheckBlockSanity(block *jaxutil.Block, chainParams *chaincfg.Params, timeSource MedianTimeSource) error {
+	return CheckBlockSanityWF(block, chainParams, timeSource, BFNone)
 }
 
 // ExtractCoinbaseHeight attempts to extract the height of the block from the
@@ -802,7 +781,7 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 }
 
 // ValidateSwapTxStructure validates formats of the cross shard swap tx.
-// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// wire.TxVerCrossShardSwap transaction is a special tx for atomic swap between chains.
 // It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 // TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.
@@ -836,5 +815,50 @@ func ValidateSwapTxStructure(tx *wire.MsgTx, missedUTXO int) error {
 			inLen, outLen, missedUTXO)
 		return NewRuleError(ErrInvalidShardSwapInOuts, str)
 	}
+	return nil
+}
+
+func ValidateVoteK(header wire.BlockHeader) error {
+	err := validateVoteK(header.K(), header.VoteK())
+
+	return err
+}
+
+// ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
+//
+func validateVoteK(prevK, newVoteK uint32) error {
+	unpackedNewVoteK := pow.UnpackK(newVoteK)
+	// 0 < vote_K < 2^-60
+	if unpackedNewVoteK.Sign() < 0 || pow.K1.Cmp(unpackedNewVoteK) < 0 {
+		return fmt.Errorf("voteK is out of bounds 0 < (%v) <= 2^-60", unpackedNewVoteK)
+	}
+
+	unpackedPrevK := pow.UnpackK(prevK)
+
+	switch unpackedPrevK.Cmp(unpackedNewVoteK) {
+
+	// -1 if PrevK <  NewK
+	case -1:
+		delta, _ := new(big.Float).Quo(unpackedPrevK, unpackedNewVoteK).Float64()
+		delta = math.Round(delta * 1000)
+		if int(delta) < 990 { // NewK > 1.01*K  /// PrevK / NewK = delta
+			return fmt.Errorf("voteK is out of bounds (%0x) <= 1.01*K; prev K(%0x), delta(%v) ",
+				newVoteK, prevK, delta)
+		}
+
+	// 0 if PrevK == NewK
+	case 0:
+		return nil
+
+	// +1 if PrevK >  PrevK
+	case 1:
+		delta, _ := new(big.Float).Quo(unpackedNewVoteK, unpackedPrevK).Float64()
+		delta = math.Round(delta * 1000)
+		if int(delta) < 970 { //  delta < 0.97
+			return fmt.Errorf("voteK is out of bounds 0.97*K <= (%0x); prev K(%0x), delta(%v) ",
+				newVoteK, prevK, delta)
+		}
+	}
+
 	return nil
 }

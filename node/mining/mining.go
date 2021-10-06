@@ -27,9 +27,9 @@ import (
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority       = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityBeacon = jaxutil.SatoshiPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityShard  = jaxutil.SatoshiPerJAXCoin * 144.0 / 250
+	MinHighPriority       = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityBeacon = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityShard  = jaxutil.JuroPerJAXCoin * 144.0 / 250
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
 	// generated via jaxnetd.
@@ -248,100 +248,6 @@ func mergeUtxoView(viewA *chaindata.UtxoViewpoint, viewB *chaindata.UtxoViewpoin
 	}
 }
 
-// StandardCoinbaseScript returns a standard script suitable for use as the
-// signature script of the coinbase transaction of a new block.  In particular,
-// it starts with the block height that is required by version 2 blocks and adds
-// the extra nonce as well as additional coinbase flags.
-func StandardCoinbaseScript(nextBlockHeight int32, shardID uint32, extraNonce uint64) ([]byte, error) {
-	return txscript.NewScriptBuilder().
-		AddInt64(int64(nextBlockHeight)).
-		AddInt64(int64(shardID)).
-		AddInt64(int64(extraNonce)).
-		AddData([]byte(CoinbaseFlags)).
-		Script()
-}
-
-// CreateCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
-// based on the passed block height to the provided address.  When the address
-// is nil, the coinbase transaction will instead be redeemable by anyone.
-//
-// See the comment for NewBlockTemplate for more information about why the nil
-// address handling is useful.
-func CreateCoinbaseTx(value int64, nextHeight int32, shardID uint32, addr jaxutil.Address) (*jaxutil.Tx, error) {
-	extraNonce := uint64(0)
-	coinbaseScript, err := StandardCoinbaseScript(nextHeight, shardID, extraNonce)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the script to pay to the provided payment address if one was
-	// specified.  Otherwise create a script that allows the coinbase to be
-	// redeemable by anyone.
-	var pkScript []byte
-	if addr != nil {
-		var err error
-		pkScript, err = txscript.PayToAddrScript(addr)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		var err error
-		scriptBuilder := txscript.NewScriptBuilder()
-		pkScript, err = scriptBuilder.AddOp(txscript.OP_TRUE).Script()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	tx := wire.NewMsgTx(wire.TxVersion)
-	tx.AddTxIn(&wire.TxIn{
-		// Coinbase transactions have no inputs, so previous outpoint is
-		// zero hash and max index.
-		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{}, wire.MaxPrevOutIndex),
-		SignatureScript:  coinbaseScript,
-		Sequence:         wire.MaxTxInSequenceNum,
-	})
-
-	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
-	return jaxutil.NewTx(tx), nil
-}
-
-func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
-	shardID uint32, addr jaxutil.Address, burnReward bool) (*jaxutil.Tx, error) {
-	extraNonce := uint64(0)
-	coinbaseScript, err := StandardCoinbaseScript(nextHeight, shardID, extraNonce)
-	if err != nil {
-		return nil, err
-	}
-
-	feeAddress, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		feeAddress, _ = txscript.NewScriptBuilder().AddOp(txscript.OP_TRUE).Script()
-	}
-
-	jaxNetLink, _ := txscript.NullDataScript([]byte(types.JaxNetLink))
-	jaxBurn, _ := txscript.NullDataScript([]byte(types.JaxBurnAddr))
-
-	var pkScript = feeAddress
-	if burnReward {
-		pkScript = jaxBurn
-	}
-
-	tx := wire.NewMsgTx(wire.TxVersion)
-	tx.AddTxIn(&wire.TxIn{
-		// Coinbase transactions have no inputs, so previous outpoint is
-		// zero hash and max index.
-		PreviousOutPoint: *wire.NewOutPoint(&chainhash.Hash{}, wire.MaxPrevOutIndex),
-		SignatureScript:  coinbaseScript,
-		Sequence:         wire.MaxTxInSequenceNum,
-	})
-
-	tx.AddTxOut(&wire.TxOut{Value: 0, PkScript: jaxNetLink})
-	tx.AddTxOut(&wire.TxOut{Value: value, PkScript: pkScript})
-	tx.AddTxOut(&wire.TxOut{Value: fee, PkScript: feeAddress})
-	return jaxutil.NewTx(tx), nil
-}
-
 // spendTransaction updates the passed view by marking the inputs to the passed
 // transaction as spent.  It also adds all outputs in the passed transaction
 // which are not provably unspendable as available unspent transaction outputs.
@@ -520,11 +426,13 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
 	var msgBlock = g.chainCtx.EmptyBlock()
-	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(nextBlockVersion,
-		best.Hash, *merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
+	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().
+		NewBlockHeader(nextBlockVersion, g.blockChain.MMRTree().CurrentRoot(),
+			*merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
 	if err != nil {
 		return nil, err
 	}
+
 	if g.chainCtx.IsBeacon() {
 		k := g.blockChain.CalcNextK()
 		msgBlock.Header.SetK(k)
@@ -572,17 +480,18 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 
-	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader)
-
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader,
+		g.blockChain.Chain().Params().Net)
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {
 	case true:
 		burnReward = burnRewardFlags&types.BurnJaxNetReward == types.BurnJaxNetReward
 	case false:
-		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxNetReward
+		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 	}
 
-	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress, burnReward)
+	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress,
+		burnReward, g.blockChain.Chain().IsBeacon())
 	if err != nil {
 		return nil, err
 	}
@@ -700,8 +609,7 @@ mempoolLoop:
 		// Calculate the final transaction priority using the input
 		// value age sum as well as the adjusted transaction size.  The
 		// formula is: sum(inputValue * inputAge) / adjustedTxSize
-		prioItem.priority = CalcPriority(tx.MsgTx(), utxos,
-			nextHeight)
+		prioItem.priority = CalcPriority(tx.MsgTx(), utxos, nextHeight)
 
 		// Calculate the fee in Satoshi/kB.
 		prioItem.feePerKB = txDesc.FeePerKB
@@ -768,12 +676,10 @@ mempoolLoop:
 			// witness commitment.
 			coinbaseCopy := jaxutil.NewTx(coinbaseTx.MsgTx().Copy())
 			coinbaseCopy.MsgTx().TxIn[0].Witness = [][]byte{
-				bytes.Repeat([]byte("a"),
-					chaindata.CoinbaseWitnessDataLen),
+				bytes.Repeat([]byte("a"), chaindata.CoinbaseWitnessDataLen),
 			}
 			coinbaseCopy.MsgTx().AddTxOut(&wire.TxOut{
-				PkScript: bytes.Repeat([]byte("a"),
-					chaindata.CoinbaseWitnessPkScriptLength),
+				PkScript: bytes.Repeat([]byte("a"), chaindata.CoinbaseWitnessPkScriptLength),
 			})
 
 			// In order to accurately account for the weight

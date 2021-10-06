@@ -27,13 +27,14 @@ import (
 func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	// The height of this block is one more than the referenced previous
 	// block.
-	prevHash := block.MsgBlock().Header.PrevBlock()
-	prevNode := b.index.LookupNode(&prevHash)
+
+	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevNode := b.index.LookupNodeByMMRRoot(&prevMMRRoot)
 	if prevNode == nil {
-		str := fmt.Sprintf("previous block %s is unknown", prevHash)
+		str := fmt.Sprintf("previous block %s is unknown", prevMMRRoot)
 		return false, chaindata.NewRuleError(chaindata.ErrPreviousBlockUnknown, str)
 	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
-		str := fmt.Sprintf("previous block %s is known to be invalid", prevHash)
+		str := fmt.Sprintf("previous block %s is known to be invalid", prevMMRRoot)
 		return false, chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
 	}
 
@@ -41,7 +42,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	block.SetHeight(blockHeight)
 
 	// Perform checks of the coinbase tx structure according to merge mining spec.
-	err := b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
+	err := b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height(), b.chain.Params().Net)
 	if err != nil {
 		return false, err
 	}

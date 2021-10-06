@@ -58,7 +58,6 @@ type InstanceConfig struct {
 type ShardConfig struct {
 	Enable      bool                                    `yaml:"enable" toml:"enable"`
 	Autorun     bool                                    `yaml:"autorun" toml:"autorun"`
-	ChainParams map[uint32]cprovider.ChainRuntimeConfig `yaml:"chain_params" toml:"chain_params"`
 }
 
 func (cfg *InstanceConfig) ChainParams() *chaincfg.Params {

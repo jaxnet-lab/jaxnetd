@@ -63,8 +63,9 @@ const (
 	WitnessV0ScriptHashTy                    // Pay to witness script hash.
 	MultiSigTy                               // Multi signature.
 	MultiSigLockTy                           // Multi signature with time lock (msl).
-	NullDataTy                               // Empty data-only (provably prunable).
 	EADAddressTy                             // Management of the EAD Net Address.
+	HTLCScriptTy                             // script with time-lock
+	NullDataTy                               // Empty data-only (provably prunable).
 )
 
 // scriptClassToName houses the human-readable strings which describe each
@@ -79,6 +80,7 @@ var scriptClassToName = []string{
 	MultiSigTy:            "multisig",
 	MultiSigLockTy:        "multisig_lock",
 	NullDataTy:            "nulldata",
+	HTLCScriptTy:          "htlc",
 	EADAddressTy:          "ead_address",
 }
 
@@ -184,6 +186,8 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
 		return EADAddressTy
+	} else if isHTLC(pops) {
+		return HTLCScriptTy
 	} else if isNullData(pops) {
 		return NullDataTy
 	}
@@ -239,7 +243,8 @@ func expectedInputs(pops []parsedOpcode, class ScriptClass) int {
 
 	case EADAddressTy:
 		return 1
-
+	case HTLCScriptTy:
+		return 1
 	case NullDataTy:
 		fallthrough
 	default:
@@ -490,10 +495,16 @@ func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 				nilAddrErrStr)
 		}
 		return payToWitnessScriptHashScript(addr.ScriptAddress())
+
+	case *jaxutil.HTLCAddress:
+		if addr == nil {
+			return nil, scriptError(ErrUnsupportedAddress,
+				nilAddrErrStr)
+		}
+		return addr.ScriptAddress(), nil
 	}
 
-	str := fmt.Sprintf("unable to generate payment script for unsupported "+
-		"address type %T", addr)
+	str := fmt.Sprintf("unable to generate payment script for unsupported address type %T", addr)
 	return nil, scriptError(ErrUnsupportedAddress, str)
 }
 
@@ -697,8 +708,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the pubkey hash is the 3rd item on the stack.
 		// Skip the pubkey hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressPubKeyHash(pops[2].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -732,8 +742,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore the script hash is the 2nd item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressScriptHashFromHash(pops[1].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}
@@ -782,6 +791,13 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 			addrs = append(addrs, addr)
 		}
 
+	case HTLCScriptTy:
+		_, addrs, requiredSigs, err = extractHTLCAddrs(pops, chainParams)
+		if err != nil {
+			return NonStandardTy, nil, 0, err
+		}
+		lockAddr, _ := jaxutil.NewHTLCAddress(pkScript, chainParams)
+		addrs = append(addrs, lockAddr)
 	case NullDataTy:
 		// Null data transactions have no addresses or required
 		// signatures.

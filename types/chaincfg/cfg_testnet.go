@@ -1,4 +1,5 @@
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020-2021 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -23,7 +24,7 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
 	Name:        "testnet",
-	Net:         types.TestNet3,
+	Net:         types.TestNet,
 	DefaultPort: "18333",
 	DNSSeeds:    []DNSSeed{},
 
@@ -50,6 +51,8 @@ var TestNet3Params = Params{
 		ReduceMinDifficulty:      false,
 		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 		GenerateSupported:        true,
+		HashSorting:              true,
+		ChainIDCount:             4096, // 2^12
 	},
 
 	// Checkpoints ordered from oldest to newest.
@@ -86,8 +89,9 @@ var TestNet3Params = Params{
 	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x03, // starts with QW
 	WitnessScriptHashAddrID: 0x28, // starts with T7n
-	EADAddressID:            0x25, // starts with todo
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	EADAddressID:            0xd8, // starts with B
+	HTLCAddressID:           0x05, // starts with H
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -95,5 +99,5 @@ var TestNet3Params = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 0x6A, // ASCII for j
 }

@@ -1,6 +1,8 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
 package blocknode
 
@@ -35,11 +37,14 @@ const (
 
 type IBlockNode interface {
 	GetHash() chainhash.Hash
+	BlocksMMRRoot() chainhash.Hash
 	Height() int32
 	SerialID() int64
 	Version() int32
 	Bits() uint32
+	Difficulty() uint64
 	K() uint32
+	VoteK() uint32
 	Status() BlockStatus
 	SetStatus(status BlockStatus)
 
@@ -49,7 +54,10 @@ type IBlockNode interface {
 	Parent() IBlockNode
 	Ancestor(height int32) IBlockNode
 	CalcPastMedianTime() time.Time
+	CalcPastMedianTimeForN(nBlocks int) time.Time
+	CalcMedianVoteK() uint32
 	RelativeAncestor(distance int32) IBlockNode
+	ExpansionApproved() bool
 	WorkSum() *big.Int
 	Timestamp() int64
 }
@@ -76,4 +84,26 @@ func (status BlockStatus) KnownValid() bool {
 // invalid yet.
 func (status BlockStatus) KnownInvalid() bool {
 	return status&(StatusValidateFailed|StatusInvalidAncestor) != 0
+}
+
+// bigFloatSorter implements sort.Interface to allow a slice of big.Float to
+// be sorted.
+type bigFloatSorter []*big.Float
+
+// Len returns the number of timestamps in the slice.  It is part of the
+// sort.Interface implementation.
+func (s bigFloatSorter) Len() int {
+	return len(s)
+}
+
+// Swap swaps the timestamps at the passed indices.  It is part of the
+// sort.Interface implementation.
+func (s bigFloatSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+// Less returns whether the timstamp with index i should sort before the
+// timestamp with index j.  It is part of the sort.Interface implementation.
+func (s bigFloatSorter) Less(i, j int) bool {
+	return s[i].Cmp(s[j]) < 0
 }

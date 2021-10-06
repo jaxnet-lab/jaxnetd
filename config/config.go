@@ -800,7 +800,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Only allow TLS to be disabled if the RPC is bound to localhost
 	// addresses.
-	if !cfg.Node.RPC.Disable && cfg.Node.P2P.DisableTLS {
+	if !cfg.Node.RPC.Disable && cfg.Node.RPC.DisableTLS {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},

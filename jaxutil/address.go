@@ -207,6 +207,10 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 		}
 
 	default:
+		if netID == defaultNet.HTLCAddressID {
+			return newHTLCAddress(decoded, netID)
+		}
+
 		return nil, errors.New("decoded address is of unknown size")
 	}
 }
@@ -687,98 +691,50 @@ func (a *AddressWitnessScriptHash) WitnessProgram() []byte {
 	return a.witnessProgram[:]
 }
 
-//
-// // EADAddress is an Address for a ead_address transaction.
-// type EADAddress struct {
-// 	pubKey *AddressPubKey
-// 	script []byte
-// 	netID  byte
-// }
-//
-// func newEADAddress(script []byte, id byte, defaultNet *chaincfg.Params) (Address, error) {
-// 	scriptData, err := txscript.EADAddressScriptData(script)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	key, err := NewAddressPubKey(scriptData.RawKey, defaultNet)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return &EADAddress{
-// 		script: script,
-// 		pubKey: key,
-// 		netID:  id,
-// 	}, nil
-// }
-//
-// // NewAddressPubKey returns a new AddressPubKey which represents a pay-to-pubkey
-// // address.  The serializedPubKey parameter must be a valid pubkey and can be
-// // uncompressed, compressed, or hybrid.
-// func NewEADAddress(scriptData txscript.EADScriptData, net *chaincfg.Params) (*EADAddress, error) {
-// 	script, err := txscript.EADAddressScript(scriptData)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	return &EADAddress{
-// 		script: script,
-// 		pubKey: scriptData.Owner,
-// 		netID:  net.EADAddressID,
-// 	}, nil
-// }
-//
-// // serialize returns the serialization of the public key according to the
-// // format associated with the address.
-// func (a *EADAddress) serialize() []byte {
-// 	return a.script
-// }
-//
-// // EncodeAddress returns the string encoding of the public key as a
-// // pay-to-pubkey-hash.  Note that the public key format (uncompressed,
-// // compressed, etc) will change the resulting address.  This is expected since
-// // pay-to-pubkey-hash is a hash of the serialized public key which obviously
-// // differs with the format.  At the time of this writing, most Bitcoin addresses
-// // are pay-to-pubkey-hash constructed from the uncompressed public key.
-// //
-// // Part of the Address interface.
-// func (a *EADAddress) EncodeAddress() string {
-// 	// return encodeAddress(Hash160(a.serialize()), a.netID)
-// 	return encodeAddress(a.serialize(), a.netID)
-// }
-//
-// // ScriptAddress returns the bytes to be included in a txout script to pay
-// // to a public key.  Setting the public key format will affect the output of
-// // this function accordingly.  Part of the Address interface.
-// func (a *EADAddress) ScriptAddress() []byte {
-// 	return a.serialize()
-// }
-//
-// // IsForNet returns whether or not the pay-to-pubkey address is associated
-// // with the passed bitcoin network.
-// func (a *EADAddress) IsForNet(net *chaincfg.Params) bool {
-// 	return a.netID == net.EADAddressID
-// }
-//
-// // String returns the hex-encoded human-readable string for the pay-to-pubkey
-// // address.  This is not the same as calling EncodeAddress.
-// func (a *EADAddress) String() string {
-// 	return hex.EncodeToString(a.serialize())
-// }
-//
-// // AddressPubKeyHash returns the pay-to-pubkey address converted to a
-// // pay-to-pubkey-hash address.  Note that the public key format (uncompressed,
-// // compressed, etc) will change the resulting address.  This is expected since
-// // pay-to-pubkey-hash is a hash of the serialized public key which obviously
-// // differs with the format.  At the time of this writing, most Bitcoin addresses
-// // are pay-to-pubkey-hash constructed from the uncompressed public key.
-// func (a *EADAddress) AddressPubKeyHash() *AddressPubKeyHash {
-// 	addr := &AddressPubKeyHash{netID: a.netID}
-// 	copy(addr.hash[:], Hash160(a.serialize()))
-// 	return addr
-// }
-//
-// // PubKey returns the underlying public key for the address.
-// func (a *EADAddress) PubKey() *btcec.PublicKey {
-// 	return a.pubKey.pubKey
-// }
+// HTLCAddress is an Address for a pay-to-htlc (P2HTLC)
+// transaction.
+type HTLCAddress struct {
+	script []byte
+	netID  byte
+}
+
+// NewHTLCAddress returns a new HTLCAddress.  pkHash must be 20 bytes.
+func NewHTLCAddress(pkScript []byte, net *chaincfg.Params) (*HTLCAddress, error) {
+	return newHTLCAddress(pkScript, net.HTLCAddressID)
+}
+
+// newAddressPubKeyHash is the internal API to create a pubkey hash address
+// with a known leading identifier byte for a network, rather than looking
+// it up through its parameters.  This is useful when creating a new address
+// structure from a string encoding where the identifer byte is already
+// known.
+func newHTLCAddress(pkHash []byte, netID byte) (*HTLCAddress, error) {
+	// todo: add some validation
+	addr := &HTLCAddress{netID: netID, script: pkHash}
+	return addr, nil
+}
+
+// EncodeAddress returns the string encoding of a pay-to-pubkey-hash
+// address.  Part of the Address interface.
+func (a *HTLCAddress) EncodeAddress() string {
+	return base58.CheckEncode(a.script[:], a.netID)
+}
+
+// ScriptAddress returns the bytes to be included in a txout script to pay
+// to a htlc address.  Part of the Address interface.
+func (a *HTLCAddress) ScriptAddress() []byte {
+	return a.script[:]
+}
+
+// IsForNet returns whether or not the pay-to-htlc address is associated
+// with the passed jaxnet network.
+func (a *HTLCAddress) IsForNet(net *chaincfg.Params) bool {
+	return a.netID == net.HTLCAddressID
+}
+
+// String returns a human-readable string for the pay-to-pubkey-hash address.
+// This is equivalent to calling EncodeAddress, but is provided so the type can
+// be used as a fmt.Stringer.
+func (a *HTLCAddress) String() string {
+	return a.EncodeAddress()
+}

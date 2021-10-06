@@ -23,7 +23,6 @@ func Test_calcBlockSubsidy(t *testing.T) {
 		height int32
 		reward int64
 	}{
-
 		{epoch: 1, height: 1, reward: 340},
 		{epoch: 1, height: 10, reward: 340},
 		{epoch: 1, height: 100, reward: 340},

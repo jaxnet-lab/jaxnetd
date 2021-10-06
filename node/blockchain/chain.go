@@ -16,7 +16,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -68,13 +70,13 @@ type IndexManager interface {
 	// main chain. The set of output spent within a block is also passed in
 	// so indexers can access the previous output scripts input spent if
 	// required.
-	ConnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
+	ConnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error
 
 	// DisconnectBlock is invoked when a block has been disconnected from
 	// the main chain. The set of outputs scripts that were spent within
 	// this block is also returned so indexers can clean up the prior index
 	// state for this block.
-	DisconnectBlock(database.Tx, *jaxutil.Block, []chaindata.SpentTxOut) error
+	DisconnectBlock(database.Tx, *jaxutil.Block, chainhash.Hash, []chaindata.SpentTxOut) error
 }
 
 // Config is a descriptor which specifies the blockchain instance configuration.
@@ -239,7 +241,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	bestNode := b.bestChain.Tip()
-	log.Info().Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
+	log.Info().Str("chain", b.chain.Name()).Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
 		bestNode.Height(), bestNode.GetHash(), b.stateSnapshot.TotalTxns,
 		bestNode.WorkSum())
 
@@ -247,15 +249,15 @@ func New(config *Config) (*BlockChain, error) {
 }
 
 type ChainBlockGenerator interface {
-	NewBlockHeader(version wire.BVersion, prevHash, merkleRootHash chainhash.Hash,
+	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
 	AcceptBlock(blockHeader wire.BlockHeader) error
 
 	ValidateBlockHeader(blockHeader wire.BlockHeader) error
-	ValidateCoinbaseTx(block *wire.MsgBlock, height int32) error
+	ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error
 
-	CalcBlockSubsidy(height int32, header wire.BlockHeader) int64
+	CalcBlockSubsidy(height int32, header wire.BlockHeader, net types.JaxNet) int64
 }
 
 // BlockChain provides functions for working with the bitcoin block chain.
@@ -416,7 +418,8 @@ func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 			break
 		}
 		orphanRoot = prevHash
-		h := orphan.block.MsgBlock().Header.PrevBlock()
+		h := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+		// b.MMRTree().LookupNodeByRoot()
 		prevHash = &h
 	}
 
@@ -438,7 +441,8 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash := orphan.block.MsgBlock().Header.PrevBlock()
+	prevHash := b.MMRTree().LookupNodeByRoot(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+
 	orphans := b.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
@@ -460,6 +464,10 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 
 func (b *BlockChain) Chain() chain2.IChainCtx {
 	return b.chain
+}
+
+func (b *BlockChain) MMRTree() mmr.BlocksMMRTree {
+	return b.index.mmrTree
 }
 
 func (b *BlockChain) ChainBlockGenerator() ChainBlockGenerator {
@@ -510,7 +518,7 @@ func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
 	b.orphans[*block.Hash()] = oBlock
 
 	// Add to previous hash lookup index for faster dependency lookups.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
 	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }
 
@@ -550,16 +558,16 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *jaxutil.Tx,
 
 	// If we're performing block validation, then we need to query the BIP9
 	// state.
-	if !csvSoftforkActive {
-		// Obtain the latest BIP9 version bits state for the
-		// CSV-package soft-fork deployment. The adherence of sequence
-		// locks depends on the current soft-fork state.
-		csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
-		if err != nil {
-			return nil, err
-		}
-		csvSoftforkActive = csvState == ThresholdActive
-	}
+	// if !csvSoftforkActive {
+	// 	// Obtain the latest BIP9 version bits state for the
+	// 	// CSV-package soft-fork deployment. The adherence of sequence
+	// 	// locks depends on the current soft-fork state.
+	// 	csvState, err := b.deploymentState(node.Parent(), chaincfg.DeploymentCSV)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	csvSoftforkActive = csvState == ThresholdActive
+	// }
 
 	// If the transaction's version is less than 2, and BIP 68 has not yet
 	// been activated then sequence locks are disabled. Additionally,
@@ -568,7 +576,7 @@ func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *jaxutil.Tx,
 	// can be included within a block at any given height or time.
 	mTx := tx.MsgTx()
 
-	sequenceLockActive := mTx.CleanVersion() == wire.TxVerTimeLock && csvSoftforkActive
+	sequenceLockActive := mTx.Version == wire.TxVerTimeLock && csvSoftforkActive
 	if !sequenceLockActive || chaindata.IsCoinBase(tx) {
 		return sequenceLock, nil
 	}
@@ -749,11 +757,12 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
-	prevHash := block.MsgBlock().Header.PrevBlock()
+	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	bestBlockHash := b.bestChain.Tip().GetHash()
+	prevHash := b.index.HashByMMR(&prevMMRRoot)
+
 	if !prevHash.IsEqual(&bestBlockHash) {
-		return chaindata.AssertError("connectBlock must be called with a block " +
-			"that extends the main chain")
+		return chaindata.AssertError("connectBlock must be called with a block that extends the main chain")
 	}
 
 	// Sanity check the correct number of stxos are provided.
@@ -792,7 +801,8 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 	numTxns := uint64(len(block.MsgBlock().Transactions))
 	blockSize := uint64(block.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(block))
-	state := chaindata.NewBestState(node, blockSize, blockWeight, numTxns,
+
+	state := chaindata.NewBestState(node, b.index.MMRTreeRoot(), blockSize, blockWeight, numTxns,
 		curTotalTxns+numTxns, node.CalcPastMedianTime())
 
 	// Atomically insert info into the database.
@@ -867,7 +877,7 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.ConnectBlock(dbTx, block, stxos)
+			err := b.indexManager.ConnectBlock(dbTx, block, prevHash, stxos)
 			if err != nil {
 				return err
 			}
@@ -946,7 +956,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 	blockSize := uint64(prevBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(prevBlock))
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
-	state := chaindata.NewBestState(prevNode, blockSize, blockWeight, numTxns,
+
+	state := chaindata.NewBestState(prevNode, node.BlocksMMRRoot(), blockSize, blockWeight, numTxns,
 		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
@@ -1021,7 +1032,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 		// optional indexes with the block being disconnected so they
 		// can update themselves accordingly.
 		if b.indexManager != nil {
-			err := b.indexManager.DisconnectBlock(dbTx, block, stxos)
+			prevNode := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
+			err := b.indexManager.DisconnectBlock(dbTx, block, prevNode.Hash, stxos)
 			if err != nil {
 				return err
 			}
@@ -1036,6 +1048,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.Commit()
+
+	b.index.mmrTree.RmBlock(node.GetHash(), node.Height())
 
 	// This node's parent is now the end of the best chain.
 	b.bestChain.SetTip(node.Parent())
@@ -1157,8 +1171,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// Store the loaded block and spend journal entry for later.
 		detachBlocks = append(detachBlocks, block)
 		detachSpentTxOuts = append(detachSpentTxOuts, stxos)
-
-		err = view.DisconnectTransactions(b.db, block, stxos)
+		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+		err = view.DisconnectTransactions(b.db, block, prevHash, stxos)
 		if err != nil {
 			return err
 		}
@@ -1265,8 +1279,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 		// Update the view to unspend all of the spent txos and remove
 		// the utxos created by the block.
-		err = view.DisconnectTransactions(b.db, block,
-			detachSpentTxOuts[i])
+		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+		err = view.DisconnectTransactions(b.db, block, prevHash, detachSpentTxOuts[i])
 		if err != nil {
 			return err
 		}
@@ -1350,8 +1364,14 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	}
 
 	// We are extending the main (best) chain with a new block.  This is the
-	// most common case.
-	parentHash := block.MsgBlock().Header.PrevBlock()
+	// most common case. //todo: refactor this validation
+	parentMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevBNode := b.index.mmrTree.LookupNodeByRoot(parentMMRRoot)
+	if prevBNode == nil {
+		prevBNode = &mmr.BlockNode{}
+	}
+	parentHash := prevBNode.Hash
+
 	h := b.bestChain.Tip().GetHash()
 	if parentHash.IsEqual(&h) {
 		// Skip checks if node has already been fully validated.
@@ -1433,11 +1453,11 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 		// Log information about how the block is forking the chain.
 		fork := b.bestChain.FindFork(node)
 		if fork.GetHash() == parentHash {
-			log.Info().Msgf("FORK: Block %v forks the chain at height %d"+
+			log.Info().Str("chain", b.chain.Name()).Msgf("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		} else {
-			log.Info().Msgf("EXTEND FORK: Block %v extends a side chain "+
+			log.Info().Str("chain", b.chain.Name()).Msgf("EXTEND FORK: Block %v extends a side chain "+
 				"which forks the chain at height %d/block %v",
 				node.GetHash(), fork.Height(), fork.GetHash())
 		}
@@ -1455,7 +1475,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	detachNodes, attachNodes := b.getReorganizeNodes(node)
 
 	// Reorganize the chain.
-	log.Info().Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
+	log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
 	err := b.reorganizeChain(detachNodes, attachNodes)
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
@@ -1463,7 +1483,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	// error. The index would only be dirty if the block failed to connect, so
 	// we can ignore any errors writing.
 	if writeErr := b.index.flushToDB(); writeErr != nil {
-		log.Warn().Msgf("Error flushing block index changes to disk: %v", writeErr)
+		log.Warn().Str("chain", b.chain.Name()).Msgf("Error flushing block index changes to disk: %v", writeErr)
 	}
 
 	return err == nil, err

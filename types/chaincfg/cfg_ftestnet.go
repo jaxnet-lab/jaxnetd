@@ -1,4 +1,5 @@
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2020-2021 The JAX.Network developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -48,6 +49,8 @@ var FastNetParams = Params{
 		ReduceMinDifficulty:      false,
 		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 		GenerateSupported:        true,
+		HashSorting:              false,
+		ChainIDCount:             4096, // 2^12
 	},
 
 	// Checkpoints ordered from oldest to newest.
@@ -61,7 +64,7 @@ var FastNetParams = Params{
 	// MinerConfirmationWindow:       2016,
 	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       100,
-	ExpansionLimit:                10, // todo this makes dbtool work for raw scan in beacon case, figure out what to do, this can break fastnet potentially
+
 	Deployments: [DefinedDeployments]ConsensusDeployment{
 		DeploymentCSV: {
 			BitNumber:  0,
@@ -87,8 +90,9 @@ var FastNetParams = Params{
 	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x03, // starts with QW
 	WitnessScriptHashAddrID: 0x28, // starts with T7n
-	EADAddressID:            0x25, // starts with todo
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	EADAddressID:            0xd8, // starts with B
+	HTLCAddressID:           0x05, // starts with H
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -96,5 +100,9 @@ var FastNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 0x6A, // ASCII for j
+
+	AutoExpand:            true,
+	InitialExpansionRule:  2,
+	InitialExpansionLimit: 4,
 }

@@ -285,8 +285,8 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32,
 
 // connectSwapTransaction updates the view by adding all new utxos created by the
 // passed transaction and marking all utxos that the transactions spend as
-// spent. This function handles special case for the wire.TxMarkShardSwap transactions.
-// wire.TxMarkShardSwap transaction is a special tx for atomic swap between chains.
+// spent. This function handles special case for the wire.TxVerCrossShardSwap transactions.
+// wire.TxVerCrossShardSwap transaction is a special tx for atomic swap between chains.
 // It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 // TxIn and TxOut are strictly associated with each other by index.
 // One pair corresponds to the current chain. The second is for another, unknown chain.
@@ -459,7 +459,8 @@ func CountSpentOutputs(block *jaxutil.Block) int {
 // created by the passed block, restoring all utxos the transactions spent by
 // using the provided spent txo information, and setting the best Hash for the
 // view to the block before the passed block.
-func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block, stxos []SpentTxOut) error {
+func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block,
+	prevHash chainhash.Hash, stxos []SpentTxOut) error {
 	// Sanity check the correct number of stxos are provided.
 	if len(stxos) != CountSpentOutputs(block) {
 		return AssertError("DisconnectTransactions called with bad " +
@@ -591,8 +592,7 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil
 
 	// Update the best Hash for view to the previous block since all of the
 	// transactions for the current block have been disconnected.
-	h := block.MsgBlock().Header.PrevBlock()
-	view.SetBestHash(&h)
+	view.SetBestHash(&prevHash)
 	return nil
 }
 

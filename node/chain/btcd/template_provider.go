@@ -44,7 +44,7 @@ type BlockProvider struct {
 
 func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockProvider, error) {
 	if !cfg.Enable {
-		return &BlockProvider{offline: true}, nil
+		return &BlockProvider{offline: true, minerAddress: minerAddress}, nil
 	}
 	client, err := btcrpc.New(&btcrpc.ConnConfig{
 		Host:         cfg.RPC.Host,
@@ -62,10 +62,11 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 	}, err
 }
 
-func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux, bool, error) {
+func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
 		burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-		tx, err := mining.CreateJaxCoinbaseTx(6, 0, int32(-1), 0, bg.minerAddress, burnReward)
+		tx, err := mining.CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
+			bg.minerAddress, beaconHash.CloneBytes(), burnReward)
 		if err != nil {
 			return wire.BTCBlockAux{}, false, err
 		}
@@ -120,7 +121,8 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int) (wire.BTCBlockAux,
 	}
 
 	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-	tx, err := mining.CreateJaxCoinbaseTx(reward, totalFee, int32(height), 0, bg.minerAddress, burnReward)
+	tx, err := mining.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,
+		beaconHash.CloneBytes(), burnReward)
 	if err != nil {
 		return wire.BTCBlockAux{}, false, err
 	}

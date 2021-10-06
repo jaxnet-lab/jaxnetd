@@ -42,9 +42,12 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 func (beaconCtl *BeaconCtl) Init() error {
 	cfg := beaconCtl.cfg
 	params := cfg.Node.ChainParams()
-	params.AutoExpand = params.Net != types.MainNet && cfg.Node.BeaconChain.AutoExpand
-	params.ExpansionRule = cfg.Node.BeaconChain.ExpansionRule
-	params.ExpansionLimit = cfg.Node.BeaconChain.ExpansionLimit
+	if params.Net != types.MainNet {
+		params.AutoExpand = cfg.Node.BeaconChain.AutoExpand
+		params.InitialExpansionRule = cfg.Node.BeaconChain.ExpansionRule
+		params.InitialExpansionLimit = cfg.Node.BeaconChain.ExpansionLimit
+	}
+
 	params.IsBeacon = true
 	beaconChain := beacon.Chain(params)
 

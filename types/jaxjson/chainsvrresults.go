@@ -30,6 +30,7 @@ type GetBeaconBlockHeaderVerboseResult struct {
 	VoteK               string  `json:"voteK"`
 	Difficulty          float64 `json:"difficulty"`
 	PreviousHash        string  `json:"previousblockhash,omitempty"`
+	BlocksMMRRoot       string  `json:"blocksmmrroot,omitempty"`
 	NextHash            string  `json:"nextblockhash,omitempty"`
 }
 
@@ -50,6 +51,7 @@ type GetShardBlockHeaderVerboseResult struct {
 	VoteK         string                            `json:"voteK"`
 	Difficulty    float64                           `json:"difficulty"`
 	PreviousHash  string                            `json:"previousblockhash,omitempty"`
+	BlocksMMRRoot string                            `json:"blocksmmrroot,omitempty"`
 	NextHash      string                            `json:"nextblockhash,omitempty"`
 	BCHeader      GetBeaconBlockHeaderVerboseResult `json:"bcheader"`
 }
@@ -127,6 +129,7 @@ type GetBeaconBlockVerboseResult struct {
 	Difficulty          float64       `json:"difficulty"`
 	PoWHash             string        `json:"powhash"`
 	PreviousHash        string        `json:"previousblockhash"`
+	BlocksMMRRoot       string        `json:"blocksmmrroot,omitempty"`
 	NextHash            string        `json:"nextblockhash,omitempty"`
 	MerkleMountainRange string        `json:"mmr"`
 }
@@ -156,6 +159,7 @@ type GetShardBlockVerboseResult struct {
 	VoteK         string                      `json:"voteK"`
 	Difficulty    float64                     `json:"difficulty"`
 	PreviousHash  string                      `json:"previousblockhash"`
+	BlocksMMRRoot string                      `json:"blocksmmrroot,omitempty"`
 	NextHash      string                      `json:"nextblockhash,omitempty"`
 	BCBlock       GetBeaconBlockVerboseResult `json:"bcblock"`
 }
@@ -341,7 +345,8 @@ type GetBeaconBlockTemplateResult struct {
 	Bits          string                     `json:"bits"`
 	CurTime       int64                      `json:"curtime"`
 	Height        int64                      `json:"height"`
-	PreviousHash  string                     `json:"previousblockhash"`
+	PreviousHash  string                     `json:"previousblockhash"` // DEPRECATED this field will be dropped, use the BlocksMMRRoot
+	BlocksMMRRoot string                     `json:"blocksmmrroot"`
 	SerialID      int64                      `json:"serialID"`
 	PrevSerialID  int64                      `json:"prevSerialID"`
 	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
@@ -392,7 +397,8 @@ type GetShardBlockTemplateResult struct {
 	Height        int64                      `json:"height"`
 	SerialID      int64                      `json:"serialID"`
 	PrevSerialID  int64                      `json:"prevSerialID"`
-	PreviousHash  string                     `json:"previousblockhash"`
+	PreviousHash  string                     `json:"previousblockhash"` // DEPRECATED use BlocksMMRRoot.
+	BlocksMMRRoot string                     `json:"blocksmmrroot"`
 	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
 	SizeLimit     int64                      `json:"sizelimit,omitempty"`
 	WeightLimit   int64                      `json:"weightlimit,omitempty"`
