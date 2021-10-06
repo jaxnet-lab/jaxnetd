@@ -52,10 +52,9 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	}
 
 	beaconHeader := header.BeaconHeader()
-	shardHeader := header.(*wire.ShardHeader)
 
 	treeValidationShouldBeSkipped := false
-	mmNumber := shardHeader.MergeMiningNumber()
+	mmNumber := header.MergeMiningNumber()
 	if mmNumber%2 == 0 {
 		if header.BeaconHeader().Shards() == mmNumber {
 			if mmNumber <= lastKnownShardsAmount {
@@ -64,20 +63,22 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 		}
 	}
 
-	if !treeValidationShouldBeSkipped {
-		hashes, coding, codingBitsLen := beaconHeader.MergedMiningTreeCodingProof()
+	if treeValidationShouldBeSkipped {
+		return nil
+	}
 
-		var (
-			providedRoot   = shardHeader.MergeMiningRoot()
-			validationRoot mmtree.BinHash
-		)
-		copy(validationRoot[:], providedRoot[:])
+	hashes, coding, codingBitsLen := beaconHeader.MergedMiningTreeCodingProof()
 
-		tree := mmtree.NewSparseMerkleTree(lastKnownShardsAmount)
-		err = tree.Validate(codingBitsLen, coding, hashes, mmNumber, validationRoot)
-		if err != nil {
-			return err
-		}
+	var (
+		providedRoot   = header.MergeMiningRoot()
+		validationRoot mmtree.BinHash
+	)
+	copy(validationRoot[:], providedRoot[:])
+
+	tree := mmtree.NewSparseMerkleTree(lastKnownShardsAmount)
+	err = tree.Validate(codingBitsLen, coding, hashes, mmNumber, validationRoot)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -97,7 +98,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
-	reward := CalcShardBlockSubsidy(header.(*wire.ShardHeader).MergeMiningNumber(), header.Bits(), header.K())
+	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), header.K())
 
 	if net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
 		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
@@ -142,7 +143,7 @@ func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
 		shards = 1
 	}
 
-	dRat := new(big.Float).SetInt64(d.Int64())
+	dRat := new(big.Float).SetInt(d)
 	shardsN := new(big.Float).SetInt64(int64(shards))
 
 	// (Di * Ki)

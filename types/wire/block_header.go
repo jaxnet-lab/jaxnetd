@@ -55,6 +55,12 @@ type BlockHeader interface {
 	// and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 	UpdateCoinbaseScript(coinbaseScript []byte)
 
+	MergeMiningNumber() uint32
+	SetMergeMiningNumber(n uint32)
+
+	MergeMiningRoot() chainhash.Hash
+	SetMergeMiningRoot(value chainhash.Hash)
+
 	Read(r io.Reader) error
 	Write(r io.Writer) error
 	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error

@@ -32,10 +32,6 @@ type ShardHeader struct {
 	// Difficulty target for the block.
 	bits uint32
 
-	// Merge-mining number is the miner’s claim about how
-	// many shards he was mining
-	mergeMiningNumber uint32
-
 	beaconHeader BeaconHeader
 
 	beaconCoinbase CoinbaseAux
@@ -107,8 +103,8 @@ func (h *ShardHeader) SetVoteK(value uint32) { h.beaconHeader.voteK = value }
 
 func (h *ShardHeader) MaxLength() int { return MaxShardBlockHeaderPayload }
 
-func (h *ShardHeader) MergeMiningNumber() uint32     { return h.mergeMiningNumber }
-func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n }
+func (h *ShardHeader) MergeMiningNumber() uint32     { return h.beaconHeader.mergeMiningNumber }
+func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.beaconHeader.mergeMiningNumber = n }
 
 func (h *ShardHeader) MergeMiningRoot() chainhash.Hash { return h.beaconHeader.MergeMiningRoot() }
 func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) {
@@ -126,28 +122,12 @@ func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 // BlockHash computes the block identifier hash for the BeaconChain Container for the given block.
 func (h *ShardHeader) BlockHash() chainhash.Hash {
 	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-
-	sec := uint32(h.beaconHeader.btcAux.Timestamp.Unix())
+	beaconHash := h.beaconHeader.BlockHash()
 	_ = encoder.WriteElements(w,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
 		&h.bits,
-		h.mergeMiningNumber,
-		h.beaconHeader.version,
-		&h.beaconHeader.blocksMMRRoot,
-		&h.beaconHeader.merkleRoot,
-		&h.beaconHeader.mergeMiningRoot,
-		h.beaconHeader.bits,
-		&h.beaconHeader.shards,
-		&h.beaconHeader.k,
-		&h.beaconHeader.voteK,
-		&h.beaconHeader.treeEncoding,
-		h.beaconHeader.btcAux.Version,
-		&h.beaconHeader.btcAux.PrevBlock,
-		&h.beaconHeader.btcAux.MerkleRoot,
-		sec,
-		h.beaconHeader.btcAux.Bits,
-		h.beaconHeader.btcAux.Nonce,
+		&beaconHash,
 	)
 	return chainhash.DoubleHashH(w.Bytes())
 }
@@ -221,7 +201,6 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
-		&bh.mergeMiningNumber,
 	)
 	if err != nil {
 		return err
@@ -241,7 +220,6 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
-		bh.mergeMiningNumber,
 	)
 	if err != nil {
 		return err
@@ -263,6 +241,5 @@ func writeShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
-		bh.mergeMiningNumber,
 	)
 }
