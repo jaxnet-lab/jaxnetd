@@ -127,8 +127,11 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 }
 
 func (client *TxMan) CollectUTXOs(opts UTXOCollectorOpts) (map[uint32]txmodels.UTXORows, int64, error) {
-	addressFilter := make(map[string]bool, len(opts.FilterAddresses))
+	addressFilter := make(map[string]bool)
 	for _, addr := range opts.FilterAddresses {
+		if addr == "" {
+			continue
+		}
 		addressFilter[addr] = true
 	}
 
@@ -218,6 +221,7 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 			}
 
 			for utxoID, out := range msgTx.TxOut {
+
 				decodedScript, err := client.DecodeScript(out.PkScript)
 				if err != nil {
 					return nil, 0, err

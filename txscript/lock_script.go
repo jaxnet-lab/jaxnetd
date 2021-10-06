@@ -47,7 +47,6 @@ func HTLCScript(address jaxutil.Address, lockPeriod int32) ([]byte, error) {
 		return nil, errors.New("unsupported address type")
 	}
 
-	// builder.AddOp(OP_NIP)
 	builder.AddOp(OP_ELSE)
 	builder.AddOp(OP_RETURN)
 	// builder.AddOp(OP_NIP)
@@ -73,11 +72,7 @@ func HTLCScriptAddress(address jaxutil.Address, lockPeriod int32, params *chainc
 // [ 1] <lockPeriod>
 // [ 2] OP_GREATERTHAN
 // [ 3] OP_IF
-// [ 4]    OP_DUP
-// [ 5]    OP_HASH160
-// [ 6]    <scriptAddress>
-// [ 7]    OP_EQUALVERIFY
-// [ 8]    OP_CHECKSIG
+// [--]     todo:
 // [ 9] OP_ELSE
 // [10]     OR_RETURN
 // [11] OP_ENDIF
@@ -93,7 +88,6 @@ func isHTLC(pops []parsedOpcode) bool {
 		isOpCode(pops[3], OP_IF) &&
 		isOpCode(pops[l-3], OP_ELSE) &&
 		isOpCode(pops[l-2], OP_RETURN) &&
-		// isOpCode(pops[11], OP_NIP) &&
 		isOpCode(pops[l-1], OP_ENDIF)
 	if !templateMatch {
 		return false
@@ -118,7 +112,7 @@ func isHTLC(pops []parsedOpcode) bool {
 	return false
 }
 
-// extractHTLCAddrs
+// extractHTLCAddrs ...
 func extractHTLCAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (ScriptClass, []jaxutil.Address, int, error) {
 	var addr jaxutil.Address
 	var err error
@@ -144,24 +138,33 @@ func extractHTLCAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (Script
 }
 
 // signHTLC ...
-func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType, address []jaxutil.Address, kdb KeyDB, sdb ScriptDB) ([]byte, error) {
+func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
+	address []jaxutil.Address, kdb KeyDB, sdb ScriptDB) ([]byte, ScriptClass, error) {
 	// look up key for address
-	key, compressed, err := kdb.GetKey(address[0])
-	if err != nil {
-		return nil, err
-	}
 
 	pops, _ := parseScript(subScript)
 	switch len(pops) {
 	case 9:
-		return p2pkSignatureScript(tx, idx, subScript, hashType, key)
+		key, _, err := kdb.GetKey(address[0])
+		if err != nil {
+			return nil, 0, err
+		}
+
+		sig, err := p2pkSignatureScript(tx, idx, subScript, hashType, key)
+		return sig, HTLCScriptTy, err
 	case 10:
-		return sdb.GetScript(address[0])
+		sig, err := sdb.GetScript(address[0])
+		return sig, HTLCScriptTy, err
 	case 12:
-		return SignatureScript(tx, idx, subScript, hashType, key, compressed)
+		key, compressed, err := kdb.GetKey(address[0])
+		if err != nil {
+			return nil, 0, err
+		}
+		sig, err := SignatureScript(tx, idx, subScript, hashType, key, compressed)
+		return sig, HTLCScriptTy, err
 	}
 
-	return nil, errors.New("invalid htlc script")
+	return nil, NonStandardTy, errors.New("invalid htlc script")
 }
 
 func ExtractHTLCLockTime(data []byte) (int32, error) {

@@ -4,12 +4,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"gitlab.com/jaxnet/jaxnetd/btcec"
@@ -17,6 +19,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txutils"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 func main() {
@@ -76,8 +79,43 @@ func (app *App) getCommands() cli.Commands {
 		},
 		{
 			Name:  "decode",
-			Usage: "fetch UTXO data to CSV file",
+			Usage: "decodes hex-encoded data",
 			Subcommands: cli.Commands{
+				{
+					Name:  "block",
+					Usage: "decode hex encoded block",
+					Flags: []cli.Flag{
+						&cli.StringFlag{
+							Name:     "block",
+							Aliases:  []string{"b"},
+							Usage:    "hex-encoded body of block",
+							Required: true,
+						},
+						&cli.StringFlag{
+							Name:  "shard",
+							Usage: "is this shard block or beacon",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						script := c.String("block")
+						shard := c.Bool("shard")
+						var block = wire.EmptyBeaconBlock()
+						if shard {
+							block = wire.EmptyShardBlock()
+						}
+
+						decodedHex, err := hex.DecodeString(script)
+						if err != nil {
+							return cli.NewExitError(err, 1)
+						}
+						err = block.Deserialize(bytes.NewBuffer(decodedHex))
+						if err != nil {
+							return cli.NewExitError(err, 1)
+						}
+						spew.Dump(block)
+						return nil
+					},
+				},
 				{
 					Name:  "tx",
 					Usage: "decode hex encoded transaction body",

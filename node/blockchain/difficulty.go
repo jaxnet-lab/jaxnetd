@@ -165,7 +165,7 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 	}
 
 	// Get the block node at the previous retarget (targetTimespan days worth of blocks).
-	firstNode := lastNode.RelativeAncestor(opts.blocksPerRetarget - 1 + 5)
+	firstNode := lastNode.RelativeAncestor(opts.blocksPerRetarget - 5)
 	if firstNode == nil {
 		return 0, chaindata.AssertError("unable to obtain previous retarget block")
 	}

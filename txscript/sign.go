@@ -219,7 +219,7 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 
 		return script, class, addresses, nrequired, nil
 	case HTLCScriptTy:
-		script, err := signHTLC(tx, idx, subScript, hashType, addresses, kdb, sdb)
+		script, class, err := signHTLC(tx, idx, subScript, hashType, addresses, kdb, sdb)
 		return script, class, addresses, 1, err
 	case NullDataTy:
 		return nil, class, nil, 0,

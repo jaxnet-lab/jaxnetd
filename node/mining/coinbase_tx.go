@@ -162,12 +162,16 @@ func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
 	return jaxutil.NewTx(tx), nil
 }
 
+func IsJaxnetBurnRawAddress(pkScript []byte) bool {
+	return bytes.Equal(pkScript, types.RawJaxBurnAddr)
+}
+
 func jaxnetBurnRawAddress() []byte {
 	addr, _ := jaxutil.DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
 	return addr.ScriptAddress()
 }
 
-func btcJaxPrefix(pkScript []byte) bool {
+func BtcJaxPrefix(pkScript []byte) bool {
 	addr, err := jaxutil.NewAddressPubKeyHash(pkScript, &chaincfg.MainNetParams)
 	if err != nil {
 		return false
@@ -175,7 +179,7 @@ func btcJaxPrefix(pkScript []byte) bool {
 	return strings.HasPrefix(addr.String(), "1JAX")
 }
 
-func bchJaxPrefix(pkScript []byte) bool {
+func BchJaxPrefix(pkScript []byte) bool {
 	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
 }
 
@@ -199,19 +203,17 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	}
 
 	if len(aux.Tx.TxOut) != 3 {
-		if !btcJaxPrefix(aux.Tx.TxOut[0].PkScript) && !bchJaxPrefix(aux.Tx.TxOut[0].PkScript) {
+		if !BtcJaxPrefix(aux.Tx.TxOut[0].PkScript) && !BchJaxPrefix(aux.Tx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 
 		return false, nil
 	}
 
-	jaxBurn := jaxnetBurnRawAddress()
-
 	const errMsg = "invalid format of btc aux coinbase tx: "
 	btcCoinbaseTx := aux.Tx
 
-	btcJaxNetLinkOut := bytes.Equal(btcCoinbaseTx.TxOut[0].PkScript, jaxBurn) && btcCoinbaseTx.TxOut[0].Value == 0
+	btcJaxNetLinkOut := IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[0].PkScript) && btcCoinbaseTx.TxOut[0].Value == 0
 
 	if !btcJaxNetLinkOut {
 		err = errors.New(errMsg + "first out must be zero and have JaxNetLink")
@@ -230,7 +232,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 		}
 	}
 
-	rewardBurned = bytes.Equal(btcCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+	rewardBurned = IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[1].PkScript)
 
 	return rewardBurned, nil
 }
@@ -271,9 +273,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		return false, err
 	}
 
-	jaxBurn := jaxnetBurnRawAddress()
-
-	jaxNetLinkOut := bytes.Equal(coinbase.TxOut[0].PkScript, jaxBurn) &&
+	jaxNetLinkOut := IsJaxnetBurnRawAddress(coinbase.TxOut[0].PkScript) &&
 		coinbase.TxOut[0].Value == 0
 	if !jaxNetLinkOut {
 		err = errors.New(errMsg + "first out must be zero and have JaxNetLink")
@@ -292,7 +292,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		}
 	}
 
-	jxnBurnReward := bytes.Equal(coinbase.TxOut[1].PkScript, jaxBurn)
+	jxnBurnReward := IsJaxnetBurnRawAddress(coinbase.TxOut[1].PkScript)
 
 	if btcBurnReward && !jxnBurnReward {
 		err = errors.New(errMsg + "BTC burned, JaxNet reward prohibited")
@@ -331,15 +331,13 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 		return err
 	}
 
-	jaxBurn := jaxnetBurnRawAddress()
-
 	const errMsg = "invalid format of shard coinbase tx: "
 
 	if len(shardCoinbaseTx.TxOut) < 3 {
 		return errors.New(errMsg + "less than 3 out")
 	}
 
-	shardJaxNetLinkOut := bytes.Equal(shardCoinbaseTx.TxOut[0].PkScript, jaxBurn) &&
+	shardJaxNetLinkOut := IsJaxnetBurnRawAddress(shardCoinbaseTx.TxOut[0].PkScript) &&
 		shardCoinbaseTx.TxOut[0].Value == 0
 	if !shardJaxNetLinkOut {
 		return errors.New(errMsg + "first out must be zero and have JaxNetLink")
@@ -351,7 +349,7 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 		return errors.New(errMsg + "value of second output not eq to expected reward")
 	}
 
-	shardJaxBurnReward := bytes.Equal(shardCoinbaseTx.TxOut[1].PkScript, jaxBurn)
+	shardJaxBurnReward := IsJaxnetBurnRawAddress(shardCoinbaseTx.TxOut[1].PkScript)
 	if shardJaxBurnReward {
 		return nil
 	}
