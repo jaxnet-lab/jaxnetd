@@ -234,7 +234,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	ka.refs++
 	a.addrNew[bucket][addr] = ka
 
-	log.Debug().Msgf("Added new address %s for a total of %d addresses", addr,
+	log.Trace().Msgf("Added new address %s for a total of %d addresses", addr,
 		a.nTried+a.nNew)
 }
 
