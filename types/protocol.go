@@ -116,7 +116,6 @@ const (
 
 	// FastTestNet represents the development jax network.
 	FastTestNet JaxNet = 0x12121212
-	// 303174162
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for

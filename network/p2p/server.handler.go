@@ -5,7 +5,6 @@
 package p2p
 
 import (
-	"fmt"
 	"net"
 	"sync/atomic"
 	"time"
@@ -48,7 +47,6 @@ func (server *Server) handleUpdatePeerHeights(state *peerState, umsg UpdatePeerH
 // handleAddPeerMsg deals with adding new peers.  It is invoked from the
 // peerHandler goroutine.
 func (server *Server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
-	fmt.Println("peer add")
 	if sp == nil || !sp.Connected() {
 		return false
 	}

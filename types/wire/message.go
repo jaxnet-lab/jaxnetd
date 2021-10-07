@@ -225,7 +225,6 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, error) {
 
 	// Strip trailing zeros from command string.
 	hdr.command = string(bytes.TrimRight(command[:], string(rune(0))))
-	fmt.Printf("heheader: %+v\n", hdr)
 
 	return n, &hdr, nil
 }

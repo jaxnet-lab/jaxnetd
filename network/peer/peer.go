@@ -1124,7 +1124,7 @@ func (peer *Peer) handlePongMsg(msg *wire.MsgPong) {
 // readMessage reads the next bitcoin message from the peer with logging.
 func (peer *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, []byte, error) {
 	n, msg, buf, err := wire.ReadMessageWithEncodingN(peer.chain, peer.conn,
-		peer.ProtocolVersion(), peer.cfg.ChainParams.Net, wire.BaseEncoding)
+		peer.ProtocolVersion(), peer.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&peer.bytesReceived, uint64(n))
 	if peer.cfg.Listeners.OnRead != nil {
 		peer.cfg.Listeners.OnRead(peer, n, msg, err)
@@ -1968,7 +1968,6 @@ func (peer *Peer) readRemoteVersionMsg() error {
 	// Read their version message.
 	remoteMsg, _, err := peer.readMessage(wire.LatestEncoding)
 	if err != nil {
-		fmt.Println("ERRROR: ", err)
 		return err
 	}
 
@@ -2218,18 +2217,15 @@ func (peer *Peer) writeLocalVersionMsg() error {
 //   4. Remote peer sends their verack.
 func (peer *Peer) negotiateInboundProtocol() error {
 	if err := peer.readRemoteVersionMsg(); err != nil {
-		fmt.Println("exit here")
 		return err
 	}
 
 	if err := peer.writeLocalVersionMsg(); err != nil {
-		fmt.Println("exit here 2")
 		return err
 	}
 
 	err := peer.writeMessage(wire.NewMsgVerAck(), wire.LatestEncoding)
 	if err != nil {
-		fmt.Println("exit here 3")
 		return err
 	}
 

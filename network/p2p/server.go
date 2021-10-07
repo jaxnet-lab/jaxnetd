@@ -186,7 +186,7 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 		Dial:           p2pServer.netDial,
 		OnAccept:       p2pServer.inboundPeerConnected,
 		OnConnection:   p2pServer.outboundPeerConnected,
-		GetNewAddress:  p2pServer.newAddressHandler(len(cfg.ConnectPeers)),
+		GetNewAddress:  p2pServer.newAddressHandler(),
 	})
 	if err != nil {
 		return nil, err
@@ -349,12 +349,7 @@ func (server *Server) Query(value interface{}) {
 // specified peers and actively avoid advertising and connecting to
 // discovered peers in order to prevent it from becoming a public test
 // network.
-func (server *Server) newAddressHandler(connectPeersCount int) func() (net.Addr, error) {
-	/*fmt.Println("connectPeersCount: ", connectPeersCount)
-	if connectPeersCount == 0 {
-		return nil
-	}*/
-
+func (server *Server) newAddressHandler() func() (net.Addr, error) {
 	return func() (net.Addr, error) {
 		for tries := 0; tries < 100; tries++ {
 			addr := server.addrManager.GetAddress()
@@ -617,7 +612,6 @@ func (server *Server) inboundPeerConnected(conn net.Conn) {
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
 func (server *Server) outboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) {
-	fmt.Println("some movement")
 	if server.cfg.DisableOutbound {
 		server.logger.Debug().Msgf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
 		return

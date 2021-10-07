@@ -25,7 +25,7 @@ var FastNetParams = Params{
 	Net:            types.FastTestNet,
 	DefaultPort:    "18333",
 	DefaultP2PPort: "18444",
-	DNSSeeds:       []DNSSeed{{"localhost.net", false}},
+	DNSSeeds:       []DNSSeed{{"test-dns.net", false}},
 
 	// Chain parameters
 	GenesisBlock: GenesisBlockOpts{
