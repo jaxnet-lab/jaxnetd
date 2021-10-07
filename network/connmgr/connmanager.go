@@ -521,6 +521,7 @@ func (cm *ConnManager) Start() {
 	// provided a callback to be invoked when connections are accepted.
 	if cm.cfg.OnAccept != nil {
 		for _, listner := range cm.cfg.Listeners {
+			fmt.Printf("listener %+v\n", listner)
 			cm.wg.Add(1)
 			go cm.listenHandler(listner)
 		}

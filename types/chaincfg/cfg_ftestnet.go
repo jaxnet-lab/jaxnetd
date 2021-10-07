@@ -21,10 +21,11 @@ var fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
-	Name:        "fastnet",
-	Net:         types.FastTestNet,
-	DefaultPort: "18333",
-	DNSSeeds:    []DNSSeed{},
+	Name:           "fastnet",
+	Net:            types.FastTestNet,
+	DefaultPort:    "18333",
+	DefaultP2PPort: "18444",
+	DNSSeeds:       []DNSSeed{{"localhost.net", false}},
 
 	// Chain parameters
 	GenesisBlock: GenesisBlockOpts{

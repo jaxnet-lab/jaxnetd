@@ -234,7 +234,8 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	ka.refs++
 	a.addrNew[bucket][addr] = ka
 
-	log.Trace().Msgf("Added new address %s for a total of %d addresses", addr,
+	fmt.Printf("\"Added new address %s for a total of %d addresses\"", addr, a.nTried, a.nNew)
+	log.Debug().Msgf("Added new address %s for a total of %d addresses", addr,
 		a.nTried+a.nNew)
 }
 
@@ -603,6 +604,7 @@ func (a *AddrManager) AddAddresses(addrs []*wire.NetAddress, srcAddr *wire.NetAd
 	defer a.mtx.Unlock()
 
 	for _, na := range addrs {
+		fmt.Printf("Calling AddAddresses: %+v\n", na)
 		a.updateAddress(na, srcAddr)
 	}
 }
@@ -614,6 +616,7 @@ func (a *AddrManager) AddAddress(addr, srcAddr *wire.NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
+	fmt.Printf("Calling AddAddress: %+v\n", addr)
 	a.updateAddress(addr, srcAddr)
 }
 

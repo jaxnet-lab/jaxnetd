@@ -804,6 +804,7 @@ func LoadConfig() (*node.Config, []string, error) {
 		allowedTLSListeners := map[string]struct{}{
 			"localhost": {},
 			"127.0.0.1": {},
+			"127.0.0.2": {},
 			"0.0.0.0":   {}, // TODO: setup tls
 			"::1":       {},
 		}

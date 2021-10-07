@@ -195,8 +195,13 @@ type Params struct {
 	InitialExpansionRule  int32
 	InitialExpansionLimit int32
 
+	// todo rename varible and figure out where it is used (Nikita)
+	// it is used both in context of p2p and rpc ports
 	// DefaultPort defines the default peer-to-peer port for the network.
 	DefaultPort string
+
+	// DefaultP2PPort defines default port for p2p connection
+	DefaultP2PPort string
 
 	// DNSSeeds defines a list of DNS seeds for the network that are used
 	// as one method to discover peers.

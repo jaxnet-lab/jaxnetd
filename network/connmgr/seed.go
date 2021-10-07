@@ -59,7 +59,7 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
 			}
 			addresses := make([]*wire.NetAddress, len(seedpeers))
 			// if this errors then we have *real* problems
-			intPort, _ := strconv.Atoi(chainParams.DefaultPort)
+			intPort, _ := strconv.Atoi(chainParams.DefaultP2PPort)
 			for i, peer := range seedpeers {
 				addresses[i] = wire.NewNetAddressTimestamp(
 					// jaxnetd seeds with addresses from

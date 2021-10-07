@@ -1024,9 +1024,12 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	// public test network since it will not be able to learn about other
 	// peers that have not specifically been provided.
 
+	fmt.Printf("getadder is called")
+
 	// Do not accept getaddr requests from outbound peers.  This reduces
 	// fingerprinting attacks.
 	if !sp.Inbound() {
+		fmt.Println("IS OUTBOUND")
 		sp.logger.Debug().Msgf("Ignoring getaddr request from outbound peer "+
 			"%v", sp)
 		return
@@ -1035,6 +1038,7 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	// Only allow one getaddr request per connection to discourage
 	// address stamping of inv announcements.
 	if sp.sentAddrs {
+		fmt.Println("SENT ALREADY")
 		sp.logger.Debug().Msgf("Ignoring repeated getaddr request from peer "+
 			"%v", sp)
 		return
@@ -1043,6 +1047,10 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 
 	// Get the current known addresses from the address manager.
 	addrCache := sp.serverPeerHandler.addrManager.AddressCache()
+
+	for i := range addrCache {
+		fmt.Printf("addrCache %d: %+v\n", i, *addrCache[i])
+	}
 
 	// Push the addresses.
 	sp.pushAddrMsg(addrCache)

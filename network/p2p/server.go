@@ -350,9 +350,10 @@ func (server *Server) Query(value interface{}) {
 // discovered peers in order to prevent it from becoming a public test
 // network.
 func (server *Server) newAddressHandler(connectPeersCount int) func() (net.Addr, error) {
+	/*fmt.Println("connectPeersCount: ", connectPeersCount)
 	if connectPeersCount == 0 {
 		return nil
-	}
+	}*/
 
 	return func() (net.Addr, error) {
 		for tries := 0; tries < 100; tries++ {
@@ -380,7 +381,7 @@ func (server *Server) newAddressHandler(connectPeersCount int) func() (net.Addr,
 
 			// allow nondefault ports after 50 failed tries.
 			if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-				server.chain.ChainParams.DefaultPort {
+				server.chain.ChainParams.DefaultP2PPort {
 				continue
 			}
 
@@ -616,6 +617,7 @@ func (server *Server) inboundPeerConnected(conn net.Conn) {
 // request instance and the connection itself, and finally notifies the address
 // manager of the attempt.
 func (server *Server) outboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) {
+	fmt.Println("some movement")
 	if server.cfg.DisableOutbound {
 		server.logger.Debug().Msgf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
 		return
@@ -894,7 +896,7 @@ func (server *Server) upnpUpdateThread() {
 	// Go off immediately to prevent code duplication, thereafter we renew
 	// lease every 15 minutes.
 	timer := time.NewTimer(0 * time.Second)
-	lport, _ := strconv.ParseInt(server.chain.ChainParams.DefaultPort, 10, 16)
+	lport, _ := strconv.ParseInt(server.chain.ChainParams.DefaultP2PPort, 10, 16)
 	first := true
 out:
 	for {
