@@ -17,7 +17,6 @@ type beaconChain struct {
 
 func Chain(params *chaincfg.Params) *beaconChain {
 	clone := *params
-	clone.Name = "beacon"
 	clone.ChainName = "beacon"
 	clone.IsBeacon = true
 	beacon := &beaconChain{
