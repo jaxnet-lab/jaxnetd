@@ -96,7 +96,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 
 	// initialize p2pServer instance
 	{
-		addrManager := addrmgr.New(cfg.DataDir, beaconChain.Params().Name, cfg.Node.P2P.Lookup)
+		addrManager := addrmgr.New(cfg.DataDir, beaconChain.Params().ChainName, cfg.Node.P2P.Lookup)
 		port, _ := strconv.ParseInt(beaconChain.Params().DefaultPort, 10, 16)
 
 		// Create p2pServer.

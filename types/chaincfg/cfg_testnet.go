@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // testNet3PowLimit is the highest proof of work value a Bitcoin block
@@ -23,24 +22,14 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 // (version 3).  Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
-	Name:        "testnet",
-	Net:         types.TestNet,
-	DefaultPort: "18333",
-	DNSSeeds:    []DNSSeed{},
-
-	// Chain parameters
-	GenesisBlock: GenesisBlockOpts{
-		Version:    1,
-		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-		Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-		Bits:       0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
-		Nonce:      0x18aea41a,               // 414098458
-	},
-	GenesisHash: &genesisHash,
-
-	CoinbaseMaturity:         10,
-	SubsidyReductionInterval: 210000,
+	Name:             "testnet",
+	Net:              types.TestNet,
+	DefaultPort:      "18333",
+	DNSSeeds:         []DNSSeed{},
+	IsBeacon:         true,
+	ChainID:          0,
+	ChainName:        "beacon",
+	CoinbaseMaturity: 10,
 
 	PowParams: PowParams{
 		PowLimit:                 testNet3PowLimit,

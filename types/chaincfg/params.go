@@ -202,21 +202,11 @@ type Params struct {
 	// as one method to discover peers.
 	DNSSeeds []DNSSeed
 
-	// GenesisBlock defines the first block of the chain.
-	GenesisBlock GenesisBlockOpts
-
-	// GenesisHash is the starting block hash.
-	GenesisHash *chainhash.Hash
-
 	PowParams PowParams
 
 	// CoinbaseMaturity is the number of blocks required before newly mined
 	// coins (coinbase transactions) can be spent.
 	CoinbaseMaturity uint16
-
-	// SubsidyReductionInterval is the interval of blocks before the subsidy
-	// is reduced.
-	SubsidyReductionInterval int32
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints []Checkpoint
@@ -270,11 +260,26 @@ type Params struct {
 	HDCoinType uint32
 }
 
-// ShardGenesis creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
+func (cfg *Params) GenesisBlock() *wire.MsgBlock {
+	if cfg.IsBeacon {
+		return BeaconGenesisBlock(cfg.Net)
+	}
+	return ShardGenesisBlock(cfg.ChainID)
+}
+
+func (cfg *Params) GenesisHash() *chainhash.Hash {
+	if cfg.IsBeacon {
+		return BeaconGenesisHash(cfg.Net)
+	}
+
+	return ShardGenesisHash(cfg.ChainID)
+}
+
+// ShardParams creates genesis for ShardChain based on genesis of the BeaconChain.
+func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params {
 	// shard's exclusive info
-	cfg.Name = "shard_" + strconv.FormatUint(uint64(shard), 10)
-	cfg.GenesisHash = hash
+	cfg.ChainID = shard
+	cfg.ChainName = "shard_" + strconv.FormatUint(uint64(shard), 10)
 	cfg.IsBeacon = false
 
 	cfg.PowParams.TargetTimePerBlock = time.Millisecond * ShardTimeDelta
@@ -282,6 +287,8 @@ func (cfg Params) ShardGenesis(shard uint32, hash *chainhash.Hash) *Params {
 
 	cfg.PowParams.PowLimit = shardChainPowLimit
 	cfg.PowParams.PowLimitBits = ShardPoWBits
+
+	SetShardGenesisBlock(shard, beaconBlock)
 
 	return &cfg
 }

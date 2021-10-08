@@ -38,6 +38,8 @@ type Block struct {
 	serializedBlock          []byte          // Serialized bytes for the block
 	serializedBlockNoWitness []byte          // Serialized bytes for block w/o witness data
 	blockHash                *chainhash.Hash // Cached block hash
+	powBlockHash             *chainhash.Hash // Cached block hash
+	exclusiveBlockHash       *chainhash.Hash // Cached block hash
 	blockHeight              int32           // Height in the main block chain
 	transactions             []*Tx           // Transactions
 	txnsGenerated            bool            // ALL wrapped transactions generated
@@ -108,6 +110,30 @@ func (b *Block) Hash() *chainhash.Hash {
 	// Cache the block hash and return it.
 	hash := b.msgBlock.BlockHash()
 	b.blockHash = &hash
+	return &hash
+}
+
+func (b *Block) PowHash() *chainhash.Hash {
+	// Return the cached block hash if it has already been generated.
+	if b.powBlockHash != nil {
+		return b.powBlockHash
+	}
+
+	// Cache the block hash and return it.
+	hash := b.msgBlock.Header.PoWHash()
+	b.powBlockHash = &hash
+	return &hash
+}
+
+func (b *Block) ExclusiveHash() *chainhash.Hash {
+	// Return the cached block hash if it has already been generated.
+	if b.exclusiveBlockHash != nil {
+		return b.exclusiveBlockHash
+	}
+
+	// Cache the block hash and return it.
+	hash := b.msgBlock.Header.ExclusiveHash()
+	b.exclusiveBlockHash = &hash
 	return &hash
 }
 

@@ -26,11 +26,12 @@ type BeaconBlockProvider interface {
 }
 
 type BlockGenerator struct {
-	beacon BeaconBlockProvider
+	beacon  BeaconBlockProvider
+	shardID uint32
 }
 
-func NewChainBlockGenerator(beacon BeaconBlockProvider) *BlockGenerator {
-	return &BlockGenerator{beacon: beacon}
+func NewChainBlockGenerator(id uint32, beacon BeaconBlockProvider) *BlockGenerator {
+	return &BlockGenerator{beacon: beacon, shardID: id}
 }
 
 func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
@@ -76,7 +77,29 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	copy(validationRoot[:], providedRoot[:])
 
 	tree := mmtree.NewSparseMerkleTree(lastKnownShardsAmount)
-	err = tree.Validate(codingBitsLen, coding, hashes, mmNumber, validationRoot)
+	exclusiveHash := header.ExclusiveHash()
+	mergeMiningRootPath := header.MergeMiningRootPath()
+
+	// position uint32,
+	// merkleProofPath,
+	// expectedShardHash,
+	// expectedRoot []byte,
+	//	codingBitsSize uint32,
+	//	coding,
+	//	hashes []byte,
+	//	mmNumber uint32
+
+	position := c.shardID - 1
+	err = tree.Validate(
+		position,
+		mergeMiningRootPath,
+		exclusiveHash[:],
+		validationRoot[:],
+		codingBitsLen,
+		coding,
+		hashes,
+		mmNumber,
+	)
 	if err != nil {
 		return err
 	}
@@ -91,10 +114,6 @@ func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, 
 	shardCoinbaseTx := block.Transactions[0]
 
 	return mining.ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
-}
-
-func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
-	return nil
 }
 
 func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {

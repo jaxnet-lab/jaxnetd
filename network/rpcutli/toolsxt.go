@@ -165,7 +165,7 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 	txReply := &jaxjson.TxRawResult{
 		Hex:        mtxHex,
 		Txid:       txHash,
-		ChainName:  chainParams.Name,
+		ChainName:  chainParams.ChainName,
 		Hash:       mtx.WitnessHash().String(),
 		Size:       int32(mtx.SerializeSize()),
 		Vsize:      int32(GetTxVirtualSize(jaxutil.NewTx(mtx))),

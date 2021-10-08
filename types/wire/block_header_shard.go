@@ -34,7 +34,8 @@ type ShardHeader struct {
 
 	beaconHeader BeaconHeader
 
-	beaconCoinbase CoinbaseAux
+	beaconCoinbase      CoinbaseAux
+	mergeMiningRootPath []byte
 }
 
 func EmptyShardHeader() *ShardHeader { return &ShardHeader{beaconHeader: *EmptyBeaconHeader()} }
@@ -106,12 +107,24 @@ func (h *ShardHeader) MaxLength() int { return MaxShardBlockHeaderPayload }
 func (h *ShardHeader) MergeMiningNumber() uint32     { return h.beaconHeader.mergeMiningNumber }
 func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.beaconHeader.mergeMiningNumber = n }
 
+func (h *ShardHeader) MergeMiningRootPath() []byte         { return h.mergeMiningRootPath }
+func (h *ShardHeader) SetMergeMiningRootPath(value []byte) { h.mergeMiningRootPath = value }
+
 func (h *ShardHeader) MergeMiningRoot() chainhash.Hash { return h.beaconHeader.MergeMiningRoot() }
 func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) {
 	h.beaconHeader.SetMergeMiningRoot(value)
 }
 
-// ShardExclusiveBlockHash computes the block identifier hash for the given block ShardHeader.
+// ExclusiveHash computes hash of header data without any extra aux (beacon & btc).
+func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
+	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
+	_ = writeShardBlockHeaderNoBC(buf, h)
+
+	return chainhash.DoubleHashH(buf.Bytes())
+}
+
+// DEPRECATED
+// ShardExclusiveBlockHash computes the block identifier hash for the given ShardHeader.
 func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
 	_ = writeShardBlockHeaderNoBC(buf, h)
@@ -201,6 +214,7 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
+		&bh.mergeMiningRootPath,
 	)
 	if err != nil {
 		return err
@@ -220,6 +234,7 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
+		&bh.mergeMiningRootPath,
 	)
 	if err != nil {
 		return err

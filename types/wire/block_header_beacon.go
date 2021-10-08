@@ -139,6 +139,9 @@ func (h *BeaconHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n 
 func (h *BeaconHeader) MergedMiningTree() []byte            { return h.treeEncoding }
 func (h *BeaconHeader) SetMergedMiningTree(treeData []byte) { h.treeEncoding = treeData }
 
+func (h *BeaconHeader) MergeMiningRootPath() []byte   { return []byte{} }
+func (h *BeaconHeader) SetMergeMiningRootPath([]byte) {}
+
 func (h *BeaconHeader) MergedMiningTreeCodingProof() (hashes, coding []byte, codingLengthBits uint32) {
 	buf := h.treeEncoding[:]
 	hashesSize, size := binary.Uvarint(buf)
@@ -192,6 +195,12 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 		&btcHash,
 	)
 	return chainhash.DoubleHashH(w.Bytes())
+}
+
+// ExclusiveHash computes the hash of the BeaconHeader without BtcAux.
+// This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
+func (h *BeaconHeader) ExclusiveHash() chainhash.Hash {
+	return h.BeaconExclusiveHash()
 }
 
 // BeaconExclusiveHash computes the hash of the BeaconHeader without BtcAux.
@@ -318,5 +327,6 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 	if err != nil {
 		return err
 	}
+
 	return writeBTCBlockHeader(w, &bh.btcAux)
 }

@@ -14,7 +14,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -94,7 +94,7 @@ type Config struct {
 	//
 	// This field is required.
 	ChainParams *chaincfg.Params
-	ChainCtx    chain2.IChainCtx
+	ChainCtx    chain.IChainCtx
 	BlockGen    ChainBlockGenerator
 	// ------ ------ ------ ------ ------
 
@@ -179,34 +179,34 @@ func New(config *Config) (*BlockChain, error) {
 		}
 	}
 
-	params := config.ChainParams
+	params := config.ChainCtx.Params()
+
+	blocksPerRetarget := chaincfg.ShardEpochLength
+	if config.ChainCtx.IsBeacon() {
+		blocksPerRetarget = chaincfg.BeaconEpochLength
+	}
 
 	targetTimespan := int64(params.PowParams.TargetTimespan / time.Second)
-	targetTimePerBlock := int64(params.PowParams.TargetTimePerBlock / time.Second)
-
 	adjustmentFactor := params.PowParams.RetargetAdjustmentFactor
 	b := BlockChain{
+		db:       config.DB,
+		chain:    config.ChainCtx,
+		blockGen: config.BlockGen,
+		// ------ ------ ------ ------ ------
+		TimeSource:          config.TimeSource,
+		SigCache:            config.SigCache,
+		HashCache:           config.HashCache,
+		indexManager:        config.IndexManager,
 		checkpoints:         config.Checkpoints,
 		checkpointsByHeight: checkpointsByHeight,
-
-		// todo: combine this fields
-		db:          config.DB,
-		chain:       config.ChainCtx,
-		blockGen:    config.BlockGen,
-		chainParams: params,
-		// ------ ------ ------ ------ ------
-		TimeSource:   config.TimeSource,
-		SigCache:     config.SigCache,
-		indexManager: config.IndexManager,
 
 		retargetOpts: retargetOpts{
 			minRetargetTimespan: targetTimespan / adjustmentFactor,
 			maxRetargetTimespan: targetTimespan * adjustmentFactor,
-			blocksPerRetarget:   int32(targetTimespan / targetTimePerBlock),
+			blocksPerRetarget:   int32(blocksPerRetarget),
 		},
 
 		index:            newBlockIndex(config.DB, params),
-		HashCache:        config.HashCache,
 		bestChain:        newChainView(nil),
 		orphans:          make(map[chainhash.Hash]*orphanBlock),
 		prevOrphans:      make(map[chainhash.Hash][]*orphanBlock),
@@ -252,8 +252,6 @@ type ChainBlockGenerator interface {
 	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
-	AcceptBlock(blockHeader wire.BlockHeader) error
-
 	ValidateBlockHeader(blockHeader wire.BlockHeader) error
 	ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error
 
@@ -274,10 +272,9 @@ type BlockChain struct {
 	indexManager IndexManager
 
 	// todo: combine this fields
-	chainParams *chaincfg.Params
-	chain       chain2.IChainCtx
-	blockGen    ChainBlockGenerator
-	db          database.DB
+	chain    chain.IChainCtx
+	blockGen ChainBlockGenerator
+	db       database.DB
 	// ------ ------ ------ ------ ------
 
 	TimeSource chaindata.MedianTimeSource
@@ -462,7 +459,7 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 	}
 }
 
-func (b *BlockChain) Chain() chain2.IChainCtx {
+func (b *BlockChain) Chain() chain.IChainCtx {
 	return b.chain
 }
 

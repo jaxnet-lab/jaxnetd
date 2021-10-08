@@ -20,7 +20,7 @@ import (
 // verify that claimed proof of work by a block is sane as compared to a
 // known good checkpoint.
 func (b *BlockChain) calcEasiestDifficulty(bits uint32, duration time.Duration) uint32 {
-	return calcEasiestDifficulty(b.chainParams.PowParams, b.retargetOpts, bits, duration)
+	return calcEasiestDifficulty(b.chain.Params().PowParams, b.retargetOpts, bits, duration)
 }
 
 func calcEasiestDifficulty(powParams chaincfg.PowParams, opts retargetOpts, bits uint32, duration time.Duration) uint32 {
@@ -114,7 +114,7 @@ func (b *BlockChain) CalcNextK() uint32 {
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
 func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknode.IBlockNode, newBlockTime time.Time) (uint32, error) {
-	return calcNextRequiredDifficulty(b.chainParams, b.retargetOpts, lastNode, newBlockTime)
+	return calcNextRequiredDifficulty(b.chain.Params(), b.retargetOpts, lastNode, newBlockTime)
 }
 
 // The following fields are calculated based upon the provided chain

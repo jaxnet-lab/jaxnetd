@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // simNetPowLimit is the highest proof of work value a Bitcoin block
@@ -26,24 +25,14 @@ var simNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 // following normal discovery rules.  This is important as otherwise it would
 // just turn into another public testnet.
 var SimNetParams = Params{
-	Name:        "simnet",
-	Net:         types.SimNet,
-	DefaultPort: "18555",
-	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
-
-	// Chain parameters
-	GenesisBlock: GenesisBlockOpts{
-		Version:    1,
-		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-		Timestamp:  time.Unix(1401292357, 0), // 2014-05-28 15:52:37 +0000 UTC
-		Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
-		Nonce:      2,
-	},
-	GenesisHash: &genesisHash,
-
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 210000,
+	Name:             "simnet",
+	Net:              types.SimNet,
+	DefaultPort:      "18555",
+	DNSSeeds:         []DNSSeed{}, // NOTE: There must NOT be any seeds.
+	IsBeacon:         true,
+	ChainID:          0,
+	ChainName:        "beacon",
+	CoinbaseMaturity: 100,
 
 	PowParams: PowParams{
 		PowLimit:                 simNetPowLimit,

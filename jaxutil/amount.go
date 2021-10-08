@@ -11,44 +11,71 @@ import (
 	"strconv"
 )
 
-// AmountUnit describes a method of converting an Amount to something
-// other than the base unit of a bitcoin.  The value of the AmountUnit
+// JXNAmountUnit describes a method of converting an Amount to something
+// other than the base unit of a bitcoin.  The value of the JXNAmountUnit
 // is the exponent component of the decadic multiple to convert from
 // an amount in bitcoin to an amount counted in units.
-type AmountUnit int
+type JXNAmountUnit int
+type JAXAmountUnit int
 
 // These constants define various units used when describing a bitcoin
 // monetary amount.
 const (
-	AmountMegaBTC  AmountUnit = 6
-	AmountKiloBTC  AmountUnit = 3
-	AmountBTC      AmountUnit = 0
-	AmountJAXNet   AmountUnit = 0
-	AmountJAX      AmountUnit = 0
-	AmountMilliBTC AmountUnit = -3
-	AmountMicroBTC AmountUnit = -6
-	AmountSatoshi  AmountUnit = -8
+	AmountMegaJXN        JXNAmountUnit = 6
+	AmountKiloJXN        JXNAmountUnit = 3
+	AmountJXN            JXNAmountUnit = 0
+	AmountMilliJXN       JXNAmountUnit = -3
+	AmountMicroJXN       JXNAmountUnit = -6
+	AmountHaberStornetta JXNAmountUnit = -8
+
+	AmountMegaJAX  JAXAmountUnit = 6
+	AmountKiloJAX  JAXAmountUnit = 3
+	AmountJAX      JAXAmountUnit = 0
+	AmountMilliJAX JAXAmountUnit = -3
+	AmountJuro     JAXAmountUnit = -4
 )
 
 // String returns the unit as a string.  For recognized units, the SI
 // prefix is used, or "Satoshi" for the base unit.  For all unrecognized
-// units, "1eN BTC" is returned, where N is the AmountUnit.
-func (u AmountUnit) String() string {
+// units, "1eN BTC" is returned, where N is the JXNAmountUnit.
+func (u JXNAmountUnit) String() string {
 	switch u {
-	case AmountMegaBTC:
-		return "MBTC"
-	case AmountKiloBTC:
-		return "kBTC"
-	case AmountBTC:
-		return "BTC"
-	case AmountMilliBTC:
-		return "mBTC"
-	case AmountMicroBTC:
-		return "μBTC"
-	case AmountSatoshi:
-		return "Satoshi"
+	case AmountMegaJXN:
+		return "MJXN"
+	case AmountKiloJXN:
+		return "kJXN"
+	case AmountJXN:
+		return "JXN"
+	case AmountMilliJXN:
+		return "mJXN"
+	case AmountMicroJXN:
+		return "μJXN"
+	case AmountHaberStornetta:
+		return "HaberStornetta"
+
 	default:
-		return "1e" + strconv.FormatInt(int64(u), 10) + " BTC"
+		return "1e" + strconv.FormatInt(int64(u), 10) + " JXN"
+	}
+}
+
+// String returns the unit as a string.  For recognized units, the SI
+// prefix is used, or "Satoshi" for the base unit.  For all unrecognized
+// units, "1eN BTC" is returned, where N is the JXNAmountUnit.
+func (u JAXAmountUnit) String() string {
+	switch u {
+	case AmountMegaJAX:
+		return "MJAX"
+	case AmountKiloJAX:
+		return "kJAX"
+	case AmountJAX:
+		return "JAX"
+	case AmountMilliJAX:
+		return "mJAX"
+	case AmountJuro:
+		return "Juro"
+
+	default:
+		return "1e" + strconv.FormatInt(int64(u), 10) + " JAX"
 	}
 }
 
@@ -93,13 +120,13 @@ func NewAmount(f float64) (Amount, error) {
 
 // ToUnit converts a monetary amount counted in bitcoin base units to a
 // floating point value representing an amount of bitcoin.
-func (a Amount) ToUnit(u AmountUnit) float64 {
+func (a Amount) ToUnit(u JXNAmountUnit) float64 {
 	return float64(a) / math.Pow10(int(u+8))
 }
 
 // ToBTC is the equivalent of calling ToUnit with AmountBTC.
 func (a Amount) ToBTC() float64 {
-	return a.ToUnit(AmountBTC)
+	return a.ToUnit(AmountJXN)
 }
 
 // ToJax ...
@@ -123,14 +150,14 @@ func (a Amount) ToCoin(isBeacon bool) float64 {
 // string for a given unit.  The conversion will succeed for any unit,
 // however, known units will be formated with an appended label describing
 // the units with SI notation, or "Satoshi" for the base unit.
-func (a Amount) Format(u AmountUnit) string {
+func (a Amount) Format(u JXNAmountUnit) string {
 	units := " " + u.String()
 	return strconv.FormatFloat(a.ToUnit(u), 'f', -int(u+8), 64) + units
 }
 
 // String is the equivalent of calling Format with AmountBTC.
 func (a Amount) String() string {
-	return a.Format(AmountBTC)
+	return a.Format(AmountJXN)
 }
 
 // MulF64 multiplies an Amount by a floating point value.  While this is not

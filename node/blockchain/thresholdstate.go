@@ -310,11 +310,11 @@ func (b *BlockChain) deploymentState(prevNode blocknode.IBlockNode, deploymentID
 		return ThresholdActive, nil
 	}
 
-	if deploymentID > uint32(len(b.chainParams.Deployments)) {
+	if deploymentID > uint32(len(b.chain.Params().Deployments)) {
 		return ThresholdFailed, chaindata.DeploymentError(deploymentID)
 	}
 
-	deployment := &b.chainParams.Deployments[deploymentID]
+	deployment := &b.chain.Params().Deployments[deploymentID]
 	checker := deploymentChecker{deployment: deployment, chain: b}
 	cache := &b.deploymentCaches[deploymentID]
 
@@ -338,8 +338,8 @@ func (b *BlockChain) initThresholdCaches() error {
 			return err
 		}
 	}
-	for id := 0; id < len(b.chainParams.Deployments); id++ {
-		deployment := &b.chainParams.Deployments[id]
+	for id := 0; id < len(b.chain.Params().Deployments); id++ {
+		deployment := &b.chain.Params().Deployments[id]
 		cache := &b.deploymentCaches[id]
 		checker := deploymentChecker{deployment: deployment, chain: b}
 		_, err := b.thresholdState(prevNode, checker, cache)

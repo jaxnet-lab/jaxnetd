@@ -45,7 +45,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *jaxutil.Block) ([]chaindata.
 // the genesis block, so it must only be called on an uninitialized database.
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
-	genesisBlock := jaxutil.NewBlock(b.chain.GenesisBlock())
+	genesisBlock := jaxutil.NewBlock(b.chain.Params().GenesisBlock())
 	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
 	node := b.chain.NewNode(header, nil)
@@ -60,6 +60,7 @@ func (b *BlockChain) createChainState() error {
 	numTxns := uint64(len(genesisBlock.MsgBlock().Transactions))
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(genesisBlock))
+
 	b.stateSnapshot = chaindata.NewBestState(node, b.index.MMRTreeRoot(), blockSize, blockWeight, numTxns,
 		numTxns, time.Unix(node.Timestamp(), 0))
 
@@ -258,10 +259,10 @@ func (b *BlockChain) initChainState() error {
 			if lastNode == nil {
 				blockHash := header.BlockHash()
 
-				if !blockHash.IsEqual(b.chain.Params().GenesisHash) {
+				if !blockHash.IsEqual(b.chain.Params().GenesisHash()) {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
-						b.chainParams.GenesisHash, blockHash))
+						b.chain.Params().GenesisHash(), blockHash))
 				}
 			} else if header.BlocksMerkleMountainRoot() == b.index.MMRTreeRoot() {
 				// Since we iterate block headers in order of height, if the
