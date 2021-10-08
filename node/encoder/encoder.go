@@ -26,8 +26,7 @@ const (
 
 	CommandSize = 12
 	// MaxMessagePayload = 1024 * 1024 * 32 // 32MB
-	MaxMessagePayload = (1024 * 1024 * 1024 * 2) // 2 GB
-
+	MaxMessagePayload = 1024 * 1024 * 32 * 2 // 640MB
 )
 
 type MessageEncoding uint32
@@ -64,6 +63,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
+	case *uint8:
+		rv, err := BinarySerializer.Uint8(r)
+		if err != nil {
+			return err
+		}
+		*e = rv
 	case *int32:
 		rv, err := BinarySerializer.Uint32(r, littleEndian)
 		if err != nil {
@@ -217,6 +222,12 @@ func WriteElement(w io.Writer, element interface{}) error {
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
+	case uint8:
+		err := BinarySerializer.PutUint8(w, e)
+		if err != nil {
+			return err
+		}
+		return nil
 	case int32:
 		err := BinarySerializer.PutUint32(w, littleEndian, uint32(e))
 		if err != nil {

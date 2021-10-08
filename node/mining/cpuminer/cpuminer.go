@@ -219,8 +219,8 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 		reward += block.MsgBlock().Transactions[0].TxOut[2].Value
 	}
 
-	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, amount %v)", chainID,
-		block.Hash(), jaxutil.Amount(reward))
+	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, pow_hash %s amount %v)", chainID,
+		block.Hash(), block.PowHash(), jaxutil.Amount(reward).ToCoin(chainID == 0))
 	return true
 }
 
@@ -561,6 +561,17 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 
 	job.beacon.block.Header.BeaconHeader().SetMergeMiningRoot(*rootHash)
 	job.beacon.block.Header.BeaconHeader().SetMergedMiningTreeCodingProof(hashes, coding, codingBitLength)
+	for id := range job.shards {
+		// Shard IDs are going to be indexed from 1,
+		// but the tree expects slots to be indexed from 0.
+		slotIndex := id - 1
+		path, err := tree.MerkleProofPath(slotIndex)
+		if err != nil {
+			return err
+		}
+
+		job.shards[id].block.Header.SetMergeMiningRootPath(path)
+	}
 	return
 }
 

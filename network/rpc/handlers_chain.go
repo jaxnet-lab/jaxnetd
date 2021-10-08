@@ -372,7 +372,7 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 	}
 
 	chainInfo := &jaxjson.GetBlockChainInfoResult{
-		Chain:         params.Name,
+		Chain:         params.ChainName,
 		Blocks:        chainSnapshot.Height,
 		Headers:       chainSnapshot.Height,
 		BestBlockHash: chainSnapshot.Hash.String(),

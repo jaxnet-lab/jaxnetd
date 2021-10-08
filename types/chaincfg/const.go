@@ -28,7 +28,6 @@ const (
 	BeaconBaseReward       = 20    // In JXN
 	ShardTestnetBaseReward = 10    // In JAX
 
-	// ShardEpochLength = 2304  // (1.6 blocks/per hour * 1 day) in blocks
-	ShardEpochLength = 2048
+	ShardEpochLength = 4096
 	ShardTimeDelta   = 37500 // 37.5s in milliseconds
 )

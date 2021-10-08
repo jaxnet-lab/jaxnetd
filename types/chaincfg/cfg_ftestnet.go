@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // fastNetPowLimit is the highest proof of work value a Bitcoin block
@@ -21,24 +20,14 @@ var fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
-	Name:        "fastnet",
-	Net:         types.FastTestNet,
-	DefaultPort: "18333",
-	DNSSeeds:    []DNSSeed{},
-
-	// Chain parameters
-	GenesisBlock: GenesisBlockOpts{
-		Version:    1,
-		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-		MerkleRoot: genesisMerkleRoot,        // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-		Timestamp:  time.Unix(1296688602, 0), // 2011-02-02 23:16:42 +0000 UTC
-		Bits:       0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-		Nonce:      0x18aea41a,
-	},
-	GenesisHash: &genesisHash,
-
-	CoinbaseMaturity:         5,
-	SubsidyReductionInterval: 210000,
+	Name:             "fastnet",
+	Net:              types.FastTestNet,
+	DefaultPort:      "18333",
+	IsBeacon:         true,
+	ChainID:          0,
+	ChainName:        "beacon",
+	DNSSeeds:         []DNSSeed{},
+	CoinbaseMaturity: 5,
 
 	PowParams: PowParams{
 		PowLimit:                 fastNetPowLimit,

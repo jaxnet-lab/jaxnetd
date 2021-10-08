@@ -51,6 +51,10 @@ type BeaconHeader struct {
 	// voteK is a proposed inflation-fix coefficient for next mining epoch.
 	voteK uint32
 
+	// Merge-mining number is the miner’s claim about how
+	// many shards he was mining
+	mergeMiningNumber uint32
+
 	// btcAux is a container with the bitcoin auxiliary header, required for merge mining.
 	btcAux BTCBlockAux // todo (mike): do not store all hashes, only merkle path
 
@@ -129,8 +133,14 @@ func (h *BeaconHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
 	h.btcAux.UpdateCoinbaseScript(coinbaseScript)
 }
 
+func (h *BeaconHeader) MergeMiningNumber() uint32     { return h.mergeMiningNumber }
+func (h *BeaconHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n }
+
 func (h *BeaconHeader) MergedMiningTree() []byte            { return h.treeEncoding }
 func (h *BeaconHeader) SetMergedMiningTree(treeData []byte) { h.treeEncoding = treeData }
+
+func (h *BeaconHeader) MergeMiningRootPath() []byte   { return []byte{} }
+func (h *BeaconHeader) SetMergeMiningRootPath([]byte) {}
 
 func (h *BeaconHeader) MergedMiningTreeCodingProof() (hashes, coding []byte, codingLengthBits uint32) {
 	buf := h.treeEncoding[:]
@@ -170,8 +180,7 @@ func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 // BlockHash computes the block identifier hash for the given block BeaconHeader.
 func (h *BeaconHeader) BlockHash() chainhash.Hash {
 	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	sec := uint32(h.btcAux.Timestamp.Unix())
-
+	btcHash := h.btcAux.BlockHash()
 	_ = encoder.WriteElements(w,
 		h.version,
 		&h.blocksMMRRoot,
@@ -181,15 +190,17 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 		&h.shards,
 		&h.k,
 		&h.voteK,
+		&h.mergeMiningNumber,
 		&h.treeEncoding,
-		h.btcAux.Version,
-		&h.btcAux.PrevBlock,
-		&h.btcAux.MerkleRoot,
-		sec,
-		h.btcAux.Bits,
-		h.btcAux.Nonce,
+		&btcHash,
 	)
 	return chainhash.DoubleHashH(w.Bytes())
+}
+
+// ExclusiveHash computes the hash of the BeaconHeader without BtcAux.
+// This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
+func (h *BeaconHeader) ExclusiveHash() chainhash.Hash {
+	return h.BeaconExclusiveHash()
 }
 
 // BeaconExclusiveHash computes the hash of the BeaconHeader without BtcAux.
@@ -205,6 +216,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 		&h.shards,
 		&h.k,
 		&h.voteK,
+		&h.mergeMiningNumber,
 		&h.treeEncoding,
 	)
 
@@ -288,6 +300,7 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 		&bh.shards,
 		&bh.k,
 		&bh.voteK,
+		&bh.mergeMiningNumber,
 		&bh.treeEncoding)
 	if err != nil {
 		return err
@@ -309,9 +322,11 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 		&bh.shards,
 		&bh.k,
 		&bh.voteK,
+		&bh.mergeMiningNumber,
 		&bh.treeEncoding)
 	if err != nil {
 		return err
 	}
+
 	return writeBTCBlockHeader(w, &bh.btcAux)
 }

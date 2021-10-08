@@ -55,6 +55,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		}
 
 		if b.chain.IsBeacon() {
+			// todo: validate expected K for shards also
 			expectedK := b.calcNextK(prevNode)
 
 			if expectedK != header.K() {
@@ -233,7 +234,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	// The coinbase for the Genesis block is not spendable, so just return
 	// an error now.
 	h := node.GetHash()
-	if h.IsEqual(b.chainParams.GenesisHash) {
+	if h.IsEqual(b.chain.Params().GenesisHash()) {
 		str := "the coinbase for the genesis block is not spendable"
 		return chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
 	}
@@ -314,7 +315,7 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	// bounds.
 	var totalFees int64
 	for _, tx := range transactions {
-		txFee, err := chaindata.CheckTransactionInputs(tx, node.Height(), view, b.chainParams)
+		txFee, err := chaindata.CheckTransactionInputs(tx, node.Height(), view, b.chain.Params())
 		if err != nil {
 			return err
 		}
@@ -485,7 +486,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
 	}
 
-	err := chaindata.CheckBlockSanityWF(block, b.chainParams, b.TimeSource, flags)
+	err := chaindata.CheckBlockSanityWF(block, b.chain.Params(), b.TimeSource, flags)
 	if err != nil {
 		return err
 	}

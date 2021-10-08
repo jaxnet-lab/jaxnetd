@@ -58,7 +58,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 		// Set the latest checkpoint to the genesis block if there isn't
 		// already one.
 		latestCheckpoint = &chain.Checkpoint{
-			Hash:   activeNetParams.GenesisHash,
+			Hash:   *activeNetParams.GenesisHash(),
 			Height: 0,
 		}
 	}

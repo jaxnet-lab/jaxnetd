@@ -5,74 +5,32 @@
 package shard
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types"
-	blocknode2 "gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type shardChain struct {
 	wire.ShardHeaderConstructor
-	chainParams chaincfg.Params
-	genesisTx   wire.MsgTx
+	chainParams *chaincfg.Params
 }
 
-func Chain(shardID uint32, params *chaincfg.Params, beaconGenesis *wire.BeaconHeader, tx *wire.MsgTx) *shardChain {
+func Chain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock) *shardChain {
+	chainParams := params.ShardParams(shardID, beaconBlock)
+
 	shard := &shardChain{
 		ShardHeaderConstructor: wire.ShardHeaderConstructor{ID: shardID},
-		genesisTx:              *tx.Copy(),
+		chainParams:            chainParams,
 	}
 
-	shardBits := chaincfg.ShardPoWBits
-	if params.Net == types.TestNet {
-		shardBits = 0x1e00ffff
-	}
-	chainParams := params.ShardGenesis(shardID, nil)
-	chainParams.GenesisBlock = chaincfg.GenesisBlockOpts{
-		Version:    int32(beaconGenesis.Version()),
-		Timestamp:  beaconGenesis.Timestamp(),
-		PrevBlock:  chainhash.Hash{},
-		MerkleRoot: chainhash.Hash{},
-		Bits:       shardBits,
-		Nonce:      beaconGenesis.Nonce(),
-		BCHeader:   *beaconGenesis,
-	}
-
-	chainParams.PowParams.PowLimitBits = shardBits
-
-	shard.SetChainParams(*chainParams)
 	return shard
 }
 
-func (c *shardChain) SetChainParams(params chaincfg.Params) {
-	c.chainParams = params
-
-	genesis := c.GenesisBlock().BlockHash()
-	c.chainParams.GenesisHash = &genesis
+func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
+	return blocknode.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }
 
-func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode2.IBlockNode) blocknode2.IBlockNode {
-	return blocknode2.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
-}
-
-func (c *shardChain) Params() *chaincfg.Params  { return &c.chainParams }
-func (c *shardChain) Name() string              { return c.chainParams.Name }
-func (c *shardChain) EmptyBlock() wire.MsgBlock { return wire.EmptyShardBlock() }
-
-func (c *shardChain) GenesisBlock() *wire.MsgBlock {
-	return &wire.MsgBlock{
-		ShardBlock: true,
-		Header: wire.NewShardBlockHeader(
-			c.chainParams.GenesisBlock.PrevBlock, // todo: Put actual MMR Root
-			c.chainParams.GenesisBlock.MerkleRoot,
-			c.chainParams.GenesisBlock.Bits,
-			c.chainParams.GenesisBlock.BCHeader,
-			wire.CoinbaseAux{
-				Tx:       *c.genesisTx.Copy(),
-				TxMerkle: []chainhash.Hash{c.chainParams.GenesisBlock.MerkleRoot},
-			},
-		),
-		Transactions: []*wire.MsgTx{&c.genesisTx},
-	}
-}
+func (c *shardChain) Params() *chaincfg.Params     { return c.chainParams }
+func (c *shardChain) Name() string                 { return c.chainParams.ChainName }
+func (c *shardChain) EmptyBlock() wire.MsgBlock    { return wire.EmptyShardBlock() }
+func (c *shardChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.GenesisBlock() }

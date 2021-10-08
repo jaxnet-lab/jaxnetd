@@ -46,14 +46,27 @@ type BlockHeader interface {
 	VoteK() uint32
 	SetVoteK(value uint32)
 
+	// BlockHash computes hash of header data including hash of the aux data.
+	// BlockHash must be used as unique block identifier eq to BLOCK_ID.
 	BlockHash() chainhash.Hash
-
+	// ExclusiveHash computes hash of header data without any extra aux data.
+	// ExclusiveHash needed to build inclusion proofs for merge mining
+	ExclusiveHash() chainhash.Hash
 	// PoWHash computes the hash for block that will be used to check ProofOfWork.
 	PoWHash() chainhash.Hash
 
 	// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
 	// and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 	UpdateCoinbaseScript(coinbaseScript []byte)
+
+	MergeMiningNumber() uint32
+	SetMergeMiningNumber(n uint32)
+
+	SetMergeMiningRootPath(path []byte)
+	MergeMiningRootPath() []byte
+
+	MergeMiningRoot() chainhash.Hash
+	SetMergeMiningRoot(value chainhash.Hash)
 
 	Read(r io.Reader) error
 	Write(r io.Writer) error
@@ -125,9 +138,7 @@ func (b BeaconHeaderConstructor) BlockHeaderOverhead() int {
 
 type ShardHeaderConstructor struct{ ID uint32 }
 
-func (b ShardHeaderConstructor) EmptyHeader() BlockHeader {
-	return &ShardHeader{beaconHeader: BeaconHeader{}}
-}
+func (b ShardHeaderConstructor) EmptyHeader() BlockHeader   { return &ShardHeader{} }
 func (b ShardHeaderConstructor) IsBeacon() bool             { return false }
 func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }
 func (b ShardHeaderConstructor) MaxBlockHeaderPayload() int { return MaxShardBlockHeaderPayload }

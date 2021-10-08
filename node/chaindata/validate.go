@@ -181,7 +181,7 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	return true
 }
 
-// CalcBlockSubsidy returns the subsidy amount a block at the provided height
+// BtcCalcBlockSubsidy returns the subsidy amount a block at the provided height
 // should have. This is mainly used for determining how much the coinbase for
 // newly generated blocks awards as well as validating the coinbase for blocks
 // has the expected value.
@@ -191,13 +191,9 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
-func CalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
-	if chainParams.SubsidyReductionInterval == 0 {
-		return baseSubsidy
-	}
-
+func BtcCalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return baseSubsidy >> uint(height/chainParams.SubsidyReductionInterval)
+	return baseSubsidy >> uint(height/210000)
 }
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to

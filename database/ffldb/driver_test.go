@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/database/ffldb"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chain"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
@@ -175,8 +175,8 @@ func TestPersistence(t *testing.T) {
 		"b1key2": "foo2",
 		"b1key3": "foo3",
 	}
-	genesisBlock := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-	genesisHash := chaincfg.MainNetParams.GenesisHash
+	genesisBlock := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock())
+	genesisHash := chaincfg.MainNetParams.GenesisHash()
 	err = db.Update(func(tx database.Tx) error {
 		metadataBucket := tx.Metadata()
 		if metadataBucket == nil {

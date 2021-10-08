@@ -146,7 +146,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// Perform preliminary sanity checks on the block and its transactions.
-	err = chaindata.CheckBlockSanityWF(block, b.chainParams, b.TimeSource, flags)
+	err = chaindata.CheckBlockSanityWF(block, b.chain.Params(), b.TimeSource, flags)
 	if err != nil {
 		return false, false, err
 	}
@@ -224,9 +224,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	if err != nil {
 		return false, false, err
 	}
-	if err := b.blockGen.AcceptBlock(blockHeader); err != nil {
-		return false, false, err
-	}
+
 	log.Debug().Msgf("Accepted block %v", blockHash)
 
 	return isMainChain, false, nil

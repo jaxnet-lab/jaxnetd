@@ -86,7 +86,7 @@ func (c bitConditionChecker) EndTime() uint64 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c bitConditionChecker) RuleChangeActivationThreshold() uint32 {
-	return c.chain.chainParams.RuleChangeActivationThreshold
+	return c.chain.chain.Params().RuleChangeActivationThreshold
 }
 
 // MinerConfirmationWindow is the number of blocks in each threshold state
@@ -97,7 +97,7 @@ func (c bitConditionChecker) RuleChangeActivationThreshold() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c bitConditionChecker) MinerConfirmationWindow() uint32 {
-	return c.chain.chainParams.MinerConfirmationWindow
+	return c.chain.chain.Params().MinerConfirmationWindow
 }
 
 // Condition returns true when the specific bit associated with the checker is
@@ -168,7 +168,7 @@ func (c deploymentChecker) EndTime() uint64 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c deploymentChecker) RuleChangeActivationThreshold() uint32 {
-	return c.chain.chainParams.RuleChangeActivationThreshold
+	return c.chain.chain.Params().RuleChangeActivationThreshold
 }
 
 // MinerConfirmationWindow is the number of blocks in each threshold state
@@ -179,7 +179,7 @@ func (c deploymentChecker) RuleChangeActivationThreshold() uint32 {
 //
 // This is part of the thresholdConditionChecker interface implementation.
 func (c deploymentChecker) MinerConfirmationWindow() uint32 {
-	return c.chain.chainParams.MinerConfirmationWindow
+	return c.chain.chain.Params().MinerConfirmationWindow
 }
 
 // Condition returns true when the specific bit defined by the deployment
