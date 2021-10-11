@@ -411,9 +411,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.Template
 				hasCoinbaseTxn = true
 			case "coinbasevalue":
 				hasCoinbaseValue = true
-			case "burnbtcreward":
-				burnReward |= types.BurnBtcReward
-			case "burnjaxnetreward":
+			case "burnbtcreward", "burnjaxnetreward":
 				burnReward |= types.BurnJaxNetReward
 			case "burnjaxreward":
 				burnReward |= types.BurnJaxReward

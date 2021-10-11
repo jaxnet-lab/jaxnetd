@@ -151,7 +151,7 @@ type BTCBlockGen struct {
 }
 
 func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
-	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
+	burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 	tx, err := CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
 		bg.MinerAddress, beaconHash.CloneBytes(), burnReward)
 	if err != nil {

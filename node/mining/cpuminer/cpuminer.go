@@ -478,8 +478,14 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 		return true
 	}
 
+	burnReward := types.BurnJaxReward
+	burnJXN := (curHeight+1)%2 == 0
+	if burnJXN {
+		burnReward = types.BurnJaxNetReward
+	}
+
 	if job.beacon.blockHeight < curHeight+1 {
-		template, err := miner.beacon.BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, types.BurnJaxReward)
+		template, err := miner.beacon.BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 		if err != nil {
 			miner.log.Error().Err(err).Msg("Failed to create new block template")
 			return false
@@ -499,7 +505,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 		}
 
 		if job.shards[shardID].blockHeight < curHeight+1 {
-			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, types.BurnJaxReward)
+			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 			if err != nil {
 				miner.log.Error().Err(err).Msg("Failed to create new block template")
 				return false

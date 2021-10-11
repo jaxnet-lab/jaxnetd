@@ -24,7 +24,7 @@ const (
 
 	// appPreRelease MUST only contain characters from semanticAlphabet
 	// per the semantic versioning spec.
-	appPreRelease = "rc-12"
+	appPreRelease = "rc-13"
 )
 
 var (

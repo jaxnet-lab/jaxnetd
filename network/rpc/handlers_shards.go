@@ -467,9 +467,7 @@ func (server *ShardRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateR
 				hasCoinbaseTxn = true
 			case "coinbasevalue":
 				hasCoinbaseValue = true
-			case "burnbtcreward":
-				burnReward |= types.BurnBtcReward
-			case "burnjaxnetreward":
+			case "burnbtcreward", "burnjaxnetreward":
 				burnReward |= types.BurnJaxNetReward
 			case "burnjaxreward":
 				burnReward |= types.BurnJaxReward

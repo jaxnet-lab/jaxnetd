@@ -64,7 +64,7 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 
 func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
-		burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
+		burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 		tx, err := chaindata.CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
 			bg.minerAddress, beaconHash.CloneBytes(), burnReward)
 		if err != nil {
@@ -120,7 +120,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 		aux.TxMerkle = append(aux.TxMerkle, *txHash)
 	}
 
-	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
+	burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 	tx, err := chaindata.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,
 		beaconHash.CloneBytes(), burnReward)
 	if err != nil {

@@ -7,7 +7,6 @@
 package types
 
 const (
-	BurnBtcReward    = 1 << iota
 	BurnJaxNetReward = 1 << iota
 	BurnJaxReward    = 1 << iota
 )
