@@ -16,12 +16,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-const (
-	// defaultMaxFeeRate is the default maximum fee rate in sat/KB enforced
-	// by jaxnetd v0.19.0 or after for transaction broadcast.
-	defaultMaxFeeRate = jaxutil.SatoshiPerBitcoin / 10
-)
-
 // SigHashType enumerates the available signature hashing types that the
 // SignRawTransaction function accepts.
 type SigHashType string

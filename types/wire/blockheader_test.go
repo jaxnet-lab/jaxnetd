@@ -288,18 +288,18 @@ func TestShardBlockHeaderSerialize(t *testing.T) {
 	// baseBlockHdr is used in the various tests as a baseline BlockHeader.
 	bits := uint32(0x1d00ffff)
 	baseBlockHdr := ShardHeader{
-		blocksMMRRoot:     mainNetGenesisHash,
-		merkleRoot:        mainNetGenesisMerkleRoot,
-		bits:              bits,
-		mergeMiningNumber: 0,
+		blocksMMRRoot: mainNetGenesisHash,
+		merkleRoot:    mainNetGenesisMerkleRoot,
+		bits:          bits,
 		beaconHeader: BeaconHeader{
-			version:         1,
-			blocksMMRRoot:   mainNetGenesisHash,
-			merkleRoot:      mainNetGenesisMerkleRoot,
-			mergeMiningRoot: chainhash.Hash{},
-			bits:            bits,
-			shards:          0,
-			treeEncoding:    nil,
+			version:           1,
+			blocksMMRRoot:     mainNetGenesisHash,
+			merkleRoot:        mainNetGenesisMerkleRoot,
+			mergeMiningRoot:   chainhash.Hash{},
+			bits:              bits,
+			shards:            0,
+			treeEncoding:      nil,
+			mergeMiningNumber: 0,
 			btcAux: BTCBlockAux{
 				Version:    0,
 				PrevBlock:  chainhash.Hash{},

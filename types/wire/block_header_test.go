@@ -165,10 +165,8 @@ func TestShardHeaderEncoding(t *testing.T) {
 		bits: 1,
 	}
 	sh.bits = 3
-	sh.mergeMiningNumber = 4
 	rand.Read(sh.merkleRoot[:])
 	rand.Read(sh.blocksMMRRoot[:])
-	sh.mergeMiningNumber = 5
 
 	hashes := make([]byte, 400)
 	coding := make([]byte, 300)
@@ -194,11 +192,6 @@ func TestShardHeaderEncoding(t *testing.T) {
 
 	if sh.bits != sh2.bits {
 		t.Error("Bits not equal")
-		return
-	}
-
-	if sh.mergeMiningNumber != sh2.mergeMiningNumber {
-		t.Error("MergeMiningNumber not equal")
 		return
 	}
 
@@ -244,10 +237,8 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		bits:    1,
 	}
 	sh.bits = 3
-	sh.mergeMiningNumber = 4
 	rand.Read(sh.merkleRoot[:])
 	rand.Read(sh.blocksMMRRoot[:])
-	sh.mergeMiningNumber = 5
 
 	hashes := make([]byte, 400)
 	coding := make([]byte, 300)
@@ -287,11 +278,6 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	if sh.bits != sh2.bits {
 		t.Error("Bits not equal")
-		return
-	}
-
-	if sh.mergeMiningNumber != sh2.mergeMiningNumber {
-		t.Error("MergeMiningNumber not equal")
 		return
 	}
 

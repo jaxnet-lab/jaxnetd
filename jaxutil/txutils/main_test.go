@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
 	"gitlab.com/jaxnet/jaxnetd/network/rpcclient"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -753,7 +752,7 @@ func TestEADSpend(ot *testing.T) {
 	utxo := txmodels.UTXO{
 		TxHash:     rawHash,
 		OutIndex:   7,
-		Value:      int64(txOut.Value * jaxutil.SatoshiPerBitcoin),
+		Value:      int64(txOut.Value * chaincfg.SatoshiPerBitcoin),
 		Used:       false,
 		PKScript:   txOut.ScriptPubKey.Hex,
 		ScriptType: txOut.ScriptPubKey.Type,

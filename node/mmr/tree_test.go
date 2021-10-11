@@ -27,7 +27,7 @@ func TestTree_AddBlock(t1 *testing.T) {
 
 	for _, a := range tt {
 		h, _ := chainhash.NewHashFromStr(a.hash)
-		tree.AddBlock(*h, a.diff, a.height)
+		tree.AddBlock(*h, a.diff)
 		fmt.Println("MRR_ROOT_FOR_BLOCK:>", h.String(), a.height, tree.CurrentRoot().String())
 
 	}
@@ -175,7 +175,7 @@ func TestMerkleTree(t *testing.T) {
 			tree := NewTree()
 			for i, block := range tt.blocks {
 				block.Hash[0] = byte(i)
-				tree.AddBlock(block.Hash, block.Weight, int32(block.Weight))
+				tree.AddBlock(block.Hash, block.Weight)
 			}
 
 			if tree.chainWeight != tt.want[len(tt.want)-1].Weight {

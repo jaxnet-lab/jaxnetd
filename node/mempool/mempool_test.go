@@ -165,7 +165,9 @@ func (p *poolHarness) CreateCoinbaseTx(blockHeight int32, numOutputs uint32) (*j
 		SignatureScript: coinbaseScript,
 		Sequence:        wire.MaxTxInSequenceNum,
 	})
-	totalInput := chaindata.CalcBlockSubsidy(blockHeight, p.chainParams)
+	// totalInput := blockGen.CalcBlockSubsidy(blockHeight, p.chainParams)
+	// totalInput := pow.CalcBlockSubsidy(blockHeight, p.chainParams)
+	totalInput := int64(62500000) // todo: repair this tests
 	amountPerOutput := totalInput / int64(numOutputs)
 	remainder := totalInput - amountPerOutput*int64(numOutputs)
 	for i := uint32(0); i < numOutputs; i++ {
@@ -1458,7 +1460,7 @@ func TestAncestorsDescendants(t *testing.T) {
 func TestRBF(t *testing.T) {
 	t.Parallel()
 
-	const defaultFee = jaxutil.SatoshiPerBitcoin
+	const defaultFee = chaincfg.SatoshiPerBitcoin
 
 	testCases := []struct {
 		name  string
