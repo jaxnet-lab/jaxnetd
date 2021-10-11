@@ -8,8 +8,8 @@ package blockchain
 import (
 	"fmt"
 
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -91,7 +91,7 @@ type thresholdConditionChecker interface {
 	// has been met.  This typically involves checking whether or not the
 	// bit associated with the condition is set, but can be more complex as
 	// needed.
-	Condition(blocknode.IBlockNode) (bool, error)
+	Condition(blocknodes.IBlockNode) (bool, error)
 }
 
 // thresholdStateCache provides a type to cache the threshold states of each
@@ -130,7 +130,7 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 // threshold states for previous windows are only calculated once.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) thresholdState(prevNode blocknode.IBlockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+func (b *BlockChain) thresholdState(prevNode blocknodes.IBlockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := int32(checker.MinerConfirmationWindow())
@@ -146,7 +146,7 @@ func (b *BlockChain) thresholdState(prevNode blocknode.IBlockNode, checker thres
 
 	// Iterate backwards through each of the previous confirmation windows
 	// to find the most recently cached threshold state.
-	var neededStates []blocknode.IBlockNode
+	var neededStates []blocknodes.IBlockNode
 	for prevNode != nil {
 		h := prevNode.GetHash()
 		// Nothing more to do if the state of the block is already
@@ -305,7 +305,7 @@ func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
 // AFTER the passed node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) deploymentState(prevNode blocknode.IBlockNode, deploymentID uint32) (ThresholdState, error) {
+func (b *BlockChain) deploymentState(prevNode blocknodes.IBlockNode, deploymentID uint32) (ThresholdState, error) {
 	if deploymentID == chaincfg.DeploymentCSV || deploymentID == chaincfg.DeploymentSegwit {
 		return ThresholdActive, nil
 	}

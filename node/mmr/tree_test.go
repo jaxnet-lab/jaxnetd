@@ -173,7 +173,8 @@ func TestMerkleTree(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			tree := NewTree()
-			for _, block := range tt.blocks {
+			for i, block := range tt.blocks {
+				block.Hash[0] = byte(i)
 				tree.AddBlock(block.Hash, block.Weight, int32(block.Weight))
 			}
 

@@ -14,11 +14,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -36,7 +34,7 @@ func ExampleBlockChain_ProcessBlock() {
 	// around.
 	dbPath := filepath.Join(os.TempDir(), "my_processblock")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		fmt.Printf("Failed to create database: %v\n", err)
 		return
@@ -52,20 +50,17 @@ func ExampleBlockChain_ProcessBlock() {
 	// values obtained from other peers on the network so the local time is
 	// adjusted to be in agreement with other peers.
 
-	hash, _ := chainhash.NewHashFromStr("aaa")
+	// hash, _ := chainhash.NewHashFromStr("aaa")
 	testChain, err := New(&Config{
 		DB:          db,
 		ChainParams: &chaincfg.MainNetParams,
 		TimeSource:  chaindata.NewMedianTime(),
-		ChainCtx: beacon.Chain(&chaincfg.Params{
+		ChainCtx: chainctx.NewBeaconChain(&chaincfg.Params{
 			Name:                          "test",
 			Net:                           0,
 			DefaultPort:                   "",
 			DNSSeeds:                      []chaincfg.DNSSeed{},
-			GenesisBlock:                  chaincfg.GenesisBlockOpts{},
-			GenesisHash:                   hash,
 			CoinbaseMaturity:              0,
-			SubsidyReductionInterval:      0,
 			Checkpoints:                   []chaincfg.Checkpoint{},
 			RuleChangeActivationThreshold: 0,
 			MinerConfirmationWindow:       0,
@@ -82,7 +77,7 @@ func ExampleBlockChain_ProcessBlock() {
 			HDPublicKeyID:                 [4]byte{},
 			HDCoinType:                    0,
 			AutoExpand:                    false,
-			InitialExpansionRule:          0,
+			InitialExpansionRule:          1,
 			InitialExpansionLimit:         0,
 		}),
 	})

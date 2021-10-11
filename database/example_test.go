@@ -2,7 +2,6 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-//+build deprecated_tests
 
 package database_test
 
@@ -15,7 +14,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
@@ -34,7 +33,7 @@ func ExampleCreate() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "examplecreate")
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -60,7 +59,7 @@ func Example_basicUsage() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleusage")
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -126,7 +125,7 @@ func Example_blockStorageAndRetrieval() {
 	// this, nor put it in the temp directory, but it's done here to ensure
 	// the example cleans up after itself.
 	dbPath := filepath.Join(os.TempDir(), "exampleblkstorage")
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, types.MainNet)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath, types.MainNet)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -138,7 +137,7 @@ func Example_blockStorageAndRetrieval() {
 	// read-write transaction and store a genesis block in the database as
 	// and example.
 	err = db.Update(func(tx database.Tx) error {
-		genesisBlock := chaincfg.MainNetParams.GenesisBlock
+		genesisBlock := chaincfg.MainNetParams.GenesisBlock()
 		return tx.StoreBlock(jaxutil.NewBlock(genesisBlock))
 	})
 	if err != nil {

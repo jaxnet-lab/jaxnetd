@@ -9,6 +9,8 @@ import (
 	"errors"
 	"math"
 	"strconv"
+
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
 // JXNAmountUnit describes a method of converting an Amount to something
@@ -112,10 +114,10 @@ func NewAmount(f float64) (Amount, error) {
 	case math.IsInf(f, 1):
 		fallthrough
 	case math.IsInf(f, -1):
-		return 0, errors.New("invalid bitcoin amount")
+		return 0, errors.New("invalid JXN amount")
 	}
 
-	return round(f * SatoshiPerBitcoin), nil
+	return round(f * chaincfg.HaberStornettaPerJAXNETCoin), nil
 }
 
 // ToUnit converts a monetary amount counted in bitcoin base units to a

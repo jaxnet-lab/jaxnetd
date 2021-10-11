@@ -10,7 +10,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/corelog"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/network/rpc"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )

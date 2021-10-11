@@ -9,9 +9,10 @@ import (
 	"fmt"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -25,7 +26,7 @@ import (
 //    the checkpoints are not performed.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode blocknode.IBlockNode, flags chaindata.BehaviorFlags) error {
+func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode blocknodes.IBlockNode, flags chaindata.BehaviorFlags) error {
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches
@@ -47,8 +48,9 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
-		medianTime := prevNode.CalcPastMedianTime()
-		if !header.Timestamp().After(medianTime) {
+		medianTime := prevNode.CalcPastMedianTime() //
+		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != types.FastTestNet &&
+			b.chain.Params().Net != types.SimNet {
 			str := "block timestamp of %v is not after expected %v"
 			str = fmt.Sprintf(str, header.Timestamp, medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
@@ -113,7 +115,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.IBlockNode, flags chaindata.BehaviorFlags) error {
+func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknodes.IBlockNode, flags chaindata.BehaviorFlags) error {
 	// Perform all block header related validation checks.
 	header := block.MsgBlock().Header
 	err := b.checkBlockHeaderContext(header, prevNode, flags)
@@ -224,7 +226,8 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknode.
 // with that node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut) error {
+func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
+	view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the
@@ -234,18 +237,18 @@ func (b *BlockChain) checkConnectBlock(node blocknode.IBlockNode, block *jaxutil
 	// The coinbase for the Genesis block is not spendable, so just return
 	// an error now.
 	h := node.GetHash()
-	if h.IsEqual(b.chain.Params().GenesisHash()) {
+	if h.IsEqual(b.chain.Params().GenesisHash()) { // TODO: GENESIS TX SPEND
 		str := "the coinbase for the genesis block is not spendable"
 		return chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
 	}
 
 	// Ensure the view is for the node being checked.
 	parentMMR := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	parentHash := b.index.HashByMMR(&parentMMR)
+	parentHash := b.bestChain.HashByMMR(parentMMR)
 	if !view.BestHash().IsEqual(&parentHash) {
-		return chaindata.AssertError(fmt.Sprintf("inconsistent view when "+
-			"checking block connection: best hash is %v instead "+
-			"of expected %v", view.BestHash(), parentHash))
+		return chaindata.AssertError(
+			fmt.Sprintf("inconsistent view when checking block connection: best hash is %v instead "+
+				"of expected %v", view.BestHash(), parentHash))
 	}
 
 	// Load all of the utxos referenced by the inputs for all transactions
@@ -479,8 +482,8 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	tip := b.bestChain.Tip()
 	header := block.MsgBlock().Header
 	prevMMRRoot := header.BlocksMerkleMountainRoot()
-	prevHash := b.index.HashByMMR(&prevMMRRoot)
-	if tip.GetHash() != prevHash {
+	prevHash, _ := b.bestChain.mmrTree.LookupNodeByRoot(prevMMRRoot)
+	if tip.GetHash() != prevHash.Hash {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
 			"instead got %v", tip.GetHash(), prevHash)
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
@@ -490,9 +493,9 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	if err != nil {
 		return err
 	}
-	//
-	// // Perform checks of the coinbase tx structure according to merge mining spec.
-	// err = b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height())
+
+	// Perform checks of the coinbase tx structure according to merge mining spec.
+	// err = b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height())
 	// if err != nil {
 	// 	return err
 	// }

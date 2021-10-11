@@ -89,6 +89,7 @@ var MainNetParams = Params{
 	// address generation.
 	HDCoinType: 0x4A, // ASCII for J
 
+	// Shards Expansion policy
 	AutoExpand:            true,
 	InitialExpansionRule:  2,
 	InitialExpansionLimit: 4,

@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 	"math"
 	"strconv"
+
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -224,7 +225,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		return nil, err
 	}
 
-	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
@@ -337,8 +338,8 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
 		return err
 	})
-	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:                c.Hash,
 		Confirmations:       int64(1 + best.Height - blockHeight),

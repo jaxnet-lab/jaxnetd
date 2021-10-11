@@ -14,12 +14,11 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -94,8 +93,8 @@ type Config struct {
 	//
 	// This field is required.
 	ChainParams *chaincfg.Params
-	ChainCtx    chain.IChainCtx
-	BlockGen    ChainBlockGenerator
+	ChainCtx    chainctx.IChainCtx
+	BlockGen    chaindata.ChainBlockGenerator
 	// ------ ------ ------ ------ ------
 
 	// Interrupt specifies a channel the caller can close to signal that
@@ -206,10 +205,12 @@ func New(config *Config) (*BlockChain, error) {
 			blocksPerRetarget:   int32(blocksPerRetarget),
 		},
 
-		index:            newBlockIndex(config.DB, params),
-		bestChain:        newChainView(nil),
-		orphans:          make(map[chainhash.Hash]*orphanBlock),
-		prevOrphans:      make(map[chainhash.Hash][]*orphanBlock),
+		index:     newBlockIndex(config.DB, params),
+		bestChain: newChainView(nil),
+		orphanIndex: orphanIndex{
+			orphans:     make(map[chainhash.Hash]*orphanBlock),
+			prevOrphans: make(map[chainhash.Hash][]*orphanBlock),
+		},
 		warningCaches:    newThresholdCaches(vbNumBits),
 		deploymentCaches: newThresholdCaches(chaincfg.DefinedDeployments),
 	}
@@ -248,16 +249,6 @@ func New(config *Config) (*BlockChain, error) {
 	return &b, nil
 }
 
-type ChainBlockGenerator interface {
-	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
-
-	ValidateBlockHeader(blockHeader wire.BlockHeader) error
-	ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error
-
-	CalcBlockSubsidy(height int32, header wire.BlockHeader, net types.JaxNet) int64
-}
-
 // BlockChain provides functions for working with the bitcoin block chain.
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, orphan handling, checkpoint handling, and best chain
@@ -272,8 +263,8 @@ type BlockChain struct {
 	indexManager IndexManager
 
 	// todo: combine this fields
-	chain    chain.IChainCtx
-	blockGen ChainBlockGenerator
+	chain    chainctx.IChainCtx
+	blockGen chaindata.ChainBlockGenerator
 	db       database.DB
 	// ------ ------ ------ ------ ------
 
@@ -304,15 +295,11 @@ type BlockChain struct {
 
 	// These fields are related to handling of orphan blocks.  They are
 	// protected by a combination of the chain lock and the orphan lock.
-	orphanLock   sync.RWMutex
-	orphans      map[chainhash.Hash]*orphanBlock
-	prevOrphans  map[chainhash.Hash][]*orphanBlock
-	oldestOrphan *orphanBlock
-
+	orphanIndex orphanIndex
 	// These fields are related to checkpoint handling.  They are protected
 	// by the chain lock.
 	nextCheckpoint *chaincfg.Checkpoint
-	checkpointNode blocknode.IBlockNode
+	checkpointNode blocknodes.IBlockNode
 
 	// The state is used as a fairly efficient way to cache information
 	// about the current best chain state that is returned to callers when
@@ -386,137 +373,19 @@ func (b *BlockChain) HaveBlock(hash *chainhash.Hash) (bool, error) {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) IsKnownOrphan(hash *chainhash.Hash) bool {
-	// Protect concurrent access.  Using a read lock only so multiple
-	// readers can query without blocking each other.
-	b.orphanLock.RLock()
-	_, exists := b.orphans[*hash]
-	b.orphanLock.RUnlock()
-
-	return exists
+	return b.orphanIndex.IsKnownOrphan(hash)
 }
 
-// GetOrphanRoot returns the head of the chain for the provided hash from the
-// map of orphan blocks.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
-	// Protect concurrent access.  Using a read lock only so multiple
-	// readers can query without blocking each other.
-	b.orphanLock.RLock()
-	defer b.orphanLock.RUnlock()
-
-	// Keep looping while the parent of each orphaned block is
-	// known and is an orphan itself.
-	orphanRoot := hash
-	prevHash := hash
-	for {
-		orphan, exists := b.orphans[*prevHash]
-		if !exists {
-			break
-		}
-		orphanRoot = prevHash
-		h := orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-		// b.MMRTree().LookupNodeByRoot()
-		prevHash = &h
-	}
-
-	return orphanRoot
-}
-
-// removeOrphanBlock removes the passed orphan block from the orphan pool and
-// previous orphan index.
-func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
-	// Protect concurrent access.
-	b.orphanLock.Lock()
-	defer b.orphanLock.Unlock()
-
-	// Remove the orphan block from the orphan pool.
-	orphanHash := orphan.block.Hash()
-	delete(b.orphans, *orphanHash)
-
-	// Remove the reference from the previous orphan index too.  An indexing
-	// for loop is intentionally used over a range here as range does not
-	// reevaluate the slice on each iteration nor does it adjust the index
-	// for the modified slice.
-	prevHash := b.MMRTree().LookupNodeByRoot(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
-
-	orphans := b.prevOrphans[prevHash]
-	for i := 0; i < len(orphans); i++ {
-		hash := orphans[i].block.Hash()
-		if hash.IsEqual(orphanHash) {
-			copy(orphans[i:], orphans[i+1:])
-			orphans[len(orphans)-1] = nil
-			orphans = orphans[:len(orphans)-1]
-			i--
-		}
-	}
-	b.prevOrphans[prevHash] = orphans
-
-	// Remove the map entry altogether if there are no longer any orphans
-	// which depend on the parent hash.
-	if len(b.prevOrphans[prevHash]) == 0 {
-		delete(b.prevOrphans, prevHash)
-	}
-}
-
-func (b *BlockChain) Chain() chain.IChainCtx {
+func (b *BlockChain) Chain() chainctx.IChainCtx {
 	return b.chain
 }
 
 func (b *BlockChain) MMRTree() mmr.BlocksMMRTree {
-	return b.index.mmrTree
+	return b.bestChain.mmrTree
 }
 
-func (b *BlockChain) ChainBlockGenerator() ChainBlockGenerator {
+func (b *BlockChain) ChainBlockGenerator() chaindata.ChainBlockGenerator {
 	return b.blockGen
-}
-
-// addOrphanBlock adds the passed block (which is already determined to be
-// an orphan prior calling this function) to the orphan pool.  It lazily cleans
-// up any expired blocks so a separate cleanup poller doesn't need to be run.
-// It also imposes a maximum limit on the number of outstanding orphan
-// blocks and will remove the oldest received orphan block if the limit is
-// exceeded.
-func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
-	// Remove expired orphan blocks.
-	for _, oBlock := range b.orphans {
-		if time.Now().After(oBlock.expiration) {
-			b.removeOrphanBlock(oBlock)
-			continue
-		}
-
-		// Update the oldest orphan block pointer so it can be discarded
-		// in case the orphan pool fills up.
-		if b.oldestOrphan == nil || oBlock.expiration.Before(b.oldestOrphan.expiration) {
-			b.oldestOrphan = oBlock
-		}
-	}
-
-	// Limit orphan blocks to prevent memory exhaustion.
-	if len(b.orphans)+1 > maxOrphanBlocks {
-		// Remove the oldest orphan to make room for the new one.
-		b.removeOrphanBlock(b.oldestOrphan)
-		b.oldestOrphan = nil
-	}
-
-	// Protect concurrent access.  This is intentionally done here instead
-	// of near the top since removeOrphanBlock does its own locking and
-	// the range iterator is not invalidated by removing map entries.
-	b.orphanLock.Lock()
-	defer b.orphanLock.Unlock()
-
-	// Insert the block into the orphan map with an expiration time
-	// 1 hour from now.
-	expiration := time.Now().Add(time.Hour)
-	oBlock := &orphanBlock{
-		block:      block,
-		expiration: expiration,
-	}
-	b.orphans[*block.Hash()] = oBlock
-
-	// Add to previous hash lookup index for faster dependency lookups.
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
-	b.prevOrphans[prevHash] = append(b.prevOrphans[prevHash], oBlock)
 }
 
 // CalcSequenceLock computes a relative lock-time SequenceLock for the passed
@@ -540,7 +409,7 @@ func (b *BlockChain) CalcSequenceLock(tx *jaxutil.Tx, utxoView *chaindata.UtxoVi
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcSequenceLock(node blocknode.IBlockNode, tx *jaxutil.Tx,
+func (b *BlockChain) calcSequenceLock(node blocknodes.IBlockNode, tx *jaxutil.Tx,
 	utxoView *chaindata.UtxoViewpoint, mempool bool) (*chaindata.SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
@@ -691,7 +560,7 @@ func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
 // This function may modify node statuses in the block index without flushing.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) getReorganizeNodes(node blocknode.IBlockNode) (*list.List, *list.List) {
+func (b *BlockChain) getReorganizeNodes(node blocknodes.IBlockNode) (*list.List, *list.List) {
 	attachNodes := list.New()
 	detachNodes := list.New()
 
@@ -699,7 +568,7 @@ func (b *BlockChain) getReorganizeNodes(node blocknode.IBlockNode) (*list.List, 
 	// direct parent are checked below but this is a quick check before doing
 	// more unnecessary work.
 	if b.index.NodeStatus(node.Parent()).KnownInvalid() {
-		b.index.SetStatusFlags(node, blocknode.StatusInvalidAncestor)
+		b.index.SetStatusFlags(node, blocknodes.StatusInvalidAncestor)
 		return detachNodes, attachNodes
 	}
 
@@ -723,8 +592,8 @@ func (b *BlockChain) getReorganizeNodes(node blocknode.IBlockNode) (*list.List, 
 		var next *list.Element
 		for e := attachNodes.Front(); e != nil; e = next {
 			next = e.Next()
-			n := attachNodes.Remove(e).(blocknode.IBlockNode)
-			b.index.SetStatusFlags(n, blocknode.StatusInvalidAncestor)
+			n := attachNodes.Remove(e).(blocknodes.IBlockNode)
+			b.index.SetStatusFlags(n, blocknodes.StatusInvalidAncestor)
 		}
 		return detachNodes, attachNodes
 	}
@@ -750,14 +619,14 @@ func (b *BlockChain) getReorganizeNodes(node blocknode.IBlockNode) (*list.List, 
 // it would be inefficient to repeat it.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Block,
+func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 
 	// Make sure it's extending the end of the best chain.
 	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	bestBlockHash := b.bestChain.Tip().GetHash()
-	prevHash := b.index.HashByMMR(&prevMMRRoot)
+	prevHash := b.bestChain.HashByMMR(prevMMRRoot)
 
+	bestBlockHash := b.bestChain.Tip().GetHash()
 	if !prevHash.IsEqual(&bestBlockHash) {
 		return chaindata.AssertError("connectBlock must be called with a block that extends the main chain")
 	}
@@ -916,8 +785,8 @@ func (b *BlockChain) connectBlock(node blocknode.IBlockNode, block *jaxutil.Bloc
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
-	forkNode blocknode.IBlockNode) error {
+func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
+	forkNode blocknodes.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.bestChain.Tip().GetHash()
@@ -1029,8 +898,8 @@ func (b *BlockChain) disconnectBlock(node blocknode.IBlockNode, block *jaxutil.B
 		// optional indexes with the block being disconnected so they
 		// can update themselves accordingly.
 		if b.indexManager != nil {
-			prevNode := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
-			err := b.indexManager.DisconnectBlock(dbTx, block, prevNode.Hash, stxos)
+			prevNode := b.index.HashByMMR(block.MsgBlock().Header.BlocksMerkleMountainRoot())
+			err := b.indexManager.DisconnectBlock(dbTx, block, prevNode, stxos)
 			if err != nil {
 				return err
 			}
@@ -1090,7 +959,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// Ensure the provided nodes match the current best chain.
 	tip := b.bestChain.Tip()
 	if detachNodes.Len() != 0 {
-		firstDetachNode := detachNodes.Front().Value.(blocknode.IBlockNode)
+		firstDetachNode := detachNodes.Front().Value.(blocknodes.IBlockNode)
 		if firstDetachNode.GetHash() != tip.GetHash() {
 			return chaindata.AssertError(fmt.Sprintf("reorganize nodes to detach are "+
 				"not for the current best chain -- first detach node %v, "+
@@ -1100,8 +969,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 	// Ensure the provided nodes are for the same fork point.
 	if attachNodes.Len() != 0 && detachNodes.Len() != 0 {
-		firstAttachNode := attachNodes.Front().Value.(blocknode.IBlockNode)
-		lastDetachNode := detachNodes.Back().Value.(blocknode.IBlockNode)
+		firstAttachNode := attachNodes.Front().Value.(blocknodes.IBlockNode)
+		lastDetachNode := detachNodes.Back().Value.(blocknodes.IBlockNode)
 		if firstAttachNode.Parent().GetHash() != lastDetachNode.Parent().GetHash() {
 			return chaindata.AssertError(fmt.Sprintf("reorganize nodes do not have the "+
 				"same fork point -- first attach parent %v, last detach "+
@@ -1131,7 +1000,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	h := oldBest.GetHash()
 	view.SetBestHash(&h)
 	for e := detachNodes.Front(); e != nil; e = e.Next() {
-		n := e.Value.(blocknode.IBlockNode)
+		n := e.Value.(blocknodes.IBlockNode)
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
@@ -1168,7 +1037,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// Store the loaded block and spend journal entry for later.
 		detachBlocks = append(detachBlocks, block)
 		detachSpentTxOuts = append(detachSpentTxOuts, stxos)
-		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+
+		prevHash := b.index.HashByMMR(block.MsgBlock().Header.BlocksMerkleMountainRoot())
 		err = view.DisconnectTransactions(b.db, block, prevHash, stxos)
 		if err != nil {
 			return err
@@ -1179,7 +1049,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 	// Set the fork point only if there are nodes to attach since otherwise
 	// blocks are only being disconnected and thus there is no fork point.
-	var forkNode blocknode.IBlockNode
+	var forkNode blocknodes.IBlockNode
 	if attachNodes.Len() > 0 {
 		forkNode = newBest
 	}
@@ -1197,7 +1067,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// tweaking the chain and/or database.  This approach catches these
 	// issues before ever modifying the chain.
 	for e := attachNodes.Front(); e != nil; e = e.Next() {
-		n := e.Value.(blocknode.IBlockNode)
+		n := e.Value.(blocknodes.IBlockNode)
 
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
@@ -1240,15 +1110,15 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		err = b.checkConnectBlock(n, block, view, nil)
 		if err != nil {
 			if _, ok := err.(chaindata.RuleError); ok {
-				b.index.SetStatusFlags(n, blocknode.StatusValidateFailed)
+				b.index.SetStatusFlags(n, blocknodes.StatusValidateFailed)
 				for de := e.Next(); de != nil; de = de.Next() {
-					dn := de.Value.(blocknode.IBlockNode)
-					b.index.SetStatusFlags(dn, blocknode.StatusInvalidAncestor)
+					dn := de.Value.(blocknodes.IBlockNode)
+					b.index.SetStatusFlags(dn, blocknodes.StatusInvalidAncestor)
 				}
 			}
 			return err
 		}
-		b.index.SetStatusFlags(n, blocknode.StatusValid)
+		b.index.SetStatusFlags(n, blocknodes.StatusValid)
 
 		newBest = n
 	}
@@ -1264,7 +1134,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 	// Disconnect blocks from the main chain.
 	for i, e := 0, detachNodes.Front(); e != nil; i, e = i+1, e.Next() {
-		n := e.Value.(blocknode.IBlockNode)
+		n := e.Value.(blocknodes.IBlockNode)
 		block := detachBlocks[i]
 
 		// Load all of the utxos referenced by the block that aren't
@@ -1276,7 +1146,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 		// Update the view to unspend all of the spent txos and remove
 		// the utxos created by the block.
-		prevHash := b.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot()).Hash
+		prevHash := b.index.HashByMMR(block.MsgBlock().Header.BlocksMerkleMountainRoot())
 		err = view.DisconnectTransactions(b.db, block, prevHash, detachSpentTxOuts[i])
 		if err != nil {
 			return err
@@ -1291,7 +1161,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 
 	// Connect the new best chain blocks.
 	for i, e := 0, attachNodes.Front(); e != nil; i, e = i+1, e.Next() {
-		n := e.Value.(blocknode.IBlockNode)
+		n := e.Value.(blocknodes.IBlockNode)
 		block := attachBlocks[i]
 
 		// Load all of the utxos referenced by the block that aren't
@@ -1346,7 +1216,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 //    This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
+func (b *BlockChain) connectBestChain(node blocknodes.IBlockNode, block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 
 	flushIndexState := func() {
@@ -1361,13 +1231,8 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	}
 
 	// We are extending the main (best) chain with a new block.  This is the
-	// most common case. //todo: refactor this validation
-	parentMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	prevBNode := b.index.mmrTree.LookupNodeByRoot(parentMMRRoot)
-	if prevBNode == nil {
-		prevBNode = &mmr.BlockNode{}
-	}
-	parentHash := prevBNode.Hash
+	// most common case.
+	parentHash := b.bestChain.HashByMMR(block.MsgBlock().Header.BlocksMerkleMountainRoot())
 
 	h := b.bestChain.Tip().GetHash()
 	if parentHash.IsEqual(&h) {
@@ -1383,9 +1248,9 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 		if !fastAdd {
 			err := b.checkConnectBlock(node, block, view, &stxos)
 			if err == nil {
-				b.index.SetStatusFlags(node, blocknode.StatusValid)
+				b.index.SetStatusFlags(node, blocknodes.StatusValid)
 			} else if _, ok := err.(chaindata.RuleError); ok {
-				b.index.SetStatusFlags(node, blocknode.StatusValidateFailed)
+				b.index.SetStatusFlags(node, blocknodes.StatusValidateFailed)
 			} else {
 				return false, err
 			}
@@ -1419,9 +1284,7 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 			// that status of the block as invalid and flush the
 			// index state to disk before returning with the error.
 			if _, ok := err.(chaindata.RuleError); ok {
-				b.index.SetStatusFlags(
-					node, blocknode.StatusValidateFailed,
-				)
+				b.index.SetStatusFlags(node, blocknodes.StatusValidateFailed)
 			}
 
 			flushIndexState()
@@ -1433,15 +1296,14 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 		// valid, then we'll update its status and flush the state to
 		// disk again.
 		if fastAdd || !b.index.NodeStatus(node).KnownValid() {
-			b.index.SetStatusFlags(node, blocknode.StatusValid)
+			b.index.SetStatusFlags(node, blocknodes.StatusValid)
 			flushIndexState()
 		}
 
 		return true, nil
 	}
 	if fastAdd {
-		log.Warn().Msgf("fastAdd set in the side chain case? %v\n",
-			block.Hash())
+		log.Warn().Msgf("fastAdd set in the side chain case? %v\n", block.Hash())
 	}
 
 	// We're extending (or creating) a side chain, but the cumulative
@@ -1474,6 +1336,15 @@ func (b *BlockChain) connectBestChain(node blocknode.IBlockNode, block *jaxutil.
 	// Reorganize the chain.
 	log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: Block %v is causing a reorganize.", node.GetHash())
 	err := b.reorganizeChain(detachNodes, attachNodes)
+
+	// currentMMR := b.index.mmrTree.CurrentRoot()
+	// lastLeafInMMR := b.index.HashByMMR(currentMMR)
+	// nodeHash := node.GetHash()
+	// if !lastLeafInMMR.IsEqual(&nodeHash) {
+	// 	log.Info().Str("chain", b.chain.Name()).Msgf(
+	// 		"REORGANIZE: Block %v is not a last leaf in MMR, reorganize tree", node.GetHash())
+	//
+	// }
 
 	// Either getReorganizeNodes or reorganizeChain could have made unsaved
 	// changes to the block index, so flush regardless of whether there was an
@@ -1787,7 +1658,7 @@ func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int,
 // functions.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) locateInventory(locator BlockLocator, hashStop *chainhash.Hash, maxEntries uint32) (blocknode.IBlockNode, uint32) {
+func (b *BlockChain) locateInventory(locator BlockLocator, hashStop *chainhash.Hash, maxEntries uint32) (blocknodes.IBlockNode, uint32) {
 	// There are no block locators so a specific block is being requested
 	// as identified by the stop hash.
 	stopNode := b.index.LookupNode(hashStop)

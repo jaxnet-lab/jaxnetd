@@ -21,7 +21,9 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 // TestNet3Params defines the network parameters for the test Bitcoin network
 // (version 3).  Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
-var TestNet3Params = Params{
+var TestNet3Params = TestNetParams
+
+var TestNetParams = Params{
 	Name:             "testnet",
 	Net:              types.TestNet,
 	DefaultPort:      "18333",
@@ -42,7 +44,13 @@ var TestNet3Params = Params{
 		GenerateSupported:        true,
 		HashSorting:              true,
 		ChainIDCount:             4096, // 2^12
+
 	},
+
+	// Shards Expansion policy
+	AutoExpand:            false,
+	InitialExpansionRule:  1,
+	InitialExpansionLimit: 0,
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,

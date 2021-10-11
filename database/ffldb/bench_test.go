@@ -3,8 +3,6 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-//+build deprecated_tests
-
 package ffldb
 
 import (
@@ -14,7 +12,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
@@ -25,14 +23,14 @@ func BenchmarkBlockHeader(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblkhdr")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath)
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) error {
-		block := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		block := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock())
 		return tx.StoreBlock(block)
 	})
 	if err != nil {
@@ -66,14 +64,14 @@ func BenchmarkBlock(b *testing.B) {
 	// genesis block.
 	dbPath := filepath.Join(os.TempDir(), "ffldb-benchblk")
 	_ = os.RemoveAll(dbPath)
-	db, err := database.Create("ffldb", chain.BeaconChain, dbPath, blockDataNet)
+	db, err := database.Create("ffldb", chainctx.BeaconChain, dbPath)
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) error {
-		block := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		block := jaxutil.NewBlock(chaincfg.MainNetParams.GenesisBlock())
 		return tx.StoreBlock(block)
 	})
 	if err != nil {

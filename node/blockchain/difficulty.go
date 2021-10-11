@@ -9,8 +9,8 @@ import (
 	"math/big"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
@@ -60,7 +60,7 @@ func calcEasiestDifficulty(powParams chaincfg.PowParams, opts retargetOpts, bits
 // did not have the special testnet minimum difficulty rule applied.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func findPrevTestNetDifficulty(startNode blocknode.IBlockNode, blocksPerRetarget int32, powLimitBits uint32) uint32 {
+func findPrevTestNetDifficulty(startNode blocknodes.IBlockNode, blocksPerRetarget int32, powLimitBits uint32) uint32 {
 	// Search backwards through the chain for the last block without
 	// the special rule applied.
 	iterNode := startNode
@@ -79,7 +79,7 @@ func findPrevTestNetDifficulty(startNode blocknode.IBlockNode, blocksPerRetarget
 	return lastBits
 }
 
-func (b *BlockChain) calcNextK(lastNode blocknode.IBlockNode) uint32 {
+func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode) uint32 {
 	if lastNode == nil {
 		return pow.PackK(pow.K1)
 	}
@@ -113,7 +113,7 @@ func (b *BlockChain) CalcNextK() uint32 {
 // This function differs from the exported CalcNextRequiredDifficulty in that
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
-func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknode.IBlockNode, newBlockTime time.Time) (uint32, error) {
+func (b *BlockChain) calcNextRequiredDifficulty(lastNode blocknodes.IBlockNode, newBlockTime time.Time) (uint32, error) {
 	return calcNextRequiredDifficulty(b.chain.Params(), b.retargetOpts, lastNode, newBlockTime)
 }
 
@@ -132,7 +132,7 @@ type retargetOpts struct {
 // This function differs from the exported CalcNextRequiredDifficulty in that
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
-func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts, lastNode blocknode.IBlockNode, newBlockTime time.Time) (uint32, error) {
+func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts, lastNode blocknodes.IBlockNode, newBlockTime time.Time) (uint32, error) {
 	// Genesis block.
 	if lastNode == nil {
 		return chainParams.PowParams.PowLimitBits, nil

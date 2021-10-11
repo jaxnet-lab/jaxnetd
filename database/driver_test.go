@@ -11,7 +11,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 )
 
 var (
@@ -55,7 +55,7 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// driver function and intentionally returns a failure that can be
 	// detected if the interface allows a duplicate driver to overwrite an
 	// existing one.
-	bogusCreateDB := func(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chainctx.IChainCtx, args ...interface{}) (database.DB, error) {
 		return nil, fmt.Errorf("duplicate driver allowed for database type [%v]", dbType)
 	}
 
@@ -83,7 +83,7 @@ func TestCreateOpenFail(t *testing.T) {
 	dbType := "createopenfail"
 	openError := fmt.Errorf("failed to create or open database for "+
 		"database type [%v]", dbType)
-	bogusCreateDB := func(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
+	bogusCreateDB := func(chain chainctx.IChainCtx, args ...interface{}) (database.DB, error) {
 		return nil, openError
 	}
 
@@ -95,7 +95,7 @@ func TestCreateOpenFail(t *testing.T) {
 		Open:   bogusCreateDB,
 	}
 	database.RegisterDriver(driver)
-	ch := chain.BeaconChain
+	ch := chainctx.BeaconChain
 	// Ensure creating a database with the new type fails with the expected
 	// error.
 	_, err := database.Create(dbType, ch)
@@ -118,7 +118,7 @@ func TestCreateOpenFail(t *testing.T) {
 // TestCreateOpenUnsupported ensures that attempting to create or open an
 // unsupported database type is handled properly.
 func TestCreateOpenUnsupported(t *testing.T) {
-	ch := chain.BeaconChain
+	ch := chainctx.BeaconChain
 	// Ensure creating a database with an unsupported type fails with the
 	// expected error.
 	testName := "create with unsupported database type"

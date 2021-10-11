@@ -18,7 +18,7 @@ import (
 	btcrpc "github.com/btcsuite/btcd/rpcclient"
 	btcdwire "github.com/btcsuite/btcd/wire"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/mining"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -65,7 +65,7 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
 		burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-		tx, err := mining.CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
+		tx, err := chaindata.CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
 			bg.minerAddress, beaconHash.CloneBytes(), burnReward)
 		if err != nil {
 			return wire.BTCBlockAux{}, false, err
@@ -121,7 +121,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 	}
 
 	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
-	tx, err := mining.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,
+	tx, err := chaindata.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,
 		beaconHash.CloneBytes(), burnReward)
 	if err != nil {
 		return wire.BTCBlockAux{}, false, err

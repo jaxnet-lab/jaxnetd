@@ -11,9 +11,9 @@ import (
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types"
 )
@@ -49,7 +49,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 	}
 
 	params.IsBeacon = true
-	beaconChain := beacon.Chain(params)
+	beaconChain := chainctx.NewBeaconChain(params)
 
 	// initialize chainProvider instance
 	{
@@ -72,7 +72,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 			return err
 		}
 
-		bsp := beacon.StateProvider{
+		bsp := chaindata.StateProvider{
 			ShardCount: func() (uint32, error) {
 				if beaconCtl.chainProvider != nil && beaconCtl.chainProvider.BlockChain() != nil {
 					return beaconCtl.chainProvider.ShardCount()
@@ -82,7 +82,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 			BTCGen: btcdProvider,
 		}
 
-		blockGen := beacon.NewChainBlockGenerator(bsp)
+		blockGen := chaindata.NewBeaconBlockGen(bsp)
 
 		chainProvider, err := cprovider.NewChainProvider(beaconCtl.ctx,
 			cfg.Node.BeaconChain, beaconChain, blockGen, db, beaconCtl.log)
@@ -120,7 +120,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
 }
 
-func (beaconCtl *BeaconCtl) ChainCtx() chain.IChainCtx {
+func (beaconCtl *BeaconCtl) ChainCtx() chainctx.IChainCtx {
 	return beaconCtl.ChainProvider().ChainCtx
 }
 

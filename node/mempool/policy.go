@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -94,8 +95,8 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee jaxutil.Amoun
 
 	// Set the minimum fee to the maximum possible value if the calculated
 	// fee is not in the valid range for monetary amounts.
-	if minFee < 0 || minFee > jaxutil.MaxSatoshi {
-		minFee = jaxutil.MaxSatoshi
+	if minFee < 0 || minFee > chaincfg.MaxSatoshi {
+		minFee = chaincfg.MaxSatoshi
 	}
 
 	return minFee

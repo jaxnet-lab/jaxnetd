@@ -25,7 +25,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/database/internal/treap"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	chain2 "gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -981,7 +981,7 @@ type transaction struct {
 // Enforce transaction implements the database.Tx interface.
 var _ database.Tx = (*transaction)(nil)
 
-func (tx *transaction) Chain() chain2.IChainCtx {
+func (tx *transaction) Chain() chainctx.IChainCtx {
 	return tx.db.chain
 }
 
@@ -1737,7 +1737,7 @@ type db struct {
 	closed    bool         // Is the database closed?
 	store     *blockStore  // Handles read/writing blocks to flat files.
 	cache     *dbCache     // Cache layer which wraps underlying leveldb DB.
-	chain     chain2.IChainCtx
+	chain     chainctx.IChainCtx
 }
 
 // Enforce db implements the database.DB interface.
@@ -1820,7 +1820,7 @@ func (db *db) Begin(writable bool) (database.Tx, error) {
 	return db.begin(writable)
 }
 
-func (db *db) Chain() chain2.IChainCtx {
+func (db *db) Chain() chainctx.IChainCtx {
 	return db.chain
 }
 
@@ -1992,7 +1992,7 @@ func initDB(ldb *leveldb.DB) error {
 
 // openDB opens the database at the provided path.  database.ErrDbDoesNotExist
 // is returned if the database doesn't exist and the create flag is not set.
-func openDB(dbPath string, chainCtx chain2.IChainCtx, create bool) (database.DB, error) {
+func openDB(dbPath string, chainCtx chainctx.IChainCtx, create bool) (database.DB, error) {
 	// Error if the database doesn't exist and the create flag is not set.
 	metadataDbPath := filepath.Join(dbPath, metadataDbName)
 	dbExists := fileExists(metadataDbPath)

@@ -16,7 +16,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/network/rpc"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
@@ -125,7 +125,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		return
 	}
 
-	chainCtx := shard.Chain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock())
+	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock())
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)

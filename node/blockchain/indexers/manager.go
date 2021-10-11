@@ -334,7 +334,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			err = m.db.Update(func(dbTx database.Tx) error {
 				// Remove all of the index entries associated
 				// with the block and update the indexer tip.
-				prevNode := chain.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
+				prevNode, _ := chain.MMRTree().LookupNodeByRoot(block.MsgBlock().Header.BlocksMerkleMountainRoot())
 				err = dbIndexDisconnectBlock(
 					dbTx, indexer, block, prevNode.Hash, spentTxos,
 				)
@@ -438,7 +438,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			}
 
 			mmrRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-			bNode := chain.MMRTree().LookupNodeByRoot(mmrRoot)
+			bNode, _ := chain.MMRTree().LookupNodeByRoot(mmrRoot)
 			if bNode == nil {
 				bNode = &mmr.BlockNode{}
 			}

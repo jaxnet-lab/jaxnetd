@@ -14,8 +14,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -64,7 +64,7 @@ type shardRO struct {
 
 type ShardCtl struct {
 	log   zerolog.Logger
-	chain chain.IChainCtx
+	chain chainctx.IChainCtx
 	cfg   *Config
 	ctx   context.Context
 
@@ -75,7 +75,7 @@ type ShardCtl struct {
 }
 
 func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
-	chain chain.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
+	chain chainctx.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
 	log = log.With().Str("chain", chain.Name()).Logger()
 
 	return &ShardCtl{
@@ -88,7 +88,7 @@ func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	}
 }
 
-func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider) error {
+func (shardCtl *ShardCtl) Init(beaconBlockGen chaindata.BeaconBlockProvider) error {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
@@ -96,7 +96,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen shard.BeaconBlockProvider) error {
 		return err
 	}
 
-	blockGen := shard.NewChainBlockGenerator(shardCtl.chain.ShardID(), beaconBlockGen)
+	blockGen := chaindata.NewShardBlockGen(shardCtl.chain.ShardID(), beaconBlockGen)
 
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
@@ -147,14 +147,14 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 
 	<-ctx.Done()
 
-	shardCtl.log.Info().Msg("Chain p2p server shutdown complete")
+	shardCtl.log.Info().Msg("ShardChain p2p server shutdown complete")
 	shardCtl.log.Info().Msg("Gracefully shutting down the database...")
 	if err := shardCtl.chainProvider.DB.Close(); err != nil {
 		shardCtl.log.Error().Err(err).Msg("Can't close db")
 	}
 }
 
-func (shardCtl *ShardCtl) ChainCtx() chain.IChainCtx {
+func (shardCtl *ShardCtl) ChainCtx() chainctx.IChainCtx {
 	return shardCtl.ChainProvider().ChainCtx
 }
 

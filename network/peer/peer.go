@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -438,7 +438,7 @@ type Peer struct {
 	connected     int32
 	disconnect    int32
 
-	chain chain.IChainCtx
+	chain chainctx.IChainCtx
 
 	conn net.Conn
 
@@ -501,12 +501,12 @@ type Peer struct {
 
 // NewInboundPeer returns a new inbound bitcoin peer. Use Start to begin
 // processing incoming and outgoing messages.
-func NewInboundPeer(cfg *Config, chainCtx chain.IChainCtx) *Peer {
+func NewInboundPeer(cfg *Config, chainCtx chainctx.IChainCtx) *Peer {
 	return newPeerBase(cfg, true, chainCtx)
 }
 
 // NewOutboundPeer returns a new outbound bitcoin peer.
-func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer, error) {
+func NewOutboundPeer(cfg *Config, addr string, chainCtx chainctx.IChainCtx) (*Peer, error) {
 	p := newPeerBase(cfg, false, chainCtx)
 	p.addr = addr
 
@@ -539,7 +539,7 @@ func NewOutboundPeer(cfg *Config, addr string, chainCtx chain.IChainCtx) (*Peer,
 // newPeerBase returns a new base bitcoin peer based on the inbound flag.  This
 // is used by the NewInboundPeer and NewOutboundPeer functions to perform base
 // setup needed by both types of peers.
-func newPeerBase(origCfg *Config, inbound bool, chainCtx chain.IChainCtx) *Peer {
+func newPeerBase(origCfg *Config, inbound bool, chainCtx chainctx.IChainCtx) *Peer {
 	// Default to the max supported protocol version if not specified by the
 	// caller.
 	cfg := *origCfg // Copy to avoid mutating caller.

@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -119,9 +119,9 @@ func MigrateBlockIndex(db database.DB) error {
 			}
 
 			// Mark blocks as valid if they are part of the main chain.
-			status := blocknode.StatusDataStored
+			status := blocknodes.StatusDataStored
 			if chainContext.mainChain {
-				status |= blocknode.StatusValid
+				status |= blocknodes.StatusValid
 			}
 
 			// Write header to v2 bucket
@@ -152,7 +152,7 @@ func MigrateBlockIndex(db database.DB) error {
 // each block to its parent block and all child blocks. This mapping represents
 // the full tree of blocks. This function does not populate the height or
 // mainChain fields of the returned blockChainContext values.
-func readBlockTree(chain chain.IChainCtx, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
+func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
 		header := chain.EmptyHeader()

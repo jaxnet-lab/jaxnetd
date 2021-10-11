@@ -13,7 +13,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -27,9 +27,9 @@ import (
 const (
 	// MinHighPriority is the minimum priority value that allows a
 	// transaction to be considered high priority.
-	MinHighPriority       = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityBeacon = jaxutil.HaberStornettaPerJAXNETCoin * 144.0 / 250
-	MinHighPriorityShard  = jaxutil.JuroPerJAXCoin * 144.0 / 250
+	MinHighPriority       = chaincfg.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityBeacon = chaincfg.HaberStornettaPerJAXNETCoin * 144.0 / 250
+	MinHighPriorityShard  = chaincfg.JuroPerJAXCoin * 144.0 / 250
 	// CoinbaseFlags is added to the coinbase script of a generated block
 	// and is used to monitor BIP16 support as well as blocks that are
 	// generated via jaxnetd.
@@ -186,42 +186,6 @@ func newTxPriorityQueue(reserve int, sortByFee bool) *txPriorityQueue {
 	return pq
 }
 
-// BlockTemplate houses a block that has yet to be solved along with additional
-// details about the fees and the number of signature operations for each
-// transaction in the block.
-type BlockTemplate struct {
-	// Block is a block that is ready to be solved by miners.  Thus, it is
-	// completely valid with the exception of satisfying the proof-of-work
-	// requirement.
-	Block *wire.MsgBlock
-
-	// Fees contains the amount of fees each transaction in the generated
-	// template pays in base units.  Since the first transaction is the
-	// coinbase, the first entry (offset 0) will contain the negative of the
-	// sum of the fees of all other transactions.
-	Fees []int64
-
-	// SigOpCosts contains the number of signature operations each
-	// transaction in the generated template performs.
-	SigOpCosts []int64
-
-	// Height is the height at which the block template connects to the main
-	// chain.
-	Height int32
-
-	// ValidPayAddress indicates whether or not the template coinbase pays
-	// to an address or is redeemable by anyone.  See the documentation on
-	// NewBlockTemplate for details on which this can be useful to generate
-	// templates without a coinbase payment address.
-	ValidPayAddress bool
-
-	// WitnessCommitment is a commitment to the witness data (if any)
-	// within the block. This field will only be populted once segregated
-	// witness has been activated, and the block contains a transaction
-	// which has witness data.
-	WitnessCommitment []byte
-}
-
 type blockTxsCollection struct {
 	BlockTxns         []*jaxutil.Tx
 	BlockWeight       uint32
@@ -309,7 +273,7 @@ func medianAdjustedTime(chainState *chaindata.BestState, timeSource chaindata.Me
 // are built on top of the current best chain and adhere to the consensus rules.
 type BlkTmplGenerator struct {
 	policy     *Policy
-	chainCtx   chain.IChainCtx
+	chainCtx   chainctx.IChainCtx
 	txSource   TxSource
 	blockChain *blockchain.BlockChain
 }
@@ -321,7 +285,7 @@ type BlkTmplGenerator struct {
 // templates are built on top of the current best chain and adhere to the
 // consensus rules.
 func NewBlkTmplGenerator(policy *Policy,
-	chainCtx chain.IChainCtx,
+	chainCtx chainctx.IChainCtx,
 	txSource TxSource,
 	chain *blockchain.BlockChain) *BlkTmplGenerator {
 
@@ -396,7 +360,7 @@ func NewBlkTmplGenerator(policy *Policy,
 //  |  <= policy.BlockMinSize)          |   |
 //   -----------------------------------  --
 
-func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnReward int) (*BlockTemplate, error) {
+func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnReward int) (*chaindata.BlockTemplate, error) {
 	// fmt.Println("New block for address ", payToAddress.String())
 	// Extend the most recently known best block.
 	best := g.blockChain.BestSnapshot()
@@ -459,7 +423,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 		"%064x)", len(msgBlock.Transactions), txsCollection.TotalFees, txsCollection.BlockSigOpCost,
 		txsCollection.BlockWeight, pow.CompactToBig(msgBlock.Header.Bits()))
 
-	return &BlockTemplate{
+	return &chaindata.BlockTemplate{
 		Block:             &msgBlock,
 		Fees:              txsCollection.TxFees,
 		SigOpCosts:        txsCollection.TxSigOpCosts,
@@ -490,7 +454,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 		burnReward = burnRewardFlags&types.BurnJaxReward == types.BurnJaxReward
 	}
 
-	coinbaseTx, err := CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress,
+	coinbaseTx, err := chaindata.CreateJaxCoinbaseTx(reward, 0, nextHeight, g.chainCtx.ShardID(), payToAddress,
 		burnReward, g.blockChain.Chain().IsBeacon())
 	if err != nil {
 		return nil, err
@@ -910,7 +874,7 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 // from changing the coinbase script.
 func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32,
 	shardID uint32, extraNonce uint64) error {
-	coinbaseScript, err := StandardCoinbaseScript(blockHeight, shardID, extraNonce)
+	coinbaseScript, err := chaindata.StandardCoinbaseScript(blockHeight, shardID, extraNonce)
 	if err != nil {
 		return err
 	}

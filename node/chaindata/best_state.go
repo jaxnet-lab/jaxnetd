@@ -7,7 +7,7 @@ package chaindata
 import (
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -34,7 +34,7 @@ type BestState struct {
 }
 
 // NewBestState returns a new best stats instance for the given parameters.
-func NewBestState(node blocknode.IBlockNode, actualMMRRoot chainhash.Hash, blockSize, blockWeight, numTxns,
+func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash, blockSize, blockWeight, numTxns,
 	totalTxns uint64, medianTime time.Time) *BestState {
 
 	return &BestState{

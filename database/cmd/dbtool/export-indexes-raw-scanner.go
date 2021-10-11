@@ -5,13 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -19,7 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -79,7 +77,7 @@ func rawScanner(offset int, shardID uint32) error {
 func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan, inputsChan, outputsChan chan row, shardID uint32) error {
 	// Load the block database.
 	var dbShard database.DB
-	dbBeacon, err := loadBlockDB(beacon.Chain(activeNetParams))
+	dbBeacon, err := loadBlockDB(chainctx.NewBeaconChain(activeNetParams))
 	if err != nil {
 		return err
 	}
@@ -216,7 +214,7 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 
 func prepareBlockchain(shardsJSONPath string, shardID uint32, dbBeacon, dbShard database.DB) (*blockchain.BlockChain, error) {
 	if shardID == 0 {
-		return createBlockchain(dbBeacon, beacon.Chain(activeNetParams))
+		return createBlockchain(dbBeacon, chainctx.NewBeaconChain(activeNetParams))
 	}
 
 	idx, err := deserializeShardData(shardsJSONPath)
@@ -224,7 +222,7 @@ func prepareBlockchain(shardsJSONPath string, shardID uint32, dbBeacon, dbShard 
 		return nil, err
 	}
 
-	beaconBlockChain, err := createBlockchain(dbBeacon, beacon.Chain(activeNetParams))
+	beaconBlockChain, err := createBlockchain(dbBeacon, chainctx.NewBeaconChain(activeNetParams))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating beacon blockchain")
 	}
@@ -234,7 +232,7 @@ func prepareBlockchain(shardsJSONPath string, shardID uint32, dbBeacon, dbShard 
 		return nil, errors.Wrap(err, "error getting genesis block from beacon chain")
 	}
 
-	shardBlockChain, err := createBlockchain(dbShard, shard.Chain(shardID, activeNetParams, block.MsgBlock().Header.Copy().BeaconHeader(), block.MsgBlock().Transactions[0]))
+	shardBlockChain, err := createBlockchain(dbShard, chainctx.ShardChain(shardID, activeNetParams, block.MsgBlock()))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating shard blockchain")
 	}
@@ -257,7 +255,7 @@ func deserializeShardData(filePath string) (node.Index, error) {
 	return idx, nil
 }
 
-func createBlockchain(db database.DB, chain chain.IChainCtx) (*blockchain.BlockChain, error) {
+func createBlockchain(db database.DB, chain chainctx.IChainCtx) (*blockchain.BlockChain, error) {
 	interrupt := make(chan struct{})
 	var checkpoints []chaincfg.Checkpoint
 	var indexManager blockchain.IndexManager

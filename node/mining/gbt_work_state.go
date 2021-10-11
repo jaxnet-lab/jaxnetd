@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package mining
 
 import (
@@ -89,7 +90,7 @@ type GBTWorkState struct {
 	LastGenerated time.Time
 	prevHash      *chainhash.Hash
 	minTimestamp  time.Time
-	Template      *BlockTemplate
+	Template      *chaindata.BlockTemplate
 	notifyMap     map[chainhash.Hash]map[int64]chan struct{}
 	timeSource    chaindata.MedianTimeSource
 	Log           zerolog.Logger
@@ -218,10 +219,10 @@ func (state *GBTWorkState) TemplateUpdateChan(prevHash *chainhash.Hash, lastGene
 	return c
 }
 
-func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbaseValue bool, burnReward int) (BlockTemplate, error) {
+func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbaseValue bool, burnReward int) (chaindata.BlockTemplate, error) {
 	err := state.UpdateBlockTemplate(chainProvider, useCoinbaseValue, burnReward)
 	if err != nil {
-		return BlockTemplate{}, err
+		return chaindata.BlockTemplate{}, err
 	}
 	return *state.Template, nil
 }
@@ -415,8 +416,8 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	}
 
 	mmrRoot := header.BlocksMerkleMountainRoot()
-	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
-	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
+	prevHash, _ := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot)
+	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +437,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	reply := jaxjson.GetBeaconBlockTemplateResult{
 		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:       header.Timestamp().Unix(),
-		PreviousHash:  prevHash.String(),
+		PreviousHash:  prevHash.Hash.String(),
 		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
 		Height:        int64(template.Height),
 		SerialID:      prevSerialID + 1,
@@ -509,8 +510,8 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 		return nil, err
 	}
 	mmrRoot := header.BlocksMerkleMountainRoot()
-	prevHash := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot).Hash
-	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash)
+	prevHash, _ := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot)
+	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +531,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	reply := jaxjson.GetShardBlockTemplateResult{
 		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
 		CurTime:       header.Timestamp().Unix(),
-		PreviousHash:  prevHash.String(),
+		PreviousHash:  prevHash.Hash.String(),
 		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
 		Height:        int64(template.Height),
 		SerialID:      prevSerialID + 1,
@@ -578,7 +579,7 @@ type coinbaseData struct {
 	CoinbaseValue *int64                             `json:"coinbasevalue,omitempty"`
 }
 
-func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
+func (state *GBTWorkState) CoinbaseData(template *chaindata.BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
 	reply := new(coinbaseData)
 
 	reply.CoinbaseAux = gbtCoinbaseAux
@@ -625,7 +626,7 @@ func (state *GBTWorkState) CoinbaseData(template *BlockTemplate, useCoinbaseValu
 	return reply, nil
 }
 
-func (state *GBTWorkState) TransformTxs(template *BlockTemplate) ([]jaxjson.GetBlockTemplateResultTx, error) {
+func (state *GBTWorkState) TransformTxs(template *chaindata.BlockTemplate) ([]jaxjson.GetBlockTemplateResultTx, error) {
 
 	// Convert each transaction in the block template to a template result
 	// transaction.  The result does not include the coinbase, so notice

@@ -14,8 +14,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/btcd"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
@@ -68,7 +68,7 @@ type ChainProvider struct {
 	// StartupTime is the unix timestamp for when the Server that is hosting
 	// the RPC Server started.
 	StartupTime int64
-	ChainCtx    chain.IChainCtx
+	ChainCtx    chainctx.IChainCtx
 	ChainParams *chaincfg.Params
 
 	DB database.DB
@@ -103,8 +103,8 @@ type ChainProvider struct {
 	gbtWorkState       *mining.GBTWorkState
 }
 
-func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chain.IChainCtx,
-	blockGen blockchain.ChainBlockGenerator, db database.DB, log zerolog.Logger) (*ChainProvider, error) {
+func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chainctx.IChainCtx,
+	blockGen chaindata.ChainBlockGenerator, db database.DB, log zerolog.Logger) (*ChainProvider, error) {
 	var err error
 
 	chainProvider := &ChainProvider{
@@ -238,7 +238,7 @@ func (chainProvider *ChainProvider) MiningAddresses() []jaxutil.Address {
 	return chainProvider.MiningAddrs
 }
 
-func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
+func (chainProvider *ChainProvider) BlockTemplate(useCoinbaseValue bool, burnReward int) (chaindata.BlockTemplate, error) {
 	return chainProvider.gbtWorkState.BlockTemplate(chainProvider, useCoinbaseValue, burnReward)
 }
 
@@ -252,7 +252,7 @@ func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
 }
 
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,
-	blockGen blockchain.ChainBlockGenerator) error {
+	blockGen chaindata.ChainBlockGenerator) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)
 
 	// Create a new blockchain instance with the appropriate configuration.

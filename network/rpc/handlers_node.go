@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/version"
@@ -235,7 +236,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 // in shard during the CrossShard Swap Tx.
 func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 	kd := pow.MultBitsAndK(bits, k)
-	n := amount / int64(kd*jaxutil.JuroPerJAXCoin)
+	n := amount / int64(kd*chaincfg.JuroPerJAXCoin)
 
 	if n < 4 {
 		n = 4 * 30

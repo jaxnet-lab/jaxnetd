@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"time"
+
+	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -99,7 +100,7 @@ func historyScanner(offset int, limit *int, shardID uint32) error {
 func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc, offset int, limit *int, shardID uint32) error {
 	// Load the block database.
 	var dbShard database.DB
-	dbBeacon, err := loadBlockDB(beacon.Chain(activeNetParams))
+	dbBeacon, err := loadBlockDB(chainctx.NewBeaconChain(activeNetParams))
 	if err != nil {
 		return err
 	}

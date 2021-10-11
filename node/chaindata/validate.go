@@ -36,9 +36,9 @@ const (
 	// coinbases to start with the serialized block height.
 	serializedHeightVersion = 2
 
-	// baseSubsidy is the starting subsidy amount for mined blocks.  This
+	// btcBaseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 50 * jaxutil.SatoshiPerBitcoin
+	btcBaseSubsidy = 50 * chaincfg.SatoshiPerBitcoin
 )
 
 // isNullOutpoint determines whether or not a previous transaction output point
@@ -187,13 +187,13 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 // has the expected value.
 //
 // The subsidy is halved every SubsidyReductionInterval blocks.  Mathematically
-// this is: baseSubsidy / 2^(height/SubsidyReductionInterval)
+// this is: btcBaseSubsidy / 2^(height/SubsidyReductionInterval)
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
 func BtcCalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
-	// Equivalent to: baseSubsidy / 2^(height/subsidyHalvingInterval)
-	return baseSubsidy >> uint(height/210000)
+	// Equivalent to: btcBaseSubsidy / 2^(height/subsidyHalvingInterval)
+	return btcBaseSubsidy >> uint(height/210000)
 }
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
@@ -240,10 +240,10 @@ func CheckTransactionSanity(tx *jaxutil.Tx) error {
 				"value of %v", satoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if satoshi > jaxutil.MaxSatoshi {
+		if satoshi > chaincfg.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v", satoshi,
-				jaxutil.MaxSatoshi)
+				chaincfg.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -254,14 +254,14 @@ func CheckTransactionSanity(tx *jaxutil.Tx) error {
 		if totalSatoshi < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				jaxutil.MaxSatoshi)
+				chaincfg.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if totalSatoshi > jaxutil.MaxSatoshi {
+		if totalSatoshi > chaincfg.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
 				"allowed value of %v", totalSatoshi,
-				jaxutil.MaxSatoshi)
+				chaincfg.MaxSatoshi)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -725,11 +725,11 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 				"value of %v", jaxutil.Amount(originTxSatoshi))
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
-		if originTxSatoshi > jaxutil.MaxSatoshi {
+		if originTxSatoshi > chaincfg.MaxSatoshi {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
 				jaxutil.Amount(originTxSatoshi),
-				jaxutil.MaxSatoshi)
+				chaincfg.MaxSatoshi)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -739,11 +739,11 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		lastSatoshiIn := totalSatoshiIn
 		totalSatoshiIn += originTxSatoshi
 		if totalSatoshiIn < lastSatoshiIn ||
-			totalSatoshiIn > jaxutil.MaxSatoshi {
+			totalSatoshiIn > chaincfg.MaxSatoshi {
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
-				"allowed value of %v", totalSatoshiIn,
-				jaxutil.MaxSatoshi)
+				"allowed value of %v", totalSatoshiIn, chaincfg.MaxSatoshi)
+
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 	}

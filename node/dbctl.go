@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 )
 
 type DBCtl struct {
@@ -24,7 +24,7 @@ type DBCtl struct {
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
-func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chain.IChainCtx, cfg InstanceConfig) (database.DB, error) {
+func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg InstanceConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.

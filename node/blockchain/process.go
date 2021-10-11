@@ -82,8 +82,8 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		for i := 0; i < len(b.prevOrphans[*processHash]); i++ {
-			orphan := b.prevOrphans[*processHash][i]
+		for i := 0; i < len(b.orphanIndex.prevOrphans[*processHash]); i++ {
+			orphan := b.orphanIndex.prevOrphans[*processHash][i]
 			if orphan == nil {
 				log.Warn().Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i,
 					processHash)
@@ -140,7 +140,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	// The block must not already exist as an orphan.
-	if _, exists := b.orphans[*blockHash]; exists {
+	if _, exists := b.orphanIndex.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, chaindata.NewRuleError(chaindata.ErrDuplicateBlock, str)
 	}
@@ -191,17 +191,13 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		}
 	}
 
-	if err := b.blockGen.ValidateBlockHeader(blockHeader); err != nil {
-		return false, false, err
-	}
-
 	prevMMRRoot := blockHeader.BlocksMerkleMountainRoot()
-	prevHash := b.index.HashByMMR(&prevMMRRoot)
-
+	prevHash := b.index.HashByMMR(prevMMRRoot)
 	prevHashExists, err := b.blockExists(&prevHash)
 	if err != nil {
 		return false, false, err
 	}
+
 	if !prevHashExists {
 		log.Info().Msgf("Adding orphan block %v with parent %v", blockHash, prevHash)
 		b.addOrphanBlock(block)

@@ -10,8 +10,8 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if
@@ -29,7 +29,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	// block.
 
 	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	prevNode := b.index.LookupNodeByMMRRoot(&prevMMRRoot)
+	prevNode := b.index.LookupNodeByMMRRoot(prevMMRRoot)
 	if prevNode == nil {
 		str := fmt.Sprintf("previous block %s is unknown", prevMMRRoot)
 		return false, chaindata.NewRuleError(chaindata.ErrPreviousBlockUnknown, str)
@@ -42,7 +42,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	block.SetHeight(blockHeight)
 
 	// Perform checks of the coinbase tx structure according to merge mining spec.
-	err := b.blockGen.ValidateCoinbaseTx(block.MsgBlock(), block.Height(), b.chain.Params().Net)
+	err := b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height(), b.chain.Params().Net)
 	if err != nil {
 		return false, err
 	}
@@ -76,7 +76,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	blockHeader := block.MsgBlock().Header
 
 	newNode := b.chain.NewNode(blockHeader, prevNode)
-	newNode.SetStatus(blocknode.StatusDataStored)
+	newNode.SetStatus(blocknodes.StatusDataStored)
 
 	b.index.AddNode(newNode)
 	err = b.index.flushToDB()

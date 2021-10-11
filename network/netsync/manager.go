@@ -1288,8 +1288,7 @@ out:
 				msg.reply <- peerID
 
 			case processBlockMsg:
-				_, isOrphan, err := sm.chain.ProcessBlock(
-					msg.block, msg.flags)
+				_, isOrphan, err := sm.chain.ProcessBlock(msg.block, msg.flags)
 				if err != nil {
 					msg.reply <- processBlockResponse{
 						isOrphan: false,

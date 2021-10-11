@@ -1,4 +1,10 @@
-package mining
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
+
+package chaindata
 
 import (
 	"bytes"
@@ -14,6 +20,11 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
+
+// CoinbaseFlags is added to the coinbase script of a generated block
+// and is used to monitor BIP16 support as well as blocks that are
+// generated via jaxnetd.
+const CoinbaseFlags = "/P2SH/jaxnetd/"
 
 const JaxnetScriptSigMarker = "6a61786e6574" // "jaxnet" in hex
 var JaxnetScriptSigMarkerBytes = []byte{0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74}
@@ -100,10 +111,10 @@ func CreateBitcoinCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Ad
 	return btcCoinbase, err
 }
 
-func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
+func CreateJaxCoinbaseTx(value, fee int64, height int32,
 	shardID uint32, addr jaxutil.Address, burnReward, beacon bool) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
-	coinbaseScript, err := StandardCoinbaseScript(nextHeight, shardID, extraNonce)
+	coinbaseScript, err := StandardCoinbaseScript(height, shardID, extraNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +156,7 @@ func CreateJaxCoinbaseTx(value, fee int64, nextHeight int32,
 			return nil, errors.New("miner address must be *jaxutil.AddressPubKeyHash or *jaxutil.AddressPubKey")
 		}
 
-		const baseReward = chaincfg.BeaconBaseReward * int64(jaxutil.HaberStornettaPerJAXNETCoin)
+		const baseReward = chaincfg.BeaconBaseReward * int64(chaincfg.HaberStornettaPerJAXNETCoin)
 		lockScript, err := txscript.HTLCScript(lockAddr, chaincfg.BeaconRewardLockPeriod)
 		if err != nil {
 			return nil, err
@@ -302,7 +313,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		err = errors.New(errMsg + "BTC not burned, JaxNet burn prohibited")
 		return false, err
 	}
-	const baseReward = chaincfg.BeaconBaseReward * int64(jaxutil.HaberStornettaPerJAXNETCoin)
+	const baseReward = chaincfg.BeaconBaseReward * int64(chaincfg.HaberStornettaPerJAXNETCoin)
 
 	if expectedReward == -1 {
 		if coinbase.TxOut[1].Value != baseReward {
