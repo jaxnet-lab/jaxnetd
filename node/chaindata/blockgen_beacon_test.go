@@ -4,14 +4,13 @@
  * license that can be found in the LICENSE file.
  */
 
-package beacon
+package chaindata
 
 import (
 	"fmt"
 	"strconv"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/base58"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -55,8 +54,8 @@ func Test_calcBlockSubsidy(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			if got := calcBlockSubsidy(tt.height); got != tt.reward*jaxutil.SatoshiPerBitcoin {
-				t.Errorf("calcBlockSubsidy(%d) = %v, want %v", tt.height, got/jaxutil.SatoshiPerBitcoin, tt.reward)
+			if got := calcBlockSubsidy(tt.height); got != tt.reward*chaincfg.SatoshiPerBitcoin {
+				t.Errorf("calcBlockSubsidy(%d) = %v, want %v", tt.height, got/chaincfg.SatoshiPerBitcoin, tt.reward)
 			}
 		})
 	}

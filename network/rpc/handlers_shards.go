@@ -9,9 +9,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 	"math"
 	"strconv"
+
+	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -239,11 +240,11 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	}
 
 	beaconHeader := blockHeader.BeaconHeader()
-	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 
 	blockReply := jaxjson.GetShardBlockVerboseResult{
 		Hash:          hash.String(),
-		ShardHash:     blockHeader.ShardExclusiveBlockHash().String(),
+		ShardHash:     blockHeader.ExclusiveHash().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		PreviousHash:  prevHash.Hash.String(),
 		BlocksMMRRoot: blockHeader.BlocksMerkleMountainRoot().String(),
@@ -378,17 +379,17 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	})
 
 	beaconHeader := blockHeader.BeaconHeader()
-	prevHash := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot()).Hash
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
 
 	blockHeaderReply := jaxjson.GetShardBlockHeaderVerboseResult{
 		Hash:          c.Hash,
-		ShardHash:     shardHeader.ShardExclusiveBlockHash().String(),
+		ShardHash:     shardHeader.ExclusiveHash().String(),
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        blockHeight,
 		SerialID:      serialID,
 		PrevSerialID:  prevSerialID,
 		NextHash:      nextHashString,
-		PreviousHash:  prevHash.String(),
+		PreviousHash:  prevHash.Hash.String(),
 		BlocksMMRRoot: blockHeader.BlocksMerkleMountainRoot().String(),
 		MerkleRoot:    blockHeader.MerkleRoot().String(),
 		Bits:          strconv.FormatInt(int64(blockHeader.Bits()), 16),

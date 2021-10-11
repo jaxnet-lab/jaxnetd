@@ -7,8 +7,6 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/shard"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,7 +16,7 @@ import (
 	"github.com/btcsuite/btclog"
 	"github.com/jessevdk/go-flags"
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 )
 
 const (
@@ -32,7 +30,7 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
-func loadBlockDB(chain chain.IChainCtx) (database.DB, error) {
+func loadBlockDB(chain chainctx.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, getChainDir(chain.ShardID()), dbName)
@@ -130,12 +128,12 @@ func parseShardID(cliArg string) (uint32, error) {
 	return uint32(shardID), nil
 }
 
-func relevantChain(shardID uint32) chain.IChainCtx {
+func relevantChain(shardID uint32) chainctx.IChainCtx {
 	if shardID > 0 {
-		return shard.Chain(shardID, activeNetParams, beacon.Chain(activeNetParams).GenesisBlock().Header.BeaconHeader(), beacon.Chain(activeNetParams).GenesisBlock().Transactions[0])
+		return chainctx.ShardChain(shardID, activeNetParams, chainctx.NewBeaconChain(activeNetParams).GenesisBlock())
 	}
 
-	return beacon.Chain(activeNetParams)
+	return chainctx.NewBeaconChain(activeNetParams)
 }
 
 func getChainDir(shardID uint32) string {

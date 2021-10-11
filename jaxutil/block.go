@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -260,7 +260,7 @@ func NewBlock(msgBlock *wire.MsgBlock) *Block {
 
 // NewBlockFromBytes returns a new instance of a bitcoin block given the
 // serialized bytes.  See Block.
-func NewBlockFromBytes(chain chain.IChainCtx, serializedBlock []byte) (*Block, error) {
+func NewBlockFromBytes(chain chainctx.IChainCtx, serializedBlock []byte) (*Block, error) {
 	br := bytes.NewReader(serializedBlock)
 	b, err := NewBlockFromReader(chain, br)
 	if err != nil {
@@ -272,7 +272,7 @@ func NewBlockFromBytes(chain chain.IChainCtx, serializedBlock []byte) (*Block, e
 
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
-func NewBlockFromReader(chain chain.IChainCtx, r io.Reader) (*Block, error) {
+func NewBlockFromReader(chain chainctx.IChainCtx, r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
 	msgBlock := chain.EmptyBlock()
 	err := msgBlock.Deserialize(r)

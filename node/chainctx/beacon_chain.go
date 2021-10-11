@@ -1,11 +1,13 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
-package beacon
+package chainctx
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -15,7 +17,7 @@ type beaconChain struct {
 	chainParams *chaincfg.Params
 }
 
-func Chain(params *chaincfg.Params) *beaconChain {
+func NewBeaconChain(params *chaincfg.Params) *beaconChain {
 	clone := *params
 	clone.ChainName = "beacon"
 	clone.IsBeacon = true
@@ -30,6 +32,6 @@ func (c *beaconChain) Params() *chaincfg.Params     { return c.chainParams }
 func (c *beaconChain) EmptyBlock() wire.MsgBlock    { return wire.EmptyBeaconBlock() }
 func (c *beaconChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.GenesisBlock() }
 
-func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewBeaconBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
+func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode) blocknodes.IBlockNode {
+	return blocknodes.NewBeaconBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }

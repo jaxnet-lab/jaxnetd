@@ -368,7 +368,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 
 func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce uint64) (wire.MsgBlock, []chainhash.Hash, error) {
 	bh := beaconBlock.Header.BeaconHeader().BeaconExclusiveHash()
-	coinbaseScript, err := mining.BTCCoinbaseScript(height, packUint64LE(extraNonce), bh.CloneBytes())
+	coinbaseScript, err := chaindata.BTCCoinbaseScript(height, packUint64LE(extraNonce), bh.CloneBytes())
 	if err != nil {
 		return wire.MsgBlock{}, nil, err
 	}

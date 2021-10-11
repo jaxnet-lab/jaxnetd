@@ -42,6 +42,11 @@ var FastNetParams = Params{
 		ChainIDCount:             4096, // 2^12
 	},
 
+	// Shards Expansion policy
+	AutoExpand:            true,
+	InitialExpansionRule:  2,
+	InitialExpansionLimit: 4,
+
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
 
@@ -91,7 +96,4 @@ var FastNetParams = Params{
 	// address generation.
 	HDCoinType: 0x6A, // ASCII for j
 
-	AutoExpand:            true,
-	InitialExpansionRule:  2,
-	InitialExpansionLimit: 4,
 }

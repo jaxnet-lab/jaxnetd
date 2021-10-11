@@ -7,6 +7,7 @@
 package mmr
 
 import (
+	"math"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -19,96 +20,194 @@ type BlocksMMRTree interface {
 	CurrentRoot() chainhash.Hash
 	RootForHeight(height int32) chainhash.Hash
 
-	LookupNodeByRoot(chainhash.Hash) *BlockNode
+	LookupNodeByRoot(chainhash.Hash) (*BlockNode, bool)
 
-	AddBlock(hash chainhash.Hash, difficulty uint64, height int32)
+	AddBlock(hash chainhash.Hash, difficulty uint64)
+	SetBlock(hash chainhash.Hash, difficulty uint64, height int32)
 	RmBlock(hash chainhash.Hash, height int32)
+	ResetRootTo(hash chainhash.Hash, height int32)
 }
 
 type BlockNode struct {
 	Block
-	// ActualRoot is a root of the MMR Tree when this node was latest
-	ActualRoot chainhash.Hash
-	// PrevNode hash of previous block
-	PrevNode *BlockNode
-	// ID of node in the MMR Tree
-	ID     uint32
-	height int32
+
+	ID         uint64         // ID of node in the MMR Tree, if ID < math.MaxInt32, ID == block height in main chain.
+	PrevNodeID uint64         // PrevNodeID hash of previous block
+	ActualRoot chainhash.Hash // ActualRoot is a root of the MMR Tree when this node was latest
+}
+
+func (n *BlockNode) Clone() *BlockNode {
+	clone := *n
+	return &clone
 }
 
 type Tree struct {
 	sync.RWMutex
 
-	nodeCount   uint32
+	// nodeCount stores number of BlockNode.
+	// nodeCount - 1 is last height in chain.
+	nodeCount   uint64
 	chainWeight uint64
+	lastRootID  uint64
+	lastNode    *BlockNode
+	rootHash    chainhash.Hash
 
-	// map of nodes and their index at zero layer of tree
-	nodes map[uint32]*BlockNode
-	// map of nodes and actual tree roots, when the node was added
-	mountainTops map[chainhash.Hash]uint32
-	heightToID   map[int32]uint32
-
-	rootHash chainhash.Hash
-	lastNode *BlockNode
+	// nodes is a representation of Merkle Mountain Range tree.
+	// ID starts from 0.
+	// If ID < math.MaxInt32, ID == block height in main chain.
+	// If ID > math.MaxInt32, ID is a tree leaf or top.
+	nodes map[uint64]*BlockNode
+	// mountainTops is an association of mmr_root and corresponding block_node,
+	// that was last in the chain for this root
+	mountainTops map[chainhash.Hash]uint64
+	// hashToID is a map of hashes and their IDs, ID eq to height of block in chain.
+	hashToID map[chainhash.Hash]uint64
 }
 
 func NewTree() *Tree {
 	return &Tree{
-		nodes:        make(map[uint32]*BlockNode, 4096),
-		mountainTops: make(map[chainhash.Hash]uint32, 4096),
-		heightToID:   make(map[int32]uint32, 4096),
 		lastNode:     &BlockNode{},
+		nodes:        make(map[uint64]*BlockNode, 4096),
+		mountainTops: make(map[chainhash.Hash]uint64, 4096),
+		hashToID:     make(map[chainhash.Hash]uint64, 4096),
 	}
 }
 
-func (t *Tree) AddBlock(hash chainhash.Hash, difficulty uint64, height int32) {
-	t.Lock()
-	node := &BlockNode{
-		Block:    Block{Hash: hash, Weight: difficulty},
-		height:   height,
-		ID:       t.nodeCount,
-		PrevNode: t.lastNode,
+func (t *Tree) Fork() BlocksMMRTree {
+	t.RLock()
+	newTree := &Tree{
+		nodeCount:    t.nodeCount,
+		chainWeight:  t.chainWeight,
+		rootHash:     chainhash.Hash{},
+		lastNode:     t.lastNode.Clone(),
+		nodes:        make(map[uint64]*BlockNode, len(t.nodes)),
+		mountainTops: make(map[chainhash.Hash]uint64, len(t.mountainTops)),
+		hashToID:     make(map[chainhash.Hash]uint64, 4096),
 	}
 
-	t.nodes[t.nodeCount] = node
-	t.heightToID[height] = t.nodeCount
+	for u, node := range t.nodes {
+		newTree.nodes[u] = node.Clone()
+	}
+	for top, nodeID := range t.mountainTops {
+		newTree.mountainTops[top] = nodeID
+	}
+
+	for hash, nodeID := range t.hashToID {
+		newTree.hashToID[hash] = nodeID
+	}
+
+	t.RUnlock()
+	return newTree
+}
+
+// AddBlock adds block as latest leaf, increases height and rebuild tree.
+func (t *Tree) AddBlock(hash chainhash.Hash, difficulty uint64) {
+	t.Lock()
+	t.addBlock(hash, difficulty)
+	t.Unlock()
+}
+
+func (t *Tree) addBlock(hash chainhash.Hash, difficulty uint64) {
+	_, ok := t.hashToID[hash]
+	if ok {
+		return
+	}
+
+	node := &BlockNode{
+		Block:      Block{Hash: hash, Weight: difficulty},
+		ID:         t.nodeCount,
+		PrevNodeID: t.lastNode.ID,
+	}
+
+	t.nodes[node.ID] = node
+	t.hashToID[hash] = node.ID
 
 	t.nodeCount += 1
 	t.chainWeight += difficulty
 
-	t.rootHash = t.rebuildTree(0, t.nodeCount)
+	t.rootHash = t.rebuildTree(0, node.ID+1)
 
 	t.nodes[node.ID].ActualRoot = t.rootHash
 	t.mountainTops[t.rootHash] = node.ID
 	t.lastNode = node
+}
+
+// SetBlock sets provided block with <hash, height> as latest.
+// If block height is not latest, then reset tree to height - 1 and add AddBLock.
+func (t *Tree) SetBlock(hash chainhash.Hash, difficulty uint64, height int32) {
+	t.Lock()
+
+	if uint64(height) < t.nodeCount {
+		node := t.nodes[uint64(height)]
+		t.rmBlock(node.Hash, height)
+	}
+
+	t.addBlock(hash, difficulty)
+	return
+}
+
+// ResetRootTo sets provided block with <hash, height> as latest and drops all blocks after this.
+func (t *Tree) ResetRootTo(hash chainhash.Hash, height int32) {
+	t.Lock()
+	t.resetRootTo(hash, height)
 	t.Unlock()
 }
 
+func (t *Tree) resetRootTo(hash chainhash.Hash, height int32) {
+	_, found := t.hashToID[hash]
+	if !found {
+		return
+	}
+	_, found = t.nodes[uint64(height)]
+	if !found {
+		return
+	}
+
+	node, found := t.nodes[uint64(height+1)]
+	if !found {
+		return
+	}
+
+	t.rmBlock(node.Hash, height+1)
+}
+
+// RmBlock drops all block from latest to (including) provided block with <hash, height>.
 func (t *Tree) RmBlock(hash chainhash.Hash, height int32) {
 	t.Lock()
-	id := t.heightToID[height]
-	if id == 0 {
-		t.Unlock()
-		return
-	}
-
-	node := t.nodes[id]
-	if !node.Hash.IsEqual(&hash) {
-		t.Unlock()
-		// todo: really strange situation
-		return
-	}
-
-	t.chainWeight -= node.Weight
-
-	t.nodes[id] = nil
-	t.mountainTops[t.rootHash] = 0
-	t.nodeCount -= 1
-
-	t.lastNode = node.PrevNode
-	t.rootHash = node.PrevNode.ActualRoot
-
+	t.rmBlock(hash, height)
 	t.Unlock()
+}
+
+func (t *Tree) rmBlock(hash chainhash.Hash, height int32) {
+
+	id, found := t.hashToID[hash]
+	if !found {
+		return
+	}
+
+	node, found := t.nodes[uint64(height)]
+	if !found || node == nil || !node.Hash.IsEqual(&hash) || id != uint64(height) {
+		return
+	}
+
+	var deleted = 0
+	for idToDrop := t.nodeCount - 1; idToDrop >= node.ID; idToDrop-- {
+		node := t.nodes[idToDrop]
+		t.nodeCount -= 1
+		t.chainWeight -= node.Weight
+		delete(t.hashToID, node.Hash)
+		delete(t.mountainTops, node.ActualRoot)
+		delete(t.nodes, idToDrop)
+		deleted++
+	}
+
+	if t.nodeCount == 0 {
+		return
+	}
+
+	t.lastNode = t.nodes[t.nodeCount-1]
+	t.rootHash = t.lastNode.ActualRoot
+
 }
 
 func (t *Tree) Current() *BlockNode {
@@ -120,12 +219,7 @@ func (t *Tree) Current() *BlockNode {
 
 func (t *Tree) Parent(height int32) *BlockNode {
 	t.RLock()
-	id := t.heightToID[height]
-	if id == 0 {
-		t.RUnlock()
-		return nil
-	}
-	node := t.nodes[id-1]
+	node := t.nodes[uint64(height-1)]
 	if node == nil {
 		node = &BlockNode{}
 	}
@@ -135,13 +229,7 @@ func (t *Tree) Parent(height int32) *BlockNode {
 
 func (t *Tree) Block(height int32) *BlockNode {
 	t.RLock()
-	id, ok := t.heightToID[height]
-	if !ok {
-		t.RUnlock()
-		return nil
-	}
-
-	node := t.nodes[id]
+	node := t.nodes[uint64(height)]
 	if node == nil {
 		node = &BlockNode{}
 	}
@@ -155,33 +243,29 @@ func (t *Tree) CurrentRoot() chainhash.Hash {
 
 func (t *Tree) RootForHeight(height int32) chainhash.Hash {
 	t.RLock()
-
-	id, ok := t.heightToID[height]
-	if !ok {
-		t.RUnlock()
-		return chainhash.ZeroHash
-	}
-	hash := t.nodes[id].ActualRoot
+	hash := t.nodes[uint64(height)].ActualRoot
 	t.RUnlock()
 	return hash
 }
 
-func (t *Tree) LookupNodeByRoot(hash chainhash.Hash) *BlockNode {
+func (t *Tree) LookupNodeByRoot(hash chainhash.Hash) (*BlockNode, bool) {
 	t.RLock()
-	bNode := t.mountainTops[hash]
-	node := t.nodes[bNode]
-	if node == nil {
-		node = &BlockNode{}
+	node := &BlockNode{}
+	bNode, found := t.mountainTops[hash]
+
+	if found {
+		node, found = t.nodes[bNode]
 	}
+
 	t.RUnlock()
-	return node
+	return node, found
 }
 
-func (t *Tree) rebuildTree(startOffset, count uint32) (rootHash chainhash.Hash) {
+func (t *Tree) rebuildTree(startOffset, count uint64) (rootHash chainhash.Hash) {
 	// Calculate how many entries are required to hold the binary merkle
 	// tree as a linear array and create an array of that size.
 	nextPoT := nextPowerOfTwo(count)
-	arraySize := uint32(nextPoT*2 - 1)
+	arraySize := uint64(nextPoT*2 - 1)
 
 	if count == 1 {
 		rootHash = t.nodes[0].Hash
@@ -192,7 +276,8 @@ func (t *Tree) rebuildTree(startOffset, count uint32) (rootHash chainhash.Hash) 
 
 	// Start the array offset after the last transaction and adjusted to the
 	// next power of two.
-	offset := uint32(nextPoT)
+	offset := uint64(math.MaxInt32)
+
 	for i := startOffset; i < arraySize-1; i += 2 {
 		switch {
 		// When there is no left child node, the parent is nil too.
@@ -215,6 +300,8 @@ func (t *Tree) rebuildTree(startOffset, count uint32) (rootHash chainhash.Hash) 
 		}
 		offset++
 	}
+
+	t.lastRootID = offset - 1
 	return
 }
 
@@ -231,6 +318,5 @@ func hashMerkleBranches(left, right *BlockNode) *BlockNode {
 			Hash:   chainhash.HashH(data[:]),
 			Weight: left.Weight + right.Weight,
 		},
-		height: 0,
 	}
 }

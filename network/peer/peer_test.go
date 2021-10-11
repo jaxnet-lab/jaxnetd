@@ -17,7 +17,7 @@ import (
 
 	"github.com/btcsuite/go-socks/socks"
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -822,7 +822,7 @@ func TestUnsupportedVersionPeer(t *testing.T) {
 	}
 
 	// Remote peer writes version message advertising invalid protocol version 1
-	invalidVersionMsg := wire.NewMsgVersion(chain.BeaconChain, remoteNA, localNA, 0, 0)
+	invalidVersionMsg := wire.NewMsgVersion(chainctx.BeaconChain, remoteNA, localNA, 0, 0)
 	invalidVersionMsg.ProtocolVersion = 1
 
 	_, err = wire.WriteMessageN(

@@ -11,7 +11,7 @@ const (
 	SatoshiPerBitcoin = 1e8
 
 	// MaxSatoshi is the maximum transaction amount allowed in satoshi.
-	MaxSatoshi = 21e6 * SatoshiPerBitcoin
+	MaxSatoshi = 21e6 * SatoshiPerBitcoin // todo: replace this by MaxHaberStornetta & MaxJuro
 
 	// HaberStornettaPerJAXNETCoin is the number of satoshi in one Beacon Chain coin (1 JAXNET).
 	HaberStornettaPerJAXNETCoin = 1e8

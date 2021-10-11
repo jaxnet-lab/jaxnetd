@@ -8,8 +8,8 @@ package blockchain
 import (
 	"math"
 
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -107,7 +107,7 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint32 {
 // This function MUST be called with the chain state lock held (for writes).
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c bitConditionChecker) Condition(node blocknode.IBlockNode) (bool, error) {
+func (c bitConditionChecker) Condition(node blocknodes.IBlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.bit
 	version := uint32(node.Version())
 	if version&vbTopMask != vbTopBits {
@@ -186,7 +186,7 @@ func (c deploymentChecker) MinerConfirmationWindow() uint32 {
 // associated with the checker is set.
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c deploymentChecker) Condition(node blocknode.IBlockNode) (bool, error) {
+func (c deploymentChecker) Condition(node blocknodes.IBlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.deployment.BitNumber
 	version := uint32(node.Version())
 	return (version&vbTopMask == vbTopBits) && (version&conditionMask != 0),
@@ -202,7 +202,7 @@ func (c deploymentChecker) Condition(node blocknode.IBlockNode) (bool, error) {
 // while this function accepts any block node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.BVersion, error) {
+func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.BVersion, error) {
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
@@ -240,10 +240,9 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.B
 			(uint32(b.chain.Params().InitialExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
 	}
 
-	// if b.chain.Params().Net != types.MainNet {
-	if b.chain.Params().Net != types.FastTestNet {
+	if b.chain.Params().Net != types.MainNet {
 		// at the testnet and dev-nets number of shards must be strictly limited
-		allowed := !limitExceeded && prevHeight%b.chain.Params().InitialExpansionRule == 0 && prevHeight != 0
+		allowed := !limitExceeded && (prevHeight%b.chain.Params().InitialExpansionRule) == 0 && prevHeight != 0
 		if b.chain.Params().AutoExpand && allowed {
 			version = wire.BVersion(expectedVersion).SetExpansionMade()
 		}
@@ -253,7 +252,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknode.IBlockNode) (wire.B
 
 	if !limitExceeded {
 		// in main-net we launch first shards automatically until InitialExpansionLimit reached
-		allowed := !limitExceeded && prevHeight%b.chain.Params().InitialExpansionRule == 0 && prevHeight != 0
+		allowed := !limitExceeded && (prevHeight%b.chain.Params().InitialExpansionRule) == 0 && prevHeight != 0
 		if b.chain.Params().AutoExpand && allowed {
 			version = wire.BVersion(expectedVersion).SetExpansionMade()
 			return version, nil
@@ -287,7 +286,7 @@ func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
 // activated.
 //
 // This function MUST be called with the chain state lock held (for writes)
-func (b *BlockChain) warnUnknownRuleActivations(node blocknode.IBlockNode) error {
+func (b *BlockChain) warnUnknownRuleActivations(node blocknodes.IBlockNode) error {
 	// Warn if any unknown new rules are either about to activate or have
 	// already been activated.
 	for bit := uint32(0); bit < vbNumBits; bit++ {
@@ -321,7 +320,7 @@ func (b *BlockChain) warnUnknownRuleActivations(node blocknode.IBlockNode) error
 // blocks have unexpected versions.
 //
 // This function MUST be called with the chain state lock held (for writes)
-func (b *BlockChain) warnUnknownVersions(node blocknode.IBlockNode) error {
+func (b *BlockChain) warnUnknownVersions(node blocknodes.IBlockNode) error {
 	// Nothing to do if already warned.
 	if b.unknownVersionsWarned {
 		return nil

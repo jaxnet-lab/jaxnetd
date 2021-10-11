@@ -45,6 +45,11 @@ var SimNetParams = Params{
 		GenerateSupported:        true,
 	},
 
+	// Shards Expansion policy
+	AutoExpand:            false,
+	InitialExpansionRule:  1,
+	InitialExpansionLimit: 0,
+
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: nil,
 

@@ -19,17 +19,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/config"
 	"gitlab.com/jaxnet/jaxnetd/limits"
 	"gitlab.com/jaxnet/jaxnetd/node"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
-
-func initChain() bool {
-	chain.BeaconChain = beacon.Chain(config.ActiveNetParams.Params)
-	return true
-}
-
-var _ = initChain()
 
 // winServiceMain is only invoked on Windows.  It detects when jaxnetd is running
 // as a service and reacts accordingly.

@@ -12,7 +12,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -32,7 +32,7 @@ func TestMerkleBlock3(t *testing.T) {
 		t.Errorf("TestMerkleBlock3 DecodeString failed: %v", err)
 		return
 	}
-	blk, err := jaxutil.NewBlockFromBytes(chain.BeaconChain, blockBytes)
+	blk, err := jaxutil.NewBlockFromBytes(chainctx.BeaconChain, blockBytes)
 	if err != nil {
 		t.Errorf("TestMerkleBlock3 NewBlockFromBytes failed: %v", err)
 		return

@@ -2,7 +2,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-//+build deprecated_tests
+//build deprecated_tests
 
 package blockchain
 
@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -28,10 +29,11 @@ func TestHaveBlock(t *testing.T) {
 		"blk_0_to_4.dat.bz2",
 		"blk_3A.dat.bz2",
 	}
+	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
 
 	var blocks []*jaxutil.Block
 	for _, file := range testFiles {
-		blockTmp, err := loadBlocks(file)
+		blockTmp, err := loadBlocks(chainCtx, file)
 		if err != nil {
 			t.Errorf("Error loading file: %v\n", err)
 			return
@@ -40,8 +42,7 @@ func TestHaveBlock(t *testing.T) {
 	}
 
 	// Create a new database and chain instance to run tests against.
-	chain, teardownFunc, err := chainSetup("haveblock",
-		&chaincfg.MainNetParams)
+	chain, teardownFunc, err := chainSetup("haveblock", chainCtx)
 	if err != nil {
 		t.Errorf("Failed to setup chain instance: %v", err)
 		return
@@ -66,24 +67,24 @@ func TestHaveBlock(t *testing.T) {
 	}
 
 	// Insert an orphan block.
-	_, isOrphan, err := chain.ProcessBlock(jaxutil.NewBlock(&chaindata.Block100000),
-		chaindata.BFNone)
-	if err != nil {
-		t.Errorf("Unable to process block: %v", err)
-		return
-	}
-	if !isOrphan {
-		t.Errorf("ProcessBlock indicated block is an not orphan when " +
-			"it should be\n")
-		return
-	}
+	// _, isOrphan, err := chain.ProcessBlock(jaxutil.NewBlock(&chaindata.Block100000),
+	// 	chaindata.BFNone)
+	// if err != nil {
+	// 	t.Errorf("Unable to process block: %v", err)
+	// 	return
+	// }
+	// if !isOrphan {
+	// 	t.Errorf("ProcessBlock indicated block is an not orphan when " +
+	// 		"it should be\n")
+	// 	return
+	// }
 
 	tests := []struct {
 		hash string
 		want bool
 	}{
 		// Genesis block should be present (in the main chain).
-		{hash: chain.MainNetParams.GenesisHash.String(), want: true},
+		{hash: chaincfg.MainNetParams.GenesisHash().String(), want: true},
 
 		// Block 3a should be present (on a side chain).
 		{hash: "00000000474284d20067a4d33f6a02284e6ef70764a3a26d6a5b9df52ef663dd", want: true},
@@ -120,22 +121,23 @@ func TestHaveBlock(t *testing.T) {
 // combinations of inputs to the CalcSequenceLock function in order to ensure
 // the returned SequenceLocks are correct for each test instance.
 func TestCalcSequenceLock(t *testing.T) {
-	netParams := &chaincfg.SimNetParams
+	netParams := &chaincfg.MainNetParams
+
+	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
 
 	// We need to activate CSV in order to test the processing logic, so
 	// manually craft the block version that's used to signal the soft-fork
 	// activation.
 	csvBit := netParams.Deployments[chaincfg.DeploymentCSV].BitNumber
 	blockVersion := int32(0x20000000 | (uint32(1) << csvBit))
-
 	// Generate enough synthetic blocks to activate CSV.
-	chain := newFakeChain(netParams)
+	chain := newFakeChain(chainCtx)
 	node := chain.bestChain.Tip()
 	blockTime := node.Header().Timestamp()
-	numBlocksToActivate := (netParams.MinerConfirmationWindow * 3)
+	numBlocksToActivate := netParams.MinerConfirmationWindow * 3
 	for i := uint32(0); i < numBlocksToActivate; i++ {
 		blockTime = blockTime.Add(time.Second)
-		node = newFakeNode(node, blockVersion, 0, blockTime)
+		node = newFakeNode(chainCtx, node, wire.BVersion(blockVersion), 0, blockTime)
 		chain.index.AddNode(node)
 		chain.bestChain.SetTip(node)
 	}
@@ -198,7 +200,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		tx      *wire.MsgTx
 		view    *chaindata.UtxoViewpoint
 		mempool bool
-		want    *SequenceLock
+		want    *chaindata.SequenceLock
 	}{
 		// A transaction of version one should disable sequence locks
 		// as the new sequence number semantics only apply to
@@ -212,7 +214,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     -1,
 				BlockHeight: -1,
 			},
@@ -229,7 +231,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     -1,
 				BlockHeight: -1,
 			},
@@ -249,7 +251,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     medianTime - 1,
 				BlockHeight: -1,
 			},
@@ -267,7 +269,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     medianTime + 1023,
 				BlockHeight: -1,
 			},
@@ -294,7 +296,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     medianTime + (5 << wire.SequenceLockTimeGranularity) - 1,
 				BlockHeight: prevUtxoHeight + 3,
 			},
@@ -312,7 +314,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     -1,
 				BlockHeight: prevUtxoHeight + 2,
 			},
@@ -332,7 +334,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     medianTime + (10 << wire.SequenceLockTimeGranularity) - 1,
 				BlockHeight: -1,
 			},
@@ -353,7 +355,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     -1,
 				BlockHeight: prevUtxoHeight + 10,
 			},
@@ -379,7 +381,7 @@ func TestCalcSequenceLock(t *testing.T) {
 				}},
 			},
 			view: utxoView,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     medianTime + (13 << wire.SequenceLockTimeGranularity) - 1,
 				BlockHeight: prevUtxoHeight + 8,
 			},
@@ -400,7 +402,7 @@ func TestCalcSequenceLock(t *testing.T) {
 			},
 			view:    utxoView,
 			mempool: true,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     -1,
 				BlockHeight: nextBlockHeight + 1,
 			},
@@ -418,7 +420,7 @@ func TestCalcSequenceLock(t *testing.T) {
 			},
 			view:    utxoView,
 			mempool: true,
-			want: &SequenceLock{
+			want: &chaindata.SequenceLock{
 				Seconds:     nextMedianTime + 1023,
 				BlockHeight: -1,
 			},
@@ -447,7 +449,7 @@ func TestCalcSequenceLock(t *testing.T) {
 // nodeHashes is a convenience function that returns the hashes for all of the
 // passed indexes of the provided nodes.  It is used to construct expected hash
 // slices in the tests.
-func nodeHashes(nodes []blocknode.IBlockNode, indexes ...int) []chainhash.Hash {
+func nodeHashes(nodes []blocknodes.IBlockNode, indexes ...int) []chainhash.Hash {
 	hashes := make([]chainhash.Hash, 0, len(indexes))
 	for _, idx := range indexes {
 		hashes = append(hashes, nodes[idx].GetHash())
@@ -458,7 +460,7 @@ func nodeHashes(nodes []blocknode.IBlockNode, indexes ...int) []chainhash.Hash {
 // nodeHeaders is a convenience function that returns the headers for all of
 // the passed indexes of the provided nodes.  It is used to construct expected
 // located headers in the tests.
-func nodeHeaders(nodes []blocknode.IBlockNode, indexes ...int) []wire.BlockHeader {
+func nodeHeaders(nodes []blocknodes.IBlockNode, indexes ...int) []wire.BlockHeader {
 	headers := make([]wire.BlockHeader, 0, len(indexes))
 	for _, idx := range indexes {
 		headers = append(headers, nodes[idx].Header())
@@ -474,7 +476,9 @@ func TestLocateInventory(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a
 	tip := tstTip
-	ch := newFakeChain(&chaincfg.MainNetParams)
+	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
+
+	ch := newFakeChain(chainCtx)
 	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 2)
 	for _, node := range branch0Nodes {
@@ -814,16 +818,18 @@ func TestHeightToHashRange(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	ch := newFakeChain(&chaincfg.MainNetParams)
+
+	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
+	ch := newFakeChain(chainCtx)
 	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		ch.index.SetStatusFlags(node, blocknode.StatusValid)
+		ch.index.SetStatusFlags(node, blocknodes.StatusValid)
 		ch.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
 		if node.Height() < 18 {
-			ch.index.SetStatusFlags(node, blocknode.StatusValid)
+			ch.index.SetStatusFlags(node, blocknodes.StatusValid)
 		}
 		ch.index.AddNode(node)
 	}
@@ -906,16 +912,17 @@ func TestIntervalBlockHashes(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	ch := newFakeChain(&chaincfg.MainNetParams)
+	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
+	ch := newFakeChain(chainCtx)
 	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		ch.index.SetStatusFlags(node, blocknode.StatusValid)
+		ch.index.SetStatusFlags(node, blocknodes.StatusValid)
 		ch.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
 		if node.Height() < 18 {
-			ch.index.SetStatusFlags(node, blocknode.StatusValid)
+			ch.index.SetStatusFlags(node, blocknodes.StatusValid)
 		}
 		ch.index.AddNode(node)
 	}

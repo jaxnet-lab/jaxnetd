@@ -11,8 +11,8 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -49,7 +49,7 @@ func (b *BlockChain) createChainState() error {
 	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
 	node := b.chain.NewNode(header, nil)
-	node.SetStatus(blocknode.StatusDataStored | blocknode.StatusValid)
+	node.SetStatus(blocknodes.StatusDataStored | blocknodes.StatusValid)
 	b.bestChain.SetTip(node)
 
 	// Add the new node to the index which is used for faster lookups.
@@ -242,7 +242,7 @@ func (b *BlockChain) initChainState() error {
 		blockIndexBucket := dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
 
 		var i int32
-		var lastNode blocknode.IBlockNode
+		var lastNode blocknodes.IBlockNode
 		cursor := blockIndexBucket.Cursor()
 
 		for ok := cursor.First(); ok; ok = cursor.Next() {
@@ -254,7 +254,7 @@ func (b *BlockChain) initChainState() error {
 			// Determine the parent block node. Since we iterate block headers
 			// in order of height, if the blocks are mostly linear there is a
 			// very good chance the previous header processed is the parent.
-			var parent blocknode.IBlockNode
+			var parent blocknodes.IBlockNode
 
 			if lastNode == nil {
 				blockHash := header.BlockHash()
@@ -271,7 +271,7 @@ func (b *BlockChain) initChainState() error {
 				parent = lastNode
 			} else {
 				prev := header.BlocksMerkleMountainRoot()
-				parent = b.index.LookupNodeByMMRRoot(&prev)
+				parent = b.index.LookupNodeByMMRRoot(prev)
 				if parent == nil {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Could not find parent for block %s", header.BlockHash()))
@@ -322,7 +322,7 @@ func (b *BlockChain) initChainState() error {
 					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 
-				b.index.SetStatusFlags(iterNode, blocknode.StatusValid)
+				b.index.SetStatusFlags(iterNode, blocknodes.StatusValid)
 			}
 		}
 
@@ -330,7 +330,7 @@ func (b *BlockChain) initChainState() error {
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(&block)))
 		numTxns := uint64(len(block.Transactions))
-		b.stateSnapshot = chaindata.NewBestState(tip, b.index.MMRTreeRoot(), blockSize, blockWeight,
+		b.stateSnapshot = chaindata.NewBestState(tip, b.bestChain.mmrTree.CurrentRoot(), blockSize, blockWeight,
 			numTxns, state.TotalTxns, tip.CalcPastMedianTime())
 
 		return nil

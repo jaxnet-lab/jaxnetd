@@ -17,6 +17,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -203,7 +204,7 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 	params := server.chainProvider.ChainParams
 	for encodedAddr, amount := range c.Amounts {
 		// Ensure amount is in the valid range for monetary amounts.
-		if amount <= 0 || amount > jaxutil.MaxSatoshi {
+		if amount <= 0 || amount > chaincfg.MaxSatoshi {
 			return nil, &jaxjson.RPCError{
 				Code:    jaxjson.ErrRPCType,
 				Message: "Invalid amount",

@@ -47,7 +47,7 @@ func (b *Block) Value() Value {
 func BuildMerkleTreeStore(blocks []Block) []*Block {
 	// Calculate how many entries are required to hold the binary merkle
 	// tree as a linear array and create an array of that size.
-	nextPoT := nextPowerOfTwo(uint32(len(blocks)))
+	nextPoT := nextPowerOfTwo(uint64(len(blocks)))
 	arraySize := nextPoT*2 - 1
 	merkles := make([]*Block, arraySize)
 
@@ -99,7 +99,7 @@ func HashMerkleBranches(left, right *Block) *Block {
 // nextPowerOfTwo returns the next highest power of two from a given number if
 // it is not already a power of two.  This is a helper function used during the
 // calculation of a merkle tree.
-func nextPowerOfTwo(n uint32) int {
+func nextPowerOfTwo(n uint64) int {
 	// Return the number if it's already a power of 2.
 	if n&(n-1) == 0 {
 		return int(n)

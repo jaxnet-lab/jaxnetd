@@ -68,7 +68,7 @@ func (server *CommonChainRPC) IsBeacon() bool {
 	return server.chainProvider.ChainCtx.IsBeacon()
 }
 
-func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error) {
+func (server *CommonChainRPC) BlockGenerator(useCoinbaseValue bool, burnReward int) (chaindata.BlockTemplate, error) {
 	return server.gbtWorkState.BlockTemplate(server.chainProvider, useCoinbaseValue, burnReward)
 }
 
@@ -1042,7 +1042,7 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	kd := pow.MultBitsAndK(best.Bits, best.K)
-	n := c.Amount / int64(kd*jaxutil.JuroPerJAXCoin)
+	n := c.Amount / int64(kd*chaincfg.JuroPerJAXCoin)
 
 	if n < 4 {
 		n = 4 * 30

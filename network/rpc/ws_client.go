@@ -14,7 +14,7 @@ import (
 
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
@@ -49,7 +49,7 @@ type wsClient struct {
 	sync.Mutex
 
 	manager *WsManager
-	chain   chain.IChainCtx
+	chain   chainctx.IChainCtx
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 

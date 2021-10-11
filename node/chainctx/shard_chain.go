@@ -1,11 +1,13 @@
-// Copyright (c) 2020 The JaxNetwork developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
+/*
+ * Copyright (c) 2021 The JaxNetwork developers
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ */
 
-package shard
+package chainctx
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -15,7 +17,7 @@ type shardChain struct {
 	chainParams *chaincfg.Params
 }
 
-func Chain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock) *shardChain {
+func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock) *shardChain {
 	chainParams := params.ShardParams(shardID, beaconBlock)
 
 	shard := &shardChain{
@@ -26,8 +28,8 @@ func Chain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock) 
 	return shard
 }
 
-func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknode.IBlockNode) blocknode.IBlockNode {
-	return blocknode.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
+func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode) blocknodes.IBlockNode {
+	return blocknodes.NewShardBlockNode(blockHeader, parent, c.chainParams.PowParams.PowLimitBits)
 }
 
 func (c *shardChain) Params() *chaincfg.Params     { return c.chainParams }

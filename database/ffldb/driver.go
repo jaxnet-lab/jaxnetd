@@ -10,7 +10,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 )
@@ -40,7 +40,7 @@ func parseArgs(funcName string, args ...interface{}) (string, error) {
 
 // openDBDriver is the callback provided during driver registration that opens
 // an existing database for use.
-func openDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
+func openDBDriver(chain chainctx.IChainCtx, args ...interface{}) (database.DB, error) {
 	dbPath, err := parseArgs("Open", args...)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func openDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, erro
 
 // createDBDriver is the callback provided during driver registration that
 // creates, initializes, and opens a database for use.
-func createDBDriver(chain chain.IChainCtx, args ...interface{}) (database.DB, error) {
+func createDBDriver(chain chainctx.IChainCtx, args ...interface{}) (database.DB, error) {
 	dbPath, err := parseArgs("Create", args...)
 	if err != nil {
 		return nil, err

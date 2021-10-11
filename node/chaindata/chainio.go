@@ -14,8 +14,8 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -660,10 +660,10 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 	return serialized, nil
 }
 
-// deserializeUtxoEntry decodes a utxo entry from the passed serialized byte
+// DeserializeUtxoEntry decodes a utxo entry from the passed serialized byte
 // slice into a new UtxoEntry using a format that is suitable for long-term
 // storage.  The format is described in detail above.
-func deserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
+func DeserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	// Deserialize the header code.
 	code, offset := deserializeVLQ(serialized)
 	if offset >= len(serialized) {
@@ -726,7 +726,7 @@ func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry,
 		return nil, nil
 	}
 
-	return deserializeUtxoEntry(cursor.Value())
+	return DeserializeUtxoEntry(cursor.Value())
 }
 
 // DBFetchUtxoEntry uses an existing database transaction to fetch the specified
@@ -753,7 +753,7 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	}
 
 	// Deserialize the utxo entry and return it.
-	entry, err := deserializeUtxoEntry(serializedUtxo)
+	entry, err := DeserializeUtxoEntry(serializedUtxo)
 	if err != nil {
 		// Ensure any deserialization errors are returned as database
 		// corruption errors.
@@ -794,7 +794,7 @@ func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEnt
 		}
 
 		// Deserialize the utxo entry and return it.
-		entry, err := deserializeUtxoEntry(serializedUtxo)
+		entry, err := DeserializeUtxoEntry(serializedUtxo)
 		if err != nil {
 			// Ensure any deserialization errors are returned as database
 			// corruption errors.
@@ -1129,26 +1129,26 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 
 // DeserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func DeserializeBlockRow(ch chain.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknode.BlockStatus, error) {
+func DeserializeBlockRow(ch chainctx.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknodes.BlockStatus, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	header := ch.EmptyHeader()
 	err := header.Read(buffer)
 	if err != nil {
-		return nil, blocknode.StatusNone, err
+		return nil, blocknodes.StatusNone, err
 	}
 
 	statusByte, err := buffer.ReadByte()
 	if err != nil {
-		return nil, blocknode.StatusNone, err
+		return nil, blocknodes.StatusNone, err
 	}
 
-	return header, blocknode.BlockStatus(statusByte), nil
+	return header, blocknodes.BlockStatus(statusByte), nil
 }
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided Hash.
-func dbFetchHeaderByHash(chain chain.IChainCtx, dbTx database.Tx, hash *chainhash.Hash) (wire.BlockHeader, error) {
+func dbFetchHeaderByHash(chain chainctx.IChainCtx, dbTx database.Tx, hash *chainhash.Hash) (wire.BlockHeader, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
@@ -1165,7 +1165,7 @@ func dbFetchHeaderByHash(chain chain.IChainCtx, dbTx database.Tx, hash *chainhas
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
 // block header for the provided height.
-func dbFetchHeaderByHeight(chain chain.IChainCtx, dbTx database.Tx, height int32) (wire.BlockHeader, error) {
+func dbFetchHeaderByHeight(chain chainctx.IChainCtx, dbTx database.Tx, height int32) (wire.BlockHeader, error) {
 	hash, err := dbFetchHashByHeight(dbTx, height)
 	if err != nil {
 		return nil, err
@@ -1177,7 +1177,7 @@ func dbFetchHeaderByHeight(chain chain.IChainCtx, dbTx database.Tx, height int32
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a jaxutil.Block
 // with the height set.
-func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) (*jaxutil.Block, error) {
+func DBFetchBlockByNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
 	blockBytes, err := dbTx.FetchBlock(&h)
@@ -1197,7 +1197,7 @@ func DBFetchBlockByNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.
 
 // DBStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func DBStoreBlockNode(chain chain.IChainCtx, dbTx database.Tx, node blocknode.IBlockNode) error {
+func DBStoreBlockNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknodes.IBlockNode) error {
 	// Serialize block data to be stored.
 	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
 	header := node.Header()

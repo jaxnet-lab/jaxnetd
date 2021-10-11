@@ -13,7 +13,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
-	"gitlab.com/jaxnet/jaxnetd/node/chain/beacon"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -28,7 +28,7 @@ var (
 // loadBlockDB opens the block database and returns a handle to it.
 func loadBlockDB() (database.DB, error) {
 
-	chain := beacon.Chain(&chaincfg.TestNet3Params)
+	chain := chainctx.NewBeaconChain(&chaincfg.TestNet3Params)
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DbType
 	dbPath := filepath.Join(cfg.DataDir, dbName)

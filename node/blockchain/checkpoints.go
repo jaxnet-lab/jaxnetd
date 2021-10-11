@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types/blocknode"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -87,7 +87,7 @@ func (b *BlockChain) verifyCheckpoint(height int32, hash *chainhash.Hash) bool {
 // should really only happen for blocks before the first checkpoint).
 //
 // This function MUST be called with the chain lock held (for reads).
-func (b *BlockChain) findPreviousCheckpoint() (blocknode.IBlockNode, error) {
+func (b *BlockChain) findPreviousCheckpoint() (blocknodes.IBlockNode, error) {
 	if !b.HasCheckpoints() {
 		return nil, nil
 	}

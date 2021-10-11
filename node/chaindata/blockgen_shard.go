@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-package shard
+package chaindata
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
-	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -20,21 +19,30 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
+type ChainBlockGenerator interface {
+	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
+		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
+
+	ValidateJaxAuxRules(block *wire.MsgBlock, height int32, net types.JaxNet) error
+
+	CalcBlockSubsidy(height int32, header wire.BlockHeader, net types.JaxNet) int64
+}
+
 type BeaconBlockProvider interface {
-	BlockTemplate(useCoinbaseValue bool, burnReward int) (mining.BlockTemplate, error)
+	BlockTemplate(useCoinbaseValue bool, burnReward int) (BlockTemplate, error)
 	ShardCount() (uint32, error)
 }
 
-type BlockGenerator struct {
+type ShardBlockGenerator struct {
 	beacon  BeaconBlockProvider
 	shardID uint32
 }
 
-func NewChainBlockGenerator(id uint32, beacon BeaconBlockProvider) *BlockGenerator {
-	return &BlockGenerator{beacon: beacon, shardID: id}
+func NewShardBlockGen(id uint32, beacon BeaconBlockProvider) *ShardBlockGenerator {
+	return &ShardBlockGenerator{beacon: beacon, shardID: id}
 }
 
-func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
+func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
@@ -44,7 +52,7 @@ func (c *BlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRo
 	return wire.NewShardBlockHeader(blocksMMRRoot, merkleRootHash, bits, *header, cAux), nil
 }
 
-func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
+func (c *ShardBlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	lastKnownShardsAmount, err := c.beacon.ShardCount()
 	if err != nil {
 		// An error will occur if it is impossible
@@ -107,16 +115,21 @@ func (c *BlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, net types.JaxNet) error {
+func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32, net types.JaxNet) error {
+	err := c.ValidateBlockHeader(block.Header)
+	if err != nil {
+		return err
+	}
+
 	expectedReward := c.CalcBlockSubsidy(height, block.Header, net)
 
 	shardHeader := block.Header.(*wire.ShardHeader)
 	shardCoinbaseTx := block.Transactions[0]
 
-	return mining.ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
+	return ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
 }
 
-func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
+func (c *ShardBlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
 	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), header.K())
 
 	if net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
@@ -126,7 +139,7 @@ func (c *BlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net 
 	return reward
 }
 
-func (c *BlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
+func (c *ShardBlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.Time, burnReward int) (*wire.BeaconHeader, wire.CoinbaseAux, error) {
 	blockTemplate, err := c.beacon.BlockTemplate(false, burnReward)
 	if err != nil {
 		return nil, wire.CoinbaseAux{}, err

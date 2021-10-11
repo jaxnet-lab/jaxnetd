@@ -6,11 +6,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 )
 
 type statsProvider interface {
-	ChainCtx() chain.IChainCtx
+	ChainCtx() chainctx.IChainCtx
 	Stats() map[string]float64
 }
 

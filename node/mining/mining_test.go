@@ -12,6 +12,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
@@ -119,7 +120,7 @@ func TestCreateJaxCoinbaseTx(t *testing.T) {
 		return
 	}
 
-	got, err := CreateJaxCoinbaseTx(100_0000, 100, 0, 43, address, true, false)
+	got, err := chaindata.CreateJaxCoinbaseTx(100_0000, 100, 0, 43, address, true, false)
 	if err != nil {
 		t.Errorf("CreateJaxCoinbaseTx() error = %v", err)
 		return

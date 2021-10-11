@@ -4,46 +4,40 @@
  * license that can be found in the LICENSE file.
  */
 
-package beacon
+package chaindata
 
 import (
 	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-const (
-	// baseSubsidy is the starting subsidy amount for mined blocks.  This
-	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 20
-)
-
 type StateProvider struct {
 	ShardCount func() (uint32, error)
-	BTCGen     btcGen
+	BTCGen     BtcGen
 }
 
-type BlockGenerator struct {
+type BeaconBlockGenerator struct {
 	stateInfo StateProvider
 }
 
-type btcGen interface {
+type BtcGen interface {
 	NewBlockTemplate(burnReward int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error)
 }
 
-func NewChainBlockGenerator(stateInfo StateProvider) *BlockGenerator {
-	return &BlockGenerator{
+func NewBeaconBlockGen(stateInfo StateProvider) *BeaconBlockGenerator {
+	return &BeaconBlockGenerator{
 		stateInfo: stateInfo,
 	}
 }
 
-func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRootHash chainhash.Hash,
+func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRootHash chainhash.Hash,
 	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
@@ -88,17 +82,13 @@ func (c *BlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRo
 	return header, nil
 }
 
-func (c *BlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
+func (c *BeaconBlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BlockGenerator) ValidateCoinbaseTx(block *wire.MsgBlock, height int32, _ types.JaxNet) error {
-	_, err := mining.ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
+func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32, _ types.JaxNet) error {
+	_, err := ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
 	return err
-}
-
-func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
-	return nil
 }
 
 // CalcBlockSubsidy returns the subsidy amount a block at the provided height
@@ -114,7 +104,7 @@ func (c *BlockGenerator) AcceptBlock(wire.BlockHeader) error {
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader, _ types.JaxNet) int64 {
+func (c *BeaconBlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader, _ types.JaxNet) int64 {
 	return calcBlockSubsidy(height)
 }
 
@@ -130,29 +120,51 @@ func calcBlockSubsidy(height int32) int64 {
 
 	// Year 1
 	case height >= 0 && height <= endOfEpoch:
-		return (340 - 10*((x-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
+		return (340 - 10*((x-1+pow10)/pow11)) * chaincfg.HaberStornettaPerJAXNETCoin
 
 	// Year 2
 	case height > endOfEpoch && height <= endOfEpoch*2:
-		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
+		return (260 - 5*((x-endOfEpoch-1+pow10)/pow11)) * chaincfg.HaberStornettaPerJAXNETCoin
 
 	// Year 3
 	case height > endOfEpoch*2 && height <= endOfEpoch*3:
-		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
+		return (220 - 15*((x-(endOfEpoch*2+1)+pow10)/pow11)) * chaincfg.HaberStornettaPerJAXNETCoin
 
 	// Year 4
 	case height > endOfEpoch*3 && height <= endOfEpoch*4:
-		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
+		return (100 - 5*((x-(endOfEpoch*3+1)+pow10)/pow11)) * chaincfg.HaberStornettaPerJAXNETCoin
 
 	// Year 5
 	case height > endOfEpoch*4 && height <= endOfEpoch*5:
-		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * jaxutil.HaberStornettaPerJAXNETCoin
+		return (60 - 5*((x-(endOfEpoch*4+1)+pow10)/pow11)) * chaincfg.HaberStornettaPerJAXNETCoin
 
 	// Year 6+
 	case height > endOfEpoch*5:
-		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
+		return chaincfg.BeaconBaseReward * chaincfg.HaberStornettaPerJAXNETCoin
 	default:
-		return baseSubsidy * jaxutil.HaberStornettaPerJAXNETCoin
+		return chaincfg.BeaconBaseReward * chaincfg.HaberStornettaPerJAXNETCoin
 	}
+}
+
+type BTCBlockGen struct {
+	MinerAddress jaxutil.Address
+}
+
+func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
+	burnReward := burnRewardFlag&types.BurnBtcReward == types.BurnBtcReward
+	tx, err := CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
+		bg.MinerAddress, beaconHash.CloneBytes(), burnReward)
+	if err != nil {
+		return wire.BTCBlockAux{}, false, err
+	}
+
+	return wire.BTCBlockAux{
+		CoinbaseAux: wire.CoinbaseAux{
+			Tx:       *tx.MsgTx(),
+			TxMerkle: []chainhash.Hash{*tx.Hash()},
+		},
+		MerkleRoot: *tx.Hash(),
+		Timestamp:  time.Unix(time.Now().Unix(), 0),
+	}, false, nil
 
 }

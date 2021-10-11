@@ -10,7 +10,7 @@ package database
 
 import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/node/chain"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -409,7 +409,7 @@ type Tx interface {
 	// result in a panic.
 	Rollback() error
 
-	Chain() chain.IChainCtx
+	Chain() chainctx.IChainCtx
 }
 
 // DB provides a generic interface that is used to store bitcoin blocks and
@@ -433,7 +433,7 @@ type DB interface {
 	// was created with.
 	Type() string
 
-	Chain() chain.IChainCtx
+	Chain() chainctx.IChainCtx
 
 	// Begin starts a transaction which is either read-only or read-write
 	// depending on the specified flag.  Multiple read-only transactions
