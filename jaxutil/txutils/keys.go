@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
@@ -200,6 +201,14 @@ func DecodeScript(script []byte, net *chaincfg.Params) (*jaxjson.DecodeScriptRes
 	}
 	if scriptClass != txscript.ScriptHashTy {
 		reply.P2sh = p2sh.EncodeAddress()
+	}
+
+	if jaxutil.IsJaxnetBurnRawAddress(script) {
+		reply.Type = types.JaxBurnAddrTy
+		if len(reply.Addresses) == 0 {
+			addr, _ := jaxutil.NewAddressScriptHash(script, net)
+			reply.Addresses = []string{addr.EncodeAddress()}
+		}
 	}
 
 	return reply, nil

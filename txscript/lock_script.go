@@ -167,8 +167,8 @@ func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 	return nil, NonStandardTy, errors.New("invalid htlc script")
 }
 
-func ExtractHTLCLockTime(data []byte) (int32, error) {
-	pops, err := parseScript(data)
+func ExtractHTLCLockTime(pkScript []byte) (int32, error) {
+	pops, err := parseScript(pkScript)
 	if err != nil {
 		return 0, err
 	}

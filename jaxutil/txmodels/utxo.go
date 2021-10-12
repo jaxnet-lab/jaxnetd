@@ -13,6 +13,7 @@ import (
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 type IndexKey struct {
@@ -255,7 +256,9 @@ type UTXO struct {
 func (utxo *UTXO) CanBeSpend(shardID uint32) bool {
 	return !utxo.Used &&
 		utxo.ShardID == shardID &&
-		utxo.ScriptType != txscript.EADAddressTy.String()
+		utxo.ScriptType != txscript.EADAddressTy.String() &&
+		utxo.ScriptType != txscript.HTLCScriptTy.String() &&
+		utxo.ScriptType != types.JaxBurnAddrTy
 }
 
 func (utxo UTXO) ToShort() ShortUTXO {

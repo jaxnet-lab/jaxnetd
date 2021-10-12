@@ -226,7 +226,6 @@ func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
 				if err != nil {
 					return nil, 0, err
 				}
-
 				for _, skAddress := range decodedScript.Addresses {
 					if noAddressFilter || filter[skAddress] {
 						index.AddUTXO(txmodels.UTXO{

@@ -674,8 +674,7 @@ mempoolLoop:
 
 		// Enforce maximum signature operation cost per block.  Also
 		// check for overflow.
-		sigOpCost, err := chaindata.GetSigOpCost(tx, false,
-			blockUtxos, true, segwitActive)
+		sigOpCost, err := chaindata.GetSigOpCost(tx, false, blockUtxos, true, segwitActive)
 		if err != nil {
 			log.Trace().Msgf("Skipping tx %s due to error in GetSigOpCost: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
@@ -733,8 +732,7 @@ mempoolLoop:
 
 		// Ensure the transaction inputs pass all of the necessary
 		// preconditions before allowing it to be added to the block.
-		_, err = chaindata.CheckTransactionInputs(tx, nextHeight,
-			blockUtxos, g.chainCtx.Params())
+		_, err = chaindata.CheckTransactionInputs(tx, nextHeight, blockUtxos, g.chainCtx.Params())
 		if err != nil {
 			log.Trace().Msgf("Skipping tx %s due to error in CheckTransactionInputs: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
@@ -787,7 +785,12 @@ mempoolLoop:
 	blockWeight -= encoder.MaxVarIntPayload -
 		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) * chaindata.WitnessScaleFactor)
 
-	coinbaseTx.MsgTx().TxOut[2].Value += totalFees
+	if g.chainCtx.IsBeacon() {
+		coinbaseTx.MsgTx().TxOut[3].Value += totalFees
+	} else {
+		coinbaseTx.MsgTx().TxOut[2].Value += totalFees
+	}
+
 	txFees[0] = -totalFees
 
 	// If segwit is active and we included transactions with witness data,
@@ -803,8 +806,7 @@ mempoolLoop:
 		// Next, obtain the merkle root of a tree which consists of the
 		// wtxid of all transactions in the block. The coinbase
 		// transaction will have a special wtxid of all zeroes.
-		witnessMerkleTree := chaindata.BuildMerkleTreeStore(blockTxns,
-			true)
+		witnessMerkleTree := chaindata.BuildMerkleTreeStore(blockTxns, true)
 		witnessMerkleRoot := witnessMerkleTree[len(witnessMerkleTree)-1]
 
 		// The preimage to the witness commitment is:

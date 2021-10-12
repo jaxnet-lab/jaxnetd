@@ -380,19 +380,19 @@ func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce 
 }
 
 func updateMerkleRoot(msgBlock *wire.MsgBlock) []chainhash.Hash {
-	root := msgBlock.Header.MerkleRoot()
-	if root.IsEqual(&chainhash.ZeroHash) {
-		// Recalculate the merkle root with the updated extra nonce.
-		block := jaxutil.NewBlock(msgBlock)
-		merkles := chaindata.BuildMerkleTreeStore(block.Transactions(), false)
-		msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
-		res := make([]chainhash.Hash, len(merkles))
-		for i := range merkles {
-			res[i] = *merkles[i]
-		}
-		return res
+	// Recalculate the merkle root with the updated extra nonce.
+	block := jaxutil.NewBlock(msgBlock)
+
+	txs := block.Transactions()
+	merkles := chaindata.BuildMerkleTreeStore(txs, false)
+
+	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
+
+	res := make([]chainhash.Hash, len(txs))
+	for i, tx := range txs {
+		res[i] = *tx.Hash()
 	}
-	return []chainhash.Hash{}
+	return res
 }
 
 func packUint64LE(n uint64) []byte {

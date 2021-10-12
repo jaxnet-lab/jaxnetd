@@ -495,7 +495,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	}
 
 	// Perform checks of the coinbase tx structure according to merge mining spec.
-	// err = b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height())
+	// err = b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height(), b.chain.Params().Net)
 	// if err != nil {
 	// 	return err
 	// }

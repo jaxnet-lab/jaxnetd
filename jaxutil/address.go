@@ -16,6 +16,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/base58"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bech32"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -737,4 +738,30 @@ func (a *HTLCAddress) IsForNet(net *chaincfg.Params) bool {
 // be used as a fmt.Stringer.
 func (a *HTLCAddress) String() string {
 	return a.EncodeAddress()
+}
+
+func IsJaxnetBurnRawAddress(pkScript []byte) bool {
+	return bytes.Equal(pkScript, types.RawJaxBurnAddr)
+}
+
+func IsJaxnetBurnAddress(address string, params *chaincfg.Params) bool {
+	addr, _ := DecodeAddress(address, params)
+	return bytes.Equal(addr.ScriptAddress(), types.RawJaxBurnAddr)
+}
+
+func jaxnetBurnRawAddress() []byte {
+	addr, _ := DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
+	return addr.ScriptAddress()
+}
+
+func BtcJaxVanityPrefix(pkScript []byte) bool {
+	addr, err := NewAddressPubKeyHash(pkScript, &chaincfg.MainNetParams)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(addr.String(), "1JAX")
+}
+
+func BchJaxPrefix(pkScript []byte) bool {
+	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
 }

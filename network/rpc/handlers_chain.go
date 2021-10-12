@@ -703,8 +703,6 @@ func (server *CommonChainRPC) fetchMempoolTxnsForAddress(addr jaxutil.Address, n
 // poll clients of the passed transactions.  This function should be called
 // whenever new transactions are added to the mempool.
 func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
-
-	fmt.Println("####################### NotifyNewTransaction ######################")
 	if wsManager == nil {
 		return
 	}
