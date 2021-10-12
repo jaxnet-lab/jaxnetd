@@ -186,7 +186,7 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 		Dial:           p2pServer.netDial,
 		OnAccept:       p2pServer.inboundPeerConnected,
 		OnConnection:   p2pServer.outboundPeerConnected,
-		GetNewAddress:  p2pServer.newAddressHandler(len(cfg.ConnectPeers)),
+		GetNewAddress:  p2pServer.newAddressHandler(),
 	})
 	if err != nil {
 		return nil, err
@@ -349,11 +349,7 @@ func (server *Server) Query(value interface{}) {
 // specified peers and actively avoid advertising and connecting to
 // discovered peers in order to prevent it from becoming a public test
 // network.
-func (server *Server) newAddressHandler(connectPeersCount int) func() (net.Addr, error) {
-	if connectPeersCount == 0 {
-		return nil
-	}
-
+func (server *Server) newAddressHandler() func() (net.Addr, error) {
 	return func() (net.Addr, error) {
 		for tries := 0; tries < 100; tries++ {
 			addr := server.addrManager.GetAddress()
@@ -380,7 +376,7 @@ func (server *Server) newAddressHandler(connectPeersCount int) func() (net.Addr,
 
 			// allow nondefault ports after 50 failed tries.
 			if tries < 50 && fmt.Sprintf("%d", addr.NetAddress().Port) !=
-				server.chain.ChainParams.DefaultPort {
+				server.chain.ChainParams.DefaultP2PPort {
 				continue
 			}
 
@@ -894,7 +890,7 @@ func (server *Server) upnpUpdateThread() {
 	// Go off immediately to prevent code duplication, thereafter we renew
 	// lease every 15 minutes.
 	timer := time.NewTimer(0 * time.Second)
-	lport, _ := strconv.ParseInt(server.chain.ChainParams.DefaultPort, 10, 16)
+	lport, _ := strconv.ParseInt(server.chain.ChainParams.DefaultP2PPort, 10, 16)
 	first := true
 out:
 	for {
