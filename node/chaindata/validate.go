@@ -334,7 +334,7 @@ func checkProofOfWork(header wire.BlockHeader, chainCfg *chaincfg.Params, flags 
 			return NewRuleError(ErrHighHash, str)
 		}
 
-		if chainCfg.PowParams.HashSorting && !pow.ValidateHashSortingRule(target, chainCfg.PowParams.ChainIDCount, chainCfg.ChainID) {
+		if chainCfg.PowParams.HashSorting && !pow.ValidateHashSortingRule(hashNum, chainCfg.PowParams.ChainIDCount, chainCfg.ChainID) {
 			str := fmt.Sprintf("block Hash of %064x is not match for chain %d by hash-sorting rules",
 				hashNum, chainCfg.ChainID)
 			return NewRuleError(ErrHashSortingRuleNotMatch, str)
