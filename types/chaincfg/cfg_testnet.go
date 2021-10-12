@@ -23,10 +23,11 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 // (version 3).  Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
 var TestNet3Params = Params{
-	Name:        "testnet",
-	Net:         types.TestNet,
-	DefaultPort: "18333",
-	DNSSeeds:    []DNSSeed{},
+	Name:           "testnet",
+	Net:            types.TestNet,
+	DefaultPort:    "18333",
+	DefaultP2PPort: "18444",
+	DNSSeeds:       []DNSSeed{{"dnsseed.testnet.jaxdevz.space", false}},
 
 	// Chain parameters
 	GenesisBlock: GenesisBlockOpts{

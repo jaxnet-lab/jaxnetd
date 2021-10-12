@@ -90,10 +90,11 @@ var genesisMerkleRoot = genesisHash
 
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
-	Name:        "mainnet",
-	Net:         types.MainNet,
-	DefaultPort: "8333",
-	DNSSeeds:    []DNSSeed{},
+	Name:           "mainnet",
+	Net:            types.MainNet,
+	DefaultPort:    "8333",
+	DefaultP2PPort: "8444",
+	DNSSeeds:       []DNSSeed{{"dnsseed.testnet.jaxdevz.space", false}},
 
 	// Chain parameters
 	GenesisBlock: GenesisBlockOpts{
