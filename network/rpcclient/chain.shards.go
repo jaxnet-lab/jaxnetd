@@ -530,12 +530,12 @@ func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, er
 // returned instance.
 //
 // See ListShardBlocksBySerialNumber for the blocking version and more details.
-func (c *Client) ListShardBlocksBySerialNumberAsync(shardID uint32, serialID int64, limit int) FutureListShardBlocksBySerialNumberResult {
+func (c *Client) ListShardBlocksBySerialNumberAsync(serialID int64, limit int) FutureListShardBlocksBySerialNumberResult {
 	cmd := jaxjson.NewListShardBlocksBySerialNumberCmd(serialID, jaxjson.Int(0), jaxjson.Int(limit))
 	return FutureListShardBlocksBySerialNumberResult{
 		client:   c,
 		serialID: serialID,
-		Response: c.ForShard(shardID).sendCmd(cmd),
+		Response: c.sendCmd(cmd),
 	}
 }
 
@@ -543,8 +543,8 @@ func (c *Client) ListShardBlocksBySerialNumberAsync(shardID uint32, serialID int
 //
 // See GetBeaconBlockBySerialNumberVerbose to retrieve a data structure with information about the
 // block instead.
-func (c *Client) ListShardBlocksBySerialNumber(shardID uint32, serialID int64, limit int) ([]*BlockResult, error) {
-	return c.ListShardBlocksBySerialNumberAsync(shardID, serialID, limit).Receive()
+func (c *Client) ListShardBlocksBySerialNumber(serialID int64, limit int) ([]*BlockResult, error) {
+	return c.ListShardBlocksBySerialNumberAsync(serialID, limit).Receive()
 }
 
 // FutureGetShardBlockVerboseBySerialNumberResult is a future promise to deliver the result of a

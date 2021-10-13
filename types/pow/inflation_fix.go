@@ -94,7 +94,7 @@ func PackK(val *big.Float) uint32 {
 }
 
 func MultBitsAndK(bits, k uint32) float64 {
-	// (Di * Ki) * jaxutil.SatoshiPerJAXCoin
+	// (Di * Ki)
 	d := CalcWork(bits)
 	k1 := UnpackK(k)
 	dFloat := new(big.Float).SetInt(d)

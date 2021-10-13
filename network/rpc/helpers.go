@@ -126,7 +126,7 @@ func rpcNoTxInfoError(txHash *chainhash.Hash) *jaxjson.RPCError {
 
 // peerExists determines if a certain peer is currently connected given
 // information about all currently connected peers. Peer existence is
-// determined using either a target address or chainProvider id.
+// determined using either a target address or beaconChain id.
 func peerExists(connMgr netsync.P2PConnManager, addr string, nodeID int32) bool {
 	for _, p := range connMgr.ConnectedPeers() {
 		if p.ToPeer().ID() == nodeID || p.ToPeer().Addr() == addr {

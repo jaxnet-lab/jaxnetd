@@ -25,6 +25,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
@@ -1040,15 +1041,19 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
 	kd := pow.MultBitsAndK(best.Bits, best.K)
-	n := c.Amount / int64(kd*chaincfg.JuroPerJAXCoin)
+	n := float64(c.Amount/chaincfg.JuroPerJAXCoin) / kd
 
 	if n < 4 {
 		n = 4 * 30
 	}
+
 	if n > 20000 {
-		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
-			fmt.Sprintf("lock time more than 2000 blocks"))
+		if server.chainProvider.ChainParams.Net == types.MainNet {
+			return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
+				fmt.Sprintf("lock time more than 2000 blocks"))
+		}
+		n = chaincfg.ShardEpochLength / 2
 	}
 
-	return jaxjson.EstimateLockTimeResult{NBlocks: n}, nil
+	return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil
 }

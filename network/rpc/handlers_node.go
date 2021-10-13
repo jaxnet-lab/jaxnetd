@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -23,21 +24,21 @@ type NodeRPC struct {
 	Mux
 
 	// shardsMgr provides ability to manipulate running shards.
-	shardsMgr ShardManager
+	shardsMgr   ShardManager
+	beaconChain *cprovider.ChainProvider
 
 	// fixme: this fields are empty
-	helpCache     *helpCacher
-	StartupTime   int64
-	MiningAddrs   []jaxutil.Address
-	CPUMiner      cpuminer.CPUMiner
-	chainProvider *cprovider.ChainProvider
+	helpCache   *helpCacher
+	StartupTime int64
+	MiningAddrs []jaxutil.Address
+	CPUMiner    cpuminer.CPUMiner
 }
 
-func NewNodeRPC(provider *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
+func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
 	rpc := &NodeRPC{
-		Mux:           NewRPCMux(logger),
-		shardsMgr:     shardsMgr,
-		chainProvider: provider,
+		Mux:         NewRPCMux(logger),
+		shardsMgr:   shardsMgr,
+		beaconChain: beaconChain,
 	}
 	rpc.ComposeHandlers()
 
@@ -90,8 +91,8 @@ func (server *NodeRPC) handleUptime(cmd interface{}, closeChan <-chan struct{}) 
 // handleGetInfo implements the getinfo command. We only return the fields
 // that are not related to wallet functionality.
 func (server *NodeRPC) handleGetInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// best := server.chainProvider.BlockChain.BestSnapshot()
-	// ratio, err := server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
+	// best := server.beaconChain.BlockChain.BestSnapshot()
+	// ratio, err := server.GetDifficultyRatio(best.Bits, server.beaconChain.ChainParams)
 	// if err != nil {
 	// 	return nil, err
 	//
@@ -101,7 +102,7 @@ func (server *NodeRPC) handleGetInfo(cmd interface{}, closeChan <-chan struct{})
 	// 	// Version:         int32(1000000*appMajor + 10000*appMinor + 100*appPatch),
 	// 	ProtocolVersion: int32(maxProtocolVersion),
 	// 	Blocks:          best.Height,
-	// 	TimeOffset:      int64(server.chainProvider.TimeSource.Offset().Seconds()),
+	// 	TimeOffset:      int64(server.beaconChain.TimeSource.Offset().Seconds()),
 	// 	Connections:     server.connMgr.ConnectedCount(),
 	// 	Difficulty:      ratio,
 	// 	// Proxy:           cfg.Proxy,
@@ -199,6 +200,8 @@ func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct
 func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.EstimateSwapLockTime)
 
+	isMainNet := server.beaconChain.ChainParams.Net == types.MainNet
+
 	sourceShard, ok := server.shardsMgr.ShardCtl(c.SourceShard)
 	if !ok {
 		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInvalidParameter,
@@ -207,7 +210,10 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 	sourceBest := sourceShard.BlockChain().BestSnapshot()
 	sN, err := EstimateLockInChain(sourceBest.Bits, sourceBest.K, c.Amount)
 	if err != nil {
-		return nil, err
+		if isMainNet {
+			return nil, err
+		}
+		sN = chaincfg.ShardEpochLength
 	}
 
 	destinationShard, ok := server.shardsMgr.ShardCtl(c.DestinationShard)
@@ -219,7 +225,10 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 	destBest := destinationShard.BlockChain().BestSnapshot()
 	dN, err := EstimateLockInChain(destBest.Bits, destBest.K, c.Amount)
 	if err != nil {
-		return nil, err
+		if isMainNet {
+			return nil, err
+		}
+		dN = chaincfg.ShardEpochLength / 2
 	}
 
 	if sN < dN*2 {
@@ -236,7 +245,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 // in shard during the CrossShard Swap Tx.
 func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 	kd := pow.MultBitsAndK(bits, k)
-	n := amount / int64(kd*chaincfg.JuroPerJAXCoin)
+	n := float64(amount/chaincfg.JuroPerJAXCoin) / kd
 
 	if n < 4 {
 		n = 4 * 30
@@ -245,7 +254,7 @@ func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 		return 0, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
 			fmt.Sprintf("lock time more than 2000 blocks"))
 	}
-	return n, nil
+	return int64(n), nil
 }
 
 // handleSetGenerate implements the setgenerate command.
@@ -265,7 +274,7 @@ func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struc
 	//	}
 	//
 	//	if !generate {
-	//		s.chainProvider.CPUMiner.Stop()
+	//		s.beaconChain.CPUMiner.Stop()
 	//	} else {
 	//		// Respond with an error if there are no addresses to pay the
 	//		// created blocks to.
@@ -278,8 +287,8 @@ func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struc
 	//		}
 	//
 	//		// It's safe to call start even if it's already started.
-	//		s.chainProvider.CPUMiner.SetNumWorkers(int32(genProcLimit))
-	//		s.chainProvider.CPUMiner.Start()
+	//		s.beaconChain.CPUMiner.SetNumWorkers(int32(genProcLimit))
+	//		s.beaconChain.CPUMiner.Start()
 	//	}
 	return nil, nil
 }

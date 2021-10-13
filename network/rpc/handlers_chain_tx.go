@@ -529,7 +529,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 		}
 	}
 
-	// Use 0 for the tag to represent local chainProvider.
+	// Use 0 for the tag to represent local beaconChain.
 	tx := jaxutil.NewTx(&msgTx)
 	acceptedTxs, err := server.chainProvider.TxMemPool.ProcessTransaction(tx, false, false, 0)
 	if err != nil {

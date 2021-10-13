@@ -202,7 +202,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 	params := server.chainProvider.ChainParams
 	switch c.SubCmd {
 	case "disconnect":
-		// If we have a valid uint disconnect by chainProvider id. Otherwise,
+		// If we have a valid uint disconnect by beaconChain id. Otherwise,
 		// attempt to disconnect by address, returning an error if a
 		// valid IP address is not supplied.
 		if nodeID, errN = strconv.ParseUint(c.Target, 10, 32); errN == nil {
@@ -214,7 +214,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 			} else {
 				return nil, &jaxjson.RPCError{
 					Code:    jaxjson.ErrRPCInvalidParameter,
-					Message: "invalid address or chainProvider ID",
+					Message: "invalid address or beaconChain ID",
 				}
 			}
 		}
@@ -227,7 +227,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 		}
 
 	case "remove":
-		// If we have a valid uint disconnect by chainProvider id. Otherwise,
+		// If we have a valid uint disconnect by beaconChain id. Otherwise,
 		// attempt to disconnect by address, returning an error if a
 		// valid IP address is not supplied.
 		if nodeID, errN = strconv.ParseUint(c.Target, 10, 32); errN == nil {
@@ -239,7 +239,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 			} else {
 				return nil, &jaxjson.RPCError{
 					Code:    jaxjson.ErrRPCInvalidParameter,
-					Message: "invalid address or chainProvider ID",
+					Message: "invalid address or beaconChain ID",
 				}
 			}
 		}
@@ -265,13 +265,13 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 		default:
 			return nil, &jaxjson.RPCError{
 				Code:    jaxjson.ErrRPCInvalidParameter,
-				Message: "invalid subcommand for chainProvider connect",
+				Message: "invalid subcommand for beaconChain connect",
 			}
 		}
 	default:
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCInvalidParameter,
-			Message: "invalid subcommand for chainProvider",
+			Message: "invalid subcommand for beaconChain",
 		}
 	}
 
