@@ -27,7 +27,7 @@ var FastNetParams = Params{
 	ChainID:          0,
 	ChainName:        "beacon",
 	DefaultP2PPort:   "18444",
-	DNSSeeds:         []DNSSeed{{"test-dns.net", false}},
+	DNSSeeds:         []DNSSeed{},
 	CoinbaseMaturity: 5,
 
 	PowParams: PowParams{

@@ -24,11 +24,13 @@ var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 var TestNet3Params = TestNetParams
 
 var TestNetParams = Params{
-	Name:             "testnet",
-	Net:              types.TestNet,
-	DefaultPort:      "18333",
-	DefaultP2PPort:   "18444",
-	DNSSeeds:         []DNSSeed{{"dnsseed.testnet.jaxdevz.space", false}},
+	Name:           "testnet",
+	Net:            types.TestNet,
+	DefaultPort:    "18333",
+	DefaultP2PPort: "18444",
+	DNSSeeds:       []DNSSeed{
+		// {"dnsseed.testnet.jaxdevz.space", false}
+	},
 	IsBeacon:         true,
 	ChainID:          0,
 	ChainName:        "beacon",

@@ -21,11 +21,13 @@ var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
 
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
-	Name:             "mainnet",
-	Net:              types.MainNet,
-	DefaultPort:      "8333",
-	DefaultP2PPort:   "8444",
-	DNSSeeds:         []DNSSeed{{"dnsseed.testnet.jaxdevz.space", false}},
+	Name:           "mainnet",
+	Net:            types.MainNet,
+	DefaultPort:    "8333",
+	DefaultP2PPort: "8444",
+	DNSSeeds:       []DNSSeed{
+		// {"dnsseed.testnet.jaxdevz.space", false}
+	},
 	IsBeacon:         true,
 	ChainID:          0,
 	ChainName:        "beacon",
