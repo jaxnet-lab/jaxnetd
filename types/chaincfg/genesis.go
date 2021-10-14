@@ -9,7 +9,6 @@ package chaincfg
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -18,198 +17,236 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-var (
+type genesisDataState struct {
 	genesisBlock      *wire.MsgBlock
 	genesisHash       *chainhash.Hash
 	genesisMerkleRoot *chainhash.Hash
+	genesisTx         *wire.MsgTx
 
 	shardsGenesisTx         *wire.MsgTx
 	shardsGenesisMerkleRoot *chainhash.Hash
-	shardGenesisBlocks      = map[uint32]wire.MsgBlock{}
-	shardGenesisHash        = map[uint32]chainhash.Hash{}
+	shardGenesisBlocks      map[uint32]wire.MsgBlock
+	shardGenesisHash        map[uint32]chainhash.Hash
+}
+
+func newGenesisDataState() *genesisDataState {
+	return &genesisDataState{
+		genesisBlock:            nil,
+		genesisHash:             nil,
+		genesisMerkleRoot:       nil,
+		shardsGenesisTx:         nil,
+		shardsGenesisMerkleRoot: nil,
+		shardGenesisBlocks:      map[uint32]wire.MsgBlock{},
+		shardGenesisHash:        map[uint32]chainhash.Hash{},
+	}
+}
+
+var (
+	genesisStorage = map[types.JaxNet]*genesisDataState{
+		types.MainNet:     newGenesisDataState(),
+		types.TestNet:     newGenesisDataState(),
+		types.FastTestNet: newGenesisDataState(),
+		types.SimNet:      newGenesisDataState(),
+	}
 )
 
 func cleanState() {
-	genesisBlock = nil
-	genesisHash = nil
-	genesisMerkleRoot = nil
-	shardsGenesisTx = nil
-	shardsGenesisMerkleRoot = nil
-	shardGenesisBlocks = map[uint32]wire.MsgBlock{}
-	shardGenesisHash = map[uint32]chainhash.Hash{}
+	for net := range genesisStorage {
+		genesisStorage[net] = newGenesisDataState()
+	}
 }
 
-func GenesisMerkleRoot() chainhash.Hash {
-	if genesisMerkleRoot != nil {
-		return *genesisMerkleRoot
+func GenesisMerkleRoot(name types.JaxNet) chainhash.Hash {
+	state := genesisStorage[name]
+
+	if state.genesisMerkleRoot != nil {
+		return *state.genesisMerkleRoot
 	}
 
-	GenesisCoinbaseTx()
+	GenesisCoinbaseTx(name)
 
-	genesisMerkleRoot = new(chainhash.Hash)
-	*genesisMerkleRoot = genesisCoinbaseTx.TxHash()
-	return *genesisMerkleRoot
+	state.genesisMerkleRoot = new(chainhash.Hash)
+	*state.genesisMerkleRoot = state.genesisTx.TxHash()
+	return *state.genesisMerkleRoot
 }
 
 func BeaconGenesisHash(name types.JaxNet) *chainhash.Hash {
-	if genesisHash != nil {
-		return genesisHash
+	state := genesisStorage[name]
+
+	if state.genesisHash != nil {
+		return state.genesisHash
 	}
 
 	BeaconGenesisBlock(name)
-	return genesisHash
+	return state.genesisHash
 }
 
 func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
-	if genesisBlock != nil {
-		return genesisBlock
+	state := genesisStorage[name]
+
+	if state.genesisBlock != nil {
+		return state.genesisBlock
 	}
-	fmt.Println(name.String())
 
 	var opts GenesisBlockOpts
 	switch name {
 	case types.TestNet:
 		opts = GenesisBlockOpts{
-			Version:    1,
-			PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-			MerkleRoot: GenesisMerkleRoot(),      // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-			Timestamp:  time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:       0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
-			Nonce:      0x18aea41a,               // 414098458
+			Version:   1,
+			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
+			Bits:      0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
+			Nonce:     0x18aea41a,               // 414098458
 		}
 
 	case types.FastTestNet:
 		opts = GenesisBlockOpts{
-			Version:    1,
-			PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-			MerkleRoot: GenesisMerkleRoot(),      // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-			Timestamp:  time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:       0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
-			Nonce:      0x18aea41a,
+			Version:   1,
+			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
+			Bits:      0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+			Nonce:     0x18aea41a,
 		}
 	case types.SimNet:
 		opts = GenesisBlockOpts{
-			Version:    1,
-			PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-			MerkleRoot: GenesisMerkleRoot(),      // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-			Timestamp:  time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:       0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
-			Nonce:      2,
+			Version:   1,
+			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
+			Bits:      0x207fffff,               // 545259519 [7fffff0000000000000000000000000000000000000000000000000000000000]
+			Nonce:     2,
 		}
 	default:
 		opts = GenesisBlockOpts{
-			Version:    1,
-			PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
-			MerkleRoot: GenesisMerkleRoot(),      // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
-			Timestamp:  time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:       0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
-			Nonce:      0x7c2bac1d,               // 2083236893
+			Version:   1,
+			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
+			Bits:      0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
+			Nonce:     0x7c2bac1d,               // 2083236893
 		}
 	}
 
-	GenesisCoinbaseTx()
+	GenesisCoinbaseTx(name)
 
-	genesisBlock = &wire.MsgBlock{
+	state.genesisBlock = &wire.MsgBlock{
 		Header: wire.NewBeaconBlockHeader(
 			wire.NewBVersion(opts.Version),
 			opts.PrevBlock,
-			opts.MerkleRoot,
+			GenesisMerkleRoot(name),
 			chainhash.Hash{},
 			opts.Timestamp,
 			opts.Bits,
 			opts.Nonce,
 		),
-		Transactions: []*wire.MsgTx{genesisCoinbaseTx},
+		Transactions: []*wire.MsgTx{state.genesisTx},
 	}
-	genesisBlock.Header.SetK(pow.PackK(pow.K1))
-	genesisBlock.Header.SetVoteK(pow.PackK(pow.K1))
-	genesisHash = new(chainhash.Hash)
-	*genesisHash = genesisBlock.BlockHash()
+	state.genesisBlock.Header.SetK(pow.PackK(pow.K1))
+	state.genesisBlock.Header.SetVoteK(pow.PackK(pow.K1))
+	state.genesisHash = new(chainhash.Hash)
+	*state.genesisHash = state.genesisBlock.BlockHash()
 
-	return genesisBlock
+	return state.genesisBlock
 
 }
 
-func ShardGenesisHash(shardID uint32) *chainhash.Hash {
-	hash := shardGenesisHash[shardID]
+func ShardGenesisHash(name types.JaxNet, shardID uint32) *chainhash.Hash {
+	state := genesisStorage[name]
+
+	hash := state.shardGenesisHash[shardID]
 	return &hash
 }
 
-func ShardGenesisBlock(shardID uint32) *wire.MsgBlock {
-	shardBlock := shardGenesisBlocks[shardID]
+func ShardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
+	state := genesisStorage[name]
+	shardBlock := state.shardGenesisBlocks[shardID]
 	return &shardBlock
 }
 
-func SetShardGenesisBlock(shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
-	shardBlock, ok := shardGenesisBlocks[shardID]
+func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
+	state := genesisStorage[name]
+
+	shardBlock, ok := state.shardGenesisBlocks[shardID]
 	if ok {
 		return &shardBlock
 	}
 
-	ShardGenesisCoinbaseTx()
+	ShardGenesisCoinbaseTx(name)
 
 	coinbaseAux := wire.CoinbaseAux{}.FromBlock(beaconBlock)
 	shardBlock = wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
 			chainhash.Hash{},
-			*shardsGenesisMerkleRoot,
+			*state.shardsGenesisMerkleRoot,
 			ShardPoWBits,
 			*beaconBlock.Header.BeaconHeader(),
 			coinbaseAux,
 		),
-		Transactions: []*wire.MsgTx{shardsGenesisTx},
+		Transactions: []*wire.MsgTx{state.shardsGenesisTx},
 	}
 
-	shardGenesisBlocks[shardID] = shardBlock
-	shardGenesisHash[shardID] = shardBlock.BlockHash()
+	state.shardGenesisBlocks[shardID] = shardBlock
+	state.shardGenesisHash[shardID] = shardBlock.BlockHash()
 
 	return &shardBlock
 }
 
 // GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
-func GenesisCoinbaseTx() wire.MsgTx {
-	if genesisCoinbaseTx != nil {
-		return *genesisCoinbaseTx
-	}
-	genesisCoinbaseTx = new(wire.MsgTx)
+func GenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
+	state := genesisStorage[name]
 
-	rawTx, err := hex.DecodeString(genesisTxHex)
+	if state.genesisTx != nil {
+		return *state.genesisTx
+	}
+
+	state.genesisTx = new(wire.MsgTx)
+
+	txHex := ""
+	switch name {
+	case types.FastTestNet:
+		txHex = fastNetGenesisTxHex
+	default:
+		state.genesisTx = mainNetgenesisCoinbaseTx
+		return *state.genesisTx
+	}
+
+	rawTx, err := hex.DecodeString(txHex)
 	if err != nil {
 		panic("invalid genesis tx hex-data")
 	}
-	err = genesisCoinbaseTx.Deserialize(bytes.NewBuffer(rawTx))
+	err = state.genesisTx.Deserialize(bytes.NewBuffer(rawTx))
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
 
-	return *genesisCoinbaseTx
+	return *state.genesisTx
 }
 
-func ShardGenesisCoinbaseTx() wire.MsgTx {
-	if shardsGenesisTx != nil {
-		return *shardsGenesisTx
+func ShardGenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
+	state := genesisStorage[name]
+
+	if state.shardsGenesisTx != nil {
+		return *state.shardsGenesisTx
 	}
-	shardsGenesisTx = new(wire.MsgTx)
+	state.shardsGenesisTx = new(wire.MsgTx)
 
 	rawTx, err := hex.DecodeString(shardsGenesisTxHex)
 	if err != nil {
 		panic("invalid genesis tx hex-data")
 	}
-	err = shardsGenesisTx.Deserialize(bytes.NewBuffer(rawTx))
+	err = state.shardsGenesisTx.Deserialize(bytes.NewBuffer(rawTx))
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
 
-	shardsGenesisMerkleRoot = new(chainhash.Hash)
-	*shardsGenesisMerkleRoot = shardsGenesisTx.TxHash()
-	return *shardsGenesisTx
+	state.shardsGenesisMerkleRoot = new(chainhash.Hash)
+	*state.shardsGenesisMerkleRoot = state.shardsGenesisTx.TxHash()
+	return *state.shardsGenesisTx
 }
 
 // GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
-var genesisCoinbaseTx = &wire.MsgTx{
+var mainNetgenesisCoinbaseTx = &wire.MsgTx{
 	Version: 1,
 	TxIn: []*wire.TxIn{
 		{
@@ -262,7 +299,6 @@ var genesisCoinbaseTx = &wire.MsgTx{
 }
 
 const (
-	// todo
-	genesisTxHex       = ""
-	shardsGenesisTxHex = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff170005ffffffff00000e2f503253482f6a61786e6574642fffffffff03000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a54000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a5400000000000000001976a914bc473af4c71c45d5aa3278adc99701ded3740a5488ac00000000"
+	fastNetGenesisTxHex = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff44202bf70f9cbe34cf53add3ed8c96b115e64c911de96007040000000000000000001d4a61782e4e6574776f726b20656e7465727320746865207261636521200473686562ffffffff0300f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00000000"
+	shardsGenesisTxHex  = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff170005ffffffff00000e2f503253482f6a61786e6574642fffffffff03000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a54000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a5400000000000000001976a914bc473af4c71c45d5aa3278adc99701ded3740a5488ac00000000"
 )

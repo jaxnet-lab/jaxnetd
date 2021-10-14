@@ -120,7 +120,6 @@ const (
 type GenesisBlockOpts struct {
 	Version    int32
 	PrevBlock  chainhash.Hash
-	MerkleRoot chainhash.Hash
 	Timestamp  time.Time
 	Bits       uint32
 	Nonce      uint32
@@ -269,7 +268,7 @@ func (cfg *Params) GenesisBlock() *wire.MsgBlock {
 	if cfg.IsBeacon {
 		return BeaconGenesisBlock(cfg.Net)
 	}
-	return ShardGenesisBlock(cfg.ChainID)
+	return ShardGenesisBlock(cfg.Net, cfg.ChainID)
 }
 
 func (cfg *Params) GenesisHash() *chainhash.Hash {
@@ -277,7 +276,7 @@ func (cfg *Params) GenesisHash() *chainhash.Hash {
 		return BeaconGenesisHash(cfg.Net)
 	}
 
-	return ShardGenesisHash(cfg.ChainID)
+	return ShardGenesisHash(cfg.Net, cfg.ChainID)
 }
 
 // ShardParams creates genesis for ShardChain based on genesis of the BeaconChain.
@@ -293,7 +292,7 @@ func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params 
 	cfg.PowParams.PowLimit = shardChainPowLimit
 	cfg.PowParams.PowLimitBits = ShardPoWBits
 
-	SetShardGenesisBlock(shard, beaconBlock)
+	SetShardGenesisBlock(cfg.Net, shard, beaconBlock)
 
 	return &cfg
 }

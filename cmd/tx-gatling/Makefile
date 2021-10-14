@@ -50,8 +50,8 @@ sync_all:
 	cat data/all_utxo.csv | grep -v pubkeyhash > data/filtered.csv
 
 sync_all_for_shard:
-	go run $(GATLING_PKG) --shard 1 -f data/all_utxo_1.csv sync
-	cat data/all_utxo_1.csv | grep -v pubkeyhash > data/filtered.csv
+	go run $(GATLING_PKG) --shard 2 -f data/all_utxo_2.csv sync
+	cat data/all_utxo_2.csv | grep -v pubkeyhash > data/filtered.csv
 
 sync: sync_all sync_miner sync_alice sync_bob sync_eva
 

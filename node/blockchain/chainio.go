@@ -184,7 +184,26 @@ func (b *BlockChain) createChainState() error {
 		}
 		log.Info().Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
 		// Store the genesis block into the database.
-		return chaindata.DBStoreBlock(dbTx, genesisBlock)
+		err = chaindata.DBStoreBlock(dbTx, genesisBlock)
+		if err != nil {
+			return err
+		}
+
+		if b.chain.IsBeacon() {
+
+			view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
+			err := view.ConnectTransactions(genesisBlock, nil)
+
+			// Update the utxo set using the state of the utxo view.  This
+			// entails removing all of the utxos spent and adding the new
+			// ones created by the block.
+			err = chaindata.DBPutUtxoView(dbTx, view)
+			if err != nil {
+				return err
+			}
+
+		}
+		return nil
 	})
 	return err
 }

@@ -237,10 +237,10 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 	// The coinbase for the Genesis block is not spendable, so just return
 	// an error now.
 	h := node.GetHash()
-	if h.IsEqual(b.chain.Params().GenesisHash()) { // TODO: GENESIS TX SPEND
-		str := "the coinbase for the genesis block is not spendable"
-		return chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
-	}
+	// if h.IsEqual(b.chain.Params().GenesisHash()) { // TODO: GENESIS TX SPEND
+	// 	str := "the coinbase for the genesis block is not spendable"
+	// 	return chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
+	// }
 
 	// Ensure the view is for the node being checked.
 	parentMMR := block.MsgBlock().Header.BlocksMerkleMountainRoot()

@@ -955,9 +955,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	// applies to orphan transactions as well when the reject duplicate
 	// orphans flag is set.  This check is intended to be a quick check to
 	// weed out duplicates.
-	if mp.isTransactionInPool(txHash) || (rejectDupOrphans &&
-		mp.isOrphanInPool(txHash)) {
-
+	if mp.isTransactionInPool(txHash) || (rejectDupOrphans && mp.isOrphanInPool(txHash)) {
 		str := fmt.Sprintf("already have transaction %v", txHash)
 		return nil, nil, txRuleError(wire.RejectDuplicate, str)
 	}
