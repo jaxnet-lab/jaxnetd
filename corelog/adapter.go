@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -106,13 +105,15 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 }
 
 func newRollingFile(config Config) io.Writer {
+	fmt.Println("config.Directory", config.Directory)
 	if err := os.MkdirAll(config.Directory, 0744); err != nil {
 		log.Error().Err(err).Str("path", config.Directory).Msg("can't create log directory")
 		return nil
 	}
 
+	fmt.Println("config.Filename", config.Filename)
 	return &lumberjack.Logger{
-		Filename:   path.Join(config.Directory, config.Filename),
+		Filename:   config.Filename,
 		MaxBackups: config.MaxBackups, // files
 		MaxSize:    config.MaxSize,    // megabytes
 		MaxAge:     config.MaxAge,     // days
