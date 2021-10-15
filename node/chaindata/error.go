@@ -234,6 +234,8 @@ const (
 	// the expected value either because it doesn't match the calculated
 	// valued based on protocol rules or it is out of the valid
 	ErrUnexpectedKValue
+
+	ErrInvalidJaxHeaderAux
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -284,6 +286,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrInvalidShardSwapInOuts:    "ErrInvalidShardSwapInOuts",
 	ErrHashSortingRuleNotMatch:   "ErrHashSortingRuleNotMatch",
 	ErrUnexpectedKValue:          "ErrUnexpectedKValue",
+	ErrInvalidJaxHeaderAux:       "ErrInvalidJaxHeaderAux",
 }
 
 // String returns the ErrorCode as a human-readable name.

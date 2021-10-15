@@ -14,15 +14,17 @@ import (
 
 type shardChain struct {
 	wire.ShardHeaderConstructor
-	chainParams *chaincfg.Params
+	chainParams  *chaincfg.Params
+	beaconHeight int32
 }
 
-func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock) *shardChain {
+func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock, height int32) *shardChain {
 	chainParams := params.ShardParams(shardID, beaconBlock)
 
 	shard := &shardChain{
 		ShardHeaderConstructor: wire.ShardHeaderConstructor{ID: shardID},
 		chainParams:            chainParams,
+		beaconHeight:           height,
 	}
 
 	return shard
@@ -36,3 +38,4 @@ func (c *shardChain) Params() *chaincfg.Params     { return c.chainParams }
 func (c *shardChain) Name() string                 { return c.chainParams.ChainName }
 func (c *shardChain) EmptyBlock() wire.MsgBlock    { return wire.EmptyShardBlock() }
 func (c *shardChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.GenesisBlock() }
+func (c *shardChain) GenesisBeaconHeight() int32   { return c.beaconHeight }

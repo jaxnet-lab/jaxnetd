@@ -94,7 +94,7 @@ func (h *BTCBlockAux) Serialize(w io.Writer) error {
 	return writeBTCBlockHeader(w, h)
 }
 
-// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkleProof
 // and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 func (h *BTCBlockAux) UpdateCoinbaseScript(coinbaseScript []byte) {
 	h.Tx.TxIn[0].SignatureScript = coinbaseScript
@@ -109,8 +109,8 @@ func (h *BTCBlockAux) Copy() *BTCBlockAux {
 	// all fields except this are passed by value
 	// so we manually copy the following fields to prevent side effects
 	clone.Tx = *h.Tx.Copy()
-	clone.TxMerkle = make([]chainhash.Hash, len(h.TxMerkle))
-	copy(clone.TxMerkle, h.TxMerkle)
+	clone.TxMerkleProof = make([]chainhash.Hash, len(h.TxMerkleProof))
+	copy(clone.TxMerkleProof, h.TxMerkleProof)
 
 	return &clone
 }
@@ -164,7 +164,7 @@ type CoinbaseAux struct {
 	Tx MsgTx
 
 	// Merkle tree leaves  of all transactions for the block.
-	TxMerkle []chainhash.Hash
+	TxMerkleProof []chainhash.Hash
 }
 
 func (CoinbaseAux) New() CoinbaseAux {
@@ -174,34 +174,34 @@ func (CoinbaseAux) New() CoinbaseAux {
 			{PreviousOutPoint: OutPoint{Hash: chainhash.ZeroHash, Index: math.MaxUint32}},
 		}}
 	return CoinbaseAux{
-		Tx:       tx,
-		TxMerkle: []chainhash.Hash{tx.TxHash()},
+		Tx:            tx,
+		TxMerkleProof: []chainhash.Hash{tx.TxHash()},
 	}
 }
 
 func (CoinbaseAux) FromBlock(block *MsgBlock) CoinbaseAux {
 	tx := block.Transactions[0].Copy()
 	aux := CoinbaseAux{
-		Tx:       *tx,
-		TxMerkle: make([]chainhash.Hash, len(block.Transactions)),
-	}
-	for i, transaction := range block.Transactions {
-		aux.TxMerkle[i] = transaction.TxHash()
+		Tx: *tx,
 	}
 
+	txHashes := make([]chainhash.Hash, len(block.Transactions))
+	for i, transaction := range block.Transactions {
+		txHashes[i] = transaction.TxHash()
+	}
+
+	aux.TxMerkleProof = chainhash.BuildMerkleTreeProof(txHashes)
 	return aux
 }
 
 func (h *CoinbaseAux) UpdatedMerkleRoot() chainhash.Hash {
-	if len(h.TxMerkle) <= 1 {
-		h.TxMerkle = []chainhash.Hash{h.Tx.TxHash()}
-	} else {
-		h.TxMerkle[0] = h.Tx.TxHash()
+	if len(h.TxMerkleProof) <= 0 {
+		return h.Tx.TxHash()
 	}
 
-	merkleTree := chainhash.BuildMerkleTreeStore(h.TxMerkle)
-
-	return *merkleTree[len(merkleTree)-1]
+	coinbaseHash := h.Tx.TxHash()
+	merkleTreeRoot := chainhash.MerkleTreeProofRoot(coinbaseHash, h.TxMerkleProof)
+	return merkleTreeRoot
 }
 
 // Copy creates a deep copy of a CoinbaseAux so that the original does not get
@@ -212,8 +212,8 @@ func (h *CoinbaseAux) Copy() *CoinbaseAux {
 	// all fields except this are passed by value
 	// so we manually copy the following fields to prevent side effects
 	clone.Tx = *h.Tx.Copy()
-	clone.TxMerkle = make([]chainhash.Hash, len(h.TxMerkle))
-	copy(clone.TxMerkle, h.TxMerkle)
+	clone.TxMerkleProof = make([]chainhash.Hash, len(h.TxMerkleProof))
+	copy(clone.TxMerkleProof, h.TxMerkleProof)
 
 	return clone
 }
@@ -222,22 +222,13 @@ func (h *CoinbaseAux) Copy() *CoinbaseAux {
 // that is suitable for long-term storage such as a database while respecting
 // the Version field.
 func (h *CoinbaseAux) Deserialize(r io.Reader) error {
-	if err := h.Tx.BtcDecode(r, ProtocolVersion, BaseEncoding); err != nil {
-		return err
-	}
-	count, err := encoder.ReadVarInt(r, ProtocolVersion)
+	err := h.Tx.BtcDecode(r, ProtocolVersion, BaseEncoding)
 	if err != nil {
 		return err
 	}
 
-	h.TxMerkle = make([]chainhash.Hash, count)
-	for i := range h.TxMerkle {
-		err = encoder.ReadElement(r, &h.TxMerkle[i])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	h.TxMerkleProof, err = ReadHashArray(r)
+	return err
 }
 
 // Serialize encodes a block header from r into the receiver using a format
@@ -247,17 +238,5 @@ func (h *CoinbaseAux) Serialize(w io.Writer) error {
 	if err := h.Tx.BtcEncode(w, ProtocolVersion, BaseEncoding); err != nil {
 		return err
 	}
-
-	count := uint64(len(h.TxMerkle))
-	if err := encoder.WriteVarInt(w, count); err != nil {
-		return err
-	}
-
-	for i := range h.TxMerkle {
-		if err := encoder.WriteElement(w, &h.TxMerkle[i]); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return WriteHashArray(w, h.TxMerkleProof)
 }

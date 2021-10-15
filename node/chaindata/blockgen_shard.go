@@ -8,13 +8,15 @@ package chaindata
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
-	mmtree "gitlab.com/jaxnet/core/merged-mining-tree"
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	mmtree "gitlab.com/jaxnet/jaxnetd/types/merge_mining_tree"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -52,7 +54,7 @@ func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, mer
 	return wire.NewShardBlockHeader(blocksMMRRoot, merkleRootHash, bits, *header, cAux), nil
 }
 
-func (c *ShardBlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error {
+func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) error {
 	lastKnownShardsAmount, err := c.beacon.ShardCount()
 	if err != nil {
 		// An error will occur if it is impossible
@@ -60,63 +62,43 @@ func (c *ShardBlockGenerator) ValidateBlockHeader(header wire.BlockHeader) error
 		return fmt.Errorf("can't fetch last beacon block: %w", err)
 	}
 
-	beaconHeader := header.BeaconHeader()
+	beaconAux := header.BeaconHeader()
+	if math.Abs(float64(lastKnownShardsAmount-beaconAux.Shards())) > 1 {
+		return fmt.Errorf("delta between lastKnownShardsAmount(%v) and beaconAux.Shards(%v) more than 1",
+			lastKnownShardsAmount, beaconAux.Shards())
+	}
 
-	treeValidationShouldBeSkipped := false
 	mmNumber := header.MergeMiningNumber()
-	if mmNumber%2 == 0 {
-		if header.BeaconHeader().Shards() == mmNumber {
-			if mmNumber <= lastKnownShardsAmount {
-				treeValidationShouldBeSkipped = true
-			}
+	if mmNumber > beaconAux.Shards() {
+		return fmt.Errorf("MergeMiningNumber(%v) more than beaconAux.Shards(%v)",
+			mmNumber, beaconAux.Shards())
+	}
+
+	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
+
+	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) &&
+		mmNumber == lastKnownShardsAmount && mmNumber == beaconAux.Shards()
+
+	if !orangeTreeEmpty {
+		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
+		err = tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
+		if err != nil {
+			return errors.Wrap(err, "invalid orange tree")
 		}
 	}
 
-	if treeValidationShouldBeSkipped {
-		return nil
-	}
-
-	hashes, coding, codingBitsLen := beaconHeader.MergedMiningTreeCodingProof()
-
-	var (
-		providedRoot   = header.MergeMiningRoot()
-		validationRoot mmtree.BinHash
-	)
-	copy(validationRoot[:], providedRoot[:])
-
-	tree := mmtree.NewSparseMerkleTree(lastKnownShardsAmount)
-	exclusiveHash := header.ExclusiveHash()
-	mergeMiningRootPath := header.MergeMiningRootPath()
-
-	// position uint32,
-	// merkleProofPath,
-	// expectedShardHash,
-	// expectedRoot []byte,
-	//	codingBitsSize uint32,
-	//	coding,
-	//	hashes []byte,
-	//	mmNumber uint32
-
 	position := c.shardID - 1
-	err = tree.Validate(
-		position,
-		mergeMiningRootPath,
-		exclusiveHash[:],
-		validationRoot[:],
-		codingBitsLen,
-		coding,
-		hashes,
-		mmNumber,
-	)
+	exclusiveHash := header.ExclusiveHash()
+	err = tree.ValidateShardMerkleProofPath(position, beaconAux.Shards(), header.ShardMerkleProof(),
+		exclusiveHash, beaconAux.MergeMiningRoot())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "invalid shard merkle proof")
 	}
-
 	return nil
 }
 
 func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32, net types.JaxNet) error {
-	err := c.ValidateBlockHeader(block.Header)
+	err := c.ValidateMergeMiningData(block.Header)
 	if err != nil {
 		return err
 	}
@@ -146,12 +128,12 @@ func (c *ShardBlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.
 	}
 
 	coinbaseAux := wire.CoinbaseAux{
-		Tx:       *blockTemplate.Block.Transactions[0].Copy(),
-		TxMerkle: make([]chainhash.Hash, len(blockTemplate.Block.Transactions)),
+		Tx:            *blockTemplate.Block.Transactions[0].Copy(),
+		TxMerkleProof: make([]chainhash.Hash, len(blockTemplate.Block.Transactions)),
 	}
 
 	for i, tx := range blockTemplate.Block.Transactions {
-		coinbaseAux.TxMerkle[i] = tx.TxHash()
+		coinbaseAux.TxMerkleProof[i] = tx.TxHash()
 	}
 
 	beaconHeader := blockTemplate.Block.Header.BeaconHeader()

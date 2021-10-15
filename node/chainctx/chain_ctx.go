@@ -16,9 +16,9 @@ type IChainCtx interface {
 	Name() string
 	Params() *chaincfg.Params
 	GenesisBlock() *wire.MsgBlock
+	GenesisBeaconHeight() int32
 	EmptyBlock() wire.MsgBlock
 
-	// NewNode... todo: think about how to refactor this
 	NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode) blocknodes.IBlockNode
 }
 

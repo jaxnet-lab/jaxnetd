@@ -125,7 +125,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		return
 	}
 
-	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock())
+	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height())
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
@@ -159,11 +159,6 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	if autoInit {
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
-
-		if chainCtl.cfg.Node.EnableCPUMiner {
-			chainCtl.logger.Warn().Msg("CPUMiner is not available.")
-			// chainCtl.runShardMiner(shardCtl.ChainProvider())
-		}
 	}
 
 	if chainCtl.cfg.Metrics.Enable {

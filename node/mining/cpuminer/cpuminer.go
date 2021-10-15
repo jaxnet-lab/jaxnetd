@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	merged_mining_tree "gitlab.com/jaxnet/core/merged-mining-tree"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	mergedMiningTree "gitlab.com/jaxnet/jaxnetd/types/merge_mining_tree"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -261,11 +261,8 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
 
-		block, merkles, _ := updateBeaconExtraNonce(job.beacon.block, int64(job.beacon.blockHeight), extraNonce+enOffset)
-		beaconCoinbaseAux := wire.CoinbaseAux{
-			Tx:       *job.beacon.block.Transactions[0].Copy(),
-			TxMerkle: merkles,
-		}
+		block, beaconCoinbaseAux, _ := updateBeaconExtraNonce(job.beacon.block, int64(job.beacon.blockHeight), extraNonce+enOffset)
+
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
@@ -366,33 +363,28 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 	return false
 }
 
-func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce uint64) (wire.MsgBlock, []chainhash.Hash, error) {
+func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce uint64) (wire.MsgBlock, wire.CoinbaseAux, error) {
 	bh := beaconBlock.Header.BeaconHeader().BeaconExclusiveHash()
 	coinbaseScript, err := chaindata.BTCCoinbaseScript(height, packUint64LE(extraNonce), bh.CloneBytes())
 	if err != nil {
-		return wire.MsgBlock{}, nil, err
+		return wire.MsgBlock{}, wire.CoinbaseAux{}, err
 	}
 
 	beaconBlock.Header.UpdateCoinbaseScript(coinbaseScript)
-	merkles := updateMerkleRoot(&beaconBlock)
+	aux := wire.CoinbaseAux{}.FromBlock(&beaconBlock)
 
-	return beaconBlock, merkles, nil
+	// updateMerkleRoot(&beaconBlock)
+
+	return beaconBlock, aux, nil
 }
 
-func updateMerkleRoot(msgBlock *wire.MsgBlock) []chainhash.Hash {
+func updateMerkleRoot(msgBlock *wire.MsgBlock) {
 	// Recalculate the merkle root with the updated extra nonce.
 	block := jaxutil.NewBlock(msgBlock)
 
 	txs := block.Transactions()
 	merkles := chaindata.BuildMerkleTreeStore(txs, false)
-
 	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
-
-	res := make([]chainhash.Hash, len(txs))
-	for i, tx := range txs {
-		res[i] = *tx.Hash()
-	}
-	return res
 }
 
 func packUint64LE(n uint64) []byte {
@@ -535,7 +527,7 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 		return
 	}
 
-	tree := merged_mining_tree.NewSparseMerkleTree(uint32(knownShardsCount))
+	tree := mergedMiningTree.NewSparseMerkleTree(uint32(knownShardsCount))
 	for id, shard := range job.shards {
 		// Shard IDs are going to be indexed from 1,
 		// but the tree expects slots to be indexed from 0.
@@ -576,7 +568,7 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 			return err
 		}
 
-		job.shards[id].block.Header.SetMergeMiningRootPath(path)
+		job.shards[id].block.Header.SetShardMerkleProof(path)
 	}
 	return
 }

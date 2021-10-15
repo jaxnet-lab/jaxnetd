@@ -82,6 +82,89 @@ func BuildMerkleTreeStore(txHashes []Hash) []*Hash {
 	return merkles
 }
 
+func MerkleTreeRoot(txHashes []Hash) Hash {
+	tree := BuildMerkleTreeStore(txHashes)
+	return *tree[len(tree)-1]
+}
+
+func ValidateMerkleTreeRoot(txHashes []Hash, expectedRoot Hash) bool {
+	tree := BuildMerkleTreeStore(txHashes)
+	return tree[len(tree)-1].IsEqual(&expectedRoot)
+}
+
+func BuildMerkleTreeProof(txHashes []Hash) []Hash {
+	merkleHashes := txHashes
+	steps := make([]Hash, 0)
+	PreL := []Hash{{}}
+	StartL := 2
+	Ll := len(merkleHashes)
+
+	for Ll > 1 {
+		steps = append(steps, merkleHashes[1])
+
+		if Ll%2 != 0 {
+			merkleHashes = append(merkleHashes, merkleHashes[len(merkleHashes)-1])
+		}
+
+		r := rangeSteps(StartL, Ll, 2)
+		Ld := make([]Hash, len(r))
+
+		for i := 0; i < len(r); i++ {
+			Ld[i] = *HashMerkleBranches(&merkleHashes[r[i]], &merkleHashes[r[i]+1])
+		}
+		merkleHashes = append(PreL, Ld...)
+		Ll = len(merkleHashes)
+	}
+
+	return steps
+}
+
+func MerkleTreeProofRoot(txHash Hash, proof []Hash) Hash {
+	root := txHash
+	for i := range proof {
+		root = *HashMerkleBranches(&root, &proof[i])
+	}
+
+	return root
+}
+
+func ValidateMerkleTreeProof(txHash Hash, proof []Hash, expectedRoot Hash) bool {
+	root := txHash
+	for i := range proof {
+		root = *HashMerkleBranches(&root, &proof[i])
+	}
+
+	return root.IsEqual(&expectedRoot)
+}
+
+// rangeSteps steps between [start, end)
+func rangeSteps(start, stop, step int) []int {
+	if (step > 0 && start >= stop) || (step < 0 && start <= stop) {
+		return []int{}
+	}
+
+	result := make([]int, 0)
+	i := start
+	for {
+		if step > 0 {
+			if i < stop {
+				result = append(result, i)
+			} else {
+				break
+			}
+		} else {
+			if i > stop {
+				result = append(result, i)
+			} else {
+				break
+			}
+		}
+		i += step
+	}
+
+	return result
+}
+
 // HashMerkleBranches takes two hashes, treated as the left and right tree
 // nodes, and returns the Hash of their concatenation.  This is a helper
 // function used to aid in the generation of a merkle tree.

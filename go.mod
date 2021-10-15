@@ -25,7 +25,6 @@ require (
 	github.com/rs/zerolog v1.25.0
 	github.com/stretchr/testify v1.6.1
 	github.com/urfave/cli/v2 v2.2.0
-	gitlab.com/jaxnet/core/merged-mining-tree v1.0.6
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect

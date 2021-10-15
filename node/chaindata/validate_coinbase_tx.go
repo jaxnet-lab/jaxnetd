@@ -8,10 +8,10 @@ package chaindata
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -172,21 +172,16 @@ func CreateJaxCoinbaseTx(value, fee int64, height int32,
 
 func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error {
 	coinbaseHash := aux.Tx.TxHash()
-	if !aux.TxMerkle[0].IsEqual(&coinbaseHash) {
-		return errors.New("coinbase hash is not in tx_merkle tree")
+	if !chainhash.ValidateMerkleTreeProof(coinbaseHash, aux.TxMerkleProof, merkleRoot) {
+		return errors.New("tx_merkle tree root is not match with blockMerkle root")
 	}
 
-	merkleTree := chainhash.BuildMerkleTreeStore(aux.TxMerkle)
-	root := merkleTree[len(merkleTree)-1]
-	if !root.IsEqual(&merkleRoot) {
-		return errors.New("root of the tx_merkle tree root is not match with blockMerkle root ")
-	}
 	return nil
 }
 
 func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
-		return false, err
+		return false, errors.Wrap(err, "invalid btc coinbase aux")
 	}
 
 	if len(aux.Tx.TxOut) != 3 {
@@ -227,7 +222,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
 	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "invalid btc aux")
 	}
 
 	beaconExclusiveHash := aux.BeaconExclusiveHash()
@@ -315,7 +310,7 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 
 func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.MsgTx, expectedReward int64) error {
 	if err := validateCoinbaseAux(shardHeader.BeaconHeader().MerkleRoot(), shardHeader.BeaconCoinbaseAux()); err != nil {
-		return err
+		return errors.Wrap(err, "invalid beacon coinbase aux")
 	}
 
 	const errMsg = "invalid format of shard coinbase tx: "
@@ -344,7 +339,7 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 	beaconCoinbase := shardHeader.BeaconCoinbaseAux().Tx
 	beaconBurned, err := ValidateBeaconCoinbase(shardHeader.BeaconHeader(), &beaconCoinbase, -1)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "invalid beacon aux")
 	}
 
 	if !beaconBurned && !shardJaxBurnReward {

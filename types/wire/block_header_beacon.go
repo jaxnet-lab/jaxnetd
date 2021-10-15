@@ -6,7 +6,6 @@ package wire
 
 import (
 	"bytes"
-	"encoding/binary"
 	"io"
 	"time"
 
@@ -36,12 +35,6 @@ type BeaconHeader struct {
 	// Difficulty target for the block.
 	bits uint32
 
-	// Root of Merge-mining (orange) tree
-	mergeMiningRoot chainhash.Hash
-
-	// Encoding of the Merge-mining tree
-	treeEncoding []uint8
-
 	// shards uint32
 	shards uint32
 
@@ -51,13 +44,23 @@ type BeaconHeader struct {
 	// voteK is a proposed inflation-fix coefficient for next mining epoch.
 	voteK uint32
 
+	// Root of Merge-mining (orange) tree
+	mergeMiningRoot chainhash.Hash
+
 	// Merge-mining number is the miner’s claim about how
 	// many shards he was mining
 	mergeMiningNumber uint32
 
-	// btcAux is a container with the bitcoin auxiliary header, required for merge mining.
-	btcAux BTCBlockAux // todo (mike): do not store all hashes, only merkle path
+	// Encoding of the Merge-mining tree
+	treeEncoding []byte
 
+	// Merge-mining proof
+	mergeMiningProof []chainhash.Hash
+
+	treeCodingLengthBits uint32
+
+	// btcAux is a container with the bitcoin auxiliary header, required for merge mining.
+	btcAux BTCBlockAux
 }
 
 func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
@@ -127,7 +130,7 @@ func (h *BeaconHeader) SetVoteK(value uint32) { h.voteK = value }
 func (h *BeaconHeader) BTCAux() *BTCBlockAux         { return &h.btcAux }
 func (h *BeaconHeader) SetBTCAux(header BTCBlockAux) { h.btcAux = header }
 
-// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkleProof
 // and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 func (h *BeaconHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
 	h.btcAux.UpdateCoinbaseScript(coinbaseScript)
@@ -139,40 +142,17 @@ func (h *BeaconHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n 
 func (h *BeaconHeader) MergedMiningTree() []byte            { return h.treeEncoding }
 func (h *BeaconHeader) SetMergedMiningTree(treeData []byte) { h.treeEncoding = treeData }
 
-func (h *BeaconHeader) MergeMiningRootPath() []byte   { return []byte{} }
-func (h *BeaconHeader) SetMergeMiningRootPath([]byte) {}
+func (h *BeaconHeader) ShardMerkleProof() []chainhash.Hash   { return nil }
+func (h *BeaconHeader) SetShardMerkleProof([]chainhash.Hash) {}
 
-func (h *BeaconHeader) MergedMiningTreeCodingProof() (hashes, coding []byte, codingLengthBits uint32) {
-	buf := h.treeEncoding[:]
-	hashesSize, size := binary.Uvarint(buf)
-	buf = buf[size:]
-
-	hashes, buf = buf[:hashesSize], buf[hashesSize:]
-
-	codingSize, size := binary.Uvarint(buf)
-	buf = buf[size:]
-
-	coding, buf = buf[:codingSize], buf[codingSize:]
-
-	bitsSize, _ := binary.Uvarint(buf)
-	codingLengthBits = uint32(bitsSize)
-	return
+func (h *BeaconHeader) MergedMiningTreeCodingProof() ([]chainhash.Hash, []byte, uint32) {
+	return h.mergeMiningProof, h.treeEncoding, h.treeCodingLengthBits
 }
 
-func (h *BeaconHeader) SetMergedMiningTreeCodingProof(hashes, coding []byte, codingLengthBits uint32) {
-	buf := make([]byte, 12+len(hashes)+len(coding))
-
-	shift := binary.PutUvarint(buf, uint64(len(hashes)))
-	copy(buf[shift:], hashes)
-	shift += len(hashes)
-
-	shift += binary.PutUvarint(buf[shift:], uint64(len(coding)))
-
-	copy(buf[shift:], coding)
-	shift += len(coding)
-
-	shift += binary.PutUvarint(buf[shift:], uint64(codingLengthBits))
-	h.treeEncoding = buf[:shift]
+func (h *BeaconHeader) SetMergedMiningTreeCodingProof(hashes []chainhash.Hash, coding []byte, codingLengthBits uint32) {
+	h.treeEncoding = coding
+	h.treeCodingLengthBits = codingLengthBits
+	h.mergeMiningProof = hashes
 }
 
 func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
@@ -180,7 +160,7 @@ func (h *BeaconHeader) MaxLength() int { return MaxBeaconBlockHeaderPayload }
 // BlockHash computes the block identifier hash for the given block BeaconHeader.
 func (h *BeaconHeader) BlockHash() chainhash.Hash {
 	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	btcHash := h.btcAux.BlockHash()
+
 	_ = encoder.WriteElements(w,
 		h.version,
 		&h.blocksMMRRoot,
@@ -192,8 +172,12 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 		&h.voteK,
 		&h.mergeMiningNumber,
 		&h.treeEncoding,
-		&btcHash,
+		&h.treeCodingLengthBits,
 	)
+	_ = WriteHashArray(w, h.mergeMiningProof)
+	btcHash := h.btcAux.BlockHash()
+	_ = encoder.WriteElements(w, &btcHash)
+
 	return chainhash.DoubleHashH(w.Bytes())
 }
 
@@ -218,7 +202,9 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 		&h.voteK,
 		&h.mergeMiningNumber,
 		&h.treeEncoding,
+		&h.treeCodingLengthBits,
 	)
+	_ = WriteHashArray(buf, h.mergeMiningProof)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -301,7 +287,12 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 		&bh.k,
 		&bh.voteK,
 		&bh.mergeMiningNumber,
-		&bh.treeEncoding)
+		&bh.treeEncoding,
+		&bh.treeCodingLengthBits)
+	if err != nil {
+		return err
+	}
+	bh.mergeMiningProof, err = ReadHashArray(r)
 	if err != nil {
 		return err
 	}
@@ -323,10 +314,45 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 		&bh.k,
 		&bh.voteK,
 		&bh.mergeMiningNumber,
-		&bh.treeEncoding)
+		&bh.treeEncoding,
+		&bh.treeCodingLengthBits)
 	if err != nil {
 		return err
 	}
 
+	if err := WriteHashArray(w, bh.mergeMiningProof); err != nil {
+		return err
+	}
+
 	return writeBTCBlockHeader(w, &bh.btcAux)
+}
+
+func ReadHashArray(r io.Reader) ([]chainhash.Hash, error) {
+	count, err := encoder.ReadVarInt(r, ProtocolVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]chainhash.Hash, count)
+	for i := range data {
+		err = encoder.ReadElement(r, &data[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return data, nil
+}
+
+func WriteHashArray(w io.Writer, data []chainhash.Hash) error {
+	count := uint64(len(data))
+	if err := encoder.WriteVarInt(w, count); err != nil {
+		return err
+	}
+
+	for i := range data {
+		if err := encoder.WriteElement(w, &data[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }

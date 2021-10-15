@@ -32,10 +32,11 @@ type ShardHeader struct {
 	// Difficulty target for the block.
 	bits uint32
 
-	beaconHeader BeaconHeader
+	// Merkle Proof of the shard header block
+	shardMerkleProof []chainhash.Hash
 
-	beaconCoinbase      CoinbaseAux
-	mergeMiningRootPath []byte
+	beaconHeader   BeaconHeader
+	beaconCoinbase CoinbaseAux
 }
 
 func EmptyShardHeader() *ShardHeader { return &ShardHeader{beaconHeader: *EmptyBeaconHeader()} }
@@ -107,8 +108,8 @@ func (h *ShardHeader) MaxLength() int { return MaxShardBlockHeaderPayload }
 func (h *ShardHeader) MergeMiningNumber() uint32     { return h.beaconHeader.mergeMiningNumber }
 func (h *ShardHeader) SetMergeMiningNumber(n uint32) { h.beaconHeader.mergeMiningNumber = n }
 
-func (h *ShardHeader) MergeMiningRootPath() []byte         { return h.mergeMiningRootPath }
-func (h *ShardHeader) SetMergeMiningRootPath(value []byte) { h.mergeMiningRootPath = value }
+func (h *ShardHeader) ShardMerkleProof() []chainhash.Hash         { return h.shardMerkleProof }
+func (h *ShardHeader) SetShardMerkleProof(value []chainhash.Hash) { h.shardMerkleProof = value }
 
 func (h *ShardHeader) MergeMiningRoot() chainhash.Hash { return h.beaconHeader.MergeMiningRoot() }
 func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) {
@@ -118,7 +119,11 @@ func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) {
 // ExclusiveHash computes hash of header data without any extra aux (beacon & btc).
 func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = writeShardBlockHeaderNoBC(buf, h)
+	_ = encoder.WriteElements(buf,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.bits,
+	)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -127,7 +132,11 @@ func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 // ShardExclusiveBlockHash computes the block identifier hash for the given ShardHeader.
 func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = writeShardBlockHeaderNoBC(buf, h)
+	_ = encoder.WriteElements(buf,
+		&h.blocksMMRRoot,
+		&h.merkleRoot,
+		&h.bits,
+	)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -150,7 +159,7 @@ func (h *ShardHeader) PoWHash() chainhash.Hash {
 	return h.beaconHeader.btcAux.BlockHash()
 }
 
-// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkleProof
 // and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 func (h *ShardHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
 	h.beaconHeader.UpdateCoinbaseScript(coinbaseScript)
@@ -214,11 +223,15 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
-		&bh.mergeMiningRootPath,
 	)
 	if err != nil {
 		return err
 	}
+	bh.shardMerkleProof, err = ReadHashArray(r)
+	if err != nil {
+		return err
+	}
+
 	if err = bh.beaconHeader.Read(r); err != nil {
 		return err
 	}
@@ -234,27 +247,18 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
-		&bh.mergeMiningRootPath,
 	)
 	if err != nil {
 		return err
 	}
 
-	err = bh.beaconHeader.Write(w)
-	if err != nil {
+	if err = WriteHashArray(w, bh.shardMerkleProof); err != nil {
+		return err
+	}
+
+	if err = bh.beaconHeader.Write(w); err != nil {
 		return err
 	}
 
 	return bh.beaconCoinbase.Serialize(w)
-}
-
-// WriteShardBlockHeader writes a bitcoin block ShardHeader to w.  See Serialize for
-// encoding block headers to be stored to disk, such as in a database, as
-// opposed to encoding for the wire.
-func writeShardBlockHeaderNoBC(w io.Writer, bh *ShardHeader) error {
-	return encoder.WriteElements(w,
-		&bh.blocksMMRRoot,
-		&bh.merkleRoot,
-		&bh.bits,
-	)
 }

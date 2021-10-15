@@ -73,8 +73,8 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 
 		return wire.BTCBlockAux{
 			CoinbaseAux: wire.CoinbaseAux{
-				Tx:       *tx.MsgTx(),
-				TxMerkle: []chainhash.Hash{*tx.Hash()},
+				Tx:            *tx.MsgTx(),
+				TxMerkleProof: []chainhash.Hash{},
 			},
 			MerkleRoot: *tx.Hash(),
 			Timestamp:  time.Unix(time.Now().Unix(), 0),
@@ -103,8 +103,8 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 		Bits:       block.Header.Bits,
 		Nonce:      block.Header.Nonce,
 		CoinbaseAux: wire.CoinbaseAux{
-			Tx:       wire.MsgTx{},
-			TxMerkle: make([]chainhash.Hash, 0, len(template.Transactions)),
+			Tx:            wire.MsgTx{},
+			TxMerkleProof: make([]chainhash.Hash, 0, len(template.Transactions)),
 		},
 	}
 
@@ -114,11 +114,14 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 		reward = *template.CoinbaseValue
 	}
 
-	for _, tx := range template.Transactions {
+	txHashes := make([]chainhash.Hash, len(template.Transactions))
+	for i, tx := range template.Transactions {
 		totalFee += tx.Fee
 		txHash, _ := chainhash.NewHashFromStr(tx.Hash)
-		aux.TxMerkle = append(aux.TxMerkle, *txHash)
+		txHashes[i] = *txHash
 	}
+
+	aux.TxMerkleProof = chainhash.BuildMerkleTreeProof(txHashes)
 
 	burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 	tx, err := chaindata.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,

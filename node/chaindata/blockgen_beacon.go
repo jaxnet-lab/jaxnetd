@@ -160,8 +160,8 @@ func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash
 
 	return wire.BTCBlockAux{
 		CoinbaseAux: wire.CoinbaseAux{
-			Tx:       *tx.MsgTx(),
-			TxMerkle: []chainhash.Hash{*tx.Hash()},
+			Tx:            *tx.MsgTx(),
+			TxMerkleProof: []chainhash.Hash{*tx.Hash()},
 		},
 		MerkleRoot: *tx.Hash(),
 		Timestamp:  time.Unix(time.Now().Unix(), 0),

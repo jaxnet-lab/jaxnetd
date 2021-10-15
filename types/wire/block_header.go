@@ -55,15 +55,15 @@ type BlockHeader interface {
 	// PoWHash computes the hash for block that will be used to check ProofOfWork.
 	PoWHash() chainhash.Hash
 
-	// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkle
+	// UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkleProof
 	// and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 	UpdateCoinbaseScript(coinbaseScript []byte)
 
 	MergeMiningNumber() uint32
 	SetMergeMiningNumber(n uint32)
 
-	SetMergeMiningRootPath(path []byte)
-	MergeMiningRootPath() []byte
+	SetShardMerkleProof(path []chainhash.Hash)
+	ShardMerkleProof() []chainhash.Hash
 
 	MergeMiningRoot() chainhash.Hash
 	SetMergeMiningRoot(value chainhash.Hash)
