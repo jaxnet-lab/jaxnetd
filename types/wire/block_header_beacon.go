@@ -174,7 +174,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 		&h.treeEncoding,
 		&h.treeCodingLengthBits,
 	)
-	_ = WriteHashArray(w, h.mergeMiningProof)
+
 	btcHash := h.btcAux.BlockHash()
 	_ = encoder.WriteElements(w, &btcHash)
 
@@ -204,7 +204,6 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 		&h.treeEncoding,
 		&h.treeCodingLengthBits,
 	)
-	_ = WriteHashArray(buf, h.mergeMiningProof)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }

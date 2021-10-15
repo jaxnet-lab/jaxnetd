@@ -56,15 +56,15 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
 		}
 
-		expectedK := b.calcNextK(prevNode, b.chain.IsBeacon())
-
-		if expectedK != header.K() {
-			str := fmt.Sprintf("block K value of %0x is not the expected value of %0x, with time(%s) at height(%v)",
-				header.K(), expectedK, header.Timestamp(), prevNode.Height()+1)
-			return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, str)
-		}
-
 		if b.chain.IsBeacon() {
+			expectedK := b.calcNextK(prevNode)
+
+			if expectedK != header.K() {
+				str := fmt.Sprintf("block K value of %0x is not the expected value of %0x, with time(%s) at height(%v)",
+					header.K(), expectedK, header.Timestamp(), prevNode.Height()+1)
+				return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, str)
+			}
+
 			if prevNode != nil && prevNode.Height() > 3 {
 				if err := chaindata.ValidateVoteK(header); err != nil {
 					return chaindata.NewRuleError(chaindata.ErrUnexpectedKValue, err.Error())
@@ -355,7 +355,7 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 		totalSatoshiOut += txOut.Value
 	}
 
-	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header(), b.chain.Params().Net)
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header())
 
 	expectedSatoshiOut := reward + totalFees
 	if totalSatoshiOut > expectedSatoshiOut {

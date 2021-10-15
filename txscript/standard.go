@@ -186,7 +186,7 @@ func typeOfScript(pops []parsedOpcode) ScriptClass {
 		return MultiSigLockTy
 	} else if isEADRegistration(pops) {
 		return EADAddressTy
-	} else if isHTLC(pops) {
+	} else if ok, _ := isHTLC(pops); ok {
 		return HTLCScriptTy
 	} else if isNullData(pops) {
 		return NullDataTy

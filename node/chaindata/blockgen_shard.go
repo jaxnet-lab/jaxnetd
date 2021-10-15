@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -25,23 +26,25 @@ type ChainBlockGenerator interface {
 	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
 		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
-	ValidateJaxAuxRules(block *wire.MsgBlock, height int32, net types.JaxNet) error
+	ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error
 
-	CalcBlockSubsidy(height int32, header wire.BlockHeader, net types.JaxNet) int64
+	CalcBlockSubsidy(height int32, header wire.BlockHeader) int64
 }
 
 type BeaconBlockProvider interface {
 	BlockTemplate(useCoinbaseValue bool, burnReward int) (BlockTemplate, error)
 	ShardCount() (uint32, error)
+	BestSnapshot() *BestState
+	CalcKForHeight(height int32) uint32
 }
 
 type ShardBlockGenerator struct {
-	beacon  BeaconBlockProvider
-	shardID uint32
+	beacon BeaconBlockProvider
+	ctx    chainctx.IChainCtx
 }
 
-func NewShardBlockGen(id uint32, beacon BeaconBlockProvider) *ShardBlockGenerator {
-	return &ShardBlockGenerator{beacon: beacon, shardID: id}
+func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *ShardBlockGenerator {
+	return &ShardBlockGenerator{beacon: beacon, ctx: ctx}
 }
 
 func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
@@ -55,17 +58,12 @@ func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, mer
 }
 
 func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) error {
-	lastKnownShardsAmount, err := c.beacon.ShardCount()
-	if err != nil {
-		// An error will occur if it is impossible
-		// to get the last block from the chain state.
-		return fmt.Errorf("can't fetch last beacon block: %w", err)
-	}
+	actualShardsCount := c.beacon.BestSnapshot().Shards
 
 	beaconAux := header.BeaconHeader()
-	if math.Abs(float64(lastKnownShardsAmount-beaconAux.Shards())) > 1 {
-		return fmt.Errorf("delta between lastKnownShardsAmount(%v) and beaconAux.Shards(%v) more than 1",
-			lastKnownShardsAmount, beaconAux.Shards())
+	if math.Abs(float64(actualShardsCount-beaconAux.Shards())) > 1 {
+		return fmt.Errorf("delta between actualShardsCount(%v) and beaconAux.Shards(%v) more than 1",
+			actualShardsCount, beaconAux.Shards())
 	}
 
 	mmNumber := header.MergeMiningNumber()
@@ -76,20 +74,18 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 
 	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
 
-	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) &&
-		mmNumber == lastKnownShardsAmount && mmNumber == beaconAux.Shards()
-
+	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) && mmNumber == beaconAux.Shards()
 	if !orangeTreeEmpty {
 		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
-		err = tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
+		err := tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
 		if err != nil {
 			return errors.Wrap(err, "invalid orange tree")
 		}
 	}
 
-	position := c.shardID - 1
+	position := c.ctx.ShardID() - 1
 	exclusiveHash := header.ExclusiveHash()
-	err = tree.ValidateShardMerkleProofPath(position, beaconAux.Shards(), header.ShardMerkleProof(),
+	err := tree.ValidateShardMerkleProofPath(position, beaconAux.Shards(), header.ShardMerkleProof(),
 		exclusiveHash, beaconAux.MergeMiningRoot())
 	if err != nil {
 		return errors.Wrap(err, "invalid shard merkle proof")
@@ -97,13 +93,13 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 	return nil
 }
 
-func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32, net types.JaxNet) error {
+func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error {
 	err := c.ValidateMergeMiningData(block.Header)
 	if err != nil {
 		return err
 	}
 
-	expectedReward := c.CalcBlockSubsidy(height, block.Header, net)
+	expectedReward := c.CalcBlockSubsidy(height, block.Header)
 
 	shardHeader := block.Header.(*wire.ShardHeader)
 	shardCoinbaseTx := block.Transactions[0]
@@ -111,10 +107,13 @@ func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height i
 	return ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
 }
 
-func (c *ShardBlockGenerator) CalcBlockSubsidy(_ int32, header wire.BlockHeader, net types.JaxNet) int64 {
-	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), header.K())
+func (c *ShardBlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
+	relativeBeaconHeight := c.ctx.GenesisBeaconHeight() + (height / 16)
+	kVal := c.beacon.CalcKForHeight(relativeBeaconHeight)
 
-	if net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
+	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), kVal)
+
+	if c.ctx.Params().Net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
 		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
 	}
 

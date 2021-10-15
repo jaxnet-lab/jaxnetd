@@ -42,7 +42,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 	block.SetHeight(blockHeight)
 
 	// Perform checks of the coinbase tx structure according to merge mining spec.
-	err := b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height(), b.chain.Params().Net)
+	err := b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height())
 	if err != nil {
 		return false, chaindata.NewRuleError(chaindata.ErrInvalidJaxHeaderAux, err.Error())
 	}

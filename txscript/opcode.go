@@ -218,6 +218,7 @@ const (
 	OP_NOP3                = 0xb2 // 178
 	OP_CHECKSEQUENCEVERIFY = 0xb2 // 178 - AKA OP_NOP3
 	OP_NOP4                = 0xb3 // 179
+	OP_INPUTAGE            = 0xb3 // 179 - AKA OP_NOP4
 	OP_NOP5                = 0xb4 // 180
 	OP_NOP6                = 0xb5 // 181
 	OP_NOP7                = 0xb6 // 182
@@ -226,7 +227,7 @@ const (
 	OP_NOP10               = 0xb9 // 185
 	OP_UNKNOWN186          = 0xba // 186
 	OP_UNKNOWN187          = 0xbb // 187
-	OP_INPUTAGE            = 0xbc // 188
+	OP_UNKNOWN188          = 0xbc // 188
 	OP_UNKNOWN189          = 0xbd // 189
 	OP_UNKNOWN190          = 0xbe // 190
 	OP_UNKNOWN191          = 0xbf // 191
@@ -405,7 +406,6 @@ var opcodeArray = [256]opcode{
 	OP_14:        {OP_14, "OP_14", 1, opcodeN},
 	OP_15:        {OP_15, "OP_15", 1, opcodeN},
 	OP_16:        {OP_16, "OP_16", 1, opcodeN},
-	OP_INPUTAGE:  {OP_INPUTAGE, "OP_INPUTAGE", 1, opcodeInputAge},
 
 	// Control opcodes.
 	OP_NOP:                 {OP_NOP, "OP_NOP", 1, opcodeNop},
@@ -499,10 +499,10 @@ var opcodeArray = [256]opcode{
 	OP_CHECKSIGVERIFY:      {OP_CHECKSIGVERIFY, "OP_CHECKSIGVERIFY", 1, opcodeCheckSigVerify},
 	OP_CHECKMULTISIG:       {OP_CHECKMULTISIG, "OP_CHECKMULTISIG", 1, opcodeCheckMultiSig},
 	OP_CHECKMULTISIGVERIFY: {OP_CHECKMULTISIGVERIFY, "OP_CHECKMULTISIGVERIFY", 1, opcodeCheckMultiSigVerify},
+	OP_INPUTAGE:            {OP_INPUTAGE, "OP_INPUTAGE", 1, opcodeInputAge},
 
 	// Reserved opcodes.
 	OP_NOP1:  {OP_NOP1, "OP_NOP1", 1, opcodeNop},
-	OP_NOP4:  {OP_NOP4, "OP_NOP4", 1, opcodeNop},
 	OP_NOP5:  {OP_NOP5, "OP_NOP5", 1, opcodeNop},
 	OP_NOP6:  {OP_NOP6, "OP_NOP6", 1, opcodeNop},
 	OP_NOP7:  {OP_NOP7, "OP_NOP7", 1, opcodeNop},
@@ -514,6 +514,7 @@ var opcodeArray = [256]opcode{
 
 	OP_UNKNOWN186: {OP_UNKNOWN186, "OP_UNKNOWN186", 1, opcodeInvalid},
 	OP_UNKNOWN187: {OP_UNKNOWN187, "OP_UNKNOWN187", 1, opcodeInvalid},
+	OP_UNKNOWN188: {OP_UNKNOWN188, "OP_UNKNOWN188", 1, opcodeInvalid},
 	OP_UNKNOWN189: {OP_UNKNOWN189, "OP_UNKNOWN189", 1, opcodeInvalid},
 	OP_UNKNOWN190: {OP_UNKNOWN190, "OP_UNKNOWN190", 1, opcodeInvalid},
 	OP_UNKNOWN191: {OP_UNKNOWN191, "OP_UNKNOWN191", 1, opcodeInvalid},
@@ -915,7 +916,7 @@ func opcodeInputAge(op *parsedOpcode, vm *Engine) error {
 // the flag to discourage use of NOPs is set for select opcodes.
 func opcodeNop(op *parsedOpcode, vm *Engine) error {
 	switch op.opcode.value {
-	case OP_NOP1, OP_NOP4, OP_NOP5,
+	case OP_NOP1, OP_NOP5,
 		OP_NOP6, OP_NOP7, OP_NOP8, OP_NOP9, OP_NOP10:
 		if vm.hasFlag(ScriptDiscourageUpgradableNops) {
 			str := fmt.Sprintf("OP_NOP%d reserved for soft-fork "+

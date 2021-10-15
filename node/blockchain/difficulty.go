@@ -79,15 +79,9 @@ func findPrevTestNetDifficulty(startNode blocknodes.IBlockNode, blocksPerRetarge
 	return lastBits
 }
 
-func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode, beacon bool) uint32 {
+func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode) uint32 {
 	if lastNode == nil {
 		return pow.PackK(pow.K1)
-	}
-
-	if !beacon {
-		// todo: we need to pass shard-genesis-height
-		// b.chain.GenesisBeaconHeight()
-		return lastNode.K()
 	}
 
 	// Return the previous block's difficulty requirements if this block
@@ -109,9 +103,24 @@ func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode, beacon bool) uint
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextK() uint32 {
 	b.chainLock.Lock()
-	difficulty := b.calcNextK(b.bestChain.Tip(), b.chain.IsBeacon())
+	kVal := b.calcNextK(b.bestChain.Tip())
 	b.chainLock.Unlock()
-	return difficulty
+	return kVal
+}
+
+// CalcKForHeight calculates the required k coefficient
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) CalcKForHeight(height int32) uint32 {
+	b.chainLock.Lock()
+	var kVal uint32
+	if height == b.stateSnapshot.Height {
+		kVal = b.stateSnapshot.K
+	} else {
+		kVal = b.calcNextK(b.bestChain.NodeByHeight(height))
+	}
+	b.chainLock.Unlock()
+	return kVal
 }
 
 // calcNextRequiredDifficulty calculates the required difficulty for the block

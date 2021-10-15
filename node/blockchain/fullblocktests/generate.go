@@ -300,7 +300,7 @@ func uniqueOpReturnScript() []byte {
 // subsidy based on the passed block height.  The coinbase signature script
 // conforms to the requirements of version 2 blocks.
 func (g *testGenerator) createCoinbaseTx(blockHeight int32) *wire.MsgTx {
-	reward := g.blockGen.CalcBlockSubsidy(blockHeight, g.tip.Header, g.chainCtx.Params().Net)
+	reward := g.blockGen.CalcBlockSubsidy(blockHeight, g.tip.Header)
 
 	tx, _ := chaindata.CreateJaxCoinbaseTx(reward, 0, blockHeight,
 		g.chainCtx.ShardID(), g.miner, false, g.chainCtx.IsBeacon())

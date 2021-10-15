@@ -76,10 +76,10 @@ func HTLCScriptAddress(address jaxutil.Address, lockPeriod int32, params *chainc
 // [ 9] OP_ELSE
 // [10]     OR_RETURN
 // [11] OP_ENDIF
-func isHTLC(pops []parsedOpcode) bool {
+func isHTLC(pops []parsedOpcode) (bool, ScriptClass) {
 	l := len(pops)
 	if l != 9 && l != 10 && l != 12 {
-		return false
+		return false, NonStandardTy
 	}
 
 	templateMatch := isOpCode(pops[0], OP_INPUTAGE) &&
@@ -90,26 +90,39 @@ func isHTLC(pops []parsedOpcode) bool {
 		isOpCode(pops[l-2], OP_RETURN) &&
 		isOpCode(pops[l-1], OP_ENDIF)
 	if !templateMatch {
-		return false
+		return false, NonStandardTy
 	}
 
 	switch len(pops) {
 	case 9: // isPubkey
-		return (len(pops[4].data) == 33 || len(pops[4].data) == 65) &&
-			pops[5].opcode.value == OP_CHECKSIG
+		templateMatch = (len(pops[4].data) == 33 || len(pops[4].data) == 65) && pops[5].opcode.value == OP_CHECKSIG
+		if templateMatch {
+			return true, PubKeyTy
+		}
 	case 10: // isScriptHash
-		return pops[4].opcode.value == OP_HASH160 &&
+		templateMatch = pops[4].opcode.value == OP_HASH160 &&
 			pops[5].opcode.value == OP_DATA_20 &&
 			pops[6].opcode.value == OP_EQUAL
+		if templateMatch {
+			return true, ScriptHashTy
+		}
 	case 12: // isPubkeyHash
-		return pops[4].opcode.value == OP_DUP &&
+		templateMatch = pops[4].opcode.value == OP_DUP &&
 			pops[5].opcode.value == OP_HASH160 &&
 			pops[6].opcode.value == OP_DATA_20 &&
 			pops[7].opcode.value == OP_EQUALVERIFY &&
 			pops[8].opcode.value == OP_CHECKSIG
+		if templateMatch {
+			return true, PubKeyHashTy
+		}
 	}
 
-	return false
+	return false, NonStandardTy
+}
+
+func isHTLCWithScriptHash(pops []parsedOpcode) bool {
+	_, innerType := isHTLC(pops)
+	return innerType == ScriptHashTy
 }
 
 // extractHTLCAddrs ...
@@ -154,7 +167,7 @@ func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 		return sig, HTLCScriptTy, err
 	case 10:
 		sig, err := sdb.GetScript(address[0])
-		return sig, HTLCScriptTy, err
+		return sig, ScriptHashTy, err
 	case 12:
 		key, compressed, err := kdb.GetKey(address[0])
 		if err != nil {
@@ -165,6 +178,49 @@ func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 	}
 
 	return nil, NonStandardTy, errors.New("invalid htlc script")
+}
+
+// ExtractHTLCData extract full info from HTLC pkScript:
+// 1) subScript - the original Address,
+// 2) subScriptClass -  class of th inner pkScript,
+// 3) lockTime
+func ExtractHTLCData(pkScript []byte, params *chaincfg.Params) (jaxutil.Address, ScriptClass, int32, error) {
+	pops, err := parseScript(pkScript)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	var (
+		addr        jaxutil.Address
+		scriptClass ScriptClass
+		lockTime    int32
+	)
+
+	if isSmallInt(pops[1].opcode) {
+		rawShardID := asSmallInt(pops[1].opcode)
+		lockTime = int32(rawShardID)
+	} else {
+		var rawShardID scriptNum
+		rawShardID, err = makeScriptNum(pops[1].data, true, 5)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		lockTime = int32(rawShardID)
+	}
+
+	switch len(pops) {
+	case 9:
+		addr, err = jaxutil.NewAddressPubKey(pops[4].data, params)
+		scriptClass = PubKeyTy
+	case 10:
+		addr, err = jaxutil.NewAddressScriptHashFromHash(pops[5].data, params)
+		scriptClass = ScriptHashTy
+	case 12:
+		addr, err = jaxutil.NewAddressPubKeyHash(pops[6].data, params)
+		scriptClass = PubKeyHashTy
+	}
+
+	return addr, scriptClass, lockTime, err
 }
 
 func ExtractHTLCLockTime(pkScript []byte) (int32, error) {

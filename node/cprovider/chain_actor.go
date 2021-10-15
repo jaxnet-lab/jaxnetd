@@ -246,6 +246,13 @@ func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
 	return chainProvider.BlockChain().ShardCount()
 }
 
+func (chainProvider *ChainProvider) BestSnapshot() *chaindata.BestState {
+	return chainProvider.BlockChain().BestSnapshot()
+}
+func (chainProvider *ChainProvider) CalcKForHeight(height int32) uint32 {
+	return chainProvider.BlockChain().CalcKForHeight(height)
+}
+
 func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
 	// todo
 	return nil

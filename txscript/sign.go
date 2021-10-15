@@ -450,7 +450,6 @@ func (sc ScriptClosure) GetScript(address jaxutil.Address) ([]byte, error) {
 func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB,
 	previousScript []byte) ([]byte, error) {
-
 	sigScript, class, addresses, nrequired, err := sign(chainParams, tx,
 		idx, pkScript, hashType, kdb, sdb)
 	if err != nil {
@@ -458,9 +457,7 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	}
 
 	if class == ScriptHashTy {
-		// TODO keep the sub addressed and pass down to merge.
-		realSigScript, _, _, _, err := sign(chainParams, tx, idx,
-			sigScript, hashType, kdb, sdb)
+		realSigScript, _, _, _, err := sign(chainParams, tx, idx, sigScript, hashType, kdb, sdb)
 		if err != nil {
 			return nil, err
 		}
@@ -469,9 +466,7 @@ func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		builder := NewScriptBuilder()
 		builder.AddOps(realSigScript)
 		builder.AddData(sigScript)
-
 		sigScript, _ = builder.Script()
-		// TODO keep a copy of the script for merging.
 	}
 
 	// Merge scripts. with any previous data, if any.

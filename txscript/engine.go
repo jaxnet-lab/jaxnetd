@@ -925,7 +925,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 		vm.scriptIdx++
 	}
 
-	if vm.hasFlag(ScriptBip16) && isScriptHash(vm.scripts[1]) {
+	if vm.hasFlag(ScriptBip16) && (isScriptHash(vm.scripts[1]) || isHTLCWithScriptHash(vm.scripts[1])) {
 		// Only accept input scripts that push data for P2SH.
 		if !isPushOnly(vm.scripts[0]) {
 			return nil, scriptError(ErrNotPushOnly,

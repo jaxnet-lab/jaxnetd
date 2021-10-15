@@ -25,6 +25,7 @@ type BestState struct {
 	Height        int32          // The height of the block.
 	Bits          uint32         // The difficulty bits of the block.
 	K             uint32         // The K coefficient.
+	Shards        uint32         // The last known number of Shards.
 	BlockSize     uint64         // The size of the block.
 	BlockWeight   uint64         // The weight of the block.
 	NumTxns       uint64         // The number of txns in the block.
@@ -42,7 +43,8 @@ func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash, bloc
 		BlocksMMRRoot: actualMMRRoot,
 		Height:        node.Height(),
 		Bits:          node.Bits(),
-		K:             node.K(),
+		K:             node.Header().BeaconHeader().K(),
+		Shards:        node.Header().BeaconHeader().Shards(),
 		BlockSize:     blockSize,
 		BlockWeight:   blockWeight,
 		NumTxns:       numTxns,

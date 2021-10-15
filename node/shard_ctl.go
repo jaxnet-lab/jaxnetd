@@ -96,7 +96,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen chaindata.BeaconBlockProvider) err
 		return err
 	}
 
-	blockGen := chaindata.NewShardBlockGen(shardCtl.chain.ShardID(), beaconBlockGen)
+	blockGen := chaindata.NewShardBlockGen(shardCtl.chain, beaconBlockGen)
 
 	shardCtl.chainProvider, err = cprovider.NewChainProvider(shardCtl.ctx,
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)

@@ -86,7 +86,7 @@ func (c *BeaconBlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
 	return nil
 }
 
-func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32, _ types.JaxNet) error {
+func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error {
 	_, err := ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
 	return err
 }
@@ -104,7 +104,7 @@ func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height 
 // | 4    | 147457      | 196608     | `100-5*([(x-147157+3*2^10)/(3*2^11])` | 100                | 60                |
 // | 5    | 196609      | 245760     | `60-5*([(x-196609+3*2^10)/(3*2^11])`  | 60                 | 20                |
 // | 6+   | 245761      |            | 20                                    | 20                 |                   |
-func (c *BeaconBlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader, _ types.JaxNet) int64 {
+func (c *BeaconBlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader) int64 {
 	return calcBlockSubsidy(height)
 }
 

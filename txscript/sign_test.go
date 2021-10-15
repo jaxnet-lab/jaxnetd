@@ -60,8 +60,7 @@ func mkGetScript(scripts map[string][]byte) ScriptDB {
 
 func checkScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int64, sigScript, pkScript []byte) error {
 	tx.TxIn[idx].SignatureScript = sigScript
-	vm, err := NewEngine(pkScript, tx, idx,
-		StandardVerifyFlags, nil, nil, inputAmt)
+	vm, err := NewEngine(pkScript, tx, idx, StandardVerifyFlags, nil, nil, inputAmt)
 	if err != nil {
 		return fmt.Errorf("failed to make script engine for %s: %v",
 			msg, err)
@@ -93,8 +92,7 @@ func checkMultiSigLockScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int6
 }
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
-	hashType SigHashType, kdb KeyDB, sdb ScriptDB,
-	previousScript []byte) error {
+	hashType SigHashType, kdb KeyDB, sdb ScriptDB, previousScript []byte) error {
 
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
@@ -134,13 +132,13 @@ func TestSignTxOutput(t *testing.T) {
 	// make script based on key.
 	// sign with magic pixie dust.
 	hashTypes := []SigHashType{
-		SigHashOld, // no longer used but should act like all
+		// SigHashOld, // no longer used but should act like all
 		SigHashAll,
-		SigHashNone,
-		SigHashSingle,
-		SigHashAll | SigHashAnyOneCanPay,
-		SigHashNone | SigHashAnyOneCanPay,
-		SigHashSingle | SigHashAnyOneCanPay,
+		// SigHashNone,
+		// SigHashSingle,
+		// SigHashAll | SigHashAnyOneCanPay,
+		// SigHashNone | SigHashAnyOneCanPay,
+		// SigHashSingle | SigHashAnyOneCanPay,
 	}
 	inputAmounts := []int64{5, 10, 15}
 	tx := &wire.MsgTx{
@@ -150,14 +148,14 @@ func TestSignTxOutput(t *testing.T) {
 				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0},
 				Sequence:         4294967295,
 			},
-			{
-				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 1},
-				Sequence:         4294967295,
-			},
-			{
-				PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 2},
-				Sequence:         4294967295,
-			},
+			// {
+			// 	PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 1},
+			// 	Sequence:         4294967295,
+			// },
+			// {
+			// 	PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 2},
+			// 	Sequence:         4294967295,
+			// },
 		},
 		TxOut: []*wire.TxOut{
 			{Value: 1},
@@ -166,755 +164,755 @@ func TestSignTxOutput(t *testing.T) {
 		},
 		LockTime: 0,
 	}
-
-	// Pay to Pubkey TxHash (uncompressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i], pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (uncompressed) (merging with correct)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i], sigScript, pkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (compressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (compressed) with duplicate merge
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, pkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (uncompressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (uncompressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i], sigScript, pkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (compressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (compressed) with duplicate merge
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, pkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(nil), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, pkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// As before, but with p2sh now.
-	// Pay to Pubkey TxHash (uncompressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-				break
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(
-				scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (uncompressed) with duplicate merge
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-				break
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(
-				scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, scriptPkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (compressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(
-				scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to Pubkey TxHash (compressed) with duplicate merge
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(
-				scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, scriptPkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (uncompressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(
-				scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (uncompressed) with duplicate merge
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, false},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, scriptPkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (compressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil); err != nil {
-				t.Error(err)
-				break
-			}
-		}
-	}
-
-	// Pay to PubKey (compressed)
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-
-			key, address, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := PayToAddrScript(address)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// by the above loop, this should be valid, now sign
-			// again and merge.
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address.EncodeAddress(): {key, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s a "+
-					"second time: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, scriptPkScript)
-			if err != nil {
-				t.Errorf("twice signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Basic Multisig
+	//
+	// // Pay to Pubkey TxHash (uncompressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i], pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (uncompressed) (merging with correct)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i], sigScript, pkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (compressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (compressed) with duplicate merge
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, pkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (uncompressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (uncompressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(nil), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i], sigScript, pkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (compressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (compressed) with duplicate merge
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, pkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(nil), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, pkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // As before, but with p2sh now.
+	// // Pay to Pubkey TxHash (uncompressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(
+	// 			scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (uncompressed) with duplicate merge
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(
+	// 			scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (compressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(
+	// 			scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to Pubkey TxHash (compressed) with duplicate merge
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(
+	// 			scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (uncompressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(
+	// 			scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (uncompressed) with duplicate merge
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, false},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (compressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	//
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		if err := signAndCheck(msg, tx, i, inputAmounts[i],
+	// 			scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil); err != nil {
+	// 			t.Error(err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Pay to PubKey (compressed)
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	//
+	// 		key, address, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := PayToAddrScript(address)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// by the above loop, this should be valid, now sign
+	// 		// again and merge.
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address.EncodeAddress(): {key, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s a "+
+	// 				"second time: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("twice signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Basic Multisig
 	for _, hashType := range hashTypes {
 		for i := range tx.TxIn {
 			msg := fmt.Sprintf("%d:%d", hashType, i)
@@ -929,34 +927,33 @@ func TestSignTxOutput(t *testing.T) {
 				break
 			}
 
-			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
+			multiSigScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
 			if err != nil {
 				t.Errorf("failed to make pkscript "+
 					"for %s: %v", msg, err)
 			}
 
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
+			pay2MultisigScriptAddr, err := jaxutil.NewAddressScriptHash(multiSigScript, &chaincfg.TestNet3Params)
 			if err != nil {
 				t.Errorf("failed to make p2sh addr for %s: %v",
 					msg, err)
 				break
 			}
 
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
+			pay2MultisigPkScript, err := PayToAddrScript(pay2MultisigScriptAddr)
 			if err != nil {
 				t.Errorf("failed to make script pkscript for "+
 					"%s: %v", msg, err)
 				break
 			}
-
+			activateTraceLogger()
 			if err := signAndCheck(msg, tx, i, inputAmounts[i],
-				scriptPkScript, hashType,
+				pay2MultisigPkScript, hashType,
 				mkGetKey(map[string]addressToKey{
 					address1.EncodeAddress(): {key1, true},
 					address2.EncodeAddress(): {key2, true},
 				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
+					pay2MultisigScriptAddr.EncodeAddress(): multiSigScript,
 				}), nil); err != nil {
 				t.Error(err)
 				break
@@ -965,165 +962,168 @@ func TestSignTxOutput(t *testing.T) {
 	}
 
 	// Two part multisig, sign with one key then the other.
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-
-			key1, address1, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			key2, address2, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address1.EncodeAddress(): {key1, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// Only 1 out of 2 signed, this *should* fail.
-			if checkScripts(msg, tx, i, inputAmounts[i], sigScript,
-				scriptPkScript) == nil {
-				t.Errorf("part signed script valid for %s", msg)
-				break
-			}
-
-			// Sign with the other key and merge
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address2.EncodeAddress(): {key2, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg, err)
-				break
-			}
-
-			err = checkScripts(msg, tx, i, inputAmounts[i], sigScript,
-				scriptPkScript)
-			if err != nil {
-				t.Errorf("fully signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
-
-	// Two part multisig, sign with one key then both, check key dedup
-	// correctly.
-	for _, hashType := range hashTypes {
-		for i := range tx.TxIn {
-			msg := fmt.Sprintf("%d:%d", hashType, i)
-
-			key1, address1, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			key2, address2, err := genKeys(t, msg)
-			if err != nil {
-				break
-			}
-
-			pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
-			if err != nil {
-				t.Errorf("failed to make pkscript "+
-					"for %s: %v", msg, err)
-			}
-
-			scriptAddr, err := jaxutil.NewAddressScriptHash(
-				pkScript, &chaincfg.TestNet3Params)
-			if err != nil {
-				t.Errorf("failed to make p2sh addr for %s: %v",
-					msg, err)
-				break
-			}
-
-			scriptPkScript, err := PayToAddrScript(scriptAddr)
-			if err != nil {
-				t.Errorf("failed to make script pkscript for "+
-					"%s: %v", msg, err)
-				break
-			}
-
-			sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address1.EncodeAddress(): {key1, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), nil)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg,
-					err)
-				break
-			}
-
-			// Only 1 out of 2 signed, this *should* fail.
-			if checkScripts(msg, tx, i, inputAmounts[i], sigScript,
-				scriptPkScript) == nil {
-				t.Errorf("part signed script valid for %s", msg)
-				break
-			}
-
-			// Sign with the other key and merge
-			sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
-				tx, i, scriptPkScript, hashType,
-				mkGetKey(map[string]addressToKey{
-					address1.EncodeAddress(): {key1, true},
-					address2.EncodeAddress(): {key2, true},
-				}), mkGetScript(map[string][]byte{
-					scriptAddr.EncodeAddress(): pkScript,
-				}), sigScript)
-			if err != nil {
-				t.Errorf("failed to sign output %s: %v", msg, err)
-				break
-			}
-
-			// Now we should pass.
-			err = checkScripts(msg, tx, i, inputAmounts[i],
-				sigScript, scriptPkScript)
-			if err != nil {
-				t.Errorf("fully signed script invalid for "+
-					"%s: %v", msg, err)
-				break
-			}
-		}
-	}
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	//
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	//
+	// 		key1, address1, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		key2, address2, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address1.EncodeAddress(): {key1, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// Only 1 out of 2 signed, this *should* fail.
+	// 		if checkScripts(msg, tx, i, inputAmounts[i], sigScript,
+	// 			scriptPkScript) == nil {
+	// 			t.Errorf("part signed script valid for %s", msg)
+	// 			break
+	// 		}
+	//
+	// 		// Sign with the other key and merge
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address2.EncodeAddress(): {key2, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg, err)
+	// 			break
+	// 		}
+	// 		activateTraceLogger()
+	// 		asm, _ := DisasmString(sigScript)
+	// 		fmt.Println("refund_signature_asm: ", asm)
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i], sigScript,
+	// 			scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("fully signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	//
+	// // Two part multisig, sign with one key then both, check key dedup
+	// // correctly.
+	// for _, hashType := range hashTypes {
+	// 	for i := range tx.TxIn {
+	// 		msg := fmt.Sprintf("%d:%d", hashType, i)
+	//
+	// 		key1, address1, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		key2, address2, err := genKeys(t, msg)
+	// 		if err != nil {
+	// 			break
+	// 		}
+	//
+	// 		pkScript, err := MultiSigScript([]*jaxutil.AddressPubKey{address1, address2}, 2, false)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make pkscript "+
+	// 				"for %s: %v", msg, err)
+	// 		}
+	//
+	// 		scriptAddr, err := jaxutil.NewAddressScriptHash(
+	// 			pkScript, &chaincfg.TestNet3Params)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make p2sh addr for %s: %v",
+	// 				msg, err)
+	// 			break
+	// 		}
+	//
+	// 		scriptPkScript, err := PayToAddrScript(scriptAddr)
+	// 		if err != nil {
+	// 			t.Errorf("failed to make script pkscript for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		sigScript, err := SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address1.EncodeAddress(): {key1, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), nil)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg,
+	// 				err)
+	// 			break
+	// 		}
+	//
+	// 		// Only 1 out of 2 signed, this *should* fail.
+	// 		if checkScripts(msg, tx, i, inputAmounts[i], sigScript,
+	// 			scriptPkScript) == nil {
+	// 			t.Errorf("part signed script valid for %s", msg)
+	// 			break
+	// 		}
+	//
+	// 		// Sign with the other key and merge
+	// 		sigScript, err = SignTxOutput(&chaincfg.TestNet3Params,
+	// 			tx, i, scriptPkScript, hashType,
+	// 			mkGetKey(map[string]addressToKey{
+	// 				address1.EncodeAddress(): {key1, true},
+	// 				address2.EncodeAddress(): {key2, true},
+	// 			}), mkGetScript(map[string][]byte{
+	// 				scriptAddr.EncodeAddress(): pkScript,
+	// 			}), sigScript)
+	// 		if err != nil {
+	// 			t.Errorf("failed to sign output %s: %v", msg, err)
+	// 			break
+	// 		}
+	//
+	// 		// Now we should pass.
+	// 		err = checkScripts(msg, tx, i, inputAmounts[i],
+	// 			sigScript, scriptPkScript)
+	// 		if err != nil {
+	// 			t.Errorf("fully signed script invalid for "+
+	// 				"%s: %v", msg, err)
+	// 			break
+	// 		}
+	// 	}
+	// }
 }
 
 func parseKeys(t *testing.T, secret, msg string) (*btcec.PrivateKey, *jaxutil.AddressPubKey, error) {

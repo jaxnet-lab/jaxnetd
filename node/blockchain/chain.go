@@ -1426,12 +1426,7 @@ func (b *BlockChain) ShardCount() (uint32, error) {
 	snapshot := b.stateSnapshot
 	b.stateLock.RUnlock()
 
-	bestBlock, err := b.BlockByHash(&snapshot.Hash)
-	if err != nil {
-		return 0, err
-	}
-
-	return bestBlock.MsgBlock().Header.BeaconHeader().Shards(), nil
+	return snapshot.Shards, nil
 }
 
 // HeaderByHash returns the block header identified by the given hash or an

@@ -199,13 +199,9 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 	if err != nil {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
-		if _, ok := err.(chaindata.RuleError); !ok {
-			miner.log.Error().Err(err).Msg("Unexpected error while processing " +
-				"block submitted via CPU miner")
-			return false
-		}
-
-		miner.log.Debug().Err(err).Msg("Block submitted via CPU miner rejected")
+		// miner.log.Error().Err(err).Msg("Unexpected error while processingblock submitted via CPU miner")
+		miner.log.Error().Err(err).Msg("Block submitted via CPU miner rejected")
+		// miner.log.Debug().Err(err).Msg("Block submitted via CPU miner rejected")
 		return false
 	}
 	if isOrphan {
@@ -261,7 +257,8 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 		// new value by regenerating the coinbase script and
 		// setting the merkle root to the new value.
 
-		block, beaconCoinbaseAux, _ := updateBeaconExtraNonce(job.beacon.block, int64(job.beacon.blockHeight), extraNonce+enOffset)
+		block, beaconCoinbaseAux, _ := updateBeaconExtraNonce(job.beacon.block,
+			int64(job.beacon.blockHeight), extraNonce+enOffset)
 
 		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
@@ -558,7 +555,9 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 	hashes := tree.MarshalOrangeTreeLeafs()
 
 	job.beacon.block.Header.BeaconHeader().SetMergeMiningRoot(*rootHash)
+	job.beacon.block.Header.BeaconHeader().SetMergeMiningNumber(uint32(len(job.shards)))
 	job.beacon.block.Header.BeaconHeader().SetMergedMiningTreeCodingProof(hashes, coding, codingBitLength)
+
 	for id := range job.shards {
 		// Shard IDs are going to be indexed from 1,
 		// but the tree expects slots to be indexed from 0.
@@ -569,6 +568,9 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 		}
 
 		job.shards[id].block.Header.SetShardMerkleProof(path)
+		job.shards[id].block.Header.BeaconHeader().SetMergeMiningRoot(*rootHash)
+		job.shards[id].block.Header.BeaconHeader().SetMergeMiningNumber(uint32(len(job.shards)))
+		job.shards[id].block.Header.BeaconHeader().SetMergedMiningTreeCodingProof(hashes, coding, codingBitLength)
 	}
 	return
 }
@@ -592,8 +594,9 @@ func (miner *CPUMiner) submitTask(job *miningJob) {
 }
 
 type miningJob struct {
-	beacon chainTask
-	shards map[uint32]chainTask
+	beacon            chainTask
+	shards            map[uint32]chainTask
+	beaconCoinbaseAux wire.CoinbaseAux
 }
 
 type chainTask struct {

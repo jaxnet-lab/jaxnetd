@@ -444,8 +444,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 
-	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader,
-		g.blockChain.Chain().Params().Net)
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader)
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {
 	case true:
