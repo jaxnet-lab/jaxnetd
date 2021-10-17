@@ -66,25 +66,14 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 			actualShardsCount, beaconAux.Shards())
 	}
 
-	mmNumber := header.MergeMiningNumber()
-	if mmNumber > beaconAux.Shards() {
-		return fmt.Errorf("MergeMiningNumber(%v) more than beaconAux.Shards(%v)",
-			mmNumber, beaconAux.Shards())
-	}
-
-	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
-
-	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) && mmNumber == beaconAux.Shards()
-	if !orangeTreeEmpty {
-		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
-		err := tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
-		if err != nil {
-			return errors.Wrap(err, "invalid orange tree")
-		}
+	if err := validateMergeMiningData(header, false); err != nil {
+		return err
 	}
 
 	position := c.ctx.ShardID() - 1
 	exclusiveHash := header.ExclusiveHash()
+
+	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
 	err := tree.ValidateShardMerkleProofPath(position, beaconAux.Shards(), header.ShardMerkleProof(),
 		exclusiveHash, beaconAux.MergeMiningRoot())
 	if err != nil {

@@ -1,7 +1,7 @@
 package mmr
 
 import (
-	"fmt"
+	"strconv"
 	"testing"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -11,10 +11,9 @@ func TestTree_AddBlock(t1 *testing.T) {
 	type arg struct {
 		hash   string
 		diff   uint64
-		height int32
+		height uint64
 	}
 
-	tree := NewTree()
 	tt := []arg{
 		{hash: "361d6688ba1645379f0f6dd65d816302aab22caf0c0daa49000fe3d53786a042", diff: 0, height: 0},
 		{hash: "8584369a88a2793528847c0b808422a28df5296de03a6a375049e0db886e8caa", diff: 0, height: 1},
@@ -24,13 +23,28 @@ func TestTree_AddBlock(t1 *testing.T) {
 		{hash: "81ba669d2de9183d45e27bdeba340211fb38de0e45b7eae5e357be8f9983a32e", diff: 0, height: 5},
 		{hash: "1c567e5653e01329423dee2ca1764a69a37546fb4010d7b4ecd6ca123eedbc07", diff: 0, height: 6},
 	}
-
+	nodes := []Block{}
+	tree := NewTree()
+	prevRoot := chainhash.ZeroHash
 	for _, a := range tt {
 		h, _ := chainhash.NewHashFromStr(a.hash)
-		tree.AddBlock(*h, a.diff)
-		fmt.Println("MRR_ROOT_FOR_BLOCK:>", h.String(), a.height, tree.CurrentRoot().String())
+		tree.AddBlock(*h, a.height)
+		root := tree.CurrentRoot()
+		if prevRoot.IsEqual(&root) {
+			t1.Errorf("the root is not recalculated")
+		}
 
+		nodes = append(nodes, Block{
+			Hash:   *h,
+			Weight: a.height,
+		})
+
+		// tree := BuildMerkleTreeStore(nodes)
+		// fmt.Println(prevRoot, a.hash, tree[len(tree)-1].Hash)
+		// prevRoot = tree[len(tree)-1].Hash
+		// prevRoot = prevRoot
 	}
+
 }
 
 func TestMerkleTree(t *testing.T) {
@@ -173,9 +187,15 @@ func TestMerkleTree(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			tree := NewTree()
+			prevRoot := chainhash.ZeroHash
 			for i, block := range tt.blocks {
-				block.Hash[0] = byte(i)
-				tree.AddBlock(block.Hash, block.Weight)
+				hash := chainhash.HashH([]byte(strconv.Itoa(int(block.Weight) + i)))
+				tree.AddBlock(hash, block.Weight)
+
+				root := tree.CurrentRoot()
+				if prevRoot.IsEqual(&root) {
+					t.Errorf("the root is not recalculated")
+				}
 			}
 
 			if tree.chainWeight != tt.want[len(tt.want)-1].Weight {

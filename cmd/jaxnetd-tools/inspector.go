@@ -24,10 +24,11 @@ func (app *App) SyncPoWStatsCmd(c *cli.Context) error {
 	}
 
 	defer out.Close()
-	_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v",
+	_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v",
 		"chain",
 		"height",
 		"hash",
+		"blocks_mmr",
 		"pow_hash",
 		"bits",
 		"target",
@@ -50,10 +51,11 @@ func (app *App) SyncPoWStatsCmd(c *cli.Context) error {
 			return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%s)", hash), 1)
 		}
 
-		_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v",
+		_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v",
 			"beacon",
 			height,
 			hash.String(),
+			header.BlocksMerkleMountainRoot(),
 			header.PoWHash(),
 			fmt.Sprintf("%08x", header.Bits()),
 			fmt.Sprintf("%064x", pow.CompactToBig(header.Bits())),
@@ -78,10 +80,11 @@ func (app *App) SyncPoWStatsCmd(c *cli.Context) error {
 				return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%s)", hash), 1)
 			}
 
-			_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v",
+			_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v",
 				"shard_"+strconv.Itoa(int(shardID)),
 				height,
 				hash.String(),
+				header.BlocksMerkleMountainRoot(),
 				header.PoWHash(),
 				fmt.Sprintf("%08x", header.Bits()),
 				fmt.Sprintf("%064x", pow.CompactToBig(header.Bits())),

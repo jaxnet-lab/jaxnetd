@@ -1,0 +1,6 @@
+net: fastnet
+
+node_rpc:
+  host: 127.0.0.1:18333
+  user: jax
+  pass: jax

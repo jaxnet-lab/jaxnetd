@@ -76,6 +76,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 				Tx:            *tx.MsgTx(),
 				TxMerkleProof: []chainhash.Hash{},
 			},
+			Bits:       0x170e2632,
 			MerkleRoot: *tx.Hash(),
 			Timestamp:  time.Unix(time.Now().Unix(), 0),
 		}, false, nil

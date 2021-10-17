@@ -7,6 +7,7 @@
 package chaindata
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	mmtree "gitlab.com/jaxnet/jaxnetd/types/merge_mining_tree"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -74,7 +76,6 @@ func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, me
 	}
 	if !full {
 		aux.Version = header.Version().Version()
-		aux.Bits = header.Bits()
 		aux.Nonce = header.Nonce()
 	}
 	header.SetBTCAux(aux)
@@ -82,11 +83,46 @@ func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, me
 	return header, nil
 }
 
-func (c *BeaconBlockGenerator) ValidateBlockHeader(_ wire.BlockHeader) error {
+func validateMergeMiningData(header wire.BlockHeader, beacon bool) error {
+	beaconAux := header.BeaconHeader()
+
+	mmNumber := header.MergeMiningNumber()
+	if beacon && mmNumber == 0 {
+		mm := beaconAux.MergeMiningRoot()
+		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
+
+		emptyData := chainhash.ZeroHash.IsEqual(&mm) && len(hashes) == 0 && len(coding) == 0 && codingBitsLen == 0
+		if !emptyData {
+			return fmt.Errorf("MergeMiningNumber is 0, but  MergeMining data not empty")
+		}
+
+		return nil
+	}
+
+	if mmNumber > beaconAux.Shards() {
+		return fmt.Errorf("MergeMiningNumber(%v) more than beaconAux.Shards(%v)",
+			mmNumber, beaconAux.Shards())
+	}
+
+	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
+
+	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) && mmNumber == beaconAux.Shards()
+	if !orangeTreeEmpty {
+		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
+		err := tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
+		if err != nil {
+			return errors.Wrap(err, "invalid orange tree")
+		}
+	}
+
 	return nil
 }
 
 func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error {
+	if err := validateMergeMiningData(block.Header, true); err != nil {
+		return err
+	}
+
 	_, err := ValidateBeaconCoinbase(block.Header.BeaconHeader(), block.Transactions[0], calcBlockSubsidy(height))
 	return err
 }
@@ -163,6 +199,7 @@ func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash
 			Tx:            *tx.MsgTx(),
 			TxMerkleProof: []chainhash.Hash{*tx.Hash()},
 		},
+		Bits:       0x170e2632,
 		MerkleRoot: *tx.Hash(),
 		Timestamp:  time.Unix(time.Now().Unix(), 0),
 	}, false, nil

@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txutils"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -25,7 +26,7 @@ import (
 func main() {
 	app := &App{}
 	cliApp := &cli.App{
-		Name:     "tx-gatling",
+		Name:     "jax-tx-tools",
 		Usage:    "routine transactions",
 		Flags:    app.InitFlags(),
 		Before:   app.InitCfg,
@@ -64,6 +65,15 @@ func (app *App) getCommands() cli.Commands {
 			Usage:  "creates new 2of2 multi sig address and redeem script",
 			Flags:  app.NewMultiSigTxFlags(),
 			Action: app.NewMultiSigAddressCmd,
+		},
+		{
+			Name:  "new-htlc-address",
+			Usage: "creates new HTLC(hybrid-time-lock-contract) address",
+			Flags: []cli.Flag{
+				standardFlags[flagLockTime],
+				standardFlags[flagAddress],
+			},
+			Action: app.NewHTLCAddress,
 		},
 		{
 			Name:   "add-signature",
@@ -120,7 +130,7 @@ func (app *App) getCommands() cli.Commands {
 					Name:  "tx",
 					Usage: "decode hex encoded transaction body",
 					Flags: []cli.Flag{
-						getFlags()[flagTxBody],
+						standardFlags[flagTxBody],
 					},
 					Action: func(c *cli.Context) error {
 						txBody := c.String(flagTxBody)
@@ -140,7 +150,7 @@ func (app *App) getCommands() cli.Commands {
 					Name:  "script",
 					Usage: "decode hex encoded redeem script",
 					Flags: []cli.Flag{
-						getFlags()[flagRedeemScript],
+						standardFlags[flagRedeemScript],
 					},
 					Action: func(c *cli.Context) error {
 						script := c.String(flagRedeemScript)
@@ -177,13 +187,12 @@ type App struct {
 }
 
 func (app *App) InitFlags() []cli.Flag {
-	flags := getFlags()
 	return []cli.Flag{
-		flags[flagConfig],
-		flags[flagDataFile],
-		flags[flagSecretKey],
-		flags[flagShard],
-		flags[flagRunFromConfig],
+		standardFlags[flagConfig],
+		standardFlags[flagDataFile],
+		standardFlags[flagSecretKey],
+		standardFlags[flagShard],
+		standardFlags[flagRunFromConfig],
 	}
 }
 
@@ -236,13 +245,11 @@ func (app *App) defaultAction(c *cli.Context) error {
 }
 
 func (app *App) SyncUTXOFlags() []cli.Flag {
-	flags := getFlags()
-
 	return []cli.Flag{
-		flags[flagAddress],
-		flags[flagOffset],
-		flags[flagShards],
-		flags[flagSplitFiles],
+		standardFlags[flagAddress],
+		standardFlags[flagOffset],
+		standardFlags[flagShards],
+		standardFlags[flagSplitFiles],
 	}
 }
 
@@ -331,12 +338,11 @@ func (app *App) sendTxCmd(*cli.Context) error {
 }
 
 func (app *App) NewMultiSigTxFlags() []cli.Flag {
-	flags := getFlags()
 	return []cli.Flag{
-		flags[flagFirstPubKey],
-		flags[flagSecondPubKey],
-		flags[flagAmount],
-		flags[flagSendTx],
+		standardFlags[flagFirstPubKey],
+		standardFlags[flagSecondPubKey],
+		standardFlags[flagAmount],
+		standardFlags[flagSendTx],
 	}
 }
 
@@ -394,12 +400,28 @@ func (app *App) NewMultiSigAddressCmd(c *cli.Context) error {
 	return nil
 }
 
+func (app *App) NewHTLCAddress(c *cli.Context) error {
+	address := c.String(flagAddress)
+	lockTime := c.Int64(flagLockTime)
+	jAddress, err := jaxutil.DecodeAddress(address, app.TxMan.NetParams)
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	htlcAddress, err := txscript.HTLCScriptAddress(jAddress, int32(lockTime), app.TxMan.NetParams)
+	if err != nil {
+		return cli.NewExitError(err, 1)
+	}
+
+	fmt.Printf("Craft new HTLC Address\nAddress: %s\n", htlcAddress)
+	return nil
+}
+
 func (app *App) AddSignatureToTxFlags() []cli.Flag {
-	flags := getFlags()
 	return []cli.Flag{
-		flags[flagTxBody],
-		flags[flagRedeemScript],
-		flags[flagSendTx],
+		standardFlags[flagTxBody],
+		standardFlags[flagRedeemScript],
+		standardFlags[flagSendTx],
 	}
 }
 
@@ -433,13 +455,12 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 }
 
 func (app *App) SpendUTXOFlags() []cli.Flag {
-	flags := getFlags()
 	return []cli.Flag{
-		flags[flagTxHash],
-		flags[flagAddress],
-		flags[flagOutIn],
-		flags[flagAmount],
-		flags[flagAmount],
+		standardFlags[flagTxHash],
+		standardFlags[flagAddress],
+		standardFlags[flagOutIn],
+		standardFlags[flagAmount],
+		standardFlags[flagAmount],
 	}
 }
 
@@ -480,37 +501,44 @@ func (*App) genKp(*cli.Context) error {
 		return cli.NewExitError("failed to generate kp", 1)
 	}
 
-	pk := (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed()
-	addressPubKey, err := jaxutil.NewAddressPubKey(pk, &chaincfg.FastNetParams)
-	if err != nil {
-		println("[error] " + err.Error())
-		return cli.NewExitError("failed to generate kp", 1)
-
+	nets := []chaincfg.Params{
+		chaincfg.MainNetParams,
+		chaincfg.TestNetParams,
 	}
 
-	fastNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.FastNetParams)
-	if err != nil {
-		println("[error] " + err.Error())
-		return cli.NewExitError("failed to generate kp", 1)
+	pubKeys := map[string][]byte{
+		"uncompressed": (*btcec.PublicKey)(&key.PublicKey).SerializeUncompressed(),
+		"compressed":   (*btcec.PublicKey)(&key.PublicKey).SerializeCompressed(),
+		// "hybrid":       (*btcec.PublicKey)(&key.PublicKey).SerializeHybrid(),
 	}
 
-	mainNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.MainNetParams)
-	if err != nil {
-		println("[error] " + err.Error())
-		return cli.NewExitError("failed to generate kp", 1)
-	}
+	fmt.Printf("PrivateKey: %x\n", key.Serialize())
 
-	testNetAddress, err := jaxutil.NewAddressPubKeyHash(jaxutil.Hash160(pk), &chaincfg.TestNet3Params)
-	if err != nil {
-		println("[error] " + err.Error())
-		return cli.NewExitError("failed to generate kp", 1)
-	}
+	for _, net := range nets {
+		fmt.Println("\n" + net.Name + ":")
 
-	fmt.Printf("PrivateKey:\t%x\n", key.Serialize())
-	fmt.Printf("AddressPubKey:\t%s\n", addressPubKey.String())
-	fmt.Printf("FastNet:\t%s\n", fastNetAddress.EncodeAddress())
-	fmt.Printf("TestNet:\t%s\n", testNetAddress.EncodeAddress())
-	fmt.Printf("MainNet:\t%s\n", mainNetAddress.EncodeAddress())
+		wif, err := jaxutil.NewWIF(key, &net, true)
+		if err != nil {
+			println("[error] " + err.Error())
+			return cli.NewExitError("failed to generate wif", 1)
+		}
+
+		fmt.Printf("   WIF: %s\n", wif.String())
+
+		for pubKeyTy, pk := range pubKeys {
+			fmt.Println()
+			fmt.Println("   PubKey [" + pubKeyTy + "]:")
+
+			addressPubKey, err := jaxutil.NewAddressPubKey(pk, &net)
+			if err != nil {
+				println("[error] " + err.Error())
+				return cli.NewExitError("failed to generate kp", 1)
+			}
+
+			fmt.Printf("   AddressPubKey: %s\n", addressPubKey.String())
+			fmt.Printf("   AddressPubKeyHash: %s\n", addressPubKey.EncodeAddress())
+		}
+	}
 
 	return nil
 }

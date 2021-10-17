@@ -276,13 +276,12 @@ func (t *Tree) rebuildTree(startOffset, count uint64) (rootHash chainhash.Hash) 
 
 	// Start the array offset after the last transaction and adjusted to the
 	// next power of two.
-	offset := uint64(math.MaxInt32)
-
-	for i := startOffset; i < arraySize-1; i += 2 {
+	offset := uint64(nextPoT)
+	for i := startOffset; i < arraySize+1; i += 2 {
 		switch {
 		// When there is no left child node, the parent is nil too.
 		case t.nodes[i] == nil:
-			// merkles[offset] = nil
+			// t.nodes[offset] = nil
 			continue
 
 		// When there is no right child, the parent is equal the left child.

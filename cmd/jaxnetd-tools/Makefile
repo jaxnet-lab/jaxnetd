@@ -1,13 +1,3 @@
-build:
-	cd .. && go build -o ./tmp/jaxcore && go build -o ./tmp/jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
-
-
-build_linux:
-	cd .. && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxcore && env GOOS=linux GOARCH=amd64 go build -o ./tmp/jaxctl gitlab.com/jaxnet/jaxnetd/cmd/btcctl
-
-clean:
-	rm -rf core_1/core/* && rm -rf core_2/core/* && rm -rf core_3/core/*
-
 MINER_SK=3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b
 MINER_PK=0489f306c39ba355799d2f525e50372ca257b9a44e95a91cf9fc8677e1dc50dcfee1aa2e306310f415dc73e20aa0db04cfdd450d479db7937ea2fb9ca72651ad21
 MINER_ADDR=mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz
@@ -25,7 +15,7 @@ EVA_SK=bdfb934f403bd6c3f74730f9690f6fc22863388f473860eb001a1e7f02261b79
 EVA_PK=04229dea33b9b89b8b6d746bcf2df82c142f254b3acc6c5452525ef0774bf2d0a19ca45e6ace7a427756b4422dac084ca9b406835b33140641a5f6608c41434b8b
 EVA_ADDR=mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK
 
-GATLING_PKG=gitlab.com/jaxnet/jaxnetd/cmd/tx-gatling
+GATLING_PKG=gitlab.com/jaxnet/jaxnetd/cmd/jaxnetd-tools
 
 sync_miner:
 	mkdir -p data || true
