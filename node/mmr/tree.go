@@ -7,7 +7,6 @@
 package mmr
 
 import (
-	"fmt"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -119,8 +118,6 @@ func (t *Tree) addBlock(hash chainhash.Hash, difficulty uint64) {
 		PrevNodeID: t.lastNode.ID,
 	}
 
-	prevHash := t.rootHash
-
 	t.nodes[node.ID] = node
 	t.hashToID[hash] = node.ID
 
@@ -132,8 +129,6 @@ func (t *Tree) addBlock(hash chainhash.Hash, difficulty uint64) {
 	t.nodes[node.ID].ActualRoot = t.rootHash
 	t.mountainTops[t.rootHash] = node.ID
 	t.lastNode = node
-
-	fmt.Println("MMR_ADD_BLOCK:>", prevHash, difficulty, hash, t.rootHash)
 }
 
 // SetBlock sets provided block with <hash, height> as latest.
