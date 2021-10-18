@@ -141,8 +141,7 @@ out:
 			hashesPerSec = (hashesPerSec + curHashesPerSec) / 2
 			totalHashes = 0
 			if hashesPerSec != 0 {
-				miner.log.Debug().Msgf("Hash speed: %6.0f kilohashes/s",
-					hashesPerSec/1000)
+				miner.log.Debug().Msgf("Hash speed: %6.0f kilohashes/s", hashesPerSec/1000)
 			}
 
 		// Request for the number of hashes per second.

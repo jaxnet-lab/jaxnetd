@@ -332,15 +332,16 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 		return errors.New(errMsg + "value of second output not eq to expected reward")
 	}
 
-	shardJaxBurnReward := jaxutil.IsJaxnetBurnRawAddress(shardCoinbaseTx.TxOut[1].PkScript)
-	if shardJaxBurnReward {
-		return nil
-	}
-
 	beaconCoinbase := shardHeader.BeaconCoinbaseAux().Tx
+
 	beaconBurned, err := ValidateBeaconCoinbase(shardHeader.BeaconHeader(), &beaconCoinbase, -1)
 	if err != nil {
 		return errors.Wrap(err, "invalid beacon aux")
+	}
+
+	shardJaxBurnReward := jaxutil.IsJaxnetBurnRawAddress(shardCoinbaseTx.TxOut[1].PkScript)
+	if shardJaxBurnReward {
+		return nil
 	}
 
 	if !beaconBurned && !shardJaxBurnReward {

@@ -214,10 +214,9 @@ func (b *BlockChain) createChainState() error {
 func (b *BlockChain) initChainState() error {
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
-	var initialized, hasBlockIndex bool
+	var initialized bool
 	err := b.db.View(func(dbTx database.Tx) error {
 		initialized = dbTx.Metadata().Get(chaindata.ChainStateKeyName) != nil
-		hasBlockIndex = dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName) != nil
 		return nil
 	})
 	if err != nil {

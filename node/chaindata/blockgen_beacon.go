@@ -113,10 +113,6 @@ func validateMergeMiningData(header wire.BlockHeader, beacon bool) error {
 		return nil
 	}
 
-	// if !emptyData {
-	// 	return fmt.Errorf("orangeTreeEmpty, but MergeMining data not empty")
-	// }
-
 	return nil
 }
 

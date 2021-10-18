@@ -147,8 +147,8 @@ func CalcWork(bits uint32) *big.Int {
 		return big.NewInt(0)
 	}
 
+	// 268 == 256 + 12
 	// ( (1 << 268) / (difficultyNum + 1) ) * (1 << hashSortingBits)
-
 	// (difficultyNum + 1)
 	denominator := new(big.Int).Add(difficultyNum, bigOne)
 	// ( (1 << 268) / (difficultyNum + 1) )
@@ -156,6 +156,25 @@ func CalcWork(bits uint32) *big.Int {
 
 	// ( (1 << 268) / (difficultyNum + 1) ) * (1 << hashSortingBits)
 	return new(big.Int).Mul(workWithoutHashSorting, new(big.Int).Lsh(bigOne, hashSortingBits))
+}
+
+func BTCCalcWork(bits uint32) *big.Int {
+	// Return a work value of zero if the passed difficulty bits represent
+	// a negative number. Note this should not happen in practice with valid
+	// blocks, but an invalid block could trigger it.
+	difficultyNum := CompactToBig(bits)
+	if difficultyNum.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+
+	// ( (1 << 256) / (difficultyNum + 1) )
+	// (difficultyNum + 1)
+	denominator := new(big.Int).Add(difficultyNum, bigOne)
+	// ( (1 << 256) / (difficultyNum + 1) )
+	workWithoutHashSorting := new(big.Int).Div(oneLsh256, denominator)
+
+	// ( (1 << 256) / (difficultyNum + 1) )
+	return workWithoutHashSorting
 }
 
 // GetDifficultyRatio this is ration of initial difficulty and current.

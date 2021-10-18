@@ -156,5 +156,5 @@ func CalcShardBlockSubsidy(shards, bits, k uint32) int64 {
 		return 0
 	}
 
-	return int64(reward * 1_0000)
+	return int64(reward * chaincfg.JuroPerJAXCoin)
 }

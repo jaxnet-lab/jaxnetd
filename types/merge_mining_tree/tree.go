@@ -1046,11 +1046,6 @@ func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount
 		return
 	}
 
-	// if bytes.Compare(shardMerkleProof[0:HashSizeBytes], expectedShardHash) != 0 {
-	//	err = fmt.Errorf("shard hash wasn't found in an expected position in shardMerkleProof: %w", ErrValidation)
-	//	return
-	// }
-
 	totalLevelsCount := len(shardMerkleProof)
 	correspondingPairIndex := position
 

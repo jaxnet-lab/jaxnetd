@@ -84,14 +84,14 @@ func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode) uint32 {
 		return pow.PackK(pow.K1)
 	}
 
+	if pow.BeaconEpoch(lastNode.Height()+1) <= 2 {
+		return pow.PackK(pow.K1)
+	}
+
 	// Return the previous block's difficulty requirements if this block
 	// is not at a difficulty retarget interval.
 	if (lastNode.Height()+1)%pow.KBeaconEpochLen != 0 {
 		return lastNode.K()
-	}
-
-	if pow.BeaconEpoch(lastNode.Height()+1) <= 2 {
-		return pow.PackK(pow.K1)
 	}
 
 	ancestor := lastNode.RelativeAncestor(pow.KBeaconEpochLen)
@@ -114,10 +114,10 @@ func (b *BlockChain) CalcNextK() uint32 {
 func (b *BlockChain) CalcKForHeight(height int32) uint32 {
 	b.chainLock.Lock()
 	var kVal uint32
-	if height == b.stateSnapshot.Height {
+	if height >= b.stateSnapshot.Height {
 		kVal = b.stateSnapshot.K
 	} else {
-		kVal = b.calcNextK(b.bestChain.NodeByHeight(height))
+		kVal = b.bestChain.NodeByHeight(height).K()
 	}
 	b.chainLock.Unlock()
 	return kVal

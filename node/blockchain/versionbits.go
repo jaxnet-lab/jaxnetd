@@ -261,7 +261,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 		}
 	}
 
-	if (prevNode.Height()+1)%chaincfg.ExpansionEpochLength == 0 {
+	if (prevNode.Height()+1)%chaincfg.ExpansionEpochLength != 0 {
 		return version, nil
 	}
 

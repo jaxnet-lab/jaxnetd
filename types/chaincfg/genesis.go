@@ -234,10 +234,13 @@ func ShardGenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	if err != nil {
 		panic("invalid genesis tx hex-data")
 	}
+
 	err = state.shardsGenesisTx.Deserialize(bytes.NewBuffer(rawTx))
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
+
+	// todo put shardID into genesis tx script signature
 
 	state.shardsGenesisMerkleRoot = new(chainhash.Hash)
 	*state.shardsGenesisMerkleRoot = state.shardsGenesisTx.TxHash()
