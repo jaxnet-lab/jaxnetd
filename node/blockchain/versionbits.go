@@ -231,14 +231,16 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 	version := wire.BVersion(expectedVersion).
 		UnsetExpansionApproved().
 		UnsetExpansionMade()
+	if prevNode == nil {
+		return version, nil
+	}
 
 	var prevHeight int32
 	var limitExceeded bool
-	if prevNode != nil {
-		prevHeight = prevNode.Height()
-		limitExceeded = b.chain.Params().InitialExpansionLimit > 0 &&
-			(uint32(b.chain.Params().InitialExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
-	}
+
+	prevHeight = prevNode.Height()
+	limitExceeded = b.chain.Params().InitialExpansionLimit > 0 &&
+		(uint32(b.chain.Params().InitialExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
 
 	if b.chain.Params().Net != types.MainNet {
 		// at the testnet and dev-nets number of shards must be strictly limited
@@ -259,7 +261,11 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 		}
 	}
 
-	if prevNode != nil && prevNode.ExpansionApproved() {
+	if (prevNode.Height()+1)%chaincfg.ExpansionEpochLength == 0 {
+		return version, nil
+	}
+
+	if prevNode.ExpansionApproved() {
 		version = wire.BVersion(expectedVersion).SetExpansionMade()
 		return version, nil
 	}

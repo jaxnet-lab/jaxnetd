@@ -357,7 +357,7 @@ func solveBlock(header wire.BlockHeader, powParams *chaincfg.PowParams) bool {
 				hash := hdr.PoWHash()
 				if pow.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 					if powParams.HashSorting {
-						if pow.ValidateHashSortingRule(pow.HashToBig(&hash), powParams.ChainIDCount, 0) {
+						if pow.ValidateHashSortingRule(pow.HashToBig(&hash), powParams.HashSortingSlotNumber, 0) {
 							results <- sbResult{true, i}
 						}
 					} else {

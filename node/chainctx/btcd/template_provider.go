@@ -122,7 +122,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 		txHashes[i] = *txHash
 	}
 
-	aux.TxMerkleProof = chainhash.BuildMerkleTreeProof(txHashes)
+	aux.CoinbaseAux.TxMerkleProof = chainhash.BuildCoinbaseMerkleTreeProof(txHashes)
 
 	burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 	tx, err := chaindata.CreateBitcoinCoinbaseTx(reward, totalFee, int32(height), bg.minerAddress,
@@ -131,14 +131,14 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 		return wire.BTCBlockAux{}, false, err
 	}
 
-	aux.Tx = *tx.MsgTx()
+	aux.CoinbaseAux.Tx = *tx.MsgTx()
 	return aux, true, nil
 }
 
 func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 	block *btcdwire.MsgBlock, height int64, err error) {
 
-	// Block initialisation.
+	// Leaf initialisation.
 	height = c.Height
 
 	bitcoinBlock := btcdwire.MsgBlock{}
@@ -150,7 +150,7 @@ func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 		return
 	}
 
-	// Block header processing.
+	// Leaf header processing.
 	previousBlockHash, err := btcdchainhash.NewHashFromStr(c.PreviousHash)
 	if err != nil {
 		return

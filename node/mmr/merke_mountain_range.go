@@ -17,13 +17,13 @@ const ValueSize = 40
 
 type Value [ValueSize]byte
 
-func (v Value) Block() (b Block) {
+func (v Value) Block() (b Leaf) {
 	copy(b.Hash[:], v[:32])
 	b.Weight = binary.LittleEndian.Uint64(v[32:])
 	return b
 }
 
-type Block struct {
+type Leaf struct {
 	Hash   chainhash.Hash
 	Weight uint64
 
@@ -31,12 +31,11 @@ type Block struct {
 	filled bool
 }
 
-func (b *Block) Value() Value {
+func (b *Leaf) Value() Value {
 	if b.filled {
 		return b.v
 	}
 
-	copy(b.v[:32], b.Hash[:])
 	copy(b.v[:32], b.Hash[:])
 
 	binary.LittleEndian.PutUint64(b.v[32:], b.Weight)
@@ -44,12 +43,12 @@ func (b *Block) Value() Value {
 	return b.v
 }
 
-func BuildMerkleTreeStore(blocks []Block) []*Block {
+func BuildMerkleTreeStore(blocks []Leaf) []*Leaf {
 	// Calculate how many entries are required to hold the binary merkle
 	// tree as a linear array and create an array of that size.
 	nextPoT := nextPowerOfTwo(uint64(len(blocks)))
 	arraySize := nextPoT*2 - 1
-	merkles := make([]*Block, arraySize)
+	merkles := make([]*Leaf, arraySize)
 
 	// Create the base transaction hashes and populate the array with them.
 	for i := range blocks {
@@ -82,7 +81,7 @@ func BuildMerkleTreeStore(blocks []Block) []*Block {
 	return merkles
 }
 
-func HashMerkleBranches(left, right *Block) *Block {
+func HashMerkleBranches(left, right *Leaf) *Leaf {
 	var data [80]byte
 	lv := left.Value()
 	rv := right.Value()
@@ -90,7 +89,7 @@ func HashMerkleBranches(left, right *Block) *Block {
 	copy(data[:ValueSize], lv[:])
 	copy(data[ValueSize:], rv[:])
 
-	return &Block{
+	return &Leaf{
 		Hash:   chainhash.HashH(data[:]),
 		Weight: left.Weight + right.Weight,
 	}

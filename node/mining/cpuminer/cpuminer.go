@@ -312,7 +312,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 			if pow.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
 				if miner.beacon.ChainParams.PowParams.HashSorting {
 					if pow.ValidateHashSortingRule(pow.HashToBig(&hash),
-						miner.beacon.ChainParams.PowParams.ChainIDCount, 0) {
+						miner.beacon.ChainParams.PowParams.HashSortingSlotNumber, 0) {
 						atLeastOneMined = true
 						miner.updateHashes <- hashesCompleted
 						job.beacon.notSolved = false
@@ -334,7 +334,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 
 				if miner.beacon.ChainParams.PowParams.HashSorting {
 					if pow.ValidateHashSortingRule(pow.HashToBig(&hash),
-						miner.beacon.ChainParams.PowParams.ChainIDCount, shardID) {
+						miner.beacon.ChainParams.PowParams.HashSortingSlotNumber, shardID) {
 
 						atLeastOneMined = true
 						task.notSolved = false

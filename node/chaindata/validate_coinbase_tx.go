@@ -172,7 +172,7 @@ func CreateJaxCoinbaseTx(value, fee int64, height int32,
 
 func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error {
 	coinbaseHash := aux.Tx.TxHash()
-	if !chainhash.ValidateMerkleTreeProof(coinbaseHash, aux.TxMerkleProof, merkleRoot) {
+	if !chainhash.ValidateCoinbaseMerkleTreeProof(coinbaseHash, aux.TxMerkleProof, merkleRoot) {
 		return errors.New("tx_merkle tree root is not match with blockMerkle root")
 	}
 
@@ -183,9 +183,10 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
 		return false, errors.Wrap(err, "invalid btc coinbase aux")
 	}
-
-	if len(aux.Tx.TxOut) != 3 {
-		if !jaxutil.BtcJaxVanityPrefix(aux.Tx.TxOut[0].PkScript) && !jaxutil.BchJaxPrefix(aux.Tx.TxOut[0].PkScript) {
+	btcCoinbaseTx := aux.CoinbaseAux.Tx
+	if len(btcCoinbaseTx.TxOut) != 3 {
+		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
+			!jaxutil.BchJaxPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 
@@ -193,9 +194,9 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	}
 
 	const errMsg = "invalid format of btc aux coinbase tx: "
-	btcCoinbaseTx := aux.Tx
 
-	btcJaxNetLinkOut := jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[0].PkScript) && btcCoinbaseTx.TxOut[0].Value == 0
+	btcJaxNetLinkOut := jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[0].PkScript) &&
+		btcCoinbaseTx.TxOut[0].Value == 0
 
 	if !btcJaxNetLinkOut {
 		err = errors.New(errMsg + "first out must be zero and have JaxNetLink")
@@ -227,8 +228,8 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 
 	beaconExclusiveHash := aux.BeaconExclusiveHash()
 	exclusiveHash := hex.EncodeToString(beaconExclusiveHash.CloneBytes())
-	asmString, _ := txscript.DisasmString(aux.BTCAux().Tx.TxIn[0].SignatureScript)
-	//
+	asmString, _ := txscript.DisasmString(aux.BTCAux().CoinbaseAux.Tx.TxIn[0].SignatureScript)
+
 	hashPresent := false
 	chunks := strings.Split(asmString, " ")
 	for i, chunk := range chunks {

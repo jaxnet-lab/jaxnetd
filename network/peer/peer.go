@@ -1460,16 +1460,12 @@ out:
 		switch msg := rmsg.(type) {
 		case *wire.MsgVersion:
 			// Limit to one version message per peer.
-			peer.PushRejectMsg(msg.Command(), wire.RejectDuplicate,
-				"duplicate version message", nil, true)
+			peer.PushRejectMsg(msg.Command(), wire.RejectDuplicate, "duplicate version message", nil, true)
 			break out
 
 		case *wire.MsgVerAck:
 			// Limit to one verack message per peer.
-			peer.PushRejectMsg(
-				msg.Command(), wire.RejectDuplicate,
-				"duplicate verack message", nil, true,
-			)
+			peer.PushRejectMsg(msg.Command(), wire.RejectDuplicate, "duplicate verack message", nil, true)
 			break out
 
 		case *wire.MsgGetAddr:

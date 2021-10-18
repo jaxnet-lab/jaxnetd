@@ -44,14 +44,14 @@ func TestBuildMerkleTreeProof(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := BuildMerkleTreeProof(tt.txHashes); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("BuildMerkleTreeProof() = %v, want %v", got, tt.want)
+			if got := BuildCoinbaseMerkleTreeProof(tt.txHashes); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildCoinbaseMerkleTreeProof() = %v, want %v", got, tt.want)
 			}
 
 			root := MerkleTreeRoot(tt.txHashes)
 
-			if !ValidateMerkleTreeProof(tt.txHashes[0], tt.want, root) {
-				t.Error("ValidateMerkleTreeProof() = false, want true")
+			if !ValidateCoinbaseMerkleTreeProof(tt.txHashes[0], tt.want, root) {
+				t.Error("ValidateCoinbaseMerkleTreeProof() = false, want true")
 			}
 
 		})

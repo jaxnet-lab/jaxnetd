@@ -23,7 +23,7 @@ func TestTree_AddBlock(t1 *testing.T) {
 		{hash: "81ba669d2de9183d45e27bdeba340211fb38de0e45b7eae5e357be8f9983a32e", diff: 0, height: 5},
 		{hash: "1c567e5653e01329423dee2ca1764a69a37546fb4010d7b4ecd6ca123eedbc07", diff: 0, height: 6},
 	}
-	nodes := []Block{}
+	nodes := []Leaf{}
 	tree := NewTree()
 	prevRoot := chainhash.ZeroHash
 	for _, a := range tt {
@@ -34,7 +34,7 @@ func TestTree_AddBlock(t1 *testing.T) {
 			t1.Errorf("the root is not recalculated")
 		}
 
-		nodes = append(nodes, Block{
+		nodes = append(nodes, Leaf{
 			Hash:   *h,
 			Weight: a.height,
 		})
@@ -49,22 +49,22 @@ func TestTree_AddBlock(t1 *testing.T) {
 
 func TestMerkleTree(t *testing.T) {
 	tests := []struct {
-		blocks []Block
-		want   []*Block
+		blocks []Leaf
+		want   []*Leaf
 	}{
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				{Weight: 1},
 			},
 		},
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				{Weight: 1}, {Weight: 20},
 				// root
 				{Weight: 21},
@@ -72,11 +72,11 @@ func TestMerkleTree(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300},
 			},
 
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, nil, // reserved slot
 
@@ -88,10 +88,10 @@ func TestMerkleTree(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 
@@ -102,10 +102,10 @@ func TestMerkleTree(t *testing.T) {
 			},
 		},
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000}, {Weight: 50000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, nil, nil, nil, // reserved slots
@@ -122,10 +122,10 @@ func TestMerkleTree(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000}, {Weight: 50000}, {Weight: 600000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, nil, nil, // reserved slot
@@ -142,11 +142,11 @@ func TestMerkleTree(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, nil, // reserved slot
@@ -163,11 +163,11 @@ func TestMerkleTree(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, {Weight: 80000000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, {Weight: 80000000},

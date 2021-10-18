@@ -41,7 +41,7 @@ type BTCBlockAux struct {
 	// Nonce used to generate the block.
 	Nonce uint32
 
-	CoinbaseAux
+	CoinbaseAux CoinbaseAux
 }
 
 // BlockHash computes the block identifier hash for the given block header.
@@ -52,7 +52,7 @@ func (h *BTCBlockAux) BlockHash() chainhash.Hash {
 	// run-time panic.
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 
-	// CoinbaseAux must be omitted to keep this hash equal to Bitcoin Block hash with the same header.
+	// CoinbaseAux must be omitted to keep this hash equal to Bitcoin Leaf hash with the same header.
 	sec := uint32(h.Timestamp.Unix())
 	_ = encoder.WriteElements(buf, h.Version, &h.PrevBlock, &h.MerkleRoot, sec, h.Bits, h.Nonce)
 	return chainhash.DoubleHashH(buf.Bytes())
@@ -97,7 +97,7 @@ func (h *BTCBlockAux) Serialize(w io.Writer) error {
 // UpdateCoinbaseScript sets new coinbase script, rebuilds BTCBlockAux.TxMerkleProof
 // and recalculates the BTCBlockAux.MerkleRoot with the updated extra nonce.
 func (h *BTCBlockAux) UpdateCoinbaseScript(coinbaseScript []byte) {
-	h.Tx.TxIn[0].SignatureScript = coinbaseScript
+	h.CoinbaseAux.Tx.TxIn[0].SignatureScript = coinbaseScript
 	h.MerkleRoot = h.CoinbaseAux.UpdatedMerkleRoot()
 }
 
@@ -108,9 +108,9 @@ func (h *BTCBlockAux) Copy() *BTCBlockAux {
 
 	// all fields except this are passed by value
 	// so we manually copy the following fields to prevent side effects
-	clone.Tx = *h.Tx.Copy()
-	clone.TxMerkleProof = make([]chainhash.Hash, len(h.TxMerkleProof))
-	copy(clone.TxMerkleProof, h.TxMerkleProof)
+	clone.CoinbaseAux.Tx = *h.CoinbaseAux.Tx.Copy()
+	clone.CoinbaseAux.TxMerkleProof = make([]chainhash.Hash, len(h.CoinbaseAux.TxMerkleProof))
+	copy(clone.CoinbaseAux.TxMerkleProof, h.CoinbaseAux.TxMerkleProof)
 
 	return &clone
 }
@@ -190,7 +190,7 @@ func (CoinbaseAux) FromBlock(block *MsgBlock) CoinbaseAux {
 		txHashes[i] = transaction.TxHash()
 	}
 
-	aux.TxMerkleProof = chainhash.BuildMerkleTreeProof(txHashes)
+	aux.TxMerkleProof = chainhash.BuildCoinbaseMerkleTreeProof(txHashes)
 	return aux
 }
 
@@ -200,7 +200,7 @@ func (h *CoinbaseAux) UpdatedMerkleRoot() chainhash.Hash {
 	}
 
 	coinbaseHash := h.Tx.TxHash()
-	merkleTreeRoot := chainhash.MerkleTreeProofRoot(coinbaseHash, h.TxMerkleProof)
+	merkleTreeRoot := chainhash.CoinbaseMerkleTreeProofRoot(coinbaseHash, h.TxMerkleProof)
 	return merkleTreeRoot
 }
 

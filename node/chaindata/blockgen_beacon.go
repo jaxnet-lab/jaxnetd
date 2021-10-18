@@ -87,32 +87,34 @@ func validateMergeMiningData(header wire.BlockHeader, beacon bool) error {
 	beaconAux := header.BeaconHeader()
 
 	mmNumber := header.MergeMiningNumber()
-	if beacon && mmNumber == 0 {
-		mm := beaconAux.MergeMiningRoot()
-		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
-
-		emptyData := chainhash.ZeroHash.IsEqual(&mm) && len(hashes) == 0 && len(coding) == 0 && codingBitsLen == 0
-		if !emptyData {
-			return fmt.Errorf("MergeMiningNumber is 0, but  MergeMining data not empty")
-		}
-
-		return nil
-	}
+	mergeMiningRoot := beaconAux.MergeMiningRoot()
+	miningTreeCodingProof, orangeTreeEncoding, codingLen := beaconAux.MergedMiningTreeCodingProof()
+	emptyData := chainhash.ZeroHash.IsEqual(&mergeMiningRoot) && len(miningTreeCodingProof) == 0 && len(orangeTreeEncoding) == 0 && codingLen == 0
 
 	if mmNumber > beaconAux.Shards() {
 		return fmt.Errorf("MergeMiningNumber(%v) more than beaconAux.Shards(%v)",
 			mmNumber, beaconAux.Shards())
 	}
 
-	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
+	if beacon && mmNumber == 0 {
+		if !emptyData {
+			return fmt.Errorf("MergeMiningNumber is 0, but MergeMining data not empty")
+		}
+		return nil
+	}
 
+	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
 	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) && mmNumber == beaconAux.Shards()
 	if !orangeTreeEmpty {
-		hashes, coding, codingBitsLen := beaconAux.MergedMiningTreeCodingProof()
-		err := tree.ValidateOrangeTree(codingBitsLen, coding, hashes, mmNumber, beaconAux.MergeMiningRoot())
+		err := tree.ValidateOrangeTree(codingLen, orangeTreeEncoding, miningTreeCodingProof, mmNumber, mergeMiningRoot)
 		if err != nil {
 			return errors.Wrap(err, "invalid orange tree")
 		}
+		return nil
+	}
+
+	if !emptyData {
+		return fmt.Errorf("orangeTreeEmpty, but MergeMining data not empty")
 	}
 
 	return nil

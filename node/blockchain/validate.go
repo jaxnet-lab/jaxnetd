@@ -56,6 +56,19 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
 		}
 
+		shardsDelta := int64(header.BeaconHeader().Shards()) - int64(prevNode.Header().BeaconHeader().Shards())
+		switch shardsDelta {
+		case 0:
+			// all fine
+		case 1:
+			if !prevNode.Header().Version().ExpansionMade() {
+				return chaindata.NewRuleError(chaindata.ErrUnexpectedShardsValue,
+					"expansion not made, shards count increased")
+			}
+		default:
+			return chaindata.NewRuleError(chaindata.ErrUnexpectedShardsValue, "shards count is invalid")
+		}
+
 		if b.chain.IsBeacon() {
 			expectedK := b.calcNextK(prevNode)
 

@@ -40,7 +40,7 @@ var FastNetParams = Params{
 		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 		GenerateSupported:        true,
 		HashSorting:              false,
-		ChainIDCount:             4096, // 2^12
+		HashSortingSlotNumber:    4096, // 2^12
 	},
 
 	// Shards Expansion policy

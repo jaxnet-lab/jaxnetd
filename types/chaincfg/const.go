@@ -30,4 +30,6 @@ const (
 
 	ShardEpochLength = 4096
 	ShardTimeDelta   = 37500 // 37.5s in milliseconds
+
+	ExpansionEpochLength = 1024 // in blocks
 )

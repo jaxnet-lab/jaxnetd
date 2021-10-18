@@ -139,8 +139,8 @@ func (h *BeaconHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
 func (h *BeaconHeader) MergeMiningNumber() uint32     { return h.mergeMiningNumber }
 func (h *BeaconHeader) SetMergeMiningNumber(n uint32) { h.mergeMiningNumber = n }
 
-func (h *BeaconHeader) MergedMiningTree() []byte            { return h.treeEncoding }
-func (h *BeaconHeader) SetMergedMiningTree(treeData []byte) { h.treeEncoding = treeData }
+func (h *BeaconHeader) MergedMiningTree() []byte     { return h.treeEncoding }
+func (h *BeaconHeader) MergedMiningTreeSize() uint32 { return h.treeCodingLengthBits }
 
 func (h *BeaconHeader) ShardMerkleProof() []chainhash.Hash   { return nil }
 func (h *BeaconHeader) SetShardMerkleProof([]chainhash.Hash) {}

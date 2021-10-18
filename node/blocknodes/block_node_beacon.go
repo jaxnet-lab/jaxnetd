@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	merged_mining_tree "gitlab.com/jaxnet/jaxnetd/types/merge_mining_tree"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -208,20 +210,50 @@ func (node *BeaconBlockNode) CalcMedianVoteK() uint32 {
 }
 
 func (node *BeaconBlockNode) ExpansionApproved() bool {
-	nBlocks := 1024
+	nBlocks := chaincfg.ExpansionEpochLength
 
 	numNodes := 0
 	iterNode := IBlockNode(node)
 	expansionApprove := 0
+
+	treeEncodings := make([][]byte, nBlocks)
+	treeEncodingsSizes := make([]uint32, nBlocks)
+
 	for i := 0; i < nBlocks && iterNode != nil; i++ {
 		version := iterNode.Header().Version()
 		if version.ExpansionApproved() {
 			expansionApprove += 1
 		}
+		treeEncodings[i] = iterNode.Header().BeaconHeader().MergedMiningTree()
+		treeEncodingsSizes[i] = iterNode.Header().BeaconHeader().MergedMiningTreeSize()
 		numNodes++
-
 		iterNode = iterNode.Parent()
 	}
 
-	return expansionApprove >= 768
+	if expansionApprove < 768 {
+		return false
+	}
+
+	nShards := node.Header().BeaconHeader().Shards()
+	l := chainhash.NextPowerOfTwo(int(nShards))*2 - 1
+	aggregationResults := [4][]byte{
+		make([]byte, l),
+		make([]byte, l),
+		make([]byte, l),
+		make([]byte, l),
+	}
+
+	for i, encoding := range treeEncodings {
+		resID := i % 256
+		result := aggregationResults[resID]
+		merged_mining_tree.AggregateOrangeTree(result, encoding, treeEncodingsSizes[i], nShards)
+		aggregationResults[resID] = result
+	}
+
+	a1 := aggregationResults[0][0]
+	a2 := aggregationResults[1][0]
+	a3 := aggregationResults[2][0]
+	a4 := aggregationResults[3][0]
+
+	return a1 > 47 && a2 > 47 && a3 > 47 && a4 > 47
 }

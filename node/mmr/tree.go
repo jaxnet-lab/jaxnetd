@@ -7,7 +7,7 @@
 package mmr
 
 import (
-	"math"
+	"fmt"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -29,7 +29,7 @@ type BlocksMMRTree interface {
 }
 
 type BlockNode struct {
-	Block
+	Leaf
 
 	ID         uint64         // ID of node in the MMR Tree, if ID < math.MaxInt32, ID == block height in main chain.
 	PrevNodeID uint64         // PrevNodeID hash of previous block
@@ -114,10 +114,12 @@ func (t *Tree) addBlock(hash chainhash.Hash, difficulty uint64) {
 	}
 
 	node := &BlockNode{
-		Block:      Block{Hash: hash, Weight: difficulty},
+		Leaf:       Leaf{Hash: hash, Weight: difficulty},
 		ID:         t.nodeCount,
 		PrevNodeID: t.lastNode.ID,
 	}
+
+	prevHash := t.rootHash
 
 	t.nodes[node.ID] = node
 	t.hashToID[hash] = node.ID
@@ -130,6 +132,8 @@ func (t *Tree) addBlock(hash chainhash.Hash, difficulty uint64) {
 	t.nodes[node.ID].ActualRoot = t.rootHash
 	t.mountainTops[t.rootHash] = node.ID
 	t.lastNode = node
+
+	fmt.Println("MMR_ADD_BLOCK:>", prevHash, difficulty, hash, t.rootHash)
 }
 
 // SetBlock sets provided block with <hash, height> as latest.
@@ -313,7 +317,7 @@ func hashMerkleBranches(left, right *BlockNode) *BlockNode {
 	copy(data[ValueSize:], rv[:])
 
 	return &BlockNode{
-		Block: Block{
+		Leaf: Leaf{
 			Hash:   chainhash.HashH(data[:]),
 			Weight: left.Weight + right.Weight,
 		},

@@ -118,12 +118,12 @@ const (
 )
 
 type GenesisBlockOpts struct {
-	Version    int32
-	PrevBlock  chainhash.Hash
-	Timestamp  time.Time
-	Bits       uint32
-	Nonce      uint32
-	BCHeader   wire.BeaconHeader
+	Version   int32
+	PrevBlock chainhash.Hash
+	Timestamp time.Time
+	Bits      uint32
+	Nonce     uint32
+	BCHeader  wire.BeaconHeader
 }
 
 type PowParams struct {
@@ -170,7 +170,7 @@ type PowParams struct {
 	HashSorting bool
 
 	// Maximum chain ID count
-	ChainIDCount uint32
+	HashSortingSlotNumber uint32
 }
 
 // Params defines a Bitcoin network by its parameters.  These parameters may be

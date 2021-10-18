@@ -92,7 +92,7 @@ func ValidateMerkleTreeRoot(txHashes []Hash, expectedRoot Hash) bool {
 	return tree[len(tree)-1].IsEqual(&expectedRoot)
 }
 
-func BuildMerkleTreeProof(txHashes []Hash) []Hash {
+func BuildCoinbaseMerkleTreeProof(txHashes []Hash) []Hash {
 	merkleHashes := txHashes
 	steps := make([]Hash, 0)
 	PreL := []Hash{{}}
@@ -119,7 +119,7 @@ func BuildMerkleTreeProof(txHashes []Hash) []Hash {
 	return steps
 }
 
-func MerkleTreeProofRoot(txHash Hash, proof []Hash) Hash {
+func CoinbaseMerkleTreeProofRoot(txHash Hash, proof []Hash) Hash {
 	root := txHash
 	for i := range proof {
 		root = *HashMerkleBranches(&root, &proof[i])
@@ -128,7 +128,7 @@ func MerkleTreeProofRoot(txHash Hash, proof []Hash) Hash {
 	return root
 }
 
-func ValidateMerkleTreeProof(txHash Hash, proof []Hash, expectedRoot Hash) bool {
+func ValidateCoinbaseMerkleTreeProof(txHash Hash, proof []Hash, expectedRoot Hash) bool {
 	root := txHash
 	for i := range proof {
 		root = *HashMerkleBranches(&root, &proof[i])

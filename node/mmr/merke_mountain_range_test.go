@@ -37,7 +37,7 @@ func TestBlock_Value(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Block{
+			b := Leaf{
 				Hash:   tt.fields.Hash,
 				Weight: tt.fields.Weight,
 			}
@@ -48,7 +48,7 @@ func TestBlock_Value(t *testing.T) {
 
 			nB := gotV.Block()
 			if !reflect.DeepEqual(nB, b) {
-				t.Errorf("Block() = %v, want %v", nB, b)
+				t.Errorf("Leaf() = %v, want %v", nB, b)
 			}
 		})
 	}
@@ -56,22 +56,22 @@ func TestBlock_Value(t *testing.T) {
 
 func TestBuildMerkleTreeStore(t *testing.T) {
 	tests := []struct {
-		blocks []Block
-		want   []*Block
+		blocks []Leaf
+		want   []*Leaf
 	}{
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				{Weight: 1},
 			},
 		},
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				{Weight: 1}, {Weight: 20},
 				// root
 				{Weight: 21},
@@ -79,11 +79,11 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300},
 			},
 
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, nil, // reserved slot
 
@@ -95,10 +95,10 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 
@@ -109,10 +109,10 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 			},
 		},
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000}, {Weight: 50000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, nil, nil, nil, // reserved slots
@@ -129,10 +129,10 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000}, {Weight: 50000}, {Weight: 600000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, nil, nil, // reserved slot
@@ -149,11 +149,11 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, nil, // reserved slot
@@ -170,11 +170,11 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 		},
 
 		{
-			blocks: []Block{
+			blocks: []Leaf{
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, {Weight: 80000000},
 			},
-			want: []*Block{
+			want: []*Leaf{
 				// zero layer
 				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
 				{Weight: 50000}, {Weight: 600000}, {Weight: 7000000}, {Weight: 80000000},

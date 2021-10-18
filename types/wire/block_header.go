@@ -16,7 +16,7 @@ const (
 	flagsReserve = 4
 
 	ExpansionApprove = 1 << iota
-	ExpansionExec
+	ExpansionMade
 )
 
 type BlockHeader interface {
@@ -104,16 +104,16 @@ func (bv BVersion) UnsetExpansionApproved() BVersion {
 }
 
 func (bv BVersion) ExpansionMade() bool {
-	return bv&ExpansionExec == ExpansionExec
+	return bv&ExpansionMade == ExpansionMade
 }
 
 func (bv BVersion) SetExpansionMade() BVersion {
-	return bv | ExpansionExec
+	return bv | ExpansionMade
 }
 
 func (bv BVersion) UnsetExpansionMade() BVersion {
-	if bv&ExpansionExec == ExpansionExec {
-		return bv ^ ExpansionExec
+	if bv&ExpansionMade == ExpansionMade {
+		return bv ^ ExpansionMade
 	}
 	return bv
 }

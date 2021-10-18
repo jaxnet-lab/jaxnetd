@@ -530,8 +530,7 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	//
 	// This mirrors the behavior in the reference implementation.
 	chain := sp.serverPeerHandler.chain.BlockChain()
-	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop,
-		wire.MaxBlocksPerMsg)
+	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop, wire.MaxBlocksPerMsg)
 
 	// Generate inventory message.
 	invMsg := wire.NewMsgInv()

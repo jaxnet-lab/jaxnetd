@@ -221,7 +221,7 @@ func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlo
 		return
 	}
 
-	lifoToAdd := []mmr.Block{
+	lifoToAdd := []mmr.Leaf{
 		{Hash: node.GetHash(), Weight: node.Difficulty()},
 	}
 
@@ -244,7 +244,7 @@ func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlo
 			break
 		}
 
-		lifoToAdd = append(lifoToAdd, mmr.Block{Hash: iterNode.GetHash(), Weight: iterNode.Difficulty()})
+		lifoToAdd = append(lifoToAdd, mmr.Leaf{Hash: iterNode.GetHash(), Weight: iterNode.Difficulty()})
 
 		iterMMRRoot = iterNode.Header().BlocksMerkleMountainRoot()
 		iterNode = iterNode.Parent()

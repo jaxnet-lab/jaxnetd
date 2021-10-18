@@ -7,12 +7,9 @@
 package chaindata
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/jaxutil/base58"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
@@ -60,9 +57,10 @@ func Test_calcBlockSubsidy(t *testing.T) {
 		})
 	}
 
-	f1, _ := txscript.NullDataScript([]byte(" jax.network "))
-	f2, _ := txscript.NullDataScript([]byte("     JAX     "))
-
-	fmt.Println(base58.CheckEncode(f1, chaincfg.MainNetParams.PubKeyHashAddrID))
-	fmt.Println(base58.CheckEncode(f2, chaincfg.MainNetParams.PubKeyHashAddrID))
+	// sum := int64(0)
+	// for h := 1; h <= 262500; h++ {
+	// 	reward := calcBlockSubsidy(int32(h)) / 10000_0000
+	// 	sum += reward
+	// 	println("height", h, "sum", sum, "reward", reward)
+	// }
 }

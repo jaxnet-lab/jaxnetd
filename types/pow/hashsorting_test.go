@@ -77,11 +77,11 @@ func TestValidateHashSortingRule(t *testing.T) {
 		},
 		{
 			powHash: "00000000150288a5bfe367741d20e02167f24cbc14844cd069ee24e0a2411000",
-			chainID: 0,
+			chainID: 4096 + 0,
 		},
 		{
 			powHash: "00000000150288a5bfe367741d20e02167f24cbc14844cd069ee24e0a2411001",
-			chainID: 1,
+			chainID: 4096 + 1,
 		},
 	}
 

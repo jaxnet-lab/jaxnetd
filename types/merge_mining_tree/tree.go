@@ -311,7 +311,7 @@ func NewSparseMerkleTree(shardsCount uint32) (tree *SparseMerkleTree) {
 // Height returns height of the tree including root level.
 func (tree *SparseMerkleTree) Height() uint16 {
 	// +1 because root does not belong to the levels structure,
-	//but it is considered as a level too.
+	// but it is considered as a level too.
 	return uint16(tree.slotsLevelIndex) + 2
 }
 
@@ -366,7 +366,7 @@ func (tree *SparseMerkleTree) DropShardHash(position uint32) (err error) {
 func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
 	defer func() {
 		// Prevent redundant re-calculations
-		//until some changes would be done on the leafs level.
+		// until some changes would be done on the leafs level.
 		tree.markWholeTreeAsCached()
 	}()
 
@@ -966,6 +966,76 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 	return
 }
 
+func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint32) {
+	l := chainhash.NextPowerOfTwo(int(nShards))*2 - 1
+	if len(result) < l {
+		res := make([]byte, l)
+		copy(res[:], result[:])
+		result = res
+	}
+
+	if codingSize == 0 {
+		result[0] += 1
+		return
+	}
+
+	k := codingSize / 3
+
+	topologyCodingFirstBit := uint32(0)
+	topologyCodingLastBitIndex := (2 * k) - 1 - 1
+
+	nodesTypesCodingFirstBitIndex := topologyCodingLastBitIndex + 1
+	// nodesTypesCodingLastBitIndex := nodesTypesCodingFirstBitIndex + k
+
+	topologyBits := (&big.Int{}).SetBytes(coding)
+	getTopologyBit := func(pos uint32) byte {
+		if pos > topologyCodingLastBitIndex && pos <= topologyCodingLastBitIndex+2 {
+			return 0
+		}
+
+		return byte(topologyBits.Bit(int(pos)))
+	}
+
+	var v = topologyCodingFirstBit
+	var u = nodesTypesCodingFirstBitIndex
+
+	var traverseTreeStep func(nodeIndex uint32)
+	treeIndexLimit := uint32(chainhash.NextPowerOfTwo(int(nShards))) + nShards - 2
+
+	traverseTreeStep = func(nodeIndex uint32) {
+		if getTopologyBit(v) == 1 {
+			v++
+			traverseTreeStep(uint32(2*nodeIndex) + 1)
+			v++
+			traverseTreeStep(uint32(2*nodeIndex) + 2)
+		}
+
+		if len(result) > int(2*nodeIndex)+2 {
+			return
+		}
+
+		if result[(2*nodeIndex)+1] > 0 && result[(2*nodeIndex)+2] > 0 {
+			result[(2*nodeIndex)+1] -= 1
+			result[(2*nodeIndex)+2] -= 1
+			result[nodeIndex] += 1
+			return
+		}
+
+		bit := byte(topologyBits.Bit(int(u)))
+		result[nodeIndex] += bit
+		if nodeIndex > treeIndexLimit {
+			result[nodeIndex] += 1
+			return
+		}
+
+		u++
+	}
+
+	traverseTreeStep(0)
+
+	return
+}
+
 func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount uint32,
 	shardMerkleProof []chainhash.Hash, expectedShardHash, expectedRootHash chainhash.Hash) (err error) {
 
@@ -976,10 +1046,10 @@ func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount
 		return
 	}
 
-	//if bytes.Compare(shardMerkleProof[0:HashSizeBytes], expectedShardHash) != 0 {
+	// if bytes.Compare(shardMerkleProof[0:HashSizeBytes], expectedShardHash) != 0 {
 	//	err = fmt.Errorf("shard hash wasn't found in an expected position in shardMerkleProof: %w", ErrValidation)
 	//	return
-	//}
+	// }
 
 	totalLevelsCount := len(shardMerkleProof)
 	correspondingPairIndex := position

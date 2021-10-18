@@ -230,13 +230,6 @@ func (b *BlockChain) initChainState() error {
 		return b.createChainState()
 	}
 
-	if !hasBlockIndex {
-		err := chaindata.MigrateBlockIndex(b.db)
-		if err != nil {
-			return nil
-		}
-	}
-
 	// Attempt to load the chain state from the database.
 	err = b.db.View(func(dbTx database.Tx) error {
 
