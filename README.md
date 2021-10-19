@@ -10,7 +10,7 @@ jaxnetd is a full node JAX.Network implementation written in Go (golang).
 
 ## Requirements
 
-[Go](http://golang.org) 1.14 or newer.
+[Go](http://golang.org) 1.17 or newer.
 
 ## Installation
 

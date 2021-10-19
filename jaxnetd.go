@@ -17,7 +17,7 @@ import (
 	"runtime/pprof"
 
 	"gitlab.com/jaxnet/jaxnetd/config"
-	"gitlab.com/jaxnet/jaxnetd/limits"
+	"gitlab.com/jaxnet/jaxnetd/internal/limits"
 	"gitlab.com/jaxnet/jaxnetd/node"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
