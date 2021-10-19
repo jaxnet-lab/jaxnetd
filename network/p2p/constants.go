@@ -1,14 +1,13 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package p2p
 
 import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/network/peer"
-	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -30,35 +29,7 @@ const (
 	// number of retries such that there is a retry backoff.
 	connectionRetryInterval = time.Second * 5
 
-	defaultConfigFilename        = "shard.yaml"
-	defaultDataDirname           = "data"
-	defaultLogLevel              = "info"
-	defaultLogDirname            = "logs"
-	defaultLogFilename           = "jaxnetd.log"
-	defaultMaxPeers              = 125
-	defaultBanDuration           = time.Hour * 24
-	defaultBanThreshold          = 100
-	defaultConnectTimeout        = time.Second * 30
-	defaultMaxRPCClients         = 10
-	defaultMaxRPCWebsockets      = 25
-	defaultMaxRPCConcurrentReqs  = 20
-	defaultDbType                = "ffldb"
-	defaultFreeTxRelayLimit      = 15.0
-	defaultTrickleInterval       = peer.DefaultTrickleInterval
-	defaultBlockMinSize          = 0
-	defaultBlockMaxSize          = 750000
-	defaultBlockMinWeight        = 0
-	defaultBlockMaxWeight        = 3000000
-	blockMaxSizeMin              = 1000
-	blockMaxSizeMax              = chaindata.MaxBlockBaseSize - 1000
-	blockMaxWeightMin            = 4000
-	blockMaxWeightMax            = chaindata.MaxBlockWeight - 4000
-	defaultGenerate              = false
-	defaultMaxOrphanTransactions = 100
-	defaultSigCacheMaxSize       = 100000
-	sampleConfigFilename         = "sample-jaxnetd.yaml"
-	defaultTxIndex               = false
-	defaultAddrIndex             = false
+	defaultConnectTimeout = time.Second * 30
 )
 
 var (

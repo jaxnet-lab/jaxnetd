@@ -20,5 +20,5 @@ up_local: build_docker_local
 debug_build:
 	#env GOOS=linux GOARCH=amd64
 	go build  -gcflags "all=-N -l" -o ./jaxnetd .
-	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./jaxnetd -C shard.local.yaml
+	dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./jaxnetd -C shard.local.toml
 

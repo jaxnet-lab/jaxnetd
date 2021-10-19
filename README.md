@@ -69,7 +69,7 @@ configuration.
 
 ### Configuration
 
-Edit the `data_dir` and `log_dir` in [jaxnetd.testnet.yaml](./jaxnetd.testnet.yaml) 
+Edit the `data_dir` and `log_dir` in [jaxnetd.testnet.toml](./jaxnetd.testnet.toml) 
 
 #### Windows (Installed from MSI)
 
@@ -79,7 +79,7 @@ Edit the `data_dir` and `log_dir` in [jaxnetd.testnet.yaml](./jaxnetd.testnet.ya
 
 ```bash
 $ go build .
-$ ./jaxnetd -C jaxnetd.testnet.yaml
+$ ./jaxnetd -C jaxnetd.testnet.toml
 ```
 
 

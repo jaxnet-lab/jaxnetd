@@ -43,7 +43,7 @@ archives:
       - LICENSE
       - README.md
       - CHANGELOG.md
-      - jaxnetd.testnet.yaml
+      - jaxnetd.testnet.toml
       - docs/*
 
 nfpms:
