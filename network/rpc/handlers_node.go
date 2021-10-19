@@ -216,6 +216,10 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 		sN = chaincfg.ShardEpochLength
 	}
 
+	if !isMainNet && sN > chaincfg.ShardEpochLength/32 {
+		sN = chaincfg.ShardEpochLength / 32
+	}
+
 	destinationShard, ok := server.shardsMgr.ShardCtl(c.DestinationShard)
 	if !ok {
 		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCInvalidParameter,
@@ -228,7 +232,10 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 		if isMainNet {
 			return nil, err
 		}
-		dN = chaincfg.ShardEpochLength / 2
+		dN = chaincfg.ShardEpochLength / 32
+	}
+	if !isMainNet && dN > chaincfg.ShardEpochLength/32 {
+		dN = chaincfg.ShardEpochLength / 32
 	}
 
 	if sN < dN*2 {

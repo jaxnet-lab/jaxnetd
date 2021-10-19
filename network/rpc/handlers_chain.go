@@ -1047,12 +1047,14 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 		n = 4 * 30
 	}
 
+	if server.chainProvider.ChainParams.Net != types.MainNet && n > chaincfg.ShardEpochLength/32 {
+		n = chaincfg.ShardEpochLength / 32
+		return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil
+	}
+
 	if n > 20000 {
-		if server.chainProvider.ChainParams.Net == types.MainNet {
-			return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
-				fmt.Sprintf("lock time more than 2000 blocks"))
-		}
-		n = chaincfg.ShardEpochLength / 2
+		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
+			fmt.Sprintf("lock time more than 2000 blocks"))
 	}
 
 	return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil
