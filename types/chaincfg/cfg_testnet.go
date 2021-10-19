@@ -13,10 +13,17 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
-// testNet3PowLimit is the highest proof of work value a Bitcoin block
-// can have for the test network (version 3).  It is the value
-// 2^224 - 1.
-var testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
+var (
+	// testNetPowLimit is the highest proof of work value a Bitcoin block
+	// can have for the test network (version 3).  It is the value
+	// 2^256 / 2^(28-12) = 2^240 - 12 bits for hash-sorting here don't present.
+	testNetPowLimitBeacon            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 241), bigOne)
+	testNetPowLimitBitsBeacon uint32 = 0x1f01fff0 // 2^28 target=0001fff000000000000000000000000000000000000000000000000000000000
+
+	// 2^256 / 2^(24-12) = 2^244 - 12 bits for hash-sorting here don't present.
+	testNetPowLimitShard            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 245), bigOne)
+	testNetPowLimitBitsShard uint32 = 0x1f1ff000 // 2^24 target=001ff00000000000000000000000000000000000000000000000000000000000
+)
 
 // TestNet3Params defines the network parameters for the test Bitcoin network
 // (version 3).  Not to be confused with the regression test network, this
@@ -37,8 +44,8 @@ var TestNetParams = Params{
 	CoinbaseMaturity: 10,
 
 	PowParams: PowParams{
-		PowLimit:                 testNet3PowLimit,
-		PowLimitBits:             0x1d0ffff0,
+		PowLimit:                 testNetPowLimitBeacon,
+		PowLimitBits:             testNetPowLimitBitsBeacon,
 		TargetTimespan:           time.Hour * 24 * 14, // 14 days
 		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
 		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more

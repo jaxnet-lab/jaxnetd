@@ -16,7 +16,12 @@ import (
 // fastNetPowLimit is the highest proof of work value a Bitcoin block
 // can have for the test network (version 3).  It is the value
 // 2^255 - 1.
-var fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+var (
+	fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
+
+	// fastnetShardPoWBits is basic target for shard chain.
+	fastnetShardPoWBits uint32 = 0x1e0dffff
+)
 
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
@@ -32,7 +37,7 @@ var FastNetParams = Params{
 
 	PowParams: PowParams{
 		PowLimit:                 fastNetPowLimit,
-		PowLimitBits:             0x1e0dffff,
+		PowLimitBits:             fastnetShardPoWBits,
 		TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
 		TargetTimePerBlock:       time.Second * 15,           // 15 seconds
 		RetargetAdjustmentFactor: 4,                          // 25% less, 400% more

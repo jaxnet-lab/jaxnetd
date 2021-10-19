@@ -23,14 +23,6 @@ var (
 	// bigOne is 1 represented as a big.Int.  It is defined here to avoid
 	// the overhead of creating it multiple times.
 	bigOne = big.NewInt(1)
-
-	// shardChainPowLimit is the highest proof of work value a Bitcoin block
-	// can have for the test network (version 3).  It is the value
-	// 2^255 - 1.
-	shardChainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
-
-	// ShardPoWBits is basic target for shard chain.
-	ShardPoWBits uint32 = 0x1e0dffff
 )
 
 var (
@@ -289,8 +281,17 @@ func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params 
 	cfg.PowParams.TargetTimePerBlock = time.Millisecond * ShardTimeDelta
 	cfg.PowParams.TargetTimespan = time.Millisecond * ShardTimeDelta * ShardEpochLength
 
-	cfg.PowParams.PowLimit = shardChainPowLimit
-	cfg.PowParams.PowLimitBits = ShardPoWBits
+	switch cfg.Net {
+	case types.TestNet:
+		cfg.PowParams.PowLimit = testNetPowLimitShard
+		cfg.PowParams.PowLimitBits = testNetPowLimitBitsShard
+	case types.MainNet:
+		cfg.PowParams.PowLimit = mainNetPowLimitShard
+		cfg.PowParams.PowLimitBits = mainNetPowLimitBitsShard
+	default:
+		cfg.PowParams.PowLimit = fastNetPowLimit
+		cfg.PowParams.PowLimitBits = fastnetShardPoWBits
+	}
 
 	SetShardGenesisBlock(cfg.Net, shard, beaconBlock)
 

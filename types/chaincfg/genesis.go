@@ -8,6 +8,7 @@ package chaincfg
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"time"
 
@@ -95,8 +96,8 @@ func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 			Version:   1,
 			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
 			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:      0x1d0ffff0,               // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
-			Nonce:     0x18aea41a,               // 414098458
+			Bits:      testNetPowLimitBitsBeacon,
+			Nonce:     0x18aea41a, // 414098458
 		}
 
 	case types.FastTestNet:
@@ -104,7 +105,7 @@ func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 			Version:   1,
 			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
 			Timestamp: time.Unix(1633687865, 0), // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:      0x1e0fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+			Bits:      0x1e0fffff,
 			Nonce:     0x18aea41a,
 		}
 	case types.SimNet:
@@ -169,7 +170,17 @@ func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 		return &shardBlock
 	}
 
-	ShardGenesisCoinbaseTx(name)
+	ShardGenesisCoinbaseTx(name, shardID)
+
+	var bits uint32
+	switch name {
+	case types.TestNet:
+		bits = testNetPowLimitBitsShard
+	case types.MainNet:
+		bits = mainNetPowLimitBitsShard
+	default:
+		bits = fastnetShardPoWBits
+	}
 
 	coinbaseAux := wire.CoinbaseAux{}.FromBlock(beaconBlock)
 	shardBlock = wire.MsgBlock{
@@ -177,7 +188,7 @@ func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 		Header: wire.NewShardBlockHeader(
 			chainhash.Hash{},
 			*state.shardsGenesisMerkleRoot,
-			ShardPoWBits,
+			bits,
 			*beaconBlock.Header.BeaconHeader(),
 			coinbaseAux,
 		),
@@ -222,7 +233,7 @@ func GenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	return *state.genesisTx
 }
 
-func ShardGenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
+func ShardGenesisCoinbaseTx(name types.JaxNet, shardID uint32) wire.MsgTx {
 	state := genesisStorage[name]
 
 	if state.shardsGenesisTx != nil {
@@ -239,6 +250,11 @@ func ShardGenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
+
+	data := []byte{'s', 'h', 'a', 'r', 'd'}
+	binary.PutUvarint(data, uint64(shardID))
+
+	state.shardsGenesisTx.TxIn[0].SignatureScript = append(state.shardsGenesisTx.TxIn[0].SignatureScript, data...)
 
 	// todo put shardID into genesis tx script signature
 

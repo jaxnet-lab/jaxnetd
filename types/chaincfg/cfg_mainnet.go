@@ -13,9 +13,17 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
-// mainPowLimit is the highest proof of work value a Bitcoin block can
-// have for the main network.  It is the value 2^224 - 1.
-var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
+var (
+	// testNetPowLimit is the highest proof of work value a Bitcoin block
+	// can have for the test network (version 3).  It is the value
+	// 2^256 / 2^(28-12) = 2^240 - 12 bits for hash-sorting here don't present.
+	mainNetPowLimitBeacon            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 240), bigOne)
+	mainNetPowLimitBitsBeacon uint32 = 0x1f01fff0 // 2^28 target=0001fff000000000000000000000000000000000000000000000000000000000
+
+	// 2^256 / 2^(24-12) = 2^244 - 12 bits for hash-sorting here don't present.
+	mainNetPowLimitShard            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 244), bigOne)
+	mainNetPowLimitBitsShard uint32 = 0x1f1ff000 // 2^24 target=001ff00000000000000000000000000000000000000000000000000000000000
+)
 
 // var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 224), bigOne)
 
@@ -34,8 +42,8 @@ var MainNetParams = Params{
 	CoinbaseMaturity: 100,
 
 	PowParams: PowParams{
-		PowLimit:                 mainPowLimit,
-		PowLimitBits:             0x1d0ffff0,
+		PowLimit:                 mainNetPowLimitBeacon,
+		PowLimitBits:             mainNetPowLimitBitsBeacon,
 		TargetTimespan:           time.Hour * 24 * 14, // 14 days
 		TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
 		RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
