@@ -62,6 +62,26 @@ func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 	}
 }
 
+func (chainCtl *chainController) GetNodeMetrics() jaxjson.GetNodeMetricsResult {
+	statsMap := chainCtl.Stats()
+	return jaxjson.GetNodeMetricsResult{Stats: statsMap}
+}
+
+func (chainCtl *chainController) GetChainMetrics() jaxjson.GetChainMetricsResult {
+	beaconStats := chainCtl.beacon.Stats()
+	var res jaxjson.GetChainMetricsResult
+	res.NetName = chainCtl.cfg.Node.Net
+
+	res.ChainStats = make(map[uint32]map[string]float64)
+	res.ChainStats[0] = beaconStats
+
+	for i, v := range chainCtl.shardsCtl {
+		res.ChainStats[i] = v.ctl.Stats()
+	}
+
+	return res
+}
+
 func (chainCtl *chainController) runShards() error {
 	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err

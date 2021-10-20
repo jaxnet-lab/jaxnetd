@@ -1007,3 +1007,12 @@ type EstimateSwapLockTimeResult struct {
 	NBlocksAtSource int64 `json:"NBlocksAtSource"`
 	NBlocksAtDest   int64 `json:"NBlocksAtDest"`
 }
+
+type GetNodeMetricsResult struct {
+	Stats map[string]float64 `json:"stats"`
+}
+
+type GetChainMetricsResult struct {
+	ChainStats map[uint32]map[string]float64 `json:"chainStats"`
+	NetName    string                        `json:"netName"`
+}

@@ -108,6 +108,11 @@ type ShardManager interface {
 	DisableShard(shardID uint32) error
 }
 
+type MetricsManager interface {
+	GetNodeMetrics() jaxjson.GetNodeMetricsResult
+	GetChainMetrics() jaxjson.GetChainMetricsResult
+}
+
 // filesExists reports whether the named file or directory exists.
 func fileExists(name string) bool {
 	if _, err := os.Stat(name); err != nil {

@@ -25,6 +25,7 @@ type NodeRPC struct {
 
 	// shardsMgr provides ability to manipulate running shards.
 	shardsMgr   ShardManager
+	metricsMgr  MetricsManager
 	beaconChain *cprovider.ChainProvider
 
 	// fixme: this fields are empty
@@ -34,10 +35,11 @@ type NodeRPC struct {
 	CPUMiner    cpuminer.CPUMiner
 }
 
-func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger) *NodeRPC {
+func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger, metricsMgr MetricsManager) *NodeRPC {
 	rpc := &NodeRPC{
 		Mux:         NewRPCMux(logger),
 		shardsMgr:   shardsMgr,
+		metricsMgr:  metricsMgr,
 		beaconChain: beaconChain,
 	}
 	rpc.ComposeHandlers()
@@ -62,9 +64,11 @@ func (server *NodeRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
 		jaxjson.ScopedMethod("node", "generate"):    server.handleGenerate,
 		jaxjson.ScopedMethod("node", "setGenerate"): server.handleSetGenerate,
 
-		jaxjson.ScopedMethod("node", "debugLevel"): server.handleDebugLevel,
-		jaxjson.ScopedMethod("node", "stop"):       server.handleStop,
-		jaxjson.ScopedMethod("node", "help"):       server.handleHelp,
+		jaxjson.ScopedMethod("node", "debugLevel"):      server.handleDebugLevel,
+		jaxjson.ScopedMethod("node", "stop"):            server.handleStop,
+		jaxjson.ScopedMethod("node", "help"):            server.handleHelp,
+		jaxjson.ScopedMethod("node", "getnodemetrics"):  server.handleGetNodeMetrics,
+		jaxjson.ScopedMethod("node", "getchainmetrics"): server.handleGetChainMetrics,
 	}
 }
 
@@ -371,4 +375,14 @@ func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (i
 		return nil, server.InternalRPCError(err.Error(), context)
 	}
 	return help, nil
+}
+
+func (server *NodeRPC) handleGetNodeMetrics(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	res := server.metricsMgr.GetNodeMetrics()
+	return res, nil
+}
+
+func (server *NodeRPC) handleGetChainMetrics(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+	res := server.metricsMgr.GetChainMetrics()
+	return res, nil
 }
