@@ -662,15 +662,15 @@ type ScriptSig struct {
 // getrawtransaction, decoderawtransaction, and searchrawtransaction use the
 // same structure.
 type Vin struct {
-	Coinbase  string     `json:"coinbase"`
-	Txid      string     `json:"txid"`
-	Vout      uint32     `json:"vout"`
-	ScriptSig *ScriptSig `json:"scriptSig"`
-	Sequence  uint32     `json:"sequence"`
-	Witness   []string   `json:"txinwitness"`
-
-	Age    int32 `json:"age"`
-	Amount int64 `json:"amount"`
+	Coinbase         string     `json:"coinbase"`
+	Txid             string     `json:"txid"`
+	Vout             uint32     `json:"vout"`
+	ScriptSig        *ScriptSig `json:"scriptSig"`
+	Sequence         uint32     `json:"sequence"`
+	Witness          []string   `json:"txinwitness"`
+	Age              int32      `json:"age"`
+	Amount           int64      `json:"amount"`
+	FromAnotherShard bool       `json:"from_another_shard,omitempty"`
 }
 
 // IsCoinBase returns a bool to show if a Vin is a Coinbase one or not.
@@ -810,10 +810,11 @@ func (v *VinPrevOut) MarshalJSON() ([]byte, error) {
 // Vout models parts of the tx data.  It is defined separately since both
 // getrawtransaction and decoderawtransaction use the same structure.
 type Vout struct {
-	Value        float64            `json:"value"`
-	N            uint32             `json:"n"`
-	ScriptPubKey ScriptPubKeyResult `json:"scriptPubKey"`
-	PreciseValue int64              `json:"precise_value"`
+	Value            float64            `json:"value"`
+	N                uint32             `json:"n"`
+	ScriptPubKey     ScriptPubKeyResult `json:"scriptPubKey"`
+	PreciseValue     int64              `json:"precise_value"`
+	FromAnotherShard bool               `json:"from_another_shard,omitempty"`
 }
 
 // GetMiningInfoResult models the data from the getmininginfo command.

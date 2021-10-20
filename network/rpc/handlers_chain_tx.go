@@ -452,13 +452,14 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 		return nil, nil, server.InternalRPCError(err.Error(), context)
 	}
 
-	var inputsFromAnotherChain []int
+	var inputsFromAnotherChain = map[int]struct{}{}
 	if detailedIn && !rawTxn.CoinbaseTx {
 		for i, in := range rawTxn.Vin {
 			hashStr := in.Coinbase
 			if in.Txid != "" {
 				hashStr = in.Txid
 			}
+
 			hash, _ := chainhash.NewHashFromStr(hashStr)
 			parentTx, err := server.getTx(hash, true, includeOrphan)
 			switch {
@@ -467,7 +468,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 				return nil, nil, server.InternalRPCError(err.Error(), context)
 			case err != nil && txInfo.tx.SwapTx():
 				// ignore missed parent for for swap tx
-				inputsFromAnotherChain = append(inputsFromAnotherChain, i)
+				inputsFromAnotherChain[i] = struct{}{}
 				continue
 			}
 
@@ -484,11 +485,14 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 			// so if input X from chain A, then output X in chain A also
 			for i := range inputsFromAnotherChain {
 				rawTxn.OutAmount -= rawTxn.Vout[i].PreciseValue
+				rawTxn.Vin[i].FromAnotherShard = true
+				rawTxn.Vout[i].FromAnotherShard = true
 			}
 		}
 
 		rawTxn.Fee = rawTxn.InAmount - rawTxn.OutAmount
 	}
+
 	rawTxn.OrphanTx = txInfo.isOrphan
 
 	return rawTxn, txInfo.tx, err
