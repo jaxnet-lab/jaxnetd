@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -165,7 +164,6 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}()
 
 	if autoInit {
-		fmt.Printf("autoinit data: %+v\n", shardCtl.ChainProvider().ChainCtx.ShardID())
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), shardCtl.p2pServer.P2PConnManager(), chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 	}
