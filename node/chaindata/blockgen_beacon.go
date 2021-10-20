@@ -195,7 +195,7 @@ func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash
 	return wire.BTCBlockAux{
 		CoinbaseAux: wire.CoinbaseAux{
 			Tx:            *tx.MsgTx(),
-			TxMerkleProof: []chainhash.Hash{*tx.Hash()},
+			TxMerkleProof: []chainhash.Hash{},
 		},
 		Bits:       0x170e2632,
 		MerkleRoot: *tx.Hash(),

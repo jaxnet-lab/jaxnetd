@@ -418,9 +418,9 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 		return nil, err
 	}
 
-	log.Debug().Msgf("Created new block template (%d transactions, %d in "+
-		"fees, %d signature operations cost, %d weight, target difficulty "+
-		"%064x)", len(msgBlock.Transactions), txsCollection.TotalFees, txsCollection.BlockSigOpCost,
+	log.Debug().Str("chain", g.chainCtx.Name()).Msgf("Created new block template (%d transactions, %d in "+
+		"fees, %d signature operations cost, %d weight, target difficulty %064x)",
+		len(msgBlock.Transactions), txsCollection.TotalFees, txsCollection.BlockSigOpCost,
 		txsCollection.BlockWeight, pow.CompactToBig(msgBlock.Header.Bits()))
 
 	return &chaindata.BlockTemplate{
@@ -496,7 +496,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	txFees = append(txFees, -1) // Updated once known
 	txSigOpCosts = append(txSigOpCosts, coinbaseSigOpCost)
 
-	log.Debug().Msgf("Considering %d transactions for inclusion to new block",
+	log.Debug().Str("chain", g.chainCtx.Name()).Msgf("Considering %d transactions for inclusion to new block",
 		len(sourceTxns))
 
 mempoolLoop:
@@ -505,13 +505,13 @@ mempoolLoop:
 		// non-finalized transactions.
 		tx := txDesc.Tx
 		if chaindata.IsCoinBase(tx) {
-			log.Trace().Msgf("Skipping coinbase tx %s", tx.Hash())
+			log.Trace().Str("chain", g.chainCtx.Name()).Msgf("Skipping coinbase tx %s", tx.Hash())
 			continue
 		}
 		if !chaindata.IsFinalizedTransaction(tx, nextHeight,
 			g.blockChain.TimeSource.AdjustedTime()) {
 
-			log.Trace().Msgf("Skipping non-finalized tx %s", tx.Hash())
+			log.Trace().Str("chain", g.chainCtx.Name()).Msgf("Skipping non-finalized tx %s", tx.Hash())
 			continue
 		}
 
@@ -522,7 +522,7 @@ mempoolLoop:
 		// dependencies in the final generated block.
 		utxos, err := g.blockChain.FetchUtxoView(tx)
 		if err != nil {
-			log.Warn().Msgf("Unable to fetch utxo view for tx %s: %v",
+			log.Warn().Str("chain", g.chainCtx.Name()).Msgf("Unable to fetch utxo view for tx %s: %v",
 				tx.Hash(), err)
 			continue
 		}
@@ -542,7 +542,7 @@ mempoolLoop:
 
 			if entry == nil || entry.IsSpent() {
 				if !g.txSource.HaveTransaction(originHash) {
-					log.Trace().Msgf(
+					log.Trace().Str("chain", g.chainCtx.Name()).Msgf(
 						"Skipping tx %s because it references unspent output %s which is not available",
 						tx.Hash(), txIn.PreviousOutPoint)
 					continue mempoolLoop
@@ -590,7 +590,7 @@ mempoolLoop:
 		mergeUtxoView(blockUtxos, utxos)
 	}
 
-	log.Trace().Msgf("Priority queue len %d, dependers len %d",
+	log.Trace().Str("chain", g.chainCtx.Name()).Msgf("Priority queue len %d, dependers len %d",
 		priorityQueue.Len(), len(dependers))
 
 	// The starting block size is the size of the block header plus the max
@@ -666,7 +666,8 @@ mempoolLoop:
 		if blockPlusTxWeight < blockWeight ||
 			blockPlusTxWeight >= g.policy.BlockMaxWeight {
 
-			log.Trace().Msgf("Skipping tx %s because it would exceed the max block weight", tx.Hash())
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s because it would exceed the max block weight", tx.Hash())
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -675,13 +676,15 @@ mempoolLoop:
 		// check for overflow.
 		sigOpCost, err := chaindata.GetSigOpCost(tx, false, blockUtxos, true, segwitActive)
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in GetSigOpCost: %v", tx.Hash(), err)
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s due to error in GetSigOpCost: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
 		if blockSigOpCost+int64(sigOpCost) < blockSigOpCost ||
 			blockSigOpCost+int64(sigOpCost) > chaindata.MaxBlockSigOpsCost {
-			log.Trace().Msgf("Skipping tx %s because it would exceed the maximum sigops per block", tx.Hash())
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s because it would exceed the maximum sigops per block", tx.Hash())
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -692,11 +695,11 @@ mempoolLoop:
 			prioItem.feePerKB < int64(g.policy.TxMinFreeFee) &&
 			blockPlusTxWeight >= g.policy.BlockMinWeight {
 
-			log.Trace().Msgf(
-				"Skipping tx %s with feePerKB %d < TxMinFreeFee %d and block weight %d >= minBlockWeight %d",
-				tx.Hash(), prioItem.feePerKB,
-				g.policy.TxMinFreeFee, blockPlusTxWeight,
-				g.policy.BlockMinWeight)
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s with feePerKB %d < TxMinFreeFee %d and block weight %d >= minBlockWeight %d",
+					tx.Hash(), prioItem.feePerKB,
+					g.policy.TxMinFreeFee, blockPlusTxWeight,
+					g.policy.BlockMinWeight)
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -707,7 +710,7 @@ mempoolLoop:
 		if !sortedByFee && (blockPlusTxWeight >= g.policy.BlockPrioritySize ||
 			prioItem.priority <= MinHighPriority) { // todo (mike): use precise value
 
-			log.Trace().Msgf(
+			log.Trace().Str("chain", g.chainCtx.Name()).Msgf(
 				"Switching to sort by fees per kilobyte blockSize %d >= BlockPrioritySize %d || priority %.2f <= minHighPriority %.2f",
 				blockPlusTxWeight, g.policy.BlockPrioritySize,
 				prioItem.priority, MinHighPriority)
@@ -733,7 +736,8 @@ mempoolLoop:
 		// preconditions before allowing it to be added to the block.
 		_, err = chaindata.CheckTransactionInputs(tx, nextHeight, blockUtxos, g.chainCtx.Params())
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in CheckTransactionInputs: %v", tx.Hash(), err)
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s due to error in CheckTransactionInputs: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -741,7 +745,8 @@ mempoolLoop:
 			txscript.StandardVerifyFlags, g.blockChain.SigCache,
 			g.blockChain.HashCache)
 		if err != nil {
-			log.Trace().Msgf("Skipping tx %s due to error in ValidateTransactionScripts: %v", tx.Hash(), err)
+			log.Trace().Str("chain", g.chainCtx.Name()).
+				Msgf("Skipping tx %s due to error in ValidateTransactionScripts: %v", tx.Hash(), err)
 			logSkippedDeps(tx, deps)
 			continue
 		}
@@ -762,7 +767,7 @@ mempoolLoop:
 		txFees = append(txFees, prioItem.fee)
 		txSigOpCosts = append(txSigOpCosts, int64(sigOpCost))
 
-		log.Trace().Msgf("Adding tx %s (priority %.2f, feePerKB %d)",
+		log.Trace().Str("chain", g.chainCtx.Name()).Msgf("Adding tx %s (priority %.2f, feePerKB %d)",
 			prioItem.tx.Hash(), prioItem.priority, prioItem.feePerKB)
 
 		// Add transactions which depend on this one (and also do not

@@ -180,6 +180,7 @@ func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
 	}
 
 	cmgr, err := connmgr.New(&connmgr.Config{
+		ChainName:      chainProvider.ChainCtx.Name(),
 		Listeners:      listeners,
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),

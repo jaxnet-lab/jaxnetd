@@ -219,10 +219,10 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 	// newTarget since conversion to the compact representation loses
 	// precision.
 	newTargetBits := pow.BigToCompact(newTarget)
-	log.Debug().Msgf("Difficulty retarget at block height %d", lastNode.Height()+1)
-	log.Debug().Msgf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
-	log.Debug().Msgf("New target %08x (%064x)", newTargetBits, pow.CompactToBig(newTargetBits))
-	log.Debug().Msgf("Actual timespan %v, adjusted timespan %v, target timespan %v",
+	log.Debug().Str("chain", chainParams.ChainName).Msgf("Difficulty retarget at block height %d", lastNode.Height()+1)
+	log.Debug().Str("chain", chainParams.ChainName).Msgf("Old target %08x (%064x)", lastNode.Bits(), oldTarget)
+	log.Debug().Str("chain", chainParams.ChainName).Msgf("New target %08x (%064x)", newTargetBits, pow.CompactToBig(newTargetBits))
+	log.Debug().Str("chain", chainParams.ChainName).Msgf("Actual timespan %v, adjusted timespan %v, target timespan %v",
 		time.Duration(actualTimespan)*time.Second,
 		time.Duration(adjustedTimespan)*time.Second,
 		chainParams.PowParams.TargetTimespan)

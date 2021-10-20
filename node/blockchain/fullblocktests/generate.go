@@ -194,7 +194,7 @@ type testGenerator struct {
 	mmrRootToBlock map[chainhash.Hash]chainhash.Hash
 	blocksByName   map[string]*wire.MsgBlock
 	blockHeights   map[string]int32
-	mmr            mmr.BlocksMMRTree
+	mmr            *mmr.BlocksMMRTree
 
 	// Used for tracking spendable coinbase outputs.
 	spendableOuts     []spendableOut

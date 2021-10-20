@@ -133,6 +133,7 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Bl
 type Manager struct {
 	db             database.DB
 	enabledIndexes []Indexer
+	chainName      string
 }
 
 // Ensure the Manager type implements the blockchain.IndexManager interface.
@@ -187,7 +188,7 @@ func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) error {
 			continue
 		}
 
-		log.Info().Msgf("Resuming %s drop", indexer.Name())
+		log.Info().Str("chain", m.chainName).Msgf("Resuming %s drop", indexer.Name())
 		err := dropIndex(m.db, indexer.Key(), indexer.Name(), interrupt)
 		if err != nil {
 			return err
@@ -359,7 +360,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 
 		if initialHeight != height {
-			log.Info().Msgf("Removed %d orphaned blocks from %s "+
+			log.Info().Str("chain", m.chainName).Msgf("Removed %d orphaned blocks from %s "+
 				"(heights %d to %d)", initialHeight-height,
 				indexer.Name(), height+1, initialHeight)
 		}
@@ -380,7 +381,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				return err
 			}
 
-			log.Debug().Msgf("Current %s tip (height %d, hash %v)",
+			log.Debug().Str("chain", m.chainName).Msgf("Current %s tip (height %d, hash %v)",
 				indexer.Name(), height, hash)
 			indexerHeights[i] = height
 			if height < lowestHeight {
@@ -404,8 +405,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 	// At this point, one or more indexes are behind the current best chain
 	// tip and need to be caught up, so log the details and loop through
 	// each block that needs to be indexed.
-	log.Info().Msgf("Catching up indexes from height %d to %d", lowestHeight,
-		bestHeight)
+	log.Info().Str("chain", m.chainName).Msgf("Catching up indexes from height %d to %d", lowestHeight, bestHeight)
 	for height := lowestHeight + 1; height <= bestHeight; height++ {
 		// Load the block for the height since it is required to index
 		// it.
@@ -463,7 +463,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		}
 	}
 
-	log.Info().Msgf("Indexes caught up to height %d", bestHeight)
+	log.Info().Str("chain", m.chainName).Msgf("Indexes caught up to height %d", bestHeight)
 	return nil
 }
 
@@ -547,10 +547,11 @@ func (m *Manager) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 //
 // The manager returned satisfies the blockchain.IndexManager interface and thus
 // cleanly plugs into the normal blockchain processing path.
-func NewManager(db database.DB, enabledIndexes []Indexer) *Manager {
+func NewManager(db database.DB, enabledIndexes []Indexer, name string) *Manager {
 	return &Manager{
 		db:             db,
 		enabledIndexes: enabledIndexes,
+		chainName:      name,
 	}
 }
 

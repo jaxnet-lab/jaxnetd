@@ -6,8 +6,11 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -146,6 +149,17 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	shardCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
+	tree := shardCtl.chainProvider.BlockChain().MMRTree()
+	data, err := json.Marshal(tree)
+	if err != nil {
+		shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+	} else {
+		filePath := filepath.Join(shardCtl.cfg.DataDir, shardCtl.chain.Name()+"_mmr.json")
+		err = ioutil.WriteFile(filePath, data, 0755)
+		if err != nil {
+			shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+		}
+	}
 
 	shardCtl.log.Info().Msg("ShardChain p2p server shutdown complete")
 	shardCtl.log.Info().Msg("Gracefully shutting down the database...")

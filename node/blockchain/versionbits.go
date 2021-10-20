@@ -306,16 +306,15 @@ func (b *BlockChain) warnUnknownRuleActivations(node blocknodes.IBlockNode) erro
 		switch state {
 		case ThresholdActive:
 			if !b.unknownRulesWarned {
-				log.Warn().Msgf("Unknown new rules activated (bit %d)",
-					bit)
+				log.Warn().Str("chain", b.chain.Name()).Msgf("Unknown new rules activated (bit %d)", bit)
 				b.unknownRulesWarned = true
 			}
 
 		case ThresholdLockedIn:
 			window := int32(checker.MinerConfirmationWindow())
 			activationHeight := window - (node.Height() % window)
-			log.Warn().Msgf("Unknown new rules are about to activate in "+
-				"%d blocks (bit %d)", activationHeight, bit)
+			log.Warn().Str("chain", b.chain.Name()).
+				Msgf("Unknown new rules are about to activate in %d blocks (bit %d)", activationHeight, bit)
 		}
 	}
 
@@ -349,9 +348,9 @@ func (b *BlockChain) warnUnknownVersions(node blocknodes.IBlockNode) error {
 		node = node.Parent()
 	}
 	if numUpgraded > unknownVerWarnNum {
-		log.Warn().Msg("Unknown block versions are being mined, so new " +
-			"rules might be in effect.  Are you running the " +
-			"latest version of the software?")
+		log.Warn().Str("chain", b.chain.Name()).
+			Msg("Unknown block versions are being mined, so new rules might be in effect. Are you running the " +
+				"latest version of the software?")
 		b.unknownVersionsWarned = true
 	}
 

@@ -202,7 +202,7 @@ func (bi *blockIndex) flushToDB() error {
 }
 
 type mmrContainer struct {
-	mmr.BlocksMMRTree
+	*mmr.BlocksMMRTree
 	// mmrRootToBlock stores all known pairs of the mmr_root and corresponding block,
 	// which was the last leaf in the tree for this root.
 	// Here is stored all roots for the main chain and orphans.

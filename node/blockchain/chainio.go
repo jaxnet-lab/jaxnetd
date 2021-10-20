@@ -182,7 +182,7 @@ func (b *BlockChain) createChainState() error {
 		if err != nil {
 			return err
 		}
-		log.Info().Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
+		log.Info().Str("chain", b.chain.Name()).Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
 		// Store the genesis block into the database.
 		err = chaindata.DBStoreBlock(dbTx, genesisBlock)
 		if err != nil {
@@ -237,7 +237,7 @@ func (b *BlockChain) initChainState() error {
 		// initialized for use with chain yet, so break out now to allow
 		// that to happen under a writable database transaction.
 		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
-		log.Trace().Msgf("Serialized chain state: %x", serializedData)
+		log.Trace().Str("chain", b.chain.Name()).Msgf("Serialized chain state: %x", serializedData)
 		state, err := chaindata.DeserializeBestChainState(serializedData)
 		if err != nil {
 			return err
@@ -248,7 +248,7 @@ func (b *BlockChain) initChainState() error {
 		// number of nodes are already known, perform a single alloc
 		// for them versus a whole bunch of little ones to reduce
 		// pressure on the GC.
-		log.Info().Msgf("Loading block index...")
+		log.Info().Str("chain", b.chain.Name()).Msgf("Loading block index...")
 
 		blockIndexBucket := dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
 
@@ -329,7 +329,7 @@ func (b *BlockChain) initChainState() error {
 			// we'll mark it as valid now to ensure consistency once
 			// we're up and running.
 			if !iterNode.Status().KnownValid() {
-				log.Info().Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid,"+
+				log.Info().Str("chain", b.chain.Name()).Msgf("Block %v (height=%v) ancestor of chain tip not marked as valid,"+
 					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 
