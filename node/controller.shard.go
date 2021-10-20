@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
@@ -125,7 +126,13 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		return
 	}
 
-	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height())
+	script, _ := txscript.NewScriptBuilder().
+		AddData([]byte{0x73, 0x68, 0x61, 0x72, 0x64, 0x5f, 0x63, 0x68, 0x61, 0x69, 0x6e}). // ASCII: shard_chain
+		AddInt64(int64(shardID)).
+		AddData([]byte("/P2SH/jaxnetd/")).
+		Script()
+
+	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height(), script)
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)

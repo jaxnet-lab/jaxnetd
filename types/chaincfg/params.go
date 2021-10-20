@@ -272,7 +272,7 @@ func (cfg *Params) GenesisHash() *chainhash.Hash {
 }
 
 // ShardParams creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params {
+func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock, script []byte) *Params {
 	// shard's exclusive info
 	cfg.ChainID = shard
 	cfg.ChainName = "shard_" + strconv.FormatUint(uint64(shard), 10)
@@ -293,7 +293,7 @@ func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params 
 		cfg.PowParams.PowLimitBits = fastnetShardPoWBits
 	}
 
-	SetShardGenesisBlock(cfg.Net, shard, beaconBlock)
+	SetShardGenesisBlock(cfg.Net, shard, beaconBlock, script)
 
 	return &cfg
 }

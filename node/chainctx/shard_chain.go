@@ -18,8 +18,8 @@ type shardChain struct {
 	beaconHeight int32
 }
 
-func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock, height int32) *shardChain {
-	chainParams := params.ShardParams(shardID, beaconBlock)
+func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock, height int32, script []byte) *shardChain {
+	chainParams := params.ShardParams(shardID, beaconBlock, script)
 
 	shard := &shardChain{
 		ShardHeaderConstructor: wire.ShardHeaderConstructor{ID: shardID},
