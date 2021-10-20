@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/btcjson"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -922,7 +921,7 @@ func (c *Client) StopNotifyBlocksAsync() FutureNotifyBlocksResult {
 		return newNilFutureResult()
 	}
 
-	cmd := btcjson.NewStopNotifyBlocksCmd()
+	cmd := jaxjson.NewStopNotifyBlocksCmd()
 	return c.sendCmd(cmd)
 }
 
