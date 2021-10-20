@@ -8,7 +8,6 @@ package chaincfg
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"time"
 
@@ -162,7 +161,7 @@ func ShardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
 	return &shardBlock
 }
 
-func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
+func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock, script []byte) *wire.MsgBlock {
 	state := genesisStorage[name]
 
 	shardBlock, ok := state.shardGenesisBlocks[shardID]
@@ -170,7 +169,7 @@ func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 		return &shardBlock
 	}
 
-	ShardGenesisCoinbaseTx(name, shardID)
+	ShardGenesisCoinbaseTx(name, script)
 
 	var bits uint32
 	switch name {
@@ -233,7 +232,7 @@ func GenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	return *state.genesisTx
 }
 
-func ShardGenesisCoinbaseTx(name types.JaxNet, shardID uint32) wire.MsgTx {
+func ShardGenesisCoinbaseTx(name types.JaxNet, script []byte) wire.MsgTx {
 	state := genesisStorage[name]
 
 	if state.shardsGenesisTx != nil {
@@ -251,12 +250,10 @@ func ShardGenesisCoinbaseTx(name types.JaxNet, shardID uint32) wire.MsgTx {
 		panic("invalid genesis tx data")
 	}
 
-	data := []byte{'s', 'h', 'a', 'r', 'd'}
-	binary.PutUvarint(data, uint64(shardID))
-
-	state.shardsGenesisTx.TxIn[0].SignatureScript = append(state.shardsGenesisTx.TxIn[0].SignatureScript, data...)
-
 	// todo put shardID into genesis tx script signature
+	// data := []byte{'s', 'h', 'a', 'r', 'd'}
+	// binary.PutUvarint(data, uint64(shardID))
+	state.shardsGenesisTx.TxIn[0].SignatureScript = script
 
 	state.shardsGenesisMerkleRoot = new(chainhash.Hash)
 	*state.shardsGenesisMerkleRoot = state.shardsGenesisTx.TxHash()

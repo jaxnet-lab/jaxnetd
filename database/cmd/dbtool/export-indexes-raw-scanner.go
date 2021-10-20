@@ -232,7 +232,7 @@ func prepareBlockchain(shardsJSONPath string, shardID uint32, dbBeacon, dbShard 
 		return nil, errors.Wrap(err, "error getting genesis block from beacon chain")
 	}
 
-	shardBlockChain, err := createBlockchain(dbShard, chainctx.ShardChain(shardID, activeNetParams, block.MsgBlock(), 0))
+	shardBlockChain, err := createBlockchain(dbShard, chainctx.ShardChain(shardID, activeNetParams, block.MsgBlock(), 0, nil))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating shard blockchain")
 	}
