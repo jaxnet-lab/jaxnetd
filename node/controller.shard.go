@@ -164,7 +164,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}()
 
 	if autoInit {
-		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), chainCtl.rpc.connMgr, chainCtl.logger)
+		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), shardCtl.p2pServer.P2PConnManager(), chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
 	}
 
