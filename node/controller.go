@@ -184,7 +184,7 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 
 	chainCtl.logger.Info().Msg("Create WS RPC server")
 
-	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger)
+	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger, chainCtl)
 	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}

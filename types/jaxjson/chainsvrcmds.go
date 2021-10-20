@@ -1014,6 +1014,12 @@ type EstimateSwapLockTime struct {
 	DestinationShard uint32 `json:"destinationShard"`
 }
 
+type GetChainMetricsCmd struct {
+}
+
+type GetNodeMetricsCmd struct {
+}
+
 func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
@@ -1085,6 +1091,8 @@ func init() {
 	MustRegisterCmd("node", "debugLevel", (*DebugLevelCmd)(nil), flags)
 	MustRegisterCmd("node", "help", (*HelpCmd)(nil), flags)
 	MustRegisterCmd("node", "stop", (*StopCmd)(nil), flags)
+	MustRegisterCmd("node", "getChainMetrics", (*GetChainMetricsCmd)(nil), flags)
+	MustRegisterCmd("node", "getNodeMetrics", (*GetNodeMetricsCmd)(nil), flags)
 
 	// ---- beacon rpc commands ----------------------------------------------------------------------------------------
 	MustRegisterCmd("beacon", "getBeaconBlock", (*GetBeaconBlockCmd)(nil), flags)

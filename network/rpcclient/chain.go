@@ -1292,3 +1292,60 @@ func (c *Client) GetTxAsync(txHash *chainhash.Hash, mempool, orphan bool) Future
 func (c *Client) GetTx(txHash *chainhash.Hash, mempool, orphan bool) (*jaxjson.GetTxResult, error) {
 	return c.GetTxAsync(txHash, mempool, orphan).Receive()
 }
+
+type FutureGetChainMetricsResult chan *response
+
+func (r FutureGetChainMetricsResult) Receive() (*jaxjson.GetChainMetricsResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// take care of the special case where the output has been spent already
+	// it should return the string "null"
+	if string(res) == "null" {
+		return nil, nil
+	}
+
+	// Unmarshal result as an gettx result object.
+	var txInfo *jaxjson.GetChainMetricsResult
+	err = json.Unmarshal(res, &txInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return txInfo, nil
+}
+
+func (c *Client) GetChainMetricsAsync() FutureGetChainMetricsResult {
+	cmd := &jaxjson.GetChainMetricsCmd{}
+	return c.sendCmd(cmd)
+}
+
+// GetChainMetrics returns the chain metrics info for Prometheus
+func (c *Client) GetChainMetrics() (*jaxjson.GetChainMetricsResult, error) {
+	return c.GetChainMetricsAsync().Receive()
+}
+
+type FutureGetNodeMetrics chan *response
+
+func (r FutureGetNodeMetrics) Receive() (*jaxjson.GetNodeMetricsResult, error) {
+	res, err := receiveFuture(r)
+	var list jaxjson.GetNodeMetricsResult
+	err = json.Unmarshal(res, &list)
+	if err != nil {
+		return nil, err
+	}
+
+	return &list, nil
+}
+
+func (c *Client) GetNodeMetricsAsync() FutureGetNodeMetrics {
+	cmd := &jaxjson.GetNodeMetricsCmd{}
+	return c.sendCmd(cmd)
+}
+
+// GetChainMetrics returns the node metrics info for Prometheus
+func (c *Client) GetNodeMetrics() (*jaxjson.GetNodeMetricsResult, error) {
+	return c.GetNodeMetricsAsync().Receive()
+}
