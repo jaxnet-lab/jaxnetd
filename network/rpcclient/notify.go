@@ -378,21 +378,18 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 
 	// OnTxAccepted
 	case jaxjson.TxAcceptedNtfnMethod:
-		fmt.Println("accepted")
 		// Ignore the notification if the client is not interested in
 		// it.
 		if c.ntfnHandlers.OnTxAccepted == nil {
 			return
 		}
 
-		fmt.Println("accepted 2")
 		hash, amt, err := parseTxAcceptedNtfnParams(ntfn.Params)
 		if err != nil {
 			log.Warn().Msgf("Received invalid tx accepted "+
 				"notification: %v", err)
 			return
 		}
-		fmt.Println("accepted 3")
 
 		c.ntfnHandlers.OnTxAccepted(hash, amt)
 

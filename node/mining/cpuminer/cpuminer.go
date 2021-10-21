@@ -274,7 +274,6 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 		block, beaconCoinbaseAux, _ := updateBeaconExtraNonce(job.beacon.block,
 			int64(job.beacon.blockHeight), extraNonce+enOffset)
 
-		// fmt.Printf("BlockData %x (%d)\n", bd, len(bd))
 		// Search through the entire nonce range for a solution while
 		// periodically checking for early quit and stale block
 		// conditions along with updates to the speed monitor.

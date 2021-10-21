@@ -470,7 +470,6 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 		}
 	}
 
-	fmt.Printf("%+v\n", chainInfo)
 	return chainInfo, nil
 }
 

@@ -982,7 +982,6 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 		responseChan:   responseChan,
 	}
 
-	fmt.Printf("req: %+v\n", jReq)
 	c.sendRequest(jReq)
 
 	return responseChan
