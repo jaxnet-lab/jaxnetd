@@ -142,7 +142,8 @@ type Config struct {
 	GetNewAddress func() (net.Addr, error)
 
 	// Dial connects to the address on the named network. It cannot be nil.
-	Dial func(net.Addr) (net.Conn, error)
+	Dial      func(net.Addr) (net.Conn, error)
+	ChainName string
 }
 
 // registerPending is used to register a pending connection attempt. By
@@ -201,14 +202,14 @@ func (cm *ConnManager) handleFailedConn(c *ConnReq) {
 		if d > maxRetryDuration {
 			d = maxRetryDuration
 		}
-		log.Debug().Msgf("Retrying connection to %v in %v", c, d)
+		log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Retrying connection to %v in %v", c, d)
 		time.AfterFunc(d, func() {
 			cm.Connect(c)
 		})
 	} else if cm.cfg.GetNewAddress != nil {
 		cm.failedAttempts++
 		if cm.failedAttempts >= maxFailedAttempts {
-			log.Debug().Msgf("Max failed connection attempts reached: [%d] "+
+			log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Max failed connection attempts reached: [%d] "+
 				"-- retrying connection in: %v", maxFailedAttempts,
 				cm.cfg.RetryDuration)
 			time.AfterFunc(cm.cfg.RetryDuration, func() {
@@ -256,15 +257,15 @@ out:
 					if msg.conn != nil {
 						msg.conn.Close()
 					}
-					log.Debug().Msgf("Ignoring connection for "+
-						"canceled connreq=%v", connReq)
+					log.Debug().Str("chain", cm.cfg.ChainName).
+						Msgf("Ignoring connection for canceled connreq=%v", connReq)
 					continue
 				}
 
 				connReq.updateState(ConnEstablished)
 				connReq.conn = msg.conn
 				conns[connReq.id] = connReq
-				log.Debug().Msgf("Connected to %v", connReq)
+				log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Connected to %v", connReq)
 				connReq.retryCount = 0
 				cm.failedAttempts = 0
 
@@ -279,7 +280,7 @@ out:
 				if !ok {
 					connReq, ok = pending[msg.id]
 					if !ok {
-						log.Error().Msgf("Unknown connid=%d", msg.id)
+						log.Error().Str("chain", cm.cfg.ChainName).Msgf("Unknown connid=%d", msg.id)
 						continue
 					}
 
@@ -288,7 +289,7 @@ out:
 					// ignore a later, successful
 					// connection.
 					connReq.updateState(ConnCanceled)
-					log.Debug().Msgf("Canceling: %v", connReq)
+					log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Canceling: %v", connReq)
 					delete(pending, msg.id)
 					continue
 
@@ -297,7 +298,7 @@ out:
 				// An existing connection was located, mark as
 				// disconnected and execute disconnection
 				// callback.
-				log.Debug().Msgf("Disconnected from %v", connReq)
+				log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Disconnected from %v", connReq)
 				delete(conns, msg.id)
 
 				if connReq.conn != nil {
@@ -326,7 +327,7 @@ out:
 					connReq.Permanent {
 
 					connReq.updateState(ConnPending)
-					log.Debug().Msgf("Reconnecting to %v",
+					log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Reconnecting to %v",
 						connReq)
 					pending[msg.id] = connReq
 					cm.handleFailedConn(connReq)
@@ -336,13 +337,13 @@ out:
 				connReq := msg.c
 
 				if _, ok := pending[connReq.id]; !ok {
-					log.Debug().Msgf("Ignoring connection for "+
+					log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Ignoring connection for "+
 						"canceled conn req: %v", connReq)
 					continue
 				}
 
 				connReq.updateState(ConnFailing)
-				log.Debug().Msgf("Failed to connect to %v: %v",
+				log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Failed to connect to %v: %v",
 					connReq, msg.err)
 				cm.handleFailedConn(connReq)
 			}
@@ -353,7 +354,7 @@ out:
 	}
 
 	cm.wg.Done()
-	log.Trace().Msg("Connection handler done")
+	log.Trace().Str("chain", cm.cfg.ChainName).Msg("Connection handler done")
 }
 
 // NewConnReq creates a new connection request and connects to the
@@ -412,7 +413,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 	// During the time we wait for retry there is a chance that
 	// this connection was already cancelled
 	if c.State() == ConnCanceled {
-		log.Debug().Msgf("Ignoring connect for canceled connreq=%v", c)
+		log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Ignoring connect for canceled connreq=%v", c)
 		return
 	}
 
@@ -439,7 +440,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		}
 	}
 
-	log.Debug().Msgf("Attempting to connect to %v", c)
+	log.Debug().Str("chain", cm.cfg.ChainName).Msgf("Attempting to connect to %v", c)
 
 	conn, err := cm.cfg.Dial(c.Addr)
 	if err != nil {
@@ -489,13 +490,13 @@ func (cm *ConnManager) Remove(id uint64) {
 // listenHandler accepts incoming connections on a given listener.  It must be
 // run as a goroutine.
 func (cm *ConnManager) listenHandler(listener net.Listener) {
-	log.Info().Msgf("Server listening on %s", listener.Addr())
+	log.Info().Str("chain", cm.cfg.ChainName).Msgf("Server listening on %s", listener.Addr())
 	for atomic.LoadInt32(&cm.stop) == 0 {
 		conn, err := listener.Accept()
 		if err != nil {
 			// Only log the error if not forcibly shutting down.
 			if atomic.LoadInt32(&cm.stop) == 0 {
-				log.Error().Msgf("Can't accept connection: %v", err)
+				log.Error().Str("chain", cm.cfg.ChainName).Msgf("Can't accept connection: %v", err)
 			}
 			continue
 		}
@@ -503,7 +504,7 @@ func (cm *ConnManager) listenHandler(listener net.Listener) {
 	}
 
 	cm.wg.Done()
-	log.Trace().Msgf("Listener handler done for %s", listener.Addr())
+	log.Trace().Str("chain", cm.cfg.ChainName).Msgf("Listener handler done for %s", listener.Addr())
 }
 
 // Start launches the connection manager and begins connecting to the network.
@@ -513,7 +514,7 @@ func (cm *ConnManager) Start() {
 		return
 	}
 
-	log.Trace().Msg("Connection manager started")
+	log.Trace().Str("chain", cm.cfg.ChainName).Msg("Connection manager started")
 	cm.wg.Add(1)
 	go cm.connHandler()
 
@@ -539,7 +540,7 @@ func (cm *ConnManager) Wait() {
 // Stop gracefully shuts down the connection manager.
 func (cm *ConnManager) Stop() {
 	if atomic.AddInt32(&cm.stop, 1) != 1 {
-		log.Warn().Msgf("Connection manager already stopped")
+		log.Warn().Str("chain", cm.cfg.ChainName).Msgf("Connection manager already stopped")
 		return
 	}
 
@@ -552,7 +553,7 @@ func (cm *ConnManager) Stop() {
 	}
 
 	close(cm.quit)
-	log.Trace().Msg("Connection manager stopped")
+	log.Trace().Str("chain", cm.cfg.ChainName).Msg("Connection manager stopped")
 }
 
 // New returns a new connection manager.

@@ -85,8 +85,8 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		for i := 0; i < len(b.orphanIndex.prevOrphans[*processHash]); i++ {
 			orphan := b.orphanIndex.prevOrphans[*processHash][i]
 			if orphan == nil {
-				log.Warn().Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i,
-					processHash)
+				log.Warn().Str("chain", b.chain.Name()).
+					Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i,	processHash)
 				continue
 			}
 
@@ -127,7 +127,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 
 	blockHash := block.Hash()
-	log.Trace().Msgf("Processing block %v", blockHash)
+	log.Trace().Str("chain", b.chain.Name()).Msgf("Processing block %v", blockHash)
 
 	// The block must not already exist in the main chain or side chains.
 	exists, err := b.blockExists(blockHash)
@@ -199,7 +199,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	}
 
 	if !prevHashExists {
-		log.Info().Msgf("Adding orphan block %v with parent %v", blockHash, prevHash)
+		log.Info().Str("chain", b.chain.Name()).Msgf("Adding orphan block %v with parent %v", blockHash, prevHash)
 		b.addOrphanBlock(block)
 
 		return false, true, nil
@@ -221,7 +221,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 
-	log.Debug().Msgf("Accepted block %v", blockHash)
+	log.Debug().Str("chain", b.chain.Name()).Msgf("Accepted block %v", blockHash)
 
 	return isMainChain, false, nil
 }

@@ -48,6 +48,7 @@ type AddrManager struct {
 	lamtx          sync.Mutex
 	localAddresses map[string]*localAddress
 	version        int
+	chainName      string
 }
 
 type serializedKnownAddress struct {
@@ -226,7 +227,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 
 	// Enforce max addresses.
 	if len(a.addrNew[bucket]) > newBucketSize {
-		log.Trace().Msgf("new bucket is full, expiring old")
+		log.Trace().Str("chain", a.chainName).Msgf("new bucket is full, expiring old")
 		a.expireNew(bucket)
 	}
 
@@ -234,7 +235,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	ka.refs++
 	a.addrNew[bucket][addr] = ka
 
-	log.Trace().Msgf("Added new address %s for a total of %d addresses", addr,
+	log.Trace().Str("chain", a.chainName).Msgf("Added new address %s for a total of %d addresses", addr,
 		a.nTried+a.nNew)
 }
 
@@ -249,7 +250,7 @@ func (a *AddrManager) expireNew(bucket int) {
 	var oldest *KnownAddress
 	for k, v := range a.addrNew[bucket] {
 		if v.isBad() {
-			log.Trace().Msgf("expiring bad address %v", k)
+			log.Trace().Str("chain", a.chainName).Msgf("expiring bad address %v", k)
 			delete(a.addrNew[bucket], k)
 			v.refs--
 			if v.refs == 0 {
@@ -267,7 +268,7 @@ func (a *AddrManager) expireNew(bucket int) {
 
 	if oldest != nil {
 		key := NetAddressKey(oldest.na)
-		log.Trace().Msgf("expiring oldest address %v", key)
+		log.Trace().Str("chain", a.chainName).Msgf("expiring oldest address %v", key)
 
 		delete(a.addrNew[bucket], key)
 		oldest.refs--
@@ -354,7 +355,7 @@ out:
 	}
 	a.savePeers()
 	a.wg.Done()
-	log.Trace().Msg("Address handler done")
+	log.Trace().Str("chain", a.chainName).Msg("Address handler done")
 }
 
 // savePeers saves all the known addresses to a file so they can be read back
@@ -408,13 +409,13 @@ func (a *AddrManager) savePeers() {
 
 	w, err := os.Create(a.peersFile)
 	if err != nil {
-		log.Error().Msgf("Error opening file %s: %v", a.peersFile, err)
+		log.Error().Str("chain", a.chainName).Msgf("Error opening file %s: %v", a.peersFile, err)
 		return
 	}
 	enc := json.NewEncoder(w)
 	defer w.Close()
 	if err := enc.Encode(&sam); err != nil {
-		log.Error().Msgf("Failed to encode file %s: %v", a.peersFile, err)
+		log.Error().Str("chain", a.chainName).Msgf("Failed to encode file %s: %v", a.peersFile, err)
 		return
 	}
 }
@@ -427,17 +428,17 @@ func (a *AddrManager) loadPeers() {
 
 	err := a.deserializePeers(a.peersFile)
 	if err != nil {
-		log.Error().Msgf("Failed to parse file %s: %v", a.peersFile, err)
+		log.Error().Str("chain", a.chainName).Msgf("Failed to parse file %s: %v", a.peersFile, err)
 		// if it is invalid we nuke the old one unconditionally.
 		err = os.Remove(a.peersFile)
 		if err != nil {
-			log.Warn().Msgf("Failed to remove corrupt peers file %s: %v",
+			log.Warn().Str("chain", a.chainName).Msgf("Failed to remove corrupt peers file %s: %v",
 				a.peersFile, err)
 		}
 		a.reset()
 		return
 	}
-	log.Info().Msgf("Loaded %d addresses from file '%s'", a.numAddresses(), a.peersFile)
+	log.Info().Str("chain", a.chainName).Msgf("Loaded %d addresses from file '%s'", a.numAddresses(), a.peersFile)
 }
 
 func (a *AddrManager) deserializePeers(filePath string) error {
@@ -571,7 +572,7 @@ func (a *AddrManager) Start() {
 		return
 	}
 
-	log.Trace().Msg("Starting address manager")
+	log.Trace().Str("chain", a.chainName).Msg("Starting address manager")
 
 	// Load peers we already know about from file.
 	a.loadPeers()
@@ -584,12 +585,12 @@ func (a *AddrManager) Start() {
 // Stop gracefully shuts down the address manager by stopping the main handler.
 func (a *AddrManager) Stop() error {
 	if atomic.AddInt32(&a.shutdown, 1) != 1 {
-		log.Warn().Msgf("Address manager is already in the process of " +
+		log.Warn().Str("chain", a.chainName).Msgf("Address manager is already in the process of " +
 			"shutting down")
 		return nil
 	}
 
-	log.Info().Msgf("Address manager shutting down")
+	log.Info().Str("chain", a.chainName).Msgf("Address manager shutting down")
 	close(a.quit)
 	a.wg.Wait()
 	return nil
@@ -804,7 +805,7 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 			ka := e.Value.(*KnownAddress)
 			randval := a.rand.Intn(large)
 			if float64(randval) < (factor * ka.chance() * float64(large)) {
-				log.Trace().Msgf("Selected %v from tried bucket",
+				log.Trace().Str("chain", a.chainName).Msgf("Selected %v from tried bucket",
 					NetAddressKey(ka.na))
 				return ka
 			}
@@ -832,7 +833,7 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 			}
 			randval := a.rand.Intn(large)
 			if float64(randval) < (factor * ka.chance() * float64(large)) {
-				log.Trace().Msgf("Selected %v from new bucket",
+				log.Trace().Str("chain", a.chainName).Msgf("Selected %v from new bucket",
 					NetAddressKey(ka.na))
 				return ka
 			}
@@ -968,7 +969,7 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 	a.nNew++
 
 	rmkey := NetAddressKey(rmka.na)
-	log.Trace().Msgf("Replacing %s with %s in tried", rmkey, addrKey)
+	log.Trace().Str("chain", a.chainName).Msgf("Replacing %s with %s in tried", rmkey, addrKey)
 
 	// We made sure there is space here just above.
 	a.addrNew[newBucket][rmkey] = rmka
@@ -1131,10 +1132,10 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 		}
 	}
 	if bestAddress != nil {
-		log.Debug().Msgf("Suggesting address %s:%d for %s:%d", bestAddress.IP,
+		log.Debug().Str("chain", a.chainName).Msgf("Suggesting address %s:%d for %s:%d", bestAddress.IP,
 			bestAddress.Port, remoteAddr.IP, remoteAddr.Port)
 	} else {
-		log.Debug().Msgf("No worthy address for %s:%d", remoteAddr.IP,
+		log.Debug().Str("chain", a.chainName).Msgf("No worthy address for %s:%d", remoteAddr.IP,
 			remoteAddr.Port)
 
 		// Send something unroutable if nothing suitable.
@@ -1161,6 +1162,7 @@ func New(dataDir, chainName string, lookupFunc func(string) ([]net.IP, error)) *
 		quit:           make(chan struct{}),
 		localAddresses: make(map[string]*localAddress),
 		version:        serialisationVersion,
+		chainName:      chainName,
 	}
 	am.reset()
 	return &am

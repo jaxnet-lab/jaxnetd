@@ -380,8 +380,8 @@ func (b *BlockChain) Chain() chainctx.IChainCtx {
 	return b.chain
 }
 
-func (b *BlockChain) MMRTree() mmr.BlocksMMRTree {
-	return b.bestChain.mmrTree
+func (b *BlockChain) MMRTree() *mmr.BlocksMMRTree {
+	return b.bestChain.mmrTree.BlocksMMRTree
 }
 
 func (b *BlockChain) ChainBlockGenerator() chaindata.ChainBlockGenerator {
@@ -1191,12 +1191,12 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	// Log the point where the chain forked and old and new best chain
 	// heads.
 	if forkNode != nil {
-		log.Info().Msgf("REORGANIZE: ChainCtx forks at %v (height %v)", forkNode.GetHash(),
+		log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: ChainCtx forks at %v (height %v)", forkNode.GetHash(),
 			forkNode.Height())
 	}
-	log.Info().Msgf("REORGANIZE: Old best chain head was %v (height %v)",
+	log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: Old best chain head was %v (height %v)",
 		oldBest.GetHash(), oldBest.Height())
-	log.Info().Msgf("REORGANIZE: New best chain head is %v (height %v)",
+	log.Info().Str("chain", b.chain.Name()).Msgf("REORGANIZE: New best chain head is %v (height %v)",
 		newBest.GetHash(), newBest.Height())
 
 	return nil
@@ -1225,7 +1225,7 @@ func (b *BlockChain) connectBestChain(node blocknodes.IBlockNode, block *jaxutil
 		// valid, we flush in connectBlock and if the block is invalid, the
 		// worst that can happen is we revalidate the block after a restart.
 		if writeErr := b.index.flushToDB(); writeErr != nil {
-			log.Warn().Msgf("Error flushing block index changes to disk: %v",
+			log.Warn().Str("chain", b.chain.Name()).Msgf("Error flushing block index changes to disk: %v",
 				writeErr)
 		}
 	}
@@ -1303,7 +1303,7 @@ func (b *BlockChain) connectBestChain(node blocknodes.IBlockNode, block *jaxutil
 		return true, nil
 	}
 	if fastAdd {
-		log.Warn().Msgf("fastAdd set in the side chain case? %v\n", block.Hash())
+		log.Warn().Str("chain", b.chain.Name()).Msgf("fastAdd set in the side chain case? %v\n", block.Hash())
 	}
 
 	// We're extending (or creating) a side chain, but the cumulative

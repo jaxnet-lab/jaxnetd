@@ -163,6 +163,21 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 	miner.submitBlockLock.Lock()
 	defer miner.submitBlockLock.Unlock()
 
+	if chainID == 0 {
+		curHeight := miner.beacon.BlockTemplateGenerator.BestSnapshot().Height
+		if curHeight != 0 && !miner.beacon.IsCurrent() {
+			miner.log.Warn().Msgf("Beacon is not in sync state, skip submission")
+			return true
+		}
+	} else {
+		curHeight := miner.shards[chainID].BlockTemplateGenerator.BestSnapshot().Height
+		if curHeight != 0 && !miner.shards[chainID].IsCurrent() {
+			miner.log.Warn().Uint32("chain_id", chainID).
+				Msgf("Shard is not in sync state, skip submission")
+			return true
+		}
+	}
+
 	// Ensure the block is not stale since a new block could have shown up
 	// while the solution was being found.  Typically that condition is
 	// detected and all work on the stale block is halted to start work on

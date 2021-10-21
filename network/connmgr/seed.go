@@ -47,12 +47,14 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
 
 			seedpeers, err := lookupFn(host)
 			if err != nil {
-				log.Info().Msgf("DNS discovery failed on seed %s: %v", host, err)
+				log.Info().Str("chain", chainParams.ChainName).
+					Msgf("DNS discovery failed on seed %s: %v", host, err)
 				return
 			}
 			numPeers := len(seedpeers)
 
-			log.Info().Msgf("%d addresses found from DNS seed %s", numPeers, host)
+			log.Info().Str("chain", chainParams.ChainName).
+				Msgf("%d addresses found from DNS seed %s", numPeers, host)
 
 			if numPeers == 0 {
 				return

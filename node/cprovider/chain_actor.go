@@ -361,7 +361,7 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 	// Create an index manager if any of the optional indexes are enabled.
 	var indexManager blockchain.IndexManager
 	if len(indexes) > 0 {
-		indexManager = indexers.NewManager(chainProvider.DB, indexes)
+		indexManager = indexers.NewManager(chainProvider.DB, indexes, chainProvider.ChainCtx.Name())
 	}
 
 	// Merge given checkpoints with the default ones unless they are disabled.

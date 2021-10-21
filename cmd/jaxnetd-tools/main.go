@@ -50,6 +50,14 @@ func (app *App) getCommands() cli.Commands {
 			Flags:  app.SyncUTXOFlags(),
 		},
 		{
+			Name:   "sync-headers",
+			Usage:  "fetch UTXO data to CSV file",
+			Action: app.SyncHeadersCmd,
+			Flags: []cli.Flag{
+				standardFlags[flagDataDir],
+			},
+		},
+		{
 			Name:   "send-tx",
 			Usage:  "send transactions with values from config file",
 			Action: app.sendTxCmd,
