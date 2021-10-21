@@ -102,14 +102,14 @@ func ScopedMethod(scope, method string) MethodName {
 }
 
 func LegacyMethod(method string) MethodName {
-	return MethodName{"", strings.ToLower(method), true}
+	return MethodName{Scope: "", Method: strings.ToLower(method), Legacy: true}
 }
 
 var (
 	// These fields are used to map the registered types to method names.
 	registerLock         sync.RWMutex
-	methodToConcreteType = make(map[string]reflect.Type)
-	methodToInfo         = make(map[string]methodInfo)
+	methodToConcreteType = make(map[string]reflect.Type) // todo: use map[method]map[scope]reflect.Type
+	methodToInfo         = make(map[string]methodInfo)   // todo: use map[method]map[scope]reflect.Type
 	concreteTypeToMethod = make(map[reflect.Type]MethodName)
 )
 
@@ -120,6 +120,8 @@ func getMethodByType(cmd interface{}) (MethodName, bool) {
 	name, ok := concreteTypeToMethod[rt]
 	return name, ok
 }
+
+// func getMethodTypeInfo(method, scope string) (reflect.Type, methodInfo, bool) {
 
 func getMethodTypeInfo(method string) (reflect.Type, methodInfo, bool) {
 	method = strings.ToLower(method)
@@ -195,11 +197,11 @@ func isAcceptableKind(kind reflect.Kind) bool {
 // passed struct, so it does not need to be an actual instance.  Therefore, it
 // is recommended to simply pass a nil pointer cast to the appropriate type.
 // For example, (*FooCmd)(nil).
-func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag) error {
+func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag, replace bool) error {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
-	if _, ok := methodToConcreteType[method.Method]; ok {
+	if _, ok := methodToConcreteType[method.Method]; ok && !replace {
 		str := fmt.Sprintf("method %q is already registered", method)
 		return makeError(ErrDuplicateMethod, str)
 	}
@@ -212,14 +214,12 @@ func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag) error {
 
 	rtp := reflect.TypeOf(cmd)
 	if rtp.Kind() != reflect.Ptr {
-		str := fmt.Sprintf("type must be *struct not '%s (%s)'", rtp,
-			rtp.Kind())
+		str := fmt.Sprintf("type must be *struct not '%s (%s)'", rtp, rtp.Kind())
 		return makeError(ErrInvalidType, str)
 	}
 	rt := rtp.Elem()
 	if rt.Kind() != reflect.Struct {
-		str := fmt.Sprintf("type must be *struct not '%s (*%s)'",
-			rtp, rt.Kind())
+		str := fmt.Sprintf("type must be *struct not '%s (*%s)'", rtp, rt.Kind())
 		return makeError(ErrInvalidType, str)
 	}
 
@@ -316,14 +316,28 @@ func DropAllCmds() {
 // functions.
 func MustRegisterCmd(scope, method string, cmd interface{}, flags UsageFlag) {
 	scopedMethodName := ScopedMethod(scope, method)
-	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
+	if err := RegisterCmd(scopedMethodName, cmd, flags, false); err != nil {
 		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
 	}
 }
 
 func MustRegisterLegacyCmd(method string, cmd interface{}, flags UsageFlag) {
 	scopedMethodName := LegacyMethod(method)
-	if err := RegisterCmd(scopedMethodName, cmd, flags); err != nil {
+	if err := RegisterCmd(scopedMethodName, cmd, flags, false); err != nil {
+		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
+	}
+}
+
+func RegisterOrReplaceLegacyCmd(method string, cmd interface{}, flags UsageFlag) {
+	scopedMethodName := LegacyMethod(method)
+	if err := RegisterCmd(scopedMethodName, cmd, flags, true); err != nil {
+		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
+	}
+}
+
+func RegisterOrReplaceCmd(scope, method string, cmd interface{}, flags UsageFlag) {
+	scopedMethodName := ScopedMethod(scope, method)
+	if err := RegisterCmd(scopedMethodName, cmd, flags, true); err != nil {
 		panic(fmt.Sprintf("failed to register type %q: %v\n", method, err))
 	}
 }

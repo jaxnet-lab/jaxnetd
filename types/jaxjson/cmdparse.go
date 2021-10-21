@@ -107,6 +107,7 @@ func populateDefaults(numParams int, info *methodInfo, rv reflect.Value) {
 // so long as the method type contained within the marshalled request is
 // registered.
 func UnmarshalCmd(r *Request) (interface{}, error) {
+	// rtp, info, ok := getMethodTypeInfo(r.Method, r.Scope) // todo:
 	rtp, info, ok := getMethodTypeInfo(r.Method)
 	if !ok {
 		str := fmt.Sprintf("%q is not registered", r.Method)
