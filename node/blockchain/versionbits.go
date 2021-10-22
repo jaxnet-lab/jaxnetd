@@ -280,7 +280,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
 	b.chainLock.Lock()
-	version, err := b.calcNextBlockVersion(b.bestChain.Tip())
+	version, err := b.calcNextBlockVersion(b.blocksDB.bestChain.Tip())
 	b.chainLock.Unlock()
 
 	return version, err

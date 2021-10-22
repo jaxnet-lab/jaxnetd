@@ -52,21 +52,19 @@ type BeaconBlockNode struct {
 // NewBeaconBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, _ uint32) *BeaconBlockNode {
+func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *BeaconBlockNode {
 	node := &BeaconBlockNode{
-		hash:      blockHeader.BlockHash(),
-		workSum:   pow.CalcWork(blockHeader.Bits()),
-		timestamp: blockHeader.Timestamp().Unix(),
-		header:    blockHeader,
-	}
-	if blockHeader.Bits() != 0 {
-		node.difficulty = pow.CalcWork(blockHeader.Bits()).Uint64()
+		hash:       blockHeader.BlockHash(),
+		workSum:    pow.CalcWork(blockHeader.Bits()),
+		timestamp:  blockHeader.Timestamp().Unix(),
+		header:     blockHeader,
+		difficulty: pow.CalcWork(blockHeader.Bits()).Uint64(),
 	}
 
 	if parent != nil && parent != (*BeaconBlockNode)(nil) {
 		node.parent = parent
 		node.height = parent.Height() + 1
-		node.serialID = parent.SerialID() + 1 // todo: check correctness
+		node.serialID = serialID
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
 	return node
@@ -75,6 +73,13 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, _ uint3
 func (node *BeaconBlockNode) GetHash() chainhash.Hash { return node.hash }
 func (node *BeaconBlockNode) BlocksMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
+}
+func (node *BeaconBlockNode) PrevHash() chainhash.Hash {
+	if node.parent == nil {
+		return chainhash.ZeroHash
+	}
+
+	return node.parent.GetHash()
 }
 func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *BeaconBlockNode) Height() int32                { return node.height }

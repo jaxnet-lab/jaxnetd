@@ -18,7 +18,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
@@ -132,11 +131,17 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		chainCtl.logger.Error().Err(err).Msg("unable to get free port")
 	}
 
+	chainCtl.shardsMutex.Lock()
 	shardID := chainCtl.shardsIndex.AddShard(block, opts)
+	chainCtl.shardsMutex.Unlock()
+
 	chainCtl.runShardRoutine(shardID, opts, block, true)
 }
 
 func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *jaxutil.Block, autoInit bool) {
+	chainCtl.ctlMutex.Lock()
+	defer chainCtl.ctlMutex.Unlock()
+
 	if interruptRequested(chainCtl.ctx) {
 		chainCtl.logger.Error().
 			Uint32("shard_id", shardID).
@@ -146,16 +151,10 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		return
 	}
 
-	script, _ := txscript.NewScriptBuilder().
-		AddData([]byte{0x73, 0x68, 0x61, 0x72, 0x64, 0x5f, 0x63, 0x68, 0x61, 0x69, 0x6e}). // ASCII: shard_chain
-		AddInt64(int64(shardID)).
-		AddData([]byte("/P2SH/jaxnetd/")).
-		Script()
-
-	chainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height(), script)
+	shardChainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height())
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
-	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, chainCtx, opts)
+	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, shardChainCtx, opts)
 
 	// gbt worker state was initialized in cprovider.NewChainProvider
 	if err := shardCtl.Init(chainCtl.beacon.chainProvider); err != nil {

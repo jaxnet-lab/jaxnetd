@@ -490,7 +490,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 	if job.beacon.blockHeight < curHeight+1 {
 		template, err := miner.beacon.BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 		if err != nil {
-			miner.log.Error().Err(err).Msg("Failed to create new block template")
+			miner.log.Error().Err(err).Msg("Failed to create new beacon block template")
 			return false
 		}
 
@@ -510,7 +510,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 		if job.shards[shardID].blockHeight < curHeight+1 {
 			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 			if err != nil {
-				miner.log.Error().Err(err).Msg("Failed to create new block template")
+				miner.log.Error().Err(err).Uint32("shard_id", shardID).Msg("Failed to create new block shard template")
 				return false
 			}
 

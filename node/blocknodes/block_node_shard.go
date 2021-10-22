@@ -51,7 +51,7 @@ type ShardBlockNode struct {
 // NewShardBlockNode returns a new block node for the given block ShardHeader and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, _ uint32) *ShardBlockNode {
+func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *ShardBlockNode {
 	node := &ShardBlockNode{
 		hash:       blockHeader.BlockHash(),
 		workSum:    pow.CalcWork(blockHeader.Bits()),
@@ -63,7 +63,7 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, _ uint32
 	if parent != nil {
 		node.parent = parent
 		node.height = parent.Height() + 1
-		node.serialID = parent.SerialID() + 1
+		node.serialID = serialID
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
 
@@ -73,6 +73,13 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, _ uint32
 func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
 func (node *ShardBlockNode) BlocksMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
+}
+func (node *ShardBlockNode) PrevHash() chainhash.Hash {
+	if node.parent == nil {
+		return chainhash.ZeroHash
+	}
+
+	return node.parent.GetHash()
 }
 func (node *ShardBlockNode) Version() int32               { return node.header.Version().Version() }
 func (node *ShardBlockNode) Height() int32                { return node.height }

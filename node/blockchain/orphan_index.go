@@ -48,24 +48,29 @@ func (b *orphanIndex) IsKnownOrphan(hash *chainhash.Hash) bool {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
+	return b.blocksDB.GetOrphanRoot(hash)
+}
+func (storage *rBlockStorage) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 	// Protect concurrent access.  Using a read lock only so multiple
 	// readers can query without blocking each other.
-	b.orphanIndex.orphanLock.RLock()
-	defer b.orphanIndex.orphanLock.RUnlock()
+	storage.orphanIndex.orphanLock.RLock()
+	defer storage.orphanIndex.orphanLock.RUnlock()
 
 	// Keep looping while the parent of each orphaned block is
 	// known and is an orphan itself.
 	orphanRoot := hash
 	prevHash := hash
 	for {
-		orphan, exists := b.orphanIndex.orphans[*prevHash]
+		orphan, exists := storage.orphanIndex.orphans[*prevHash]
 		if !exists {
 			break
 		}
 		orphanRoot = prevHash
 
-		h := b.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
-		prevHash = &h
+		h, exist := storage.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
+		if exist {
+			prevHash = &h
+		}
 	}
 
 	return orphanRoot
@@ -73,22 +78,25 @@ func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
 
 // removeOrphanBlock removes the passed orphan block from the orphan pool and
 // previous orphan index.
-func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
+func (storage *rBlockStorage) removeOrphanBlock(orphan *orphanBlock) {
 	// Protect concurrent access.
-	b.orphanIndex.orphanLock.Lock()
-	defer b.orphanIndex.orphanLock.Unlock()
+	storage.orphanIndex.orphanLock.Lock()
+	defer storage.orphanIndex.orphanLock.Unlock()
 
 	// Remove the orphan block from the orphan pool.
 	orphanHash := orphan.block.Hash()
-	delete(b.orphanIndex.orphans, *orphanHash)
+	delete(storage.orphanIndex.orphans, *orphanHash)
 
 	// Remove the reference from the previous orphan index too.  An indexing
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash := b.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
+	prevHash, exist := storage.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
+	if !exist {
+		return
+	}
 
-	orphans := b.orphanIndex.prevOrphans[prevHash]
+	orphans := storage.orphanIndex.prevOrphans[prevHash]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
 		if hash.IsEqual(orphanHash) {
@@ -98,12 +106,12 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 			i--
 		}
 	}
-	b.orphanIndex.prevOrphans[prevHash] = orphans
+	storage.orphanIndex.prevOrphans[prevHash] = orphans
 
 	// Remove the map entry altogether if there are no longer any orphans
 	// which depend on the parent hash.
-	if len(b.orphanIndex.prevOrphans[prevHash]) == 0 {
-		delete(b.orphanIndex.prevOrphans, prevHash)
+	if len(storage.orphanIndex.prevOrphans[prevHash]) == 0 {
+		delete(storage.orphanIndex.prevOrphans, prevHash)
 	}
 }
 
@@ -113,33 +121,33 @@ func (b *BlockChain) removeOrphanBlock(orphan *orphanBlock) {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
+func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block) {
 	// Remove expired orphan blocks.
-	for _, oBlock := range b.orphanIndex.orphans {
+	for _, oBlock := range storage.orphanIndex.orphans {
 		if time.Now().After(oBlock.expiration) {
-			b.removeOrphanBlock(oBlock)
+			storage.removeOrphanBlock(oBlock)
 			continue
 		}
 
 		// Update the oldest orphan block pointer so it can be discarded
 		// in case the orphan pool fills up.
-		if b.orphanIndex.oldestOrphan == nil || oBlock.expiration.Before(b.orphanIndex.oldestOrphan.expiration) {
-			b.orphanIndex.oldestOrphan = oBlock
+		if storage.orphanIndex.oldestOrphan == nil || oBlock.expiration.Before(storage.orphanIndex.oldestOrphan.expiration) {
+			storage.orphanIndex.oldestOrphan = oBlock
 		}
 	}
 
 	// Limit orphan blocks to prevent memory exhaustion.
-	if len(b.orphanIndex.orphans)+1 > maxOrphanBlocks {
+	if len(storage.orphanIndex.orphans)+1 > maxOrphanBlocks {
 		// Remove the oldest orphan to make room for the new one.
-		b.removeOrphanBlock(b.orphanIndex.oldestOrphan)
-		b.orphanIndex.oldestOrphan = nil
+		storage.removeOrphanBlock(storage.orphanIndex.oldestOrphan)
+		storage.orphanIndex.oldestOrphan = nil
 	}
 
 	// Protect concurrent access.  This is intentionally done here instead
 	// of near the top since removeOrphanBlock does its own locking and
 	// the range iterator is not invalidated by removing map entries.
-	b.orphanIndex.orphanLock.Lock()
-	defer b.orphanIndex.orphanLock.Unlock()
+	storage.orphanIndex.orphanLock.Lock()
+	defer storage.orphanIndex.orphanLock.Unlock()
 
 	// Insert the block into the orphan map with an expiration time
 	// 1 hour from now.
@@ -148,20 +156,23 @@ func (b *BlockChain) addOrphanBlock(block *jaxutil.Block) {
 		block:      block,
 		expiration: expiration,
 	}
-	b.orphanIndex.orphans[*block.Hash()] = oBlock
+	storage.orphanIndex.orphans[*block.Hash()] = oBlock
 
 	// Add to previous hash lookup index for faster dependency lookups.
 	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	prevHash := b.index.HashByMMR(prevMMRRoot)
+	prevHash, ok := storage.index.HashByMMR(prevMMRRoot)
+	if !ok {
+		return
+	}
 
-	b.orphanIndex.prevOrphans[prevHash] = append(b.orphanIndex.prevOrphans[prevHash], oBlock)
+	storage.orphanIndex.prevOrphans[prevHash] = append(storage.orphanIndex.prevOrphans[prevHash], oBlock)
 
 	// TODO: probably need to fork MMR Tree and store particular copy of tree for orphans
 	// blockHeader := block.MsgBlock().Header
 	//
-	// newNode := b.chain.NewNode(blockHeader, prevNode)
+	// newNode := storage.chain.NewNode(blockHeader, prevNode)
 	// newNode.SetStatus(blocknodes.StatusDataStored)
 	//
-	// b.index.AddNode(newNode)
+	// storage.index.AddNode(newNode)
 
 }

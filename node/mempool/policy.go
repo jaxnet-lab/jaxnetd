@@ -95,8 +95,8 @@ func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee jaxutil.Amoun
 
 	// Set the minimum fee to the maximum possible value if the calculated
 	// fee is not in the valid range for monetary amounts.
-	if minFee < 0 || minFee > chaincfg.MaxSatoshi {
-		minFee = chaincfg.MaxSatoshi
+	if minFee < 0 || minFee > chaincfg.MaxCoinAmount {
+		minFee = chaincfg.MaxCoinAmount
 	}
 
 	return minFee

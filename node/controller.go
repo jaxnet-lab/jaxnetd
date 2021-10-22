@@ -26,8 +26,9 @@ const (
 )
 
 type chainController struct {
-	logger zerolog.Logger
-	cfg    *Config
+	logger   zerolog.Logger
+	cfg      *Config
+	ctlMutex sync.RWMutex
 	// -------------------------------
 
 	// controller runtime
@@ -38,6 +39,7 @@ type chainController struct {
 	beacon      BeaconCtl
 	shardsCtl   map[uint32]shardRO
 	shardsIndex *Index
+
 	shardsMutex sync.RWMutex
 	ports       *p2p.ChainsPortIndex
 	rpc         rpcRO

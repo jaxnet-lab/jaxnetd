@@ -103,7 +103,7 @@ func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode) uint32 {
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextK() uint32 {
 	b.chainLock.Lock()
-	kVal := b.calcNextK(b.bestChain.Tip())
+	kVal := b.calcNextK(b.blocksDB.bestChain.Tip())
 	b.chainLock.Unlock()
 	return kVal
 }
@@ -117,7 +117,7 @@ func (b *BlockChain) CalcKForHeight(height int32) uint32 {
 	if height >= b.stateSnapshot.Height {
 		kVal = b.stateSnapshot.K
 	} else {
-		kVal = b.bestChain.NodeByHeight(height).K()
+		kVal = b.blocksDB.bestChain.NodeByHeight(height).K()
 	}
 	b.chainLock.Unlock()
 	return kVal
@@ -237,7 +237,7 @@ func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts,
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcNextRequiredDifficulty(timestamp time.Time) (uint32, error) {
 	b.chainLock.Lock()
-	difficulty, err := b.calcNextRequiredDifficulty(b.bestChain.Tip(), timestamp)
+	difficulty, err := b.calcNextRequiredDifficulty(b.blocksDB.bestChain.Tip(), timestamp)
 	b.chainLock.Unlock()
 	return difficulty, err
 }

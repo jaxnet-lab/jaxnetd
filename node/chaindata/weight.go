@@ -16,6 +16,7 @@ import (
 
 const (
 	// todo(mike): check this value
+
 	// MaxBlockWeight defines the maximum block weight, where "block
 	// weight" is interpreted as defined in BIP0141. A block's weight is
 	// calculated as the sum of the of bytes in the existing transactions

@@ -101,8 +101,8 @@ func (b *BlockChain) findPreviousCheckpoint() (blocknodes.IBlockNode, error) {
 		// Loop backwards through the available checkpoints to find one
 		// that is already available.
 		for i := numCheckpoints - 1; i >= 0; i-- {
-			node := b.index.LookupNode(checkpoints[i].Hash)
-			if node == nil || !b.bestChain.Contains(node) {
+			node := b.blocksDB.index.LookupNode(checkpoints[i].Hash)
+			if node == nil || !b.blocksDB.bestChain.Contains(node) {
 				continue
 			}
 
@@ -133,7 +133,7 @@ func (b *BlockChain) findPreviousCheckpoint() (blocknodes.IBlockNode, error) {
 	// When there is a next checkpoint and the height of the current best
 	// chain does not exceed it, the current checkpoint lockin is still
 	// the latest known checkpoint.
-	if b.bestChain.Tip().Height() < b.nextCheckpoint.Height {
+	if b.blocksDB.bestChain.Tip().Height() < b.nextCheckpoint.Height {
 		return b.checkpointNode, nil
 	}
 
@@ -146,7 +146,7 @@ func (b *BlockChain) findPreviousCheckpoint() (blocknodes.IBlockNode, error) {
 	// this lookup fails something is very wrong since the chain has already
 	// passed the checkpoint which was verified as accurate before inserting
 	// it.
-	checkpointNode := b.index.LookupNode(b.nextCheckpoint.Hash)
+	checkpointNode := b.blocksDB.index.LookupNode(b.nextCheckpoint.Hash)
 	if checkpointNode == nil {
 		return nil, chaindata.AssertError(fmt.Sprintf("findPreviousCheckpoint "+
 			"failed lookup of known good block node %s",
@@ -205,8 +205,8 @@ func (b *BlockChain) IsCheckpointCandidate(block *jaxutil.Block) (bool, error) {
 	defer b.chainLock.RUnlock()
 
 	// A checkpoint must be in the main chain.
-	node := b.index.LookupNode(block.Hash())
-	if node == nil || !b.bestChain.Contains(node) {
+	node := b.blocksDB.index.LookupNode(block.Hash())
+	if node == nil || !b.blocksDB.bestChain.Contains(node) {
 		return false, nil
 	}
 
@@ -221,7 +221,7 @@ func (b *BlockChain) IsCheckpointCandidate(block *jaxutil.Block) (bool, error) {
 
 	// A checkpoint must be at least CheckpointConfirmations blocks
 	// before the end of the main chain.
-	mainChainHeight := b.bestChain.Tip().Height()
+	mainChainHeight := b.blocksDB.bestChain.Tip().Height()
 	if node.Height() > (mainChainHeight - CheckpointConfirmations) {
 		return false, nil
 	}
@@ -231,7 +231,7 @@ func (b *BlockChain) IsCheckpointCandidate(block *jaxutil.Block) (bool, error) {
 	// This should always succeed since the check above already made sure it
 	// is CheckpointConfirmations back, but be safe in case the constant
 	// changes.
-	nextNode := b.bestChain.Next(node)
+	nextNode := b.blocksDB.bestChain.Next(node)
 	if nextNode == nil {
 		return false, nil
 	}

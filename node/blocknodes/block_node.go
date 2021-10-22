@@ -38,6 +38,7 @@ const (
 type IBlockNode interface {
 	GetHash() chainhash.Hash
 	BlocksMMRRoot() chainhash.Hash
+	PrevHash() chainhash.Hash
 	Height() int32
 	SerialID() int64
 	Version() int32

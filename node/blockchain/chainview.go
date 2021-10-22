@@ -221,9 +221,11 @@ func (c *chainView) NodeByHeight(height int32) blocknodes.IBlockNode {
 // HashByMMR returns hash of block, that has provided MMR root.
 //
 // This function is safe for concurrent access.
-func (c *chainView) HashByMMR(root chainhash.Hash) chainhash.Hash {
-	hash := c.mmrTree.mmrRootToBlock[root]
-	return hash
+func (c *chainView) HashByMMR(root chainhash.Hash) (chainhash.Hash, bool) {
+	c.mtx.Lock()
+	hash, present := c.mmrTree.mmrRootToBlock[root]
+	c.mtx.Unlock()
+	return hash, present
 }
 
 // Equals returns whether or not two chain views are the same.  Uninitialized

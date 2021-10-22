@@ -64,24 +64,14 @@ func (bi *blockIndex) HaveBlock(hash *chainhash.Hash) bool {
 	return hasBlock
 }
 
-// HaveBlockWithMMRoot returns whether or not the block index contains the provided MMR root.
-//
-// This function is safe for concurrent access.
-func (bi *blockIndex) HaveBlockWithMMRoot(root *chainhash.Hash) bool {
-	bi.RLock()
-	_, hasBlock := bi.mmrTree.mmrRootToBlock[*root]
-	bi.RUnlock()
-	return hasBlock
-}
-
 // HashByMMR returns hash of block, that has provided MMR root.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) HashByMMR(root chainhash.Hash) chainhash.Hash {
+func (bi *blockIndex) HashByMMR(root chainhash.Hash) (chainhash.Hash, bool) {
 	bi.RLock()
-	hash := bi.mmrTree.mmrRootToBlock[root]
+	hash, hasBlock := bi.mmrTree.mmrRootToBlock[root]
 	bi.RUnlock()
-	return hash
+	return hash, hasBlock
 }
 
 // LookupNodeByMMRRoot returns the block node identified by the provided MMR Root hash. It will

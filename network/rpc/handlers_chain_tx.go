@@ -204,7 +204,7 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 	params := server.chainProvider.ChainParams
 	for encodedAddr, amount := range c.Amounts {
 		// Ensure amount is in the valid range for monetary amounts.
-		if amount <= 0 || amount > chaincfg.MaxSatoshi {
+		if amount <= 0 || amount > chaincfg.MaxCoinAmount {
 			return nil, &jaxjson.RPCError{
 				Code:    jaxjson.ErrRPCType,
 				Message: "Invalid amount",
