@@ -36,9 +36,15 @@ const (
 )
 
 type IBlockNode interface {
+	// GetHash returns hash of the block (including aux data).
 	GetHash() chainhash.Hash
+	// BlocksMMRRoot is the root of the MMR tree before this node was added to the chain.
 	BlocksMMRRoot() chainhash.Hash
+	// ActualMMRRoot is the root of the MMR tree after adding this node to the chain.
+	ActualMMRRoot() chainhash.Hash
+	// PrevHash returns hash of parent node.
 	PrevHash() chainhash.Hash
+
 	Height() int32
 	SerialID() int64
 	Version() int32
@@ -47,9 +53,12 @@ type IBlockNode interface {
 	K() uint32
 	VoteK() uint32
 	Status() BlockStatus
-	SetStatus(status BlockStatus)
+	WorkSum() *big.Int
+	Timestamp() int64
+	ExpansionApproved() bool
 
-	NewHeader() wire.BlockHeader // required only for tests
+	SetStatus(status BlockStatus)
+	SetActualMMRRoot(chainhash.Hash)
 
 	Header() wire.BlockHeader
 	Parent() IBlockNode
@@ -58,9 +67,8 @@ type IBlockNode interface {
 	CalcPastMedianTimeForN(nBlocks int) time.Time
 	CalcMedianVoteK() uint32
 	RelativeAncestor(distance int32) IBlockNode
-	ExpansionApproved() bool
-	WorkSum() *big.Int
-	Timestamp() int64
+
+	NewHeader() wire.BlockHeader // required only for tests
 }
 
 // BlockStatus is a bit field representing the validation state of the block.

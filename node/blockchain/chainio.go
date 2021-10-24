@@ -76,91 +76,48 @@ func (b *BlockChain) createChainState() error {
 	// necessary index buckets and inserting the genesis block.
 	err := b.db.Update(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
-
-		// Create the bucket that houses the block index data.
-		_, err := meta.CreateBucket(chaindata.BlockIndexBucketName)
-		if err != nil {
-			return err
+		buckets := [][]byte{
+			// Create the bucket that houses the block index data.
+			chaindata.BlockIndexBucketName,
+			// Create the bucket that houses the chain block hash to height index.
+			chaindata.HashIndexBucketName,
+			// Create the bucket that houses the chain block height to hash index.
+			chaindata.HeightIndexBucketName,
+			// Create the bucket that houses the spend journal data and store its version.
+			chaindata.SpendJournalBucketName,
+			// Create the bucket that houses the utxo set and store its
+			// version.  Note that the genesis block coinbase transaction is
+			// intentionally not inserted here since it is not spendable by
+			// consensus rules.
+			chaindata.UtxoSetBucketName,
+			// Create the bucket that houses the mapping of hash to block serial id and serial id
+			chaindata.BlockHashToSerialID,
+			// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
+			chaindata.SerialIDToPrevBlock,
+			chaindata.MMRRootsToHashBucketName,
+			chaindata.HashToMMRRootBucketName,
 		}
-
-		// Create the bucket that houses the chain block hash to height
-		// index.
-		_, err = meta.CreateBucket(chaindata.HashIndexBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the chain block height to hash
-		// index.
-		_, err = meta.CreateBucket(chaindata.HeightIndexBucketName)
-		if err != nil {
-			return err
-		}
-
-		// EAD registration is possible only at beacon
 		if b.chain.IsBeacon() {
-			// Create the bucket that houses the EAD addresses index.
-			_, err = meta.CreateBucket(chaindata.EADAddressesBucketNameV2)
+			buckets = append(buckets,
+				// Create the bucket that houses the EAD addresses index.
+				chaindata.EADAddressesBucketNameV2, // EAD registration is possible only at beacon
+			)
+		}
+
+		for _, bucket := range buckets {
+			_, err := meta.CreateBucket(bucket)
 			if err != nil {
 				return err
 			}
 		}
 
-		// Create the bucket that houses the spend journal data and
-		// store its version.
-		_, err = meta.CreateBucket(chaindata.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-		err = chaindata.DBPutVersion(dbTx, chaindata.UtxoSetVersionKeyName,
+		err := chaindata.DBPutVersion(dbTx, chaindata.UtxoSetVersionKeyName,
 			chaindata.LatestUtxoSetBucketVersion)
 		if err != nil {
 			return err
 		}
 
-		// Create the bucket that houses the utxo set and store its
-		// version.  Note that the genesis block coinbase transaction is
-		// intentionally not inserted here since it is not spendable by
-		// consensus rules.
-		_, err = meta.CreateBucket(chaindata.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses block last_serial_id
-		_, err = meta.CreateBucket(chaindata.BlockLastSerialID)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the mapping of hash to block serial id and serial id
-		_, err = meta.CreateBucket(chaindata.BlockHashSerialID)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
-		_, err = meta.CreateBucket(chaindata.BlockSerialIDHashPrevSerialID)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutLastSerialID(dbTx, 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockHashSerialID(dbTx, genesisBlock.Hash(), 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockSerialIDHash(dbTx, genesisBlock.Hash(), 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, genesisBlock.Hash(), 0, -1)
+		err = chaindata.DBPutHashToSerialIDWithPrev(dbTx, *genesisBlock.Hash(), 0, 0)
 		if err != nil {
 			return err
 		}
@@ -172,7 +129,7 @@ func (b *BlockChain) createChainState() error {
 		}
 
 		// Save the genesis block to the block index database.
-		err = chaindata.DBStoreBlockNode(b.chain, dbTx, genesisNode)
+		err = chaindata.DBStoreBlockNode(dbTx, genesisNode)
 		if err != nil {
 			return err
 		}

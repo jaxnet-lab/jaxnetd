@@ -46,7 +46,8 @@ type BeaconBlockNode struct {
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
 	// blockIndex once the node has been added to the global index.
-	status BlockStatus
+	status        BlockStatus
+	actualMMRRoot chainhash.Hash
 }
 
 // NewBeaconBlockNode returns a new block node for the given block header and parent
@@ -81,19 +82,22 @@ func (node *BeaconBlockNode) PrevHash() chainhash.Hash {
 
 	return node.parent.GetHash()
 }
-func (node *BeaconBlockNode) Version() int32               { return node.header.Version().Version() }
-func (node *BeaconBlockNode) Height() int32                { return node.height }
-func (node *BeaconBlockNode) SerialID() int64              { return node.serialID }
-func (node *BeaconBlockNode) Bits() uint32                 { return node.header.Bits() }
-func (node *BeaconBlockNode) Difficulty() uint64           { return node.difficulty }
-func (node *BeaconBlockNode) K() uint32                    { return node.header.K() }
-func (node *BeaconBlockNode) VoteK() uint32                { return node.header.VoteK() }
-func (node *BeaconBlockNode) Parent() IBlockNode           { return node.parent }
-func (node *BeaconBlockNode) WorkSum() *big.Int            { return node.workSum }
-func (node *BeaconBlockNode) Timestamp() int64             { return node.timestamp }
-func (node *BeaconBlockNode) Status() BlockStatus          { return node.status }
-func (node *BeaconBlockNode) SetStatus(status BlockStatus) { node.status = status }
-func (node *BeaconBlockNode) NewHeader() wire.BlockHeader  { return new(wire.BeaconHeader) }
+
+func (node *BeaconBlockNode) ActualMMRRoot() chainhash.Hash           { return node.actualMMRRoot }
+func (node *BeaconBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actualMMRRoot = mmrRoot }
+func (node *BeaconBlockNode) Version() int32                          { return node.header.Version().Version() }
+func (node *BeaconBlockNode) Height() int32                           { return node.height }
+func (node *BeaconBlockNode) SerialID() int64                         { return node.serialID }
+func (node *BeaconBlockNode) Bits() uint32                            { return node.header.Bits() }
+func (node *BeaconBlockNode) Difficulty() uint64                      { return node.difficulty }
+func (node *BeaconBlockNode) K() uint32                               { return node.header.K() }
+func (node *BeaconBlockNode) VoteK() uint32                           { return node.header.VoteK() }
+func (node *BeaconBlockNode) Parent() IBlockNode                      { return node.parent }
+func (node *BeaconBlockNode) WorkSum() *big.Int                       { return node.workSum }
+func (node *BeaconBlockNode) Timestamp() int64                        { return node.timestamp }
+func (node *BeaconBlockNode) Status() BlockStatus                     { return node.status }
+func (node *BeaconBlockNode) SetStatus(status BlockStatus)            { node.status = status }
+func (node *BeaconBlockNode) NewHeader() wire.BlockHeader             { return new(wire.BeaconHeader) }
 
 // Header constructs a block header from the node and returns it.
 //

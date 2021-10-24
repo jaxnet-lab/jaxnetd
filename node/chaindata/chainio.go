@@ -53,26 +53,25 @@ var (
 	// chain state.
 	ChainStateKeyName = []byte("chainstate")
 
-	// MMRRootsBucketName is unordered storage of mmr root and
+	// MMRRootsToHashBucketName is unordered storage of mmr root and
 	// corresponding last block hash for this root.
 	// [mmr root hash] -> [block Hash]
-	MMRRootsBucketName = []byte("mmrroots")
+	MMRRootsToHashBucketName = []byte("mmr_root_to_hash")
 
-	// -------- TODO: fix serial id implementation
+	// HashToMMRRootBucketName is unordered storage of block hash and
+	// corresponding  mmr root for this block.
+	// [mmr root hash] -> [block Hash]
+	// [block Hash] -> [mmr root hash]
+	HashToMMRRootBucketName = []byte("hash_to_mmr_root")
 
-	// BlockLastSerialID is the name of the db bucket used to house the
-	// block last [serial id].
-	BlockLastSerialID = []byte("block_last_serial_id")
-
-	// BlockHashSerialID is the name of the db bucket used to house the
+	// BlockHashToSerialID is the name of the db bucket used to house the
 	// [block Hash] -> [serial id] index.
-	BlockHashSerialID = []byte("block_hash_serial_id")
+	BlockHashToSerialID = []byte("hash_to_serialid")
 
-	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the
+	// SerialIDToPrevBlock is the name of the db bucket used to house the
 	// block serial id to hash and previous serial id.
-	BlockSerialIDHashPrevSerialID = []byte("block_serial_id_hash_prev_serial_id")
-
-	// ----------
+	//  [serial id] -> [block Hash; previous serial id]
+	SerialIDToPrevBlock = []byte("serialid_to_prev_block")
 
 	// SpendJournalVersionKeyName is the name of the db key used to store
 	// the version of the spend journal currently in the database.
@@ -1230,9 +1229,10 @@ func DBFetchBlockByNode(chain chainctx.IChainCtx, dbTx database.Tx, node blockno
 
 // DBStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func DBStoreBlockNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknodes.IBlockNode) error {
+func DBStoreBlockNode(dbTx database.Tx, node blocknodes.IBlockNode) error {
 	// Serialize block data to be stored.
-	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
+
+	w := bytes.NewBuffer(make([]byte, 0, dbTx.Chain().MaxBlockHeaderPayload()+1))
 	header := node.Header()
 	err := header.Write(w)
 	if err != nil {
@@ -1251,9 +1251,10 @@ func DBStoreBlockNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknode
 	value := w.Bytes()
 
 	// Write block header data to block index bucket.
-	blockIndexBucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	blockHash := node.GetHash()
 	key := blockIndexKey(&blockHash, uint32(node.Height()))
+
+	blockIndexBucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
 	return blockIndexBucket.Put(key, value)
 }
 
@@ -1278,4 +1279,15 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	binary.BigEndian.PutUint32(indexKey[0:4], blockHeight)
 	copy(indexKey[4:chainhash.HashSize+4], blockHash[:])
 	return indexKey
+}
+
+func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
+	blockIndexBucket := dbTx.Metadata().Bucket(MMRRootsToHashBucketName)
+	err := blockIndexBucket.Put(mmrRoot[:], blockHash[:])
+	if err != nil {
+		return err
+	}
+
+	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+	return bucket.Put(blockHash[:], mmrRoot[:])
 }

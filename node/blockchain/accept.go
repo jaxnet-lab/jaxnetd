@@ -75,6 +75,20 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 		return false, err
 	}
 
+	err = b.db.Update(func(dbTx database.Tx) error {
+		err := chaindata.DBPutMMRRoot(dbTx, b.blocksDB.index.MMRTreeRoot(), newNode.GetHash())
+		if err != nil {
+			return err
+		}
+
+		return chaindata.DBPutHashToSerialIDWithPrev(dbTx, newNode.GetHash(),
+			newNode.SerialID(), newNode.Parent().SerialID())
+	})
+
+	if err != nil {
+		return false, err
+	}
+
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.

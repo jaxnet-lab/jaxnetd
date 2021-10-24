@@ -174,7 +174,7 @@ func (bi *blockIndex) flushToDB() error {
 
 	err := bi.db.Update(func(dbTx database.Tx) error {
 		for node := range bi.dirty {
-			err := chaindata.DBStoreBlockNode(bi.db.Chain(), dbTx, node)
+			err := chaindata.DBStoreBlockNode(dbTx, node)
 			if err != nil {
 				return err
 			}
@@ -200,14 +200,15 @@ type mmrContainer struct {
 }
 
 func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlockNode) {
-	nodeMMRRoot := node.Header().BlocksMerkleMountainRoot()
+	prevNodesMMRRoot := node.Header().BlocksMerkleMountainRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()
 
 	// 1) Good Case: if a new node is next in the current chain,
 	// then just push it to the MMR tree as the last leaf.
-	if nodeMMRRoot.IsEqual(&currentMMRRoot) {
+	if prevNodesMMRRoot.IsEqual(&currentMMRRoot) {
 		mmrTree.AddBlock(node.GetHash(), node.Difficulty())
 		mmrTree.mmrRootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
+		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 		return
 	}
 
@@ -244,5 +245,6 @@ func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlo
 		bNode := lifoToAdd[i]
 		mmrTree.AddBlock(bNode.Hash, bNode.Weight)
 		mmrTree.mmrRootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
+		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 	}
 }

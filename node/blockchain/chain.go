@@ -607,41 +607,6 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		// Get chain last block id from db hash->id mapping
-		bestChainLastSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, &bestBlockHash)
-		if err != nil {
-			return err
-		}
-
-		blockSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
-		if err != nil {
-			return err
-		}
-
-		// new incoming block
-		if blockSerialID == -1 {
-			chainNewSerialID := bestChainLastSerialID + 1
-			err = chaindata.DBPutLastSerialID(dbTx, chainNewSerialID)
-			if err != nil {
-				return err
-			}
-			err = chaindata.DBPutBlockHashSerialID(dbTx, block.Hash(), chainNewSerialID)
-			if err != nil {
-				return err
-			}
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
-				chainNewSerialID, bestChainLastSerialID)
-			if err != nil {
-				return err
-			}
-		} else { // existing block for re-chaining
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(),
-				blockSerialID, bestChainLastSerialID)
-			if err != nil {
-				return err
-			}
-		}
-
 		// Update best block state.
 		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
 
@@ -719,8 +684,8 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
-	forkNode blocknodes.IBlockNode) error {
+func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
+	view *chaindata.UtxoViewpoint) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.blocksDB.bestChain.Tip().GetHash()
@@ -769,30 +734,6 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// get block serial id
-		blockSerialID, blockPrevSerialID, err := chaindata.DBFetchBlockSerialID(dbTx, block.Hash())
-		if err != nil {
-			return err
-		}
-
-		// block is disconnecting without fork
-		if forkNode == nil {
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), blockSerialID, blockPrevSerialID)
-			if err != nil {
-				return err
-			}
-		} else { // there was fork
-			// get fork block id
-			fHash := forkNode.GetHash()
-			forkBlockSerialID, _, err := chaindata.DBFetchBlockSerialID(dbTx, &fHash)
-			if err != nil {
-				return err
-			}
-
-			err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, block.Hash(), blockSerialID, forkBlockSerialID)
-			if err != nil {
-				return err
-			}
-		}
 
 		// Update best block state.
 		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
@@ -1090,7 +1031,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		}
 
 		// Update the database and chain state.
-		err = b.disconnectBlock(blockNode, block, view, forkNode)
+		err = b.disconnectBlock(blockNode, block, view)
 		if err != nil {
 			return err
 		}

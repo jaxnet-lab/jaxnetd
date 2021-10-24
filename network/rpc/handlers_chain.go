@@ -847,25 +847,9 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 
 // handleGetLastSerialBlockNumber implements the getLastSerialBlockNumber command.
 func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	var lastSerial int64
-	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
-		var err error
-		lastSerial, err = chaindata.DBFetchLastSerialID(dbTx)
-		return err
-	})
-
-	if err != nil {
-		return nil, &jaxjson.RPCError{
-			Code:    jaxjson.ErrRPCBlockNotFound,
-			Message: err.Error(),
-		}
-	}
-
-	result := &jaxjson.GetLastSerialBlockNumberResult{
-		LastSerial: lastSerial,
-	}
-
-	return result, nil
+	return &jaxjson.GetLastSerialBlockNumberResult{
+		LastSerial: server.chainProvider.BlockChain().BestSnapshot().LastSerialID,
+	}, nil
 }
 
 // directionString is a helper function that returns a string that represents
