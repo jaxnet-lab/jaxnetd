@@ -343,6 +343,9 @@ func (t *BlocksMMRTree) rebuildTree(startOffset, count uint64) (rootHash chainha
 		// The normal case sets the parent node to the double sha256
 		// of the concatenation of the left and right children.
 		default:
+			if (t.nodes[i].Weight + t.nodes[i+1].Weight) > t.chainWeight {
+				continue
+			}
 			newItem := hashMerkleBranches(t.nodes[i], t.nodes[i+1])
 			newItem.ID = offset
 			t.nodes[offset] = newItem
