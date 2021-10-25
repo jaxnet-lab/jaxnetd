@@ -26,11 +26,10 @@ type slotsSpace uint32
 type levelsSpace uint16
 
 var (
-	ErrInvalidShardPosition   = errors.New("specified shard position does not correspond to the expected tree conf")
-	ErrValidation             = errors.New("validation error")
-	ErrRootIsNil              = errors.New("root is nil")
-	ErrLeafIsNil              = errors.New("leaf is nil")
-	ErrInvalidMerkleProofPath = errors.New("invalid merkle proof path")
+	ErrInvalidShardPosition = errors.New("specified shard position does not correspond to the expected tree conf")
+	ErrValidation           = errors.New("validation error")
+	ErrRootIsNil            = errors.New("root is nil")
+	ErrLeafIsNil            = errors.New("leaf is nil")
 )
 
 var (
@@ -788,6 +787,8 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 	//	d=4		→  size<=48 bit
 	//	d>=5	→  size<=18*d bit
 	d := tree.HeightWithoutRoot()
+	//  The logic behind the prfevious line should be changed. We shoudn't pass a tree structure. Instead of that we need to path only the number d.
+
 	if d < 1 {
 		return validationError("invalid tree structure")
 	}
@@ -795,14 +796,14 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 	maxCodingSizeUpTo4 := []uint32{0, 3, 9, 21, 45}
 	if d <= 4 {
 		if codingBitsSize > maxCodingSizeUpTo4[d] {
-			return validationError("invalid coding size (greater than maximal expected)")
+			return validationError("invalid orange tree coding size (greater than maximal expected)")
 		}
 
 	} else {
 		// d > 4
 		maxCodingSize := uint32(math.Pow(18, float64(d)))
 		if codingBitsSize > maxCodingSize {
-			return validationError("invalid coding size (greater than maximal expected)")
+			return validationError("invalid orange tree coding size (greater than maximal expected)")
 		}
 	}
 
@@ -841,10 +842,6 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 		i = 0
 		j = 0
 
-		// The algorithm compares this bit 0, so
-		// it must not be equal to zero on first iteration.
-		previousBit = byte(1)
-
 		// By default, each topology coding consist 2 trailing zeroes,
 		// that are escaped during transporting and must be restored during validation.
 		alignedTopologyCodingLastBitIndex = topologyCodingLastBitIndex + 2
@@ -852,25 +849,15 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 	for index := topologyCodingFirstBit; index <= alignedTopologyCodingLastBitIndex; index++ {
 		bit := getTopologyBit(int(index))
 		if bitIsPositive(bit) {
-			i++
 			j++
 
 		} else { // bit is negative
-			j--
-
-			if previousBit == 0 {
-				i--
-			}
+			i++
 		}
 
-		if i > int(d) {
-			return validationError("orange tree deepness error")
+		if j < i && index != alignedTopologyCodingLastBitIndex {
+			return validationError("orange tree positiveBitsCount error")
 		}
-		if j < 0 && index != alignedTopologyCodingLastBitIndex {
-			return validationError("orange tree deepness error")
-		}
-
-		previousBit = bit
 	}
 
 	// Checking the amount of positive bits in the coding.
@@ -887,32 +874,43 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 	}
 
 	// MM Number check
-	j = 0
+	// We assume that checks above where succefull
+	emptyMMTleafCount := 0
 	t := uint32(math.Pow(2, float64(d)))
-	previousBit = 1
-	positiveBitsCount = 0
 	typesIndex := int(nodesTypesCodingFirstBitIndex)
-	for topologyIndex := topologyCodingFirstBit; topologyIndex <= topologyCodingLastBitIndex+2; topologyIndex++ {
-		bit := getTopologyBit(int(topologyIndex))
+	topologyIndex := int(topologyCodingFirstBit)
+
+	var traverseOrangeTreeNode func(node2pHeight uint32) error
+	traverseOrangeTreeNode = func(node2pHeight uint32) error {
+		bit := getTopologyBit(topologyIndex)
+		topologyIndex++
 		if bitIsPositive(bit) {
-			t /= 2
-
-		} else {
-			if previousBit == 0 {
-				t *= 2
+			if node2pHeight < 2 {
+				return validationError("orange tree height error")
+			} else {
+				err := traverseOrangeTreeNode(node2pHeight / 2)
+				if err != nil {
+					return err
+				}
+				return traverseOrangeTreeNode(node2pHeight / 2)
 			}
-
+		} else {
 			typesBit := nodesTypesSet.Bit(typesIndex)
 			typesIndex++
 			if typesBit == 0 {
-				j += int(t)
+				emptyMMTleafCount += int(node2pHeight)
 			}
 		}
 
-		previousBit = bit
+		return nil
 	}
 
-	if (mmNumber + uint32(j)) < uint32(math.Pow(2, float64(d))) {
+	err = traverseOrangeTreeNode(t)
+	if err != nil {
+		return
+	}
+
+	if (mmNumber + uint32(emptyMMTleafCount)) < uint32(math.Pow(2, float64(d))) {
 		err = fmt.Errorf("invalid MMNumber: %v", ErrValidation)
 		return
 	}
