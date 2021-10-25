@@ -53,7 +53,8 @@ var TestNetParams = Params{
 		MinDiffReductionTime:     time.Second * 30, // TargetTimePerBlock * 2
 		GenerateSupported:        true,
 		HashSorting:              true,
-		HashSortingSlotNumber:    4096, // 2^12
+		// HashSortingSlotNumber:    4096, // 2^12
+		HashSortingSlotNumber: 16, // 2^4
 
 	},
 

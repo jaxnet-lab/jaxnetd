@@ -51,7 +51,8 @@ var MainNetParams = Params{
 		MinDiffReductionTime:     0,
 		GenerateSupported:        false,
 		HashSorting:              true,
-		HashSortingSlotNumber:    4096, // 2^12
+		HashSortingSlotNumber:    16, // 2^4
+		// HashSortingSlotNumber:    4096, // 2^12
 	},
 
 	// Checkpoints ordered from oldest to newest.

@@ -149,15 +149,18 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	shardCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
-	tree := shardCtl.chainProvider.BlockChain().MMRTree()
-	data, err := json.Marshal(tree)
-	if err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
-	} else {
-		filePath := filepath.Join(shardCtl.cfg.DataDir, shardCtl.chain.Name()+"_mmr.json")
-		err = ioutil.WriteFile(filePath, data, 0755)
+
+	if shardCtl.cfg.Node.DumpMMR {
+		tree := shardCtl.chainProvider.BlockChain().MMRTree()
+		data, err := json.Marshal(tree)
 		if err != nil {
 			shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+		} else {
+			filePath := filepath.Join(shardCtl.cfg.DataDir, shardCtl.chain.Name()+"_mmr.json")
+			err = ioutil.WriteFile(filePath, data, 0755)
+			if err != nil {
+				shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+			}
 		}
 	}
 

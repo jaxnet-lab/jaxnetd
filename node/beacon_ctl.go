@@ -146,15 +146,18 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 	beaconCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
-	tree := beaconCtl.chainProvider.BlockChain().MMRTree()
-	data, err := json.Marshal(tree)
-	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
-	} else {
-		filePath := filepath.Join(beaconCtl.cfg.DataDir, "beacon_mmr.json")
-		err = ioutil.WriteFile(filePath, data, 0755)
+
+	if beaconCtl.cfg.Node.DumpMMR {
+		tree := beaconCtl.chainProvider.BlockChain().MMRTree()
+		data, err := json.Marshal(tree)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+		} else {
+			filePath := filepath.Join(beaconCtl.cfg.DataDir, "beacon_mmr.json")
+			err = ioutil.WriteFile(filePath, data, 0755)
+			if err != nil {
+				beaconCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
+			}
 		}
 	}
 

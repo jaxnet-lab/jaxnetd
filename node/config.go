@@ -53,6 +53,7 @@ type InstanceConfig struct {
 	DbType         string                       `yaml:"db_type" toml:"db_type" description:"Database backend to use for the Block Chain"`
 	Net            string                       `yaml:"net" toml:"net"`
 	EnableCPUMiner bool                         `yaml:"enable_cpu_miner" toml:"enable_cpu_miner"`
+	DumpMMR        bool                         `yaml:"dump_mmr" toml:"dump_mmr"`
 }
 
 type ShardConfig struct {
