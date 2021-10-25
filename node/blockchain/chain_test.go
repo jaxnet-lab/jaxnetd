@@ -132,14 +132,14 @@ func TestCalcSequenceLock(t *testing.T) {
 	blockVersion := int32(0x20000000 | (uint32(1) << csvBit))
 	// Generate enough synthetic blocks to activate CSV.
 	chain := newFakeChain(chainCtx)
-	node := chain.bestChain.Tip()
+	node := chain.blocksDB.bestChain.Tip()
 	blockTime := node.Header().Timestamp()
 	numBlocksToActivate := netParams.MinerConfirmationWindow * 3
 	for i := uint32(0); i < numBlocksToActivate; i++ {
 		blockTime = blockTime.Add(time.Second)
 		node = newFakeNode(chainCtx, node, wire.BVersion(blockVersion), 0, blockTime)
-		chain.index.AddNode(node)
-		chain.bestChain.SetTip(node)
+		chain.blocksDB.index.AddNode(node)
+		chain.blocksDB.bestChain.SetTip(node)
 	}
 
 	// Create a utxo view with a fake utxo for the inputs used in the
@@ -479,15 +479,15 @@ func TestLocateInventory(t *testing.T) {
 	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
 
 	ch := newFakeChain(chainCtx)
-	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
+	branch0Nodes := chainedNodes(ch.blocksDB.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 2)
 	for _, node := range branch0Nodes {
-		ch.index.AddNode(node)
+		ch.blocksDB.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
-		ch.index.AddNode(node)
+		ch.blocksDB.index.AddNode(node)
 	}
-	ch.bestChain.SetTip(tip(branch0Nodes))
+	ch.blocksDB.bestChain.SetTip(tip(branch0Nodes))
 
 	// Create chain views for different branches of the overall chain to
 	// simulate a local and remote node on different parts of the chain.
@@ -496,7 +496,7 @@ func TestLocateInventory(t *testing.T) {
 
 	// Create a chain view for a completely unrelated block chain to
 	// simulate a remote node on a totally different chain.
-	unrelatedBranchNodes := chainedNodes(nil, 5)
+	unrelatedBranchNodes := chainedNodes((*blocknodes.BeaconBlockNode)(nil), 5)
 	unrelatedView := newChainView(tip(unrelatedBranchNodes))
 
 	tests := []struct {
@@ -821,19 +821,19 @@ func TestHeightToHashRange(t *testing.T) {
 
 	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
 	ch := newFakeChain(chainCtx)
-	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
+	branch0Nodes := chainedNodes(ch.blocksDB.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		ch.index.SetStatusFlags(node, blocknodes.StatusValid)
-		ch.index.AddNode(node)
+		ch.blocksDB.index.SetStatusFlags(node, blocknodes.StatusValid)
+		ch.blocksDB.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
 		if node.Height() < 18 {
-			ch.index.SetStatusFlags(node, blocknodes.StatusValid)
+			ch.blocksDB.index.SetStatusFlags(node, blocknodes.StatusValid)
 		}
-		ch.index.AddNode(node)
+		ch.blocksDB.index.AddNode(node)
 	}
-	ch.bestChain.SetTip(tip(branch0Nodes))
+	ch.blocksDB.bestChain.SetTip(tip(branch0Nodes))
 
 	tests := []struct {
 		name        string
@@ -914,19 +914,19 @@ func TestIntervalBlockHashes(t *testing.T) {
 	tip := tstTip
 	chainCtx := chainctx.NewBeaconChain(&chaincfg.MainNetParams)
 	ch := newFakeChain(chainCtx)
-	branch0Nodes := chainedNodes(ch.bestChain.Genesis(), 18)
+	branch0Nodes := chainedNodes(ch.blocksDB.bestChain.Genesis(), 18)
 	branch1Nodes := chainedNodes(branch0Nodes[14], 3)
 	for _, node := range branch0Nodes {
-		ch.index.SetStatusFlags(node, blocknodes.StatusValid)
-		ch.index.AddNode(node)
+		ch.blocksDB.index.SetStatusFlags(node, blocknodes.StatusValid)
+		ch.blocksDB.index.AddNode(node)
 	}
 	for _, node := range branch1Nodes {
 		if node.Height() < 18 {
-			ch.index.SetStatusFlags(node, blocknodes.StatusValid)
+			ch.blocksDB.index.SetStatusFlags(node, blocknodes.StatusValid)
 		}
-		ch.index.AddNode(node)
+		ch.blocksDB.index.AddNode(node)
 	}
-	ch.bestChain.SetTip(tip(branch0Nodes))
+	ch.blocksDB.bestChain.SetTip(tip(branch0Nodes))
 
 	tests := []struct {
 		name        string

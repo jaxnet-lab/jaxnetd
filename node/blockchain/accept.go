@@ -6,8 +6,6 @@
 package blockchain
 
 import (
-	"fmt"
-
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
@@ -24,19 +22,9 @@ import (
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
+func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.IBlockNode, flags chaindata.BehaviorFlags) (bool, error) {
 	// The height of this block is one more than the referenced previous
 	// block.
-
-	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	prevNode := b.index.LookupNodeByMMRRoot(prevMMRRoot)
-	if prevNode == nil {
-		str := fmt.Sprintf("previous block %s is unknown", prevMMRRoot)
-		return false, chaindata.NewRuleError(chaindata.ErrPreviousBlockUnknown, str)
-	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
-		str := fmt.Sprintf("previous block %s is known to be invalid", prevMMRRoot)
-		return false, chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
-	}
 
 	blockHeight := prevNode.Height() + 1
 	block.SetHeight(blockHeight)
@@ -70,16 +58,33 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, flags chaindata.Beha
 		return false, err
 	}
 
+	// Incrementing lastSerialID, because block was stored.
+	b.blocksDB.lastSerialID += 1
+
 	// Create a new block node for the block and add it to the node index. Even
 	// if the block ultimately gets connected to the main chain, it starts out
 	// on a side chain.
 	blockHeader := block.MsgBlock().Header
+	newNode := b.chain.NewNode(blockHeader, prevNode, b.blocksDB.lastSerialID)
 
-	newNode := b.chain.NewNode(blockHeader, prevNode)
 	newNode.SetStatus(blocknodes.StatusDataStored)
 
-	b.index.AddNode(newNode)
-	err = b.index.flushToDB()
+	b.blocksDB.index.AddNode(newNode)
+	err = b.blocksDB.index.flushToDB()
+	if err != nil {
+		return false, err
+	}
+
+	err = b.db.Update(func(dbTx database.Tx) error {
+		err := chaindata.DBPutMMRRoot(dbTx, b.blocksDB.index.MMRTreeRoot(), newNode.GetHash())
+		if err != nil {
+			return err
+		}
+
+		return chaindata.DBPutHashToSerialIDWithPrev(dbTx, newNode.GetHash(),
+			newNode.SerialID(), newNode.Parent().SerialID())
+	})
+
 	if err != nil {
 		return false, err
 	}

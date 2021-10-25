@@ -7,8 +7,6 @@ package blockchain
 
 import (
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
-
 	// "gitlab.com/jaxnet/jaxnetd/shards/chain/beacon"
 	"math/rand"
 	"reflect"
@@ -36,7 +34,7 @@ func chainedNodes(parent blocknodes.IBlockNode, numNodes int) []blocknodes.IBloc
 			header.SetBlocksMerkleMountainRoot(tip.GetHash())
 		}
 
-		nodes[i] = blocknodes.NewBeaconBlockNode(header, tip, chaincfg.TestNetParams.PowParams.PowLimitBits)
+		nodes[i] = blocknodes.NewBeaconBlockNode(header, tip, 0) // todo: fix serial id
 		tip = nodes[i]
 	}
 	return nodes

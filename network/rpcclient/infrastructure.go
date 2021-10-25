@@ -1503,6 +1503,7 @@ func (c *Client) Connect(tries int) error {
 }
 
 const (
+	// todo: update this version
 	// jaxnetd19Str is the string representation of jaxnetd v0.19.0.
 	jaxnetd19Str = "0.19.0"
 

@@ -274,7 +274,7 @@ func (b *BlockChain) TstSetCoinbaseMaturity(maturity uint16) {
 func newFakeChain(ctx chainctx.IChainCtx) *BlockChain {
 	// Create a genesis block node and block index index populated with it
 	// for use when creating the fake chain below.
-	node := ctx.NewNode(ctx.GenesisBlock().Header, nil)
+	node := ctx.NewNode(ctx.GenesisBlock().Header, nil, 0)
 
 	index := newBlockIndex(nil, ctx.Params())
 	index.AddNode(node)
@@ -290,9 +290,10 @@ func newFakeChain(ctx chainctx.IChainCtx) *BlockChain {
 			maxRetargetTimespan: targetTimespan * adjustmentFactor,
 			blocksPerRetarget:   int32(chaincfg.BeaconEpochLength),
 		},
-
-		index:            index,
-		bestChain:        newChainView(node),
+		blocksDB: rBlockStorage{
+			index:     index,
+			bestChain: newChainView(node),
+		},
 		warningCaches:    newThresholdCaches(vbNumBits),
 		deploymentCaches: newThresholdCaches(chaincfg.DefinedDeployments),
 	}
@@ -311,7 +312,7 @@ func newFakeNode(ctx chainctx.IChainCtx, parent blocknodes.IBlockNode, blockVers
 		0,
 	)
 
-	return ctx.NewNode(header, parent)
+	return ctx.NewNode(header, parent, 0)
 }
 
 func newBeaconBlockGen() chaindata.ChainBlockGenerator {

@@ -7,6 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.1]
+ 
+- Fixed shard genesis generation.
+- Re-implemented block-serial-id, now it works as expected. 
+- Added last serialID to best state. 
+- Added saving mmr-roots to the db.
+
 ## [0.4.0]
 
 - Removed TxMark, now CSTX (CrossShard Swap Tx aka SwapTx) has own version - `wire.TxVerCrossShardSwap` = 4.

@@ -32,11 +32,12 @@ type BestState struct {
 	TotalTxns     uint64         // The total number of txns in the chain.
 	MedianTime    time.Time      // Median time as per CalcPastMedianTime.
 	BlocksMMRRoot chainhash.Hash // Actual root of the MMR Tree.
+	LastSerialID  int64
 }
 
 // NewBestState returns a new best stats instance for the given parameters.
 func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash, blockSize, blockWeight, numTxns,
-	totalTxns uint64, medianTime time.Time) *BestState {
+	totalTxns uint64, medianTime time.Time, lastSerialID int64) *BestState {
 
 	return &BestState{
 		Hash:          node.GetHash(),
@@ -50,5 +51,6 @@ func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash, bloc
 		NumTxns:       numTxns,
 		TotalTxns:     totalTxns,
 		MedianTime:    medianTime,
+		LastSerialID:  lastSerialID,
 	}
 }

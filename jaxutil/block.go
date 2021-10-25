@@ -125,6 +125,10 @@ func (b *Block) PowHash() *chainhash.Hash {
 	return &hash
 }
 
+func (b *Block) PrevMMRRoot() chainhash.Hash {
+	return b.msgBlock.Header.BlocksMerkleMountainRoot()
+}
+
 func (b *Block) ExclusiveHash() *chainhash.Hash {
 	// Return the cached block hash if it has already been generated.
 	if b.exclusiveBlockHash != nil {

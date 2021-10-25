@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -48,12 +49,12 @@ func (b *BlockChain) createChainState() error {
 	genesisBlock := jaxutil.NewBlock(b.chain.Params().GenesisBlock())
 	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
-	node := b.chain.NewNode(header, nil)
-	node.SetStatus(blocknodes.StatusDataStored | blocknodes.StatusValid)
-	b.bestChain.SetTip(node)
+	genesisNode := b.chain.NewNode(header, nil, 0)
+	genesisNode.SetStatus(blocknodes.StatusDataStored | blocknodes.StatusValid)
+	b.blocksDB.bestChain.SetTip(genesisNode)
 
 	// Add the new node to the index which is used for faster lookups.
-	b.index.addNode(node)
+	b.blocksDB.index.addNode(genesisNode)
 
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
@@ -61,98 +62,62 @@ func (b *BlockChain) createChainState() error {
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(genesisBlock))
 
-	b.stateSnapshot = chaindata.NewBestState(node, b.index.MMRTreeRoot(), blockSize, blockWeight, numTxns,
-		numTxns, time.Unix(node.Timestamp(), 0))
+	b.stateSnapshot = chaindata.NewBestState(genesisNode,
+		b.blocksDB.index.MMRTreeRoot(),
+		blockSize,
+		blockWeight,
+		numTxns,
+		numTxns,
+		time.Unix(genesisNode.Timestamp(), 0),
+		0,
+	)
 
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
 	err := b.db.Update(func(dbTx database.Tx) error {
 		meta := dbTx.Metadata()
-
-		// Create the bucket that houses the block index data.
-		_, err := meta.CreateBucket(chaindata.BlockIndexBucketName)
-		if err != nil {
-			return err
+		buckets := [][]byte{
+			// Create the bucket that houses the block index data.
+			chaindata.BlockIndexBucketName,
+			// Create the bucket that houses the chain block hash to height index.
+			chaindata.HashIndexBucketName,
+			// Create the bucket that houses the chain block height to hash index.
+			chaindata.HeightIndexBucketName,
+			// Create the bucket that houses the spend journal data and store its version.
+			chaindata.SpendJournalBucketName,
+			// Create the bucket that houses the utxo set and store its
+			// version.  Note that the genesis block coinbase transaction is
+			// intentionally not inserted here since it is not spendable by
+			// consensus rules.
+			chaindata.UtxoSetBucketName,
+			// Create the bucket that houses the mapping of hash to block serial id and serial id
+			chaindata.BlockHashToSerialID,
+			// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
+			chaindata.SerialIDToPrevBlock,
+			chaindata.MMRRootsToHashBucketName,
+			chaindata.HashToMMRRootBucketName,
 		}
-
-		// Create the bucket that houses the chain block hash to height
-		// index.
-		_, err = meta.CreateBucket(chaindata.HashIndexBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the chain block height to hash
-		// index.
-		_, err = meta.CreateBucket(chaindata.HeightIndexBucketName)
-		if err != nil {
-			return err
-		}
-
-		// EAD registration is possible only at beacon
 		if b.chain.IsBeacon() {
-			// Create the bucket that houses the EAD addresses index.
-			_, err = meta.CreateBucket(chaindata.EADAddressesBucketNameV2)
+			buckets = append(buckets,
+				// Create the bucket that houses the EAD addresses index.
+				chaindata.EADAddressesBucketNameV2, // EAD registration is possible only at beacon
+			)
+		}
+
+		for _, bucket := range buckets {
+			_, err := meta.CreateBucket(bucket)
 			if err != nil {
 				return err
 			}
 		}
 
-		// Create the bucket that houses the spend journal data and
-		// store its version.
-		_, err = meta.CreateBucket(chaindata.SpendJournalBucketName)
-		if err != nil {
-			return err
-		}
-		err = chaindata.DBPutVersion(dbTx, chaindata.UtxoSetVersionKeyName,
+		err := chaindata.DBPutVersion(dbTx, chaindata.UtxoSetVersionKeyName,
 			chaindata.LatestUtxoSetBucketVersion)
 		if err != nil {
 			return err
 		}
 
-		// Create the bucket that houses the utxo set and store its
-		// version.  Note that the genesis block coinbase transaction is
-		// intentionally not inserted here since it is not spendable by
-		// consensus rules.
-		_, err = meta.CreateBucket(chaindata.UtxoSetBucketName)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses block last_serial_id
-		_, err = meta.CreateBucket(chaindata.BlockLastSerialID)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the mapping of hash to block serial id and serial id
-		_, err = meta.CreateBucket(chaindata.BlockHashSerialID)
-		if err != nil {
-			return err
-		}
-
-		// Create the bucket that houses the mapping of block serial id to hash and previouse serial id
-		_, err = meta.CreateBucket(chaindata.BlockSerialIDHashPrevSerialID)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutLastSerialID(dbTx, 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockHashSerialID(dbTx, genesisBlock.Hash(), 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockSerialIDHash(dbTx, genesisBlock.Hash(), 0)
-		if err != nil {
-			return err
-		}
-
-		err = chaindata.DBPutBlockSerialIDHashPrevSerialID(dbTx, genesisBlock.Hash(), 0, -1)
+		err = chaindata.DBPutHashToSerialIDWithPrev(dbTx, *genesisBlock.Hash(), 0, 0)
 		if err != nil {
 			return err
 		}
@@ -164,25 +129,26 @@ func (b *BlockChain) createChainState() error {
 		}
 
 		// Save the genesis block to the block index database.
-		err = chaindata.DBStoreBlockNode(b.chain, dbTx, node)
+		err = chaindata.DBStoreBlockNode(dbTx, genesisNode)
 		if err != nil {
 			return err
 		}
 
-		h := node.GetHash()
+		h := genesisNode.GetHash()
 		// Add the genesis block hash to height and height to hash
 		// mappings to the index.
-		err = chaindata.DBPutBlockIndex(dbTx, &h, node.Height())
+		err = chaindata.DBPutBlockIndex(dbTx, &h, genesisNode.Height())
 		if err != nil {
 			return err
 		}
 
 		// Store the current best chain state into the database.
-		err = chaindata.DBPutBestState(dbTx, b.stateSnapshot, node.WorkSum())
+		err = chaindata.DBPutBestState(dbTx, b.stateSnapshot, genesisNode.WorkSum())
 		if err != nil {
 			return err
 		}
 		log.Info().Str("chain", b.chain.Name()).Msgf("Store new genesis: Chain %s Hash %s", b.chain.Name(), genesisBlock.Hash())
+
 		// Store the genesis block into the database.
 		err = chaindata.DBStoreBlock(dbTx, genesisBlock)
 		if err != nil {
@@ -190,7 +156,6 @@ func (b *BlockChain) createChainState() error {
 		}
 
 		if b.chain.IsBeacon() {
-
 			view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 			err := view.ConnectTransactions(genesisBlock, nil)
 
@@ -257,7 +222,7 @@ func (b *BlockChain) initChainState() error {
 		cursor := blockIndexBucket.Cursor()
 
 		for ok := cursor.First(); ok; ok = cursor.Next() {
-			header, status, err := chaindata.DeserializeBlockRow(b.chain, cursor.Value())
+			header, status, blockSerialID, err := chaindata.DeserializeBlockRow(b.chain, cursor.Value())
 			if err != nil {
 				return err
 			}
@@ -271,18 +236,40 @@ func (b *BlockChain) initChainState() error {
 				blockHash := header.BlockHash()
 
 				if !blockHash.IsEqual(b.chain.Params().GenesisHash()) {
+
+					// Load the raw block bytes for the best block.
+					blockBytes, err := dbTx.FetchBlock(&blockHash)
+					if err != nil {
+						return err
+					}
+
+					block := b.chain.EmptyBlock()
+					err = block.Deserialize(bytes.NewReader(blockBytes))
+					if err != nil {
+						return err
+
+					}
+					var asm string
+					fmt.Println("FETCHED_HEADER", blockSerialID, b.db.Chain().Params().ChainName)
+					asm, _ = txscript.DisasmString(block.Transactions[0].TxIn[0].SignatureScript)
+					fmt.Println(asm)
+
+					fmt.Println("GENESIS_HEADER", b.chain.Name())
+					asm, _ = txscript.DisasmString(b.chain.Params().GenesisBlock().Transactions[0].TxIn[0].SignatureScript)
+					fmt.Println(asm)
+
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chain.Params().GenesisHash(), blockHash))
 				}
-			} else if header.BlocksMerkleMountainRoot() == b.index.MMRTreeRoot() {
+			} else if header.BlocksMerkleMountainRoot() == b.blocksDB.index.MMRTreeRoot() {
 				// Since we iterate block headers in order of height, if the
 				// blocks are mostly linear there is a very good chance the
 				// previous header processed is the parent.
 				parent = lastNode
 			} else {
 				prev := header.BlocksMerkleMountainRoot()
-				parent = b.index.LookupNodeByMMRRoot(prev)
+				parent = b.blocksDB.index.LookupNodeByMMRRoot(prev)
 				if parent == nil {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Could not find parent for block %s", header.BlockHash()))
@@ -291,22 +278,24 @@ func (b *BlockChain) initChainState() error {
 
 			// Initialize the block node for the block, connect it,
 			// and add it to the block index.
-			node := b.chain.NewNode(header, parent)
+			node := b.chain.NewNode(header, parent, blockSerialID)
 			node.SetStatus(status)
 
-			b.index.addNode(node)
+			b.blocksDB.index.addNode(node)
 
 			lastNode = node
 			i++
 		}
 
+		b.blocksDB.lastSerialID = state.LastSerialID
+
 		// Set the best chain view to the stored best state.
-		tip := b.index.LookupNode(&state.Hash)
+		tip := b.blocksDB.index.LookupNode(&state.Hash)
 		if tip == nil {
 			return chaindata.AssertError(fmt.Sprintf(
 				"initChainState: cannot find chain tip %s in block index", state.Hash))
 		}
-		b.bestChain.SetTip(tip)
+		b.blocksDB.bestChain.SetTip(tip)
 
 		// Load the raw block bytes for the best block.
 		blockBytes, err := dbTx.FetchBlock(&state.Hash)
@@ -333,7 +322,7 @@ func (b *BlockChain) initChainState() error {
 					" upgrading to valid for consistency",
 					iterNode.GetHash(), iterNode.Height())
 
-				b.index.SetStatusFlags(iterNode, blocknodes.StatusValid)
+				b.blocksDB.index.SetStatusFlags(iterNode, blocknodes.StatusValid)
 			}
 		}
 
@@ -341,9 +330,15 @@ func (b *BlockChain) initChainState() error {
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(&block)))
 		numTxns := uint64(len(block.Transactions))
-		b.stateSnapshot = chaindata.NewBestState(tip, b.bestChain.mmrTree.CurrentRoot(), blockSize, blockWeight,
-			numTxns, state.TotalTxns, tip.CalcPastMedianTime())
-
+		b.stateSnapshot = chaindata.NewBestState(tip,
+			b.blocksDB.bestChain.mmrTree.CurrentRoot(),
+			blockSize,
+			blockWeight,
+			numTxns,
+			state.TotalTxns,
+			tip.CalcPastMedianTime(),
+			state.LastSerialID,
+		)
 		return nil
 	})
 	if err != nil {
@@ -353,7 +348,7 @@ func (b *BlockChain) initChainState() error {
 	// As we might have updated the index after it was loaded, we'll
 	// attempt to flush the index to the DB. This will only result in a
 	// write if the elements are dirty, so it'll usually be a noop.
-	return b.index.flushToDB()
+	return b.blocksDB.index.flushToDB()
 }
 
 // BlockByHeight returns the block at the given height in the main chain.
@@ -361,7 +356,7 @@ func (b *BlockChain) initChainState() error {
 // This function is safe for concurrent access.
 func (b *BlockChain) BlockByHeight(blockHeight int32) (*jaxutil.Block, error) {
 	// Lookup the block height in the best chain.
-	node := b.bestChain.NodeByHeight(blockHeight)
+	node := b.blocksDB.bestChain.NodeByHeight(blockHeight)
 	if node == nil {
 		str := fmt.Sprintf("no block at height %d exists", blockHeight)
 		return nil, chaindata.ErrNotInMainChain(str)
@@ -384,8 +379,8 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*jaxutil.Block, error) {
 func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 	// Lookup the block hash in block index and ensure it is in the best
 	// chain.
-	node := b.index.LookupNode(hash)
-	if node == nil || !b.bestChain.Contains(node) {
+	node := b.blocksDB.index.LookupNode(hash)
+	if node == nil || !b.blocksDB.bestChain.Contains(node) {
 		str := fmt.Sprintf("block %s is not in the main chain", hash)
 		return nil, chaindata.ErrNotInMainChain(str)
 	}

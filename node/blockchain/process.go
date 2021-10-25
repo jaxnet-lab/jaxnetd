@@ -8,50 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
-
-// blockExists determines whether a block with the given hash exists either in
-// the main chain or any side chains.
-//
-// This function is safe for concurrent access.
-func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
-	// Check block index first (could be main chain or side chain blocks).
-	if b.index.HaveBlock(hash) {
-		return true, nil
-	}
-
-	// Check in the database.
-	var exists bool
-	err := b.db.View(func(dbTx database.Tx) error {
-		var err error
-		exists, err = dbTx.HasBlock(hash)
-		if err != nil || !exists {
-			return err
-		}
-
-		// Ignore side chain blocks in the database.  This is necessary
-		// because there is not currently any record of the associated
-		// block index data such as its block height, so it's not yet
-		// possible to efficiently load the block and do anything useful
-		// with it.
-		//
-		// Ultimately the entire block index should be serialized
-		// instead of only the current main chain so it can be consulted
-		// directly.
-		_, err = chaindata.DBFetchHeightByHash(dbTx, hash)
-		if chaindata.IsNotInMainChainErr(err) {
-			exists = false
-			return nil
-		}
-		return err
-	})
-	return exists, err
-}
 
 // processOrphans determines if there are any orphans which depend on the passed
 // block hash (they are no longer orphans if true) and potentially accepts them.
@@ -82,21 +43,26 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		for i := 0; i < len(b.orphanIndex.prevOrphans[*processHash]); i++ {
-			orphan := b.orphanIndex.prevOrphans[*processHash][i]
+		for i := 0; i < len(b.blocksDB.orphanIndex.prevOrphans[*processHash]); i++ {
+			orphan := b.blocksDB.orphanIndex.prevOrphans[*processHash][i]
 			if orphan == nil {
 				log.Warn().Str("chain", b.chain.Name()).
-					Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i,	processHash)
+					Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i, processHash)
 				continue
 			}
 
 			// Remove the orphan from the orphan pool.
 			orphanHash := orphan.block.Hash()
-			b.removeOrphanBlock(orphan)
+			b.blocksDB.removeOrphanBlock(orphan)
 			i--
 
+			prevBlock, _, err := b.blocksDB.getBlockParent(orphan.block.PrevMMRRoot())
+			if err != nil {
+				return err
+			}
+
 			// Potentially accept the block into the block chain.
-			_, err := b.maybeAcceptBlock(orphan.block, flags)
+			_, err = b.maybeAcceptBlock(orphan.block, prevBlock, flags)
 			if err != nil {
 				return err
 			}
@@ -130,7 +96,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	log.Trace().Str("chain", b.chain.Name()).Msgf("Processing block %v", blockHash)
 
 	// The block must not already exist in the main chain or side chains.
-	exists, err := b.blockExists(blockHash)
+	exists, orphan, err := b.blocksDB.blockExists(b.db, blockHash)
 	if err != nil {
 		return false, false, err
 	}
@@ -138,9 +104,8 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		str := fmt.Sprintf("already have block %v", blockHash)
 		return false, false, chaindata.NewRuleError(chaindata.ErrDuplicateBlock, str)
 	}
-
 	// The block must not already exist as an orphan.
-	if _, exists := b.orphanIndex.orphans[*blockHash]; exists {
+	if orphan {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, chaindata.NewRuleError(chaindata.ErrDuplicateBlock, str)
 	}
@@ -191,23 +156,22 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		}
 	}
 
-	prevMMRRoot := blockHeader.BlocksMerkleMountainRoot()
-	prevHash := b.index.HashByMMR(prevMMRRoot)
-	prevHashExists, err := b.blockExists(&prevHash)
-	if err != nil {
+	prevBlock, prevExists, err := b.blocksDB.getBlockParent(block.PrevMMRRoot())
+	if prevExists && err != nil {
 		return false, false, err
 	}
 
-	if !prevHashExists {
-		log.Info().Str("chain", b.chain.Name()).Msgf("Adding orphan block %v with parent %v", blockHash, prevHash)
-		b.addOrphanBlock(block)
+	if !prevExists {
+		log.Info().Str("chain", b.chain.Name()).
+			Msgf("Adding orphan block %v with mmr root %v", blockHash, block.PrevMMRRoot())
+		b.blocksDB.addOrphanBlock(block)
 
 		return false, true, nil
 	}
 
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
-	isMainChain, err := b.maybeAcceptBlock(block, flags)
+	isMainChain, err := b.maybeAcceptBlock(block, prevBlock, flags)
 	if err != nil {
 		return false, false, err
 	}

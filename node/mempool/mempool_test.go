@@ -1460,7 +1460,7 @@ func TestAncestorsDescendants(t *testing.T) {
 func TestRBF(t *testing.T) {
 	t.Parallel()
 
-	const defaultFee = chaincfg.SatoshiPerBitcoin
+	const defaultFee = chaincfg.HaberStornettaPerJAXNETCoin
 
 	testCases := []struct {
 		name  string

@@ -38,7 +38,7 @@ const (
 
 	// btcBaseSubsidy is the starting subsidy amount for mined blocks.  This
 	// value is halved every SubsidyHalvingInterval blocks.
-	btcBaseSubsidy = 50 * chaincfg.SatoshiPerBitcoin
+	btcBaseSubsidy = 50 * 1e8
 )
 
 // isNullOutpoint determines whether or not a previous transaction output point
@@ -148,7 +148,6 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	msgTx := tx.MsgTx()
 
 	// Lock time of zero means the transaction is finalized.
-	// wire.TxVerRefundableTimeLock is always finalized, like a wire.TxVerRegular.
 	lockTime := msgTx.LockTime
 	if lockTime == 0 {
 		return true
@@ -232,36 +231,35 @@ func CheckTransactionSanity(tx *jaxutil.Tx) error {
 	// restrictions.  All amounts in a transaction are in a unit value known
 	// as a satoshi.  One bitcoin is a quantity of satoshi as defined by the
 	// SatoshiPerBitcoin constant.
-	var totalSatoshi int64
+	var totalDimes int64 // `dime` stands for decimal part of coin
 	for _, txOut := range msgTx.TxOut {
-		satoshi := txOut.Value
-		if satoshi < 0 {
-			str := fmt.Sprintf("transaction output has negative "+
-				"value of %v", satoshi)
+		dime := txOut.Value
+		if dime < 0 {
+			str := fmt.Sprintf("transaction output has negative value of %v", dime)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if satoshi > chaincfg.MaxSatoshi {
+		if dime > chaincfg.MaxCoinAmount {
 			str := fmt.Sprintf("transaction output value of %v is "+
-				"higher than max allowed value of %v", satoshi,
-				chaincfg.MaxSatoshi)
+				"higher than max allowed value of %v", dime,
+				chaincfg.MaxCoinAmount)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 
 		// Two's complement int64 overflow guarantees that any overflow
 		// is detected and reported.  This is impossible for Bitcoin, but
 		// perhaps possible if an alt increases the total money supply.
-		totalSatoshi += satoshi
-		if totalSatoshi < 0 {
+		totalDimes += dime
+		if totalDimes < 0 {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs exceeds max allowed value of %v",
-				chaincfg.MaxSatoshi)
+				chaincfg.MaxCoinAmount)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
-		if totalSatoshi > chaincfg.MaxSatoshi {
+		if totalDimes > chaincfg.MaxCoinAmount {
 			str := fmt.Sprintf("total value of all transaction "+
 				"outputs is %v which is higher than max "+
-				"allowed value of %v", totalSatoshi,
-				chaincfg.MaxSatoshi)
+				"allowed value of %v", totalDimes,
+				chaincfg.MaxCoinAmount)
 			return NewRuleError(ErrBadTxOutValue, str)
 		}
 	}
@@ -572,7 +570,7 @@ func CheckBlockSanityWF(block *jaxutil.Block, chainParams *chaincfg.Params, time
 		// We could potentially overflow the accumulator so check for
 		// overflow.
 		lastSigOps := totalSigOps
-		totalSigOps += (CountSigOps(tx) * WitnessScaleFactor)
+		totalSigOps += CountSigOps(tx) * WitnessScaleFactor
 
 		if totalSigOps < lastSigOps || totalSigOps > MaxBlockSigOpsCost {
 			str := fmt.Sprintf("block contains too many signature operations - got %v, max %v",
@@ -726,11 +724,11 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 				"value of %v", jaxutil.Amount(originTxSatoshi))
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
-		if originTxSatoshi > chaincfg.MaxSatoshi {
+		if originTxSatoshi > chaincfg.MaxCoinAmount {
 			str := fmt.Sprintf("transaction output value of %v is "+
 				"higher than max allowed value of %v",
 				jaxutil.Amount(originTxSatoshi),
-				chaincfg.MaxSatoshi)
+				chaincfg.MaxCoinAmount)
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}
 
@@ -740,10 +738,10 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 		lastSatoshiIn := totalSatoshiIn
 		totalSatoshiIn += originTxSatoshi
 		if totalSatoshiIn < lastSatoshiIn ||
-			totalSatoshiIn > chaincfg.MaxSatoshi {
+			totalSatoshiIn > chaincfg.MaxCoinAmount {
 			str := fmt.Sprintf("total value of all transaction "+
 				"inputs is %v which is higher than max "+
-				"allowed value of %v", totalSatoshiIn, chaincfg.MaxSatoshi)
+				"allowed value of %v", totalSatoshiIn, chaincfg.MaxCoinAmount)
 
 			return 0, NewRuleError(ErrBadTxOutValue, str)
 		}

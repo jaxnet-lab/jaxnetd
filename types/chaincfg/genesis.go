@@ -8,7 +8,9 @@ package chaincfg
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"sync"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -23,8 +25,8 @@ type genesisDataState struct {
 	genesisMerkleRoot *chainhash.Hash
 	genesisTx         *wire.MsgTx
 
-	shardsGenesisTx         *wire.MsgTx
-	shardsGenesisMerkleRoot *chainhash.Hash
+	shardsGenesisTx         map[uint32]wire.MsgTx
+	shardsGenesisMerkleRoot map[uint32]chainhash.Hash
 	shardGenesisBlocks      map[uint32]wire.MsgBlock
 	shardGenesisHash        map[uint32]chainhash.Hash
 }
@@ -34,14 +36,15 @@ func newGenesisDataState() *genesisDataState {
 		genesisBlock:            nil,
 		genesisHash:             nil,
 		genesisMerkleRoot:       nil,
-		shardsGenesisTx:         nil,
-		shardsGenesisMerkleRoot: nil,
+		shardsGenesisTx:         map[uint32]wire.MsgTx{},
+		shardsGenesisMerkleRoot: map[uint32]chainhash.Hash{},
 		shardGenesisBlocks:      map[uint32]wire.MsgBlock{},
 		shardGenesisHash:        map[uint32]chainhash.Hash{},
 	}
 }
 
 var (
+	stateLock      sync.RWMutex
 	genesisStorage = map[types.JaxNet]*genesisDataState{
 		types.MainNet:     newGenesisDataState(),
 		types.TestNet:     newGenesisDataState(),
@@ -51,37 +54,42 @@ var (
 )
 
 func cleanState() {
+	stateLock.Lock()
 	for net := range genesisStorage {
 		genesisStorage[net] = newGenesisDataState()
 	}
+	stateLock.Unlock()
 }
 
-func GenesisMerkleRoot(name types.JaxNet) chainhash.Hash {
+func genesisMerkleRoot(name types.JaxNet) chainhash.Hash {
 	state := genesisStorage[name]
 
 	if state.genesisMerkleRoot != nil {
 		return *state.genesisMerkleRoot
 	}
 
-	GenesisCoinbaseTx(name)
+	genesisCoinbaseTx(name)
 
 	state.genesisMerkleRoot = new(chainhash.Hash)
-	*state.genesisMerkleRoot = state.genesisTx.TxHash()
-	return *state.genesisMerkleRoot
+	txHash := state.genesisTx.TxHash()
+	state.genesisMerkleRoot = &txHash
+	return txHash
 }
 
-func BeaconGenesisHash(name types.JaxNet) *chainhash.Hash {
+func beaconGenesisHash(name types.JaxNet) *chainhash.Hash {
 	state := genesisStorage[name]
 
 	if state.genesisHash != nil {
 		return state.genesisHash
 	}
 
-	BeaconGenesisBlock(name)
+	beaconGenesisBlock(name)
 	return state.genesisHash
 }
 
-func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
+func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
+	stateLock.Lock()
+	defer stateLock.Unlock()
 	state := genesisStorage[name]
 
 	if state.genesisBlock != nil {
@@ -125,13 +133,13 @@ func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 		}
 	}
 
-	GenesisCoinbaseTx(name)
+	genesisCoinbaseTx(name)
 
 	state.genesisBlock = &wire.MsgBlock{
 		Header: wire.NewBeaconBlockHeader(
 			wire.NewBVersion(opts.Version),
 			opts.PrevBlock,
-			GenesisMerkleRoot(name),
+			genesisMerkleRoot(name),
 			chainhash.Hash{},
 			opts.Timestamp,
 			opts.Bits,
@@ -148,20 +156,25 @@ func BeaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 
 }
 
-func ShardGenesisHash(name types.JaxNet, shardID uint32) *chainhash.Hash {
+func shardGenesisHash(name types.JaxNet, shardID uint32) *chainhash.Hash {
 	state := genesisStorage[name]
 
 	hash := state.shardGenesisHash[shardID]
 	return &hash
 }
 
-func ShardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
+func shardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
+	stateLock.RLock()
+	defer stateLock.RUnlock()
 	state := genesisStorage[name]
 	shardBlock := state.shardGenesisBlocks[shardID]
 	return &shardBlock
 }
 
-func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock, script []byte) *wire.MsgBlock {
+func setShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
+	stateLock.Lock()
+	defer stateLock.Unlock()
+
 	state := genesisStorage[name]
 
 	shardBlock, ok := state.shardGenesisBlocks[shardID]
@@ -169,7 +182,7 @@ func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 		return &shardBlock
 	}
 
-	ShardGenesisCoinbaseTx(name, script)
+	shardGenesisCoinbaseTx(name, shardID)
 
 	var bits uint32
 	switch name {
@@ -181,28 +194,29 @@ func SetShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 		bits = fastnetShardPoWBits
 	}
 
+	gtx := state.shardsGenesisTx[shardID]
 	coinbaseAux := wire.CoinbaseAux{}.FromBlock(beaconBlock)
 	shardBlock = wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
 			chainhash.Hash{},
-			*state.shardsGenesisMerkleRoot,
+			state.shardsGenesisMerkleRoot[shardID],
 			bits,
 			*beaconBlock.Header.BeaconHeader(),
 			coinbaseAux,
 		),
-		Transactions: []*wire.MsgTx{state.shardsGenesisTx},
+		Transactions: []*wire.MsgTx{&gtx},
 	}
 
-	state.shardGenesisBlocks[shardID] = shardBlock
+	state.shardGenesisBlocks[shardID] = *shardBlock.Copy()
 	state.shardGenesisHash[shardID] = shardBlock.BlockHash()
 
 	return &shardBlock
 }
 
-// GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
+// genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
-func GenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
+func genesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	state := genesisStorage[name]
 
 	if state.genesisTx != nil {
@@ -232,32 +246,46 @@ func GenesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	return *state.genesisTx
 }
 
-func ShardGenesisCoinbaseTx(name types.JaxNet, script []byte) wire.MsgTx {
+func shardGenesisCoinbaseTx(name types.JaxNet, shardID uint32) wire.MsgTx {
 	state := genesisStorage[name]
-
-	if state.shardsGenesisTx != nil {
-		return *state.shardsGenesisTx
+	tx, ok := state.shardsGenesisTx[shardID]
+	if ok {
+		return tx
 	}
-	state.shardsGenesisTx = new(wire.MsgTx)
+	tx = wire.MsgTx{}
 
 	rawTx, err := hex.DecodeString(shardsGenesisTxHex)
 	if err != nil {
 		panic("invalid genesis tx hex-data")
 	}
 
-	err = state.shardsGenesisTx.Deserialize(bytes.NewBuffer(rawTx))
+	err = tx.Deserialize(bytes.NewBuffer(rawTx))
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
 
-	// todo put shardID into genesis tx script signature
-	// data := []byte{'s', 'h', 'a', 'r', 'd'}
-	// binary.PutUvarint(data, uint64(shardID))
-	state.shardsGenesisTx.TxIn[0].SignatureScript = script
+	sid := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sid, shardID)
+	script := []byte{
+		0x0b,
+		0x73, 0x68, 0x61, 0x72, 0x64, 0x5f, 0x63,
+		0x68, 0x61, 0x69, 0x6e, // ASCII: shard_chain
 
-	state.shardsGenesisMerkleRoot = new(chainhash.Hash)
-	*state.shardsGenesisMerkleRoot = state.shardsGenesisTx.TxHash()
-	return *state.shardsGenesisTx
+		0x04,
+		sid[0], sid[1], sid[2], sid[3],
+
+		0x11,
+		0x2f, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73,
+		0x2f, 0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74, 0x64,
+		0x2f, // ASCII: /genesis/jaxnetd/
+	}
+
+	// todo put shardID into genesis tx script signature
+	tx.TxIn[0].SignatureScript = script
+
+	state.shardsGenesisMerkleRoot[shardID] = tx.TxHash()
+	state.shardsGenesisTx[shardID] = tx
+	return tx
 }
 
 // GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for

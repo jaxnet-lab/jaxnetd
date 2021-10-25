@@ -752,7 +752,7 @@ func TestEADSpend(ot *testing.T) {
 	utxo := txmodels.UTXO{
 		TxHash:     rawHash,
 		OutIndex:   7,
-		Value:      int64(txOut.Value * chaincfg.SatoshiPerBitcoin),
+		Value:      int64(txOut.Value * chaincfg.HaberStornettaPerJAXNETCoin),
 		Used:       false,
 		PKScript:   txOut.ScriptPubKey.Hex,
 		ScriptType: txOut.ScriptPubKey.Type,

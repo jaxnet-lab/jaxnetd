@@ -19,7 +19,7 @@ type IChainCtx interface {
 	GenesisBeaconHeight() int32
 	EmptyBlock() wire.MsgBlock
 
-	NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode) blocknodes.IBlockNode
+	NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode, serialID int64) blocknodes.IBlockNode
 }
 
 var BeaconChain IChainCtx = NewBeaconChain(&chaincfg.MainNetParams)

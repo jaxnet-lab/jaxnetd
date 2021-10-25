@@ -249,18 +249,14 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 	// The coinbase for the Genesis block is not spendable, so just return
 	// an error now.
 	h := node.GetHash()
-	// if h.IsEqual(b.chain.Params().GenesisHash()) { // TODO: GENESIS TX SPEND
-	// 	str := "the coinbase for the genesis block is not spendable"
-	// 	return chaindata.NewRuleError(chaindata.ErrMissingTxOut, str)
-	// }
 
 	// Ensure the view is for the node being checked.
-	parentMMR := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	parentHash := b.bestChain.HashByMMR(parentMMR)
+	parentHash := node.PrevHash()
 	if !view.BestHash().IsEqual(&parentHash) {
-		return chaindata.AssertError(
-			fmt.Sprintf("inconsistent view when checking block connection: best hash is %v instead "+
-				"of expected %v", view.BestHash(), parentHash))
+		return chaindata.AssertError(fmt.Sprintf(
+			"inconsistent view when checking block connection: best hash is %v instead of expected %v",
+			view.BestHash(), parentHash,
+		))
 	}
 
 	// Load all of the utxos referenced by the inputs for all transactions
@@ -352,10 +348,6 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 		if err != nil {
 			return err
 		}
-
-		if tx.MsgTx().Version == wire.TxVerEADAction {
-			// todo(mike)
-		}
 	}
 
 	// The total output values of the coinbase transaction must not exceed
@@ -434,8 +426,7 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 			// A transaction can only be included within a block
 			// once the sequence locks of *all* its inputs are
 			// active.
-			sequenceLock, err := b.calcSequenceLock(node, tx, view,
-				false)
+			sequenceLock, err := b.calcSequenceLock(node, tx, view, false)
 			if err != nil {
 				return err
 			}
@@ -482,7 +473,7 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 // work requirement. The block must connect to the current tip of the main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
+func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block, skipAuxValidation bool) error {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -491,11 +482,14 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 
 	// This only checks whether the block can be connected to the tip of the
 	// current chain.
-	tip := b.bestChain.Tip()
+	tip := b.blocksDB.bestChain.Tip()
+	tipHash := tip.GetHash()
+
 	header := block.MsgBlock().Header
 	prevMMRRoot := header.BlocksMerkleMountainRoot()
-	prevHash, _ := b.bestChain.mmrTree.LookupNodeByRoot(prevMMRRoot)
-	if tip.GetHash() != prevHash.Hash {
+	prevHash, _, inMainChain := b.blocksDB.getBlockParentHash(prevMMRRoot)
+
+	if !inMainChain || !tipHash.IsEqual(&prevHash) {
 		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
 			"instead got %v", tip.GetHash(), prevHash)
 		return chaindata.NewRuleError(chaindata.ErrPrevBlockNotBest, str)
@@ -506,11 +500,13 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 		return err
 	}
 
-	// Perform checks of the coinbase tx structure according to merge mining spec.
-	// err = b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height(), b.chain.Params().Net)
-	// if err != nil {
-	// 	return err
-	// }
+	if !skipAuxValidation {
+		// Perform checks of the coinbase tx structure according to merge mining spec.
+		err = b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height())
+		if err != nil {
+			return err
+		}
+	}
 
 	err = b.checkBlockContext(block, tip, flags)
 	if err != nil {
@@ -522,6 +518,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block) error {
 	view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
 	h := tip.GetHash()
 	view.SetBestHash(&h)
-	newNode := b.chain.NewNode(header, tip)
+	newNode := b.chain.NewNode(header, tip, b.blocksDB.lastSerialID+1)
+
 	return b.checkConnectBlock(newNode, block, view, nil)
 }

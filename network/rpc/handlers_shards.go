@@ -580,7 +580,7 @@ func (server *ShardRPC) handleGetBlockTemplateProposal(request *jaxjson.Template
 		return "bad-prevblk", nil
 	}
 
-	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block); err != nil {
+	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block, false); err != nil {
 		if _, ok := err.(chaindata.RuleError); !ok {
 			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
 			server.Log.Error().Msg(errStr)

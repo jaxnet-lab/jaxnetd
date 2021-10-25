@@ -49,6 +49,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg Ins
 	// removeRegressionDB(cfg, dbPath)
 
 	ctrl.logger.Info().Msgf("Loading block database from '%s'", dbPath)
+
 	db, err := database.Open(cfg.DbType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't exist.

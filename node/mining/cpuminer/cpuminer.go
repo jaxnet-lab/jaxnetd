@@ -481,7 +481,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 	}
 
 	burnReward := types.BurnJaxReward
-	burnJXN := (curHeight+1)%2 == 0
+	burnJXN := (curHeight+1)%4 == 0
 	if burnJXN {
 		burnReward = types.BurnJaxNetReward
 	}
@@ -489,7 +489,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 	if job.beacon.blockHeight < curHeight+1 {
 		template, err := miner.beacon.BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 		if err != nil {
-			miner.log.Error().Err(err).Msg("Failed to create new block template")
+			miner.log.Error().Err(err).Msg("Failed to create new beacon block template")
 			return false
 		}
 
@@ -497,6 +497,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 			blockHeight: curHeight + 1,
 			block:       *template.Block,
 			notSolved:   true,
+			burnReward:  burnReward,
 		}
 	}
 
@@ -509,7 +510,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 		if job.shards[shardID].blockHeight < curHeight+1 {
 			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 			if err != nil {
-				miner.log.Error().Err(err).Msg("Failed to create new block template")
+				miner.log.Error().Err(err).Uint32("shard_id", shardID).Msg("Failed to create new block shard template")
 				return false
 			}
 
@@ -517,6 +518,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 				blockHeight: curHeight + 1,
 				block:       *template.Block,
 				notSolved:   true,
+				burnReward:  burnReward,
 			}
 		}
 	}
@@ -596,7 +598,7 @@ func (miner *CPUMiner) submitTask(job *miningJob) {
 
 	for shardID := range job.shards {
 		task := job.shards[shardID]
-		if task.notSolved || task.submitted {
+		if task.notSolved || task.submitted || task.burnReward != job.beacon.burnReward {
 			continue
 		}
 
@@ -617,6 +619,7 @@ type chainTask struct {
 	block       wire.MsgBlock
 	notSolved   bool
 	submitted   bool
+	burnReward  int
 }
 
 // miningWorkerController launches the worker goroutines that are used to

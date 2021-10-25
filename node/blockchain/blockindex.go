@@ -64,24 +64,14 @@ func (bi *blockIndex) HaveBlock(hash *chainhash.Hash) bool {
 	return hasBlock
 }
 
-// HaveBlockWithMMRoot returns whether or not the block index contains the provided MMR root.
-//
-// This function is safe for concurrent access.
-func (bi *blockIndex) HaveBlockWithMMRoot(root *chainhash.Hash) bool {
-	bi.RLock()
-	_, hasBlock := bi.mmrTree.mmrRootToBlock[*root]
-	bi.RUnlock()
-	return hasBlock
-}
-
 // HashByMMR returns hash of block, that has provided MMR root.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) HashByMMR(root chainhash.Hash) chainhash.Hash {
+func (bi *blockIndex) HashByMMR(root chainhash.Hash) (chainhash.Hash, bool) {
 	bi.RLock()
-	hash := bi.mmrTree.mmrRootToBlock[root]
+	hash, hasBlock := bi.mmrTree.mmrRootToBlock[root]
 	bi.RUnlock()
-	return hash
+	return hash, hasBlock
 }
 
 // LookupNodeByMMRRoot returns the block node identified by the provided MMR Root hash. It will
@@ -184,7 +174,7 @@ func (bi *blockIndex) flushToDB() error {
 
 	err := bi.db.Update(func(dbTx database.Tx) error {
 		for node := range bi.dirty {
-			err := chaindata.DBStoreBlockNode(bi.db.Chain(), dbTx, node)
+			err := chaindata.DBStoreBlockNode(dbTx, node)
 			if err != nil {
 				return err
 			}
@@ -210,14 +200,15 @@ type mmrContainer struct {
 }
 
 func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlockNode) {
-	nodeMMRRoot := node.Header().BlocksMerkleMountainRoot()
+	prevNodesMMRRoot := node.Header().BlocksMerkleMountainRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()
 
 	// 1) Good Case: if a new node is next in the current chain,
 	// then just push it to the MMR tree as the last leaf.
-	if nodeMMRRoot.IsEqual(&currentMMRRoot) {
+	if prevNodesMMRRoot.IsEqual(&currentMMRRoot) {
 		mmrTree.AddBlock(node.GetHash(), node.Difficulty())
 		mmrTree.mmrRootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
+		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 		return
 	}
 
@@ -254,5 +245,6 @@ func (mmrTree *mmrContainer) setNodeToMmrWithReorganization(node blocknodes.IBlo
 		bNode := lifoToAdd[i]
 		mmrTree.AddBlock(bNode.Hash, bNode.Weight)
 		mmrTree.mmrRootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
+		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 	}
 }

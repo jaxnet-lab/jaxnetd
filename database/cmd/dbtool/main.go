@@ -130,7 +130,7 @@ func parseShardID(cliArg string) (uint32, error) {
 
 func relevantChain(shardID uint32) chainctx.IChainCtx {
 	if shardID > 0 {
-		return chainctx.ShardChain(shardID, activeNetParams, chainctx.NewBeaconChain(activeNetParams).GenesisBlock(), 0, nil)
+		return chainctx.ShardChain(shardID, activeNetParams, chainctx.NewBeaconChain(activeNetParams).GenesisBlock(), 0)
 	}
 
 	return chainctx.NewBeaconChain(activeNetParams)

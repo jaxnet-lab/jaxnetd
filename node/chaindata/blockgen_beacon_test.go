@@ -51,8 +51,8 @@ func Test_calcBlockSubsidy(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			if got := calcBlockSubsidy(tt.height); got != tt.reward*chaincfg.SatoshiPerBitcoin {
-				t.Errorf("calcBlockSubsidy(%d) = %v, want %v", tt.height, got/chaincfg.SatoshiPerBitcoin, tt.reward)
+			if got := calcBlockSubsidy(tt.height); got != tt.reward*chaincfg.HaberStornettaPerJAXNETCoin {
+				t.Errorf("calcBlockSubsidy(%d) = %v, want %v", tt.height, got/chaincfg.HaberStornettaPerJAXNETCoin, tt.reward)
 			}
 		})
 	}

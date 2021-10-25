@@ -42,16 +42,36 @@ var (
 	BlockIndexBucketName = []byte("blockheaderidx")
 
 	// HashIndexBucketName is the name of the db bucket used to house to the
-	// block Hash -> block height index.
+	// [block Hash] -> [block height] index.
 	HashIndexBucketName = []byte("hashidx")
 
-	// HeightIndexBucketName is the name of the db bucket used to house to
-	// the block height -> block Hash index.
+	// HeightIndexBucketName is the name of the db bucket used to house to the
+	// [block height] -> [block Hash] index.
 	HeightIndexBucketName = []byte("heightidx")
 
 	// ChainStateKeyName is the name of the db key used to store the best
 	// chain state.
 	ChainStateKeyName = []byte("chainstate")
+
+	// MMRRootsToHashBucketName is unordered storage of mmr root and
+	// corresponding last block hash for this root.
+	// [mmr root hash] -> [block Hash]
+	MMRRootsToHashBucketName = []byte("mmr_root_to_hash")
+
+	// HashToMMRRootBucketName is unordered storage of block hash and
+	// corresponding  mmr root for this block.
+	// [mmr root hash] -> [block Hash]
+	// [block Hash] -> [mmr root hash]
+	HashToMMRRootBucketName = []byte("hash_to_mmr_root")
+
+	// BlockHashToSerialID is the name of the db bucket used to house the
+	// [block Hash] -> [serial id] index.
+	BlockHashToSerialID = []byte("hash_to_serialid")
+
+	// SerialIDToPrevBlock is the name of the db bucket used to house the
+	// block serial id to hash and previous serial id.
+	//  [serial id] -> [block Hash; previous serial id]
+	SerialIDToPrevBlock = []byte("serialid_to_prev_block")
 
 	// SpendJournalVersionKeyName is the name of the db key used to store
 	// the version of the spend journal currently in the database.
@@ -69,25 +89,9 @@ var (
 	// unspent transaction output set.
 	UtxoSetBucketName = []byte("utxosetv2")
 
-	// EADAddressesBucketNameV1 is the name of the db bucket used to house the
-	// net addresses of Exchange Agents.
-	EADAddressesBucketNameV1 = []byte("ead_addresses")
-
 	// EADAddressesBucketNameV2 is the name of the db bucket used to house the
 	// net addresses of Exchange Agents.
 	EADAddressesBucketNameV2 = []byte("ead_addresses_v2")
-
-	// BlockLastSerialID is the name of the db bucket used to house the
-	// block last serial id.
-	BlockLastSerialID = []byte("block_last_serial_id")
-
-	// BlockHashSerialID is the name of the db bucket used to house the mapping of
-	// block hash to serial id.
-	BlockHashSerialID = []byte("block_hash_serial_id")
-
-	// BlockSerialIDHashPrevSerialID is the name of the db bucket used to house the mapping of
-	// block serial id to hash and previous serial id.
-	BlockSerialIDHashPrevSerialID = []byte("block_serial_id_hash_prev_serial_id")
 
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
@@ -1037,7 +1041,9 @@ func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error
 //
 //   Field             Type             Size
 //   block hash        chainhash.Hash   chainhash.HashSize
+//   mmr root hash     chainhash.Hash   chainhash.HashSize
 //   block height      uint32           4 bytes
+//   last serial id    uint32           8 bytes
 //   total txns        uint64           8 bytes
 //   work sum length   uint32           4 bytes
 //   work sum          big.Int          work sum length
@@ -1046,10 +1052,12 @@ func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error
 // BestChainState represents the data to be stored the database for the current
 // best chain state.
 type BestChainState struct {
-	Hash      chainhash.Hash
-	height    uint32
-	TotalTxns uint64
-	workSum   *big.Int
+	Hash         chainhash.Hash
+	MMRRoot      chainhash.Hash
+	height       uint32
+	LastSerialID int64
+	TotalTxns    uint64
+	workSum      *big.Int
 }
 
 // serializeBestChainState returns the serialization of the passed block best
@@ -1058,16 +1066,26 @@ func serializeBestChainState(state BestChainState) []byte {
 	// Calculate the full size needed to serialize the chain state.
 	workSumBytes := state.workSum.Bytes()
 	workSumBytesLen := uint32(len(workSumBytes))
-	serializedLen := chainhash.HashSize + 4 + 8 + 4 + workSumBytesLen
+	serializedLen := chainhash.HashSize + chainhash.HashSize + 4 + 8 + 8 + 4 + workSumBytesLen
 
 	// Serialize the chain state.
 	serializedData := make([]byte, serializedLen)
+
 	copy(serializedData[0:chainhash.HashSize], state.Hash[:])
 	offset := uint32(chainhash.HashSize)
+
+	copy(serializedData[offset:offset+chainhash.HashSize], state.MMRRoot[:])
+	offset += uint32(chainhash.HashSize)
+
 	byteOrder.PutUint32(serializedData[offset:], state.height)
 	offset += 4
+
+	byteOrder.PutUint64(serializedData[offset:], uint64(state.LastSerialID))
+	offset += 8
+
 	byteOrder.PutUint64(serializedData[offset:], state.TotalTxns)
 	offset += 8
+
 	byteOrder.PutUint32(serializedData[offset:], workSumBytesLen)
 	offset += 4
 	copy(serializedData[offset:], workSumBytes)
@@ -1091,8 +1109,12 @@ func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	state := BestChainState{}
 	copy(state.Hash[:], serializedData[0:chainhash.HashSize])
 	offset := uint32(chainhash.HashSize)
+	copy(state.MMRRoot[:], serializedData[offset:offset+chainhash.HashSize])
+	offset += uint32(chainhash.HashSize)
 	state.height = byteOrder.Uint32(serializedData[offset : offset+4])
 	offset += 4
+	state.LastSerialID = int64(byteOrder.Uint64(serializedData[offset : offset+8]))
+	offset += 8
 	state.TotalTxns = byteOrder.Uint64(serializedData[offset : offset+8])
 	offset += 8
 	workSumBytesLen := byteOrder.Uint32(serializedData[offset : offset+4])
@@ -1117,10 +1139,12 @@ func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
 	serializedData := serializeBestChainState(BestChainState{
-		Hash:      snapshot.Hash,
-		height:    uint32(snapshot.Height),
-		TotalTxns: snapshot.TotalTxns,
-		workSum:   workSum,
+		Hash:         snapshot.Hash,
+		MMRRoot:      snapshot.BlocksMMRRoot,
+		height:       uint32(snapshot.Height),
+		LastSerialID: snapshot.LastSerialID,
+		TotalTxns:    snapshot.TotalTxns,
+		workSum:      workSum,
 	})
 
 	// Store the current best chain state into the database.
@@ -1129,21 +1153,29 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 
 // DeserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func DeserializeBlockRow(ch chainctx.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknodes.BlockStatus, error) {
+func DeserializeBlockRow(ch chainctx.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknodes.BlockStatus, int64, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	header := ch.EmptyHeader()
 	err := header.Read(buffer)
 	if err != nil {
-		return nil, blocknodes.StatusNone, err
+		return nil, blocknodes.StatusNone, 0, err
 	}
 
 	statusByte, err := buffer.ReadByte()
 	if err != nil {
-		return nil, blocknodes.StatusNone, err
+		return nil, blocknodes.StatusNone, 0, err
 	}
 
-	return header, blocknodes.BlockStatus(statusByte), nil
+	dest := make([]byte, 8)
+	_, err = buffer.Read(dest)
+	if err != nil {
+		return nil, blocknodes.StatusNone, 0, err
+	}
+
+	blockSerialID := byteOrder.Uint64(dest)
+
+	return header, blocknodes.BlockStatus(statusByte), int64(blockSerialID), nil
 }
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
@@ -1197,9 +1229,10 @@ func DBFetchBlockByNode(chain chainctx.IChainCtx, dbTx database.Tx, node blockno
 
 // DBStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func DBStoreBlockNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknodes.IBlockNode) error {
+func DBStoreBlockNode(dbTx database.Tx, node blocknodes.IBlockNode) error {
 	// Serialize block data to be stored.
-	w := bytes.NewBuffer(make([]byte, 0, chain.MaxBlockHeaderPayload()+1))
+
+	w := bytes.NewBuffer(make([]byte, 0, dbTx.Chain().MaxBlockHeaderPayload()+1))
 	header := node.Header()
 	err := header.Write(w)
 	if err != nil {
@@ -1209,12 +1242,19 @@ func DBStoreBlockNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknode
 	if err != nil {
 		return err
 	}
+	sidData := make([]byte, 8)
+	byteOrder.PutUint64(sidData, uint64(node.SerialID()))
+	_, err = w.Write(sidData)
+	if err != nil {
+		return err
+	}
 	value := w.Bytes()
 
 	// Write block header data to block index bucket.
+	blockHash := node.GetHash()
+	key := blockIndexKey(&blockHash, uint32(node.Height()))
+
 	blockIndexBucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
-	h := node.GetHash()
-	key := blockIndexKey(&h, uint32(node.Height()))
 	return blockIndexBucket.Put(key, value)
 }
 
@@ -1239,4 +1279,15 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	binary.BigEndian.PutUint32(indexKey[0:4], blockHeight)
 	copy(indexKey[4:chainhash.HashSize+4], blockHash[:])
 	return indexKey
+}
+
+func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
+	blockIndexBucket := dbTx.Metadata().Bucket(MMRRootsToHashBucketName)
+	err := blockIndexBucket.Put(mmrRoot[:], blockHash[:])
+	if err != nil {
+		return err
+	}
+
+	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+	return bucket.Put(blockHash[:], mmrRoot[:])
 }

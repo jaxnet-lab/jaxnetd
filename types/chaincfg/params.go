@@ -253,26 +253,33 @@ type Params struct {
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType uint32
+	HDCoinType  uint32
+	genesisHash *chainhash.Hash
 }
 
 func (cfg *Params) GenesisBlock() *wire.MsgBlock {
 	if cfg.IsBeacon {
-		return BeaconGenesisBlock(cfg.Net)
+		return beaconGenesisBlock(cfg.Net)
 	}
-	return ShardGenesisBlock(cfg.Net, cfg.ChainID)
+	return shardGenesisBlock(cfg.Net, cfg.ChainID)
 }
 
 func (cfg *Params) GenesisHash() *chainhash.Hash {
-	if cfg.IsBeacon {
-		return BeaconGenesisHash(cfg.Net)
+	if cfg.genesisHash != nil {
+		return cfg.genesisHash
 	}
 
-	return ShardGenesisHash(cfg.Net, cfg.ChainID)
+	if cfg.IsBeacon {
+		cfg.genesisHash = beaconGenesisHash(cfg.Net)
+	} else {
+		cfg.genesisHash = shardGenesisHash(cfg.Net, cfg.ChainID)
+	}
+
+	return cfg.genesisHash
 }
 
 // ShardParams creates genesis for ShardChain based on genesis of the BeaconChain.
-func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock, script []byte) *Params {
+func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params {
 	// shard's exclusive info
 	cfg.ChainID = shard
 	cfg.ChainName = "shard_" + strconv.FormatUint(uint64(shard), 10)
@@ -293,7 +300,7 @@ func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock, script [
 		cfg.PowParams.PowLimitBits = fastnetShardPoWBits
 	}
 
-	SetShardGenesisBlock(cfg.Net, shard, beaconBlock, script)
+	setShardGenesisBlock(cfg.Net, shard, beaconBlock)
 
 	return &cfg
 }

@@ -414,7 +414,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	// chain with no issues.
 	block := jaxutil.NewBlock(&msgBlock)
 	block.SetHeight(nextBlockHeight)
-	if err := g.blockChain.CheckConnectBlockTemplate(block); err != nil {
+	if err := g.blockChain.CheckConnectBlockTemplate(block, true); err != nil {
 		return nil, err
 	}
 
