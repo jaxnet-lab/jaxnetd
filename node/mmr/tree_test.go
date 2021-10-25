@@ -1,7 +1,7 @@
 package mmr
 
 import (
-	"strconv"
+	"encoding/binary"
 	"testing"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -48,76 +48,99 @@ func TestTree_AddBlock(t1 *testing.T) {
 }
 
 func TestMerkleTree(t *testing.T) {
+	s2h := func(h string) chainhash.Hash {
+		return chainhash.HashH([]byte(h))
+	}
+
+	concatHashes := func(h1, h2 chainhash.Hash, w1, w2 uint64) chainhash.Hash {
+		var buf [80]byte
+		copy(buf[:32], h1[:32])
+		binary.LittleEndian.PutUint64(buf[32:], w1)
+		copy(buf[40:], h2[:32])
+		binary.LittleEndian.PutUint64(buf[72:], w2)
+		//		return fmt.Sprintf("%s%b", h1.String(), w1) + fmt.Sprintf("%s%b", h2.String(), w2)
+		return chainhash.HashH(buf[:])
+	}
+
+	hash_w_1 := s2h("leaf_weight_1")
+	hash_w_20 := s2h("leaf_weight_20")
+	hash_w_300 := s2h("leaf_weight_300")
+	hash_w_4000 := s2h("leaf_weight_4000")
+	hash_w_50000 := s2h("leaf_weight_50000")
+	hash_w_21 := concatHashes(s2h("leaf_weight_1"), s2h("leaf_weight_20"), 1, 20)
+	hash_w_321 := concatHashes(hash_w_300, hash_w_21, 300, 21)
+
 	tests := []struct {
 		blocks []Leaf
 		want   []*Leaf
 	}{
 		{
 			blocks: []Leaf{
-				{Weight: 1},
+				{Weight: 1, Hash: hash_w_1},
 			},
 			want: []*Leaf{
-				{Weight: 1},
+				{Weight: 1, Hash: hash_w_1},
 			},
 		},
 		{
 			blocks: []Leaf{
-				{Weight: 1}, {Weight: 20},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20},
 			},
 			want: []*Leaf{
-				{Weight: 1}, {Weight: 20},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20},
 				// root
-				{Weight: 21},
+				{Weight: 21, Hash: hash_w_21},
 			},
 		},
 
 		{
 			blocks: []Leaf{
-				{Weight: 1}, {Weight: 20}, {Weight: 300},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300},
 			},
 
 			want: []*Leaf{
 				// zero layer
-				{Weight: 1}, {Weight: 20}, {Weight: 300}, nil, // reserved slot
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300}, nil, // reserved slot
 
 				// 1st layer
-				{Weight: 21}, {Weight: 300},
+				{Weight: 21, Hash: hash_w_21}, {Weight: 300, Hash: hash_w_300},
 				// root
-				{Weight: 321},
+				{Weight: 321, Hash: hash_w_321},
 			},
 		},
 
 		{
 			blocks: []Leaf{
-				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300}, {Weight: 4000, Hash: hash_w_4000},
 			},
 			want: []*Leaf{
 				// zero layer
-				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300}, {Weight: 4000, Hash: hash_w_4000},
 
 				// 1st layer
-				{Weight: 21}, {Weight: 4300},
+				{Weight: 21, Hash: hash_w_21}, {Weight: 4300, Hash: concatHashes(hash_w_300, hash_w_4000, 300, 4000)},
 				// root
-				{Weight: 4321},
+				{Weight: 4321, Hash: concatHashes(hash_w_21, concatHashes(hash_w_300, hash_w_4000, 300, 4000),
+					21, 4300)},
 			},
 		},
 		{
 			blocks: []Leaf{
-				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000}, {Weight: 50000},
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300}, {Weight: 4000, Hash: hash_w_4000}, {Weight: 50000, Hash: hash_w_50000},
 			},
 			want: []*Leaf{
 				// zero layer
-				{Weight: 1}, {Weight: 20}, {Weight: 300}, {Weight: 4000},
-				{Weight: 50000}, nil, nil, nil, // reserved slots
+				{Weight: 1, Hash: hash_w_1}, {Weight: 20, Hash: hash_w_20}, {Weight: 300, Hash: hash_w_300}, {Weight: 4000, Hash: hash_w_4000},
+				{Weight: 50000, Hash: hash_w_50000}, nil, nil, nil, // reserved slots
 
 				// 1st layer
-				{Weight: 21}, {Weight: 4300}, {Weight: 50000}, nil,
+				{Weight: 21, Hash: hash_w_21}, {Weight: 4300, Hash: concatHashes(hash_w_300, hash_w_4000, 300, 4000)}, {Weight: 50000, Hash: hash_w_50000}, nil,
 
 				// 2nd layer
-				{Weight: 4321}, {Weight: 50000},
+				{Weight: 4321, Hash: concatHashes(hash_w_21, concatHashes(hash_w_300, hash_w_4000, 300, 4000), 21, 4000)}, {Weight: 50000, Hash: hash_w_50000},
 
 				// root
-				{Weight: 54321},
+				{Weight: 54321, Hash: concatHashes(concatHashes(hash_w_21, concatHashes(hash_w_300, hash_w_4000, 300, 4000), 21, 4000), hash_w_50000, 4321, 50000)},
 			},
 		},
 
@@ -188,9 +211,8 @@ func TestMerkleTree(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			tree := NewTree()
 			prevRoot := chainhash.ZeroHash
-			for i, block := range tt.blocks {
-				hash := chainhash.HashH([]byte(strconv.Itoa(int(block.Weight) + i)))
-				tree.AddBlock(hash, block.Weight)
+			for _, block := range tt.blocks {
+				tree.AddBlock(block.Hash, block.Weight)
 
 				root := tree.CurrentRoot()
 				if prevRoot.IsEqual(&root) {
@@ -200,6 +222,10 @@ func TestMerkleTree(t *testing.T) {
 
 			if tree.chainWeight != tt.want[len(tt.want)-1].Weight {
 				t.Errorf("chainWeight(): %v != %v", tree.chainWeight, tt.want[len(tt.want)-1].Weight)
+			}
+
+			if tree.CurrentRoot() != tt.want[len(tt.want)-1].Hash {
+				t.Errorf("Hash: %v != %v", tree.CurrentRoot(), tt.want[len(tt.want)-1].Hash)
 			}
 		})
 	}
