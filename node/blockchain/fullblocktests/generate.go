@@ -25,6 +25,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
+	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
@@ -361,6 +362,7 @@ func solveBlock(header wire.BlockHeader, powParams *chaincfg.PowParams) bool {
 							results <- sbResult{true, i}
 						}
 					} else {
+						fmt.Printf("pow_hash %s, target %064x \n", hash, targetDifficulty)
 						results <- sbResult{true, i}
 					}
 
@@ -543,7 +545,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 		ts,
 		g.chainCtx.Params().PowParams.PowLimitBits,
 		0,
-		0,
+		types.BurnJaxReward,
 	)
 
 	block := wire.MsgBlock{
@@ -971,8 +973,8 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	//   genesis -> bm0 -> bm1 -> ... -> bm99
 	// ---------------------------------------------------------------------
 
-	coinbaseMaturity := g.chainCtx.Params().CoinbaseMaturity
-	// coinbaseMaturity := uint16(100)
+	// coinbaseMaturity := g.chainCtx.Params().CoinbaseMaturity
+	coinbaseMaturity := uint16(100)
 	var testInstances []TestInstance
 	for i := uint16(0); i < coinbaseMaturity; i++ {
 		blockName := fmt.Sprintf("bm%d", i)

@@ -171,14 +171,14 @@ func TestFullBlocks(t *testing.T) {
 		blockHeight := item.Height
 		block := jaxutil.NewBlock(item.Block)
 		block.SetHeight(blockHeight)
-		t.Logf("Testing block %s (hash %s, height %d)",
-			item.Name, block.Hash(), blockHeight)
+		t.Logf("Testing block %s (hash %s,pow_hash %s, height %d)",
+			item.Name, block.Hash(), block.PowHash(), blockHeight)
 
 		isMainChain, isOrphan, err := chain.ProcessBlock(block, chaindata.BFNone)
 		if err != nil {
-			t.Fatalf("block %q (hash %s, height %d) should "+
+			t.Fatalf("block %q (hash %s, pow_hash %s, height %d) should "+
 				"have been accepted: %v", item.Name,
-				block.Hash(), blockHeight, err)
+				block.Hash(), block.PowHash(), blockHeight, err)
 		}
 
 		// Ensure the main chain and orphan flags match the values
