@@ -131,7 +131,7 @@ func shardCoreMain() error {
 		}
 	}()
 
-	controller := node.Controller(config.Log.With().Str("ctx", "ShardController").Logger())
+	controller := node.Controller(config.Log.With().Str("ctx", "NodeController").Logger())
 	if err := controller.Run(ctx, cfg); err != nil {
 		config.Log.Error().Err(err).Msg("Can't run Chains")
 		os.Exit(2)
