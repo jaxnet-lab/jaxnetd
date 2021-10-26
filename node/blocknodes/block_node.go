@@ -38,8 +38,8 @@ const (
 type IBlockNode interface {
 	// GetHash returns hash of the block (including aux data).
 	GetHash() chainhash.Hash
-	// BlocksMMRRoot is the root of the MMR tree before this node was added to the chain.
-	BlocksMMRRoot() chainhash.Hash
+	// PrevMMRRoot is the root of the MMR tree before this node was added to the chain.
+	PrevMMRRoot() chainhash.Hash
 	// ActualMMRRoot is the root of the MMR tree after adding this node to the chain.
 	ActualMMRRoot() chainhash.Hash
 	// PrevHash returns hash of parent node.

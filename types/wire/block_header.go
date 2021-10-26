@@ -18,6 +18,11 @@ const (
 	ExpansionMade
 )
 
+type HeaderBox struct {
+	Height int32
+	Header BlockHeader
+}
+
 type BlockHeader interface {
 	BeaconHeader() *BeaconHeader
 	SetBeaconHeader(bh *BeaconHeader, beaconAux CoinbaseAux)

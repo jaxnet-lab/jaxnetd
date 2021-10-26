@@ -95,7 +95,7 @@ func (msg *MsgBlock) ClearTransactions() {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-	//msg.ShardBlock
+	// msg.ShardBlock
 	if err := msg.Header.Write(w); err != nil {
 		return err
 	}

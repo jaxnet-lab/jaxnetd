@@ -41,7 +41,8 @@ type Config struct {
 	// MaxBackups the max number of rolled files to keep
 	MaxBackups int `yaml:"max_backups" toml:"max_backups"`
 	// MaxAge the max age in days to keep a logfile
-	MaxAge int `yaml:"max_age" toml:"max_age"`
+	MaxAge  int  `yaml:"max_age" toml:"max_age"`
+	NoColor bool `yaml:"no_color" toml:"no_color"`
 }
 
 func (Config) Default() Config {
@@ -61,24 +62,29 @@ type Logger struct {
 	*zerolog.Logger
 }
 
+func consoleWriter(unit string, w io.Writer, noColor bool) zerolog.ConsoleWriter {
+	out := zerolog.ConsoleWriter{Out: w, NoColor: noColor}
+	out.TimeFormat = time.RFC3339
+	out.FormatLevel = func(i interface{}) string {
+		return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
+	}
+	out.FormatMessage = func(i interface{}) string {
+		return fmt.Sprintf("%-6s  ", i)
+	}
+	return out
+}
+
 func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	var writers []io.Writer
+
 	if !config.DisableConsoleLog && !config.LogsAsJson {
-		out := zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false}
-		out.TimeFormat = time.RFC3339
-		out.FormatLevel = func(i interface{}) string {
-			return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
-		}
-		out.FormatMessage = func(i interface{}) string {
-			return fmt.Sprintf("%-6s  ", i)
-		}
-		writers = append(writers, out)
+		writers = append(writers, consoleWriter(unit, os.Stderr, config.NoColor))
 	}
 	if !config.DisableConsoleLog && config.LogsAsJson {
 		writers = append(writers, os.Stdout)
 	}
 	if config.FileLoggingEnabled {
-		writers = append(writers, newRollingFile(config))
+		writers = append(writers, newRollingFile(unit, config))
 	}
 
 	mw := io.MultiWriter(writers...)
@@ -104,16 +110,21 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	return logger
 }
 
-func newRollingFile(config Config) io.Writer {
+func newRollingFile(unit string, config Config) io.Writer {
 	if err := os.MkdirAll(config.Directory, 0744); err != nil {
 		log.Error().Err(err).Str("path", config.Directory).Msg("can't create log directory")
 		return nil
 	}
 
-	return &lumberjack.Logger{
+	fileWriter := &lumberjack.Logger{
 		Filename:   config.Filename,
 		MaxBackups: config.MaxBackups, // files
 		MaxSize:    config.MaxSize,    // megabytes
 		MaxAge:     config.MaxAge,     // days
 	}
+	if config.LogsAsJson {
+		return fileWriter
+	}
+
+	return consoleWriter(unit, fileWriter, true)
 }

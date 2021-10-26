@@ -72,7 +72,7 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialI
 }
 
 func (node *BeaconBlockNode) GetHash() chainhash.Hash { return node.hash }
-func (node *BeaconBlockNode) BlocksMMRRoot() chainhash.Hash {
+func (node *BeaconBlockNode) PrevMMRRoot() chainhash.Hash {
 	return node.header.BlocksMerkleMountainRoot()
 }
 func (node *BeaconBlockNode) PrevHash() chainhash.Hash {

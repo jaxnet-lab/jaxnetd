@@ -44,7 +44,7 @@ const (
 //
 // The block locator for block 17a would be the hashes of blocks:
 // [17a 16a 15 14 13 12 11 10 9 8 7 6 4 genesis]
-type BlockLocator []*chainhash.Hash
+type BlockLocator []*wire.BlockLocatorMeta
 
 // orphanBlock represents a block that we don't yet have the parent for.  It
 // is a normal block plus an expiration time to prevent caching the orphan
@@ -724,7 +724,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
 
 	state := chaindata.NewBestState(prevNode,
-		node.BlocksMMRRoot(),
+		node.PrevMMRRoot(),
 		blockSize,
 		blockWeight,
 		b.blocksDB.index.mmrTree.CurrenWeight(), // todo: review this
@@ -1540,8 +1540,8 @@ func (b *BlockChain) locateInventory(locator BlockLocator, hashStop *chainhash.H
 	// case none of the hashes in the locator are in the main chain, fall
 	// back to the genesis block.
 	startNode := b.blocksDB.bestChain.Genesis()
-	for _, hash := range locator {
-		node := b.blocksDB.index.LookupNode(hash)
+	for _, blockMeta := range locator {
+		node := b.blocksDB.index.LookupNode(&blockMeta.Hash)
 		if node != nil && b.blocksDB.bestChain.Contains(node) {
 			startNode = node
 			break
@@ -1622,7 +1622,7 @@ func (b *BlockChain) LocateBlocks(locator BlockLocator, hashStop *chainhash.Hash
 // See the comment on the exported function for more details on special cases.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Hash, maxHeaders uint32) []wire.BlockHeader {
+func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Hash, maxHeaders uint32) []wire.HeaderBox {
 	// Find the node after the first known block in the locator and the
 	// total number of nodes after it needed while respecting the stop hash
 	// and max entries.
@@ -1632,9 +1632,9 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	}
 
 	// Populate and return the found headers.
-	headers := make([]wire.BlockHeader, 0, total)
+	headers := make([]wire.HeaderBox, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, b.chain.EmptyHeader())
+		headers = append(headers, wire.HeaderBox{Header: node.NewHeader(), Height: node.Height()})
 		node = b.blocksDB.bestChain.Next(node)
 	}
 	return headers
@@ -1653,7 +1653,7 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 //   after the genesis block will be returned
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Hash) []wire.BlockHeader {
+func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Hash) []wire.HeaderBox {
 	b.chainLock.RLock()
 	headers := b.locateHeaders(locator, hashStop, wire.MaxBlockHeadersPerMsg)
 	b.chainLock.RUnlock()

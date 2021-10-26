@@ -529,7 +529,7 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	//
 	// This mirrors the behavior in the reference implementation.
 	chain := sp.serverPeerHandler.chain.BlockChain()
-	hashList := chain.LocateBlocks(msg.BlockLocatorHashes, &msg.HashStop, wire.MaxBlocksPerMsg)
+	hashList := chain.LocateBlocks(msg.BlockLocatorMetas, &msg.HashStop, wire.MaxBlocksPerMsg)
 
 	// Generate inventory message.
 	invMsg := wire.NewMsgInv()
@@ -572,10 +572,10 @@ func (sp *serverPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 	//
 	// This mirrors the behavior in the reference implementation.
 	ch := sp.serverPeerHandler.chain.BlockChain()
-	headers := ch.LocateHeaders(msg.BlockLocatorHashes, &msg.HashStop)
+	headers := ch.LocateHeaders(msg.BlockLocatorMetas, &msg.HashStop)
 
 	// Send found headers to the requesting peer.
-	blockHeaders := make([]wire.BlockHeader, len(headers))
+	blockHeaders := make([]wire.HeaderBox, len(headers))
 	for i := range headers {
 		blockHeaders[i] = headers[i]
 	}

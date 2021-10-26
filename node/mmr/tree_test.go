@@ -191,7 +191,10 @@ func TestMerkleTree(t *testing.T) {
 			// todo: check merkle to hash && hash to merkle
 
 			tree := NewTree()
-			for _, block := range tt.blocks {
+			for i, block := range tt.blocks {
+				if i == 3 {
+					println()
+				}
 				tree.AddBlock(block.Hash, block.Weight)
 			}
 

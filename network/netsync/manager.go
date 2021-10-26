@@ -20,6 +20,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -623,10 +624,16 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	}
 
 	// If we didn't ask for this block then the peer is misbehaving.
-	blockHash := bmsg.block.Hash()
-	if _, exists = state.requestedBlocks[*blockHash]; !exists {
+	blockMeta := wire.BlockLocatorMeta{
+		Hash:        *bmsg.block.Hash(),
+		PrevMMRRoot: bmsg.block.PrevMMRRoot(),
+		Weight:      pow.CalcWork(bmsg.block.MsgBlock().Header.Bits()).Uint64(),
+		Height:      bmsg.block.Height(),
+	}
+
+	if _, exists = state.requestedBlocks[blockMeta.Hash]; !exists {
 		sm.progressLogger.subsystemLogger.Warn().Msgf("Got unrequested block %v from %s -- "+
-			"disconnecting", blockHash, peer.Addr())
+			"disconnecting", blockMeta.Hash, peer.Addr())
 		peer.Disconnect()
 		return
 	}
@@ -644,7 +651,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		firstNodeEl := sm.headerList.Front()
 		if firstNodeEl != nil {
 			firstNode := firstNodeEl.Value.(*headerNode)
-			if blockHash.IsEqual(firstNode.hash) {
+			if blockMeta.Hash.IsEqual(firstNode.hash) {
 				behaviorFlags |= chaindata.BFFastAdd
 				if firstNode.hash.IsEqual(sm.nextCheckpoint.Hash) {
 					isCheckpointBlock = true
@@ -658,8 +665,8 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// Remove block from request maps. Either chain will know about it and
 	// so we shouldn't have any more instances of trying to fetch it, or we
 	// will fail the insert and thus we'll retry next time we get an inv.
-	delete(state.requestedBlocks, *blockHash)
-	delete(sm.requestedBlocks, *blockHash)
+	delete(state.requestedBlocks, blockMeta.Hash)
+	delete(sm.requestedBlocks, blockMeta.Hash)
 
 	// Process the block to include validation, best chain selection, orphan
 	// handling, etc.
@@ -670,11 +677,11 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// it as such.  Otherwise, something really did go wrong, so log
 		// it as an actual error.
 		if _, ok := err.(chaindata.RuleError); ok {
-			sm.progressLogger.subsystemLogger.Info().Msgf("Rejected block %v from %s: %v", blockHash,
-				peer, err)
+			sm.progressLogger.subsystemLogger.Info().Msgf("Rejected block %v from %s: %v",
+				blockMeta.Hash, peer, err)
 		} else {
 			sm.progressLogger.subsystemLogger.Error().Msgf("Failed to process block %v: %v",
-				blockHash, err)
+				blockMeta.Hash, err)
 		}
 		if dbErr, ok := err.(database.Error); ok && dbErr.ErrorCode ==
 			database.ErrCorruption {
@@ -684,7 +691,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// Convert the error into an appropriate reject message and
 		// send it.
 		code, reason := mempool.ErrToRejectErr(err)
-		peer.PushRejectMsg(wire.CmdBlock, code, reason, blockHash, false)
+		peer.PushRejectMsg(wire.CmdBlock, code, reason, &blockMeta.Hash, false)
 		return
 	}
 
@@ -718,11 +725,11 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 				sm.progressLogger.subsystemLogger.Debug().Msgf("Extracted height of %v from "+
 					"orphan block", cbHeight)
 				heightUpdate = cbHeight
-				blkHashUpdate = blockHash
+				blkHashUpdate = &blockMeta.Hash
 			}
 		}
 
-		orphanRoot := sm.chain.GetOrphanRoot(blockHash)
+		orphanRoot := sm.chain.GetOrphanRoot(&blockMeta.Hash)
 		locator, err := sm.chain.LatestBlockLocator()
 		if err != nil {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Failed to get block locator for the "+
@@ -782,10 +789,17 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// for headers starting from the block after this one up to the next
 	// checkpoint.
 	prevHeight := sm.nextCheckpoint.Height
+	prevWeight := sm.nextCheckpoint.Weight
 	prevHash := sm.nextCheckpoint.Hash
+	prevParentMMRRoot := sm.nextCheckpoint.PrevMMRRoot
 	sm.nextCheckpoint = sm.findNextHeaderCheckpoint(prevHeight)
 	if sm.nextCheckpoint != nil {
-		locator := blockchain.BlockLocator([]*chainhash.Hash{prevHash})
+		locator := blockchain.BlockLocator([]*wire.BlockLocatorMeta{{
+			Hash:        *prevHash,
+			PrevMMRRoot: *prevParentMMRRoot,
+			Weight:      prevWeight,
+			Height:      prevHeight,
+		}})
 		err := peer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
 		if err != nil {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Failed to send getheaders message to "+
@@ -804,7 +818,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	sm.headersFirstMode = false
 	sm.headerList.Init()
 	sm.progressLogger.subsystemLogger.Info().Msgf("Reached the final checkpoint -- switching to normal mode")
-	locator := blockchain.BlockLocator([]*chainhash.Hash{blockHash})
+	locator := blockchain.BlockLocator([]*wire.BlockLocatorMeta{&blockMeta})
 	err = peer.PushGetBlocksMsg(locator, &zeroHash)
 	if err != nil {
 		sm.progressLogger.subsystemLogger.Warn().Msgf("Failed to send getblocks message to peer %s: %v",
@@ -895,23 +909,28 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 	// Process all of the received headers ensuring each one connects to the
 	// previous and that checkpoints match.
 	receivedCheckpoint := false
-	var finalHash *chainhash.Hash
-	for _, blockHeader := range msg.Headers {
-		blockHash := blockHeader.BlockHash()
-		finalHash = &blockHash
+	var finalMeta wire.BlockLocatorMeta
+	for _, headerBox := range msg.Headers {
+		finalMeta = wire.BlockLocatorMeta{
+			Hash:        headerBox.Header.BlockHash(),
+			PrevMMRRoot: headerBox.Header.BlocksMerkleMountainRoot(),
+			Weight:      pow.CalcWork(headerBox.Header.Bits()).Uint64(),
+			Height:      headerBox.Height,
+		}
 
 		// Ensure there is a previous header to compare against.
 		prevNodeEl := sm.headerList.Back()
 		if prevNodeEl == nil {
-			sm.progressLogger.subsystemLogger.Warn().Msgf("Header list does not contain a previous" +
-				"element as expected -- disconnecting peer")
+			sm.progressLogger.subsystemLogger.Warn().
+				Msgf("Header list does not contain a previous" +
+					"element as expected -- disconnecting peer")
 			peer.Disconnect()
 			return
 		}
 
 		// Ensure the header properly connects to the previous one and
 		// add it to the list of headers.
-		node := headerNode{hash: &blockHash}
+		node := headerNode{hash: &finalMeta.Hash}
 		prevNode := prevNodeEl.Value.(*headerNode)
 
 		// TODO: DISCUSS WITH Iurii Shyshatskyi HOW TO SOLVE THIS!!!!
@@ -966,7 +985,7 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 	// This header is not a checkpoint, so request the next batch of
 	// headers starting from the latest known header and ending with the
 	// next checkpoint.
-	locator := blockchain.BlockLocator([]*chainhash.Hash{finalHash})
+	locator := blockchain.BlockLocator([]*wire.BlockLocatorMeta{&finalMeta})
 	err := peer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
 	if err != nil {
 		sm.progressLogger.subsystemLogger.Warn().Msgf("Failed to send getheaders message to "+
@@ -1346,7 +1365,11 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 
 		// Generate the inventory vector and relay it.
 		iv := wire.NewInvVect(wire.InvTypeBlock, block.Hash())
-		sm.peerNotifier.RelayInventory(iv, block.MsgBlock().Header)
+
+		sm.peerNotifier.RelayInventory(iv, wire.HeaderBox{
+			Header: block.MsgBlock().Header,
+			Height: block.Height(),
+		})
 
 	// A block has been connected to the main block chain.
 	case blockchain.NTBlockConnected:

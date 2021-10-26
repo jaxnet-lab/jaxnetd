@@ -303,7 +303,7 @@ func newFakeChain(ctx chainctx.IChainCtx) *BlockChain {
 func newFakeNode(ctx chainctx.IChainCtx, parent blocknodes.IBlockNode, blockVersion wire.BVersion, bits uint32, timestamp time.Time) blocknodes.IBlockNode {
 	// Make up a header and create a block node from it.
 	header := wire.NewBeaconBlockHeader(blockVersion,
-		parent.BlocksMMRRoot(), // todo: this is incorrect
+		parent.PrevMMRRoot(), // todo: this is incorrect
 		chainhash.ZeroHash,
 		chainhash.ZeroHash,
 		timestamp,

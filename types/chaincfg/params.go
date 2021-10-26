@@ -52,8 +52,10 @@ var (
 // documentation for blockchain.IsCheckpointCandidate for details on the
 // selection criteria.
 type Checkpoint struct {
-	Height int32
-	Hash   *chainhash.Hash
+	Height      int32
+	Hash        *chainhash.Hash
+	PrevMMRRoot *chainhash.Hash
+	Weight      uint64
 }
 
 // DNSSeed identifies a DNS seed.

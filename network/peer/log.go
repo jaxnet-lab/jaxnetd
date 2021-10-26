@@ -112,7 +112,7 @@ func invSummary(invList []*wire.InvVect) string {
 }
 
 // locatorSummary returns a block locator as a human-readable string.
-func locatorSummary(locator []*chainhash.Hash, stopHash *chainhash.Hash) string {
+func locatorSummary(locator []*wire.BlockLocatorMeta, stopHash *chainhash.Hash) string {
 	if len(locator) > 0 {
 		return fmt.Sprintf("locator %s, stop %s", locator[0], stopHash)
 	}
@@ -194,10 +194,10 @@ func messageSummary(msg wire.Message) string {
 		return invSummary(msg.InvList)
 
 	case *wire.MsgGetBlocks:
-		return locatorSummary(msg.BlockLocatorHashes, &msg.HashStop)
+		return locatorSummary(msg.BlockLocatorMetas, &msg.HashStop)
 
 	case *wire.MsgGetHeaders:
-		return locatorSummary(msg.BlockLocatorHashes, &msg.HashStop)
+		return locatorSummary(msg.BlockLocatorMetas, &msg.HashStop)
 
 	case *wire.MsgHeaders:
 		return fmt.Sprintf("num %d", len(msg.Headers))

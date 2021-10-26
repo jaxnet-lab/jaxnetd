@@ -331,55 +331,47 @@ func (t *BlocksMMRTree) rebuildTree(node *BlockNode, count uint64) (rootHash cha
 
 	t.nodes[heightToID(int32(node.Height))] = node
 
-	// todo: rollback this
-	// removeOutdatedTops(t.nodes, node.Height)
-	// rootHash = calcRootForBlockNodes(t.nodes, true).Hash
-
-	rootHash = calcRootForBlockNodes(t.nodes, false).Hash
+	rootID := len(t.nodes) / 2
+	t.nodes[rootID] = nil
+	rootHash = calcRootForBlockNodes(t.nodes).Hash
 	return
 }
 
-func removeOutdatedTops(nodes []*BlockNode, height uint64) {
-	for i := (height * 2) - 1; i >= uint64(len(nodes)/2); {
-		nodes[i] = nil
-		if i == 1 {
-			return
-		}
-		i -= 2
-	}
-}
-
-func calcRootForBlockNodes(nodes []*BlockNode, keepPrevTops bool) *BlockNode {
+func calcRootForBlockNodes(nodes []*BlockNode) *BlockNode {
 	switch len(nodes) {
 	case 1:
 		return nodes[0]
 	case 3:
-		if keepPrevTops && nodes[1] != nil {
+		if nodes[1] != nil {
 			return nodes[1]
 		}
-		nodes[1] = hashMerkleBranches(nodes[0], nodes[2])
-		return nodes[1]
+		top, final := hashMerkleBranches(nodes[0], nodes[2])
+		if final {
+			nodes[1] = top
+		}
+
+		return top
 	default:
 		midPoint := len(nodes) / 2
 
-		if keepPrevTops && nodes[midPoint] != nil {
-			return nodes[midPoint]
+		leftBranchRoot := calcRootForBlockNodes(nodes[:midPoint])
+		rightBranchRoot := calcRootForBlockNodes(nodes[midPoint+1:])
+		top, final := hashMerkleBranches(leftBranchRoot, rightBranchRoot)
+		if final {
+			nodes[midPoint] = top
 		}
 
-		leftBranchRoot := calcRootForBlockNodes(nodes[:midPoint], keepPrevTops)
-		rightBranchRoot := calcRootForBlockNodes(nodes[midPoint+1:], keepPrevTops)
-		nodes[midPoint] = hashMerkleBranches(leftBranchRoot, rightBranchRoot)
-		return nodes[midPoint]
+		return top
 	}
 }
 
-func hashMerkleBranches(left, right *BlockNode) *BlockNode {
+func hashMerkleBranches(left, right *BlockNode) (*BlockNode, bool) {
 	if left == nil {
-		return nil
+		return nil, false
 	}
 
 	if right == nil {
-		return &BlockNode{Leaf: Leaf{Hash: left.Hash, Weight: left.Weight}}
+		return &BlockNode{Leaf: Leaf{Hash: left.Hash, Weight: left.Weight}}, false
 	}
 
 	var data [80]byte
@@ -394,7 +386,7 @@ func hashMerkleBranches(left, right *BlockNode) *BlockNode {
 			Hash:   chainhash.HashH(data[:]),
 			Weight: left.Weight + right.Weight,
 		},
-	}
+	}, true
 }
 
 func heightToID(h int32) uint64 {

@@ -82,13 +82,15 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
-	blockLocators := make([]*chainhash.Hash, len(c.BlockLocators))
+	blockLocators := make([]*wire.BlockLocatorMeta, len(c.BlockLocators))
 	for i := range c.BlockLocators {
 		blockLocator, err := chainhash.NewHashFromStr(c.BlockLocators[i])
 		if err != nil {
 			return nil, rpcDecodeHexError(c.BlockLocators[i])
 		}
-		blockLocators[i] = blockLocator
+		blockLocators[i] = &wire.BlockLocatorMeta{
+			Hash: *blockLocator,
+		}
 	}
 	var hashStop chainhash.Hash
 	if c.HashStop != "" {
@@ -103,7 +105,7 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 	hexBlockHeaders := make([]string, len(headers))
 	var buf bytes.Buffer
 	for i, h := range headers {
-		err := h.Write(&buf)
+		err := h.Header.Write(&buf)
 		if err != nil {
 			return nil, server.InternalRPCError(err.Error(),
 				"Failed to serialize block header")

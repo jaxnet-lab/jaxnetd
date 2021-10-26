@@ -59,24 +59,24 @@ func TestGetBlocks(t *testing.T) {
 	}
 
 	// Ensure block locator hashes are added properly.
-	err = msg.AddBlockLocatorHash(locatorHash)
+	err = msg.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *locatorHash})
 	if err != nil {
-		t.Errorf("AddBlockLocatorHash: %v", err)
+		t.Errorf("AddBlockLocatorMeta: %v", err)
 	}
-	if msg.BlockLocatorHashes[0] != locatorHash {
-		t.Errorf("AddBlockLocatorHash: wrong block locator added - "+
+	if msg.BlockLocatorMetas[0].Hash != *locatorHash {
+		t.Errorf("AddBlockLocatorMeta: wrong block locator added - "+
 			"got %v, want %v",
-			spew.Sprint(msg.BlockLocatorHashes[0]),
+			spew.Sprint(msg.BlockLocatorMetas[0]),
 			spew.Sprint(locatorHash))
 	}
 
 	// Ensure adding more than the max allowed block locator hashes per
 	// message returns an error.
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
-		err = msg.AddBlockLocatorHash(locatorHash)
+		err = msg.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *locatorHash})
 	}
 	if err == nil {
-		t.Errorf("AddBlockLocatorHash: expected error on too many " +
+		t.Errorf("AddBlockLocatorMeta: expected error on too many " +
 			"block locator hashes not received")
 	}
 }
@@ -122,8 +122,8 @@ func TestGetBlocksWire(t *testing.T) {
 
 	// MsgGetBlocks message with multiple block locators and a stop hash.
 	multiLocators := NewMsgGetBlocks(hashStop)
-	multiLocators.AddBlockLocatorHash(hashLocator2)
-	multiLocators.AddBlockLocatorHash(hashLocator)
+	multiLocators.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator2})
+	multiLocators.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator})
 	multiLocators.ProtocolVersion = pver
 	multiLocatorsEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
@@ -232,8 +232,8 @@ func TestGetBlocksWireErrors(t *testing.T) {
 	// MsgGetBlocks message with multiple block locators and a stop hash.
 	baseGetBlocks := NewMsgGetBlocks(hashStop)
 	baseGetBlocks.ProtocolVersion = pver
-	baseGetBlocks.AddBlockLocatorHash(hashLocator2)
-	baseGetBlocks.AddBlockLocatorHash(hashLocator)
+	baseGetBlocks.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator2})
+	baseGetBlocks.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator})
 	baseGetBlocksEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
 		0x02, // Varint for number of block locator hashes
@@ -255,10 +255,10 @@ func TestGetBlocksWireErrors(t *testing.T) {
 	// block locator hashes.
 	maxGetBlocks := NewMsgGetBlocks(hashStop)
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
-		maxGetBlocks.AddBlockLocatorHash(&mainNetGenesisHash)
+		maxGetBlocks.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: mainNetGenesisHash})
 	}
-	maxGetBlocks.BlockLocatorHashes = append(maxGetBlocks.BlockLocatorHashes,
-		&mainNetGenesisHash)
+	maxGetBlocks.BlockLocatorMetas = append(maxGetBlocks.BlockLocatorMetas,
+		&BlockLocatorMeta{Hash: mainNetGenesisHash})
 	maxGetBlocksEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
 		0xfd, 0xf5, 0x01, // Varint for number of block loc hashes (501)

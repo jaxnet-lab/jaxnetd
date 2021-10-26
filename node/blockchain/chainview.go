@@ -11,6 +11,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // approxNodesPerWeek is an approximation of the number of new blocks there are
@@ -397,8 +398,12 @@ func (c *chainView) blockLocator(node blocknodes.IBlockNode) BlockLocator {
 
 	step := int32(1)
 	for node != nil {
-		h := node.GetHash()
-		locator = append(locator, &h)
+		locator = append(locator, &wire.BlockLocatorMeta{
+			Hash:        node.GetHash(),
+			PrevMMRRoot: node.ActualMMRRoot(),
+			Weight:      node.Difficulty(),
+			Height:      node.Height(),
+		})
 
 		// Nothing more to add once the genesis block has been added.
 		if node.Height() == 0 {

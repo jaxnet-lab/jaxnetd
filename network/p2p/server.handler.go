@@ -234,14 +234,14 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 		// generate and send a headers message instead of an inventory
 		// message.
 		if msg.InvVect.Type == wire.InvTypeBlock && sp.WantsHeaders() {
-			blockHeader, ok := msg.Data.(wire.BlockHeader)
+			headerBox, ok := msg.Data.(wire.HeaderBox)
 			if !ok {
-				server.logger.Warn().Msgf("Underlying data for headers" +
-					" is not a block header")
+				server.logger.Warn().
+					Msgf("Underlying data for headers is not a block header")
 				return
 			}
 			msgHeaders := wire.NewMsgHeaders()
-			if err := msgHeaders.AddBlockHeader(blockHeader); err != nil {
+			if err := msgHeaders.AddBlockHeader(headerBox.Header, headerBox.Height); err != nil {
 				server.logger.Error().Err(err).Msg("Failed to add block header")
 				return
 			}

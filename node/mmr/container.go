@@ -20,7 +20,7 @@ type TreeContainer struct {
 }
 
 func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBlockNode) {
-	prevNodesMMRRoot := node.Header().BlocksMerkleMountainRoot()
+	prevNodesMMRRoot := node.PrevMMRRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()
 
 	// 1) Good Case: if a new node is next in the current chain,
@@ -57,7 +57,7 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 
 		lifoToAdd = append(lifoToAdd, Leaf{Hash: iterNode.GetHash(), Weight: iterNode.Difficulty()})
 
-		iterMMRRoot = iterNode.Header().BlocksMerkleMountainRoot()
+		iterMMRRoot = iterNode.PrevMMRRoot()
 		iterNode = iterNode.Parent()
 	}
 

@@ -21,18 +21,18 @@ const MaxBlockHeadersPerMsg = 1000
 // the headers.
 type MsgHeaders struct {
 	Chain   HeaderConstructor
-	Headers []BlockHeader
+	Headers []HeaderBox
 }
 
 // AddBlockHeader adds a new block header to the message.
-func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader) error {
+func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader, height int32) error {
 	if len(msg.Headers)+1 > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
 		return Error("MsgHeaders.AddBlockHeader", str)
 	}
 
-	msg.Headers = append(msg.Headers, bh)
+	msg.Headers = append(msg.Headers, HeaderBox{Header: bh, Height: height})
 	return nil
 }
 
@@ -53,15 +53,19 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 
 	// Create a contiguous slice of headers to deserialize into in order to
 	// reduce the number of allocations.
-	headers := make([]BlockHeader, count)
-	msg.Headers = make([]BlockHeader, 0, count)
+	msg.Headers = make([]HeaderBox, count)
 	for i := uint64(0); i < count; i++ {
+		err := ReadElement(r, &msg.Headers[i].Height)
+		if err != nil {
+			return err
+		}
+
 		bh := msg.Chain.EmptyHeader()
 		if err := bh.Read(r); err != nil {
 			return err
 		}
 
-		headers[i] = bh
+		msg.Headers[i].Header = bh
 		txCount, err := ReadVarInt(r, pver)
 		if err != nil {
 			return err
@@ -73,7 +77,6 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 				"transactions [count %v]", txCount)
 			return Error("MsgHeaders.BtcDecode", str)
 		}
-		msg.AddBlockHeader(bh)
 	}
 
 	return nil
@@ -96,7 +99,10 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	}
 
 	for _, bh := range msg.Headers {
-		if err := bh.Write(w); err != nil {
+		if err := WriteElement(w, bh.Height); err != nil {
+			return err
+		}
+		if err := bh.Header.Write(w); err != nil {
 			return err
 		}
 
@@ -132,6 +138,6 @@ func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 // Message interface.  See MsgHeaders for details.
 func NewMsgHeaders() *MsgHeaders {
 	return &MsgHeaders{
-		Headers: make([]BlockHeader, 0, MaxBlockHeadersPerMsg),
+		Headers: make([]HeaderBox, 0, MaxBlockHeadersPerMsg),
 	}
 }

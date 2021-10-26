@@ -962,7 +962,7 @@ func (peer *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *ch
 	// to use for filtering duplicate getblocks requests.
 	var beginHash *chainhash.Hash
 	if len(locator) > 0 {
-		beginHash = locator[0]
+		beginHash = &locator[0].Hash
 	}
 
 	// Filter duplicate getblocks requests.
@@ -981,7 +981,7 @@ func (peer *Peer) PushGetBlocksMsg(locator blockchain.BlockLocator, stopHash *ch
 	// Construct the getblocks request and queue it to be sent.
 	msg := wire.NewMsgGetBlocks(stopHash)
 	for _, hash := range locator {
-		err := msg.AddBlockLocatorHash(hash)
+		err := msg.AddBlockLocatorMeta(hash)
 		if err != nil {
 			return err
 		}
@@ -1006,7 +1006,7 @@ func (peer *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *c
 	// to use for filtering duplicate getheaders requests.
 	var beginHash *chainhash.Hash
 	if len(locator) > 0 {
-		beginHash = locator[0]
+		beginHash = &locator[0].Hash
 	}
 
 	// Filter duplicate getheaders requests.
@@ -1026,7 +1026,7 @@ func (peer *Peer) PushGetHeadersMsg(locator blockchain.BlockLocator, stopHash *c
 	msg := wire.NewMsgGetHeaders()
 	msg.HashStop = *stopHash
 	for _, hash := range locator {
-		err := msg.AddBlockLocatorHash(hash)
+		err := msg.AddBlockLocatorMeta(hash)
 		if err != nil {
 			return err
 		}

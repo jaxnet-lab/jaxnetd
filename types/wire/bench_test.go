@@ -391,7 +391,7 @@ func BenchmarkDecodeGetHeaders(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddBlockLocatorHash(hash)
+		m.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hash})
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -422,8 +422,8 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
 		m.AddBlockHeader(
-			// NewShardBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i))
 			NewBeaconBlockHeader(1, *hash, *hash, *hash, time.Now(), 0, uint32(i)),
+			0,
 		)
 	}
 
@@ -454,7 +454,7 @@ func BenchmarkDecodeGetBlocks(b *testing.B) {
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddBlockLocatorHash(hash)
+		m.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hash})
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
