@@ -20,7 +20,8 @@ var (
 	fastNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 
 	// fastnetShardPoWBits is basic target for shard chain.
-	fastnetShardPoWBits uint32 = 0x1e0dffff
+	fastnetBeaconPoWBits uint32 = 0x1e0dffff
+	fastnetShardPoWBits  uint32 = 0x1e0dffff
 )
 
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
@@ -37,7 +38,7 @@ var FastNetParams = Params{
 
 	PowParams: PowParams{
 		PowLimit:                 fastNetPowLimit,
-		PowLimitBits:             fastnetShardPoWBits,
+		PowLimitBits:             fastnetBeaconPoWBits,
 		TargetTimespan:           time.Second * 60 * 60 * 24, // 1 day
 		TargetTimePerBlock:       time.Second * 15,           // 15 seconds
 		RetargetAdjustmentFactor: 4,                          // 25% less, 400% more
