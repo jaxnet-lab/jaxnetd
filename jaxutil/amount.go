@@ -175,7 +175,7 @@ func NewJaxAmount(f float64) (JaxAmount, error) {
 // ToUnit converts a monetary amount counted in bitcoin base units to a
 // floating point value representing an amount of bitcoin.
 func (a JaxAmount) ToUnit(u JAXAmountUnit) float64 {
-	return float64(a) / math.Pow10(int(u+8))
+	return float64(a) / math.Pow10(int(u+4))
 }
 
 // Format formats a monetary amount counted in bitcoin base units as a

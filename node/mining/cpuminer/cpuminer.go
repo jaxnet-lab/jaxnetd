@@ -214,12 +214,12 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 		// Anything other than a rule violation is an unexpected error,
 		// so log that error as an internal error.
 		// miner.log.Error().Err(err).Msg("Unexpected error while processingblock submitted via CPU miner")
-		miner.log.Error().Err(err).Msg("Block submitted via CPU miner rejected")
+		miner.log.Error().Err(err).Uint32("chain_id", chainID).Msg("Block submitted via CPU miner rejected")
 		// miner.log.Debug().Err(err).Msg("Block submitted via CPU miner rejected")
 		return false
 	}
 	if isOrphan {
-		miner.log.Debug().Msg("Block submitted via CPU miner is an orphan")
+		miner.log.Debug().Uint32("chain_id", chainID).Msg("Block submitted via CPU miner is an orphan")
 		return false
 	}
 
@@ -229,8 +229,8 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 		reward += block.MsgBlock().Transactions[0].TxOut[2].Value
 	}
 
-	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, pow_hash %s amount %v)", chainID,
-		block.Hash(), block.PowHash(), jaxutil.Amount(reward).ToCoin(chainID == 0))
+	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, pow_hash %s amount %s)", chainID,
+		block.Hash(), block.PowHash(), jaxutil.IAmountVal(reward, chainID == 0))
 	return true
 }
 
@@ -381,7 +381,7 @@ func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce 
 	}
 
 	beaconBlock.Header.UpdateCoinbaseScript(coinbaseScript)
-	aux := wire.CoinbaseAux{}.FromBlock(&beaconBlock)
+	aux := wire.CoinbaseAux{}.FromBlock(&beaconBlock, true) // todo:
 
 	// updateMerkleRoot(&beaconBlock)
 
@@ -420,7 +420,7 @@ func (miner *CPUMiner) generateBlocks(quit chan struct{}, worker uint32) {
 	var job = new(miningJob)
 	job.beacon = chainTask{}
 	job.shards = make(map[uint32]chainTask, len(miner.shards))
-
+	time.Sleep(5 * time.Second)
 out:
 	for {
 		// Quit when the miner is stopped.

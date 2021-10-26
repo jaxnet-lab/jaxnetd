@@ -47,17 +47,22 @@ the initial handshake is complete, the following chart indicates message
 interactions in no particular order.
 
 	Peer A Sends                          Peer B Responds
-	----------------------------------------------------------------------------
+	-----------------------------------------------------------------------------
 	getaddr message (MsgGetAddr)          addr message (MsgAddr)
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	getblocks message (MsgGetBlocks)      inv message (MsgInv)
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	inv message (MsgInv)                  getdata message (MsgGetData)
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	getdata message (MsgGetData)          block message (MsgBlock) -or-
 	                                      tx message (MsgTx) -or-
 	                                      notfound message (MsgNotFound)
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	getheaders message (MsgGetHeaders)    headers message (MsgHeaders)
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	ping message (MsgPing)                pong message (MsgHeaders)* -or-
 	                                      (none -- Ability to send message is enough)
-
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	NOTES:
 	* The pong message was not added until later protocol versions as defined
 	  in BIP0031.  The BIP0031Version constant can be used to detect a recent
@@ -78,16 +83,16 @@ latest protocol version this package supports and is typically the value to use
 for all outbound connections before a potentially lower protocol version is
 negotiated.
 
-Bitcoin Network
+Jax Network
 
-The bitcoin network is a magic number which is used to identify the start of a
-message and which bitcoin network the message applies to.  This package provides
+The jax network is a magic number which is used to identify the start of a
+message and which jax network the message applies to.  This package provides
 the following constants:
 
-	types.TestNet3
-	wire.TestNet  (Regression test network)
-	types.TestNet3 (Test network version 3)
-	wire.SimNet   (Simulation test network)
+	wire.MainNet
+	wire.FastTestNet  (Development network)
+	wire.TestNet      (Test network)
+	wire.SimNet       (Simulation test network)
 
 Determining Message Type
 

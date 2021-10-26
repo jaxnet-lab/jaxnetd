@@ -178,19 +178,38 @@ func (CoinbaseAux) New() CoinbaseAux {
 	}
 }
 
-func (CoinbaseAux) FromBlock(block *MsgBlock) CoinbaseAux {
+func (CoinbaseAux) FromBlock(block *MsgBlock, witness bool) CoinbaseAux {
 	tx := block.Transactions[0].Copy()
 	aux := CoinbaseAux{
 		Tx: *tx,
 	}
-
-	txHashes := make([]chainhash.Hash, len(block.Transactions))
-	for i, transaction := range block.Transactions {
-		txHashes[i] = transaction.TxHash()
-	}
-
+	txHashes := CollectTxHashes(block.Transactions, witness)
 	aux.TxMerkleProof = chainhash.BuildCoinbaseMerkleTreeProof(txHashes)
 	return aux
+}
+
+func CollectTxHashes(transactions []*MsgTx, witness bool) []chainhash.Hash {
+	hashes := make([]chainhash.Hash, len(transactions))
+
+	// Create the base transaction hashes and populate the array with them.
+	for i, tx := range transactions {
+		// If we're computing a witness merkle root, instead of the
+		// regular txid, we use the modified wtxid which includes a
+		// transaction's witness data within the digest. Additionally,
+		// the coinbase's wtxid is all zeroes.
+		switch {
+		case witness && i == 0:
+			var zeroHash chainhash.Hash
+			hashes[i] = zeroHash
+		case witness:
+			wSha := tx.WitnessHash()
+			hashes[i] = wSha
+		default:
+			hashes[i] = tx.TxHash()
+		}
+	}
+
+	return hashes
 }
 
 func (h *CoinbaseAux) UpdatedMerkleRoot() chainhash.Hash {

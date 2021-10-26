@@ -98,6 +98,30 @@ func BuildMerkleTreeStore(transactions []*jaxutil.Tx, witness bool) []*chainhash
 	return chainhash.BuildMerkleTreeStore(merkles)
 }
 
+func CollectTxHashes(transactions []*jaxutil.Tx, witness bool) []chainhash.Hash {
+	hashes := make([]chainhash.Hash, len(transactions))
+
+	// Create the base transaction hashes and populate the array with them.
+	for i, tx := range transactions {
+		// If we're computing a witness merkle root, instead of the
+		// regular txid, we use the modified wtxid which includes a
+		// transaction's witness data within the digest. Additionally,
+		// the coinbase's wtxid is all zeroes.
+		switch {
+		case witness && i == 0:
+			var zeroHash chainhash.Hash
+			hashes[i] = zeroHash
+		case witness:
+			wSha := tx.MsgTx().WitnessHash()
+			hashes[i] = wSha
+		default:
+			hashes[i] = *tx.Hash()
+		}
+	}
+
+	return hashes
+}
+
 // ExtractWitnessCommitment attempts to locate, and return the witness
 // commitment for a block. The witness commitment is of the form:
 // SHA256(witness root || witness nonce). The function additionally returns a

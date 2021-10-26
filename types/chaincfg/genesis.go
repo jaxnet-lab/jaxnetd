@@ -194,7 +194,7 @@ func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.Ms
 	}
 
 	gtx := state.shardsGenesisTx[shardID]
-	coinbaseAux := wire.CoinbaseAux{}.FromBlock(beaconBlock)
+	coinbaseAux := wire.CoinbaseAux{}.FromBlock(beaconBlock, false)
 	shardBlock = wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
