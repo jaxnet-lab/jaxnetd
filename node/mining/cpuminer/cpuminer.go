@@ -481,7 +481,7 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 	}
 
 	burnReward := types.BurnJaxReward
-	burnJXN := (curHeight+1)%4 == 0
+	burnJXN := (curHeight+1)%2 == 0
 	if burnJXN {
 		burnReward = types.BurnJaxNetReward
 	}
@@ -507,7 +507,9 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 			return true
 		}
 
-		if job.shards[shardID].blockHeight < curHeight+1 {
+		needToRefillBlock := job.shards[shardID].submitted && job.shards[shardID].burnReward != job.beacon.burnReward
+
+		if needToRefillBlock || job.shards[shardID].blockHeight < curHeight+1 {
 			template, err := miner.shards[shardID].BlockTemplateGenerator.NewBlockTemplate(miner.miningAddrs, burnReward)
 			if err != nil {
 				miner.log.Error().Err(err).Uint32("shard_id", shardID).Msg("Failed to create new block shard template")
@@ -545,7 +547,7 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 		// but the tree expects slots to be indexed from 0.
 		slotIndex := id - 1
 
-		shardBlockHash := shard.block.Header.(*wire.ShardHeader).ShardExclusiveBlockHash()
+		shardBlockHash := shard.block.Header.(*wire.ShardHeader).ExclusiveHash()
 		err = tree.SetShardHash(slotIndex, shardBlockHash)
 		if err != nil {
 			return
@@ -598,7 +600,11 @@ func (miner *CPUMiner) submitTask(job *miningJob) {
 
 	for shardID := range job.shards {
 		task := job.shards[shardID]
-		if task.notSolved || task.submitted || task.burnReward != job.beacon.burnReward {
+		if task.burnReward != job.beacon.burnReward {
+			task.submitted = true
+			continue
+		}
+		if task.notSolved || task.submitted {
 			continue
 		}
 
