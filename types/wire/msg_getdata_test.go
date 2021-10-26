@@ -12,8 +12,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -41,7 +39,7 @@ func TestGetData(t *testing.T) {
 
 	// Ensure inventory vectors are added properly.
 	hash := chainhash.Hash{}
-	iv := types.NewInvVect(types.InvTypeBlock, &hash)
+	iv := NewInvVect(InvTypeBlock, &hash)
 	err := msg.AddInvVect(iv)
 	if err != nil {
 		t.Errorf("AddInvVect: %v", err)
@@ -53,7 +51,7 @@ func TestGetData(t *testing.T) {
 
 	// Ensure adding more than the max allowed inventory vectors per
 	// message returns an error.
-	for i := 0; i < types.MaxInvPerMsg; i++ {
+	for i := 0; i < MaxInvPerMsg; i++ {
 		err = msg.AddInvVect(iv)
 	}
 	if err == nil {
@@ -63,8 +61,8 @@ func TestGetData(t *testing.T) {
 
 	// Ensure creating the message with a size hint larger than the max
 	// works as expected.
-	msg = NewMsgGetDataSizeHint(types.MaxInvPerMsg + 1)
-	wantCap := types.MaxInvPerMsg
+	msg = NewMsgGetDataSizeHint(MaxInvPerMsg + 1)
+	wantCap := MaxInvPerMsg
 	if cap(msg.InvList) != wantCap {
 		t.Errorf("NewMsgGetDataSizeHint: wrong cap for size hint - "+
 			"got %v, want %v", cap(msg.InvList), wantCap)
@@ -88,8 +86,8 @@ func TestGetDataWire(t *testing.T) {
 		t.Errorf("NewHashFromStr: %v", err)
 	}
 
-	iv := types.NewInvVect(types.InvTypeBlock, blockHash)
-	iv2 := types.NewInvVect(types.InvTypeTx, txHash)
+	iv := NewInvVect(InvTypeBlock, blockHash)
+	iv2 := NewInvVect(InvTypeTx, txHash)
 
 	// Empty MsgGetData message.
 	NoInv := NewMsgGetData()
@@ -116,11 +114,11 @@ func TestGetDataWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgGetData             // Message to encode
-		out  *MsgGetData             // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgGetData     // Message to encode
+		out  *MsgGetData     // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no inv vectors.
 		{
@@ -185,7 +183,7 @@ func TestGetDataWireErrors(t *testing.T) {
 		t.Errorf("NewHashFromStr: %v", err)
 	}
 
-	iv := types.NewInvVect(types.InvTypeBlock, blockHash)
+	iv := NewInvVect(InvTypeBlock, blockHash)
 
 	// Base message used to induce errors.
 	baseGetData := NewMsgGetData()
@@ -202,7 +200,7 @@ func TestGetDataWireErrors(t *testing.T) {
 	// Message that forces an error by having more than the max allowed inv
 	// vectors.
 	maxGetData := NewMsgGetData()
-	for i := 0; i < types.MaxInvPerMsg; i++ {
+	for i := 0; i < MaxInvPerMsg; i++ {
 		maxGetData.AddInvVect(iv)
 	}
 	maxGetData.InvList = append(maxGetData.InvList, iv)
@@ -211,13 +209,13 @@ func TestGetDataWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgGetData             // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgGetData     // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in inventory vector count

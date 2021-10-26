@@ -16,7 +16,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
@@ -607,7 +606,7 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 	// Keep track of all the sendrawtransaction request txns so that they
 	// can be rebroadcast if they don't make their way into a block.
 	txD := acceptedTxs[0]
-	iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
+	iv := wire.NewInvVect(wire.InvTypeTx, txD.Tx.Hash())
 	server.connMgr.AddRebroadcastInventory(iv, txD)
 
 	return tx.Hash().String(), nil

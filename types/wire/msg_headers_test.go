@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -98,11 +97,11 @@ func TestHeadersWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgHeaders             // Message to encode
-		out  *MsgHeaders             // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgHeaders     // Message to encode
+		out  *MsgHeaders     // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no headers.
 		{
@@ -224,13 +223,13 @@ func TestHeadersWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgHeaders             // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgHeaders     // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in header count.

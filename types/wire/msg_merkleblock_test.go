@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -140,11 +139,11 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 // various numbers of transaction hashes and protocol versions.
 func TestMerkleBlockWire(t *testing.T) {
 	tests := []struct {
-		in   *MsgMerkleBlock         // Message to encode
-		out  *MsgMerkleBlock         // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgMerkleBlock // Message to encode
+		out  *MsgMerkleBlock // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -193,13 +192,13 @@ func TestMerkleBlockWireErrors(t *testing.T) {
 	pver := uint32(70001)
 
 	tests := []struct {
-		in       *MsgMerkleBlock         // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgMerkleBlock // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in version.
 		{
@@ -314,7 +313,7 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed tx hashes.
 	var buf bytes.Buffer
-	encoder.WriteVarInt(&buf, maxTxPerBlock+1)
+	WriteVarInt(&buf, maxTxPerBlock+1)
 	numHashesOffset := 84
 	exceedMaxHashes := make([]byte, numHashesOffset)
 	copy(exceedMaxHashes, merkleBlockOneBytes[:numHashesOffset])
@@ -323,17 +322,17 @@ func TestMerkleBlockOverflowErrors(t *testing.T) {
 	// Create bytes for a merkle block that claims to have more than the max
 	// allowed flag bytes.
 	buf.Reset()
-	encoder.WriteVarInt(&buf, maxFlagsPerMerkleBlock+1)
+	WriteVarInt(&buf, maxFlagsPerMerkleBlock+1)
 	numFlagBytesOffset := 117
 	exceedMaxFlagBytes := make([]byte, numFlagBytesOffset)
 	copy(exceedMaxFlagBytes, merkleBlockOneBytes[:numFlagBytesOffset])
 	exceedMaxFlagBytes = append(exceedMaxFlagBytes, buf.Bytes()...)
 
 	tests := []struct {
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
-		err  error                   // Expected error
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
+		err  error           // Expected error
 	}{
 		// Block that claims to have more than max allowed hashes.
 		{exceedMaxHashes, pver, BaseEncoding, &MessageError{}},

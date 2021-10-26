@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -44,11 +42,11 @@ func TestVerAckWire(t *testing.T) {
 	msgVerAckEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgVerAck              // Message to encode
-		out  *MsgVerAck              // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgVerAck      // Message to encode
+		out  *MsgVerAck      // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{

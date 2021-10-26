@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -289,7 +288,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 // handlePing implements the ping command.
 func (server *CommonChainRPC) handlePing(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Ask server to ping \o_
-	nonce, err := encoder.RandomUint64()
+	nonce, err := wire.RandomUint64()
 	if err != nil {
 		return nil, server.InternalRPCError("Not sending ping - failed to "+
 			"generate nonce: "+err.Error(), "")

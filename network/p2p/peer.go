@@ -17,7 +17,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -117,9 +117,8 @@ func (sp *serverPeer) newPeerConfig() *peer.Config {
 
 // newestBlock returns the current best block hash and height using the format
 // required by the configuration for the peer package.
-func (sp *serverPeer) newestBlock() (*chainhash.Hash, int32, error) {
-	best := sp.serverPeerHandler.chain.BlockChain().BestSnapshot()
-	return &best.Hash, best.Height, nil
+func (sp *serverPeer) newestBlock() *chaindata.BestState {
+	return sp.serverPeerHandler.chain.BlockChain().BestSnapshot()
 }
 
 // addKnownAddresses adds the given addresses to the set of known addresses to
@@ -327,9 +326,9 @@ func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 		// or only the transactions that match the filter when there is
 		// one.
 		if !sp.filter.IsLoaded() || sp.filter.MatchTxAndUpdate(txDesc.Tx) {
-			iv := types.NewInvVect(types.InvTypeTx, txDesc.Tx.Hash())
+			iv := wire.NewInvVect(wire.InvTypeTx, txDesc.Tx.Hash())
 			invMsg.AddInvVect(iv)
-			if len(invMsg.InvList)+1 > types.MaxInvPerMsg {
+			if len(invMsg.InvList)+1 > wire.MaxInvPerMsg {
 				break
 			}
 		}
@@ -356,7 +355,7 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 	// Convert the raw MsgTx to a jaxutil.Tx which provides some convenience
 	// methods and things such as hash caching.
 	tx := jaxutil.NewTx(msg)
-	iv := types.NewInvVect(types.InvTypeTx, tx.Hash())
+	iv := wire.NewInvVect(wire.InvTypeTx, tx.Hash())
 	sp.AddKnownInventory(iv)
 
 	// Queue the transaction up to be handled by the sync manager and
@@ -376,7 +375,7 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	block := jaxutil.NewBlockFromBlockAndBytes(msg, buf)
 
 	// Add the block to the known inventory for the peer.
-	iv := types.NewInvVect(types.InvTypeBlock, block.Hash())
+	iv := wire.NewInvVect(wire.InvTypeBlock, block.Hash())
 	sp.AddKnownInventory(iv)
 
 	// Queue the block up to be handled by the block
@@ -408,7 +407,7 @@ func (sp *serverPeer) OnInv(_ *peer.Peer, msg *wire.MsgInv) {
 
 	newInv := wire.NewMsgInvSizeHint(uint(len(msg.InvList)))
 	for _, invVect := range msg.InvList {
-		if invVect.Type == types.InvTypeTx {
+		if invVect.Type == wire.InvTypeTx {
 			sp.logger.Trace().Msgf("Ignoring tx %v in inv from %v -- "+
 				"blocksonly enabled", invVect.Hash, sp)
 			// if sp.ProtocolVersion() >= wire.BIP0037Version {
@@ -450,7 +449,7 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 	// bursts of small requests are not penalized as that would potentially ban
 	// peers performing IBD.
 	// This incremental score decays each minute to half of its value.
-	sp.addBanScore(0, uint32(length)*99/types.MaxInvPerMsg, "getdata")
+	sp.addBanScore(0, uint32(length)*99/wire.MaxInvPerMsg, "getdata")
 
 	// We wait on this wait channel periodically to prevent queuing
 	// far more data than we can send in a reasonable time, wasting memory.
@@ -470,17 +469,17 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 		}
 		var err error
 		switch iv.Type {
-		case types.InvTypeWitnessTx:
+		case wire.InvTypeWitnessTx:
 			err = sp.serverPeerHandler.pushTxMsg(sp, &iv.Hash, c, waitChan, wire.WitnessEncoding)
-		case types.InvTypeTx:
+		case wire.InvTypeTx:
 			err = sp.serverPeerHandler.pushTxMsg(sp, &iv.Hash, c, waitChan, wire.BaseEncoding)
-		case types.InvTypeWitnessBlock:
+		case wire.InvTypeWitnessBlock:
 			err = sp.serverPeerHandler.pushBlockMsg(sp, &iv.Hash, c, waitChan, wire.WitnessEncoding)
-		case types.InvTypeBlock:
+		case wire.InvTypeBlock:
 			err = sp.serverPeerHandler.pushBlockMsg(sp, &iv.Hash, c, waitChan, wire.BaseEncoding)
-		case types.InvTypeFilteredWitnessBlock:
+		case wire.InvTypeFilteredWitnessBlock:
 			err = sp.serverPeerHandler.pushMerkleBlockMsg(sp, &iv.Hash, c, waitChan, wire.WitnessEncoding)
-		case types.InvTypeFilteredBlock:
+		case wire.InvTypeFilteredBlock:
 			err = sp.serverPeerHandler.pushMerkleBlockMsg(sp, &iv.Hash, c, waitChan, wire.BaseEncoding)
 		default:
 			sp.logger.Warn().Msgf("Unknown type in inventory request %d",
@@ -535,7 +534,7 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	// Generate inventory message.
 	invMsg := wire.NewMsgInv()
 	for i := range hashList {
-		iv := types.NewInvVect(types.InvTypeBlock, &hashList[i])
+		iv := wire.NewInvVect(wire.InvTypeBlock, &hashList[i])
 		invMsg.AddInvVect(iv)
 	}
 

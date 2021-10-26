@@ -15,8 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -68,7 +66,7 @@ var genesisCoinbaseTx = MsgTx{
 // a single byte variable length integer.
 func BenchmarkWriteVarInt1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarInt(ioutil.Discard, 1)
+		WriteVarInt(ioutil.Discard, 1)
 	}
 }
 
@@ -76,7 +74,7 @@ func BenchmarkWriteVarInt1(b *testing.B) {
 // a three byte variable length integer.
 func BenchmarkWriteVarInt3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarInt(ioutil.Discard, 65535)
+		WriteVarInt(ioutil.Discard, 65535)
 	}
 }
 
@@ -84,7 +82,7 @@ func BenchmarkWriteVarInt3(b *testing.B) {
 // a five byte variable length integer.
 func BenchmarkWriteVarInt5(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarInt(ioutil.Discard, 4294967295)
+		WriteVarInt(ioutil.Discard, 4294967295)
 	}
 }
 
@@ -92,7 +90,7 @@ func BenchmarkWriteVarInt5(b *testing.B) {
 // a nine byte variable length integer.
 func BenchmarkWriteVarInt9(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarInt(ioutil.Discard, 18446744073709551615)
+		WriteVarInt(ioutil.Discard, 18446744073709551615)
 	}
 }
 
@@ -103,7 +101,7 @@ func BenchmarkReadVarInt1(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarInt(r, 0)
+		ReadVarInt(r, 0)
 	}
 }
 
@@ -114,7 +112,7 @@ func BenchmarkReadVarInt3(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarInt(r, 0)
+		ReadVarInt(r, 0)
 	}
 }
 
@@ -125,7 +123,7 @@ func BenchmarkReadVarInt5(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarInt(r, 0)
+		ReadVarInt(r, 0)
 	}
 }
 
@@ -136,7 +134,7 @@ func BenchmarkReadVarInt9(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarInt(r, 0)
+		ReadVarInt(r, 0)
 	}
 }
 
@@ -147,7 +145,7 @@ func BenchmarkReadVarStr4(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarString(r, 0)
+		ReadVarString(r, 0)
 	}
 }
 
@@ -158,7 +156,7 @@ func BenchmarkReadVarStr10(b *testing.B) {
 	r := bytes.NewReader(buf)
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		encoder.ReadVarString(r, 0)
+		ReadVarString(r, 0)
 	}
 }
 
@@ -166,7 +164,7 @@ func BenchmarkReadVarStr10(b *testing.B) {
 // four byte variable length string.
 func BenchmarkWriteVarStr4(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarString(ioutil.Discard, 0, "test")
+		WriteVarString(ioutil.Discard, 0, "test")
 	}
 }
 
@@ -174,7 +172,7 @@ func BenchmarkWriteVarStr4(b *testing.B) {
 // ten byte variable length string.
 func BenchmarkWriteVarStr10(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder.WriteVarString(ioutil.Discard, 0, "test012345")
+		WriteVarString(ioutil.Discard, 0, "test012345")
 	}
 }
 
@@ -508,12 +506,12 @@ func BenchmarkDecodeInv(b *testing.B) {
 	// Create a message with the maximum number of entries.
 	pver := ProtocolVersion
 	var m MsgInv
-	for i := 0; i < types.MaxInvPerMsg; i++ {
+	for i := 0; i < MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(types.NewInvVect(types.InvTypeBlock, hash))
+		m.AddInvVect(NewInvVect(InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.
@@ -538,12 +536,12 @@ func BenchmarkDecodeNotFound(b *testing.B) {
 	// Create a message with the maximum number of entries.
 	pver := ProtocolVersion
 	var m MsgNotFound
-	for i := 0; i < types.MaxInvPerMsg; i++ {
+	for i := 0; i < MaxInvPerMsg; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
-		m.AddInvVect(types.NewInvVect(types.InvTypeBlock, hash))
+		m.AddInvVect(NewInvVect(InvTypeBlock, hash))
 	}
 
 	// Serialize it so the bytes are available to test the decode below.

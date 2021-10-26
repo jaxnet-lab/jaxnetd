@@ -13,14 +13,13 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // TestFilterLarge ensures a maximum sized filter can be created.
 func TestFilterLarge(t *testing.T) {
-	f := bloom.NewFilter(100000000, 0, 0.01, types.BloomUpdateNone)
+	f := bloom.NewFilter(100000000, 0, 0.01, wire.BloomUpdateNone)
 	if len(f.MsgFilterLoad().Filter) > wire.MaxFilterLoadFilterSize {
 		t.Errorf("TestFilterLarge test failed: %d > %d",
 			len(f.MsgFilterLoad().Filter), wire.MaxFilterLoadFilterSize)
@@ -59,7 +58,7 @@ func TestFilterInsert(t *testing.T) {
 		{"b9300670b4c5366e95b2699e8b18bc75e5f729c5", true},
 	}
 
-	f := bloom.NewFilter(3, 0, 0.01, types.BloomUpdateAll)
+	f := bloom.NewFilter(3, 0, 0.01, wire.BloomUpdateAll)
 
 	for i, test := range tests {
 		data, err := hex.DecodeString(test.hex)
@@ -112,19 +111,19 @@ func TestFilterFPRange(t *testing.T) {
 			name:   "fprates > 1 should be clipped at 1",
 			hash:   "02981fa052f0481dbc5868f4fc2166035a10f27a03cfd2de67326471df5bc041",
 			want:   "00000000000000000001",
-			filter: bloom.NewFilter(1, 0, 20.9999999769, types.BloomUpdateAll),
+			filter: bloom.NewFilter(1, 0, 20.9999999769, wire.BloomUpdateAll),
 		},
 		{
 			name:   "fprates less than 1e-9 should be clipped at min",
 			hash:   "02981fa052f0481dbc5868f4fc2166035a10f27a03cfd2de67326471df5bc041",
 			want:   "0566d97a91a91b0000000000000001",
-			filter: bloom.NewFilter(1, 0, 0, types.BloomUpdateAll),
+			filter: bloom.NewFilter(1, 0, 0, wire.BloomUpdateAll),
 		},
 		{
 			name:   "negative fprates should be clipped at min",
 			hash:   "02981fa052f0481dbc5868f4fc2166035a10f27a03cfd2de67326471df5bc041",
 			want:   "0566d97a91a91b0000000000000001",
-			filter: bloom.NewFilter(1, 0, -1, types.BloomUpdateAll),
+			filter: bloom.NewFilter(1, 0, -1, wire.BloomUpdateAll),
 		},
 	}
 
@@ -173,7 +172,7 @@ func TestFilterInsertWithTweak(t *testing.T) {
 		{"b9300670b4c5366e95b2699e8b18bc75e5f729c5", true},
 	}
 
-	f := bloom.NewFilter(3, 2147483649, 0.01, types.BloomUpdateAll)
+	f := bloom.NewFilter(3, 2147483649, 0.01, wire.BloomUpdateAll)
 
 	for i, test := range tests {
 		data, err := hex.DecodeString(test.hex)
@@ -223,7 +222,7 @@ func TestFilterInsertKey(t *testing.T) {
 		return
 	}
 
-	f := bloom.NewFilter(2, 0, 0.001, types.BloomUpdateAll)
+	f := bloom.NewFilter(2, 0, 0.001, wire.BloomUpdateAll)
 	f.Add(wif.SerializePubKey())
 	f.Add(jaxutil.Hash160(wif.SerializePubKey()))
 
@@ -302,7 +301,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		return
 	}
 
-	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr := "b4749f017444b051c44dfd2720e88f314ff94f3dd6d56d40ef65854fcd7fff6b"
 	hash, err := chainhash.NewHashFromStr(inputStr)
 	if err != nil {
@@ -314,7 +313,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match hash %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "6bff7fcd4f8565ef406dd5d63d4ff94f318fe82027fd4dc451b04474019f74b4"
 	hashBytes, err := hex.DecodeString(inputStr)
 	if err != nil {
@@ -326,7 +325,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match hash %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "30450220070aca44506c5cef3a16ed519d7c3c39f8aab192c4e1c90d065" +
 		"f37b8a4af6141022100a8e160b856c2d43d27d8fba71e5aef6405b8643" +
 		"ac4cb7cb3c462aced7f14711a01"
@@ -340,7 +339,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match input signature %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "046d11fee51b0e60666d5049a9101a72741df480b96ee26488a4d3466b95" +
 		"c9a40ac5eeef87e10a5cd336c19a84565f80fa6c547957b7700ff4dfbdefe" +
 		"76036c339"
@@ -354,7 +353,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match input pubkey %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "04943fdd508053c75000106d3bc6e2754dbcff19"
 	hashBytes, err = hex.DecodeString(inputStr)
 	if err != nil {
@@ -369,7 +368,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch spendingTx didn't match output address %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "a266436d2965547608b9e15d9032a7b9d64fa431"
 	hashBytes, err = hex.DecodeString(inputStr)
 	if err != nil {
@@ -381,7 +380,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match output address %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "90c122d70786e899529d71dbeba91ba216982fb6ba58f3bdaab65e73b7e9260b"
 	hash, err = chainhash.NewHashFromStr(inputStr)
 	if err != nil {
@@ -394,7 +393,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch didn't match outpoint %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "00000009e784f32f62ef849763d4f45b98e07ba658647343b915ff832b110436"
 	hash, err = chainhash.NewHashFromStr(inputStr)
 	if err != nil {
@@ -406,7 +405,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch matched hash %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "0000006d2965547608b9e15d9032a7b9d64fa431"
 	hashBytes, err = hex.DecodeString(inputStr)
 	if err != nil {
@@ -418,7 +417,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch matched address %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "90c122d70786e899529d71dbeba91ba216982fb6ba58f3bdaab65e73b7e9260b"
 	hash, err = chainhash.NewHashFromStr(inputStr)
 	if err != nil {
@@ -431,7 +430,7 @@ func TestFilterBloomMatch(t *testing.T) {
 		t.Errorf("TestFilterBloomMatch matched outpoint %s", inputStr)
 	}
 
-	f = bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f = bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 	inputStr = "000000d70786e899529d71dbeba91ba216982fb6ba58f3bdaab65e73b7e9260b"
 	hash, err = chainhash.NewHashFromStr(inputStr)
 	if err != nil {
@@ -446,7 +445,7 @@ func TestFilterBloomMatch(t *testing.T) {
 }
 
 func TestFilterInsertUpdateNone(t *testing.T) {
-	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateNone)
+	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateNone)
 
 	// Add the generation pubkey
 	inputStr := "04eaafc2314def4ca98ac970241bcab022b9c1e1f4ea423a20f134c" +
@@ -594,7 +593,7 @@ func TestFilterInsertP2PubKeyOnly(t *testing.T) {
 		return
 	}
 
-	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateP2PubkeyOnly)
+	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateP2PubkeyOnly)
 
 	// Generation pubkey
 	inputStr := "04eaafc2314def4ca98ac970241bcab022b9c1e1f4ea423a20f134c" +
@@ -647,7 +646,7 @@ func TestFilterInsertP2PubKeyOnly(t *testing.T) {
 }
 
 func TestFilterReload(t *testing.T) {
-	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 
 	bFilter := bloom.LoadFilter(f.MsgFilterLoad())
 	if bFilter.MsgFilterLoad() == nil {

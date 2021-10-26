@@ -12,13 +12,12 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // TestBlockHeader tests the BlockHeader API.
 func TestBlockHeader(t *testing.T) {
-	nonce64, err := encoder.RandomUint64()
+	nonce64, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}

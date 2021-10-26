@@ -21,36 +21,39 @@ import (
 // However, the returned snapshot must be treated as immutable since it is
 // shared by all callers.
 type BestState struct {
-	Hash          chainhash.Hash // The hash of the block.
-	Height        int32          // The height of the block.
-	Bits          uint32         // The difficulty bits of the block.
-	K             uint32         // The K coefficient.
-	Shards        uint32         // The last known number of Shards.
-	BlockSize     uint64         // The size of the block.
-	BlockWeight   uint64         // The weight of the block.
-	NumTxns       uint64         // The number of txns in the block.
-	TotalTxns     uint64         // The total number of txns in the chain.
-	MedianTime    time.Time      // Median time as per CalcPastMedianTime.
-	BlocksMMRRoot chainhash.Hash // Actual root of the MMR Tree.
-	LastSerialID  int64
+	Hash           chainhash.Hash // The hash of the block.
+	Height         int32          // The height of the block.
+	Bits           uint32         // The difficulty bits of the block.
+	K              uint32         // The K coefficient.
+	Shards         uint32         // The last known number of Shards.
+	BlockSize      uint64         // The size of the block.
+	BlockWeight    uint64         // The weight of the block.
+	NumTxns        uint64         // The number of txns in the block.
+	TotalTxns      uint64         // The total number of txns in the chain.
+	MedianTime     time.Time      // Median time as per CalcPastMedianTime.
+	LastSerialID   int64
+	CurrentMMRRoot chainhash.Hash // Actual root of the MMR Tree.
+	ChainWeight    uint64
 }
 
 // NewBestState returns a new best stats instance for the given parameters.
-func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash, blockSize, blockWeight, numTxns,
-	totalTxns uint64, medianTime time.Time, lastSerialID int64) *BestState {
+func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash,
+	blockSize, blockWeight, chainWeight, numTxns, totalTxns uint64,
+	medianTime time.Time, lastSerialID int64) *BestState {
 
 	return &BestState{
-		Hash:          node.GetHash(),
-		BlocksMMRRoot: actualMMRRoot,
-		Height:        node.Height(),
-		Bits:          node.Bits(),
-		K:             node.Header().BeaconHeader().K(),
-		Shards:        node.Header().BeaconHeader().Shards(),
-		BlockSize:     blockSize,
-		BlockWeight:   blockWeight,
-		NumTxns:       numTxns,
-		TotalTxns:     totalTxns,
-		MedianTime:    medianTime,
-		LastSerialID:  lastSerialID,
+		Hash:           node.GetHash(),
+		CurrentMMRRoot: actualMMRRoot,
+		Height:         node.Height(),
+		Bits:           node.Bits(),
+		K:              node.Header().BeaconHeader().K(),
+		Shards:         node.Header().BeaconHeader().Shards(),
+		BlockSize:      blockSize,
+		BlockWeight:    blockWeight,
+		NumTxns:        numTxns,
+		TotalTxns:      totalTxns,
+		MedianTime:     medianTime,
+		LastSerialID:   lastSerialID,
+		ChainWeight:    chainWeight,
 	}
 }

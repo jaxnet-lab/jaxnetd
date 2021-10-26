@@ -29,14 +29,13 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = types.MainNet
+	blockDataNet = wire.MainNet
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.
@@ -48,7 +47,7 @@ var (
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*jaxutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network wire.JaxNet) ([]*jaxutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {

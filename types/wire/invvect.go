@@ -3,7 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package types
+package wire
 
 import (
 	"fmt"
@@ -33,6 +33,7 @@ const (
 	InvTypeTx                   InvType = 1
 	InvTypeBlock                InvType = 2
 	InvTypeFilteredBlock        InvType = 3
+	InvTypeMMRRoot              InvType = 4
 	InvTypeWitnessBlock         InvType = InvTypeBlock | InvWitnessFlag
 	InvTypeWitnessTx            InvType = InvTypeTx | InvWitnessFlag
 	InvTypeFilteredWitnessBlock InvType = InvTypeFilteredBlock | InvWitnessFlag
@@ -43,6 +44,7 @@ var ivStrings = map[InvType]string{
 	InvTypeError:                "ERROR",
 	InvTypeTx:                   "MSG_TX",
 	InvTypeBlock:                "MSG_BLOCK",
+	InvTypeMMRRoot:              "MSG_MMR_ROOT",
 	InvTypeFilteredBlock:        "MSG_FILTERED_BLOCK",
 	InvTypeWitnessBlock:         "MSG_WITNESS_BLOCK",
 	InvTypeWitnessTx:            "MSG_WITNESS_TX",
@@ -73,5 +75,3 @@ func NewInvVect(typ InvType, hash *chainhash.Hash) *InvVect {
 		Hash: *hash,
 	}
 }
-
-//

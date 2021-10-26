@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -45,11 +44,11 @@ func newGenesisDataState() *genesisDataState {
 
 var (
 	stateLock      sync.RWMutex
-	genesisStorage = map[types.JaxNet]*genesisDataState{
-		types.MainNet:     newGenesisDataState(),
-		types.TestNet:     newGenesisDataState(),
-		types.FastTestNet: newGenesisDataState(),
-		types.SimNet:      newGenesisDataState(),
+	genesisStorage = map[wire.JaxNet]*genesisDataState{
+		wire.MainNet:     newGenesisDataState(),
+		wire.TestNet:     newGenesisDataState(),
+		wire.FastTestNet: newGenesisDataState(),
+		wire.SimNet:      newGenesisDataState(),
 	}
 )
 
@@ -61,7 +60,7 @@ func cleanState() {
 	stateLock.Unlock()
 }
 
-func genesisMerkleRoot(name types.JaxNet) chainhash.Hash {
+func genesisMerkleRoot(name wire.JaxNet) chainhash.Hash {
 	state := genesisStorage[name]
 
 	if state.genesisMerkleRoot != nil {
@@ -76,7 +75,7 @@ func genesisMerkleRoot(name types.JaxNet) chainhash.Hash {
 	return txHash
 }
 
-func beaconGenesisHash(name types.JaxNet) *chainhash.Hash {
+func beaconGenesisHash(name wire.JaxNet) *chainhash.Hash {
 	state := genesisStorage[name]
 
 	if state.genesisHash != nil {
@@ -87,7 +86,7 @@ func beaconGenesisHash(name types.JaxNet) *chainhash.Hash {
 	return state.genesisHash
 }
 
-func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
+func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 	stateLock.Lock()
 	defer stateLock.Unlock()
 	state := genesisStorage[name]
@@ -98,7 +97,7 @@ func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 
 	var opts GenesisBlockOpts
 	switch name {
-	case types.TestNet:
+	case wire.TestNet:
 		opts = GenesisBlockOpts{
 			Version:   1,
 			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
@@ -107,7 +106,7 @@ func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 			Nonce:     0x18aea41a, // 414098458
 		}
 
-	case types.FastTestNet:
+	case wire.FastTestNet:
 		opts = GenesisBlockOpts{
 			Version:   1,
 			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
@@ -115,7 +114,7 @@ func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 			Bits:      0x1e0fffff,
 			Nonce:     0x18aea41a,
 		}
-	case types.SimNet:
+	case wire.SimNet:
 		opts = GenesisBlockOpts{
 			Version:   1,
 			PrevBlock: chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
@@ -156,14 +155,14 @@ func beaconGenesisBlock(name types.JaxNet) *wire.MsgBlock {
 
 }
 
-func shardGenesisHash(name types.JaxNet, shardID uint32) *chainhash.Hash {
+func shardGenesisHash(name wire.JaxNet, shardID uint32) *chainhash.Hash {
 	state := genesisStorage[name]
 
 	hash := state.shardGenesisHash[shardID]
 	return &hash
 }
 
-func shardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
+func shardGenesisBlock(name wire.JaxNet, shardID uint32) *wire.MsgBlock {
 	stateLock.RLock()
 	defer stateLock.RUnlock()
 	state := genesisStorage[name]
@@ -171,7 +170,7 @@ func shardGenesisBlock(name types.JaxNet, shardID uint32) *wire.MsgBlock {
 	return &shardBlock
 }
 
-func setShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
+func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.MsgBlock) *wire.MsgBlock {
 	stateLock.Lock()
 	defer stateLock.Unlock()
 
@@ -186,9 +185,9 @@ func setShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 
 	var bits uint32
 	switch name {
-	case types.TestNet:
+	case wire.TestNet:
 		bits = testNetPowLimitBitsShard
-	case types.MainNet:
+	case wire.MainNet:
 		bits = mainNetPowLimitBitsShard
 	default:
 		bits = fastnetShardPoWBits
@@ -216,7 +215,7 @@ func setShardGenesisBlock(name types.JaxNet, shardID uint32, beaconBlock *wire.M
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
-func genesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
+func genesisCoinbaseTx(name wire.JaxNet) wire.MsgTx {
 	state := genesisStorage[name]
 
 	if state.genesisTx != nil {
@@ -227,7 +226,7 @@ func genesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 
 	txHex := ""
 	switch name {
-	case types.FastTestNet:
+	case wire.FastTestNet:
 		txHex = fastNetGenesisTxHex
 	default:
 		state.genesisTx = mainNetgenesisCoinbaseTx
@@ -246,7 +245,7 @@ func genesisCoinbaseTx(name types.JaxNet) wire.MsgTx {
 	return *state.genesisTx
 }
 
-func shardGenesisCoinbaseTx(name types.JaxNet, shardID uint32) wire.MsgTx {
+func shardGenesisCoinbaseTx(name wire.JaxNet, shardID uint32) wire.MsgTx {
 	state := genesisStorage[name]
 	tx, ok := state.shardsGenesisTx[shardID]
 	if ok {

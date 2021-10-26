@@ -14,8 +14,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 const (
@@ -67,7 +67,7 @@ func validDbType(dbType string) bool {
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
-	case types.TestNet:
+	case wire.TestNet:
 		return "testnet"
 	default:
 		return chainParams.Name

@@ -8,7 +8,6 @@ package wire
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"io"
 )
 
@@ -79,7 +78,7 @@ const maxSignatureSize = 72
 //
 // MessagePayload = VarInt(Alert) + Alert + VarInt(Signature) + Signature
 // MaxMessagePayload = maxAlertSize + max(VarInt) + maxSignatureSize + 1
-const maxAlertSize = MaxMessagePayload - maxSignatureSize - encoder.MaxVarIntPayload - 1
+const maxAlertSize = MaxMessagePayload - maxSignatureSize - MaxVarIntPayload - 1
 
 // maxCountSetCancel is the maximum number of cancel IDs that could possibly
 // fit into a maximum size alert.
@@ -88,7 +87,7 @@ const maxAlertSize = MaxMessagePayload - maxSignatureSize - encoder.MaxVarIntPay
 // for caculating maximum number of cancel IDs, set all other var  sizes to 0
 // maxAlertSize = fixedAlertSize + (MaxVarIntPayload-1) + x*sizeOf(int32)
 // x = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 4
-const maxCountSetCancel = (maxAlertSize - fixedAlertSize - encoder.MaxVarIntPayload + 1) / 4
+const maxCountSetCancel = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 4
 
 // maxCountSetSubVer is the maximum number of subversions that could possibly
 // fit into a maximum size alert.
@@ -99,7 +98,7 @@ const maxCountSetCancel = (maxAlertSize - fixedAlertSize - encoder.MaxVarIntPayl
 // x = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / sizeOf(string)
 // subversion would typically be something like "/Satoshi:0.7.2/" (15 bytes)
 // so assuming < 255 bytes, sizeOf(string) = sizeOf(uint8) + 255 = 256
-const maxCountSetSubVer = (maxAlertSize - fixedAlertSize - encoder.MaxVarIntPayload + 1) / 256
+const maxCountSetSubVer = (maxAlertSize - fixedAlertSize - MaxVarIntPayload + 1) / 256
 
 // Alert contains the data deserialized from the MsgAlert payload.
 type Alert struct {
@@ -151,7 +150,7 @@ type Alert struct {
 
 // Serialize encodes the alert to w using the alert protocol encoding format.
 func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
-	err := encoder.WriteElements(w, alert.Version, alert.RelayUntil,
+	err := WriteElements(w, alert.Version, alert.RelayUntil,
 		alert.Expiration, alert.ID, alert.Cancel)
 	if err != nil {
 		return err
@@ -161,20 +160,20 @@ func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
 	if count > maxCountSetCancel {
 		str := fmt.Sprintf("too many cancel alert IDs for alert "+
 			"[count %v, max %v]", count, maxCountSetCancel)
-		return messageError("Alert.Serialize", str)
+		return Error("Alert.Serialize", str)
 	}
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 	for i := 0; i < count; i++ {
-		err = encoder.WriteElement(w, alert.SetCancel[i])
+		err = WriteElement(w, alert.SetCancel[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = encoder.WriteElements(w, alert.MinVer, alert.MaxVer)
+	err = WriteElements(w, alert.MinVer, alert.MaxVer)
 	if err != nil {
 		return err
 	}
@@ -183,38 +182,38 @@ func (alert *Alert) Serialize(w io.Writer, pver uint32) error {
 	if count > maxCountSetSubVer {
 		str := fmt.Sprintf("too many sub versions for alert "+
 			"[count %v, max %v]", count, maxCountSetSubVer)
-		return messageError("Alert.Serialize", str)
+		return Error("Alert.Serialize", str)
 	}
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 	for i := 0; i < count; i++ {
-		err = encoder.WriteVarString(w, pver, alert.SetSubVer[i])
+		err = WriteVarString(w, pver, alert.SetSubVer[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = encoder.WriteElement(w, alert.Priority)
+	err = WriteElement(w, alert.Priority)
 	if err != nil {
 		return err
 	}
-	err = encoder.WriteVarString(w, pver, alert.Comment)
+	err = WriteVarString(w, pver, alert.Comment)
 	if err != nil {
 		return err
 	}
-	err = encoder.WriteVarString(w, pver, alert.StatusBar)
+	err = WriteVarString(w, pver, alert.StatusBar)
 	if err != nil {
 		return err
 	}
-	return encoder.WriteVarString(w, pver, alert.Reserved)
+	return WriteVarString(w, pver, alert.Reserved)
 }
 
 // Deserialize decodes from r into the receiver using the alert protocol
 // encoding format.
 func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
-	err := encoder.ReadElements(r, &alert.Version, &alert.RelayUntil,
+	err := ReadElements(r, &alert.Version, &alert.RelayUntil,
 		&alert.Expiration, &alert.ID, &alert.Cancel)
 	if err != nil {
 		return err
@@ -223,60 +222,60 @@ func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
 	// SetCancel: first read a VarInt that contains
 	// count - the number of Cancel IDs, then
 	// iterate count times and read them
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 	if count > maxCountSetCancel {
 		str := fmt.Sprintf("too many cancel alert IDs for alert "+
 			"[count %v, max %v]", count, maxCountSetCancel)
-		return messageError("Alert.Deserialize", str)
+		return Error("Alert.Deserialize", str)
 	}
 	alert.SetCancel = make([]int32, count)
 	for i := 0; i < int(count); i++ {
-		err := encoder.ReadElement(r, &alert.SetCancel[i])
+		err := ReadElement(r, &alert.SetCancel[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err = encoder.ReadElements(r, &alert.MinVer, &alert.MaxVer)
+	err = ReadElements(r, &alert.MinVer, &alert.MaxVer)
 	if err != nil {
 		return err
 	}
 
 	// SetSubVer: similar to SetCancel
 	// but read count number of sub-version strings
-	count, err = encoder.ReadVarInt(r, pver)
+	count, err = ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 	if count > maxCountSetSubVer {
 		str := fmt.Sprintf("too many sub versions for alert "+
 			"[count %v, max %v]", count, maxCountSetSubVer)
-		return messageError("Alert.Deserialize", str)
+		return Error("Alert.Deserialize", str)
 	}
 	alert.SetSubVer = make([]string, count)
 	for i := 0; i < int(count); i++ {
-		alert.SetSubVer[i], err = encoder.ReadVarString(r, pver)
+		alert.SetSubVer[i], err = ReadVarString(r, pver)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = encoder.ReadElement(r, &alert.Priority)
+	err = ReadElement(r, &alert.Priority)
 	if err != nil {
 		return err
 	}
-	alert.Comment, err = encoder.ReadVarString(r, pver)
+	alert.Comment, err = ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
-	alert.StatusBar, err = encoder.ReadVarString(r, pver)
+	alert.StatusBar, err = ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
-	alert.Reserved, err = encoder.ReadVarString(r, pver)
+	alert.Reserved, err = ReadVarString(r, pver)
 	return err
 }
 
@@ -335,10 +334,10 @@ type MsgAlert struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	var err error
 
-	msg.SerializedPayload, err = encoder.ReadVarBytes(r, pver, MaxMessagePayload,
+	msg.SerializedPayload, err = ReadVarBytes(r, pver, MaxMessagePayload,
 		"alert serialized payload")
 	if err != nil {
 		return err
@@ -349,14 +348,14 @@ func (msg *MsgAlert) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnco
 		msg.Payload = nil
 	}
 
-	msg.Signature, err = encoder.ReadVarBytes(r, pver, MaxMessagePayload,
+	msg.Signature, err = ReadVarBytes(r, pver, MaxMessagePayload,
 		"alert signature")
 	return err
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	var err error
 	var serializedpayload []byte
 	if msg.Payload != nil {
@@ -375,13 +374,13 @@ func (msg *MsgAlert) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEnco
 	}
 	slen := uint64(len(serializedpayload))
 	if slen == 0 {
-		return messageError("MsgAlert.BtcEncode", "empty serialized payload")
+		return Error("MsgAlert.BtcEncode", "empty serialized payload")
 	}
-	err = encoder.WriteVarBytes(w, pver, serializedpayload)
+	err = WriteVarBytes(w, pver, serializedpayload)
 	if err != nil {
 		return err
 	}
-	return encoder.WriteVarBytes(w, pver, msg.Signature)
+	return WriteVarBytes(w, pver, msg.Signature)
 }
 
 // Command returns the protocol command string for the message.  This is part

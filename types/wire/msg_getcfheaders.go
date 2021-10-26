@@ -8,7 +8,6 @@ package wire
 import (
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -23,34 +22,34 @@ type MsgGetCFHeaders struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgGetCFHeaders) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
-	err := encoder.ReadElement(r, &msg.FilterType)
+func (msg *MsgGetCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
+	err := ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.ReadElement(r, &msg.StartHeight)
+	err = ReadElement(r, &msg.StartHeight)
 	if err != nil {
 		return err
 	}
 
-	return encoder.ReadElement(r, &msg.StopHash)
+	return ReadElement(r, &msg.StopHash)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgGetCFHeaders) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
-	err := encoder.WriteElement(w, msg.FilterType)
+func (msg *MsgGetCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+	err := WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, &msg.StartHeight)
+	err = WriteElement(w, &msg.StartHeight)
 	if err != nil {
 		return err
 	}
 
-	return encoder.WriteElement(w, &msg.StopHash)
+	return WriteElement(w, &msg.StopHash)
 }
 
 // Command returns the protocol command string for the message.  This is part

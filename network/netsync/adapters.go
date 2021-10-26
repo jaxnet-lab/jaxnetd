@@ -9,7 +9,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -116,7 +115,7 @@ type P2PConnManager interface {
 	// AddRebroadcastInventory adds the provided inventory to the list of
 	// inventories to be rebroadcast at random intervals until they show up
 	// in a block.
-	AddRebroadcastInventory(iv *types.InvVect, data interface{})
+	AddRebroadcastInventory(iv *wire.InvVect, data interface{})
 
 	// RelayTransactions generates and relays inventory vectors for all of
 	// the passed transactions to all connected peers.

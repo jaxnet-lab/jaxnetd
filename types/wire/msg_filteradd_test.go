@@ -10,8 +10,6 @@ import (
 	"io"
 	"reflect"
 	"testing"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // TestFilterAddLatest tests the MsgFilterAdd API against the latest protocol
@@ -104,13 +102,13 @@ func TestFilterAddWireErrors(t *testing.T) {
 	baseFilterAddEncoded := append([]byte{0x04}, baseData...)
 
 	tests := []struct {
-		in       *MsgFilterAdd           // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgFilterAdd   // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in data size.

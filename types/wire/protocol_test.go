@@ -6,8 +6,6 @@
 package wire
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types"
-
 	"testing"
 )
 
@@ -43,12 +41,12 @@ func TestServiceFlagStringer(t *testing.T) {
 // TestBitcoinNetStringer tests the stringized output for bitcoin net types.
 func TestBitcoinNetStringer(t *testing.T) {
 	tests := []struct {
-		in   types.JaxNet
+		in   JaxNet
 		want string
 	}{
-		{types.MainNet, "MainNet"},
-		{types.TestNet, "TestNet"},
-		{types.SimNet, "SimNet"},
+		{MainNet, "MainNet"},
+		{TestNet, "TestNet"},
+		{SimNet, "SimNet"},
 		{0xffffffff, "Unknown JaxNet (4294967295)"},
 	}
 

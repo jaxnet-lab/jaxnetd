@@ -15,7 +15,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -786,8 +785,8 @@ mempoolLoop:
 	// Now that the actual transactions have been selected, update the
 	// block weight for the real transaction count and coinbase value with
 	// the total fees accordingly.
-	blockWeight -= encoder.MaxVarIntPayload -
-		(uint32(encoder.VarIntSerializeSize(uint64(len(blockTxns)))) * chaindata.WitnessScaleFactor)
+	blockWeight -= wire.MaxVarIntPayload -
+		(uint32(wire.VarIntSerializeSize(uint64(len(blockTxns)))) * chaindata.WitnessScaleFactor)
 
 	if g.chainCtx.IsBeacon() {
 		coinbaseTx.MsgTx().TxOut[3].Value += totalFees

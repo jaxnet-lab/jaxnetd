@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // simNetPowLimit is the highest proof of work value a Bitcoin block
@@ -26,7 +26,7 @@ var simNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 // just turn into another public testnet.
 var SimNetParams = Params{
 	Name:             "simnet",
-	Net:              types.SimNet,
+	Net:              wire.SimNet,
 	DefaultPort:      "18555",
 	DNSSeeds:         []DNSSeed{}, // NOTE: There must NOT be any seeds.
 	IsBeacon:         true,

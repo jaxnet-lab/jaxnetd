@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/btcec"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -512,7 +511,7 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		// the original script, with all code separators removed,
 		// serialized with a var int length prefix.
 		rawScript, _ := unparseScript(subScript)
-		encoder.WriteVarBytes(&sigHash, 0, rawScript)
+		wire.WriteVarBytes(&sigHash, 0, rawScript)
 	}
 
 	// Next, add the input amount, and sequence number of the input being

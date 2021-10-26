@@ -12,7 +12,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -234,7 +233,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 		// If the inventory is a block and the peer prefers headers,
 		// generate and send a headers message instead of an inventory
 		// message.
-		if msg.InvVect.Type == types.InvTypeBlock && sp.WantsHeaders() {
+		if msg.InvVect.Type == wire.InvTypeBlock && sp.WantsHeaders() {
 			blockHeader, ok := msg.Data.(wire.BlockHeader)
 			if !ok {
 				server.logger.Warn().Msgf("Underlying data for headers" +
@@ -250,7 +249,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 			return
 		}
 
-		if msg.InvVect.Type == types.InvTypeTx {
+		if msg.InvVect.Type == wire.InvTypeTx {
 			// Don't relay the transaction to the peer when it has
 			// transaction relaying disabled.
 			if sp.relayTxDisabled() {

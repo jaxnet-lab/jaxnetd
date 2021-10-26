@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -98,11 +96,11 @@ func TestMsgAlertWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgAlert               // Message to encode
-		out  *MsgAlert               // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgAlert       // Message to encode
+		out  *MsgAlert       // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -197,13 +195,13 @@ func TestMsgAlertWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgAlert               // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgAlert       // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in payload length.
 		{baseMsgAlert, baseMsgAlertEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},

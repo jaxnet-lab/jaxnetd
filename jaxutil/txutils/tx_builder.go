@@ -14,7 +14,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -59,8 +58,8 @@ func EstimateFee(inCount, outCount int, feeRate int64, addChange bool, shardID u
 	// Version 4 bytes + LockTime 4 bytes + Serialized varint size for the
 	// number of transaction inputs and outputs.
 	baseSize := 8 +
-		encoder.VarIntSerializeSize(uint64(inCount)) +
-		encoder.VarIntSerializeSize(uint64(outCount)) +
+		wire.VarIntSerializeSize(uint64(inCount)) +
+		wire.VarIntSerializeSize(uint64(outCount)) +
 		TxInEstWeight*inCount +
 		TxOutEstWeight*outCount
 

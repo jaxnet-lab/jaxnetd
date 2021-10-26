@@ -9,7 +9,6 @@ import (
 	"math"
 
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -242,7 +241,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 	limitExceeded = b.chain.Params().InitialExpansionLimit > 0 &&
 		(uint32(b.chain.Params().InitialExpansionLimit) < prevNode.Header().BeaconHeader().Shards())
 
-	if b.chain.Params().Net != types.MainNet {
+	if b.chain.Params().Net != wire.MainNet {
 		// at the testnet and dev-nets number of shards must be strictly limited
 		allowed := !limitExceeded && (prevHeight%b.chain.Params().InitialExpansionRule) == 0 && prevHeight != 0
 		if b.chain.Params().AutoExpand && allowed {

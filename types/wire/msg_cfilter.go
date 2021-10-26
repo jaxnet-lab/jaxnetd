@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -38,45 +37,45 @@ type MsgCFilter struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFilter) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	// Read filter type
-	err := encoder.ReadElement(r, &msg.FilterType)
+	err := ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Read the hash of the filter's block
-	err = encoder.ReadElement(r, &msg.BlockHash)
+	err = ReadElement(r, &msg.BlockHash)
 	if err != nil {
 		return err
 	}
 
 	// Read filter data
-	msg.Data, err = encoder.ReadVarBytes(r, pver, MaxCFilterDataSize,
+	msg.Data, err = ReadVarBytes(r, pver, MaxCFilterDataSize,
 		"cfilter data")
 	return err
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFilter) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
 	size := len(msg.Data)
 	if size > MaxCFilterDataSize {
 		str := fmt.Sprintf("cfilter size too large for message [size %v, max %v]", size, MaxCFilterDataSize)
-		return messageError("MsgCFilter.BtcEncode", str)
+		return Error("MsgCFilter.BtcEncode", str)
 	}
 
-	err := encoder.WriteElement(w, msg.FilterType)
+	err := WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.BlockHash)
+	err = WriteElement(w, msg.BlockHash)
 	if err != nil {
 		return err
 	}
 
-	return encoder.WriteVarBytes(w, pver, msg.Data)
+	return WriteVarBytes(w, pver, msg.Data)
 }
 
 // Deserialize decodes a filter from r into the receiver using a format that is
@@ -104,7 +103,7 @@ func (msg *MsgCFilter) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgCFilter) MaxPayloadLength(pver uint32) uint32 {
-	return uint32(encoder.VarIntSerializeSize(MaxCFilterDataSize)) +
+	return uint32(VarIntSerializeSize(MaxCFilterDataSize)) +
 		MaxCFilterDataSize + chainhash.HashSize + 1
 }
 

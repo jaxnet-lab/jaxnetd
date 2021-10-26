@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -113,12 +112,12 @@ func TestBlockHash(t *testing.T) {
 // of transaction inputs and outputs and protocol versions.
 func TestBlockWire(t *testing.T) {
 	tests := []struct {
-		in     *MsgBlock               // Message to encode
-		out    *MsgBlock               // Expected decoded message
-		buf    []byte                  // Wire encoding
-		txLocs []TxLoc                 // Expected transaction locations
-		pver   uint32                  // Protocol version for wire encoding
-		enc    encoder.MessageEncoding // Message encoding format
+		in     *MsgBlock       // Message to encode
+		out    *MsgBlock       // Expected decoded message
+		buf    []byte          // Wire encoding
+		txLocs []TxLoc         // Expected transaction locations
+		pver   uint32          // Protocol version for wire encoding
+		enc    MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -171,13 +170,13 @@ func TestBlockWireErrors(t *testing.T) {
 	pver := uint32(60002)
 
 	tests := []struct {
-		in       *MsgBlock               // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgBlock       // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in version.
 		{&blockOne, blockOneBytes, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -358,10 +357,10 @@ func TestBlockOverflowErrors(t *testing.T) {
 	pver := uint32(70001)
 
 	tests := []struct {
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
-		err  error                   // Expected error
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
+		err  error           // Expected error
 	}{
 		// Block that claims to have ~uint64(0) transactions.
 		{

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -40,7 +39,7 @@ func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) error {
 	if len(msg.FilterHashes)+1 > MaxCFHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
-		return messageError("MsgCFHeaders.AddCFHash", str)
+		return Error("MsgCFHeaders.AddCFHash", str)
 	}
 
 	msg.FilterHashes = append(msg.FilterHashes, hash)
@@ -49,27 +48,27 @@ func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	// Read filter type
-	err := encoder.ReadElement(r, &msg.FilterType)
+	err := ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Read stop hash
-	err = encoder.ReadElement(r, &msg.StopHash)
+	err = ReadElement(r, &msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Read prev filter header
-	err = encoder.ReadElement(r, &msg.PrevFilterHeader)
+	err = ReadElement(r, &msg.PrevFilterHeader)
 	if err != nil {
 		return err
 	}
 
 	// Read number of filter headers
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -79,7 +78,7 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEn
 		str := fmt.Sprintf("too many committed filter headers for "+
 			"message [count %v, max %v]", count,
 			MaxBlockHeadersPerMsg)
-		return messageError("MsgCFHeaders.BtcDecode", str)
+		return Error("MsgCFHeaders.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of hashes to deserialize into in order to
@@ -87,7 +86,7 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEn
 	msg.FilterHashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		var cfh chainhash.Hash
-		err := encoder.ReadElement(r, &cfh)
+		err := ReadElement(r, &cfh)
 		if err != nil {
 			return err
 		}
@@ -99,21 +98,21 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEn
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
 	// Write filter type
-	err := encoder.WriteElement(w, msg.FilterType)
+	err := WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Write stop hash
-	err = encoder.WriteElement(w, msg.StopHash)
+	err = WriteElement(w, msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Write prev filter header
-	err = encoder.WriteElement(w, msg.PrevFilterHeader)
+	err = WriteElement(w, msg.PrevFilterHeader)
 	if err != nil {
 		return err
 	}
@@ -124,16 +123,16 @@ func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEn
 		str := fmt.Sprintf("too many committed filter headers for "+
 			"message [count %v, max %v]", count,
 			MaxBlockHeadersPerMsg)
-		return messageError("MsgCFHeaders.BtcEncode", str)
+		return Error("MsgCFHeaders.BtcEncode", str)
 	}
 
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, cfh := range msg.FilterHashes {
-		err := encoder.WriteElement(w, cfh)
+		err := WriteElement(w, cfh)
 		if err != nil {
 			return err
 		}
@@ -169,7 +168,7 @@ func (msg *MsgCFHeaders) Command() string {
 func (msg *MsgCFHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Hash size + filter type + num headers (varInt) +
 	// (header size * max headers).
-	return 1 + chainhash.HashSize + chainhash.HashSize + encoder.MaxVarIntPayload +
+	return 1 + chainhash.HashSize + chainhash.HashSize + MaxVarIntPayload +
 		(MaxCFHeaderPayload * MaxCFHeadersPerMsg)
 }
 

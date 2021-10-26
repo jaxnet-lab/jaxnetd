@@ -14,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	mmtree "gitlab.com/jaxnet/jaxnetd/types/merge_mining_tree"
@@ -102,7 +101,7 @@ func (c *ShardBlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHe
 
 	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), kVal)
 
-	if c.ctx.Params().Net != types.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
+	if c.ctx.Params().Net != wire.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
 		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
 	}
 

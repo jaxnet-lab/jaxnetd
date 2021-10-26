@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -111,7 +110,7 @@ type wsClient struct {
 func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
 	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
 
-	sessionID, err := encoder.RandomUint64()
+	sessionID, err := wire.RandomUint64()
 	if err != nil {
 		return nil, err
 	}

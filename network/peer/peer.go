@@ -23,8 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -232,7 +231,7 @@ type Config struct {
 	// peer will report a block height of 0, however it is good practice for
 	// peers to specify this so their currently best known is accurately
 	// reported.
-	NewestBlock HashFunc
+	NewestBlock func() *chaindata.BestState
 
 	// HostToNetAddress returns the netaddress for the given host. This can be
 	// nil in  which case the host will be parsed as an IP address.
@@ -342,7 +341,7 @@ func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, 
 type outMsg struct {
 	msg      wire.Message
 	doneChan chan<- struct{}
-	encoding encoder.MessageEncoding
+	encoding wire.MessageEncoding
 }
 
 // stallControlCmd represents the command of a stall control message.
@@ -394,7 +393,7 @@ type StatsSnap struct {
 
 // HashFunc is a function which returns a block hash, height and error
 // It is used as a callback to get newest block details.
-type HashFunc func() (hash *chainhash.Hash, height int32, err error)
+// type HashFunc func() (hash *chainhash.Hash, height int32, err error)
 
 // AddrFunc is a func which takes an address and returns a related address.
 type AddrFunc func(remoteAddr *wire.NetAddress) *wire.NetAddress
@@ -461,7 +460,7 @@ type Peer struct {
 	verAckReceived       bool
 	witnessEnabled       bool
 
-	wireEncoding encoder.MessageEncoding
+	wireEncoding wire.MessageEncoding
 
 	knownInventory     *mruInventoryMap
 	prevGetBlocksMtx   sync.Mutex
@@ -487,7 +486,7 @@ type Peer struct {
 	outputQueue   chan outMsg
 	sendQueue     chan outMsg
 	sendDoneQueue chan struct{}
-	outputInvChan chan *types.InvVect
+	outputInvChan chan *wire.InvVect
 	inQuit        chan struct{}
 	queueQuit     chan struct{}
 	outQuit       chan struct{}
@@ -563,7 +562,7 @@ func newPeerBase(origCfg *Config, inbound bool, chainCtx chainctx.IChainCtx) *Pe
 		outputQueue:     make(chan outMsg, outputBufferSize),
 		sendQueue:       make(chan outMsg, 1),   // nonblocking sync
 		sendDoneQueue:   make(chan struct{}, 1), // nonblocking sync
-		outputInvChan:   make(chan *types.InvVect, outputBufferSize),
+		outputInvChan:   make(chan *wire.InvVect, outputBufferSize),
 		inQuit:          make(chan struct{}),
 		queueQuit:       make(chan struct{}),
 		outQuit:         make(chan struct{}),
@@ -614,7 +613,7 @@ func (peer *Peer) UpdateLastAnnouncedBlock(blkHash *chainhash.Hash) {
 // for the peer.
 //
 // This function is safe for concurrent access.
-func (peer *Peer) AddKnownInventory(invVect *types.InvVect) {
+func (peer *Peer) AddKnownInventory(invVect *wire.InvVect) {
 	peer.knownInventory.Add(invVect)
 }
 
@@ -1115,7 +1114,7 @@ func (peer *Peer) handlePongMsg(msg *wire.MsgPong) {
 }
 
 // readMessage reads the next bitcoin message from the peer with logging.
-func (peer *Peer) readMessage(encoding encoder.MessageEncoding) (wire.Message, []byte, error) {
+func (peer *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, error) {
 	n, msg, buf, err := wire.ReadMessageWithEncodingN(peer.chain, peer.conn,
 		peer.ProtocolVersion(), peer.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&peer.bytesReceived, uint64(n))
@@ -1152,7 +1151,7 @@ func stringifyMsg(msg wire.Message) string {
 }
 
 // writeMessage sends a bitcoin message to the peer with logging.
-func (peer *Peer) writeMessage(msg wire.Message, enc encoder.MessageEncoding) error {
+func (peer *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error {
 	// Don't do anything if we're disconnecting.
 	if atomic.LoadInt32(&peer.disconnect) != 0 {
 		return nil
@@ -1672,8 +1671,8 @@ out:
 				// If this is a new block, then we'll blast it
 				// out immediately, sipping the inv trickle
 				// queue.
-				if iv.Type == types.InvTypeBlock ||
-					iv.Type == types.InvTypeWitnessBlock {
+				if iv.Type == wire.InvTypeBlock ||
+					iv.Type == wire.InvTypeWitnessBlock {
 
 					invMsg := wire.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
@@ -1697,7 +1696,7 @@ out:
 			// drain the inventory send queue.
 			invMsg := wire.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
-				iv := invSendQueue.Remove(e).(*types.InvVect)
+				iv := invSendQueue.Remove(e).(*wire.InvVect)
 
 				// Don't send inventory that became known after
 				// the initial check.
@@ -1790,12 +1789,10 @@ out:
 			case *wire.MsgPing:
 				// Only expects a pong message in later protocol
 				// versions.  Also set up statistics.
-				// if peer.ProtocolVersion() > wire.BIP0031Version {
 				peer.statsMtx.Lock()
 				peer.lastPingNonce = m.Nonce
 				peer.lastPingTime = time.Now()
 				peer.statsMtx.Unlock()
-				// }
 			}
 
 			peer.stallControl <- stallControlMsg{sccSendMessage, msg.msg}
@@ -1860,7 +1857,7 @@ out:
 	for {
 		select {
 		case <-pingTicker.C:
-			nonce, err := encoder.RandomUint64()
+			nonce, err := wire.RandomUint64()
 			if err != nil {
 				log.Error().Str("chain", peer.chain.Name()).Msgf("Not sending ping to %s: %v", peer, err)
 				continue
@@ -1887,7 +1884,7 @@ func (peer *Peer) QueueMessage(msg wire.Message, doneChan chan<- struct{}) {
 //
 // This function is safe for concurrent access.
 func (peer *Peer) QueueMessageWithEncoding(msg wire.Message, doneChan chan<- struct{},
-	encoding encoder.MessageEncoding) {
+	encoding wire.MessageEncoding) {
 
 	// Avoid risk of deadlock if goroutine already exited.  The goroutine
 	// we will be sending to hangs around until it knows for a fact that
@@ -1908,7 +1905,7 @@ func (peer *Peer) QueueMessageWithEncoding(msg wire.Message, doneChan chan<- str
 // Inventory that the peer is already known to have is ignored.
 //
 // This function is safe for concurrent access.
-func (peer *Peer) QueueInventory(invVect *types.InvVect) {
+func (peer *Peer) QueueInventory(invVect *wire.InvVect) {
 	// Don't add the inventory to the send queue if the peer is already
 	// known to have it.
 	if peer.knownInventory.Exists(invVect) {
@@ -2124,13 +2121,9 @@ func (peer *Peer) readRemoteVerAckMsg() error {
 // localVersionMsg creates a version message that can be used to send to the
 // remote peer.
 func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
-	var blockNum int32
+	var bestState = new(chaindata.BestState)
 	if peer.cfg.NewestBlock != nil {
-		var err error
-		_, blockNum, err = peer.cfg.NewestBlock()
-		if err != nil {
-			return nil, err
-		}
+		bestState = peer.cfg.NewestBlock()
 	}
 
 	theirNA := peer.na
@@ -2167,7 +2160,7 @@ func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	sentNonces.Add(nonce)
 
 	// Version message.
-	msg := wire.NewMsgVersion(peer.chain, ourNA, theirNA, nonce, blockNum)
+	msg := wire.NewMsgVersion(peer.chain, ourNA, theirNA, nonce, bestState.Height, bestState.ChainWeight)
 	msg.AddUserAgent(peer.cfg.UserAgentName, peer.cfg.UserAgentVersion,
 		peer.cfg.UserAgentComments...)
 

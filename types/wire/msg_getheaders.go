@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -40,7 +39,7 @@ func (msg *MsgGetHeaders) AddBlockLocatorHash(hash *chainhash.Hash) error {
 	if len(msg.BlockLocatorHashes)+1 > MaxBlockLocatorsPerMsg {
 		str := fmt.Sprintf("too many block locator hashes for message [max %v]",
 			MaxBlockLocatorsPerMsg)
-		return messageError("MsgGetHeaders.AddBlockLocatorHash", str)
+		return Error("MsgGetHeaders.AddBlockLocatorHash", str)
 	}
 
 	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, hash)
@@ -49,21 +48,21 @@ func (msg *MsgGetHeaders) AddBlockLocatorHash(hash *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgGetHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	err := encoder.ReadElement(r, &msg.ProtocolVersion)
+func (msg *MsgGetHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+	err := ReadElement(r, &msg.ProtocolVersion)
 	if err != nil {
 		return err
 	}
 
 	// Read num block locator hashes and limit to max.
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 	if count > MaxBlockLocatorsPerMsg {
 		str := fmt.Sprintf("too many block locator hashes for message "+
 			"[count %v, max %v]", count, MaxBlockLocatorsPerMsg)
-		return messageError("MsgGetHeaders.BtcDecode", str)
+		return Error("MsgGetHeaders.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of hashes to deserialize into in order to
@@ -72,45 +71,45 @@ func (msg *MsgGetHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.Messag
 	msg.BlockLocatorHashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		hash := &locatorHashes[i]
-		err := encoder.ReadElement(r, hash)
+		err := ReadElement(r, hash)
 		if err != nil {
 			return err
 		}
 		msg.AddBlockLocatorHash(hash)
 	}
 
-	return encoder.ReadElement(r, &msg.HashStop)
+	return ReadElement(r, &msg.HashStop)
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgGetHeaders) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgGetHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// Limit to max block locator hashes per message.
 	count := len(msg.BlockLocatorHashes)
 	if count > MaxBlockLocatorsPerMsg {
 		str := fmt.Sprintf("too many block locator hashes for message "+
 			"[count %v, max %v]", count, MaxBlockLocatorsPerMsg)
-		return messageError("MsgGetHeaders.BtcEncode", str)
+		return Error("MsgGetHeaders.BtcEncode", str)
 	}
 
-	err := encoder.WriteElement(w, msg.ProtocolVersion)
+	err := WriteElement(w, msg.ProtocolVersion)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, hash := range msg.BlockLocatorHashes {
-		err := encoder.WriteElement(w, hash)
+		err := WriteElement(w, hash)
 		if err != nil {
 			return err
 		}
 	}
 
-	return encoder.WriteElement(w, &msg.HashStop)
+	return WriteElement(w, &msg.HashStop)
 }
 
 // Command returns the protocol command string for the message.  This is part
@@ -124,7 +123,7 @@ func (msg *MsgGetHeaders) Command() string {
 func (msg *MsgGetHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Version 4 bytes + num block locator hashes (varInt) + max allowed block
 	// locators + hash stop.
-	return 4 + encoder.MaxVarIntPayload + (MaxBlockLocatorsPerMsg *
+	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg *
 		chainhash.HashSize) + chainhash.HashSize
 }
 

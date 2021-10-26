@@ -22,7 +22,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
@@ -287,7 +286,7 @@ func opReturnScript(data []byte) []byte {
 // uniqueOpReturnScript returns a standard provably-pruneable OP_RETURN script
 // with a random uint64 encoded as the data.
 func uniqueOpReturnScript() []byte {
-	rand, err := encoder.RandomUint64()
+	rand, err := wire.RandomUint64()
 	if err != nil {
 		panic(err)
 	}

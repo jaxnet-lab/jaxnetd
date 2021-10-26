@@ -11,8 +11,6 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -69,7 +67,7 @@ const (
 const (
 	// BaseEncoding encodes all messages in the default format specified
 	// for the Bitcoin wire protocol.
-	BaseEncoding encoder.MessageEncoding = 1 << iota
+	BaseEncoding MessageEncoding = 1 << iota
 
 	// WitnessEncoding encodes all messages other than transaction messages
 	// using the default Bitcoin wire protocol specification. For transaction
@@ -86,8 +84,8 @@ var LatestEncoding = WitnessEncoding
 // and may therefore contain additional or fewer fields than those which
 // are used directly in the protocol encoded message.
 type Message interface {
-	BtcDecode(io.Reader, uint32, encoder.MessageEncoding) error
-	BtcEncode(io.Writer, uint32, encoder.MessageEncoding) error
+	BtcDecode(io.Reader, uint32, MessageEncoding) error
+	BtcEncode(io.Writer, uint32, MessageEncoding) error
 	Command() string
 	MaxPayloadLength(uint32) uint32
 }
@@ -199,10 +197,10 @@ func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) 
 
 // messageHeader defines the header structure for all bitcoin protocol messages.
 type messageHeader struct {
-	magic    types.JaxNet // 4 bytes
-	command  string       // 12 bytes
-	length   uint32       // 4 bytes
-	checksum [4]byte      // 4 bytes
+	magic    JaxNet  // 4 bytes
+	command  string  // 12 bytes
+	length   uint32  // 4 bytes
+	checksum [4]byte // 4 bytes
 }
 
 // readMessageHeader reads a bitcoin message header from r.
@@ -221,7 +219,7 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, error) {
 	// Create and populate a messageHeader struct from the raw header bytes.
 	hdr := messageHeader{}
 	var command [CommandSize]byte
-	encoder.ReadElements(hr, &hdr.magic, &command, &hdr.length, &hdr.checksum)
+	ReadElements(hr, &hdr.magic, &command, &hdr.length, &hdr.checksum)
 
 	// Strip trailing zeros from command string.
 	hdr.command = string(bytes.TrimRight(command[:], string(rune(0))))
@@ -252,7 +250,7 @@ func discardInput(r io.Reader, n uint32) {
 // WriteMessageN writes a bitcoin Message to w including the necessary header
 // information and returns the number of bytes written.    This function is the
 // same as WriteMessage except it also returns the number of bytes written.
-func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet types.JaxNet) (int, error) {
+func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet JaxNet) (int, error) {
 	return WriteMessageWithEncodingN(w, msg, pver, btcnet, BaseEncoding)
 }
 
@@ -261,7 +259,7 @@ func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet types.JaxNet) (
 // doesn't return the number of bytes written.  This function is mainly provided
 // for backwards compatibility with the original API, but it's also useful for
 // callers that don't care about byte counts.
-func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet types.JaxNet) error {
+func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet JaxNet) error {
 	_, err := WriteMessageN(w, msg, pver, btcnet)
 	return err
 }
@@ -272,7 +270,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet types.JaxNet) er
 // to specify the message encoding format to be used when serializing wire
 // messages.
 func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
-	btcnet types.JaxNet, encoding encoder.MessageEncoding) (int, error) {
+	btcnet JaxNet, encoding MessageEncoding) (int, error) {
 
 	totalBytes := 0
 
@@ -282,7 +280,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 	if len(cmd) > CommandSize {
 		str := fmt.Sprintf("command [%s] is too long [max %v]",
 			cmd, CommandSize)
-		return totalBytes, messageError("WriteMessage", str)
+		return totalBytes, Error("WriteMessage", str)
 	}
 	copy(command[:], []byte(cmd))
 
@@ -300,7 +298,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 		str := fmt.Sprintf("message payload is too large - encoded "+
 			"%d bytes, but maximum message payload is %d bytes",
 			lenp, MaxMessagePayload)
-		return totalBytes, messageError("WriteMessage", str)
+		return totalBytes, Error("WriteMessage", str)
 	}
 
 	// Enforce maximum message payload based on the message type.
@@ -309,7 +307,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 		str := fmt.Sprintf("message payload is too large - encoded "+
 			"%d bytes, but maximum message payload size for "+
 			"messages of type [%s] is %d.", lenp, cmd, mpl)
-		return totalBytes, messageError("WriteMessage", str)
+		return totalBytes, Error("WriteMessage", str)
 	}
 
 	// Create header for the message.
@@ -323,7 +321,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 	// rather than directly to the writer since encoder.WriteElements doesn't
 	// return the number of bytes written.
 	hw := bytes.NewBuffer(make([]byte, 0, MessageHeaderSize))
-	encoder.WriteElements(hw, hdr.magic, command, hdr.length, hdr.checksum)
+	WriteElements(hw, hdr.magic, command, hdr.length, hdr.checksum)
 
 	// Write header.
 	n, err := w.Write(hw.Bytes())
@@ -348,8 +346,8 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // comprise the message.  This function is the same as ReadMessageN except it
 // allows the caller to specify which message encoding is to to consult when
 // decoding wire messages.
-func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet types.JaxNet,
-	enc encoder.MessageEncoding) (int, Message, []byte, error) {
+func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet,
+	enc MessageEncoding) (int, Message, []byte, error) {
 
 	totalBytes := 0
 	n, hdr, err := readMessageHeader(r)
@@ -363,7 +361,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 		str := fmt.Sprintf("message payload is too large - header "+
 			"indicates %d bytes, but max message payload is %d "+
 			"bytes.", hdr.length, MaxMessagePayload)
-		return totalBytes, nil, nil, messageError("ReadMessage", str)
+		return totalBytes, nil, nil, Error("ReadMessage", str)
 
 	}
 
@@ -371,7 +369,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 	if hdr.magic != btcnet {
 		discardInput(r, hdr.length)
 		str := fmt.Sprintf("message from other network [%v]", hdr.magic)
-		return totalBytes, nil, nil, messageError("ReadMessage", str)
+		return totalBytes, nil, nil, Error("ReadMessage", str)
 	}
 
 	// Check for malformed commands.
@@ -379,14 +377,14 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 	if !utf8.ValidString(command) {
 		discardInput(r, hdr.length)
 		str := fmt.Sprintf("invalid command %v", []byte(command))
-		return totalBytes, nil, nil, messageError("ReadMessage", str)
+		return totalBytes, nil, nil, Error("ReadMessage", str)
 	}
 
 	// Create struct of appropriate message type based on the command.
 	msg, err := makeEmptyMessage(chain, command)
 	if err != nil {
 		discardInput(r, hdr.length)
-		return totalBytes, nil, nil, messageError("ReadMessage",
+		return totalBytes, nil, nil, Error("ReadMessage",
 			err.Error())
 	}
 
@@ -399,7 +397,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 		str := fmt.Sprintf("payload exceeds max length - header "+
 			"indicates %v bytes, but max payload size for "+
 			"messages of type [%v] is %v.", hdr.length, command, mpl)
-		return totalBytes, nil, nil, messageError("ReadMessage", str)
+		return totalBytes, nil, nil, Error("ReadMessage", str)
 	}
 
 	// Read payload.
@@ -416,7 +414,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 		str := fmt.Sprintf("payload checksum failed - header "+
 			"indicates %v, but actual checksum is %v.",
 			hdr.checksum, checksum)
-		return totalBytes, nil, nil, messageError("ReadMessage", str)
+		return totalBytes, nil, nil, Error("ReadMessage", str)
 	}
 
 	// Unmarshal message.  NOTE: This must be a *bytes.Buffer since the
@@ -435,7 +433,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 // bytes read in addition to the parsed Message and raw bytes which comprise the
 // message.  This function is the same as ReadMessage except it also returns the
 // number of bytes read.
-func ReadMessageN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet types.JaxNet) (int, Message, []byte, error) {
+func ReadMessageN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet) (int, Message, []byte, error) {
 	return ReadMessageWithEncodingN(chain, r, pver, btcnet, BaseEncoding)
 }
 
@@ -445,7 +443,7 @@ func ReadMessageN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet type
 // from ReadMessageN in that it doesn't return the number of bytes read.  This
 // function is mainly provided for backwards compatibility with the original
 // API, but it's also useful for callers that don't care about byte counts.
-func ReadMessage(chain HeaderConstructor, r io.Reader, pver uint32, btcnet types.JaxNet) (Message, []byte, error) {
+func ReadMessage(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet) (Message, []byte, error) {
 	_, msg, buf, err := ReadMessageN(chain, r, pver, btcnet)
 	return msg, buf, err
 }

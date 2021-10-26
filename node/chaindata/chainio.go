@@ -1140,7 +1140,7 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 	// Serialize the current best chain state.
 	serializedData := serializeBestChainState(BestChainState{
 		Hash:         snapshot.Hash,
-		MMRRoot:      snapshot.BlocksMMRRoot,
+		MMRRoot:      snapshot.CurrentMMRRoot,
 		height:       uint32(snapshot.Height),
 		LastSerialID: snapshot.LastSerialID,
 		TotalTxns:    snapshot.TotalTxns,

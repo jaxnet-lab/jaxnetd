@@ -26,7 +26,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -53,7 +52,7 @@ type broadcastInventoryAdd RelayMsg
 
 // broadcastInventoryDel is a type used to declare that the InvVect it contains
 // needs to be removed from the rebroadcast map
-type broadcastInventoryDel *types.InvVect
+type broadcastInventoryDel *wire.InvVect
 
 // cfHeaderKV is a tuple of a filter header and its associated block hash. The
 // struct is used to cache cfcheckpt responses.
@@ -394,7 +393,7 @@ func (server *Server) newAddressHandler() func() (net.Addr, error) {
 
 // AddRebroadcastInventory adds 'iv' to the list of inventories to be
 // rebroadcasted at random intervals until they show up in a block.
-func (server *Server) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
+func (server *Server) AddRebroadcastInventory(iv *wire.InvVect, data interface{}) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&server.shutdown) != 0 {
 		return
@@ -405,7 +404,7 @@ func (server *Server) AddRebroadcastInventory(iv *types.InvVect, data interface{
 
 // RemoveRebroadcastInventory removes 'iv' from the list of items to be
 // rebroadcasted if present.
-func (server *Server) RemoveRebroadcastInventory(iv *types.InvVect) {
+func (server *Server) RemoveRebroadcastInventory(iv *wire.InvVect) {
 	// Ignore if shutting down.
 	if atomic.LoadInt32(&server.shutdown) != 0 {
 		return
@@ -418,7 +417,7 @@ func (server *Server) RemoveRebroadcastInventory(iv *types.InvVect) {
 // passed transactions to all connected peers.
 func (server *Server) RelayTransactions(txns []*mempool.TxDesc) {
 	for _, txD := range txns {
-		iv := types.NewInvVect(types.InvTypeTx, txD.Tx.Hash())
+		iv := wire.NewInvVect(wire.InvTypeTx, txD.Tx.Hash())
 		server.RelayInventory(iv, txD)
 	}
 }
@@ -447,7 +446,7 @@ func (server *Server) TransactionConfirmed(tx *jaxutil.Tx) {
 		return
 	}
 
-	iv := types.NewInvVect(types.InvTypeTx, tx.Hash())
+	iv := wire.NewInvVect(wire.InvTypeTx, tx.Hash())
 	server.RemoveRebroadcastInventory(iv)
 }
 
@@ -761,7 +760,7 @@ cleanup:
 
 // RelayInventory relays the passed inventory vector to all connected peers
 // that are not already known to have it.
-func (server *Server) RelayInventory(invVect *types.InvVect, data interface{}) {
+func (server *Server) RelayInventory(invVect *wire.InvVect, data interface{}) {
 	server.relayInv <- RelayMsg{InvVect: invVect, Data: data}
 }
 
@@ -837,7 +836,7 @@ func (server *Server) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHei
 func (server *Server) rebroadcastHandler() {
 	// Wait 5 min before first tx rebroadcast.
 	timer := time.NewTimer(5 * time.Minute)
-	pendingInvs := make(map[types.InvVect]interface{})
+	pendingInvs := make(map[wire.InvVect]interface{})
 
 out:
 	for {

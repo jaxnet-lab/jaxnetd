@@ -19,7 +19,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
@@ -940,7 +939,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 
 		if !segwitActive {
 			simnetHint := ""
-			if mp.cfg.ChainParams.Net == types.SimNet {
+			if mp.cfg.ChainParams.Net == wire.SimNet {
 				bestHeight := mp.cfg.BestHeight()
 				simnetHint = fmt.Sprintf(" (The threshold for segwit activation is 300 blocks on simnet, "+
 					"current best height is %d)", bestHeight)

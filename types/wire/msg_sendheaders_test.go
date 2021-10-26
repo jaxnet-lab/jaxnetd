@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -90,11 +88,11 @@ func TestSendHeadersWire(t *testing.T) {
 	msgSendHeadersEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgSendHeaders         // Message to encode
-		out  *MsgSendHeaders         // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgSendHeaders // Message to encode
+		out  *MsgSendHeaders // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{

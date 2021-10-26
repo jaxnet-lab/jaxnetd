@@ -5,14 +5,14 @@ package p2p
 
 import (
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // RelayMsg packages an inventory vector along with the newly discovered
 // inventory so the relay has access to that information.
 type RelayMsg struct {
-	InvVect *types.InvVect
+	InvVect *wire.InvVect
 	Data    interface{}
 }
 

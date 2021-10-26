@@ -188,9 +188,9 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 
 	var bestMMR chainhash.Hash
 	if chainID == 0 {
-		bestMMR = miner.beacon.BlockTemplateGenerator.BestSnapshot().BlocksMMRRoot
+		bestMMR = miner.beacon.BlockTemplateGenerator.BestSnapshot().CurrentMMRRoot
 	} else {
-		bestMMR = miner.shards[chainID].BlockTemplateGenerator.BestSnapshot().BlocksMMRRoot
+		bestMMR = miner.shards[chainID].BlockTemplateGenerator.BestSnapshot().CurrentMMRRoot
 	}
 
 	if !merkleMountainRoot.IsEqual(&bestMMR) {
@@ -290,7 +290,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 				// has changed.
 				best := miner.beacon.BlockTemplateGenerator.BestSnapshot()
 				h := block.Header.BlocksMerkleMountainRoot()
-				if !(&h).IsEqual(&best.BlocksMMRRoot) {
+				if !(&h).IsEqual(&best.CurrentMMRRoot) {
 					return false
 				}
 

@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // fastNetPowLimit is the highest proof of work value a Bitcoin block
@@ -26,7 +26,7 @@ var (
 // FastNetParams defines the network parameters for the development test network but with low PoW params.
 var FastNetParams = Params{
 	Name:             "fastnet",
-	Net:              types.FastTestNet,
+	Net:              wire.FastTestNet,
 	DefaultPort:      "18333",
 	IsBeacon:         true,
 	ChainID:          0,

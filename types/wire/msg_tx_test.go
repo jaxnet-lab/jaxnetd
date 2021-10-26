@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -275,11 +274,11 @@ func TestTxWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgTx                  // Message to encode
-		out  *MsgTx                  // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgTx          // Message to encode
+		out  *MsgTx          // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no transactions.
 		{
@@ -339,13 +338,13 @@ func TestTxWireErrors(t *testing.T) {
 	pver := uint32(60002)
 
 	tests := []struct {
-		in       *MsgTx                  // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgTx          // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in version.
 		{multiTx, multiTxEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},
@@ -566,11 +565,11 @@ func TestTxOverflowErrors(t *testing.T) {
 	txVer := uint32(1)
 
 	tests := []struct {
-		buf     []byte                  // Wire encoding
-		pver    uint32                  // Protocol version for wire encoding
-		enc     encoder.MessageEncoding // Message encoding format
-		version uint32                  // Transaction version
-		err     error                   // Expected error
+		buf     []byte          // Wire encoding
+		pver    uint32          // Protocol version for wire encoding
+		enc     MessageEncoding // Message encoding format
+		version uint32          // Transaction version
+		err     error           // Expected error
 	}{
 		// Transaction that claims to have ~uint64(0) inputs.
 		{

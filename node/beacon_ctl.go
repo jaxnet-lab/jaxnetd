@@ -18,7 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type BeaconCtl struct {
@@ -45,7 +45,7 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 func (beaconCtl *BeaconCtl) Init() error {
 	cfg := beaconCtl.cfg
 	params := cfg.Node.ChainParams()
-	if params.Net != types.MainNet {
+	if params.Net != wire.MainNet {
 		params.AutoExpand = cfg.Node.BeaconChain.AutoExpand
 		params.InitialExpansionRule = cfg.Node.BeaconChain.ExpansionRule
 		params.InitialExpansionLimit = cfg.Node.BeaconChain.ExpansionLimit

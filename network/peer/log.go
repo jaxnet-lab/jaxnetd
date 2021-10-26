@@ -12,7 +12,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -82,7 +81,7 @@ func formatLockTime(lockTime uint32) string {
 }
 
 // invSummary returns an inventory message as a human-readable string.
-func invSummary(invList []*types.InvVect) string {
+func invSummary(invList []*wire.InvVect) string {
 	// No inventory.
 	invLen := len(invList)
 	if invLen == 0 {
@@ -93,15 +92,15 @@ func invSummary(invList []*types.InvVect) string {
 	if invLen == 1 {
 		iv := invList[0]
 		switch iv.Type {
-		case types.InvTypeError:
+		case wire.InvTypeError:
 			return fmt.Sprintf("error %s", iv.Hash)
-		case types.InvTypeWitnessBlock:
+		case wire.InvTypeWitnessBlock:
 			return fmt.Sprintf("witness block %s", iv.Hash)
-		case types.InvTypeBlock:
+		case wire.InvTypeBlock:
 			return fmt.Sprintf("block %s", iv.Hash)
-		case types.InvTypeWitnessTx:
+		case wire.InvTypeWitnessTx:
 			return fmt.Sprintf("witness tx %s", iv.Hash)
-		case types.InvTypeTx:
+		case wire.InvTypeTx:
 			return fmt.Sprintf("tx %s", iv.Hash)
 		}
 

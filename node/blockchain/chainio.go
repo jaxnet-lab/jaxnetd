@@ -63,9 +63,10 @@ func (b *BlockChain) createChainState() error {
 	blockWeight := uint64(chaindata.GetBlockWeight(genesisBlock))
 
 	b.stateSnapshot = chaindata.NewBestState(genesisNode,
-		b.blocksDB.index.MMRTreeRoot(),
+		b.blocksDB.index.mmrTree.CurrentRoot(),
 		blockSize,
 		blockWeight,
+		b.blocksDB.index.mmrTree.CurrenWeight(),
 		numTxns,
 		numTxns,
 		time.Unix(genesisNode.Timestamp(), 0),
@@ -334,6 +335,7 @@ func (b *BlockChain) initChainState() error {
 			b.blocksDB.bestChain.mmrTree.CurrentRoot(),
 			blockSize,
 			blockWeight,
+			b.blocksDB.bestChain.mmrTree.CurrenWeight(),
 			numTxns,
 			state.TotalTxns,
 			tip.CalcPastMedianTime(),

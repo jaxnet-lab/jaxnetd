@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
@@ -32,7 +32,7 @@ var TestNet3Params = TestNetParams
 
 var TestNetParams = Params{
 	Name:           "testnet",
-	Net:            types.TestNet,
+	Net:            wire.TestNet,
 	DefaultPort:    "18333",
 	DefaultP2PPort: "18444",
 	DNSSeeds:       []DNSSeed{

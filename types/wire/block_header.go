@@ -8,7 +8,6 @@ import (
 	"io"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -70,7 +69,7 @@ type BlockHeader interface {
 
 	Read(r io.Reader) error
 	Write(r io.Writer) error
-	BtcEncode(w io.Writer, prev uint32, enc encoder.MessageEncoding) error
+	BtcEncode(w io.Writer, prev uint32, enc MessageEncoding) error
 
 	// Copy creates a deep copy of a BlockHeader so that the original does not get
 	// modified when the copy is manipulated.
@@ -133,7 +132,7 @@ func (b BeaconHeaderConstructor) IsBeacon() bool             { return true }
 func (b BeaconHeaderConstructor) ShardID() uint32            { return 0 }
 func (b BeaconHeaderConstructor) MaxBlockHeaderPayload() int { return MaxBeaconBlockHeaderPayload }
 func (b BeaconHeaderConstructor) BlockHeaderOverhead() int {
-	return MaxBeaconBlockHeaderPayload + encoder.MaxVarIntPayload
+	return MaxBeaconBlockHeaderPayload + MaxVarIntPayload
 }
 
 type ShardHeaderConstructor struct{ ID uint32 }
@@ -143,5 +142,5 @@ func (b ShardHeaderConstructor) IsBeacon() bool             { return false }
 func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }
 func (b ShardHeaderConstructor) MaxBlockHeaderPayload() int { return MaxShardBlockHeaderPayload }
 func (b ShardHeaderConstructor) BlockHeaderOverhead() int {
-	return MaxShardBlockHeaderPayload + encoder.MaxVarIntPayload
+	return MaxShardBlockHeaderPayload + MaxVarIntPayload
 }

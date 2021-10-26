@@ -16,8 +16,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -90,7 +88,7 @@ func (server *serverPeerHandler) BanPeer(sp *serverPeer) {
 // pushTxMsg sends a tx message for the provided transaction hash to the
 // connected peer.  An error is returned if the transaction hash is not known.
 func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 
 	// Attempt to fetch the requested transaction from the pool.  A
 	// call could be made to check for existence first, but simply trying
@@ -119,7 +117,7 @@ func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash,
 // pushBlockMsg sends a block message for the provided block hash to the
 // connected peer.  An error is returned if the block hash is not known.
 func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
@@ -175,7 +173,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 	if sendInv {
 		best := sp.serverPeerHandler.chain.BlockChain().BestSnapshot()
 		invMsg := wire.NewMsgInvSizeHint(1)
-		iv := types.NewInvVect(types.InvTypeBlock, &best.Hash)
+		iv := wire.NewInvVect(wire.InvTypeBlock, &best.Hash)
 		invMsg.AddInvVect(iv)
 		sp.QueueMessage(invMsg, doneChan)
 		sp.continueHash = nil
@@ -188,7 +186,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 // loaded, this call will simply be ignored if there is no filter loaded.  An
 // error is returned if the block hash is not known.
 func (server *serverPeerHandler) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
-	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding encoder.MessageEncoding) error {
+	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 
 	// Do not send a response if the peer doesn't have a filter loaded.
 	if !sp.filter.IsLoaded() {

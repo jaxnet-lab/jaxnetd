@@ -6,8 +6,8 @@
 package config
 
 import (
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // ActiveNetParams is a pointer to the parameters specific to the
@@ -58,7 +58,7 @@ var simNetParams = params{
 // removed and the network parameter's name used instead.
 func netName(chainParams *params) string {
 	switch chainParams.Net {
-	case types.TestNet:
+	case wire.TestNet:
 		return "testnet"
 	default:
 		return chainParams.Name

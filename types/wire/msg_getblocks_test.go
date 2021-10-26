@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -144,11 +143,11 @@ func TestGetBlocksWire(t *testing.T) {
 	}
 
 	tests := []struct {
-		in   *MsgGetBlocks           // Message to encode
-		out  *MsgGetBlocks           // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgGetBlocks   // Message to encode
+		out  *MsgGetBlocks   // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version with no block locators.
 		{
@@ -266,13 +265,13 @@ func TestGetBlocksWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgGetBlocks           // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgGetBlocks   // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Force error in protocol version.
 		{baseGetBlocks, baseGetBlocksEncoded, pver, BaseEncoding, 0, io.ErrShortWrite, io.EOF},

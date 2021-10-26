@@ -12,7 +12,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -49,8 +48,8 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := prevNode.CalcPastMedianTime() //
-		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != types.FastTestNet &&
-			b.chain.Params().Net != types.SimNet {
+		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != wire.FastTestNet &&
+			b.chain.Params().Net != wire.SimNet {
 			str := "block timestamp of %v is not after expected %v"
 			str = fmt.Sprintf(str, header.Timestamp, medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // This example demonstrates how to create a new bloom filter, add a transaction
@@ -24,7 +24,7 @@ func ExampleNewFilter() {
 	// Create a new bloom filter intended to hold 10 elements with a 0.01%
 	// false positive rate and does not include any automatic update
 	// functionality when transactions are matched.
-	filter := bloom.NewFilter(10, tweak, 0.0001, types.BloomUpdateNone)
+	filter := bloom.NewFilter(10, tweak, 0.0001, wire.BloomUpdateNone)
 
 	// Create a transaction hash and add it to the filter.  This particular
 	// trasaction is the first transaction in block 310,000 of the main

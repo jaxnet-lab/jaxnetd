@@ -596,9 +596,10 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 	blockWeight := uint64(chaindata.GetBlockWeight(block))
 
 	state := chaindata.NewBestState(node,
-		b.blocksDB.index.MMRTreeRoot(),
+		b.blocksDB.index.mmrTree.CurrentRoot(),
 		blockSize,
 		blockWeight,
+		b.blocksDB.index.mmrTree.CurrenWeight(),
 		numTxns,
 		curTotalTxns+numTxns,
 		node.CalcPastMedianTime(),
@@ -726,6 +727,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		node.BlocksMMRRoot(),
 		blockSize,
 		blockWeight,
+		b.blocksDB.index.mmrTree.CurrenWeight(), // todo: review this
 		numTxns,
 		newTotalTxns,
 		prevNode.CalcPastMedianTime(),

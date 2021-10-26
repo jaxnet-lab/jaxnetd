@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -439,7 +440,7 @@ func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.Template
 	// However, allow this state when running in the regression test or
 	// simulation test mode.
 	netType := server.chainProvider.ChainParams.Net
-	if !(netType == types.FastTestNet || netType == types.SimNet) &&
+	if !(netType == wire.FastTestNet || netType == wire.SimNet) &&
 		server.connMgr.ConnectedCount() == 0 {
 
 		return nil, &jaxjson.RPCError{
@@ -520,7 +521,7 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *jaxjson.Templat
 	block := jaxutil.NewBlock(&msgBlock)
 
 	// Ensure the block is building from the expected previous block.
-	expectedPrevMMRRoot := server.chainProvider.BlockChain().BestSnapshot().BlocksMMRRoot
+	expectedPrevMMRRoot := server.chainProvider.BlockChain().BestSnapshot().CurrentMMRRoot
 	mmrRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 	if !expectedPrevMMRRoot.IsEqual(&mmrRoot) {
 		return "bad-prevblk", nil

@@ -9,7 +9,6 @@ import (
 	"io"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -172,7 +171,7 @@ func (h *BeaconHeader) PoWHash() chainhash.Hash {
 func (h *BeaconHeader) BlockHash() chainhash.Hash {
 	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
 
-	_ = encoder.WriteElements(w,
+	_ = WriteElements(w,
 		h.version,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
@@ -187,7 +186,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 	)
 
 	btcHash := h.btcAux.BlockHash()
-	_ = encoder.WriteElements(w, &btcHash)
+	_ = WriteElements(w, &btcHash)
 
 	return chainhash.DoubleHashH(w.Bytes())
 }
@@ -196,7 +195,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 // This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
 func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	encoder.WriteElements(buf,
+	WriteElements(buf,
 		h.version,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
@@ -217,7 +216,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
-func (h *BeaconHeader) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (h *BeaconHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	return readBeaconBlockHeader(r, h)
 }
 
@@ -225,7 +224,7 @@ func (h *BeaconHeader) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 // This is part of the Message interface implementation.
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
-func (h *BeaconHeader) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (h *BeaconHeader) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	return writeBeaconBlockHeader(w, h)
 }
 
@@ -277,7 +276,7 @@ func (h *BeaconHeader) Copy() BlockHeader {
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
-	err := encoder.ReadElements(r, &bh.version,
+	err := ReadElements(r, &bh.version,
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
@@ -303,7 +302,7 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader) error {
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
-	err := encoder.WriteElements(w,
+	err := WriteElements(w,
 		bh.version,
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
@@ -327,14 +326,14 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 }
 
 func ReadHashArray(r io.Reader) ([]chainhash.Hash, error) {
-	count, err := encoder.ReadVarInt(r, ProtocolVersion)
+	count, err := ReadVarInt(r, ProtocolVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	data := make([]chainhash.Hash, count)
 	for i := range data {
-		err = encoder.ReadElement(r, &data[i])
+		err = ReadElement(r, &data[i])
 		if err != nil {
 			return nil, err
 		}
@@ -344,12 +343,12 @@ func ReadHashArray(r io.Reader) ([]chainhash.Hash, error) {
 
 func WriteHashArray(w io.Writer, data []chainhash.Hash) error {
 	count := uint64(len(data))
-	if err := encoder.WriteVarInt(w, count); err != nil {
+	if err := WriteVarInt(w, count); err != nil {
 		return err
 	}
 
 	for i := range data {
-		if err := encoder.WriteElement(w, &data[i]); err != nil {
+		if err := WriteElement(w, &data[i]); err != nil {
 			return err
 		}
 	}

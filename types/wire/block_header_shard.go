@@ -9,7 +9,6 @@ import (
 	"io"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -119,7 +118,7 @@ func (h *ShardHeader) SetMergeMiningRoot(value chainhash.Hash) {
 // ExclusiveHash computes hash of header data without any extra aux (beacon & btc).
 func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = encoder.WriteElements(buf,
+	_ = WriteElements(buf,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
 		&h.bits,
@@ -132,7 +131,7 @@ func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 // ShardExclusiveBlockHash computes the block identifier hash for the given ShardHeader.
 func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = encoder.WriteElements(buf,
+	_ = WriteElements(buf,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
 		&h.bits,
@@ -145,7 +144,7 @@ func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 func (h *ShardHeader) BlockHash() chainhash.Hash {
 	w := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
 	beaconHash := h.beaconHeader.BlockHash()
-	_ = encoder.WriteElements(w,
+	_ = WriteElements(w,
 		&h.blocksMMRRoot,
 		&h.merkleRoot,
 		&h.bits,
@@ -169,7 +168,7 @@ func (h *ShardHeader) UpdateCoinbaseScript(coinbaseScript []byte) {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
-func (h *ShardHeader) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (h *ShardHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	return readShardBlockHeader(r, h)
 }
 
@@ -177,7 +176,7 @@ func (h *ShardHeader) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnc
 // This is part of the Message interface implementation.
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
-func (h *ShardHeader) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (h *ShardHeader) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	return WriteShardBlockHeader(w, h)
 }
 
@@ -219,7 +218,7 @@ func (h *ShardHeader) BeaconCoinbaseAux() *CoinbaseAux {
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
-	err := encoder.ReadElements(r,
+	err := ReadElements(r,
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
@@ -243,7 +242,7 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader) error {
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
 func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
-	err := encoder.WriteElements(w,
+	err := WriteElements(w,
 		&bh.blocksMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,

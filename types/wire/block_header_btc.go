@@ -10,7 +10,6 @@ import (
 	"math"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -54,7 +53,7 @@ func (h *BTCBlockAux) BlockHash() chainhash.Hash {
 
 	// CoinbaseAux must be omitted to keep this hash equal to Bitcoin Leaf hash with the same header.
 	sec := uint32(h.Timestamp.Unix())
-	_ = encoder.WriteElements(buf, h.Version, &h.PrevBlock, &h.MerkleRoot, sec, h.Bits, h.Nonce)
+	_ = WriteElements(buf, h.Version, &h.PrevBlock, &h.MerkleRoot, sec, h.Bits, h.Nonce)
 	return chainhash.DoubleHashH(buf.Bytes())
 }
 
@@ -62,7 +61,7 @@ func (h *BTCBlockAux) BlockHash() chainhash.Hash {
 // This is part of the Message interface implementation.
 // See Deserialize for decoding block headers stored to disk, such as in a
 // database, as opposed to decoding block headers from the wire.
-func (h *BTCBlockAux) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncoding) error {
+func (h *BTCBlockAux) BtcDecode(r io.Reader, _ uint32, _ MessageEncoding) error {
 	return readBTCBlockHeader(r, h)
 }
 
@@ -70,7 +69,7 @@ func (h *BTCBlockAux) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncoding
 // This is part of the Message interface implementation.
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
-func (h *BTCBlockAux) BtcEncode(w io.Writer, _ uint32, _ encoder.MessageEncoding) error {
+func (h *BTCBlockAux) BtcEncode(w io.Writer, _ uint32, _ MessageEncoding) error {
 	return writeBTCBlockHeader(w, h)
 }
 
@@ -137,8 +136,8 @@ func NewBTCBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBTCBlockHeader(r io.Reader, bh *BTCBlockAux) error {
-	err := encoder.ReadElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
-		(*encoder.Uint32Time)(&bh.Timestamp), &bh.Bits, &bh.Nonce)
+	err := ReadElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
+		(*Uint32Time)(&bh.Timestamp), &bh.Bits, &bh.Nonce)
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,7 @@ func readBTCBlockHeader(r io.Reader, bh *BTCBlockAux) error {
 // opposed to encoding for the wire.
 func writeBTCBlockHeader(w io.Writer, bh *BTCBlockAux) error {
 	sec := uint32(bh.Timestamp.Unix())
-	err := encoder.WriteElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
+	err := WriteElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		sec, bh.Bits, bh.Nonce)
 	if err != nil {
 		return err

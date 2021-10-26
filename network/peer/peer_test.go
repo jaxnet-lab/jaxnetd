@@ -3,6 +3,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+//go:build deprecated_tests
 // +build deprecated_tests
 
 package peer_test
@@ -18,7 +19,6 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -580,7 +580,7 @@ func TestPeerListeners(t *testing.T) {
 		},
 		{
 			"OnFilterLoad",
-			wire.NewMsgFilterLoad([]byte{0x01}, 10, 0, types.BloomUpdateNone),
+			wire.NewMsgFilterLoad([]byte{0x01}, 10, 0, wire.BloomUpdateNone),
 		},
 		{
 			"OnMerkleBlock",
@@ -659,7 +659,7 @@ func TestOutboundPeer(t *testing.T) {
 
 	// Test Queue Inv
 	fakeBlockHash := &chainhash.Hash{0: 0x00, 1: 0x01}
-	fakeInv := types.NewInvVect(types.InvTypeBlock, fakeBlockHash)
+	fakeInv := wire.NewInvVect(wire.InvTypeBlock, fakeBlockHash)
 
 	// Should be noops as the peer could not connect.
 	p.QueueInventory(fakeInv)

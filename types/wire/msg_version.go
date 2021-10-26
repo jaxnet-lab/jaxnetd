@@ -11,8 +11,6 @@ import (
 	"io"
 	"strings"
 	"time"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a
@@ -60,6 +58,8 @@ type MsgVersion struct {
 	// Last block seen by the generator of the version message.
 	LastBlock int32
 
+	ChainWeight uint64
+
 	// Don't announce transactions to server.
 	DisableRelayTx bool
 }
@@ -83,28 +83,28 @@ func (msg *MsgVersion) AddService(service ServiceFlag) {
 // *bytes.Buffer so the number of remaining bytes can be ascertained.
 //
 // This is part of the Message interface implementation.
-func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	buf, ok := r.(*bytes.Buffer)
 	if !ok {
 		return fmt.Errorf("MsgVersion.BtcDecode reader is not a " +
 			"*bytes.Buffer")
 	}
 
-	err := encoder.ReadElements(buf, &msg.ProtocolVersion, &msg.Services,
-		(*encoder.Int64Time)(&msg.Timestamp))
+	err := ReadElements(buf, &msg.ProtocolVersion, &msg.Services,
+		(*Int64Time)(&msg.Timestamp))
 	if err != nil {
 		return err
 	}
 
 	if buf.Len() > 0 {
-		err = encoder.ReadElement(buf, &msg.IsBeacon)
+		err = ReadElement(buf, &msg.IsBeacon)
 		if err != nil {
 			return err
 		}
 	}
 
 	if buf.Len() > 0 {
-		err = encoder.ReadElement(buf, &msg.Shard)
+		err = ReadElement(buf, &msg.Shard)
 		if err != nil {
 			return err
 		}
@@ -125,13 +125,13 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 		}
 	}
 	if buf.Len() > 0 {
-		err = encoder.ReadElement(buf, &msg.Nonce)
+		err = ReadElement(buf, &msg.Nonce)
 		if err != nil {
 			return err
 		}
 	}
 	if buf.Len() > 0 {
-		userAgent, err := encoder.ReadVarString(buf, pver)
+		userAgent, err := ReadVarString(buf, pver)
 		if err != nil {
 			return err
 		}
@@ -145,12 +145,17 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 	// Protocol versions >= 209 added a last known block field.  It is only
 	// considered present if there are bytes remaining in the message.
 	if buf.Len() > 0 {
-		err = encoder.ReadElement(buf, &msg.LastBlock)
+		err = ReadElement(buf, &msg.LastBlock)
 		if err != nil {
 			return err
 		}
 	}
-
+	if buf.Len() > 0 {
+		err = ReadElement(buf, &msg.ChainWeight)
+		if err != nil {
+			return err
+		}
+	}
 	// There was no relay transactions field before BIP0037Version, but
 	// the default behavior prior to the addition of the field was to always
 	// relay transactions.
@@ -161,7 +166,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 		// field is true when transactions should be relayed, so reverse
 		// it for the DisableRelayTx field.
 		var relayTx bool
-		encoder.ReadElement(r, &relayTx)
+		ReadElement(r, &relayTx)
 		msg.DisableRelayTx = !relayTx
 	}
 
@@ -170,24 +175,27 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	err := validateUserAgent(msg.UserAgent)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElements(w, msg.ProtocolVersion, msg.Services,
-		msg.Timestamp.Unix())
+	err = WriteElements(w,
+		msg.ProtocolVersion,
+		msg.Services,
+		msg.Timestamp.Unix(),
+	)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.IsBeacon)
+	err = WriteElement(w, msg.IsBeacon)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.Shard)
+	err = WriteElement(w, msg.Shard)
 	if err != nil {
 		return err
 	}
@@ -202,17 +210,22 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.Nonce)
+	err = WriteElement(w, msg.Nonce)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteVarString(w, pver, msg.UserAgent)
+	err = WriteVarString(w, pver, msg.UserAgent)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteElement(w, msg.LastBlock)
+	err = WriteElement(w, msg.LastBlock)
+	if err != nil {
+		return err
+	}
+
+	err = WriteElement(w, msg.ChainWeight)
 	if err != nil {
 		return err
 	}
@@ -220,7 +233,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 	// There was no relay transactions field before BIP0037Version.  Also,
 	// the wire encoding for the field is true when transactions should be
 	// relayed, so reverse it from the DisableRelayTx field.
-	err = encoder.WriteElement(w, !msg.DisableRelayTx)
+	err = WriteElement(w, !msg.DisableRelayTx)
 	if err != nil {
 		return err
 	}
@@ -242,7 +255,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 	// remote and local net addresses + nonce 8 bytes + length of user
 	// agent (varInt) + max allowed useragent length + last block 4 bytes +
 	// relay transactions flag 1 byte.
-	return 33 + (maxNetAddressPayload(pver) * 2) + encoder.MaxVarIntPayload +
+	return 33 + (maxNetAddressPayload(pver) * 2) + MaxVarIntPayload +
 		MaxUserAgentLen
 }
 
@@ -250,7 +263,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 // Message interface using the passed parameters and defaults for the remaining
 // fields.
 func NewMsgVersion(chain HeaderConstructor, me *NetAddress, you *NetAddress, nonce uint64,
-	lastBlock int32) *MsgVersion {
+	lastBlock int32, chainWeight uint64) *MsgVersion {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
@@ -265,6 +278,7 @@ func NewMsgVersion(chain HeaderConstructor, me *NetAddress, you *NetAddress, non
 		Nonce:           nonce,
 		UserAgent:       DefaultUserAgent,
 		LastBlock:       lastBlock,
+		ChainWeight:     chainWeight,
 		DisableRelayTx:  false,
 	}
 }
@@ -274,7 +288,7 @@ func validateUserAgent(userAgent string) error {
 	if len(userAgent) > MaxUserAgentLen {
 		str := fmt.Sprintf("user agent too long [len %v, max %v]",
 			len(userAgent), MaxUserAgentLen)
-		return messageError("MsgVersion", str)
+		return Error("MsgVersion", str)
 	}
 	return nil
 }

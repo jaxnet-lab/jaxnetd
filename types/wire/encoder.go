@@ -1,7 +1,8 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-package encoder
+
+package wire
 
 import (
 	"crypto/rand"
@@ -12,39 +13,15 @@ import (
 	"reflect"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 const (
 	// MaxVarIntPayload is the maximum payload size for a variable length integer.
 	MaxVarIntPayload = 9
-
-	// binaryFreeListMaxItems is the number of buffers to keep in the free
-	// list to use for binary serialization and deserialization.
-	binaryFreeListMaxItems = 1024
-
-	CommandSize = 12
-	// MaxMessagePayload = 1024 * 1024 * 32 // 32MB
-	MaxMessagePayload = 1024 * 1024 * 32 * 2 // 640MB
 )
 
 type MessageEncoding uint32
-
-var (
-	// littleEndian is a convenience variable since binary.LittleEndian is
-	// quite long.
-	littleEndian = binary.LittleEndian
-
-	// bigEndian is a convenience variable since binary.BigEndian is quite
-	// long.
-	bigEndian = binary.BigEndian
-)
-
-// errNonCanonicalVarInt is the common format string used for non-canonically
-// encoded variable length integer errors.
-var errNonCanonicalVarInt = "non-canonical varint %x - discriminant %x must " +
-	"encode a value greater than %x"
 
 // Uint32Time represents a unix timestamp encoded with a uint32.  It is used as
 // a way to signal the readElement function how to decode a timestamp into a Go
@@ -138,44 +115,44 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 		return nil
 
-	case *types.ServiceFlag:
+	case *ServiceFlag:
 		rv, err := BinarySerializer.Uint64(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = types.ServiceFlag(rv)
+		*e = ServiceFlag(rv)
 		return nil
 
-	case *types.InvType:
+	case *InvType:
 		rv, err := BinarySerializer.Uint32(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = types.InvType(rv)
+		*e = InvType(rv)
 		return nil
 
-	case *types.JaxNet:
+	case *JaxNet:
 		rv, err := BinarySerializer.Uint32(r, littleEndian)
 		if err != nil {
 			return err
 		}
-		*e = types.JaxNet(rv)
+		*e = JaxNet(rv)
 		return nil
 
-	case *types.BloomUpdateType:
+	case *BloomUpdateType:
 		rv, err := BinarySerializer.Uint8(r)
 		if err != nil {
 			return err
 		}
-		*e = types.BloomUpdateType(rv)
+		*e = BloomUpdateType(rv)
 		return nil
 
-	case *types.RejectCode:
+	case *RejectCode:
 		rv, err := BinarySerializer.Uint8(r)
 		if err != nil {
 			return err
 		}
-		*e = types.RejectCode(rv)
+		*e = RejectCode(rv)
 		return nil
 	}
 
@@ -277,35 +254,35 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 		return nil
 
-	case types.ServiceFlag:
+	case ServiceFlag:
 		err := BinarySerializer.PutUint64(w, littleEndian, uint64(e))
 		if err != nil {
 			return err
 		}
 		return nil
 
-	case types.InvType:
+	case InvType:
 		err := BinarySerializer.PutUint32(w, littleEndian, uint32(e))
 		if err != nil {
 			return err
 		}
 		return nil
 
-	case types.JaxNet:
+	case JaxNet:
 		err := BinarySerializer.PutUint32(w, littleEndian, uint32(e))
 		if err != nil {
 			return err
 		}
 		return nil
 
-	case types.BloomUpdateType:
+	case BloomUpdateType:
 		err := BinarySerializer.PutUint8(w, uint8(e))
 		if err != nil {
 			return err
 		}
 		return nil
 
-	case types.RejectCode:
+	case RejectCode:
 		err := BinarySerializer.PutUint8(w, uint8(e))
 		if err != nil {
 			return err
@@ -364,7 +341,7 @@ func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
 		// encoded using fewer bytes.
 		min := uint64(0x100000000)
 		if rv < min {
-			return 0, types.Error("ReadVarInt", fmt.Sprintf(
+			return 0, Error("ReadVarInt", fmt.Sprintf(
 				errNonCanonicalVarInt, rv, discriminant, min))
 		}
 
@@ -379,7 +356,7 @@ func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
 		// encoded using fewer bytes.
 		min := uint64(0x10000)
 		if rv < min {
-			return 0, types.Error("ReadVarInt", fmt.Sprintf(
+			return 0, Error("ReadVarInt", fmt.Sprintf(
 				errNonCanonicalVarInt, rv, discriminant, min))
 		}
 
@@ -394,7 +371,7 @@ func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
 		// encoded using fewer bytes.
 		min := uint64(0xfd)
 		if rv < min {
-			return 0, types.Error("ReadVarInt", fmt.Sprintf(
+			return 0, Error("ReadVarInt", fmt.Sprintf(
 				errNonCanonicalVarInt, rv, discriminant, min))
 		}
 
@@ -491,7 +468,7 @@ func ReadVarString(r io.Reader, pver uint32) (string, error) {
 	if count > MaxMessagePayload {
 		str := fmt.Sprintf("variable length string is too long "+
 			"[count %d, max %d]", count, MaxMessagePayload)
-		return "", types.Error("ReadVarString", str)
+		return "", Error("ReadVarString", str)
 	}
 
 	buf := make([]byte, count)
@@ -535,7 +512,7 @@ func ReadVarBytes(r io.Reader, pver uint32, maxAllowed uint32,
 	if count > uint64(maxAllowed) {
 		str := fmt.Sprintf("%s is larger than the max allowed size "+
 			"[count %d, max %d]", fieldName, count, maxAllowed)
-		return nil, types.Error("ReadVarBytes", str)
+		return nil, Error("ReadVarBytes", str)
 	}
 
 	b := make([]byte, count)
@@ -577,13 +554,13 @@ func RandomUint64() (uint64, error) {
 
 // ReadInvVect reads an encoded InvVect from r depending on the protocol
 // version.
-func ReadInvVect(r io.Reader, iv *types.InvVect) error {
+func ReadInvVect(r io.Reader, iv *InvVect) error {
 	// enc := NewEncoder(CommandSize)
 	return ReadElements(r, &iv.Type, &iv.Hash)
 }
 
 // WriteInvVect serializes an InvVect to w depending on the protocol version.
-func WriteInvVect(w io.Writer, iv *types.InvVect) error {
+func WriteInvVect(w io.Writer, iv *InvVect) error {
 	// enc := chain.NewEncoder(chain.CommandSize)
 	return WriteElements(w, iv.Type, &iv.Hash)
 }

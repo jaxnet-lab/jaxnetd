@@ -236,12 +236,12 @@ func ExtractHTLCLockTime(pkScript []byte) (int32, error) {
 		return lockTime, nil
 	}
 
-	var rawShardID scriptNum
-	rawShardID, err = makeScriptNum(pops[1].data, true, 5)
+	var rawLockTime scriptNum
+	rawLockTime, err = makeScriptNum(pops[1].data, true, 5)
 	if err != nil {
 		return 0, err
 	}
-	lockTime = int32(rawShardID)
+	lockTime = int32(rawLockTime)
 
 	return lockTime, nil
 }

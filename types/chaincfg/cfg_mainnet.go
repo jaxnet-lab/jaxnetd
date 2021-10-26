@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
 	Name:           "mainnet",
-	Net:            types.MainNet,
+	Net:            wire.MainNet,
 	DefaultPort:    "8333",
 	DefaultP2PPort: "8444",
 	DNSSeeds:       []DNSSeed{

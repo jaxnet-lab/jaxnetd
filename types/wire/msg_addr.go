@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxAddrPerMsg is the maximum number of addresses that can be in a single
@@ -37,19 +35,19 @@ func (msg *MsgAddr) AddAddress(na *NetAddress) error {
 	if len(msg.AddrList)+1 > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses in message [max %v]",
 			MaxAddrPerMsg)
-		return messageError("MsgAddr.AddAddress", str)
+		return Error("MsgAddr.AddAddress", str)
 	}
 
 	msg.AddrList = append(msg.AddrList, na)
 	return nil
 }
 
-// AddAddress adds a known active server to the message.
+// AddShardAddress adds a known active server to the message.
 func (msg *MsgAddr) AddShardAddress(shardId uint32, na *NetAddress) error {
 	if len(msg.AddrList)+1 > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses in message [max %v]",
 			MaxAddrPerMsg)
-		return messageError("MsgAddr.AddAddress", str)
+		return Error("MsgAddr.AddAddress", str)
 	}
 
 	msg.Shards = append(msg.Shards, &ShardAddress{
@@ -84,8 +82,8 @@ func (msg *MsgAddr) ClearAddresses() {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	count, err := encoder.ReadVarInt(r, pver)
+func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -94,7 +92,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 	if count > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses for message "+
 			"[count %v, max %v]", count, MaxAddrPerMsg)
-		return messageError("MsgAddr.BtcDecode", str)
+		return Error("MsgAddr.BtcDecode", str)
 	}
 
 	addrList := make([]NetAddress, count)
@@ -108,7 +106,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 		msg.AddAddress(na)
 	}
 
-	count, err = encoder.ReadVarInt(r, pver)
+	count, err = ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -116,7 +114,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 	shards := make([]*ShardAddress, count)
 	for i := uint64(0); i < count; i++ {
 		na := shards[i]
-		id, err := encoder.ReadVarInt(r, pver)
+		id, err := ReadVarInt(r, pver)
 		if err != nil {
 			return err
 		}
@@ -131,23 +129,23 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgAddr) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgAddr) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// Protocol versions before MultipleAddressVersion only allowed 1 address
 	// per message.
 	count := len(msg.AddrList)
 	// if pver < MultipleAddressVersion && count > 1 {
 	// 	str := fmt.Sprintf("too many addresses for message of "+
 	// 		"protocol version %v [count %v, max 1]", pver, count)
-	// 	return messageError("MsgAddr.BtcEncode", str)
+	// 	return Error("MsgAddr.BtcEncode", str)
 	//
 	// }
 	if count > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses for message "+
 			"[count %v, max %v]", count, MaxAddrPerMsg)
-		return messageError("MsgAddr.BtcEncode", str)
+		return Error("MsgAddr.BtcEncode", str)
 	}
 
-	err := encoder.WriteVarInt(w, uint64(count))
+	err := WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
@@ -160,13 +158,13 @@ func (msg *MsgAddr) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncod
 	}
 
 	shardsCount := len(msg.Shards)
-	err = encoder.WriteVarInt(w, uint64(shardsCount))
+	err = WriteVarInt(w, uint64(shardsCount))
 	if err != nil {
 		return err
 	}
 
 	for _, na := range msg.Shards {
-		err := encoder.WriteVarInt(w, uint64(na.ShardID))
+		err := WriteVarInt(w, uint64(na.ShardID))
 		if err != nil {
 			return err
 		}
@@ -195,7 +193,7 @@ func (msg *MsgAddr) MaxPayloadLength(pver uint32) uint32 {
 	// }
 
 	// Num addresses (varInt) + max allowed addresses.
-	return encoder.MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload(pver))
+	return MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload(pver))
 }
 
 // NewMsgAddr returns a new bitcoin addr message that conforms to the
@@ -216,10 +214,10 @@ type MsgPortRedirect struct {
 	IP net.IP
 }
 
-func (m *MsgPortRedirect) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEncoding) error {
+func (m *MsgPortRedirect) BtcDecode(r io.Reader, _ uint32, _ MessageEncoding) error {
 	var ip [16]byte
 
-	err := encoder.ReadElements(r, &m.ShardID, &m.Port, &ip)
+	err := ReadElements(r, &m.ShardID, &m.Port, &ip)
 	if err != nil {
 		return err
 	}
@@ -228,14 +226,14 @@ func (m *MsgPortRedirect) BtcDecode(r io.Reader, _ uint32, _ encoder.MessageEnco
 	return nil
 }
 
-func (m *MsgPortRedirect) BtcEncode(w io.Writer, _ uint32, _ encoder.MessageEncoding) error {
+func (m *MsgPortRedirect) BtcEncode(w io.Writer, _ uint32, _ MessageEncoding) error {
 	// Ensure to always write 16 bytes even if the ip is nil.
 	var ip [16]byte
 	if m.IP != nil {
 		copy(ip[:], m.IP.To16())
 	}
 
-	return encoder.WriteElements(w, m.ShardID, m.Port, ip)
+	return WriteElements(w, m.ShardID, m.Port, ip)
 }
 
 func (m *MsgPortRedirect) Command() string {

@@ -12,9 +12,9 @@ import (
 	"fmt"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/types"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a
@@ -199,7 +199,7 @@ type FutureGetCurrentNetResult chan *response
 
 // Receive waits for the response promised by the future and returns the network
 // the server is running on.
-func (r FutureGetCurrentNetResult) Receive() (types.JaxNet, error) {
+func (r FutureGetCurrentNetResult) Receive() (wire.JaxNet, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return 0, err
@@ -212,7 +212,7 @@ func (r FutureGetCurrentNetResult) Receive() (types.JaxNet, error) {
 		return 0, err
 	}
 
-	return types.JaxNet(net), nil
+	return wire.JaxNet(net), nil
 }
 
 // GetCurrentNetAsync returns an instance of a type that can be used to get the
@@ -230,7 +230,7 @@ func (c *Client) GetCurrentNetAsync() FutureGetCurrentNetResult {
 // GetCurrentNet returns the network the server is running on.
 //
 // NOTE: This is a jaxnetd extension.
-func (c *Client) GetCurrentNet() (types.JaxNet, error) {
+func (c *Client) GetCurrentNet() (wire.JaxNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
 

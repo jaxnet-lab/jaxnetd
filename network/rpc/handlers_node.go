@@ -13,10 +13,10 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
 
@@ -204,7 +204,7 @@ func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct
 func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.EstimateSwapLockTime)
 
-	isMainNet := server.beaconChain.ChainParams.Net == types.MainNet
+	isMainNet := server.beaconChain.ChainParams.Net == wire.MainNet
 
 	sourceShard, ok := server.shardsMgr.ShardCtl(c.SourceShard)
 	if !ok {

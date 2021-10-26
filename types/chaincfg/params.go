@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -38,7 +37,7 @@ var (
 )
 
 var (
-	registeredNets       = make(map[types.JaxNet]struct{})
+	registeredNets       = make(map[wire.JaxNet]struct{})
 	pubKeyHashAddrIDs    = make(map[byte]struct{})
 	scriptHashAddrIDs    = make(map[byte]struct{})
 	bech32SegwitPrefixes = make(map[string]struct{})
@@ -173,7 +172,7 @@ type Params struct {
 	Name string
 
 	// Net defines the magic bytes used to identify the network.
-	Net types.JaxNet
+	Net wire.JaxNet
 
 	// ChainName defines a human-readable identifier for the chain.
 	ChainName string
@@ -289,10 +288,10 @@ func (cfg Params) ShardParams(shard uint32, beaconBlock *wire.MsgBlock) *Params 
 	cfg.PowParams.TargetTimespan = time.Millisecond * ShardTimeDelta * ShardEpochLength
 
 	switch cfg.Net {
-	case types.TestNet:
+	case wire.TestNet:
 		cfg.PowParams.PowLimit = testNetPowLimitShard
 		cfg.PowParams.PowLimitBits = testNetPowLimitBitsShard
-	case types.MainNet:
+	case wire.MainNet:
 		cfg.PowParams.PowLimit = mainNetPowLimitShard
 		cfg.PowParams.PowLimitBits = mainNetPowLimitBitsShard
 	default:

@@ -7,8 +7,6 @@ package wire
 
 import (
 	"io"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MsgPing implements the Message interface and represents a bitcoin ping
@@ -30,11 +28,11 @@ type MsgPing struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	err := encoder.ReadElement(r, &msg.Nonce)
+	err := ReadElement(r, &msg.Nonce)
 	if err != nil {
 		return err
 	}
@@ -44,11 +42,11 @@ func (msg *MsgPing) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncod
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgPing) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgPing) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// There was no nonce for BIP0031Version and earlier.
 	// NOTE: > is not a mistake here.  The BIP0031 was defined as AFTER
 	// the version unlike most others.
-	err := encoder.WriteElement(w, msg.Nonce)
+	err := WriteElement(w, msg.Nonce)
 	if err != nil {
 		return err
 	}

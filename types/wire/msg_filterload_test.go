@@ -10,9 +10,6 @@ import (
 	"io"
 	"reflect"
 	"testing"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // TestFilterCLearLatest tests the MsgFilterLoad API against the latest protocol
@@ -128,7 +125,7 @@ func TestFilterLoadWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 
 	baseFilter := []byte{0x01, 0x02, 0x03, 0x04}
-	baseFilterLoad := NewMsgFilterLoad(baseFilter, 10, 0, types.BloomUpdateNone)
+	baseFilterLoad := NewMsgFilterLoad(baseFilter, 10, 0, BloomUpdateNone)
 	baseFilterLoadEncoded := append([]byte{0x04}, baseFilter...)
 	baseFilterLoadEncoded = append(baseFilterLoadEncoded,
 		0x00, 0x00, 0x00, 0x0a, // HashFuncs
@@ -136,13 +133,13 @@ func TestFilterLoadWireErrors(t *testing.T) {
 		0x00) // Flags
 
 	tests := []struct {
-		in       *MsgFilterLoad          // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgFilterLoad  // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in filter size.

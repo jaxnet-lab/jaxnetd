@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -21,7 +19,7 @@ func TestPing(t *testing.T) {
 	pver := ProtocolVersion
 
 	// Ensure we get the same nonce back out.
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -55,7 +53,7 @@ func TestPingBIP0031(t *testing.T) {
 	pver := ProtocolVersion
 	enc := BaseEncoding
 
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -98,7 +96,7 @@ func TestPingBIP0031(t *testing.T) {
 // TestPingCrossProtocol tests the MsgPing API when encoding with the latest
 // protocol version and decoding with BIP0031Version.
 func TestPingCrossProtocol(t *testing.T) {
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: Error generating nonce: %v", err)
 	}
@@ -121,11 +119,11 @@ func TestPingCrossProtocol(t *testing.T) {
 // versions.
 func TestPingWire(t *testing.T) {
 	tests := []struct {
-		in   MsgPing                 // Message to encode
-		out  MsgPing                 // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   MsgPing         // Message to encode
+		out  MsgPing         // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -174,13 +172,13 @@ func TestPingWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 
 	tests := []struct {
-		in       *MsgPing                // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgPing        // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		{

@@ -7,7 +7,6 @@ package p2p
 import (
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -163,7 +162,7 @@ func (cm *ConnManager) BroadcastMessage(msg wire.Message) {
 //
 // This function is safe for concurrent access and is part of the
 // P2PConnManager interface implementation.
-func (cm *ConnManager) AddRebroadcastInventory(iv *types.InvVect, data interface{}) {
+func (cm *ConnManager) AddRebroadcastInventory(iv *wire.InvVect, data interface{}) {
 	cm.server.AddRebroadcastInventory(iv, data)
 }
 

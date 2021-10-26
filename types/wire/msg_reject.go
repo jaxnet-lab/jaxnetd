@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -75,29 +74,29 @@ type MsgReject struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	// if pver < RejectVersion {
 	// 	str := fmt.Sprintf("reject message invalid for protocol "+
 	// 		"version %d", pver)
-	// 	return messageError("MsgReject.BtcDecode", str)
+	// 	return Error("MsgReject.BtcDecode", str)
 	// }
 
 	// Command that was rejected.
-	cmd, err := encoder.ReadVarString(r, pver)
+	cmd, err := ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
 	msg.Cmd = cmd
 
 	// Code indicating why the command was rejected.
-	err = encoder.ReadElement(r, &msg.Code)
+	err = ReadElement(r, &msg.Code)
 	if err != nil {
 		return err
 	}
 
 	// Human readable string with specific details (over and above the
 	// reject code above) about why the command was rejected.
-	reason, err := encoder.ReadVarString(r, pver)
+	reason, err := ReadVarString(r, pver)
 	if err != nil {
 		return err
 	}
@@ -106,7 +105,7 @@ func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnc
 	// CmdBlock and CmdTx messages have an additional hash field that
 	// identifies the specific block or transaction.
 	if msg.Cmd == CmdBlock || msg.Cmd == CmdTx {
-		err := encoder.ReadElement(r, &msg.Hash)
+		err := ReadElement(r, &msg.Hash)
 		if err != nil {
 			return err
 		}
@@ -117,28 +116,28 @@ func (msg *MsgReject) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnc
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// if pver < RejectVersion {
 	// 	str := fmt.Sprintf("reject message invalid for protocol "+
 	// 		"version %d", pver)
-	// 	return messageError("MsgReject.BtcEncode", str)
+	// 	return Error("MsgReject.BtcEncode", str)
 	// }
 
 	// Command that was rejected.
-	err := encoder.WriteVarString(w, pver, msg.Cmd)
+	err := WriteVarString(w, pver, msg.Cmd)
 	if err != nil {
 		return err
 	}
 
 	// Code indicating why the command was rejected.
-	err = encoder.WriteElement(w, msg.Code)
+	err = WriteElement(w, msg.Code)
 	if err != nil {
 		return err
 	}
 
 	// Human readable string with specific details (over and above the
 	// reject code above) about why the command was rejected.
-	err = encoder.WriteVarString(w, pver, msg.Reason)
+	err = WriteVarString(w, pver, msg.Reason)
 	if err != nil {
 		return err
 	}
@@ -146,7 +145,7 @@ func (msg *MsgReject) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEnc
 	// CmdBlock and CmdTx messages have an additional hash field that
 	// identifies the specific block or transaction.
 	if msg.Cmd == CmdBlock || msg.Cmd == CmdTx {
-		err := encoder.WriteElement(w, &msg.Hash)
+		err := WriteElement(w, &msg.Hash)
 		if err != nil {
 			return err
 		}

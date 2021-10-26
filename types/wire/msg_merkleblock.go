@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -35,7 +34,7 @@ func (msg *MsgMerkleBlock) AddTxHash(hash *chainhash.Hash) error {
 	if len(msg.Hashes)+1 > maxTxPerBlock {
 		str := fmt.Sprintf("too many tx hashes for message [max %v]",
 			maxTxPerBlock)
-		return messageError("MsgMerkleBlock.AddTxHash", str)
+		return Error("MsgMerkleBlock.AddTxHash", str)
 	}
 
 	msg.Hashes = append(msg.Hashes, hash)
@@ -44,36 +43,25 @@ func (msg *MsgMerkleBlock) AddTxHash(hash *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
-	// if pver < BIP0037Version {
-	// 	str := fmt.Sprintf("merkleblock message invalid for protocol "+
-	// 		"version %d", pver)
-	// 	return messageError("MsgMerkleBlock.BtcDecode", str)
-	// }
-
+func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (err error) {
 	if err := msg.Header.Read(r); err != nil {
 		return err
 	}
 
-	// , err = chain.ReadBlockHeader(r)
-	// if err != nil {
-	//	return err
-	// }
-
-	err = encoder.ReadElement(r, &msg.Transactions)
+	err = ReadElement(r, &msg.Transactions)
 	if err != nil {
 		return err
 	}
 
 	// Read num block locator hashes and limit to max.
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 	if count > maxTxPerBlock {
 		str := fmt.Sprintf("too many transaction hashes for message "+
 			"[count %v, max %v]", count, maxTxPerBlock)
-		return messageError("MsgMerkleBlock.BtcDecode", str)
+		return Error("MsgMerkleBlock.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of hashes to deserialize into in order to
@@ -82,59 +70,53 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.Messa
 	msg.Hashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		hash := &hashes[i]
-		err := encoder.ReadElement(r, hash)
+		err := ReadElement(r, hash)
 		if err != nil {
 			return err
 		}
 		msg.AddTxHash(hash)
 	}
 
-	msg.Flags, err = encoder.ReadVarBytes(r, pver, maxFlagsPerMerkleBlock,
+	msg.Flags, err = ReadVarBytes(r, pver, maxFlagsPerMerkleBlock,
 		"merkle block flags size")
 	return err
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	// if pver < BIP0037Version {
-	// 	str := fmt.Sprintf("merkleblock message invalid for protocol "+
-	// 		"version %d", pver)
-	// 	return messageError("MsgMerkleBlock.BtcEncode", str)
-	// }
-
+func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// Read num transaction hashes and limit to max.
 	numHashes := len(msg.Hashes)
 	if numHashes > maxTxPerBlock {
 		str := fmt.Sprintf("too many transaction hashes for message "+
 			"[count %v, max %v]", numHashes, maxTxPerBlock)
-		return messageError("MsgMerkleBlock.BtcDecode", str)
+		return Error("MsgMerkleBlock.BtcDecode", str)
 	}
 	numFlagBytes := len(msg.Flags)
 	if numFlagBytes > maxFlagsPerMerkleBlock {
 		str := fmt.Sprintf("too many flag bytes for message [count %v, "+
 			"max %v]", numFlagBytes, maxFlagsPerMerkleBlock)
-		return messageError("MsgMerkleBlock.BtcDecode", str)
+		return Error("MsgMerkleBlock.BtcDecode", str)
 	}
 
 	if err := msg.Header.Write(w); err != nil {
 		return err
 	}
 
-	if err := encoder.WriteElement(w, msg.Transactions); err != nil {
+	if err := WriteElement(w, msg.Transactions); err != nil {
 		return err
 	}
 
-	if err := encoder.WriteVarInt(w, uint64(numHashes)); err != nil {
+	if err := WriteVarInt(w, uint64(numHashes)); err != nil {
 		return err
 	}
 	for _, hash := range msg.Hashes {
-		if err := encoder.WriteElement(w, hash); err != nil {
+		if err := WriteElement(w, hash); err != nil {
 			return err
 		}
 	}
 
-	return encoder.WriteVarBytes(w, pver, msg.Flags)
+	return WriteVarBytes(w, pver, msg.Flags)
 }
 
 // Command returns the protocol command string for the message.  This is part

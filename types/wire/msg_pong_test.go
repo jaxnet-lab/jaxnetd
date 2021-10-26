@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -21,7 +19,7 @@ func TestPongLatest(t *testing.T) {
 	enc := BaseEncoding
 	pver := ProtocolVersion
 
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("RandomUint64: error generating nonce: %v", err)
 	}
@@ -74,7 +72,7 @@ func TestPongBIP0031(t *testing.T) {
 	pver := ProtocolVersion
 	enc := BaseEncoding
 
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("Error generating nonce: %v", err)
 	}
@@ -116,7 +114,7 @@ func TestPongBIP0031(t *testing.T) {
 // TestPongCrossProtocol tests the MsgPong API when encoding with the latest
 // protocol version and decoding with BIP0031Version.
 func TestPongCrossProtocol(t *testing.T) {
-	nonce, err := encoder.RandomUint64()
+	nonce, err := RandomUint64()
 	if err != nil {
 		t.Errorf("Error generating nonce: %v", err)
 	}
@@ -138,11 +136,11 @@ func TestPongCrossProtocol(t *testing.T) {
 // versions.
 func TestPongWire(t *testing.T) {
 	tests := []struct {
-		in   MsgPong                 // Message to encode
-		out  MsgPong                 // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   MsgPong         // Message to encode
+		out  MsgPong         // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{
@@ -196,13 +194,13 @@ func TestPongWireErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		in       *MsgPong                // Value to encode
-		buf      []byte                  // Wire encoding
-		pver     uint32                  // Protocol version for wire encoding
-		enc      encoder.MessageEncoding // Message encoding format
-		max      int                     // Max size of fixed buffer to induce errors
-		writeErr error                   // Expected write error
-		readErr  error                   // Expected read error
+		in       *MsgPong        // Value to encode
+		buf      []byte          // Wire encoding
+		pver     uint32          // Protocol version for wire encoding
+		enc      MessageEncoding // Message encoding format
+		max      int             // Max size of fixed buffer to induce errors
+		writeErr error           // Expected write error
+		readErr  error           // Expected read error
 	}{
 		// Latest protocol version with intentional read/write errors.
 		// Force error in nonce.

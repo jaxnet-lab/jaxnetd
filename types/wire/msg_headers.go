@@ -8,8 +8,6 @@ package wire
 import (
 	"fmt"
 	"io"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in
@@ -31,7 +29,7 @@ func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader) error {
 	if len(msg.Headers)+1 > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
-		return messageError("MsgHeaders.AddBlockHeader", str)
+		return Error("MsgHeaders.AddBlockHeader", str)
 	}
 
 	msg.Headers = append(msg.Headers, bh)
@@ -40,8 +38,8 @@ func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	count, err := encoder.ReadVarInt(r, pver)
+func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -50,7 +48,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 	if count > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers for message "+
 			"[count %v, max %v]", count, MaxBlockHeadersPerMsg)
-		return messageError("MsgHeaders.BtcDecode", str)
+		return Error("MsgHeaders.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of headers to deserialize into in order to
@@ -64,7 +62,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 		}
 
 		headers[i] = bh
-		txCount, err := encoder.ReadVarInt(r, pver)
+		txCount, err := ReadVarInt(r, pver)
 		if err != nil {
 			return err
 		}
@@ -73,7 +71,7 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 		if txCount > 0 {
 			str := fmt.Sprintf("block headers may not contain "+
 				"transactions [count %v]", txCount)
-			return messageError("MsgHeaders.BtcDecode", str)
+			return Error("MsgHeaders.BtcDecode", str)
 		}
 		msg.AddBlockHeader(bh)
 	}
@@ -83,16 +81,16 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// Limit to max block headers per message.
 	count := len(msg.Headers)
 	if count > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers for message "+
 			"[count %v, max %v]", count, MaxBlockHeadersPerMsg)
-		return messageError("MsgHeaders.BtcEncode", str)
+		return Error("MsgHeaders.BtcEncode", str)
 	}
 
-	err := encoder.WriteVarInt(w, uint64(count))
+	err := WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
@@ -106,7 +104,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEn
 		// of transactions on header messages.  This is really just an
 		// artifact of the way the original implementation serializes
 		// block headers, but it is required.
-		err = encoder.WriteVarInt(w, 0)
+		err = WriteVarInt(w, 0)
 		if err != nil {
 			return err
 		}
@@ -127,7 +125,7 @@ func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Num headers (varInt) + max allowed headers (header length + 1 byte
 	// for the number of transactions which is always 0).
 
-	return uint32(encoder.MaxVarIntPayload + ((msg.Chain.MaxBlockHeaderPayload() + 1) * MaxBlockHeadersPerMsg))
+	return uint32(MaxVarIntPayload + ((msg.Chain.MaxBlockHeaderPayload() + 1) * MaxBlockHeadersPerMsg))
 }
 
 // NewMsgHeaders returns a new bitcoin headers message that conforms to the

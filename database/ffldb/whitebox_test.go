@@ -5,7 +5,8 @@
 
 // This file is part of the ffldb package rather than the ffldb_test package as
 // it provides whitebox testing.
-//+build deprecated_tests
+//go:build deprecated_tests
+// +build deprecated_tests
 
 package ffldb
 
@@ -21,15 +22,15 @@ import (
 
 	"github.com/btcsuite/goleveldb/leveldb"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
-	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/database"
-	"gitlab.com/jaxnet/jaxnetd/types"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = types.MainNet
+	blockDataNet = wire.MainNet
 
 	// blockDataFile is the path to a file containing the first 256 blocks
 	// of the block chain.
@@ -41,7 +42,7 @@ var (
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network types.JaxNet) ([]*jaxutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network wire.JaxNet) ([]*jaxutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {

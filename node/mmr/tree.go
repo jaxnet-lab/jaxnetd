@@ -244,6 +244,13 @@ func (t *BlocksMMRTree) Current() *BlockNode {
 	return node
 }
 
+func (t *BlocksMMRTree) CurrenWeight() uint64 {
+	t.RLock()
+	node := t.chainWeight
+	t.RUnlock()
+	return node
+}
+
 func (t *BlocksMMRTree) Parent(height int32) *BlockNode {
 	t.RLock()
 	node := t.nodes[heightToID(height-1)]

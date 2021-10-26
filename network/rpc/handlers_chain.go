@@ -21,11 +21,9 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/node/mining"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
@@ -815,8 +813,8 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 	// Validate the signature - this just shows that it was valid at all.
 	// we will compare it with the key next.
 	var buf bytes.Buffer
-	encoder.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	encoder.WriteVarString(&buf, 0, c.Message)
+	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
+	wire.WriteVarString(&buf, 0, c.Message)
 	expectedMessageHash := chainhash.DoubleHashB(buf.Bytes())
 	pk, wasCompressed, err := btcec.RecoverCompact(btcec.S256(), sig,
 		expectedMessageHash)
@@ -1030,7 +1028,7 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 		n = 4 * 30
 	}
 
-	if server.chainProvider.ChainParams.Net != types.MainNet && n > chaincfg.ShardEpochLength/32 {
+	if server.chainProvider.ChainParams.Net != wire.MainNet && n > chaincfg.ShardEpochLength/32 {
 		n = chaincfg.ShardEpochLength / 32
 		return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil
 	}

@@ -14,8 +14,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 var (
@@ -37,7 +37,7 @@ type config struct {
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
 	TestNet3       bool   `long:"testnet" description:"Use the test network"`
-	FastNet bool `long:"fastnet" description:"Use the fast network"`
+	FastNet        bool   `long:"fastnet" description:"Use the fast network"`
 }
 
 // fileExists reports whether the named file or directory exists.
@@ -72,9 +72,9 @@ func validDbType(dbType string) bool {
 // removed and the network parameter's name used instead.
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
-	case types.TestNet:
+	case wire.TestNet:
 		return "testnet"
-	case types.FastTestNet:
+	case wire.FastTestNet:
 		return "fastnet"
 	default:
 		return chainParams.Name

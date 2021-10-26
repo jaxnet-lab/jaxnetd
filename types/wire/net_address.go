@@ -10,8 +10,6 @@ import (
 	"io"
 	"net"
 	"time"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
@@ -101,18 +99,18 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// protocol version >= NetAddressTimeVersion
 	if ts {
-		err := encoder.ReadElement(r, (*encoder.Uint32Time)(&na.Timestamp))
+		err := ReadElement(r, (*Uint32Time)(&na.Timestamp))
 		if err != nil {
 			return err
 		}
 	}
 
-	err := encoder.ReadElements(r, &na.Services, &ip)
+	err := ReadElements(r, &na.Services, &ip)
 	if err != nil {
 		return err
 	}
 	// Sigh.  Bitcoin protocol mixes little and big endian.
-	port, err := encoder.BinarySerializer.Uint16(r, bigEndian)
+	port, err := BinarySerializer.Uint16(r, bigEndian)
 	if err != nil {
 		return err
 	}
@@ -134,7 +132,7 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) error {
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.
 	if ts {
-		err := encoder.WriteElement(w, uint32(na.Timestamp.Unix()))
+		err := WriteElement(w, uint32(na.Timestamp.Unix()))
 		if err != nil {
 			return err
 		}
@@ -145,7 +143,7 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) error {
 	if na.IP != nil {
 		copy(ip[:], na.IP.To16())
 	}
-	err := encoder.WriteElements(w, na.Services, ip)
+	err := WriteElements(w, na.Services, ip)
 	if err != nil {
 		return err
 	}

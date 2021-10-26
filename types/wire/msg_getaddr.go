@@ -9,8 +9,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // MsgGetAddr implements the Message interface and represents a bitcoin
@@ -25,14 +23,14 @@ type MsgGetAddr struct {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgGetAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgGetAddr) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	buf, ok := r.(*bytes.Buffer)
 	if !ok {
 		return fmt.Errorf("MsgGetAddr.BtcDecode reader is not a " +
 			"*bytes.Buffer")
 	}
 
-	err := encoder.ReadElement(buf, &msg.ShardID)
+	err := ReadElement(buf, &msg.ShardID)
 	if err != nil {
 		return err
 	}
@@ -41,8 +39,8 @@ func (msg *MsgGetAddr) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEn
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgGetAddr) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	return encoder.WriteElement(w, msg.ShardID)
+func (msg *MsgGetAddr) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+	return WriteElement(w, msg.ShardID)
 }
 
 // Command returns the protocol command string for the message.  This is part

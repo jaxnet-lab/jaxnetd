@@ -13,7 +13,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -38,7 +37,7 @@ func TestMerkleBlock3(t *testing.T) {
 		return
 	}
 
-	f := bloom.NewFilter(10, 0, 0.000001, types.BloomUpdateAll)
+	f := bloom.NewFilter(10, 0, 0.000001, wire.BloomUpdateAll)
 
 	inputStr := "63194f18be0af63f2c6bc9dc0f777cbefed3d9415c4af83f3ee3a3d669c00cb5"
 	hash, err := chainhash.NewHashFromStr(inputStr)

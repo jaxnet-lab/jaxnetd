@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -44,7 +43,7 @@ func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
 	if len(msg.FilterHeaders) == cap(msg.FilterHeaders) {
 		str := fmt.Sprintf("FilterHeaders has insufficient capacity for additional header: len = %d",
 			len(msg.FilterHeaders))
-		return messageError("MsgCFCheckpt.AddCFHeader", str)
+		return Error("MsgCFCheckpt.AddCFHeader", str)
 	}
 
 	msg.FilterHeaders = append(msg.FilterHeaders, header)
@@ -53,21 +52,21 @@ func (msg *MsgCFCheckpt) AddCFHeader(header *chainhash.Hash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	// Read filter type
-	err := encoder.ReadElement(r, &msg.FilterType)
+	err := ReadElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Read stop hash
-	err = encoder.ReadElement(r, &msg.StopHash)
+	err = ReadElement(r, &msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Read number of filter headers
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEn
 	msg.FilterHeaders = make([]*chainhash.Hash, count)
 	for i := uint64(0); i < count; i++ {
 		var cfh chainhash.Hash
-		err := encoder.ReadElement(r, &cfh)
+		err := ReadElement(r, &cfh)
 		if err != nil {
 			return err
 		}
@@ -94,28 +93,28 @@ func (msg *MsgCFCheckpt) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEn
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *MsgCFCheckpt) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
 	// Write filter type
-	err := encoder.WriteElement(w, msg.FilterType)
+	err := WriteElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
 	// Write stop hash
-	err = encoder.WriteElement(w, msg.StopHash)
+	err = WriteElement(w, msg.StopHash)
 	if err != nil {
 		return err
 	}
 
 	// Write length of FilterHeaders slice
 	count := len(msg.FilterHeaders)
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, cfh := range msg.FilterHeaders {
-		err := encoder.WriteElement(w, cfh)
+		err := WriteElement(w, cfh)
 		if err != nil {
 			return err
 		}

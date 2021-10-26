@@ -10,7 +10,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/peer"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -24,14 +23,14 @@ type PeerNotifier interface {
 
 	UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHeight int32, updateSource *peer.Peer)
 
-	RelayInventory(invVect *types.InvVect, data interface{})
+	RelayInventory(invVect *wire.InvVect, data interface{})
 
 	TransactionConfirmed(tx *jaxutil.Tx)
 }
 
 type P2PCom interface {
 	RelayTransactions(txns []*mempool.TxDesc)
-	AddRebroadcastInventory(iv *types.InvVect, data interface{})
+	AddRebroadcastInventory(iv *wire.InvVect, data interface{})
 	BroadcastMessage(msg wire.Message)
 	Query(value interface{})
 	NetTotals() (uint64, uint64)

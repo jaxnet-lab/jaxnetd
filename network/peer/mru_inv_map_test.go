@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // TestMruInventoryMap ensures the MruInventoryMap behaves as expected including
@@ -21,10 +21,10 @@ func TestMruInventoryMap(t *testing.T) {
 	// Create a bunch of fake inventory vectors to use in testing the mru
 	// inventory code.
 	numInvVects := 10
-	invVects := make([]*types.InvVect, 0, numInvVects)
+	invVects := make([]*wire.InvVect, 0, numInvVects)
 	for i := 0; i < numInvVects; i++ {
 		hash := &chainhash.Hash{byte(i)}
-		iv := types.NewInvVect(types.InvTypeBlock, hash)
+		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
 
@@ -82,7 +82,7 @@ testLoop:
 			origLruIndex := numInvVects - test.limit
 			mruInvMap.Add(invVects[origLruIndex])
 
-			iv := types.NewInvVect(types.InvTypeBlock,
+			iv := wire.NewInvVect(wire.InvTypeBlock,
 				&chainhash.Hash{0x00, 0x01})
 			mruInvMap.Add(iv)
 
@@ -125,8 +125,8 @@ func TestMruInventoryMapStringer(t *testing.T) {
 	// inventory stringer code.
 	hash1 := &chainhash.Hash{0x01}
 	hash2 := &chainhash.Hash{0x02}
-	iv1 := types.NewInvVect(types.InvTypeBlock, hash1)
-	iv2 := types.NewInvVect(types.InvTypeBlock, hash2)
+	iv1 := wire.NewInvVect(wire.InvTypeBlock, hash1)
+	iv2 := wire.NewInvVect(wire.InvTypeBlock, hash2)
 
 	// Create new mru inventory map and add the inventory vectors.
 	mruInvMap := newMruInventoryMap(uint(2))
@@ -152,12 +152,12 @@ func BenchmarkMruInventoryList(b *testing.B) {
 	// the mru inventory code.
 	b.StopTimer()
 	numInvVects := 100000
-	invVects := make([]*types.InvVect, 0, numInvVects)
+	invVects := make([]*wire.InvVect, 0, numInvVects)
 	for i := 0; i < numInvVects; i++ {
 		hashBytes := make([]byte, chainhash.HashSize)
 		rand.Read(hashBytes)
 		hash, _ := chainhash.NewHash(hashBytes)
-		iv := types.NewInvVect(types.InvTypeBlock, hash)
+		iv := wire.NewInvVect(wire.InvTypeBlock, hash)
 		invVects = append(invVects, iv)
 	}
 	b.StartTimer()

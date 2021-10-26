@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -61,18 +60,18 @@ func (msg *EADAddresses) MaxPayloadLength(uint32) uint32 {
 	return MaxBlockPayload
 }
 
-func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	alias, err := encoder.ReadVarInt(r, pver)
+func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+	alias, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 	msg.ID = alias
 
-	msg.OwnerPubKey, err = encoder.ReadVarBytes(r, pver, 65*2, "OwnerPubKey")
+	msg.OwnerPubKey, err = ReadVarBytes(r, pver, 65*2, "OwnerPubKey")
 	if err != nil {
 		return err
 	}
-	count, err := encoder.ReadVarInt(r, pver)
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
@@ -90,13 +89,13 @@ func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc encoder.Message
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
-	err := encoder.WriteVarInt(w, msg.ID)
+func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
+	err := WriteVarInt(w, msg.ID)
 	if err != nil {
 		return err
 	}
 
-	err = encoder.WriteVarBytes(w, pver, msg.OwnerPubKey)
+	err = WriteVarBytes(w, pver, msg.OwnerPubKey)
 	if err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func (msg *EADAddresses) BtcEncode(w io.Writer, pver uint32, enc encoder.Message
 	// Protocol versions before MultipleAddressVersion only allowed 1 address
 	// per message.
 	count := len(msg.Addresses)
-	err = encoder.WriteVarInt(w, uint64(count))
+	err = WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
@@ -152,13 +151,13 @@ func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {
 	return 16 + 4 + 8 // todo: fix this
 }
 
-func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEncoding) error {
+func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
 	var port uint32
 	var txOutIndex uint64
 	var isURL bool
 	msg.TxHash = new(chainhash.Hash)
-	err := encoder.ReadElements(r,
-		(*encoder.Uint32Time)(&msg.ExpiresAt),
+	err := ReadElements(r,
+		(*Uint32Time)(&msg.ExpiresAt),
 		&msg.Shard,
 		msg.TxHash,
 		&port,
@@ -178,13 +177,13 @@ func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEnco
 
 	if !isURL {
 		var ip [16]byte
-		err := encoder.ReadElement(r, &ip)
+		err := ReadElement(r, &ip)
 		if err != nil {
 			return err
 		}
 		msg.IP = ip[:]
 	} else {
-		domain, err := encoder.ReadVarBytes(r, pver, MaxEADDomainLen, "TxHash")
+		domain, err := ReadVarBytes(r, pver, MaxEADDomainLen, "TxHash")
 		if err != nil {
 			return err
 		}
@@ -194,8 +193,8 @@ func (msg *EADAddress) BtcDecode(r io.Reader, pver uint32, _ encoder.MessageEnco
 	return nil
 }
 
-func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEncoding) error {
-	err := encoder.WriteElements(w,
+func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
+	err := WriteElements(w,
 		uint32(msg.ExpiresAt.Unix()),
 		msg.Shard,
 		msg.TxHash,
@@ -211,14 +210,14 @@ func (msg *EADAddress) BtcEncode(w io.Writer, pver uint32, _ encoder.MessageEnco
 	if msg.IP != nil {
 		var ip [16]byte
 		copy(ip[:], msg.IP.To16())
-		err = encoder.WriteElement(w, ip)
+		err = WriteElement(w, ip)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	err = encoder.WriteVarBytes(w, pver, []byte(msg.URL))
+	err = WriteVarBytes(w, pver, []byte(msg.URL))
 	if err != nil {
 		return err
 	}

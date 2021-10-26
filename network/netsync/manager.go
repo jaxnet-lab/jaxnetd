@@ -18,7 +18,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -36,11 +35,11 @@ const (
 
 	// maxRequestedBlocks is the maximum number of requested block
 	// hashes to store in memory.
-	maxRequestedBlocks = types.MaxInvPerMsg
+	maxRequestedBlocks = wire.MaxInvPerMsg
 
 	// maxRequestedTxns is the maximum number of requested transactions
 	// hashes to store in memory.
-	maxRequestedTxns = types.MaxInvPerMsg
+	maxRequestedTxns = wire.MaxInvPerMsg
 
 	// maxStallDuration is the time after which we will disconnect our
 	// current sync peer if we haven't made progress.
@@ -144,7 +143,7 @@ type headerNode struct {
 // about a peer.
 type peerSyncState struct {
 	syncCandidate   bool
-	requestQueue    []*types.InvVect
+	requestQueue    []*wire.InvVect
 	requestedTxns   map[chainhash.Hash]struct{}
 	requestedBlocks map[chainhash.Hash]struct{}
 }
@@ -835,7 +834,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			continue
 		}
 
-		iv := types.NewInvVect(types.InvTypeBlock, node.hash)
+		iv := wire.NewInvVect(wire.InvTypeBlock, node.hash)
 		haveInv, err := sm.haveInventory(iv)
 		if err != nil {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Unexpected failure when checking for "+
@@ -852,14 +851,14 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 			// post-fork, then ensure that we receive all the
 			// witness data in the blocks.
 			if sm.syncPeer.IsWitnessEnabled() {
-				iv.Type = types.InvTypeWitnessBlock
+				iv.Type = wire.InvTypeWitnessBlock
 			}
 
 			gdmsg.AddInvVect(iv)
 			numRequested++
 		}
 		sm.startHeader = e.Next()
-		if numRequested >= types.MaxInvPerMsg {
+		if numRequested >= wire.MaxInvPerMsg {
 			break
 		}
 	}
@@ -981,18 +980,18 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 // inventory can be when it is in different states such as blocks that are part
 // of the main chain, on a side chain, in the orphan pool, and transactions that
 // are in the memory pool (either the main pool or orphan pool).
-func (sm *SyncManager) haveInventory(invVect *types.InvVect) (bool, error) {
+func (sm *SyncManager) haveInventory(invVect *wire.InvVect) (bool, error) {
 	switch invVect.Type {
-	case types.InvTypeWitnessBlock:
+	case wire.InvTypeWitnessBlock:
 		fallthrough
-	case types.InvTypeBlock:
+	case wire.InvTypeBlock:
 		// Ask chain if the block is known to it in any form (main
 		// chain, side chain, or orphan).
 		return sm.chain.HaveBlock(&invVect.Hash)
 
-	case types.InvTypeWitnessTx:
+	case wire.InvTypeWitnessTx:
 		fallthrough
-	case types.InvTypeTx:
+	case wire.InvTypeTx:
 		// Ask the transaction memory pool if the transaction is known
 		// to it in any form (main pool or orphan).
 		if sm.txMemPool.HaveTransaction(&invVect.Hash) {
@@ -1042,7 +1041,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	lastBlock := -1
 	invVects := imsg.inv.InvList
 	for i := len(invVects) - 1; i >= 0; i-- {
-		if invVects[i].Type == types.InvTypeBlock {
+		if invVects[i].Type == wire.InvTypeBlock {
 			lastBlock = i
 			break
 		}
@@ -1079,10 +1078,10 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 	for i, iv := range invVects {
 		// Ignore unsupported inventory types.
 		switch iv.Type {
-		case types.InvTypeBlock:
-		case types.InvTypeTx:
-		case types.InvTypeWitnessBlock:
-		case types.InvTypeWitnessTx:
+		case wire.InvTypeBlock:
+		case wire.InvTypeTx:
+		case wire.InvTypeWitnessBlock:
+		case wire.InvTypeWitnessTx:
 		default:
 			continue
 		}
@@ -1105,7 +1104,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 		if !haveInv {
-			if iv.Type == types.InvTypeTx {
+			if iv.Type == wire.InvTypeTx {
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
@@ -1117,7 +1116,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			// peers, as after segwit activation we only want to
 			// download from peers that can provide us full witness
 			// data for blocks.
-			if !peer.IsWitnessEnabled() && iv.Type == types.InvTypeBlock {
+			if !peer.IsWitnessEnabled() && iv.Type == wire.InvTypeBlock {
 				continue
 			}
 
@@ -1126,7 +1125,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 
-		if iv.Type == types.InvTypeBlock {
+		if iv.Type == wire.InvTypeBlock {
 			// The block is an orphan block that we already have.
 			// When the existing orphan was processed, it requested
 			// the missing parent blocks.  When this scenario
@@ -1178,9 +1177,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 		requestQueue = requestQueue[1:]
 
 		switch iv.Type {
-		case types.InvTypeWitnessBlock:
+		case wire.InvTypeWitnessBlock:
 			fallthrough
-		case types.InvTypeBlock:
+		case wire.InvTypeBlock:
 			// Request the block if there is not already a pending
 			// request.
 			if _, exists := sm.requestedBlocks[iv.Hash]; !exists {
@@ -1189,16 +1188,16 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				state.requestedBlocks[iv.Hash] = struct{}{}
 
 				if peer.IsWitnessEnabled() {
-					iv.Type = types.InvTypeWitnessBlock
+					iv.Type = wire.InvTypeWitnessBlock
 				}
 
 				gdmsg.AddInvVect(iv)
 				numRequested++
 			}
 
-		case types.InvTypeWitnessTx:
+		case wire.InvTypeWitnessTx:
 			fallthrough
-		case types.InvTypeTx:
+		case wire.InvTypeTx:
 			// Request the transaction if there is not already a
 			// pending request.
 			if _, exists := sm.requestedTxns[iv.Hash]; !exists {
@@ -1209,7 +1208,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// If the peer is capable, request the txn
 				// including all witness data.
 				if peer.IsWitnessEnabled() {
-					iv.Type = types.InvTypeWitnessTx
+					iv.Type = wire.InvTypeWitnessTx
 				}
 
 				gdmsg.AddInvVect(iv)
@@ -1217,7 +1216,7 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			}
 		}
 
-		if numRequested >= types.MaxInvPerMsg {
+		if numRequested >= wire.MaxInvPerMsg {
 			break
 		}
 	}
@@ -1346,7 +1345,7 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		}
 
 		// Generate the inventory vector and relay it.
-		iv := types.NewInvVect(types.InvTypeBlock, block.Hash())
+		iv := wire.NewInvVect(wire.InvTypeBlock, block.Hash())
 		sm.peerNotifier.RelayInventory(iv, block.MsgBlock().Header)
 
 	// A block has been connected to the main block chain.

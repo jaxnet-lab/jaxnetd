@@ -8,9 +8,6 @@ package wire
 import (
 	"fmt"
 	"io"
-
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
-	"gitlab.com/jaxnet/jaxnetd/types"
 )
 
 // defaultInvListAlloc is the default size used for the backing array for an
@@ -32,15 +29,15 @@ const defaultInvListAlloc = 1000
 // Use the AddInvVect function to build up the list of inventory vectors when
 // sending an inv message to another server.
 type MsgInv struct {
-	InvList []*types.InvVect
+	InvList []*InvVect
 }
 
 // AddInvVect adds an inventory vector to the message.
-func (msg *MsgInv) AddInvVect(iv *types.InvVect) error {
-	if len(msg.InvList)+1 > types.MaxInvPerMsg {
+func (msg *MsgInv) AddInvVect(iv *InvVect) error {
+	if len(msg.InvList)+1 > MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [max %v]",
-			types.MaxInvPerMsg)
-		return messageError("MsgInv.AddInvVect", str)
+			MaxInvPerMsg)
+		return Error("MsgInv.AddInvVect", str)
 	}
 
 	msg.InvList = append(msg.InvList, iv)
@@ -49,25 +46,25 @@ func (msg *MsgInv) AddInvVect(iv *types.InvVect) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) error {
-	count, err := encoder.ReadVarInt(r, pver)
+func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
+	count, err := ReadVarInt(r, pver)
 	if err != nil {
 		return err
 	}
 
 	// Limit to max inventory vectors per message.
-	if count > types.MaxInvPerMsg {
+	if count > MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [%v]", count)
-		return messageError("MsgInv.BtcDecode", str)
+		return Error("MsgInv.BtcDecode", str)
 	}
 
 	// Create a contiguous slice of inventory vectors to deserialize into in
 	// order to reduce the number of allocations.
-	invList := make([]types.InvVect, count)
-	msg.InvList = make([]*types.InvVect, 0, count)
+	invList := make([]InvVect, count)
+	msg.InvList = make([]*InvVect, 0, count)
 	for i := uint64(0); i < count; i++ {
 		iv := &invList[i]
-		err := encoder.ReadInvVect(r, iv)
+		err := ReadInvVect(r, iv)
 		if err != nil {
 			return err
 		}
@@ -79,21 +76,21 @@ func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncodi
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgInv) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgInv) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	// Limit to max inventory vectors per message.
 	count := len(msg.InvList)
-	if count > types.MaxInvPerMsg {
+	if count > MaxInvPerMsg {
 		str := fmt.Sprintf("too many invvect in message [%v]", count)
-		return messageError("MsgInv.BtcEncode", str)
+		return Error("MsgInv.BtcEncode", str)
 	}
 
-	err := encoder.WriteVarInt(w, uint64(count))
+	err := WriteVarInt(w, uint64(count))
 	if err != nil {
 		return err
 	}
 
 	for _, iv := range msg.InvList {
-		err := encoder.WriteInvVect(w, iv)
+		err := WriteInvVect(w, iv)
 		if err != nil {
 			return err
 		}
@@ -112,14 +109,14 @@ func (msg *MsgInv) Command() string {
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgInv) MaxPayloadLength(pver uint32) uint32 {
 	// Num inventory vectors (varInt) + max allowed inventory vectors.
-	return encoder.MaxVarIntPayload + (types.MaxInvPerMsg * types.MaxInvVectPayload)
+	return MaxVarIntPayload + (MaxInvPerMsg * MaxInvVectPayload)
 }
 
 // NewMsgInv returns a new bitcoin inv message that conforms to the Message
 // interface.  See MsgInv for details.
 func NewMsgInv() *MsgInv {
 	return &MsgInv{
-		InvList: make([]*types.InvVect, 0, defaultInvListAlloc),
+		InvList: make([]*InvVect, 0, defaultInvListAlloc),
 	}
 }
 
@@ -135,11 +132,11 @@ func NewMsgInv() *MsgInv {
 // limited to MaxInvPerMsg.
 func NewMsgInvSizeHint(sizeHint uint) *MsgInv {
 	// Limit the specified hint to the maximum allow per message.
-	if sizeHint > types.MaxInvPerMsg {
-		sizeHint = types.MaxInvPerMsg
+	if sizeHint > MaxInvPerMsg {
+		sizeHint = MaxInvPerMsg
 	}
 
 	return &MsgInv{
-		InvList: make([]*types.InvVect, 0, sizeHint),
+		InvList: make([]*InvVect, 0, sizeHint),
 	}
 }

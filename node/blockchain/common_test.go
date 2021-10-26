@@ -21,7 +21,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -35,7 +34,7 @@ const (
 	testDbRoot = "testdbs"
 
 	// blockDataNet is the expected network in the test block data.
-	blockDataNet = types.MainNet
+	blockDataNet = wire.MainNet
 )
 
 // filesExists returns whether or not the named file or directory exists.
@@ -67,7 +66,7 @@ func isSupportedDbType(dbType string) bool {
 func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil.Block, err error) {
 	filename = filepath.Join("testdata/", filename)
 
-	var network = types.MainNet
+	var network = wire.MainNet
 	var dr io.Reader
 	var fi io.ReadCloser
 

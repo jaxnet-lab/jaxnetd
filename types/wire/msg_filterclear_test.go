@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 )
 
 // TestFilterCLearLatest tests the MsgFilterClear API against the latest
@@ -58,11 +57,11 @@ func TestFilterClearWire(t *testing.T) {
 	msgFilterClearEncoded := []byte{}
 
 	tests := []struct {
-		in   *MsgFilterClear         // Message to encode
-		out  *MsgFilterClear         // Expected decoded message
-		buf  []byte                  // Wire encoding
-		pver uint32                  // Protocol version for wire encoding
-		enc  encoder.MessageEncoding // Message encoding format
+		in   *MsgFilterClear // Message to encode
+		out  *MsgFilterClear // Expected decoded message
+		buf  []byte          // Wire encoding
+		pver uint32          // Protocol version for wire encoding
+		enc  MessageEncoding // Message encoding format
 	}{
 		// Latest protocol version.
 		{

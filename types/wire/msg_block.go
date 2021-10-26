@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/encoder"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -95,13 +94,13 @@ func (msg *MsgBlock) ClearTransactions() {
 // This is part of the Message interface implementation.
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
-func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEncoding) error {
+func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	//msg.ShardBlock
 	if err := msg.Header.Write(w); err != nil {
 		return err
 	}
 
-	err := encoder.WriteVarInt(w, uint64(len(msg.Transactions)))
+	err := WriteVarInt(w, uint64(len(msg.Transactions)))
 	if err != nil {
 		return err
 	}
@@ -120,7 +119,7 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc encoder.MessageEnco
 // This is part of the Message interface implementation.
 // See Deserialize for decoding blocks stored to disk, such as in a database, as
 // opposed to decoding blocks from the wire.
-func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEncoding) (err error) {
+func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (err error) {
 	if msg.Header == nil {
 		return errors.New("block not initialized")
 	}
@@ -129,7 +128,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnco
 		return err
 	}
 
-	txCount, err := encoder.ReadVarInt(r, pver)
+	txCount, err := ReadVarInt(r, pver)
 	if err != nil {
 		return nil
 	}
@@ -140,7 +139,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc encoder.MessageEnco
 	if txCount > maxTxPerBlock {
 		str := fmt.Sprintf("too many transactions to fit into a block "+
 			"[count %d, max %d]", txCount, maxTxPerBlock)
-		return messageError("MsgBlock.BtcDecode", str)
+		return Error("MsgBlock.BtcDecode", str)
 	}
 
 	msg.Transactions = make([]*MsgTx, 0, txCount)
@@ -199,7 +198,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 		return nil, err
 	}
 
-	txCount, err := encoder.ReadVarInt(r, 0)
+	txCount, err := ReadVarInt(r, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +209,7 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 	if txCount > maxTxPerBlock {
 		str := fmt.Sprintf("too many transactions to fit into a block "+
 			"[count %d, max %d]", txCount, maxTxPerBlock)
-		return nil, messageError("MsgBlock.DeserializeTxLoc", str)
+		return nil, Error("MsgBlock.DeserializeTxLoc", str)
 	}
 
 	// Deserialize each transaction while keeping track of its location
@@ -265,7 +264,7 @@ func (msg *MsgBlock) SerializeNoWitness(w io.Writer) error {
 func (msg *MsgBlock) SerializeSize() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSize()
@@ -279,7 +278,7 @@ func (msg *MsgBlock) SerializeSize() int {
 func (msg *MsgBlock) SerializeSizeStripped() int {
 	// Block header bytes + Serialized varint size for the number of
 	// transactions.
-	n := msg.Header.MaxLength() + encoder.VarIntSerializeSize(uint64(len(msg.Transactions)))
+	n := msg.Header.MaxLength() + VarIntSerializeSize(uint64(len(msg.Transactions)))
 
 	for _, tx := range msg.Transactions {
 		n += tx.SerializeSizeStripped()
