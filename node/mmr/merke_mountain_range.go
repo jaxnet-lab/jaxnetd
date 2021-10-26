@@ -81,7 +81,59 @@ func BuildMerkleTreeStore(blocks []Leaf) []*Leaf {
 	return merkles
 }
 
+func calcRoot(nodes []*Leaf, keepPrevTops bool) *Leaf {
+	switch len(nodes) {
+	case 1:
+		return nodes[0]
+	case 3:
+		if keepPrevTops && nodes[1] != nil {
+			return nodes[1]
+		}
+		nodes[1] = HashMerkleBranches(nodes[0], nodes[2])
+		return nodes[1]
+	default:
+		midPoint := len(nodes) / 2
+
+		if keepPrevTops && nodes[midPoint] != nil {
+			return nodes[midPoint]
+		}
+
+		leftBranchRoot := calcRoot(nodes[:midPoint], keepPrevTops)
+		rightBranchRoot := calcRoot(nodes[midPoint+1:], keepPrevTops)
+		nodes[midPoint] = HashMerkleBranches(leftBranchRoot, rightBranchRoot)
+		return nodes[midPoint]
+	}
+}
+
+func BuildMerkleTreeStoreNG(blocks []Leaf) (*Leaf, []*Leaf) {
+	// Calculate how many entries are required to hold the binary merkle
+	// tree as a linear array and create an array of that size.
+	nextPoT := nextPowerOfTwo(uint64(len(blocks)))
+	// arraySize := len(blocks) * 2
+	arraySize := nextPoT*2 - 1
+	merkles := make([]*Leaf, arraySize)
+
+	for i := range blocks {
+		merkles[heightToID(int32(i))] = &blocks[i]
+	}
+
+	if len(blocks) == 1 {
+		return &blocks[0], merkles
+	}
+
+	root := calcRoot(merkles, false)
+	return root, merkles
+}
+
 func HashMerkleBranches(left, right *Leaf) *Leaf {
+	if left == nil {
+		return nil
+	}
+
+	if right == nil {
+		return &Leaf{Hash: left.Hash, Weight: left.Weight}
+	}
+
 	var data [80]byte
 	lv := left.Value()
 	rv := right.Value()

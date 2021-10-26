@@ -49,7 +49,7 @@ func fastLog2Floor(n uint32) uint8 {
 type chainView struct {
 	mtx     sync.Mutex
 	nodes   []blocknodes.IBlockNode
-	mmrTree mmrContainer
+	mmrTree mmr.TreeContainer
 }
 
 // newChainView returns a new chain view for the given tip block node.  Passing
@@ -59,9 +59,9 @@ func newChainView(tip blocknodes.IBlockNode) *chainView {
 	// The mutex is intentionally not held since this is a constructor.
 	var c chainView
 
-	c.mmrTree = mmrContainer{
-		BlocksMMRTree:  mmr.NewTree(),
-		mmrRootToBlock: map[chainhash.Hash]chainhash.Hash{},
+	c.mmrTree = mmr.TreeContainer{
+		BlocksMMRTree: mmr.NewTree(),
+		RootToBlock:   map[chainhash.Hash]chainhash.Hash{},
 	}
 
 	c.setTip(tip)
@@ -151,7 +151,7 @@ func (c *chainView) setTip(node blocknodes.IBlockNode) {
 		}
 	}
 
-	c.mmrTree.setNodeToMmrWithReorganization(node)
+	c.mmrTree.SetNodeToMmrWithReorganization(node)
 
 	for node != nil && c.nodes[node.Height()] != node {
 		c.nodes[node.Height()] = node
@@ -223,7 +223,7 @@ func (c *chainView) NodeByHeight(height int32) blocknodes.IBlockNode {
 // This function is safe for concurrent access.
 func (c *chainView) HashByMMR(root chainhash.Hash) (chainhash.Hash, bool) {
 	c.mtx.Lock()
-	hash, present := c.mmrTree.mmrRootToBlock[root]
+	hash, present := c.mmrTree.RootToBlock[root]
 	c.mtx.Unlock()
 	return hash, present
 }

@@ -7,9 +7,11 @@
 package mmr
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -47,11 +49,33 @@ func TestBlock_Value(t *testing.T) {
 			}
 
 			nB := gotV.Block()
+			_ = nB.Value()
 			if !reflect.DeepEqual(nB, b) {
+				spew.Dump(nB)
+				spew.Dump(b)
 				t.Errorf("Leaf() = %v, want %v", nB, b)
 			}
 		})
 	}
+
+	for _, blocks := range []int{1, 2, 3, 4, 5, 6, 7, 8} {
+		fmt.Println("calc for N", blocks)
+		N := blocks
+		j := 0
+		p := 1
+		for p < N {
+			fmt.Println("p =", p)
+			j = p
+			p *= 2
+			for 2*j < N {
+				fmt.Println(" j =", j)
+				fmt.Println(" -> new node=", j+p)
+				j += 2 * p
+			}
+		}
+		fmt.Println()
+	}
+
 }
 
 func TestBuildMerkleTreeStore(t *testing.T) {
