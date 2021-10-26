@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/btcec"
@@ -361,7 +362,7 @@ func solveBlock(header wire.BlockHeader, powParams *chaincfg.PowParams) bool {
 							results <- sbResult{true, i}
 						}
 					} else {
-						fmt.Printf("pow_hash %s, target %064x \n", hash, targetDifficulty)
+						// fmt.Printf("pow_hash %s, target %064x \n", hash, targetDifficulty)
 						results <- sbResult{true, i}
 					}
 
@@ -854,7 +855,7 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	defer func() {
 		if r := recover(); r != nil {
 			tests = nil
-
+			debug.PrintStack()
 			switch rt := r.(type) {
 			case string:
 				err = errors.New(rt)

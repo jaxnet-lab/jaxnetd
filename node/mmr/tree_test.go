@@ -204,4 +204,44 @@ func TestMerkleTree(t *testing.T) {
 			}
 		})
 	}
+
+}
+
+func TestMerkleTreeMethods(t *testing.T) {
+	hash := func(h string) chainhash.Hash {
+		return chainhash.HashH([]byte(h))
+	}
+
+	blocks := []Leaf{
+		{Hash: hash("leaf_0_weight_0"), Weight: 143_000},
+		{Hash: hash("leaf_1_weight_1"), Weight: 143_001},
+		{Hash: hash("leaf_2_weight_2"), Weight: 143_002},
+		{Hash: hash("leaf_3_weight_3"), Weight: 143_003},
+		{Hash: hash("leaf_4_weight_4"), Weight: 143_004},
+		{Hash: hash("leaf_5_weight_5"), Weight: 143_005},
+		{Hash: hash("leaf_6_weight_6"), Weight: 143_006},
+		{Hash: hash("leaf_7_weight_7"), Weight: 143_007},
+		{Hash: hash("leaf_8_weight_8"), Weight: 143_008},
+	}
+
+	altBlocks := []Leaf{
+		{Hash: hash("leaf_0_weight_0"), Weight: 143_000},
+		{Hash: hash("leaf_1_weight_1"), Weight: 143_001},
+		{Hash: hash("leaf_2_weight_2"), Weight: 143_002},
+		{Hash: hash("alt_leaf_3_weight_3"), Weight: 343_003},
+		{Hash: hash("alt_leaf_4_weight_4"), Weight: 343_004},
+		{Hash: hash("alt_leaf_5_weight_5"), Weight: 343_005},
+		{Hash: hash("alt_leaf_6_weight_6"), Weight: 343_006},
+		{Hash: hash("alt_leaf_7_weight_7"), Weight: 343_007},
+		{Hash: hash("alt_leaf_8_weight_8"), Weight: 343_008},
+	}
+	_ = altBlocks
+
+	tree := NewTree()
+	for _, block := range blocks {
+		tree.AddBlock(block.Hash, block.Weight)
+	}
+
+	tree.ResetRootTo(blocks[3].Hash, 4)
+
 }

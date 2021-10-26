@@ -190,6 +190,9 @@ func (t *BlocksMMRTree) resetRootTo(hash chainhash.Hash, height int32) {
 	}
 
 	node := t.nodes[heightToID(height+1)]
+	if node == nil {
+		return
+	}
 
 	t.rmBlock(node.Hash, height+1)
 }
@@ -216,17 +219,30 @@ func (t *BlocksMMRTree) rmBlock(hash chainhash.Hash, height int32) {
 		return
 	}
 
-	var deleted = 0
-	for idToDrop := t.nextHeight - 1; idToDrop >= node.Height; idToDrop-- {
-		node := t.nodes[idToDrop]
-		t.nextHeight -= 1
-		t.chainWeight -= node.Weight
-		delete(t.hashToHeight, node.Hash)
-		delete(t.mountainTops, node.ActualRoot)
-		t.nodes[heightToID(int32(idToDrop))] = nil
-		// delete(t.nodes, idToDrop)
-		deleted++
+	// remove nodes
+	for i := heightToID(height); i < uint64(len(t.nodes)); i += 2 {
+		leaf := t.nodes[i]
+		if leaf == nil {
+			continue
+		}
+		delete(t.hashToHeight, leaf.Hash)
+		delete(t.mountainTops, leaf.ActualRoot)
+		t.chainWeight -= leaf.Weight
+		t.nodes[i] = nil
 	}
+
+	// remove tops
+	for i := heightToID(height) - 1; i < uint64(len(t.nodes)); i += 2 {
+		leaf := t.nodes[i]
+		if leaf == nil {
+			continue
+		}
+
+		delete(t.mountainTops, leaf.Hash)
+		t.nodes[i] = nil
+	}
+
+	t.nextHeight = uint64(height)
 
 	if t.nextHeight == 0 {
 		return
