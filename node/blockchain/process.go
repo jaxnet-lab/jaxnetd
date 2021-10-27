@@ -96,7 +96,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	log.Trace().Str("chain", b.chain.Name()).Msgf("Processing block %v", blockHash)
 
 	// The block must not already exist in the main chain or side chains.
-	exists, orphan, err := b.blocksDB.blockExists(b.db, blockHash)
+	exists, err := b.blocksDB.blockExists(b.db, blockHash)
 	if err != nil {
 		return false, false, err
 	}
@@ -104,7 +104,9 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		str := fmt.Sprintf("already have block %v", blockHash)
 		return false, false, chaindata.NewRuleError(chaindata.ErrDuplicateBlock, str)
 	}
+
 	// The block must not already exist as an orphan.
+	_, orphan := b.blocksDB.orphanIndex.orphans[*blockHash]
 	if orphan {
 		str := fmt.Sprintf("already have block (orphan) %v", blockHash)
 		return false, false, chaindata.NewRuleError(chaindata.ErrDuplicateBlock, str)

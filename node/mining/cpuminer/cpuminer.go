@@ -187,10 +187,13 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 	merkleMountainRoot := msgBlock.Header.BlocksMerkleMountainRoot()
 
 	var bestMMR chainhash.Hash
+	var bestHeight int32
 	if chainID == 0 {
 		bestMMR = miner.beacon.BlockTemplateGenerator.BestSnapshot().CurrentMMRRoot
+		bestHeight = miner.beacon.BlockTemplateGenerator.BestSnapshot().Height
 	} else {
 		bestMMR = miner.shards[chainID].BlockTemplateGenerator.BestSnapshot().CurrentMMRRoot
+		bestHeight = miner.shards[chainID].BlockTemplateGenerator.BestSnapshot().Height
 	}
 
 	if !merkleMountainRoot.IsEqual(&bestMMR) {
@@ -229,8 +232,12 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 		reward += block.MsgBlock().Transactions[0].TxOut[2].Value
 	}
 
-	miner.log.Info().Msgf("Block submitted to chain with id %d via CPU miner accepted (hash %s, pow_hash %s amount %s)", chainID,
-		block.Hash(), block.PowHash(), jaxutil.IAmountVal(reward, chainID == 0))
+	miner.log.Info().Uint32("chain_id", chainID).
+		Stringer("hash", block.Hash()).
+		Stringer("pow_hash", block.PowHash()).
+		Stringer("amount", jaxutil.IAmountVal(reward, chainID == 0)).
+		Int32("height", bestHeight+1).
+		Msgf("Block submitted via CPU miner accepted")
 	return true
 }
 

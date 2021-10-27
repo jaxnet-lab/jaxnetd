@@ -39,6 +39,10 @@ func (n *BlockNode) MarshalJSON() ([]byte, error) {
 }
 
 func (n *BlockNode) Clone() *BlockNode {
+	if n == nil {
+		return nil
+	}
+
 	clone := *n
 	return &clone
 }

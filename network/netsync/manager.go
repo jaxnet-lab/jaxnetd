@@ -591,25 +591,25 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 // still have blocks to check
 func (sm *SyncManager) current() bool {
 	if !sm.chain.IsCurrent() {
-		sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager not current -> !sm.chain.IsCurrent()")
+		// sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager not current -> !sm.chain.IsCurrent()")
 		return false
 	}
 
 	// if blockChain thinks we are current and we have no syncPeer it
 	// is probably right.
 	if sm.syncPeer == nil {
-		sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager current -> sm.syncPeer == nil")
+		// sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager current -> sm.syncPeer == nil")
 		return true
 	}
 
 	// No matter what chain thinks, if we are below the block we are syncing
 	// to we are not current.
 	if sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock() {
-		sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager not current -> sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock()")
+		// sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager not current -> sm.chain.BestSnapshot().Height < sm.syncPeer.LastBlock()")
 		return false
 	}
 
-	sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager current")
+	// sm.progressLogger.subsystemLogger.Trace().Msg("SyncManager current")
 
 	return true
 }
@@ -763,8 +763,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	if blkHashUpdate != nil && heightUpdate != 0 {
 		peer.UpdateLastBlockHeight(heightUpdate)
 		if isOrphan || sm.current() {
-			go sm.peerNotifier.UpdatePeerHeights(blkHashUpdate, heightUpdate,
-				peer)
+			go sm.peerNotifier.UpdatePeerHeights(blkHashUpdate, heightUpdate, peer)
 		}
 	}
 
@@ -852,8 +851,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 		haveInv, err := sm.haveInventory(iv)
 		if err != nil {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Unexpected failure when checking for "+
-				"existing inventory during header block "+
-				"fetch: %v", err)
+				"existing inventory during header block fetch: %v", err)
 		}
 		if !haveInv {
 			syncPeerState := sm.peerStates[sm.syncPeer]

@@ -244,7 +244,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	bestNode := b.blocksDB.bestChain.Tip()
-	log.Info().Str("chain", b.chain.Name()).Msgf("ChainCtx state (height %d, hash %v, totaltx %d, work %v)",
+	log.Info().Str("chain", b.chain.Name()).Msgf("Chain state (height %d, hash %v, totaltx %d, work %v)",
 		bestNode.Height(), bestNode.GetHash(), b.stateSnapshot.TotalTxns,
 		bestNode.WorkSum())
 
@@ -343,11 +343,12 @@ type BlockChain struct {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) HaveBlock(hash *chainhash.Hash) (bool, error) {
-	exists, orphan, err := b.blocksDB.blockExists(b.db, hash)
+	exists, err := b.blocksDB.blockExists(b.db, hash)
 	if err != nil {
 		return false, err
 	}
-	return exists || orphan, nil
+
+	return exists || b.IsKnownOrphan(hash), nil
 }
 
 // IsKnownOrphan returns whether the passed hash is currently a known orphan.

@@ -13,7 +13,7 @@ import (
 
 const (
 	// MaxInvPerMsg is the maximum number of inventory vectors that can be in a
-	// single bitcoin inv message.
+	// single jaxnetd inv message.
 	MaxInvPerMsg = 50000
 
 	// MaxInvVectPayload is maximum payload size for an inventory vector.

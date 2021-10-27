@@ -127,8 +127,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 		return err
 	})
 	if err != nil {
-		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v",
-			hash, err)
+		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v", hash, err)
 
 		if doneChan != nil {
 			doneChan <- struct{}{}

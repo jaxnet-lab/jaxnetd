@@ -46,10 +46,10 @@ type rBlockStorage struct {
 //
 // This function is safe for concurrent access.
 // Returns: blockExist, blockOrphan, error
-func (storage *rBlockStorage) blockExists(db database.DB, hash *chainhash.Hash) (bool, bool, error) {
+func (storage *rBlockStorage) blockExists(db database.DB, hash *chainhash.Hash) (bool, error) {
 	// Check block index first (could be main chain or side chain blocks).
 	if storage.index.HaveBlock(hash) {
-		return true, false, nil
+		return true, nil
 	}
 
 	// Check in the database.
@@ -77,13 +77,7 @@ func (storage *rBlockStorage) blockExists(db database.DB, hash *chainhash.Hash) 
 		}
 		return err
 	})
-
-	// b.IsKnownOrphan(hash)
-
-	// The block must not already exist as an orphan.
-	_, orphan := storage.orphanIndex.orphans[*hash]
-	return exists, orphan, err
-
+	return exists, err
 }
 
 func (storage *rBlockStorage) getBlockParent(prevMMRRoot chainhash.Hash) (blocknodes.IBlockNode, bool, error) {

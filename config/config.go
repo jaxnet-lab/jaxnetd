@@ -195,6 +195,7 @@ func parseAndSetDebugLevels(debugLevel string, logConfig corelog.Config) error {
 
 		setLogLevel(subsysID, logLevel, logConfig)
 	}
+
 	setLoggers()
 	return nil
 }

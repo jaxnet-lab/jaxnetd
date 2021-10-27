@@ -7,7 +7,6 @@
 package peer
 
 import (
-	"bytes"
 	"container/list"
 	"fmt"
 	"io"
@@ -1130,14 +1129,14 @@ func (peer *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []by
 	log.Debug().Str("chain", peer.chain.Name()).
 		Msgf("ReadMessage: %s", newLogClosure(func() string {
 			// Debug summary of message.
-			return fmt.Sprintf("Received %v%s from %s", stringifyMsg(msg), peer)
+			return fmt.Sprintf("Received %v from %s", stringifyMsg(msg), peer)
 		}))
 
 	log.Trace().Str("chain", peer.chain.Name()).
 		Msgf("ReadMessage: decoded msg \n%s", newLogClosure(func() string { return spew.Sdump(msg) }))
 
-	log.Trace().Str("chain", peer.chain.Name()).
-		Msgf("ReadMessage: raw msg \n%s", newLogClosure(func() string { return spew.Sdump(buf) }))
+	// log.Trace().Str("chain", peer.chain.Name()).
+	// 	Msgf("ReadMessage: raw msg \n%s", newLogClosure(func() string { return spew.Sdump(buf) }))
 
 	return msg, buf, nil
 }
@@ -1168,16 +1167,16 @@ func (peer *Peer) writeMessage(msg wire.Message, enc wire.MessageEncoding) error
 	log.Trace().Str("chain", peer.chain.Name()).
 		Msgf("%v", newLogClosure(func() string { return spew.Sdump(msg) }))
 
-	log.Trace().Str("chain", peer.chain.Name()).
-		Msgf("%v", newLogClosure(func() string {
-			var buf bytes.Buffer
-			_, err := wire.WriteMessageWithEncodingN(&buf, msg, peer.ProtocolVersion(),
-				peer.cfg.ChainParams.Net, enc)
-			if err != nil {
-				return err.Error()
-			}
-			return spew.Sdump(buf.Bytes())
-		}))
+	// log.Trace().Str("chain", peer.chain.Name()).
+	// 	Msgf("%v", newLogClosure(func() string {
+	// 		var buf bytes.Buffer
+	// 		_, err := wire.WriteMessageWithEncodingN(&buf, msg, peer.ProtocolVersion(),
+	// 			peer.cfg.ChainParams.Net, enc)
+	// 		if err != nil {
+	// 			return err.Error()
+	// 		}
+	// 		return spew.Sdump(buf.Bytes())
+	// 	}))
 
 	// Write the message to the peer.
 	n, err := wire.WriteMessageWithEncodingN(peer.conn, msg,
