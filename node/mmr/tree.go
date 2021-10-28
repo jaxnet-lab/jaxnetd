@@ -304,10 +304,21 @@ func (t *BlocksMMRTree) RootForHeight(height int32) chainhash.Hash {
 	return hash
 }
 
-func (t *BlocksMMRTree) LookupNodeByRoot(hash chainhash.Hash) (*TreeLeaf, bool) {
+func (t *BlocksMMRTree) LeafByHash(blockHash chainhash.Hash) (*TreeLeaf, bool) {
+	t.RLock()
+	var node *TreeLeaf
+	height, found := t.hashToHeight[blockHash]
+	if found {
+		node = t.nodes[heightToID(int32(height))]
+	}
+	t.RUnlock()
+	return node, found
+}
+
+func (t *BlocksMMRTree) LookupNodeByRoot(mmrRoot chainhash.Hash) (*TreeLeaf, bool) {
 	t.RLock()
 	node := &TreeLeaf{}
-	height, found := t.mountainTops[hash]
+	height, found := t.mountainTops[mmrRoot]
 	if found {
 		node = t.nodes[heightToID(int32(height))]
 	}

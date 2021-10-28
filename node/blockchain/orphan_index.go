@@ -17,9 +17,14 @@ import (
 type orphanIndex struct {
 	// These fields are related to handling of orphan blocks.  They are
 	// protected by a combination of the chain lock and the orphan lock.
-	orphanLock   sync.RWMutex
-	orphans      map[chainhash.Hash]*orphanBlock
-	prevOrphans  map[chainhash.Hash][]*orphanBlock
+	orphanLock sync.RWMutex
+
+	orphans          map[chainhash.Hash]*orphanBlock
+	actualMMRToBlock map[chainhash.Hash]*orphanBlock
+
+	// prevOrphans     map[chainhash.Hash][]*orphanBlock
+	mmrRootsOrphans map[chainhash.Hash][]*orphanBlock
+
 	oldestOrphan *orphanBlock
 }
 
@@ -48,9 +53,10 @@ func (b *orphanIndex) IsKnownOrphan(hash *chainhash.Hash) bool {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
-	return b.blocksDB.GetOrphanRoot(hash)
+	return b.blocksDB.GetOrphanMMRRoot(hash)
 }
-func (storage *rBlockStorage) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Hash {
+
+func (storage *rBlockStorage) GetOrphanMMRRoot(hash *chainhash.Hash) *chainhash.Hash {
 	// Protect concurrent access.  Using a read lock only so multiple
 	// readers can query without blocking each other.
 	storage.orphanIndex.orphanLock.RLock()
@@ -65,11 +71,14 @@ func (storage *rBlockStorage) GetOrphanRoot(hash *chainhash.Hash) *chainhash.Has
 		if !exists {
 			break
 		}
+
 		orphanRoot = prevHash
 
-		h, exist := storage.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
-		if exist {
-			prevHash = &h
+		orphan, exists = storage.orphanIndex.actualMMRToBlock[orphan.block.PrevMMRRoot()]
+		if exists {
+			prevHash = orphan.block.Hash()
+		} else {
+			break
 		}
 	}
 
@@ -91,14 +100,13 @@ func (storage *rBlockStorage) removeOrphanBlock(orphan *orphanBlock) {
 	// for loop is intentionally used over a range here as range does not
 	// reevaluate the slice on each iteration nor does it adjust the index
 	// for the modified slice.
-	prevHash, exist := storage.index.HashByMMR(orphan.block.MsgBlock().Header.BlocksMerkleMountainRoot())
-	if !exist {
-		return
-	}
 
-	orphans := storage.orphanIndex.prevOrphans[prevHash]
+	prevMMRRoot := orphan.block.PrevMMRRoot()
+
+	orphans := storage.orphanIndex.mmrRootsOrphans[prevMMRRoot]
 	for i := 0; i < len(orphans); i++ {
 		hash := orphans[i].block.Hash()
+
 		if hash.IsEqual(orphanHash) {
 			copy(orphans[i:], orphans[i+1:])
 			orphans[len(orphans)-1] = nil
@@ -106,12 +114,13 @@ func (storage *rBlockStorage) removeOrphanBlock(orphan *orphanBlock) {
 			i--
 		}
 	}
-	storage.orphanIndex.prevOrphans[prevHash] = orphans
+
+	storage.orphanIndex.mmrRootsOrphans[prevMMRRoot] = orphans
 
 	// Remove the map entry altogether if there are no longer any orphans
 	// which depend on the parent hash.
-	if len(storage.orphanIndex.prevOrphans[prevHash]) == 0 {
-		delete(storage.orphanIndex.prevOrphans, prevHash)
+	if len(storage.orphanIndex.mmrRootsOrphans[prevMMRRoot]) == 0 {
+		delete(storage.orphanIndex.mmrRootsOrphans, prevMMRRoot)
 	}
 }
 
@@ -121,7 +130,7 @@ func (storage *rBlockStorage) removeOrphanBlock(orphan *orphanBlock) {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block) {
+func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block, blockActualMMR chainhash.Hash) {
 	// Remove expired orphan blocks.
 	for _, oBlock := range storage.orphanIndex.orphans {
 		if time.Now().After(oBlock.expiration) {
@@ -154,25 +163,19 @@ func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block) {
 	expiration := time.Now().Add(time.Hour)
 	oBlock := &orphanBlock{
 		block:      block,
+		actualMMR:  blockActualMMR,
 		expiration: expiration,
 	}
 	storage.orphanIndex.orphans[*block.Hash()] = oBlock
+	if !blockActualMMR.IsEqual(&chainhash.ZeroHash) {
+
+	}
+	if !blockActualMMR.IsZero() {
+		storage.orphanIndex.actualMMRToBlock[blockActualMMR] = oBlock
+	}
 
 	// Add to previous hash lookup index for faster dependency lookups.
 	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
-	prevHash, ok := storage.index.HashByMMR(prevMMRRoot)
-	if !ok {
-		return
-	}
-
-	storage.orphanIndex.prevOrphans[prevHash] = append(storage.orphanIndex.prevOrphans[prevHash], oBlock)
-
-	// TODO: probably need to fork MMR Tree and store particular copy of tree for orphans
-	// blockHeader := block.MsgBlock().Header
-	//
-	// newNode := storage.chain.NewNode(blockHeader, prevNode)
-	// newNode.SetStatus(blocknodes.StatusDataStored)
-	//
-	// storage.index.AddNode(newNode)
+	storage.orphanIndex.mmrRootsOrphans[prevMMRRoot] = append(storage.orphanIndex.mmrRootsOrphans[prevMMRRoot], oBlock)
 
 }

@@ -64,6 +64,10 @@ func (hash *Hash) SetBytes(newHash []byte) error {
 	return nil
 }
 
+func (hash *Hash) IsZero() bool {
+	return hash.IsEqual(&ZeroHash)
+}
+
 // IsEqual returns true if target is the same as hash.
 func (hash *Hash) IsEqual(target *Hash) bool {
 	if hash == nil && target == nil {

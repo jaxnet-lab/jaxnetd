@@ -219,7 +219,7 @@ func messageSummary(msg wire.Message) string {
 		rejReason := sanitizeString(msg.Reason, maxRejectReasonLen)
 		summary := fmt.Sprintf("cmd %v, code %v, reason %v", rejCommand,
 			msg.Code, rejReason)
-		if rejCommand == wire.CmdBlock || rejCommand == wire.CmdTx {
+		if rejCommand == wire.CmdBlock || rejCommand == wire.CmdBlockBox || rejCommand == wire.CmdTx {
 			summary += fmt.Sprintf(", hash %v", msg.Hash)
 		}
 		return summary

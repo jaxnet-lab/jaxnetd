@@ -23,17 +23,19 @@ import (
 // are needed to pass along to maybeAcceptBlock.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.BehaviorFlags) error {
+func (b *BlockChain) processOrphans(root chainhash.Hash, flags chaindata.BehaviorFlags) error {
 	// Start with processing at least the passed hash.  Leave a little room
 	// for additional orphan blocks that need to be processed without
 	// needing to grow the array in the common case.
-	processHashes := make([]*chainhash.Hash, 0, 10)
-	processHashes = append(processHashes, hash)
-	for len(processHashes) > 0 {
+
+	processMMRRoots := make([]*chainhash.Hash, 0, 10)
+	processMMRRoots = append(processMMRRoots, &root)
+	for len(processMMRRoots) > 0 {
 		// Pop the first hash to process from the slice.
-		processHash := processHashes[0]
-		processHashes[0] = nil // Prevent GC leak.
-		processHashes = processHashes[1:]
+
+		processMMRRoot := processMMRRoots[0]
+		processMMRRoots[0] = nil // Prevent GC leak.
+		processMMRRoots = processMMRRoots[1:]
 
 		// Look up all orphans that are parented by the block we just
 		// accepted.  This will typically only be one, but it could
@@ -43,16 +45,15 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		for i := 0; i < len(b.blocksDB.orphanIndex.prevOrphans[*processHash]); i++ {
-			orphan := b.blocksDB.orphanIndex.prevOrphans[*processHash][i]
+		for i := 0; i < len(b.blocksDB.orphanIndex.mmrRootsOrphans[*processMMRRoot]); i++ {
+			orphan := b.blocksDB.orphanIndex.mmrRootsOrphans[*processMMRRoot][i]
 			if orphan == nil {
 				log.Warn().Str("chain", b.chain.Name()).
-					Msgf("Found a nil entry at index %d in the orphan dependency list for block %v", i, processHash)
+					Msgf("Found a nil entry at index %d in the orphan dependency list for block with mmr root %s", i, processMMRRoot)
 				continue
 			}
 
 			// Remove the orphan from the orphan pool.
-			orphanHash := orphan.block.Hash()
 			b.blocksDB.removeOrphanBlock(orphan)
 			i--
 
@@ -70,7 +71,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 			// Add this block to the list of blocks to process so
 			// any orphan blocks that depend on this block are
 			// handled too.
-			processHashes = append(processHashes, orphanHash)
+			processMMRRoots = append(processMMRRoots, &orphan.actualMMR)
 		}
 	}
 	return nil
@@ -86,7 +87,7 @@ func (b *BlockChain) processOrphans(hash *chainhash.Hash, flags chaindata.Behavi
 // whether or not the block is an orphan.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, bool, error) {
+func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash.Hash, flags chaindata.BehaviorFlags) (bool, bool, error) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -166,7 +167,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 	if !prevExists {
 		log.Info().Str("chain", b.chain.Name()).
 			Msgf("Adding orphan block %v with mmr root %v", blockHash, block.PrevMMRRoot())
-		b.blocksDB.addOrphanBlock(block)
+		b.blocksDB.addOrphanBlock(block, blockActualMMR)
 
 		return false, true, nil
 	}
@@ -178,11 +179,17 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, flags chaindata.Behavior
 		return false, false, err
 	}
 
+	actualMMRRoot, found := b.blocksDB.getMMRRootForHash(*blockHash)
+	if !found {
+		// how it's possible?
+		actualMMRRoot = blockActualMMR
+	}
+
 	// Handle orphan blocks.
 	// Accept any orphan blocks that depend on this block (they are
 	// no longer orphans) and repeat for those accepted blocks until
 	// there are no more.
-	err = b.processOrphans(blockHash, flags)
+	err = b.processOrphans(actualMMRRoot, flags)
 	if err != nil {
 		return false, false, err
 	}

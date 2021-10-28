@@ -128,7 +128,7 @@ type MessageListeners struct {
 	OnTx func(p *Peer, msg *wire.MsgTx)
 
 	// OnBlock is invoked when a peer receives a block bitcoin message.
-	OnBlock func(p *Peer, msg *wire.MsgBlock, buf []byte)
+	OnBlock func(p *Peer, msg *wire.MsgBlock, blockActualMMR chainhash.Hash, buf []byte)
 
 	// OnCFilter is invoked when a peer receives a cfilter bitcoin message.
 	OnCFilter func(p *Peer, msg *wire.MsgCFilter)
@@ -1055,7 +1055,7 @@ func (peer *Peer) PushRejectMsg(command string, code wire.RejectCode, reason str
 	// }
 
 	msg := wire.NewMsgReject(command, code, reason)
-	if command == wire.CmdTx || command == wire.CmdBlock {
+	if command == wire.CmdTx || command == wire.CmdBlock || command == wire.CmdBlockBox {
 		if hash == nil {
 			log.Warn().Str("chain", peer.chain.Name()).Msgf(
 				"Sending a reject message for command type %v which should have specified a hash but does not",
@@ -1236,6 +1236,7 @@ func (peer *Peer) maybeAddDeadline(pendingResponses map[string]time.Time, msgCmd
 	case wire.CmdGetData:
 		// Expects a block, merkleblock, tx, or notfound message.
 		pendingResponses[wire.CmdBlock] = deadline
+		pendingResponses[wire.CmdBlockBox] = deadline
 		pendingResponses[wire.CmdMerkleBlock] = deadline
 		pendingResponses[wire.CmdTx] = deadline
 		pendingResponses[wire.CmdNotFound] = deadline
@@ -1291,7 +1292,7 @@ out:
 				// one of a group of responses, remove
 				// everything in the expected group accordingly.
 				switch msgCmd := msg.message.Command(); msgCmd {
-				case wire.CmdBlock:
+				case wire.CmdBlock, wire.CmdBlockBox:
 					fallthrough
 				case wire.CmdMerkleBlock:
 					fallthrough
@@ -1299,6 +1300,7 @@ out:
 					fallthrough
 				case wire.CmdNotFound:
 					delete(pendingResponses, wire.CmdBlock)
+					delete(pendingResponses, wire.CmdBlockBox)
 					delete(pendingResponses, wire.CmdMerkleBlock)
 					delete(pendingResponses, wire.CmdTx)
 					delete(pendingResponses, wire.CmdNotFound)
@@ -1496,9 +1498,12 @@ out:
 
 		case *wire.MsgBlock:
 			if peer.cfg.Listeners.OnBlock != nil {
-				peer.cfg.Listeners.OnBlock(peer, msg, buf)
+				peer.cfg.Listeners.OnBlock(peer, msg, zeroHash, buf)
 			}
-
+		case *wire.MsgBlockBox:
+			if peer.cfg.Listeners.OnBlock != nil {
+				peer.cfg.Listeners.OnBlock(peer, &msg.Block, msg.BlockActualMMR, buf)
+			}
 		case *wire.MsgInv:
 			if peer.cfg.Listeners.OnInv != nil {
 				peer.cfg.Listeners.OnInv(peer, msg)

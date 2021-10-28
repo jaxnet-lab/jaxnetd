@@ -326,3 +326,34 @@ func NewMsgBlock(blockHeader BlockHeader) *MsgBlock {
 		Transactions: make([]*MsgTx, 0, defaultTransactionAlloc),
 	}
 }
+
+type MsgBlockBox struct {
+	Block          MsgBlock
+	BlockActualMMR chainhash.Hash
+}
+
+func (b *MsgBlockBox) BtcDecode(r io.Reader, ver uint32, enc MessageEncoding) error {
+	err := b.Block.BtcDecode(r, ver, enc)
+	if err != nil {
+		return err
+	}
+
+	return ReadElement(r, &b.BlockActualMMR)
+}
+
+func (b *MsgBlockBox) BtcEncode(w io.Writer, ver uint32, enc MessageEncoding) error {
+	err := b.Block.BtcEncode(w, ver, enc)
+	if err != nil {
+		return err
+	}
+
+	return WriteElement(w, &b.BlockActualMMR)
+}
+
+func (b *MsgBlockBox) Command() string {
+	return CmdBlockBox
+}
+
+func (b *MsgBlockBox) MaxPayloadLength(u uint32) uint32 {
+	return MaxBlockPayload + 32
+}

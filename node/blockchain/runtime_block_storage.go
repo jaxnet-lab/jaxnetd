@@ -97,13 +97,23 @@ func (storage *rBlockStorage) getBlockParent(prevMMRRoot chainhash.Hash) (blockn
 
 // getBlockParentHash returns: correspondingBlockHash, found, inMainChain
 func (storage *rBlockStorage) getBlockParentHash(prevMMRRoot chainhash.Hash) (chainhash.Hash, bool, bool) {
+	var inMainChain = true
 	prevHash, found := storage.bestChain.HashByMMR(prevMMRRoot)
-	if found {
-		return prevHash, true, true
+	if !found {
+		prevHash, found = storage.index.HashByMMR(prevMMRRoot)
+		inMainChain = false
 	}
 
-	prevNode, found := storage.index.HashByMMR(prevMMRRoot)
-	return prevNode, found, false
+	return prevHash, found, inMainChain
+}
+
+func (storage *rBlockStorage) getMMRRootForHash(blockHash chainhash.Hash) (chainhash.Hash, bool) {
+	leaf, found := storage.bestChain.mmrTree.LeafByHash(blockHash)
+	if !found {
+		leaf, found = storage.index.mmrTree.LeafByHash(blockHash)
+	}
+
+	return leaf.ActualRoot, found
 }
 
 // getReorganizeNodes finds the fork point between the main chain and the passed

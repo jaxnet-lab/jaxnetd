@@ -15,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -121,11 +122,17 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
+	var blockActualMMRRoot chainhash.Hash
 	err := sp.serverPeerHandler.chain.DB.View(func(dbTx database.Tx) error {
 		var err error
 		blockBytes, err = dbTx.FetchBlock(hash)
+		if err != nil {
+			return err
+		}
+		blockActualMMRRoot, err = chaindata.DBGetMMRRootForBlock(dbTx, hash)
 		return err
 	})
+
 	if err != nil {
 		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v", hash, err)
 
@@ -160,7 +167,11 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 	if !sendInv {
 		dc = doneChan
 	}
-	sp.QueueMessageWithEncoding(msgBlock, dc, encoding)
+
+	sp.QueueMessageWithEncoding(&wire.MsgBlockBox{
+		Block:          *msgBlock,
+		BlockActualMMR: blockActualMMRRoot,
+	}, dc, encoding)
 
 	// When the peer requests the final block that was advertised in
 	// response to a getblocks message which requested more blocks than

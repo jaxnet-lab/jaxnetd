@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package p2p
 
 import (
@@ -369,7 +370,7 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *wire.MsgTx) {
 
 // OnBlock is invoked when a peer receives a block bitcoin message.  It
 // blocks until the bitcoin block has been fully processed.
-func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
+func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, blockActualMMR chainhash.Hash, buf []byte) {
 	// Convert the raw MsgBlock to a jaxutil.Block which provides some
 	// convenience methods and things such as hash caching.
 	block := jaxutil.NewBlockFromBlockAndBytes(msg, buf)
@@ -389,7 +390,7 @@ func (sp *serverPeer) OnBlock(_ *peer.Peer, msg *wire.MsgBlock, buf []byte) {
 	// reference implementation processes blocks in the same
 	// thread and therefore blocks further messages until
 	// the bitcoin block has been fully processed.
-	sp.serverPeerHandler.chain.SyncManager.QueueBlock(block, sp.Peer, sp.blockProcessed)
+	sp.serverPeerHandler.chain.SyncManager.QueueBlock(block, blockActualMMR, sp.Peer, sp.blockProcessed)
 	<-sp.blockProcessed
 }
 

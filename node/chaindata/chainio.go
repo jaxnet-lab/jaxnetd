@@ -8,6 +8,7 @@ package chaindata
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -1286,4 +1287,16 @@ func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
 
 	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
 	return bucket.Put(blockHash[:], mmrRoot[:])
+}
+
+func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhash.Hash, error) {
+	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+	val := bucket.Get(blockHash[:])
+	if len(val) != chainhash.HashSize {
+		return chainhash.ZeroHash, errors.New("actual root not found for block " + blockHash.String())
+	}
+	root := chainhash.Hash{}
+	copy(root[:], val[:])
+
+	return root, nil
 }

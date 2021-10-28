@@ -39,6 +39,7 @@ const (
 	CmdGetData      = "getdata"
 	CmdNotFound     = "notfound"
 	CmdBlock        = "block"
+	CmdBlockBox     = "blockbox"
 	CmdTx           = "tx"
 	CmdGetHeaders   = "getheaders"
 	CmdHeaders      = "headers"
@@ -115,6 +116,10 @@ func makeEmptyMessage(command string) (Message, error) {
 
 	case CmdBlock:
 		msg = &MsgBlock{}
+
+	case CmdBlockBox:
+		msg = &MsgBlockBox{}
+
 	case CmdInv:
 		msg = &MsgInv{}
 

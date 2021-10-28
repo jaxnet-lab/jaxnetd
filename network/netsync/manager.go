@@ -62,9 +62,10 @@ type newPeerMsg struct {
 // blockMsg packages a bitcoin block message and the peer it came from together
 // so the block handler has access to that information.
 type blockMsg struct {
-	block *jaxutil.Block
-	peer  *peerpkg.Peer
-	reply chan struct{}
+	block          *jaxutil.Block
+	blockActualMMR chainhash.Hash
+	peer           *peerpkg.Peer
+	reply          chan struct{}
 }
 
 // invMsg packages a bitcoin inv message and the peer it came from together
@@ -670,7 +671,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 
 	// Process the block to include validation, best chain selection, orphan
 	// handling, etc.
-	_, isOrphan, err := sm.chain.ProcessBlock(bmsg.block, behaviorFlags)
+	_, isOrphan, err := sm.chain.ProcessBlock(bmsg.block, bmsg.blockActualMMR, behaviorFlags)
 	if err != nil {
 		// When the error is a rule error, it means the block was simply
 		// rejected as opposed to something actually going wrong, so log
@@ -691,7 +692,7 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		// Convert the error into an appropriate reject message and
 		// send it.
 		code, reason := mempool.ErrToRejectErr(err)
-		peer.PushRejectMsg(wire.CmdBlock, code, reason, &blockMeta.Hash, false)
+		peer.PushRejectMsg(wire.CmdBlockBox, code, reason, &blockMeta.Hash, false)
 		return
 	}
 
@@ -1304,7 +1305,7 @@ out:
 				msg.reply <- peerID
 
 			case processBlockMsg:
-				_, isOrphan, err := sm.chain.ProcessBlock(msg.block, msg.flags)
+				_, isOrphan, err := sm.chain.ProcessBlock(msg.block, zeroHash, msg.flags)
 				if err != nil {
 					msg.reply <- processBlockResponse{
 						isOrphan: false,
@@ -1460,14 +1461,14 @@ func (sm *SyncManager) QueueTx(tx *jaxutil.Tx, peer *peerpkg.Peer, done chan str
 // QueueBlock adds the passed block message and peer to the block handling
 // queue. Responds to the done channel argument after the block message is
 // processed.
-func (sm *SyncManager) QueueBlock(block *jaxutil.Block, peer *peerpkg.Peer, done chan struct{}) {
+func (sm *SyncManager) QueueBlock(block *jaxutil.Block, blockActualMMR chainhash.Hash, peer *peerpkg.Peer, done chan struct{}) {
 	// Don't accept more blocks if we're shutting down.
 	if atomic.LoadInt32(&sm.shutdown) != 0 {
 		done <- struct{}{}
 		return
 	}
 
-	sm.msgChan <- &blockMsg{block: block, peer: peer, reply: done}
+	sm.msgChan <- &blockMsg{block: block, blockActualMMR: blockActualMMR, peer: peer, reply: done}
 }
 
 // QueueInv adds the passed inv message and peer to the block handling queue.

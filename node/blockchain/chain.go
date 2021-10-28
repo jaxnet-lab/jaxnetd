@@ -51,6 +51,7 @@ type BlockLocator []*wire.BlockLocatorMeta
 // forever.
 type orphanBlock struct {
 	block      *jaxutil.Block
+	actualMMR  chainhash.Hash
 	expiration time.Time
 }
 
@@ -208,8 +209,9 @@ func New(config *Config) (*BlockChain, error) {
 			index:     newBlockIndex(config.DB, params),
 			bestChain: newChainView(nil),
 			orphanIndex: orphanIndex{
-				orphans:     make(map[chainhash.Hash]*orphanBlock),
-				prevOrphans: make(map[chainhash.Hash][]*orphanBlock),
+				orphans:          make(map[chainhash.Hash]*orphanBlock),
+				actualMMRToBlock: make(map[chainhash.Hash]*orphanBlock),
+				mmrRootsOrphans:  make(map[chainhash.Hash][]*orphanBlock),
 			},
 		},
 
