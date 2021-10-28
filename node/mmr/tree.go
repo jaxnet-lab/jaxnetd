@@ -13,14 +13,14 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
-type BlockNode struct {
+type TreeLeaf struct {
 	Leaf
 
 	Height     uint64
 	ActualRoot chainhash.Hash // ActualRoot is a root of the MMR Tree when this node was latest
 }
 
-func (n *BlockNode) MarshalJSON() ([]byte, error) {
+func (n *TreeLeaf) MarshalJSON() ([]byte, error) {
 	type dto struct {
 		BlockHash  string
 		Weight     uint64
@@ -38,7 +38,7 @@ func (n *BlockNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-func (n *BlockNode) Clone() *BlockNode {
+func (n *TreeLeaf) Clone() *TreeLeaf {
 	if n == nil {
 		return nil
 	}
@@ -50,16 +50,16 @@ func (n *BlockNode) Clone() *BlockNode {
 type BlocksMMRTree struct {
 	sync.RWMutex
 
-	// nextHeight stores number of BlockNode.
+	// nextHeight stores number of TreeLeaf.
 	// nextHeight - 1 is last height in chain.
 	nextHeight  uint64
 	chainWeight uint64
-	lastNode    *BlockNode
+	lastNode    *TreeLeaf
 	rootHash    chainhash.Hash
 
 	// nodes is a representation of Merkle Mountain Range tree.
 	// ID starts from 0.
-	nodes []*BlockNode
+	nodes []*TreeLeaf
 	// mountainTops is an association of mmr_root and corresponding block_node,
 	// that was last in the chain for this root
 	mountainTops map[chainhash.Hash]uint64
@@ -69,8 +69,8 @@ type BlocksMMRTree struct {
 
 func NewTree() *BlocksMMRTree {
 	return &BlocksMMRTree{
-		lastNode:     &BlockNode{},
-		nodes:        make([]*BlockNode, 1),
+		lastNode:     &TreeLeaf{},
+		nodes:        make([]*TreeLeaf, 1),
 		mountainTops: make(map[chainhash.Hash]uint64, 4096),
 		hashToHeight: make(map[chainhash.Hash]uint64, 4096),
 	}
@@ -80,14 +80,14 @@ func (t *BlocksMMRTree) MarshalJSON() ([]byte, error) {
 	type dto struct {
 		NodeCount    uint64
 		ChainWeight  uint64
-		Nodes        []*BlockNode
+		Nodes        []*TreeLeaf
 		MountainTops map[string]uint64
 		HashToID     map[string]uint64
 	}
 	d := dto{
 		NodeCount:    t.nextHeight,
 		ChainWeight:  t.chainWeight,
-		Nodes:        make([]*BlockNode, len(t.nodes)),
+		Nodes:        make([]*TreeLeaf, len(t.nodes)),
 		MountainTops: make(map[string]uint64, len(t.mountainTops)),
 		HashToID:     make(map[string]uint64, len(t.mountainTops)),
 	}
@@ -112,7 +112,7 @@ func (t *BlocksMMRTree) Fork() *BlocksMMRTree {
 		chainWeight:  t.chainWeight,
 		rootHash:     chainhash.Hash{},
 		lastNode:     t.lastNode.Clone(),
-		nodes:        make([]*BlockNode, len(t.nodes)),
+		nodes:        make([]*TreeLeaf, len(t.nodes)),
 		mountainTops: make(map[chainhash.Hash]uint64, len(t.mountainTops)),
 		hashToHeight: make(map[chainhash.Hash]uint64, len(t.hashToHeight)),
 	}
@@ -145,7 +145,7 @@ func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty uint64) {
 		return
 	}
 
-	node := &BlockNode{
+	node := &TreeLeaf{
 		Leaf:   Leaf{Hash: hash, Weight: difficulty},
 		Height: t.nextHeight,
 	}
@@ -249,6 +249,8 @@ func (t *BlocksMMRTree) rmBlock(hash chainhash.Hash, height int32) {
 	t.nextHeight = uint64(height)
 
 	if t.nextHeight == 0 {
+		t.lastNode = &TreeLeaf{}
+		t.rootHash = chainhash.ZeroHash
 		return
 	}
 
@@ -257,7 +259,7 @@ func (t *BlocksMMRTree) rmBlock(hash chainhash.Hash, height int32) {
 
 }
 
-func (t *BlocksMMRTree) Current() *BlockNode {
+func (t *BlocksMMRTree) Current() *TreeLeaf {
 	t.RLock()
 	node := t.lastNode
 	t.RUnlock()
@@ -271,21 +273,21 @@ func (t *BlocksMMRTree) CurrenWeight() uint64 {
 	return node
 }
 
-func (t *BlocksMMRTree) Parent(height int32) *BlockNode {
+func (t *BlocksMMRTree) Parent(height int32) *TreeLeaf {
 	t.RLock()
 	node := t.nodes[heightToID(height-1)]
 	if node == nil {
-		node = &BlockNode{}
+		node = &TreeLeaf{}
 	}
 	t.RUnlock()
 	return node
 }
 
-func (t *BlocksMMRTree) Block(height int32) *BlockNode {
+func (t *BlocksMMRTree) Block(height int32) *TreeLeaf {
 	t.RLock()
 	node := t.nodes[heightToID(height)]
 	if node == nil {
-		node = &BlockNode{}
+		node = &TreeLeaf{}
 	}
 	t.RUnlock()
 	return node
@@ -302,9 +304,9 @@ func (t *BlocksMMRTree) RootForHeight(height int32) chainhash.Hash {
 	return hash
 }
 
-func (t *BlocksMMRTree) LookupNodeByRoot(hash chainhash.Hash) (*BlockNode, bool) {
+func (t *BlocksMMRTree) LookupNodeByRoot(hash chainhash.Hash) (*TreeLeaf, bool) {
 	t.RLock()
-	node := &BlockNode{}
+	node := &TreeLeaf{}
 	height, found := t.mountainTops[hash]
 	if found {
 		node = t.nodes[heightToID(int32(height))]
@@ -314,9 +316,9 @@ func (t *BlocksMMRTree) LookupNodeByRoot(hash chainhash.Hash) (*BlockNode, bool)
 	return node, found
 }
 
-func (t *BlocksMMRTree) rebuildTree(node *BlockNode, count uint64) (rootHash chainhash.Hash) {
+func (t *BlocksMMRTree) rebuildTree(node *TreeLeaf, count uint64) (rootHash chainhash.Hash) {
 	if count == 1 {
-		t.nodes = []*BlockNode{node}
+		t.nodes = []*TreeLeaf{node}
 		rootHash = node.Hash
 		return
 	}
@@ -326,7 +328,7 @@ func (t *BlocksMMRTree) rebuildTree(node *BlockNode, count uint64) (rootHash cha
 	nextPoT := nextPowerOfTwo(count)
 	arraySize := uint64(nextPoT*2 - 1)
 	if len(t.nodes) < nextPoT {
-		blockNodes := make([]*BlockNode, arraySize)
+		blockNodes := make([]*TreeLeaf, arraySize)
 		for i := range t.nodes {
 			blockNodes[i] = t.nodes[i]
 		}
@@ -341,7 +343,7 @@ func (t *BlocksMMRTree) rebuildTree(node *BlockNode, count uint64) (rootHash cha
 	return
 }
 
-func calcRootForBlockNodes(nodes []*BlockNode) *BlockNode {
+func calcRootForBlockNodes(nodes []*TreeLeaf) *TreeLeaf {
 	switch len(nodes) {
 	case 1:
 		return nodes[0]
@@ -369,13 +371,13 @@ func calcRootForBlockNodes(nodes []*BlockNode) *BlockNode {
 	}
 }
 
-func hashMerkleBranches(left, right *BlockNode) (*BlockNode, bool) {
+func hashMerkleBranches(left, right *TreeLeaf) (*TreeLeaf, bool) {
 	if left == nil {
 		return nil, false
 	}
 
 	if right == nil {
-		return &BlockNode{Leaf: Leaf{Hash: left.Hash, Weight: left.Weight}}, false
+		return &TreeLeaf{Leaf: Leaf{Hash: left.Hash, Weight: left.Weight}}, false
 	}
 
 	var data [80]byte
@@ -385,7 +387,7 @@ func hashMerkleBranches(left, right *BlockNode) (*BlockNode, bool) {
 	copy(data[:ValueSize], lv[:])
 	copy(data[ValueSize:], rv[:])
 
-	return &BlockNode{
+	return &TreeLeaf{
 		Leaf: Leaf{
 			Hash:   chainhash.HashH(data[:]),
 			Weight: left.Weight + right.Weight,
