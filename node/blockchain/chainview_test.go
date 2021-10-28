@@ -36,7 +36,7 @@ func chainedNodes(parent blocknodes.IBlockNode, numNodes int) []blocknodes.IBloc
 			header.SetBlocksMerkleMountainRoot(tip.GetHash())
 		}
 
-		nodes[i] = blocknodes.NewBeaconBlockNode(header, tip, 0) // todo: fix serial id
+		nodes[i] = blocknodes.NewBeaconBlockNode(header, tip, 0, 1) // todo: fix serial id
 		tip = nodes[i]
 	}
 	return nodes

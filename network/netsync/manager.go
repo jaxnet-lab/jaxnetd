@@ -20,7 +20,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
-	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -626,10 +625,10 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 
 	// If we didn't ask for this block then the peer is misbehaving.
 	blockMeta := wire.BlockLocatorMeta{
-		Hash:        *bmsg.block.Hash(),
-		PrevMMRRoot: bmsg.block.PrevMMRRoot(),
-		Weight:      pow.CalcWork(bmsg.block.MsgBlock().Header.Bits()).Uint64(),
-		Height:      bmsg.block.Height(),
+		Hash: *bmsg.block.Hash(),
+		// PrevMMRRoot: bmsg.block.PrevMMRRoot(),
+		// Weight:      pow.CalcWork(bmsg.block.MsgBlock().Header.Bits()).Uint64(),
+		// Height:      bmsg.block.Height(),
 	}
 
 	if _, exists = state.requestedBlocks[blockMeta.Hash]; !exists {
@@ -789,16 +788,16 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// for headers starting from the block after this one up to the next
 	// checkpoint.
 	prevHeight := sm.nextCheckpoint.Height
-	prevWeight := sm.nextCheckpoint.Weight
+	// prevWeight := sm.nextCheckpoint.Weight
 	prevHash := sm.nextCheckpoint.Hash
-	prevParentMMRRoot := sm.nextCheckpoint.PrevMMRRoot
+	// prevParentMMRRoot := sm.nextCheckpoint.PrevMMRRoot
 	sm.nextCheckpoint = sm.findNextHeaderCheckpoint(prevHeight)
 	if sm.nextCheckpoint != nil {
 		locator := blockchain.BlockLocator([]*wire.BlockLocatorMeta{{
-			Hash:        *prevHash,
-			PrevMMRRoot: *prevParentMMRRoot,
-			Weight:      prevWeight,
-			Height:      prevHeight,
+			Hash: *prevHash,
+			// PrevMMRRoot: *prevParentMMRRoot,
+			// Weight:      prevWeight,
+			// Height:      prevHeight,
 		}})
 		err := peer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
 		if err != nil {
@@ -911,10 +910,10 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 	var finalMeta wire.BlockLocatorMeta
 	for _, headerBox := range msg.Headers {
 		finalMeta = wire.BlockLocatorMeta{
-			Hash:        headerBox.Header.BlockHash(),
-			Height:      headerBox.Header.Height(),
-			PrevMMRRoot: headerBox.Header.BlocksMerkleMountainRoot(),
-			Weight:      pow.CalcWork(headerBox.Header.Bits()).Uint64(),
+			Hash: headerBox.Header.BlockHash(),
+			// Height:      headerBox.Header.Height(),
+			// PrevMMRRoot: headerBox.Header.BlocksMerkleMountainRoot(),
+			// Weight:      pow.CalcWork(headerBox.Header.Bits()).Uint64(),
 		}
 
 		// Ensure there is a previous header to compare against.

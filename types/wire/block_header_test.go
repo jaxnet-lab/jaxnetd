@@ -239,9 +239,7 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 
 	sh := &ShardHeader{}
 	block := &MsgBlock{
-
-		ShardBlock: true,
-		Header:     sh,
+		Header: sh,
 	}
 
 	sh.beaconHeader = BeaconHeader{
@@ -276,8 +274,7 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	wr.Flush()
 
 	block2 := &MsgBlock{
-		ShardBlock: true,
-		Header:     &ShardHeader{},
+		Header: &ShardHeader{},
 	}
 	reader := bufio.NewReader(&b)
 

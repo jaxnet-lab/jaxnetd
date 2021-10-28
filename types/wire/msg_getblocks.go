@@ -124,7 +124,8 @@ func (msg *MsgGetBlocks) Command() string {
 func (msg *MsgGetBlocks) MaxPayloadLength(pver uint32) uint32 {
 	// Protocol version 4 bytes + num hashes (varInt) + max block locator
 	// hashes + hash stop.
-	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * (chainhash.HashSize*2 + 8 + 4)) + chainhash.HashSize
+	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * chainhash.HashSize) + chainhash.HashSize
+	// return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * (chainhash.HashSize*2 + 8 + 4)) + chainhash.HashSize
 }
 
 // NewMsgGetBlocks returns a new bitcoin getblocks message that conforms to the
@@ -139,23 +140,27 @@ func NewMsgGetBlocks(hashStop *chainhash.Hash) *MsgGetBlocks {
 }
 
 type BlockLocatorMeta struct {
-	Hash        chainhash.Hash
-	PrevMMRRoot chainhash.Hash
-	Weight      uint64
-	Height      int32
+	Hash chainhash.Hash
+	// todo: think if this really required
+	// PrevMMRRoot chainhash.Hash
+	// Weight      uint64
+	// Height      int32
 }
 
 func (msg *BlockLocatorMeta) String() string {
-	return fmt.Sprintf("(hash=%s, prev_mmr_root=%s, chainWeight=%d, height=%d)", msg.Hash, msg.PrevMMRRoot, msg.Weight, msg.Height)
+	return fmt.Sprintf("(hash=%s)", msg.Hash)
+	// return fmt.Sprintf("(hash=%s, prev_mmr_root=%s, chainWeight=%d, height=%d)", msg.Hash, msg.PrevMMRRoot, msg.Weight, msg.Height)
 }
 func (msg *BlockLocatorMeta) SerializeSize() int {
-	return chainhash.HashSize*2 + 8 + 4
+	return chainhash.HashSize // *2 + 8 + 4
 }
 
 func (msg *BlockLocatorMeta) Serialize(w io.Writer) error {
-	return WriteElements(w, &msg.Hash, &msg.PrevMMRRoot, &msg.Weight, &msg.Height)
+	return WriteElements(w, &msg.Hash) // &msg.PrevMMRRoot, &msg.Weight, &msg.Height,
+
 }
 
 func (msg *BlockLocatorMeta) Deserialize(r io.Reader) error {
-	return ReadElements(r, &msg.Hash, &msg.PrevMMRRoot, &msg.Weight, &msg.Height)
+	return ReadElements(r, &msg.Hash) // &msg.PrevMMRRoot, &msg.Weight, &msg.Height,
+
 }

@@ -45,30 +45,22 @@ type TxLoc struct {
 // block message.  It is used to deliver block and transaction information in
 // response to a getdata message (MsgGetData) for a given block hash.
 type MsgBlock struct {
-	ShardBlock   bool
 	Header       BlockHeader
 	Transactions []*MsgTx
 }
 
 func EmptyBeaconBlock() MsgBlock {
-	return MsgBlock{
-		ShardBlock: false,
-		Header:     EmptyBeaconHeader(),
-	}
+	return MsgBlock{Header: EmptyBeaconHeader()}
 }
 
 func EmptyShardBlock() MsgBlock {
-	return MsgBlock{
-		ShardBlock: true,
-		Header:     EmptyShardHeader(),
-	}
+	return MsgBlock{Header: EmptyShardHeader()}
 }
 
 // Copy creates a deep copy of a MsgBlock so that the original does not get
 // modified when the copy is manipulated.
 func (msg *MsgBlock) Copy() *MsgBlock {
 	clone := new(MsgBlock)
-	clone.ShardBlock = msg.ShardBlock
 	clone.Header = msg.Header.Copy()
 	clone.Transactions = make([]*MsgTx, len(msg.Transactions))
 	for i, tx := range msg.Transactions {

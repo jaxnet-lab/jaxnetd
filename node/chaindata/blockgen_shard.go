@@ -8,7 +8,6 @@ package chaindata
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"time"
 
@@ -22,8 +21,15 @@ import (
 )
 
 type ChainBlockGenerator interface {
-	NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error)
+	NewBlockHeader(version wire.BVersion,
+		height int32,
+		blocksMMRRoot chainhash.Hash,
+		merkleRootHash chainhash.Hash,
+		timestamp time.Time,
+		bits uint32,
+		prevWeight uint64,
+		nonce uint32,
+		burnReward int) (wire.BlockHeader, error)
 
 	ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error
 
@@ -38,20 +44,22 @@ type BeaconBlockProvider interface {
 }
 
 type ShardBlockGenerator struct {
-	beacon   BeaconBlockProvider
-	ctx      chainctx.IChainCtx
-	powLimit *big.Int
+	beacon                BeaconBlockProvider
+	ctx                   chainctx.IChainCtx
+	powLimit              *big.Int
+	hashSortingSlotNumber uint32
 }
 
 func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *ShardBlockGenerator {
 	return &ShardBlockGenerator{beacon: beacon, ctx: ctx,
 		// powLimit: pow.CompactToBig(ctx.GenesisBlock().Header.Bits())
-		powLimit: pow.CompactToBig(ctx.Params().PowParams.PowLimitBits),
+		powLimit:              ctx.Params().PowParams.PowLimit,
+		hashSortingSlotNumber: ctx.Params().PowParams.HashSortingSlotNumber,
 	}
 }
 
 func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
+	timestamp time.Time, bits uint32, prevWeight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
@@ -61,7 +69,7 @@ func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, bloc
 		blocksMMRRoot,
 		merkleRootHash,
 		bits,
-		weight+pow.CalcRelativeWork(c.powLimit, bits),
+		prevWeight+pow.CalcPowWeight(c.powLimit, bits, c.hashSortingSlotNumber),
 		*header,
 		cAux), nil
 }
@@ -70,7 +78,13 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 	actualShardsCount := c.beacon.BestSnapshot().Shards
 
 	beaconAux := header.BeaconHeader()
-	if math.Abs(float64(actualShardsCount-beaconAux.Shards())) > 1 {
+	//    actualShardsCount   beaconAux.Shards   delta
+	// ok       6                   4              2
+	// ok       7                   7              0
+	// ok       8                   9             -1
+	// !ok      8                  10             -2
+
+	if int64(actualShardsCount)-int64(beaconAux.Shards()) < -1 {
 		return fmt.Errorf("delta between actualShardsCount(%v) and beaconAux.Shards(%v) more than 1",
 			actualShardsCount, beaconAux.Shards())
 	}

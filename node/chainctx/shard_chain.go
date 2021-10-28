@@ -9,6 +9,7 @@ package chainctx
 import (
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -31,7 +32,9 @@ func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBl
 }
 
 func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode, serialID int64) blocknodes.IBlockNode {
-	return blocknodes.NewShardBlockNode(blockHeader, parent, serialID)
+	powWeight := pow.CalcPowWeight(c.chainParams.PowParams.PowLimit, blockHeader.Bits(),
+		c.chainParams.PowParams.HashSortingSlotNumber)
+	return blocknodes.NewShardBlockNode(blockHeader, parent, serialID, powWeight)
 }
 
 func (c *shardChain) Params() *chaincfg.Params     { return c.chainParams }

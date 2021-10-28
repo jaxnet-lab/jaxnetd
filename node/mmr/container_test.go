@@ -1,10 +1,11 @@
 package mmr
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -24,7 +25,7 @@ func TestTreeContainer_SetNodeToMmrWithReorganization(t *testing.T) {
 		prevMMRRoot:   tBlockNodes[5].actualMMRRoot,
 		actualMMRRoot: chainhash.Hash{},
 		height:        6,
-		difficulty:    tBlockNodes[5].Difficulty(),
+		difficulty:    tBlockNodes[5].PowWeight(),
 		parent:        tBlockNodes[5],
 	}
 
@@ -48,7 +49,7 @@ func (tn *TBlockNode) GetHash() chainhash.Hash     { return tn.hash }
 func (tn *TBlockNode) PrevMMRRoot() chainhash.Hash { return tn.prevMMRRoot }
 func (tn *TBlockNode) PrevHash() chainhash.Hash    { return tn.Parent().GetHash() }
 func (tn *TBlockNode) Height() int32               { return tn.height }
-func (tn *TBlockNode) Difficulty() uint64          { return tn.difficulty }
+func (tn *TBlockNode) PowWeight() uint64           { return tn.difficulty }
 
 func (tn *TBlockNode) Parent() blocknodes.IBlockNode {
 	if tn.parent == nil {

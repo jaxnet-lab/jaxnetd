@@ -399,10 +399,10 @@ func (c *chainView) blockLocator(node blocknodes.IBlockNode) BlockLocator {
 	step := int32(1)
 	for node != nil {
 		locator = append(locator, &wire.BlockLocatorMeta{
-			Hash:        node.GetHash(),
-			PrevMMRRoot: node.ActualMMRRoot(),
-			Weight:      node.Difficulty(),
-			Height:      node.Height(),
+			Hash: node.GetHash(),
+			// PrevMMRRoot: node.ActualMMRRoot(),
+			// Weight:      node.PowWeight(),
+			// Height:      node.Height(),
 		})
 
 		// Nothing more to add once the genesis block has been added.

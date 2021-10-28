@@ -122,7 +122,8 @@ func (msg *MsgGetHeaders) Command() string {
 func (msg *MsgGetHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Version 4 bytes + num block locator hashes (varInt) + max allowed block
 	// locators + hash stop.
-	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * (chainhash.HashSize*2 + 8 + 4)) + chainhash.HashSize
+	return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * chainhash.HashSize) + chainhash.HashSize
+	// return 4 + MaxVarIntPayload + (MaxBlockLocatorsPerMsg * (chainhash.HashSize*2 + 8 + 4)) + chainhash.HashSize
 }
 
 // NewMsgGetHeaders returns a new bitcoin getheaders message that conforms to

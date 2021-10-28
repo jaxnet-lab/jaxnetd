@@ -27,18 +27,20 @@ type StateProvider struct {
 }
 
 type BeaconBlockGenerator struct {
-	stateInfo StateProvider
-	powLimit  *big.Int
+	stateInfo             StateProvider
+	powLimit              *big.Int
+	hashSortingSlotNumber uint32
 }
 
 type BtcGen interface {
 	NewBlockTemplate(burnReward int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error)
 }
 
-func NewBeaconBlockGen(stateInfo StateProvider, genesisBits uint32) *BeaconBlockGenerator {
+func NewBeaconBlockGen(stateInfo StateProvider, powParams chaincfg.PowParams) *BeaconBlockGenerator {
 	return &BeaconBlockGenerator{
-		stateInfo: stateInfo,
-		powLimit:  pow.CompactToBig(genesisBits),
+		stateInfo:             stateInfo,
+		powLimit:              powParams.PowLimit,
+		hashSortingSlotNumber: powParams.HashSortingSlotNumber,
 	}
 }
 
@@ -55,7 +57,7 @@ func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, height int3
 		chainhash.Hash{},
 		timestamp,
 		bits,
-		weight+pow.CalcRelativeWork(c.powLimit, bits),
+		weight+pow.CalcPowWeight(c.powLimit, bits, c.hashSortingSlotNumber),
 		nonce,
 	)
 

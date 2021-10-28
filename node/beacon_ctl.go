@@ -85,7 +85,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 			BTCGen: btcdProvider,
 		}
 
-		blockGen := chaindata.NewBeaconBlockGen(bsp, params.PowParams.PowLimitBits)
+		blockGen := chaindata.NewBeaconBlockGen(bsp, params.PowParams)
 
 		chainProvider, err := cprovider.NewChainProvider(beaconCtl.ctx,
 			cfg.Node.BeaconChain, beaconChain, blockGen, db, beaconCtl.log)

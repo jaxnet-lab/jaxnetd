@@ -158,14 +158,15 @@ func CalcWork(bits uint32) *big.Int {
 	return new(big.Int).Mul(workWithoutHashSorting, new(big.Int).Lsh(bigOne, hashSortingBits))
 }
 
-func CalcRelativeWork(powLimit *big.Int, bits uint32) uint64 {
+func CalcPowWeight(powLimit *big.Int, bits uint32, hashSortingBits uint32) uint64 {
 	difficultyNum := CompactToBig(bits)
 	if difficultyNum.Sign() <= 0 {
 		return 1
 	}
 
 	denominator := new(big.Int).Add(difficultyNum, bigOne)
-	res := new(big.Int).Div(powLimit, denominator).Uint64()
+	workWithoutHashSorting := new(big.Int).Div(powLimit, denominator)
+	res := new(big.Int).Mul(workWithoutHashSorting, new(big.Int).Lsh(bigOne, uint(hashSortingBits))).Uint64()
 	if res == 0 {
 		return 1
 	}

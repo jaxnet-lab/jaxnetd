@@ -76,10 +76,10 @@ func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan stru
 			return nil, rpcDecodeHexError(c.BlockLocators[i])
 		}
 		blockLocators[i] = &wire.BlockLocatorMeta{
-			Hash:        *blockLocator,
-			PrevMMRRoot: chainhash.Hash{},
-			Weight:      0,
-			Height:      0,
+			Hash: *blockLocator,
+			// PrevMMRRoot: chainhash.Hash{},
+			// Weight:      0,
+			// Height:      0,
 		}
 	}
 	var hashStop chainhash.Hash

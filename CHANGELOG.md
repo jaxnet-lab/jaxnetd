@@ -16,6 +16,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added Height & ChainWeight in block header
 - Added magic byte as first bytes in serialized header and blocks. This allows you to automatically handle what type of
   data is BeaconHeader or ShardHeader.
+- Replaced CmdBlock by CmdBlockBox. This allows to push Actual MMR Root for the Block during sync.
+- Extend 
 
 ## [0.4.0]
 

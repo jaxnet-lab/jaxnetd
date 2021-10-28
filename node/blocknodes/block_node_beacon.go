@@ -34,13 +34,13 @@ type BeaconBlockNode struct {
 	// hundreds of thousands of these in memory, so a few extra bytes of
 	// padding adds up.
 
-	parent     IBlockNode     // parent is the parent block for this node.
-	hash       chainhash.Hash // hash is the double sha 256 of the block.
-	workSum    *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	serialID   int64          // serialID is the absolute unique id of current block.
-	timestamp  int64
-	difficulty uint64
-	header     wire.BlockHeader
+	parent    IBlockNode     // parent is the parent block for this node.
+	hash      chainhash.Hash // hash is the double sha 256 of the block.
+	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
+	serialID  int64          // serialID is the absolute unique id of current block.
+	timestamp int64
+	powWeight uint64
+	header    wire.BlockHeader
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
@@ -52,13 +52,13 @@ type BeaconBlockNode struct {
 // NewBeaconBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *BeaconBlockNode {
+func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64, powWeight uint64) *BeaconBlockNode {
 	node := &BeaconBlockNode{
-		hash:       blockHeader.BlockHash(),
-		workSum:    pow.CalcWork(blockHeader.Bits()),
-		timestamp:  blockHeader.Timestamp().Unix(),
-		header:     blockHeader,
-		difficulty: pow.CalcWork(blockHeader.Bits()).Uint64(),
+		hash:      blockHeader.BlockHash(),
+		workSum:   pow.CalcWork(blockHeader.Bits()),
+		timestamp: blockHeader.Timestamp().Unix(),
+		header:    blockHeader,
+		powWeight: powWeight,
 	}
 
 	if parent != nil && parent != (*BeaconBlockNode)(nil) {
@@ -87,7 +87,7 @@ func (node *BeaconBlockNode) Version() int32                          { return n
 func (node *BeaconBlockNode) Height() int32                           { return node.header.Height() }
 func (node *BeaconBlockNode) SerialID() int64                         { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                            { return node.header.Bits() }
-func (node *BeaconBlockNode) Difficulty() uint64                      { return node.difficulty }
+func (node *BeaconBlockNode) PowWeight() uint64                       { return node.powWeight }
 func (node *BeaconBlockNode) K() uint32                               { return node.header.K() }
 func (node *BeaconBlockNode) VoteK() uint32                           { return node.header.VoteK() }
 func (node *BeaconBlockNode) Parent() IBlockNode                      { return node.parent }

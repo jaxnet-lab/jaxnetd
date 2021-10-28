@@ -537,15 +537,19 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	} else {
 		ts = g.tip.Header.Timestamp().Add(time.Second)
 	}
+
+	powParams := g.chainCtx.Params().PowParams
 	currentMMRRoot := g.mmr.CurrentRoot()
 	header, _ := g.blockGen.NewBlockHeader(1,
 		nextHeight,
 		currentMMRRoot,
 		calcMerkleRoot(txns),
 		ts,
-		g.chainCtx.Params().PowParams.PowLimitBits,
-		g.mmr.CurrenWeight()+pow.CalcRelativeWork(g.chainCtx.Params().PowParams.PowLimit,
-			g.chainCtx.Params().PowParams.PowLimitBits),
+		powParams.PowLimitBits,
+		g.mmr.CurrenWeight()+pow.CalcPowWeight(
+			powParams.PowLimit,
+			powParams.PowLimitBits,
+			powParams.HashSortingSlotNumber),
 		0,
 		types.BurnJaxReward,
 	)
@@ -838,7 +842,7 @@ func newBeaconBlockGen(params *chaincfg.Params) chaindata.ChainBlockGenerator {
 		chaindata.StateProvider{
 			ShardCount: func() (uint32, error) { return 0, nil },
 			BTCGen:     &chaindata.BTCBlockGen{MinerAddress: miner},
-		}, params.PowParams.PowLimitBits)
+		}, params.PowParams)
 }
 
 // Generate returns a slice of tests that can be used to exercise the consensus

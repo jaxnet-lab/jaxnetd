@@ -49,7 +49,7 @@ type IBlockNode interface {
 	SerialID() int64
 	Version() int32
 	Bits() uint32
-	Difficulty() uint64
+	PowWeight() uint64
 	K() uint32
 	VoteK() uint32
 	Status() BlockStatus

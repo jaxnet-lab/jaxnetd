@@ -389,7 +389,6 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
 	var msgBlock wire.MsgBlock
-	msgBlock.ShardBlock = !g.blockChain.Chain().IsBeacon()
 	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(nextBlockVersion,
 		nextBlockHeight,
 		g.blockChain.MMRTree().CurrentRoot(),
