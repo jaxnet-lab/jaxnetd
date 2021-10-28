@@ -15,7 +15,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
-	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -1153,11 +1152,10 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 
 // DeserializeBlockRow parses a value in the block index bucket into a block
 // header and block status bitfield.
-func DeserializeBlockRow(ch chainctx.IChainCtx, blockRow []byte) (wire.BlockHeader, blocknodes.BlockStatus, int64, error) {
+func DeserializeBlockRow(blockRow []byte) (wire.BlockHeader, blocknodes.BlockStatus, int64, error) {
 	buffer := bytes.NewReader(blockRow)
 
-	header := ch.EmptyHeader()
-	err := header.Read(buffer)
+	header, err := wire.DecodeHeader(buffer)
 	if err != nil {
 		return nil, blocknodes.StatusNone, 0, err
 	}
@@ -1180,14 +1178,13 @@ func DeserializeBlockRow(ch chainctx.IChainCtx, blockRow []byte) (wire.BlockHead
 
 // dbFetchHeaderByHash uses an existing database transaction to retrieve the
 // block header for the provided Hash.
-func dbFetchHeaderByHash(chain chainctx.IChainCtx, dbTx database.Tx, hash *chainhash.Hash) (wire.BlockHeader, error) {
+func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (wire.BlockHeader, error) {
 	headerBytes, err := dbTx.FetchBlockHeader(hash)
 	if err != nil {
 		return nil, err
 	}
 
-	header := chain.EmptyHeader()
-	err = header.Read(bytes.NewReader(headerBytes))
+	header, err := wire.DecodeHeader(bytes.NewReader(headerBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -1197,19 +1194,19 @@ func dbFetchHeaderByHash(chain chainctx.IChainCtx, dbTx database.Tx, hash *chain
 
 // dbFetchHeaderByHeight uses an existing database transaction to retrieve the
 // block header for the provided height.
-func dbFetchHeaderByHeight(chain chainctx.IChainCtx, dbTx database.Tx, height int32) (wire.BlockHeader, error) {
+func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (wire.BlockHeader, error) {
 	hash, err := dbFetchHashByHeight(dbTx, height)
 	if err != nil {
 		return nil, err
 	}
 
-	return dbFetchHeaderByHash(chain, dbTx, hash)
+	return dbFetchHeaderByHash(dbTx, hash)
 }
 
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a jaxutil.Block
 // with the height set.
-func DBFetchBlockByNode(chain chainctx.IChainCtx, dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.Block, error) {
+func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
 	blockBytes, err := dbTx.FetchBlock(&h)
@@ -1218,11 +1215,10 @@ func DBFetchBlockByNode(chain chainctx.IChainCtx, dbTx database.Tx, node blockno
 	}
 
 	// Create the encapsulated block and set the height appropriately.
-	block, err := jaxutil.NewBlockFromBytes(chain, blockBytes)
+	block, err := jaxutil.NewBlockFromBytes(blockBytes)
 	if err != nil {
 		return nil, err
 	}
-	block.SetHeight(node.Height())
 
 	return block, nil
 }

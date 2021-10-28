@@ -7,6 +7,8 @@ package blockchain
 
 import (
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
+
 	// "gitlab.com/jaxnet/jaxnetd/shards/chain/beacon"
 	"math/rand"
 	"reflect"
@@ -59,7 +61,7 @@ func locatorHashes(nodes []blocknodes.IBlockNode, indexes ...int) BlockLocator {
 	hashes := make(BlockLocator, 0, len(indexes))
 	for _, idx := range indexes {
 		h := nodes[idx].GetHash()
-		hashes = append(hashes, &h)
+		hashes = append(hashes, &wire.BlockLocatorMeta{Hash: h})
 	}
 	return hashes
 }

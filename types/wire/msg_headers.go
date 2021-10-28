@@ -8,6 +8,8 @@ package wire
 import (
 	"fmt"
 	"io"
+
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // MaxBlockHeadersPerMsg is the maximum number of block headers that can be in
@@ -20,19 +22,18 @@ const MaxBlockHeadersPerMsg = 1000
 // per message is currently 2000.  See MsgGetHeaders for details on requesting
 // the headers.
 type MsgHeaders struct {
-	Chain   HeaderConstructor
 	Headers []HeaderBox
 }
 
 // AddBlockHeader adds a new block header to the message.
-func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader, height int32) error {
+func (msg *MsgHeaders) AddBlockHeader(bh BlockHeader, mmrRoot chainhash.Hash) error {
 	if len(msg.Headers)+1 > MaxBlockHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
 		return Error("MsgHeaders.AddBlockHeader", str)
 	}
 
-	msg.Headers = append(msg.Headers, HeaderBox{Header: bh, Height: height})
+	msg.Headers = append(msg.Headers, HeaderBox{Header: bh, ActualMMRRoot: mmrRoot})
 	return nil
 }
 
@@ -55,13 +56,13 @@ func (msg *MsgHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 	// reduce the number of allocations.
 	msg.Headers = make([]HeaderBox, count)
 	for i := uint64(0); i < count; i++ {
-		err := ReadElement(r, &msg.Headers[i].Height)
+		err := ReadElement(r, &msg.Headers[i].ActualMMRRoot)
 		if err != nil {
 			return err
 		}
 
-		bh := msg.Chain.EmptyHeader()
-		if err := bh.Read(r); err != nil {
+		bh, err := DecodeHeader(r)
+		if err != nil {
 			return err
 		}
 
@@ -99,7 +100,7 @@ func (msg *MsgHeaders) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 	}
 
 	for _, bh := range msg.Headers {
-		if err := WriteElement(w, bh.Height); err != nil {
+		if err := WriteElement(w, &bh.ActualMMRRoot); err != nil {
 			return err
 		}
 		if err := bh.Header.Write(w); err != nil {
@@ -131,7 +132,7 @@ func (msg *MsgHeaders) MaxPayloadLength(pver uint32) uint32 {
 	// Num headers (varInt) + max allowed headers (header length + 1 byte
 	// for the number of transactions which is always 0).
 
-	return uint32(MaxVarIntPayload + ((msg.Chain.MaxBlockHeaderPayload() + 1) * MaxBlockHeadersPerMsg))
+	return uint32(MaxVarIntPayload + ((MaxShardBlockHeaderPayload + 1) * MaxBlockHeadersPerMsg))
 }
 
 // NewMsgHeaders returns a new bitcoin headers message that conforms to the

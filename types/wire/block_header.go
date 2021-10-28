@@ -5,6 +5,7 @@
 package wire
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -19,8 +20,8 @@ const (
 )
 
 type HeaderBox struct {
-	Height int32
-	Header BlockHeader
+	ActualMMRRoot chainhash.Hash
+	Header        BlockHeader
 }
 
 type BlockHeader interface {
@@ -28,6 +29,8 @@ type BlockHeader interface {
 	SetBeaconHeader(bh *BeaconHeader, beaconAux CoinbaseAux)
 
 	Version() BVersion
+	Height() int32
+	ChainWeight() uint64
 
 	BlocksMerkleMountainRoot() chainhash.Hash
 	SetBlocksMerkleMountainRoot(prevBlock chainhash.Hash)
@@ -148,4 +151,32 @@ func (b ShardHeaderConstructor) ShardID() uint32            { return b.ID }
 func (b ShardHeaderConstructor) MaxBlockHeaderPayload() int { return MaxShardBlockHeaderPayload }
 func (b ShardHeaderConstructor) BlockHeaderOverhead() int {
 	return MaxShardBlockHeaderPayload + MaxVarIntPayload
+}
+
+func DecodeHeader(r io.Reader) (BlockHeader, error) {
+	var magicN [1]byte
+	err := ReadElement(r, &magicN)
+	if err != nil {
+		return nil, err
+	}
+
+	switch magicN[0] {
+	case beaconMagicByte:
+		h := &BeaconHeader{}
+		err = readBeaconBlockHeader(r, h, true)
+		return h, err
+	case shardMagic:
+		h := &ShardHeader{}
+		err = readShardBlockHeader(r, h, true)
+		return h, err
+	default:
+		return nil, fmt.Errorf("invalid magic byte: 0x%0x, expected beacon(0x%0x) or shard(0x%0x)",
+			magicN, beaconMagicByte, shardMagic)
+	}
+}
+
+func DecodeBlock(r io.Reader) (*MsgBlock, error) {
+	block := &MsgBlock{}
+	err := block.Deserialize(r)
+	return block, err
 }

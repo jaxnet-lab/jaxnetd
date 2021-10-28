@@ -892,7 +892,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 	}
 
 	// Deserialize the block.
-	blk, err := jaxutil.NewBlockFromBytes(server.chainProvider.ChainCtx, blkBytes)
+	blk, err := jaxutil.NewBlockFromBytes(blkBytes)
 	if err != nil {
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
@@ -909,7 +909,6 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 		confirmations = int64(best.Height - blockHeight)
 	}
 
-	blk.SetHeight(blockHeight)
 	txs := blk.Transactions()
 	result := jaxjson.BlockTxOperations{
 		BlockHash:     c.BlockHash,

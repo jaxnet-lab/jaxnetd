@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -268,8 +269,7 @@ out:
 // queueHandler maintains a queue of notifications and notification handler
 // control messages.
 func (m *WsManager) queueHandler(ctx context.Context) {
-	queueCtx, _ := context.WithCancel(ctx)
-	queueHandler(queueCtx, m.queueNotification, m.notificationMsgs)
+	queueHandler(ctx, m.queueNotification, m.notificationMsgs)
 }
 
 type wsBlockNotification struct {
@@ -327,7 +327,7 @@ type notificationUnregisterAddr struct {
 // handler and processes one at a time.
 func (m *WsManager) notificationHandler(ctx context.Context) {
 	m.logger.Info().Msg("Run notificationHandler")
-	childCtx, _ := context.WithCancel(ctx)
+	childCtx := ctx
 	// clients is a map of all currently connected websocket clients.
 	clients := make(map[chan struct{}]*wsClient)
 

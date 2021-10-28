@@ -249,7 +249,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 	// changed or the transactions in the memory pool have been updated and
 	// it has been at least gbtRegenerateSecond since the last template was
 	// generated.
-	var msgBlock = state.generator.chainCtx.EmptyBlock()
+	var msgBlock wire.MsgBlock
 	var targetDifficulty string
 
 	miningAddrs := chainProvider.MiningAddresses()
@@ -374,6 +374,7 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 			return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code,
 				"Failed to update block time:"+err.Error())
 		}
+
 		msgBlock.Header.SetNonce(0)
 
 		state.Log.Debug().

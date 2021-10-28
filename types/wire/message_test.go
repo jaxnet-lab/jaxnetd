@@ -69,7 +69,7 @@ func TestMessage(t *testing.T) {
 	msgFilterAdd := NewMsgFilterAdd([]byte{0x01})
 	msgFilterClear := NewMsgFilterClear()
 	msgFilterLoad := NewMsgFilterLoad([]byte{0x01}, 10, 0, BloomUpdateNone)
-	bh := NewBeaconBlockHeader(1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 0)
+	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 1, 0)
 	msgMerkleBlock := NewMsgMerkleBlock(bh)
 	msgReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	msgGetCFilters := NewMsgGetCFilters(GCSFilterRegular, 0, &chainhash.Hash{})
@@ -134,7 +134,7 @@ func TestMessage(t *testing.T) {
 
 		// Decode from wire format.
 		rbuf := bytes.NewReader(buf.Bytes())
-		nr, msg, _, err := ReadMessageN(chain, rbuf, test.pver, test.btcnet)
+		nr, msg, _, err := ReadMessageN(rbuf, test.pver, test.btcnet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %v", i, err,
 				spew.Sdump(msg))
@@ -167,7 +167,7 @@ func TestMessage(t *testing.T) {
 
 		// Decode from wire format.
 		rbuf := bytes.NewReader(buf.Bytes())
-		msg, _, err := ReadMessage(chain, rbuf, test.pver, test.btcnet)
+		msg, _, err := ReadMessage(rbuf, test.pver, test.btcnet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %v", i, err,
 				spew.Sdump(msg))
@@ -187,7 +187,6 @@ func TestReadMessageWireErrors(t *testing.T) {
 	pver := ProtocolVersion
 	btcnet := MainNet
 
-	chain := BeaconHeaderConstructor{}
 	// Ensure message errors are as expected with no function specified.
 	wantErr := "something bad happened"
 	testErr := MessageError{Description: wantErr}
@@ -358,7 +357,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	for i, test := range tests {
 		// Decode from wire format.
 		r := newFixedReader(test.max, test.buf)
-		nr, _, _, err := ReadMessageN(chain, r, test.pver, test.btcnet)
+		nr, _, _, err := ReadMessageN(r, test.pver, test.btcnet)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.readErr) {
 			t.Errorf("ReadMessage #%d wrong error got: %v <%T>, "+
 				"want: %T", i, err, err, test.readErr)

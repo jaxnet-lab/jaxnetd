@@ -7,7 +7,6 @@ package wire
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 
@@ -23,6 +22,7 @@ const defaultTransactionAlloc = 2048
 
 // MaxBlocksPerMsg is the maximum number of blocks allowed per message.
 const MaxBlocksPerMsg = 500
+
 // const MaxBlocksPerMsg = 5 // TODO: ROLLBACK
 
 // MaxBlockPayload is the maximum bytes a block message can be in bytes.
@@ -96,7 +96,6 @@ func (msg *MsgBlock) ClearTransactions() {
 // See Serialize for encoding blocks to be stored to disk, such as in a
 // database, as opposed to encoding blocks for the wire.
 func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-	// msg.ShardBlock
 	if err := msg.Header.Write(w); err != nil {
 		return err
 	}
@@ -122,10 +121,12 @@ func (msg *MsgBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) er
 // opposed to decoding blocks from the wire.
 func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (err error) {
 	if msg.Header == nil {
-		return errors.New("block not initialized")
+		msg.Header, err = DecodeHeader(r)
+	} else {
+		err = msg.Header.Read(r)
 	}
 
-	if err := msg.Header.Read(r); err != nil {
+	if err != nil {
 		return err
 	}
 

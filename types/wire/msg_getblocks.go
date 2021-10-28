@@ -15,6 +15,7 @@ import (
 // MaxBlockLocatorsPerMsg is the maximum number of block locator hashes allowed
 // per message.
 const MaxBlockLocatorsPerMsg = 500
+
 // const MaxBlockLocatorsPerMsg = 5 // TODO: ROLLBACK
 
 // MsgGetBlocks implements the Message interface and represents a bitcoin
@@ -145,7 +146,7 @@ type BlockLocatorMeta struct {
 }
 
 func (msg *BlockLocatorMeta) String() string {
-	return fmt.Sprintf("(hash=%s, prev_mmr_root=%s, weight=%d, height=%d)", msg.Hash, msg.PrevMMRRoot, msg.Weight, msg.Height)
+	return fmt.Sprintf("(hash=%s, prev_mmr_root=%s, chainWeight=%d, height=%d)", msg.Hash, msg.PrevMMRRoot, msg.Weight, msg.Height)
 }
 func (msg *BlockLocatorMeta) SerializeSize() int {
 	return chainhash.HashSize*2 + 8 + 4

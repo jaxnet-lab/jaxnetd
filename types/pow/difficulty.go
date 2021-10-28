@@ -158,6 +158,20 @@ func CalcWork(bits uint32) *big.Int {
 	return new(big.Int).Mul(workWithoutHashSorting, new(big.Int).Lsh(bigOne, hashSortingBits))
 }
 
+func CalcRelativeWork(powLimit *big.Int, bits uint32) uint64 {
+	difficultyNum := CompactToBig(bits)
+	if difficultyNum.Sign() <= 0 {
+		return 1
+	}
+
+	denominator := new(big.Int).Add(difficultyNum, bigOne)
+	res := new(big.Int).Div(powLimit, denominator).Uint64()
+	if res == 0 {
+		return 1
+	}
+	return res
+}
+
 func BTCCalcWork(bits uint32) *big.Int {
 	// Return a work value of zero if the passed difficulty bits represent
 	// a negative number. Note this should not happen in practice with valid

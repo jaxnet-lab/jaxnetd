@@ -40,7 +40,7 @@ func TestHeaders(t *testing.T) {
 
 	// Ensure headers are added properly.
 	bh := blockOne.Header
-	msg.AddBlockHeader(bh)
+	msg.AddBlockHeader(bh, chainhash.ZeroHash)
 	if !reflect.DeepEqual(msg.Headers[0], bh) {
 		t.Errorf("AddHeader: wrong header - got %v, want %v",
 			spew.Sdump(msg.Headers),
@@ -51,7 +51,7 @@ func TestHeaders(t *testing.T) {
 	// error.
 	var err error
 	for i := 0; i < MaxBlockHeadersPerMsg+1; i++ {
-		err = msg.AddBlockHeader(bh)
+		err = msg.AddBlockHeader(bh, chainhash.ZeroHash)
 	}
 	if reflect.TypeOf(err) != reflect.TypeOf(&MessageError{}) {
 		t.Errorf("AddBlockHeader: expected error on too many headers " +
@@ -68,7 +68,7 @@ func TestHeadersWire(t *testing.T) {
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bh := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	// Empty headers message.
 	noHeaders := NewMsgHeaders()
@@ -78,7 +78,7 @@ func TestHeadersWire(t *testing.T) {
 
 	// Headers message with one header.
 	oneHeader := NewMsgHeaders()
-	oneHeader.AddBlockHeader(bh)
+	oneHeader.AddBlockHeader(bh, chainhash.ZeroHash)
 	oneHeaderEncoded := []byte{
 		0x01,                   // VarInt for number of headers.
 		0x01, 0x00, 0x00, 0x00, // Version 1
@@ -166,11 +166,11 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bh := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	// Headers message with one header.
 	oneHeader := NewMsgHeaders()
-	oneHeader.AddBlockHeader(bh)
+	oneHeader.AddBlockHeader(bh, chainhash.ZeroHash)
 	oneHeaderEncoded := []byte{
 		0x01,                   // VarInt for number of headers.
 		0x01, 0x00, 0x00, 0x00, // Version 1
@@ -192,19 +192,21 @@ func TestHeadersWireErrors(t *testing.T) {
 	// headers.
 	maxHeaders := NewMsgHeaders()
 	for i := 0; i < MaxBlockHeadersPerMsg; i++ {
-		maxHeaders.AddBlockHeader(bh)
+		maxHeaders.AddBlockHeader(bh, chainhash.ZeroHash)
 	}
-	maxHeaders.Headers = append(maxHeaders.Headers, bh)
+	maxHeaders.Headers = append(maxHeaders.Headers, HeaderBox{
+		Header: bh,
+	})
 	maxHeadersEncoded := []byte{
 		0xfd, 0xd1, 0x07, // Varint for number of addresses (2001)7D1
 	}
 
 	// Intentionally invalid block header that has a transaction count used
 	// to force errors.
-	bhTrans := NewBeaconBlockHeader(1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, nonce)
+	bhTrans := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	transHeader := NewMsgHeaders()
-	transHeader.AddBlockHeader(bhTrans)
+	transHeader.AddBlockHeader(bhTrans, chainhash.ZeroHash)
 	transHeaderEncoded := []byte{
 		0x01,                   // VarInt for number of headers.
 		0x01, 0x00, 0x00, 0x00, // Version 1

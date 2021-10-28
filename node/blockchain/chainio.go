@@ -15,6 +15,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 // FetchSpendJournal attempts to retrieve the spend journal, or the set of
@@ -47,7 +48,6 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *jaxutil.Block) ([]chaindata.
 func (b *BlockChain) createChainState() error {
 	// Create a new node from the genesis block and set it as the best node.
 	genesisBlock := jaxutil.NewBlock(b.chain.Params().GenesisBlock())
-	genesisBlock.SetHeight(0)
 	header := genesisBlock.MsgBlock().Header
 	genesisNode := b.chain.NewNode(header, nil, 0)
 	genesisNode.SetStatus(blocknodes.StatusDataStored | blocknodes.StatusValid)
@@ -223,7 +223,7 @@ func (b *BlockChain) initChainState() error {
 		cursor := blockIndexBucket.Cursor()
 
 		for ok := cursor.First(); ok; ok = cursor.Next() {
-			header, status, blockSerialID, err := chaindata.DeserializeBlockRow(b.chain, cursor.Value())
+			header, status, blockSerialID, err := chaindata.DeserializeBlockRow(cursor.Value())
 			if err != nil {
 				return err
 			}
@@ -244,8 +244,7 @@ func (b *BlockChain) initChainState() error {
 						return err
 					}
 
-					block := b.chain.EmptyBlock()
-					err = block.Deserialize(bytes.NewReader(blockBytes))
+					block, err := wire.DecodeBlock(bytes.NewReader(blockBytes))
 					if err != nil {
 						return err
 
@@ -303,8 +302,8 @@ func (b *BlockChain) initChainState() error {
 		if err != nil {
 			return err
 		}
-		block := b.chain.EmptyBlock()
-		err = block.Deserialize(bytes.NewReader(blockBytes))
+
+		block, err := wire.DecodeBlock(bytes.NewReader(blockBytes))
 		if err != nil {
 			return err
 		}
@@ -329,7 +328,7 @@ func (b *BlockChain) initChainState() error {
 
 		// Initialize the state related to the best block.
 		blockSize := uint64(len(blockBytes))
-		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(&block)))
+		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(block)))
 		numTxns := uint64(len(block.Transactions))
 		b.stateSnapshot = chaindata.NewBestState(tip,
 			b.blocksDB.bestChain.mmrTree.CurrentRoot(),
@@ -368,7 +367,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*jaxutil.Block, error) {
 	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, node)
+		block, err = chaindata.DBFetchBlockByNode(dbTx, node)
 		return err
 	})
 	return block, err
@@ -391,7 +390,7 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, node)
+		block, err = chaindata.DBFetchBlockByNode(dbTx, node)
 		return err
 	})
 	return block, err

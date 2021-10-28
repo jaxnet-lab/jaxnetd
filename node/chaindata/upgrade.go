@@ -155,11 +155,11 @@ func MigrateBlockIndex(db database.DB) error {
 func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
 	err := v1BlockIdxBucket.ForEach(func(_, blockRow []byte) error {
-		header := chain.EmptyHeader()
 		blockHdrSize := uint32(chain.MaxBlockHeaderPayload())
 		endOffset := blockHdrOffset + blockHdrSize
 		headerBytes := blockRow[blockHdrOffset:endOffset:endOffset]
-		err := header.Read(bytes.NewReader(headerBytes))
+
+		header, err := wire.DecodeHeader(bytes.NewReader(headerBytes))
 		if err != nil {
 			return err
 		}

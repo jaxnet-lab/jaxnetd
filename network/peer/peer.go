@@ -1114,7 +1114,7 @@ func (peer *Peer) handlePongMsg(msg *wire.MsgPong) {
 
 // readMessage reads the next bitcoin message from the peer with logging.
 func (peer *Peer) readMessage(encoding wire.MessageEncoding) (wire.Message, []byte, error) {
-	n, msg, buf, err := wire.ReadMessageWithEncodingN(peer.chain, peer.conn,
+	n, msg, buf, err := wire.ReadMessageWithEncodingN(peer.conn,
 		peer.ProtocolVersion(), peer.cfg.ChainParams.Net, encoding)
 	atomic.AddUint64(&peer.bytesReceived, uint64(n))
 	if peer.cfg.Listeners.OnRead != nil {

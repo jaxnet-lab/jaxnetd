@@ -210,8 +210,10 @@ func TestRegisterCmdErrors(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		err := jaxjson.RegisterCmd(jaxjson.ScopedMethod(test.scope, test.method), test.cmdFunc(),
-			test.flags)
+		err := jaxjson.RegisterCmd(
+			jaxjson.ScopedMethod(test.scope, test.method),
+			test.cmdFunc(),
+			test.flags, false)
 		if reflect.TypeOf(err) != reflect.TypeOf(test.err) {
 			t.Errorf("Test #%d (%s) wrong error - got %T, "+
 				"want %T", i, test.name, err, test.err)

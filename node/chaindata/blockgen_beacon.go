@@ -8,6 +8,7 @@ package chaindata
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,30 +28,34 @@ type StateProvider struct {
 
 type BeaconBlockGenerator struct {
 	stateInfo StateProvider
+	powLimit  *big.Int
 }
 
 type BtcGen interface {
 	NewBlockTemplate(burnReward int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error)
 }
 
-func NewBeaconBlockGen(stateInfo StateProvider) *BeaconBlockGenerator {
+func NewBeaconBlockGen(stateInfo StateProvider, genesisBits uint32) *BeaconBlockGenerator {
 	return &BeaconBlockGenerator{
 		stateInfo: stateInfo,
+		powLimit:  pow.CompactToBig(genesisBits),
 	}
 }
 
-func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, mmrRoot, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
+func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
+	timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	header := wire.NewBeaconBlockHeader(
+		height,
 		version,
-		mmrRoot,
+		blocksMMRRoot,
 		merkleRootHash,
 		chainhash.Hash{},
 		timestamp,
 		bits,
+		weight+pow.CalcRelativeWork(c.powLimit, bits),
 		nonce,
 	)
 

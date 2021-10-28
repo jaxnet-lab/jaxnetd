@@ -36,6 +36,5 @@ func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBl
 
 func (c *shardChain) Params() *chaincfg.Params     { return c.chainParams }
 func (c *shardChain) Name() string                 { return c.chainParams.ChainName }
-func (c *shardChain) EmptyBlock() wire.MsgBlock    { return wire.EmptyShardBlock() }
 func (c *shardChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.GenesisBlock() }
 func (c *shardChain) GenesisBeaconHeight() int32   { return c.beaconHeight }

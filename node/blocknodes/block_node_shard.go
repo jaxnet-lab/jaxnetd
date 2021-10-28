@@ -35,7 +35,6 @@ type ShardBlockNode struct {
 	parent     IBlockNode     // parent is the parent block for this node.
 	hash       chainhash.Hash // hash is the double sha 256 of the block.
 	workSum    *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	height     int32          // height is the position in the block chain.
 	serialID   int64          // serialID is the absolute unique id of current block.
 	difficulty uint64
 	timestamp  int64
@@ -63,7 +62,6 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID
 
 	if parent != nil {
 		node.parent = parent
-		node.height = parent.Height() + 1
 		node.serialID = serialID
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
@@ -85,7 +83,7 @@ func (node *ShardBlockNode) PrevHash() chainhash.Hash {
 func (node *ShardBlockNode) ActualMMRRoot() chainhash.Hash           { return node.actualMMRRoot }
 func (node *ShardBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actualMMRRoot = mmrRoot }
 func (node *ShardBlockNode) Version() int32                          { return node.header.Version().Version() }
-func (node *ShardBlockNode) Height() int32                           { return node.height }
+func (node *ShardBlockNode) Height() int32                           { return node.header.Height() }
 func (node *ShardBlockNode) SerialID() int64                         { return node.serialID }
 func (node *ShardBlockNode) Difficulty() uint64                      { return node.difficulty }
 func (node *ShardBlockNode) Bits() uint32                            { return node.header.Bits() }
@@ -114,7 +112,7 @@ func (node *ShardBlockNode) Header() wire.BlockHeader {
 //
 // This function is safe for concurrent access.
 func (node *ShardBlockNode) Ancestor(height int32) IBlockNode {
-	if height < 0 || height > node.height {
+	if height < 0 || height > node.header.Height() {
 		return nil
 	}
 
@@ -132,7 +130,7 @@ func (node *ShardBlockNode) Ancestor(height int32) IBlockNode {
 //
 // This function is safe for concurrent access.
 func (node *ShardBlockNode) RelativeAncestor(distance int32) IBlockNode {
-	return node.Ancestor(node.height - distance)
+	return node.Ancestor(node.header.Height() - distance)
 }
 
 // CalcPastMedianTime calculates the median time of the previous few blocks

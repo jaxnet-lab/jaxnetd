@@ -998,11 +998,11 @@ func createDefaultConfigFile(destinationPath string) error {
 	}
 
 	// We assume sample config file path is same as binary
-	path, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	cfgPath, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		return err
 	}
-	sampleConfigPath := filepath.Join(path, sampleConfigFilename)
+	sampleConfigPath := filepath.Join(cfgPath, sampleConfigFilename)
 
 	// We generate a random user and password
 	randomBytes := make([]byte, 20)

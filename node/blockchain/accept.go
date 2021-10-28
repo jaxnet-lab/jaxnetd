@@ -26,9 +26,6 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 	// The height of this block is one more than the referenced previous
 	// block.
 
-	blockHeight := prevNode.Height() + 1
-	block.SetHeight(blockHeight)
-
 	// Perform checks of the coinbase tx structure according to merge mining spec.
 	err := b.blockGen.ValidateJaxAuxRules(block.MsgBlock(), block.Height())
 	if err != nil {
@@ -101,7 +98,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
 	b.chainLock.Unlock()
-	b.sendNotification(NTBlockAccepted, block)
+	b.sendNotification(NTBlockAccepted, BlockNotification{Block: block, ActualMMRRoot: newNode.ActualMMRRoot()})
 	b.chainLock.Lock()
 
 	return isMainChain, nil

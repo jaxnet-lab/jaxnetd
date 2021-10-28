@@ -46,21 +46,21 @@ func TestGetHeaders(t *testing.T) {
 	}
 
 	// Ensure block locator hashes are added properly.
-	err = msg.AddBlockLocatorMeta(locatorHash)
+	err = msg.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *locatorHash})
 	if err != nil {
 		t.Errorf("AddBlockLocatorMeta: %v", err)
 	}
-	if msg.BlockLocatorHashes[0] != locatorHash {
+	if msg.BlockLocatorMetas[0].Hash != *locatorHash {
 		t.Errorf("AddBlockLocatorMeta: wrong block locator added - "+
 			"got %v, want %v",
-			spew.Sprint(msg.BlockLocatorHashes[0]),
+			spew.Sprint(msg.BlockLocatorMetas[0]),
 			spew.Sprint(locatorHash))
 	}
 
 	// Ensure adding more than the max allowed block locator hashes per
 	// message returns an error.
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
-		err = msg.AddBlockLocatorMeta(locatorHash)
+		err = msg.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *locatorHash})
 	}
 	if err == nil {
 		t.Errorf("AddBlockLocatorMeta: expected error on too many " +
@@ -113,8 +113,8 @@ func TestGetHeadersWire(t *testing.T) {
 	multiLocators := NewMsgGetHeaders()
 	multiLocators.ProtocolVersion = pver
 	multiLocators.HashStop = *hashStop
-	multiLocators.AddBlockLocatorMeta(hashLocator2)
-	multiLocators.AddBlockLocatorMeta(hashLocator)
+	multiLocators.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator2})
+	multiLocators.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator})
 	multiLocatorsEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
 		0x02, // Varint for number of block locator hashes
@@ -223,8 +223,8 @@ func TestGetHeadersWireErrors(t *testing.T) {
 	baseGetHeaders := NewMsgGetHeaders()
 	baseGetHeaders.ProtocolVersion = pver
 	baseGetHeaders.HashStop = *hashStop
-	baseGetHeaders.AddBlockLocatorMeta(hashLocator2)
-	baseGetHeaders.AddBlockLocatorMeta(hashLocator)
+	baseGetHeaders.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator2})
+	baseGetHeaders.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *hashLocator})
 	baseGetHeadersEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
 		0x02, // Varint for number of block locator hashes
@@ -246,10 +246,10 @@ func TestGetHeadersWireErrors(t *testing.T) {
 	// block locator hashes.
 	maxGetHeaders := NewMsgGetHeaders()
 	for i := 0; i < MaxBlockLocatorsPerMsg; i++ {
-		maxGetHeaders.AddBlockLocatorMeta(&mainNetGenesisHash)
+		maxGetHeaders.AddBlockLocatorMeta(&BlockLocatorMeta{Hash: *&mainNetGenesisHash})
 	}
-	maxGetHeaders.BlockLocatorHashes = append(maxGetHeaders.BlockLocatorHashes,
-		&mainNetGenesisHash)
+	maxGetHeaders.BlockLocatorMetas = append(maxGetHeaders.BlockLocatorMetas,
+		&BlockLocatorMeta{Hash: mainNetGenesisHash})
 	maxGetHeadersEncoded := []byte{
 		0x62, 0xea, 0x00, 0x00, // Protocol version 60002
 		0xfd, 0xf5, 0x01, // Varint for number of block loc hashes (501)

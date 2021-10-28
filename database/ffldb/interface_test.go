@@ -104,7 +104,7 @@ func loadBlocks(t *testing.T, dataFile string, network wire.JaxNet) ([]*jaxutil.
 		}
 
 		// Deserialize and store the block.
-		block, err := jaxutil.NewBlockFromBytes(chainctx.BeaconChain, blockBytes)
+		block, err := jaxutil.NewBlockFromBytes(blockBytes)
 		if err != nil {
 			t.Errorf("Failed to parse block %v: %v", height, err)
 			return nil, err

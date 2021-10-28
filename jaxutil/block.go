@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 
-	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -40,7 +39,6 @@ type Block struct {
 	blockHash                *chainhash.Hash // Cached block hash
 	powBlockHash             *chainhash.Hash // Cached block hash
 	exclusiveBlockHash       *chainhash.Hash // Cached block hash
-	blockHeight              int32           // Height in the main block chain
 	transactions             []*Tx           // Transactions
 	txnsGenerated            bool            // ALL wrapped transactions generated
 }
@@ -245,28 +243,20 @@ func (b *Block) TxLoc() ([]wire.TxLoc, error) {
 // Height returns the saved height of the block in the block chain.  This value
 // will be BlockHeightUnknown if it hasn't already explicitly been set.
 func (b *Block) Height() int32 {
-	return b.blockHeight
-}
-
-// SetHeight sets the height of the block in the block chain.
-func (b *Block) SetHeight(height int32) {
-	b.blockHeight = height
+	return b.msgBlock.Header.Height()
 }
 
 // NewBlock returns a new instance of a bitcoin block given an underlying
 // wire.MsgBlock.  See Block.
 func NewBlock(msgBlock *wire.MsgBlock) *Block {
-	return &Block{
-		msgBlock:    msgBlock,
-		blockHeight: BlockHeightUnknown,
-	}
+	return &Block{msgBlock: msgBlock}
 }
 
 // NewBlockFromBytes returns a new instance of a bitcoin block given the
 // serialized bytes.  See Block.
-func NewBlockFromBytes(chain chainctx.IChainCtx, serializedBlock []byte) (*Block, error) {
+func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
 	br := bytes.NewReader(serializedBlock)
-	b, err := NewBlockFromReader(chain, br)
+	b, err := NewBlockFromReader(br)
 	if err != nil {
 		return nil, err
 	}
@@ -276,17 +266,15 @@ func NewBlockFromBytes(chain chainctx.IChainCtx, serializedBlock []byte) (*Block
 
 // NewBlockFromReader returns a new instance of a bitcoin block given a
 // Reader to deserialize the block.  See Block.
-func NewBlockFromReader(chain chainctx.IChainCtx, r io.Reader) (*Block, error) {
+func NewBlockFromReader(r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
-	msgBlock := chain.EmptyBlock()
-	err := msgBlock.Deserialize(r)
+	msgBlock, err := wire.DecodeBlock(r)
 	if err != nil {
 		return nil, err
 	}
 
 	b := Block{
-		msgBlock:    &msgBlock,
-		blockHeight: BlockHeightUnknown,
+		msgBlock: msgBlock,
 	}
 	return &b, nil
 }
@@ -297,7 +285,6 @@ func NewBlockFromBlockAndBytes(msgBlock *wire.MsgBlock, serializedBlock []byte) 
 	return &Block{
 		msgBlock:        msgBlock,
 		serializedBlock: serializedBlock,
-		blockHeight:     BlockHeightUnknown,
 	}
 }
 

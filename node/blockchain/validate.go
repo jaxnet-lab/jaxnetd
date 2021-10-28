@@ -26,6 +26,11 @@ import (
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode blocknodes.IBlockNode, flags chaindata.BehaviorFlags) error {
+	if header.Height() != prevNode.Height()+1 {
+		errMsg := fmt.Sprintf("block height is invalid: expected=%d actual=%d", prevNode.Height(), header.Height())
+		return chaindata.NewRuleError(chaindata.ErrInvalidBlockHeightValue, errMsg)
+	}
+
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches

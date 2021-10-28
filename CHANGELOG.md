@@ -8,11 +8,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Unreleased
 
 ## [0.4.1]
- 
+
 - Fixed shard genesis generation.
-- Re-implemented block-serial-id, now it works as expected. 
-- Added last serialID to best state. 
+- Re-implemented block-serial-id, now it works as expected.
+- Added last serialID to best state.
 - Added saving mmr-roots to the db.
+- Added Height & ChainWeight in block header
+- Added magic byte as first bytes in serialized header and blocks. This allows you to automatically handle what type of
+  data is BeaconHeader or ShardHeader.
 
 ## [0.4.0]
 

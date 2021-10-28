@@ -189,7 +189,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	// Otherwise, generate the JSON object and return it.
 
 	// Deserialize the block.
-	blk, err := jaxutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), blkBytes)
+	blk, err := jaxutil.NewBlockFromBytes(blkBytes)
 	if err != nil {
 		context := "Failed to deserialize block"
 		return nil, server.InternalRPCError(err.Error(), context)
@@ -201,7 +201,6 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	// Get the block height from BlockChain.
 	blockHeight, serialID, prevSerialID, err := server.chainProvider.BlockChain().BlockIDsByHash(hash)
 	if err == nil {
-		blk.SetHeight(blockHeight)
 		// Get next block hash unless there are none.
 		// TODO: resolve next block from main chain
 		if blockHeight != -1 && blockHeight < best.Height {
@@ -515,15 +514,14 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *jaxjson.Templat
 		}
 	}
 
-	var msgBlock = server.chainProvider.ChainCtx.EmptyBlock()
-
-	if err := msgBlock.Deserialize(bytes.NewReader(dataBytes)); err != nil {
+	msgBlock, err := wire.DecodeBlock(bytes.NewReader(dataBytes))
+	if err != nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCDeserialization,
 			Message: "Block decode failed: " + err.Error(),
 		}
 	}
-	block := jaxutil.NewBlock(&msgBlock)
+	block := jaxutil.NewBlock(msgBlock)
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevMMRRoot := server.chainProvider.BlockChain().BestSnapshot().CurrentMMRRoot

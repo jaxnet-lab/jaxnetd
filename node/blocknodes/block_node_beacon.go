@@ -37,7 +37,6 @@ type BeaconBlockNode struct {
 	parent     IBlockNode     // parent is the parent block for this node.
 	hash       chainhash.Hash // hash is the double sha 256 of the block.
 	workSum    *big.Int       // workSum is the total amount of work in the chain up to and including this node.
-	height     int32          // height is the position in the block chain.
 	serialID   int64          // serialID is the absolute unique id of current block.
 	timestamp  int64
 	difficulty uint64
@@ -64,7 +63,6 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialI
 
 	if parent != nil && parent != (*BeaconBlockNode)(nil) {
 		node.parent = parent
-		node.height = parent.Height() + 1
 		node.serialID = serialID
 		node.workSum = node.workSum.Add(parent.WorkSum(), node.workSum)
 	}
@@ -86,7 +84,7 @@ func (node *BeaconBlockNode) PrevHash() chainhash.Hash {
 func (node *BeaconBlockNode) ActualMMRRoot() chainhash.Hash           { return node.actualMMRRoot }
 func (node *BeaconBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actualMMRRoot = mmrRoot }
 func (node *BeaconBlockNode) Version() int32                          { return node.header.Version().Version() }
-func (node *BeaconBlockNode) Height() int32                           { return node.height }
+func (node *BeaconBlockNode) Height() int32                           { return node.header.Height() }
 func (node *BeaconBlockNode) SerialID() int64                         { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                            { return node.header.Bits() }
 func (node *BeaconBlockNode) Difficulty() uint64                      { return node.difficulty }
@@ -113,7 +111,7 @@ func (node *BeaconBlockNode) Header() wire.BlockHeader {
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) Ancestor(height int32) IBlockNode {
-	if height < 0 || height > node.height {
+	if height < 0 || height > node.header.Height() {
 		return nil
 	}
 
@@ -131,7 +129,7 @@ func (node *BeaconBlockNode) Ancestor(height int32) IBlockNode {
 //
 // This function is safe for concurrent access.
 func (node *BeaconBlockNode) RelativeAncestor(distance int32) IBlockNode {
-	return node.Ancestor(node.height - distance)
+	return node.Ancestor(node.header.Height() - distance)
 }
 
 // CalcPastMedianTime calculates the median time of the previous few blocks

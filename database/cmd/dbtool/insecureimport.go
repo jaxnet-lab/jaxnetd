@@ -110,7 +110,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // NOTE: This is not a safe import as it does not verify chain rules.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := jaxutil.NewBlockFromBytes(bi.db.Chain(), serializedBlock)
+	block, err := jaxutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
 		return false, err
 	}

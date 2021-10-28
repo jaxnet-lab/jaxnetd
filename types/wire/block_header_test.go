@@ -7,10 +7,12 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	rand2 "math/rand"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -170,8 +172,8 @@ func TestShardHeaderEncoding(t *testing.T) {
 	rand.Read(sh.merkleRoot[:])
 	rand.Read(sh.blocksMMRRoot[:])
 
-	hashes := make([]chainhash.Hash, 400)
-	coding := make([]byte, 300)
+	hashes := make([]chainhash.Hash, 2)
+	coding := make([]byte, 3)
 	var bits uint32 = 222
 
 	sh.beaconHeader.SetMergedMiningTreeCodingProof(hashes, coding, bits)
@@ -182,12 +184,20 @@ func TestShardHeaderEncoding(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	spew.Dump(sh)
+
+	buf1 := bytes.NewBuffer(nil)
+	sh.Write(buf1)
+
+	fmt.Println(hex.Dump(buf1.Bytes()))
+	// return
+
 	wr.Flush()
 
 	fmt.Printf("%d %d\n", wr.Size(), wr.Available())
 	sh2 := ShardHeader{}
 	reader := bufio.NewReader(&b)
-	if err := readShardBlockHeader(reader, &sh2); err != nil {
+	if err := readShardBlockHeader(reader, &sh2, false); err != nil {
 		t.Error(err)
 		return
 	}

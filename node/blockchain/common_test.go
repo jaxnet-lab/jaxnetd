@@ -108,7 +108,7 @@ func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil
 		// read block
 		dr.Read(rbytes)
 
-		block, err = jaxutil.NewBlockFromBytes(chainCtx, rbytes)
+		block, err = jaxutil.NewBlockFromBytes(rbytes)
 		if err != nil {
 			return
 		}
@@ -302,12 +302,15 @@ func newFakeChain(ctx chainctx.IChainCtx) *BlockChain {
 // provided fields populated and fake values for the other fields.
 func newFakeNode(ctx chainctx.IChainCtx, parent blocknodes.IBlockNode, blockVersion wire.BVersion, bits uint32, timestamp time.Time) blocknodes.IBlockNode {
 	// Make up a header and create a block node from it.
-	header := wire.NewBeaconBlockHeader(blockVersion,
+	header := wire.NewBeaconBlockHeader(
+		1, // todo: fix
+		blockVersion,
 		parent.PrevMMRRoot(), // todo: this is incorrect
 		chainhash.ZeroHash,
 		chainhash.ZeroHash,
 		timestamp,
 		bits,
+		1, // todo: fix
 		0,
 	)
 
@@ -320,5 +323,7 @@ func newBeaconBlockGen() chaindata.ChainBlockGenerator {
 		chaindata.StateProvider{
 			ShardCount: func() (uint32, error) { return 0, nil },
 			BTCGen:     &chaindata.BTCBlockGen{MinerAddress: minerAddr},
-		})
+		},
+		chaincfg.TestNetParams.PowParams.PowLimitBits, // chaincfg.TestNetParams
+	)
 }

@@ -238,6 +238,8 @@ const (
 	ErrInvalidJaxHeaderAux
 
 	ErrUnexpectedShardsValue
+
+	ErrInvalidBlockHeightValue
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -290,6 +292,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrUnexpectedKValue:          "ErrUnexpectedKValue",
 	ErrInvalidJaxHeaderAux:       "ErrInvalidJaxHeaderAux",
 	ErrUnexpectedShardsValue:     "ErrUnexpectedShardsValue",
+	ErrInvalidBlockHeightValue:   "ErrInvalidBlockHeightValue",
 }
 
 // String returns the ErrorCode as a human-readable name.

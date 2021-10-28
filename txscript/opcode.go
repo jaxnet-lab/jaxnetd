@@ -1976,8 +1976,8 @@ func opcodeSha1(op *parsedOpcode, vm *Engine) error {
 		return err
 	}
 
-	hash := sha1.Sum(buf)
-	vm.dstack.PushByteArray(hash[:])
+	hashData := sha1.Sum(buf)
+	vm.dstack.PushByteArray(hashData[:])
 	return nil
 }
 
@@ -1991,8 +1991,8 @@ func opcodeSha256(op *parsedOpcode, vm *Engine) error {
 		return err
 	}
 
-	hash := sha256.Sum256(buf)
-	vm.dstack.PushByteArray(hash[:])
+	hashData := sha256.Sum256(buf)
+	vm.dstack.PushByteArray(hashData[:])
 	return nil
 }
 
@@ -2006,8 +2006,8 @@ func opcodeHash160(op *parsedOpcode, vm *Engine) error {
 		return err
 	}
 
-	hash := sha256.Sum256(buf)
-	vm.dstack.PushByteArray(calcHash(hash[:], ripemd160.New()))
+	hashData := sha256.Sum256(buf)
+	vm.dstack.PushByteArray(calcHash(hashData[:], ripemd160.New()))
 	return nil
 }
 
@@ -2095,7 +2095,7 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 	subScript := vm.subScript()
 
 	// Generate the signature hash based on the signature hash type.
-	var hash []byte
+	var hashData []byte
 	if vm.isWitnessVersionActive(0) {
 		var sigHashes *TxSigHashes
 		if vm.hashCache != nil {
@@ -2104,7 +2104,7 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 			sigHashes = NewTxSigHashes(&vm.tx)
 		}
 
-		hash, err = calcWitnessSignatureHash(subScript, sigHashes, hashType,
+		hashData, err = calcWitnessSignatureHash(subScript, sigHashes, hashType,
 			&vm.tx, vm.txIdx, vm.inputAmount)
 		if err != nil {
 			return err
@@ -2114,7 +2114,7 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 		// to sign itself.
 		subScript = removeOpcodeByData(subScript, fullSigBytes)
 
-		hash = calcSignatureHash(subScript, hashType, &vm.tx, vm.txIdx)
+		hashData = calcSignatureHash(subScript, hashType, &vm.tx, vm.txIdx)
 	}
 
 	pubKey, err := btcec.ParsePubKey(pkBytes, btcec.S256())
@@ -2139,15 +2139,15 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 	var valid bool
 	if vm.sigCache != nil {
 		var sigHash chainhash.Hash
-		copy(sigHash[:], hash)
+		copy(sigHash[:], hashData)
 
 		valid = vm.sigCache.Exists(sigHash, signature, pubKey)
-		if !valid && signature.Verify(hash, pubKey) {
+		if !valid && signature.Verify(hashData, pubKey) {
 			vm.sigCache.Add(sigHash, signature, pubKey)
 			valid = true
 		}
 	} else {
-		valid = signature.Verify(hash, pubKey)
+		valid = signature.Verify(hashData, pubKey)
 	}
 
 	if !valid && vm.hasFlag(ScriptVerifyNullFail) && len(sigBytes) > 0 {
@@ -2368,7 +2368,7 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) error {
 		}
 
 		// Generate the signature hash based on the signature hash type.
-		var hash []byte
+		var hashData []byte
 		if vm.isWitnessVersionActive(0) {
 			var sigHashes *TxSigHashes
 			if vm.hashCache != nil {
@@ -2377,27 +2377,27 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) error {
 				sigHashes = NewTxSigHashes(&vm.tx)
 			}
 
-			hash, err = calcWitnessSignatureHash(script, sigHashes, hashType,
+			hashData, err = calcWitnessSignatureHash(script, sigHashes, hashType,
 				&vm.tx, vm.txIdx, vm.inputAmount)
 			if err != nil {
 				return err
 			}
 		} else {
-			hash = calcSignatureHash(script, hashType, &vm.tx, vm.txIdx)
+			hashData = calcSignatureHash(script, hashType, &vm.tx, vm.txIdx)
 		}
 
 		var valid bool
 		if vm.sigCache != nil {
 			var sigHash chainhash.Hash
-			copy(sigHash[:], hash)
+			copy(sigHash[:], hashData)
 
 			valid = vm.sigCache.Exists(sigHash, parsedSig, parsedPubKey)
-			if !valid && parsedSig.Verify(hash, parsedPubKey) {
+			if !valid && parsedSig.Verify(hashData, parsedPubKey) {
 				vm.sigCache.Add(sigHash, parsedSig, parsedPubKey)
 				valid = true
 			}
 		} else {
-			valid = parsedSig.Verify(hash, parsedPubKey)
+			valid = parsedSig.Verify(hashData, parsedPubKey)
 		}
 
 		if valid {

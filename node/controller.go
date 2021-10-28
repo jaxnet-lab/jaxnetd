@@ -212,7 +212,6 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 }
 
 func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Config) error {
-	childCtx, _ := context.WithCancel(ctx)
 	chainCtl.logger.Info().Msg("Metrics Enabled")
 	interval := cfg.Metrics.Interval
 	if interval == 0 {
@@ -223,7 +222,7 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 		port = 2112
 	}
 
-	chainCtl.metrics = MetricsManager(childCtx, time.Duration(interval)*time.Second)
+	chainCtl.metrics = MetricsManager(ctx, time.Duration(interval)*time.Second)
 	chainCtl.metrics.Add(
 		MetricsOfChain(&chainCtl.beacon, chainCtl.logger),
 		MetricsOfNode(chainCtl.cfg, chainCtl, chainCtl.logger),

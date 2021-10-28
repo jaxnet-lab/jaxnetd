@@ -22,8 +22,8 @@ import (
 )
 
 type ChainBlockGenerator interface {
-	NewBlockHeader(version wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
-		timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error)
+	NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
+		timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error)
 
 	ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error
 
@@ -38,22 +38,32 @@ type BeaconBlockProvider interface {
 }
 
 type ShardBlockGenerator struct {
-	beacon BeaconBlockProvider
-	ctx    chainctx.IChainCtx
+	beacon   BeaconBlockProvider
+	ctx      chainctx.IChainCtx
+	powLimit *big.Int
 }
 
 func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *ShardBlockGenerator {
-	return &ShardBlockGenerator{beacon: beacon, ctx: ctx}
+	return &ShardBlockGenerator{beacon: beacon, ctx: ctx,
+		// powLimit: pow.CompactToBig(ctx.GenesisBlock().Header.Bits())
+		powLimit: pow.CompactToBig(ctx.Params().PowParams.PowLimitBits),
+	}
 }
 
-func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, blocksMMRRoot, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits, nonce uint32, burnReward int) (wire.BlockHeader, error) {
+func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
+	timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
 	}
 
-	return wire.NewShardBlockHeader(blocksMMRRoot, merkleRootHash, bits, *header, cAux), nil
+	return wire.NewShardBlockHeader(height,
+		blocksMMRRoot,
+		merkleRootHash,
+		bits,
+		weight+pow.CalcRelativeWork(c.powLimit, bits),
+		*header,
+		cAux), nil
 }
 
 func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) error {

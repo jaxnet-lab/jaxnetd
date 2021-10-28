@@ -136,12 +136,14 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 
 	state.genesisBlock = &wire.MsgBlock{
 		Header: wire.NewBeaconBlockHeader(
+			0,
 			wire.NewBVersion(opts.Version),
 			opts.PrevBlock,
 			genesisMerkleRoot(name),
 			chainhash.Hash{},
 			opts.Timestamp,
 			opts.Bits,
+			1,
 			opts.Nonce,
 		),
 		Transactions: []*wire.MsgTx{state.genesisTx},
@@ -198,9 +200,11 @@ func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.Ms
 	shardBlock = wire.MsgBlock{
 		ShardBlock: true,
 		Header: wire.NewShardBlockHeader(
+			0,
 			chainhash.Hash{},
 			state.shardsGenesisMerkleRoot[shardID],
 			bits,
+			1,
 			*beaconBlock.Header.BeaconHeader(),
 			coinbaseAux,
 		),

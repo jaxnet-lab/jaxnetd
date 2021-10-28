@@ -576,7 +576,7 @@ var helpDescsEnUS = map[string]string{
 	// GetMiningInfoResult help.
 	"getmininginforesult-blocks":             "Height of the latest best block",
 	"getmininginforesult-currentblocksize":   "Size of the latest best block",
-	"getmininginforesult-currentblockweight": "Weight of the latest best block",
+	"getmininginforesult-currentblockweight": "ChainWeight of the latest best block",
 	"getmininginforesult-currentblocktx":     "Number of transactions in the latest best block",
 	"getmininginforesult-difficulty":         "Current target difficulty",
 	"getmininginforesult-errors":             "Any current errors",

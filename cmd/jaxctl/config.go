@@ -50,7 +50,7 @@ func listCommands() {
 	cmdMethods := jaxjson.RegisteredCmdMethods()
 	categorized := make([][]string, numCategories)
 	for _, method := range cmdMethods {
-		flags, err := jaxjson.MethodUsageFlags(method)
+		usageFlags, err := jaxjson.MethodUsageFlags(method)
 		if err != nil {
 			// This should never happen since the method was just
 			// returned from the package, but be safe.
@@ -58,7 +58,7 @@ func listCommands() {
 		}
 
 		// Skip the commands that aren't usable from this utility.
-		if flags&unusableFlags != 0 {
+		if usageFlags&unusableFlags != 0 {
 			continue
 		}
 
@@ -71,7 +71,7 @@ func listCommands() {
 
 		// Categorize the command based on the usage flags.
 		category := categoryChain
-		if flags&jaxjson.UFWalletOnly != 0 {
+		if usageFlags&jaxjson.UFWalletOnly != 0 {
 			// category = categoryWallet
 			continue
 		}

@@ -312,11 +312,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 				if err != nil {
 					return err
 				}
-				block, err = jaxutil.NewBlockFromBytes(chain.Chain(), blockBytes)
+				block, err = jaxutil.NewBlockFromBytes(blockBytes)
 				if err != nil {
 					return err
 				}
-				block.SetHeight(height)
 				return err
 			})
 			if err != nil {
@@ -411,6 +410,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 		// it.
 		block, err := chain.BlockByHeight(height)
 		if err != nil {
+			fmt.Println(height)
 			return err
 		}
 

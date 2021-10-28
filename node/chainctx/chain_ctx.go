@@ -17,7 +17,6 @@ type IChainCtx interface {
 	Params() *chaincfg.Params
 	GenesisBlock() *wire.MsgBlock
 	GenesisBeaconHeight() int32
-	EmptyBlock() wire.MsgBlock
 
 	NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode, serialID int64) blocknodes.IBlockNode
 }

@@ -226,7 +226,7 @@ func TestBuildMerkleTreeStore(t *testing.T) {
 					continue
 				}
 				if got[i].Weight != tt.want[i].Weight {
-					t.Errorf("BuildMerkleTreeStore(): [%v].Weight %v != %v", i, got[i].Weight, tt.want[i].Weight)
+					t.Errorf("BuildMerkleTreeStore(): [%v].ChainWeight %v != %v", i, got[i].Weight, tt.want[i].Weight)
 				}
 			}
 

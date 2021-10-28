@@ -136,9 +136,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 	}
 
 	// Deserialize the block.
-	var msgBlock = server.chain.ChainCtx.EmptyBlock()
-
-	err = msgBlock.Deserialize(bytes.NewReader(blockBytes))
+	msgBlock, err := wire.DecodeBlock(bytes.NewReader(blockBytes))
 	if err != nil {
 		server.logger.Trace().Msgf("Unable to deserialize requested block hash "+
 			"%v: %v", hash, err)
@@ -162,7 +160,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 	if !sendInv {
 		dc = doneChan
 	}
-	sp.QueueMessageWithEncoding(&msgBlock, dc, encoding)
+	sp.QueueMessageWithEncoding(msgBlock, dc, encoding)
 
 	// When the peer requests the final block that was advertised in
 	// response to a getblocks message which requested more blocks than

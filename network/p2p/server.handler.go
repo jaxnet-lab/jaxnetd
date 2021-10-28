@@ -241,7 +241,7 @@ func (server *Server) handleRelayInvMsg(state *peerState, msg RelayMsg) {
 				return
 			}
 			msgHeaders := wire.NewMsgHeaders()
-			if err := msgHeaders.AddBlockHeader(headerBox.Header, headerBox.Height); err != nil {
+			if err := msgHeaders.AddBlockHeader(headerBox.Header, headerBox.ActualMMRRoot); err != nil {
 				server.logger.Error().Err(err).Msg("Failed to add block header")
 				return
 			}

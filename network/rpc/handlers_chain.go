@@ -727,7 +727,7 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 		return nil, rpcDecodeHexError(hexStr)
 	}
 
-	block, err := jaxutil.NewBlockFromBytes(server.chainProvider.DB.Chain(), serializedBlock)
+	block, err := jaxutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCDeserialization,

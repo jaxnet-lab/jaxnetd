@@ -92,7 +92,7 @@ type Message interface {
 
 // makeEmptyMessage creates a message of the appropriate concrete type based
 // on the command.
-func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) {
+func makeEmptyMessage(command string) (Message, error) {
 	var msg Message
 	switch command {
 	case CmdVersion:
@@ -114,9 +114,7 @@ func makeEmptyMessage(chain HeaderConstructor, command string) (Message, error) 
 		msg = &MsgGetBlocks{}
 
 	case CmdBlock:
-		msg = &MsgBlock{
-			Header: chain.EmptyHeader(),
-		}
+		msg = &MsgBlock{}
 	case CmdInv:
 		msg = &MsgInv{}
 
@@ -346,7 +344,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // comprise the message.  This function is the same as ReadMessageN except it
 // allows the caller to specify which message encoding is to to consult when
 // decoding wire messages.
-func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet,
+func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet JaxNet,
 	enc MessageEncoding) (int, Message, []byte, error) {
 
 	totalBytes := 0
@@ -381,7 +379,7 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 	}
 
 	// Create struct of appropriate message type based on the command.
-	msg, err := makeEmptyMessage(chain, command)
+	msg, err := makeEmptyMessage(command)
 	if err != nil {
 		discardInput(r, hdr.length)
 		return totalBytes, nil, nil, Error("ReadMessage",
@@ -433,8 +431,8 @@ func ReadMessageWithEncodingN(chain HeaderConstructor, r io.Reader, pver uint32,
 // bytes read in addition to the parsed Message and raw bytes which comprise the
 // message.  This function is the same as ReadMessage except it also returns the
 // number of bytes read.
-func ReadMessageN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet) (int, Message, []byte, error) {
-	return ReadMessageWithEncodingN(chain, r, pver, btcnet, BaseEncoding)
+func ReadMessageN(r io.Reader, pver uint32, btcnet JaxNet) (int, Message, []byte, error) {
+	return ReadMessageWithEncodingN(r, pver, btcnet, BaseEncoding)
 }
 
 // ReadMessage reads, validates, and parses the next bitcoin Message from r for
@@ -443,7 +441,7 @@ func ReadMessageN(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxN
 // from ReadMessageN in that it doesn't return the number of bytes read.  This
 // function is mainly provided for backwards compatibility with the original
 // API, but it's also useful for callers that don't care about byte counts.
-func ReadMessage(chain HeaderConstructor, r io.Reader, pver uint32, btcnet JaxNet) (Message, []byte, error) {
-	_, msg, buf, err := ReadMessageN(chain, r, pver, btcnet)
+func ReadMessage(r io.Reader, pver uint32, btcnet JaxNet) (Message, []byte, error) {
+	_, msg, buf, err := ReadMessageN(r, pver, btcnet)
 	return msg, buf, err
 }

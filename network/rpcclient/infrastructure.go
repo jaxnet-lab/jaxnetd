@@ -1349,8 +1349,8 @@ func dial(config *ConnConfig) (*websocket.Conn, error) {
 	requestHeader.Add("Authorization", auth)
 
 	// Dial the connection.
-	url := fmt.Sprintf("%s://%s/%s", scheme, config.Host, config.Endpoint)
-	wsConn, resp, err := dialer.Dial(url, requestHeader)
+	connUrl := fmt.Sprintf("%s://%s/%s", scheme, config.Host, config.Endpoint)
+	wsConn, resp, err := dialer.Dial(connUrl, requestHeader)
 	if err != nil {
 		if err != websocket.ErrBadHandshake || resp == nil {
 			return nil, err

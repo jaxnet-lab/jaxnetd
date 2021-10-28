@@ -701,7 +701,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 	var prevBlock *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		prevBlock, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, prevNode)
+		prevBlock, err = chaindata.DBFetchBlockByNode(dbTx, prevNode)
 		return err
 	})
 	if err != nil {
@@ -888,7 +888,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, blockNode)
+			block, err = chaindata.DBFetchBlockByNode(dbTx, blockNode)
 			return err
 		})
 		if err != nil {
@@ -954,7 +954,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = chaindata.DBFetchBlockByNode(b.chain, dbTx, n)
+			block, err = chaindata.DBFetchBlockByNode(dbTx, n)
 			return err
 		})
 		if err != nil {
@@ -1635,7 +1635,7 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	// Populate and return the found headers.
 	headers := make([]wire.HeaderBox, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, wire.HeaderBox{Header: node.NewHeader(), Height: node.Height()})
+		headers = append(headers, wire.HeaderBox{Header: node.NewHeader(), ActualMMRRoot: node.ActualMMRRoot()})
 		node = b.blocksDB.bestChain.Next(node)
 	}
 	return headers

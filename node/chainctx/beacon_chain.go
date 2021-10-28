@@ -29,7 +29,6 @@ func NewBeaconChain(params *chaincfg.Params) *beaconChain {
 
 func (c *beaconChain) Name() string                 { return c.chainParams.ChainName }
 func (c *beaconChain) Params() *chaincfg.Params     { return c.chainParams }
-func (c *beaconChain) EmptyBlock() wire.MsgBlock    { return wire.EmptyBeaconBlock() }
 func (c *beaconChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.GenesisBlock() }
 func (c *beaconChain) GenesisBeaconHeight() int32   { return 0 }
 

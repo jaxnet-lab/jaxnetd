@@ -328,13 +328,13 @@ func checkProofOfWork(header wire.BlockHeader, chainCfg *chaincfg.Params, flags 
 		// The block Hash must be less than the claimed target.
 		hashNum := pow.HashToBig(&hash)
 		if hashNum.Cmp(target) > 0 {
-			str := fmt.Sprintf("block Hash of %064x is higher than expected max of %064x", hashNum, target)
+			str := fmt.Sprintf("block pow hash of %064x is higher than expected max of %064x", hashNum, target)
 			return NewRuleError(ErrHighHash, str)
 		}
 
 		if chainCfg.PowParams.HashSorting && !pow.ValidateHashSortingRule(hashNum,
 			chainCfg.PowParams.HashSortingSlotNumber, chainCfg.ChainID) {
-			str := fmt.Sprintf("block Hash of %064x is not match for chain %d by hash-sorting rules",
+			str := fmt.Sprintf("block pow hash of %064x is not match for chain %d by hash-sorting rules",
 				hashNum, chainCfg.ChainID)
 			return NewRuleError(ErrHashSortingRuleNotMatch, str)
 		}

@@ -7,6 +7,9 @@ package blockchain
 
 import (
 	"fmt"
+
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 // NotificationType represents the type of a notification message.
@@ -31,6 +34,11 @@ const (
 	// from the main chain.
 	NTBlockDisconnected
 )
+
+type BlockNotification struct {
+	ActualMMRRoot chainhash.Hash
+	Block         *jaxutil.Block
+}
 
 // notificationTypeStrings is a map of notification types back to their constant
 // names for pretty printing.

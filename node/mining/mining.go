@@ -388,10 +388,18 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	// Create a new block ready to be solved.
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
-	var msgBlock = g.chainCtx.EmptyBlock()
-	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().
-		NewBlockHeader(nextBlockVersion, g.blockChain.MMRTree().CurrentRoot(),
-			*merkles[len(merkles)-1], ts, reqDifficulty, 0, burnReward)
+	var msgBlock wire.MsgBlock
+	msgBlock.ShardBlock = !g.blockChain.Chain().IsBeacon()
+	msgBlock.Header, err = g.blockChain.ChainBlockGenerator().NewBlockHeader(nextBlockVersion,
+		nextBlockHeight,
+		g.blockChain.MMRTree().CurrentRoot(),
+		*merkles[len(merkles)-1],
+		ts,
+		reqDifficulty,
+		g.blockChain.MMRTree().CurrenWeight(),
+		0,
+		burnReward,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +420,6 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	// consensus rules to ensure it properly connects to the current best
 	// chain with no issues.
 	block := jaxutil.NewBlock(&msgBlock)
-	block.SetHeight(nextBlockHeight)
 	if err := g.blockChain.CheckConnectBlockTemplate(block, true); err != nil {
 		return nil, err
 	}

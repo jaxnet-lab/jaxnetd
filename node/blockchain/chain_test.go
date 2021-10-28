@@ -777,7 +777,7 @@ func TestLocateInventory(t *testing.T) {
 	}
 	for _, test := range tests {
 		// Ensure the expected headers are located.
-		var headers []wire.BlockHeader
+		var headers []wire.HeaderBox
 		if test.maxAllowed != 0 {
 			// Need to use the unexported function to override the
 			// max allowed for headers.

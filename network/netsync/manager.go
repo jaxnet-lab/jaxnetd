@@ -911,9 +911,9 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 	for _, headerBox := range msg.Headers {
 		finalMeta = wire.BlockLocatorMeta{
 			Hash:        headerBox.Header.BlockHash(),
+			Height:      headerBox.Header.Height(),
 			PrevMMRRoot: headerBox.Header.BlocksMerkleMountainRoot(),
 			Weight:      pow.CalcWork(headerBox.Header.Bits()).Uint64(),
-			Height:      headerBox.Height,
 		}
 
 		// Ensure there is a previous header to compare against.
@@ -1355,18 +1355,18 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 			return
 		}
 
-		block, ok := notification.Data.(*jaxutil.Block)
+		block, ok := notification.Data.(blockchain.BlockNotification)
 		if !ok {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Chain accepted notification is not a block.")
 			break
 		}
 
 		// Generate the inventory vector and relay it.
-		iv := wire.NewInvVect(wire.InvTypeBlock, block.Hash())
+		iv := wire.NewInvVect(wire.InvTypeBlock, block.Block.Hash())
 
 		sm.peerNotifier.RelayInventory(iv, wire.HeaderBox{
-			Header: block.MsgBlock().Header,
-			Height: block.Height(),
+			Header:        block.Block.MsgBlock().Header,
+			ActualMMRRoot: block.ActualMMRRoot,
 		})
 
 	// A block has been connected to the main block chain.

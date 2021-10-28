@@ -482,8 +482,8 @@ func (server *Server) handleQuery(state *peerState, querymsg interface{}) {
 			msg.Reply <- errors.New("max peers reached")
 			return
 		}
-		for _, peer := range state.persistentPeers {
-			if peer.Addr() == msg.Addr {
+		for _, peerObj := range state.persistentPeers {
+			if peerObj.Addr() == msg.Addr {
 				if msg.Permanent {
 					msg.Reply <- errors.New("peer already connected")
 				} else {
@@ -577,16 +577,16 @@ func (server *Server) handleQuery(state *peerState, querymsg interface{}) {
 // isn't nil, we call it with the peer as the argument before it is removed
 // from the peerList, and is disconnected from the server.
 func disconnectPeer(peerList map[int32]*serverPeer, compareFunc func(*serverPeer) bool, whenFound func(*serverPeer)) bool {
-	for addr, peer := range peerList {
-		if compareFunc(peer) {
+	for addr, peerObj := range peerList {
+		if compareFunc(peerObj) {
 			if whenFound != nil {
-				whenFound(peer)
+				whenFound(peerObj)
 			}
 
 			// This is ok because we are not continuing
 			// to iterate so won't corrupt the loop.
 			delete(peerList, addr)
-			peer.Disconnect()
+			peerObj.Disconnect()
 			return true
 		}
 	}
