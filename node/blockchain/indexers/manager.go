@@ -440,7 +440,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			mmrRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
 			bNode, _ := chain.MMRTree().LookupNodeByRoot(mmrRoot)
 			if bNode == nil {
-				bNode = &mmr.BlockNode{}
+				bNode = &mmr.TreeLeaf{}
 			}
 			prevHash := bNode.Hash
 			if mmrRoot.IsEqual(&zeroHash) {

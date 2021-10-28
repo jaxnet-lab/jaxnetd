@@ -19,7 +19,7 @@ type TreeContainer struct {
 	RootToBlock map[chainhash.Hash]chainhash.Hash
 }
 
-func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBlockNode) {
+func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBlockNode) bool {
 	prevNodesMMRRoot := node.PrevMMRRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()
 
@@ -29,11 +29,16 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 		mmrTree.AddBlock(node.GetHash(), node.Difficulty())
 		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
 		node.SetActualMMRRoot(mmrTree.CurrentRoot())
-		return
+		return true
 	}
 
 	lifoToAdd := []Leaf{
 		{Hash: node.GetHash(), Weight: node.Difficulty()},
+	}
+
+	// reject non-genesis block without parent
+	if node.Parent() == nil && node.Height() > 0 {
+		return false
 	}
 
 	// 2) OrphanAdd Case: if a node is not next in the current chain,
@@ -41,14 +46,14 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 	// resetting MMR tree state to this <fork root> as the last leaf
 	// and adding all blocks between <fork root> and a new node.
 	iterNode := node.Parent()
-	iterMMRRoot := node.Header().BlocksMerkleMountainRoot()
+	iterMMRRoot := node.PrevMMRRoot()
 	for iterNode != nil {
 		prevHash := iterNode.GetHash()
 		bNode, topPresent := mmrTree.LookupNodeByRoot(iterMMRRoot)
 		if topPresent {
 			if !bNode.Hash.IsEqual(&prevHash) || iterNode.Height() != int32(bNode.Height) {
 				// todo: impossible in normal world situation
-				return
+				return false
 			}
 
 			mmrTree.ResetRootTo(bNode.Hash, int32(bNode.Height))
@@ -67,4 +72,6 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
 		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 	}
+
+	return true
 }
