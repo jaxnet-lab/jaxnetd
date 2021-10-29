@@ -138,22 +138,6 @@ func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 		&h.prevMMRRoot,
 		&h.merkleRoot,
 		h.bits,
-		h.chainWeight,
-	)
-
-	return chainhash.DoubleHashH(buf.Bytes())
-}
-
-// DEPRECATED
-// ShardExclusiveBlockHash computes the block identifier hash for the given ShardHeader.
-func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
-	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
-	_ = WriteElements(buf,
-		h.height,
-		&h.prevMMRRoot,
-		&h.merkleRoot,
-		h.bits,
-		h.chainWeight,
 	)
 
 	return chainhash.DoubleHashH(buf.Bytes())
@@ -168,7 +152,6 @@ func (h *ShardHeader) BlockHash() chainhash.Hash {
 		&h.prevMMRRoot,
 		&h.merkleRoot,
 		h.bits,
-		h.chainWeight,
 		&beaconHash,
 	)
 	return chainhash.DoubleHashH(w.Bytes())

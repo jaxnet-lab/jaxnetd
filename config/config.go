@@ -73,13 +73,10 @@ const (
 )
 
 var (
-	defaultHomeDir = jaxutil.AppDataDir("jaxnetd", false)
-	// defaultConfigFile  =  defaultConfigFilename
-	// defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
+	defaultHomeDir     = jaxutil.AppDataDir("jaxnetd", false)
 	knownDbTypes       = database.SupportedDrivers()
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
-	// defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 )
 
 // RunServiceCommand is only set to a real function on Windows.  It is used

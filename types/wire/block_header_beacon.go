@@ -196,6 +196,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 
 	_ = WriteElements(w,
 		h.version,
+		h.height,
 		&h.prevMMRRoot,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
@@ -220,6 +221,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
 	WriteElements(buf,
 		h.version,
+		h.height,
 		&h.prevMMRRoot,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
