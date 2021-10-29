@@ -52,8 +52,7 @@ type ShardBlockGenerator struct {
 
 func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *ShardBlockGenerator {
 	return &ShardBlockGenerator{beacon: beacon, ctx: ctx,
-		// powLimit: pow.CompactToBig(ctx.GenesisBlock().Header.Bits())
-		powLimit:              ctx.Params().PowParams.PowLimit,
+		powLimit:              pow.CompactToBig(ctx.Params().PowParams.PowLimitBits),
 		hashSortingSlotNumber: ctx.Params().PowParams.HashSortingSlotNumber,
 	}
 }

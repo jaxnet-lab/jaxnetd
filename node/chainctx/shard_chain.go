@@ -32,8 +32,11 @@ func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBl
 }
 
 func (c *shardChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode, serialID int64) blocknodes.IBlockNode {
-	powWeight := pow.CalcPowWeight(c.chainParams.PowParams.PowLimit, blockHeader.Bits(),
-		c.chainParams.PowParams.HashSortingSlotNumber)
+	powWeight := pow.CalcPowWeight(
+		pow.CompactToBig(c.chainParams.PowParams.PowLimitBits),
+		blockHeader.Bits(),
+		c.chainParams.PowParams.HashSortingSlotNumber,
+	)
 	return blocknodes.NewShardBlockNode(blockHeader, parent, serialID, powWeight)
 }
 

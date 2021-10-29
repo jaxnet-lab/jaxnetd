@@ -39,7 +39,7 @@ type BtcGen interface {
 func NewBeaconBlockGen(stateInfo StateProvider, powParams chaincfg.PowParams) *BeaconBlockGenerator {
 	return &BeaconBlockGenerator{
 		stateInfo:             stateInfo,
-		powLimit:              powParams.PowLimit,
+		powLimit:              pow.CompactToBig(powParams.PowLimitBits),
 		hashSortingSlotNumber: powParams.HashSortingSlotNumber,
 	}
 }
