@@ -32,8 +32,8 @@ type BlockHeader interface {
 	Height() int32
 	ChainWeight() uint64
 
-	BlocksMerkleMountainRoot() chainhash.Hash
-	SetBlocksMerkleMountainRoot(prevBlock chainhash.Hash)
+	PrevBlocksMMRRoot() chainhash.Hash
+	SetPrevBlocksMMRRoot(prevBlock chainhash.Hash)
 
 	Timestamp() time.Time
 	SetTimestamp(time.Time)

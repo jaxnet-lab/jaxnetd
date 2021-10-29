@@ -71,7 +71,7 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID
 
 func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
 func (node *ShardBlockNode) PrevMMRRoot() chainhash.Hash {
-	return node.header.BlocksMerkleMountainRoot()
+	return node.header.PrevBlocksMMRRoot()
 }
 func (node *ShardBlockNode) PrevHash() chainhash.Hash {
 	if node.parent == nil {

@@ -175,7 +175,7 @@ func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block, blockActualMM
 	}
 
 	// Add to previous hash lookup index for faster dependency lookups.
-	prevMMRRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	prevMMRRoot := block.MsgBlock().Header.PrevBlocksMMRRoot()
 	storage.orphanIndex.mmrRootsOrphans[prevMMRRoot] = append(storage.orphanIndex.mmrRootsOrphans[prevMMRRoot], oBlock)
 
 }

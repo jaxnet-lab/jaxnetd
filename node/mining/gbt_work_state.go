@@ -416,7 +416,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		return nil, err
 	}
 
-	mmrRoot := header.BlocksMerkleMountainRoot()
+	mmrRoot := header.PrevBlocksMMRRoot()
 	prevHash, _ := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot)
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash.Hash)
 	if err != nil {
@@ -436,27 +436,28 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetBeaconBlockTemplateResult{
-		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:       header.Timestamp().Unix(),
-		PreviousHash:  prevHash.Hash.String(),
-		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
-		Height:        int64(template.Height),
-		SerialID:      prevSerialID + 1,
-		PrevSerialID:  prevSerialID,
-		Version:       int32(header.Version()),
-		Shards:        header.BeaconHeader().Shards(),
-		WeightLimit:   chaindata.MaxBlockWeight,
-		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
-		SizeLimit:     wire.MaxBlockPayload,
-		Transactions:  transactions,
-		LongPollID:    templateID,
-		SubmitOld:     submitOld,
-		Target:        targetDifficulty,
-		MinTime:       state.minTimestamp.Unix(),
-		MaxTime:       maxTime.Unix(),
-		Mutable:       gbtMutableFields,
-		NonceRange:    gbtNonceRange,
-		Capabilities:  gbtCapabilities,
+		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
+		ChainWeight:       strconv.FormatUint(header.ChainWeight(), 16),
+		CurTime:           header.Timestamp().Unix(),
+		PreviousHash:      prevHash.Hash.String(),
+		PrevBlocksMMRRoot: header.PrevBlocksMMRRoot().String(),
+		Height:            int64(template.Height),
+		SerialID:          prevSerialID + 1,
+		PrevSerialID:      prevSerialID,
+		Version:           int32(header.Version()),
+		Shards:            header.BeaconHeader().Shards(),
+		WeightLimit:       chaindata.MaxBlockWeight,
+		SigOpLimit:        chaindata.MaxBlockSigOpsCost,
+		SizeLimit:         wire.MaxBlockPayload,
+		Transactions:      transactions,
+		LongPollID:        templateID,
+		SubmitOld:         submitOld,
+		Target:            targetDifficulty,
+		MinTime:           state.minTimestamp.Unix(),
+		MaxTime:           maxTime.Unix(),
+		Mutable:           gbtMutableFields,
+		NonceRange:        gbtNonceRange,
+		Capabilities:      gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),
@@ -510,7 +511,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	if err != nil {
 		return nil, err
 	}
-	mmrRoot := header.BlocksMerkleMountainRoot()
+	mmrRoot := header.PrevBlocksMMRRoot()
 	prevHash, _ := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot)
 	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash.Hash)
 	if err != nil {
@@ -530,26 +531,27 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetShardBlockTemplateResult{
-		Bits:          strconv.FormatInt(int64(header.Bits()), 16),
-		CurTime:       header.Timestamp().Unix(),
-		PreviousHash:  prevHash.Hash.String(),
-		BlocksMMRRoot: header.BlocksMerkleMountainRoot().String(),
-		Height:        int64(template.Height),
-		SerialID:      prevSerialID + 1,
-		PrevSerialID:  prevSerialID,
-		Version:       int32(header.Version()),
-		WeightLimit:   chaindata.MaxBlockWeight,
-		SigOpLimit:    chaindata.MaxBlockSigOpsCost,
-		SizeLimit:     wire.MaxBlockPayload,
-		Transactions:  transactions,
-		LongPollID:    templateID,
-		SubmitOld:     submitOld,
-		Target:        targetDifficulty,
-		MinTime:       state.minTimestamp.Unix(),
-		MaxTime:       maxTime.Unix(),
-		Mutable:       gbtMutableFields,
-		NonceRange:    gbtNonceRange,
-		Capabilities:  gbtCapabilities,
+		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
+		ChainWeight:       strconv.FormatUint(header.ChainWeight(), 16),
+		CurTime:           header.Timestamp().Unix(),
+		PreviousHash:      prevHash.Hash.String(),
+		PrevBlocksMMRRoot: header.PrevBlocksMMRRoot().String(),
+		Height:            int64(template.Height),
+		SerialID:          prevSerialID + 1,
+		PrevSerialID:      prevSerialID,
+		Version:           int32(header.Version()),
+		WeightLimit:       chaindata.MaxBlockWeight,
+		SigOpLimit:        chaindata.MaxBlockSigOpsCost,
+		SizeLimit:         wire.MaxBlockPayload,
+		Transactions:      transactions,
+		LongPollID:        templateID,
+		SubmitOld:         submitOld,
+		Target:            targetDifficulty,
+		MinTime:           state.minTimestamp.Unix(),
+		MaxTime:           maxTime.Unix(),
+		Mutable:           gbtMutableFields,
+		NonceRange:        gbtNonceRange,
+		Capabilities:      gbtCapabilities,
 
 		K:      header.K(),
 		VoteK:  header.VoteK(),

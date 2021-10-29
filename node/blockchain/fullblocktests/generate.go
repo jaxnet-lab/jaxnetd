@@ -656,7 +656,7 @@ func (g *testGenerator) saveSpendableCoinbaseOuts() {
 	// collected.
 	var collectBlocks []*wire.MsgBlock
 
-	for b := g.tip; b != nil; b = g.blocksByMMMRoot(b.Header.BlocksMerkleMountainRoot()) {
+	for b := g.tip; b != nil; b = g.blocksByMMMRoot(b.Header.PrevBlocksMMRRoot()) {
 		if b.BlockHash() == g.prevCollectedHash {
 			break
 		}
@@ -1622,10 +1622,10 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	//   ... -> b33(9) -> b35(10) -> b39(11) -> b42(12) -> b43(13) -> b53(14)
 	//                                                                       \-> b54(15)
 	g.nextBlock("b54", outs[15], func(b *wire.MsgBlock) {
-		prevHash := g.mmrRootToBlock[b.Header.BlocksMerkleMountainRoot()]
+		prevHash := g.mmrRootToBlock[b.Header.PrevBlocksMMRRoot()]
 		medianBlock := g.blocks[prevHash]
 		for i := 0; i < medianTimeBlocks/2; i++ {
-			prevHash := g.mmrRootToBlock[medianBlock.Header.BlocksMerkleMountainRoot()]
+			prevHash := g.mmrRootToBlock[medianBlock.Header.PrevBlocksMMRRoot()]
 			medianBlock = g.blocks[prevHash]
 		}
 		b.Header.SetTimestamp(medianBlock.Header.Timestamp())
@@ -1638,10 +1638,10 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	//   ... -> b33(9) -> b35(10) -> b39(11) -> b42(12) -> b43(13) -> b53(14) -> b55(15)
 	g.setTip("b53")
 	g.nextBlock("b55", outs[15], func(b *wire.MsgBlock) {
-		prevHash := g.mmrRootToBlock[b.Header.BlocksMerkleMountainRoot()]
+		prevHash := g.mmrRootToBlock[b.Header.PrevBlocksMMRRoot()]
 		medianBlock := g.blocks[prevHash]
 		for i := 0; i < medianTimeBlocks/2; i++ {
-			prevHash := g.mmrRootToBlock[medianBlock.Header.BlocksMerkleMountainRoot()]
+			prevHash := g.mmrRootToBlock[medianBlock.Header.PrevBlocksMMRRoot()]
 			medianBlock = g.blocks[prevHash]
 		}
 		medianBlockTime := medianBlock.Header.Timestamp
@@ -1790,7 +1790,7 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	g.nextBlock("b61", outs[18], func(b *wire.MsgBlock) {
 		// Duplicate the coinbase of the parent block to force the
 		// condition.
-		prevHash := g.mmrRootToBlock[b.Header.BlocksMerkleMountainRoot()]
+		prevHash := g.mmrRootToBlock[b.Header.PrevBlocksMMRRoot()]
 		parent := g.blocks[prevHash]
 		b.Transactions[0] = parent.Transactions[0]
 	})

@@ -165,7 +165,7 @@ func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (
 		}
 
 		blockHash := header.BlockHash()
-		prevHash := header.BlocksMerkleMountainRoot() // todo: remove this
+		prevHash := header.PrevBlocksMMRRoot() // todo: remove this
 
 		if blocksMap[blockHash] == nil {
 			blocksMap[blockHash] = &blockChainContext{height: -1}

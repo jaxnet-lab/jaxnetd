@@ -230,7 +230,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		return nil, err
 	}
 
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
@@ -238,7 +238,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
 		PreviousHash:        prevHash.Hash.String(),
-		BlocksMMRRoot:       blockHeader.BlocksMerkleMountainRoot().String(),
+		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		Nonce:               blockHeader.Nonce(),
 		Time:                blockHeader.Timestamp().Unix(),
@@ -344,7 +344,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		return err
 	})
 
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.BlocksMerkleMountainRoot())
+	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:                c.Hash,
 		Confirmations:       int64(1 + best.Height - blockHeight),
@@ -357,7 +357,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		NextHash:            nextHashString,
 		PreviousHash:        prevHash.Hash.String(),
-		BlocksMMRRoot:       blockHeader.BlocksMerkleMountainRoot().String(),
+		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
 		Nonce:               uint64(blockHeader.Nonce()),
 		Time:                blockHeader.Timestamp().Unix(),
 		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
@@ -525,7 +525,7 @@ func (server *BeaconRPC) handleGetBlockTemplateProposal(request *jaxjson.Templat
 
 	// Ensure the block is building from the expected previous block.
 	expectedPrevMMRRoot := server.chainProvider.BlockChain().BestSnapshot().CurrentMMRRoot
-	mmrRoot := block.MsgBlock().Header.BlocksMerkleMountainRoot()
+	mmrRoot := block.MsgBlock().Header.PrevBlocksMMRRoot()
 	if !expectedPrevMMRRoot.IsEqual(&mmrRoot) {
 		return "bad-prevblk", nil
 	}
@@ -586,7 +586,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.Template.Block.Header.BlocksMerkleMountainRoot()
+	prevTemplateHash := state.Template.Block.Header.PrevBlocksMMRRoot()
 	if !prevHash.IsEqual(&prevTemplateHash) ||
 		lastGenerated != state.LastGenerated.Unix() {
 
@@ -634,7 +634,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// Include whether or not it is valid to submit work against the old
 	// block template depending on whether or not a solution has already
 	// been found and added to the block BlockChain.
-	h := state.Template.Block.Header.BlocksMerkleMountainRoot()
+	h := state.Template.Block.Header.PrevBlocksMMRRoot()
 	submitOld := prevHash.IsEqual(&h)
 	result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, &submitOld)
 	if err != nil {

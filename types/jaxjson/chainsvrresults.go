@@ -30,7 +30,7 @@ type GetBeaconBlockHeaderVerboseResult struct {
 	VoteK               string  `json:"voteK"`
 	Difficulty          float64 `json:"difficulty"`
 	PreviousHash        string  `json:"previousblockhash,omitempty"`
-	BlocksMMRRoot       string  `json:"blocksmmrroot,omitempty"`
+	PrevBlocksMMRRoot   string  `json:"prevblocksmmrroot,omitempty"`
 	NextHash            string  `json:"nextblockhash,omitempty"`
 }
 
@@ -38,22 +38,22 @@ type GetBeaconBlockHeaderVerboseResult struct {
 // the verbose flag is set.  When the verbose flag is not set, getShardBlockHeader
 // returns a hex-encoded string.
 type GetShardBlockHeaderVerboseResult struct {
-	Hash          string                            `json:"hash"`
-	ShardHash     string                            `json:"shardhash"`
-	Confirmations int64                             `json:"confirmations"`
-	Height        int32                             `json:"height"`
-	SerialID      int64                             `json:"serialID"`
-	PrevSerialID  int64                             `json:"prevSerialID"`
-	MerkleRoot    string                            `json:"merkleroot"`
-	Time          int64                             `json:"time"`
-	Bits          string                            `json:"bits"`
-	K             string                            `json:"k"`
-	VoteK         string                            `json:"voteK"`
-	Difficulty    float64                           `json:"difficulty"`
-	PreviousHash  string                            `json:"previousblockhash,omitempty"`
-	BlocksMMRRoot string                            `json:"blocksmmrroot,omitempty"`
-	NextHash      string                            `json:"nextblockhash,omitempty"`
-	BCHeader      GetBeaconBlockHeaderVerboseResult `json:"bcheader"`
+	Hash              string                            `json:"hash"`
+	ShardHash         string                            `json:"shardhash"`
+	Confirmations     int64                             `json:"confirmations"`
+	Height            int32                             `json:"height"`
+	SerialID          int64                             `json:"serialID"`
+	PrevSerialID      int64                             `json:"prevSerialID"`
+	MerkleRoot        string                            `json:"merkleroot"`
+	Time              int64                             `json:"time"`
+	Bits              string                            `json:"bits"`
+	K                 string                            `json:"k"`
+	VoteK             string                            `json:"voteK"`
+	Difficulty        float64                           `json:"difficulty"`
+	PreviousHash      string                            `json:"previousblockhash,omitempty"`
+	PrevBlocksMMRRoot string                            `json:"prevblocksmmrroot,omitempty"`
+	NextHash          string                            `json:"nextblockhash,omitempty"`
+	BCHeader          GetBeaconBlockHeaderVerboseResult `json:"bcheader"`
 }
 
 type GetChainStatsResult struct {
@@ -129,7 +129,7 @@ type GetBeaconBlockVerboseResult struct {
 	Difficulty          float64       `json:"difficulty"`
 	PoWHash             string        `json:"powhash"`
 	PreviousHash        string        `json:"previousblockhash"`
-	BlocksMMRRoot       string        `json:"blocksmmrroot,omitempty"`
+	PrevBlocksMMRRoot   string        `json:"blocksmmrroot,omitempty"`
 	NextHash            string        `json:"nextblockhash,omitempty"`
 	MerkleMountainRange string        `json:"mmr"`
 }
@@ -141,27 +141,27 @@ type GetBeaconBlockVerboseResult struct {
 // getShardBlock returns an object whose tx field is an array of raw transactions.
 // Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=2 to getShardBlock.
 type GetShardBlockVerboseResult struct {
-	Hash          string                      `json:"hash"`
-	ShardHash     string                      `json:"shardhash"`
-	Confirmations int64                       `json:"confirmations"`
-	StrippedSize  int32                       `json:"strippedsize"`
-	Size          int32                       `json:"size"`
-	Weight        int32                       `json:"weight"`
-	Height        int64                       `json:"height"`
-	SerialID      int64                       `json:"serialID"`
-	PrevSerialID  int64                       `json:"prevSerialID"`
-	MerkleRoot    string                      `json:"merkleroot"`
-	Tx            []string                    `json:"tx,omitempty"`
-	RawTx         []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time          int64                       `json:"time"`
-	Bits          string                      `json:"bits"`
-	K             string                      `json:"k"`
-	VoteK         string                      `json:"voteK"`
-	Difficulty    float64                     `json:"difficulty"`
-	PreviousHash  string                      `json:"previousblockhash"`
-	BlocksMMRRoot string                      `json:"blocksmmrroot,omitempty"`
-	NextHash      string                      `json:"nextblockhash,omitempty"`
-	BCBlock       GetBeaconBlockVerboseResult `json:"bcblock"`
+	Hash              string                      `json:"hash"`
+	ShardHash         string                      `json:"shardhash"`
+	Confirmations     int64                       `json:"confirmations"`
+	StrippedSize      int32                       `json:"strippedsize"`
+	Size              int32                       `json:"size"`
+	Weight            int32                       `json:"weight"`
+	Height            int64                       `json:"height"`
+	SerialID          int64                       `json:"serialID"`
+	PrevSerialID      int64                       `json:"prevSerialID"`
+	MerkleRoot        string                      `json:"merkleroot"`
+	Tx                []string                    `json:"tx,omitempty"`
+	RawTx             []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
+	Time              int64                       `json:"time"`
+	Bits              string                      `json:"bits"`
+	K                 string                      `json:"k"`
+	VoteK             string                      `json:"voteK"`
+	Difficulty        float64                     `json:"difficulty"`
+	PreviousHash      string                      `json:"previousblockhash"`
+	PrevBlocksMMRRoot string                      `json:"prevblocksmmrroot,omitempty"`
+	NextHash          string                      `json:"nextblockhash,omitempty"`
+	BCBlock           GetBeaconBlockVerboseResult `json:"bcblock"`
 }
 
 // GetBeaconBlockVerboseTxResult models the data from the getBeaconBlock command when the
@@ -342,23 +342,24 @@ type GetBlockTemplateResultAux struct {
 type GetBeaconBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
 	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
-	Bits          string                     `json:"bits"`
-	CurTime       int64                      `json:"curtime"`
-	Height        int64                      `json:"height"`
-	PreviousHash  string                     `json:"previousblockhash"` // DEPRECATED this field will be dropped, use the BlocksMMRRoot
-	BlocksMMRRoot string                     `json:"blocksmmrroot"`
-	SerialID      int64                      `json:"serialID"`
-	PrevSerialID  int64                      `json:"prevSerialID"`
-	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
-	SizeLimit     int64                      `json:"sizelimit,omitempty"`
-	WeightLimit   int64                      `json:"weightlimit,omitempty"`
-	Transactions  []GetBlockTemplateResultTx `json:"transactions"`
-	Version       int32                      `json:"version"`
-	Shards        uint32                     `json:"shards"`
-	CoinbaseAux   *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
-	CoinbaseTxn   *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
-	CoinbaseValue *int64                     `json:"coinbasevalue,omitempty"`
-	WorkID        string                     `json:"workid,omitempty"`
+	Bits              string                     `json:"bits"`
+	ChainWeight       string                     `json:"chainweight"`
+	CurTime           int64                      `json:"curtime"`
+	Height            int64                      `json:"height"`
+	PreviousHash      string                     `json:"previousblockhash"` // DEPRECATED this field will be dropped, use the PrevBlocksMMRRoot
+	PrevBlocksMMRRoot string                     `json:"prevblocksmmrroot"`
+	SerialID          int64                      `json:"serialID"`
+	PrevSerialID      int64                      `json:"prevSerialID"`
+	SigOpLimit        int64                      `json:"sigoplimit,omitempty"`
+	SizeLimit         int64                      `json:"sizelimit,omitempty"`
+	WeightLimit       int64                      `json:"weightlimit,omitempty"`
+	Transactions      []GetBlockTemplateResultTx `json:"transactions"`
+	Version           int32                      `json:"version"`
+	Shards            uint32                     `json:"shards"`
+	CoinbaseAux       *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
+	CoinbaseTxn       *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
+	CoinbaseValue     *int64                     `json:"coinbasevalue,omitempty"`
+	WorkID            string                     `json:"workid,omitempty"`
 
 	// Witness commitment defined in BIP 0141.
 	DefaultWitnessCommitment string `json:"default_witness_commitment,omitempty"`
@@ -392,22 +393,23 @@ type GetBeaconBlockTemplateResult struct {
 type GetShardBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
 	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
-	Bits          string                     `json:"bits"`
-	CurTime       int64                      `json:"curtime"`
-	Height        int64                      `json:"height"`
-	SerialID      int64                      `json:"serialID"`
-	PrevSerialID  int64                      `json:"prevSerialID"`
-	PreviousHash  string                     `json:"previousblockhash"` // DEPRECATED use BlocksMMRRoot.
-	BlocksMMRRoot string                     `json:"blocksmmrroot"`
-	SigOpLimit    int64                      `json:"sigoplimit,omitempty"`
-	SizeLimit     int64                      `json:"sizelimit,omitempty"`
-	WeightLimit   int64                      `json:"weightlimit,omitempty"`
-	Transactions  []GetBlockTemplateResultTx `json:"transactions"`
-	Version       int32                      `json:"version"`
-	CoinbaseAux   *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
-	CoinbaseTxn   *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
-	CoinbaseValue *int64                     `json:"coinbasevalue,omitempty"`
-	WorkID        string                     `json:"workid,omitempty"`
+	Bits              string                     `json:"bits"`
+	ChainWeight       string                     `json:"chainweight"`
+	CurTime           int64                      `json:"curtime"`
+	Height            int64                      `json:"height"`
+	SerialID          int64                      `json:"serialID"`
+	PrevSerialID      int64                      `json:"prevSerialID"`
+	PreviousHash      string                     `json:"previousblockhash"` // DEPRECATED use PrevBlocksMMRRoot.
+	PrevBlocksMMRRoot string                     `json:"prevblocksmmrroot"`
+	SigOpLimit        int64                      `json:"sigoplimit,omitempty"`
+	SizeLimit         int64                      `json:"sizelimit,omitempty"`
+	WeightLimit       int64                      `json:"weightlimit,omitempty"`
+	Transactions      []GetBlockTemplateResultTx `json:"transactions"`
+	Version           int32                      `json:"version"`
+	CoinbaseAux       *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
+	CoinbaseTxn       *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
+	CoinbaseValue     *int64                     `json:"coinbasevalue,omitempty"`
+	WorkID            string                     `json:"workid,omitempty"`
 
 	// Witness commitment defined in BIP 0141.
 	DefaultWitnessCommitment string `json:"default_witness_commitment,omitempty"`

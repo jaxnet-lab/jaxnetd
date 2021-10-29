@@ -124,7 +124,7 @@ func (b *Block) PowHash() *chainhash.Hash {
 }
 
 func (b *Block) PrevMMRRoot() chainhash.Hash {
-	return b.msgBlock.Header.BlocksMerkleMountainRoot()
+	return b.msgBlock.Header.PrevBlocksMMRRoot()
 }
 
 func (b *Block) ExclusiveHash() *chainhash.Hash {

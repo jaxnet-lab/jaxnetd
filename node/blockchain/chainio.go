@@ -262,13 +262,13 @@ func (b *BlockChain) initChainState() error {
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chain.Params().GenesisHash(), blockHash))
 				}
-			} else if header.BlocksMerkleMountainRoot() == b.blocksDB.index.MMRTreeRoot() {
+			} else if header.PrevBlocksMMRRoot() == b.blocksDB.index.MMRTreeRoot() {
 				// Since we iterate block headers in order of height, if the
 				// blocks are mostly linear there is a very good chance the
 				// previous header processed is the parent.
 				parent = lastNode
 			} else {
-				prev := header.BlocksMerkleMountainRoot()
+				prev := header.PrevBlocksMMRRoot()
 				parent = b.blocksDB.index.LookupNodeByMMRRoot(prev)
 				if parent == nil {
 					return chaindata.AssertError(fmt.Sprintf(

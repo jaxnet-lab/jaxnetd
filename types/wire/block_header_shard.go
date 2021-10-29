@@ -26,8 +26,8 @@ type ShardHeader struct {
 	// height the order of this block in chain
 	height int32
 
-	// blocksMMRRoot is an actual root of the MerkleMountainRange tree for current block
-	blocksMMRRoot chainhash.Hash
+	// prevMMRRoot is an actual root of the MerkleMountainRange tree for current block
+	prevMMRRoot chainhash.Hash
 
 	// Hash of the previous block ShardHeader in the block chain.
 	// prevBlock chainhash.Hash
@@ -59,7 +59,7 @@ func NewShardBlockHeader(height int32, blocksMerkleMountainRoot, merkleRootHash 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &ShardHeader{
-		blocksMMRRoot:  blocksMerkleMountainRoot,
+		prevMMRRoot:    blocksMerkleMountainRoot,
 		height:         height,
 		merkleRoot:     merkleRootHash,
 		bits:           bits,
@@ -98,9 +98,9 @@ func (h *ShardHeader) SetBits(bits uint32) { h.bits = bits }
 func (h *ShardHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
 func (h *ShardHeader) SetMerkleRoot(hash chainhash.Hash) { h.merkleRoot = hash }
 
-func (h *ShardHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMMRRoot }
-func (h *ShardHeader) SetBlocksMerkleMountainRoot(root chainhash.Hash) {
-	h.blocksMMRRoot = root
+func (h *ShardHeader) PrevBlocksMMRRoot() chainhash.Hash { return h.prevMMRRoot }
+func (h *ShardHeader) SetPrevBlocksMMRRoot(root chainhash.Hash) {
+	h.prevMMRRoot = root
 }
 
 func (h *ShardHeader) Timestamp() time.Time     { return h.beaconHeader.btcAux.Timestamp }
@@ -135,7 +135,7 @@ func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
 	_ = WriteElements(buf,
 		h.height,
-		&h.blocksMMRRoot,
+		&h.prevMMRRoot,
 		&h.merkleRoot,
 		h.bits,
 		h.chainWeight,
@@ -150,7 +150,7 @@ func (h *ShardHeader) ShardExclusiveBlockHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxShardBlockHeaderPayload))
 	_ = WriteElements(buf,
 		h.height,
-		&h.blocksMMRRoot,
+		&h.prevMMRRoot,
 		&h.merkleRoot,
 		h.bits,
 		h.chainWeight,
@@ -165,7 +165,7 @@ func (h *ShardHeader) BlockHash() chainhash.Hash {
 	beaconHash := h.beaconHeader.BlockHash()
 	_ = WriteElements(w,
 		h.height,
-		&h.blocksMMRRoot,
+		&h.prevMMRRoot,
 		&h.merkleRoot,
 		h.bits,
 		h.chainWeight,
@@ -253,7 +253,7 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader, skipMagicCheck bool) err
 
 	err := ReadElements(r,
 		&bh.height,
-		&bh.blocksMMRRoot,
+		&bh.prevMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
 		&bh.chainWeight,
@@ -280,7 +280,7 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 	err := WriteElements(w,
 		[1]byte{shardMagic},
 		bh.height,
-		&bh.blocksMMRRoot,
+		&bh.prevMMRRoot,
 		&bh.merkleRoot,
 		&bh.bits,
 		&bh.chainWeight,

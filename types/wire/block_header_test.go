@@ -170,7 +170,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 	}
 	sh.bits = 3
 	rand.Read(sh.merkleRoot[:])
-	rand.Read(sh.blocksMMRRoot[:])
+	rand.Read(sh.prevMMRRoot[:])
 
 	hashes := make([]chainhash.Hash, 2)
 	coding := make([]byte, 3)
@@ -212,7 +212,7 @@ func TestShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.blocksMMRRoot[:], sh2.blocksMMRRoot[:]) != 0 {
+	if bytes.Compare(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) != 0 {
 		t.Error("prevBlock Root not equal")
 		return
 	}
@@ -248,7 +248,7 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	}
 	sh.bits = 3
 	rand.Read(sh.merkleRoot[:])
-	rand.Read(sh.blocksMMRRoot[:])
+	rand.Read(sh.prevMMRRoot[:])
 
 	hashes := make([]chainhash.Hash, 400)
 	coding := make([]byte, 300)
@@ -295,7 +295,7 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.blocksMMRRoot[:], sh2.blocksMMRRoot[:]) != 0 {
+	if bytes.Compare(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) != 0 {
 		t.Error("prevBlock Root not equal")
 		return
 	}

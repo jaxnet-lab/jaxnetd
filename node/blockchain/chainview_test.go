@@ -33,7 +33,7 @@ func chainedNodes(parent blocknodes.IBlockNode, numNodes int) []blocknodes.IBloc
 		header.SetNonce(testNoncePrng.Uint32())
 		if tip != (*blocknodes.BeaconBlockNode)(nil) {
 			// todo: fix mmr
-			header.SetBlocksMerkleMountainRoot(tip.GetHash())
+			header.SetPrevBlocksMMRRoot(tip.GetHash())
 		}
 
 		nodes[i] = blocknodes.NewBeaconBlockNode(header, tip, 0, 1) // todo: fix serial id

@@ -184,7 +184,7 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 	// a new block, but the check only happens periodically, so it is
 	// possible a block was found and submitted in between.
 	msgBlock := block.MsgBlock()
-	merkleMountainRoot := msgBlock.Header.BlocksMerkleMountainRoot()
+	merkleMountainRoot := msgBlock.Header.PrevBlocksMMRRoot()
 
 	var bestMMR chainhash.Hash
 	var bestHeight int32
@@ -198,7 +198,7 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 
 	if !merkleMountainRoot.IsEqual(&bestMMR) {
 		miner.log.Debug().Msgf("Block submitted via CPU miner with previous block %s is stale",
-			msgBlock.Header.BlocksMerkleMountainRoot())
+			msgBlock.Header.PrevBlocksMMRRoot())
 		return false
 	}
 
@@ -296,7 +296,7 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 				// The current block is stale if the best block
 				// has changed.
 				best := miner.beacon.BlockTemplateGenerator.BestSnapshot()
-				h := block.Header.BlocksMerkleMountainRoot()
+				h := block.Header.PrevBlocksMMRRoot()
 				if !(&h).IsEqual(&best.CurrentMMRRoot) {
 					return false
 				}

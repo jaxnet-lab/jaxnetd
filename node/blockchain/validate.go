@@ -490,7 +490,7 @@ func (b *BlockChain) CheckConnectBlockTemplate(block *jaxutil.Block, skipAuxVali
 	tipHash := tip.GetHash()
 
 	header := block.MsgBlock().Header
-	prevMMRRoot := header.BlocksMerkleMountainRoot()
+	prevMMRRoot := header.PrevBlocksMMRRoot()
 	prevHash, _, inMainChain := b.blocksDB.getBlockParentHash(prevMMRRoot)
 
 	if !inMainChain || !tipHash.IsEqual(&prevHash) {

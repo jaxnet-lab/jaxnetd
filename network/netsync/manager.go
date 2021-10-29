@@ -912,7 +912,7 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 		finalMeta = wire.BlockLocatorMeta{
 			Hash: headerBox.Header.BlockHash(),
 			// Height:      headerBox.Header.Height(),
-			// PrevMMRRoot: headerBox.Header.BlocksMerkleMountainRoot(),
+			// PrevMMRRoot: headerBox.Header.PrevBlocksMMRRoot(),
 			// Weight:      pow.CalcWork(headerBox.Header.Bits()).Uint64(),
 		}
 
@@ -932,7 +932,7 @@ func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 		prevNode := prevNodeEl.Value.(*headerNode)
 
 		// TODO: DISCUSS WITH Iurii Shyshatskyi HOW TO SOLVE THIS!!!!
-		// h := blockHeader.BlocksMerkleMountainRoot() // TODO: FIX MMR ROOT
+		// h := blockHeader.PrevBlocksMMRRoot() // TODO: FIX MMR ROOT
 
 		// if prevNode.hash.IsEqual(&h) {
 		node.height = prevNode.height + 1

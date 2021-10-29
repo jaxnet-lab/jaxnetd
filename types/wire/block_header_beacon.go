@@ -31,8 +31,8 @@ type BeaconHeader struct {
 	// Version of the block.  This is not the same as the protocol version.
 	version BVersion
 
-	// blocksMMRRoot is an actual root of the MerkleMountainRange tree for current block
-	blocksMMRRoot chainhash.Hash
+	// prevMMRRoot is an actual root of the MerkleMountainRange tree for current block
+	prevMMRRoot chainhash.Hash
 
 	// height the order of this block in chain
 	height int32
@@ -90,7 +90,7 @@ func NewBeaconBlockHeader(height int32, version BVersion, blocksMerkleMountainRo
 	return &BeaconHeader{
 		height:          height,
 		version:         version,
-		blocksMMRRoot:   blocksMerkleMountainRoot,
+		prevMMRRoot:     blocksMerkleMountainRoot,
 		merkleRoot:      merkleRootHash,
 		mergeMiningRoot: mergeMiningRoot,
 		bits:            bits,
@@ -120,9 +120,9 @@ func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
 func (h *BeaconHeader) Nonce() uint32     { return h.btcAux.Nonce }
 func (h *BeaconHeader) SetNonce(n uint32) { h.btcAux.Nonce = n }
 
-func (h *BeaconHeader) BlocksMerkleMountainRoot() chainhash.Hash { return h.blocksMMRRoot }
-func (h *BeaconHeader) SetBlocksMerkleMountainRoot(root chainhash.Hash) {
-	h.blocksMMRRoot = root
+func (h *BeaconHeader) PrevBlocksMMRRoot() chainhash.Hash { return h.prevMMRRoot }
+func (h *BeaconHeader) SetPrevBlocksMMRRoot(root chainhash.Hash) {
+	h.prevMMRRoot = root
 }
 
 func (h *BeaconHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
@@ -196,7 +196,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 
 	_ = WriteElements(w,
 		h.version,
-		&h.blocksMMRRoot,
+		&h.prevMMRRoot,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
 		h.bits,
@@ -220,7 +220,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
 	WriteElements(buf,
 		h.version,
-		&h.blocksMMRRoot,
+		&h.prevMMRRoot,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
 		h.bits,
@@ -315,7 +315,7 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader, skipMagicCheck bool) e
 	err := ReadElements(r,
 		&bh.version,
 		&bh.height,
-		&bh.blocksMMRRoot,
+		&bh.prevMMRRoot,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		&bh.bits,
@@ -345,7 +345,7 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 		[1]byte{beaconMagicByte},
 		bh.version,
 		bh.height,
-		&bh.blocksMMRRoot,
+		&bh.prevMMRRoot,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		bh.bits,

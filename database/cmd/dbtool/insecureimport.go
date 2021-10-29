@@ -133,7 +133,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	}
 
 	// Don't bother trying to process orphans.
-	prevHash := block.MsgBlock().Header.BlocksMerkleMountainRoot() //todo: fix this
+	prevHash := block.MsgBlock().Header.PrevBlocksMMRRoot() //todo: fix this
 	if !prevHash.IsEqual(&zeroHash) {
 		var exists bool
 		err := bi.db.View(func(tx database.Tx) error {
