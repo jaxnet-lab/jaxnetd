@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -39,7 +40,7 @@ type ShardHeader struct {
 	bits uint32
 
 	// The total chainWeight of all blocks in the chain
-	chainWeight uint64
+	chainWeight *big.Int
 
 	// Merkle Proof of the shard header block
 	shardMerkleProof []chainhash.Hash
@@ -54,7 +55,7 @@ func EmptyShardHeader() *ShardHeader { return &ShardHeader{beaconHeader: *EmptyB
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
 func NewShardBlockHeader(height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash, bits uint32,
-	weight uint64, bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
+	weight *big.Int, bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
@@ -90,8 +91,8 @@ func (h *ShardHeader) SetBeaconHeader(bh *BeaconHeader, beaconAux CoinbaseAux) {
 	bh.merkleRoot = h.beaconCoinbase.UpdatedMerkleRoot()
 }
 
-func (h *ShardHeader) Height() int32       { return h.height }
-func (h *ShardHeader) ChainWeight() uint64 { return h.chainWeight }
+func (h *ShardHeader) Height() int32         { return h.height }
+func (h *ShardHeader) ChainWeight() *big.Int { return h.chainWeight }
 
 func (h *ShardHeader) Bits() uint32        { return h.bits }
 func (h *ShardHeader) SetBits(bits uint32) { h.bits = bits }
@@ -245,11 +246,16 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader, skipMagicCheck bool) err
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.bits,
-		&bh.chainWeight,
 	)
 	if err != nil {
 		return err
 	}
+
+	bh.chainWeight, err = ReadBigInt(r)
+	if err != nil {
+		return err
+	}
+
 	bh.shardMerkleProof, err = ReadHashArray(r)
 	if err != nil {
 		return err
@@ -273,12 +279,14 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.bits,
-		&bh.chainWeight,
 	)
 	if err != nil {
 		return err
 	}
 
+	if err := WriteBigInt(w, bh.chainWeight); err != nil {
+		return err
+	}
 	if err = WriteHashArray(w, bh.shardMerkleProof); err != nil {
 		return err
 	}

@@ -46,7 +46,7 @@ func NewBeaconBlockGen(stateInfo StateProvider, powParams chaincfg.PowParams) *B
 
 func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, height int32,
 	blocksMMRRoot, prevHash, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits uint32, weight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
+	timestamp time.Time, bits uint32, prevWeight *big.Int, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
@@ -59,7 +59,7 @@ func (c *BeaconBlockGenerator) NewBlockHeader(version wire.BVersion, height int3
 		chainhash.Hash{},
 		timestamp,
 		bits,
-		weight+pow.CalcPowWeight(c.powLimit, bits, c.hashSortingSlotNumber),
+		prevWeight,
 		nonce,
 	)
 

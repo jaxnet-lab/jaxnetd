@@ -39,7 +39,7 @@ type BeaconBlockNode struct {
 	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
 	serialID  int64          // serialID is the absolute unique id of current block.
 	timestamp int64
-	powWeight uint64
+	powWeight *big.Int
 	header    wire.BlockHeader
 	// status is a bitfield representing the validation state of the block. The
 	// status field, unlike the other fields, may be written to and so should
@@ -52,13 +52,13 @@ type BeaconBlockNode struct {
 // NewBeaconBlockNode returns a new block node for the given block header and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64, powWeight uint64) *BeaconBlockNode {
+func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *BeaconBlockNode {
 	node := &BeaconBlockNode{
 		hash:      blockHeader.BlockHash(),
 		workSum:   pow.CalcWork(blockHeader.Bits()),
 		timestamp: blockHeader.Timestamp().Unix(),
 		header:    blockHeader,
-		powWeight: powWeight,
+		powWeight: pow.CalcWork(blockHeader.Bits()),
 	}
 
 	if parent != nil && parent != (*BeaconBlockNode)(nil) {
@@ -78,10 +78,10 @@ func (node *BeaconBlockNode) Version() int32                          { return n
 func (node *BeaconBlockNode) Height() int32                           { return node.header.Height() }
 func (node *BeaconBlockNode) SerialID() int64                         { return node.serialID }
 func (node *BeaconBlockNode) Bits() uint32                            { return node.header.Bits() }
-func (node *BeaconBlockNode) PowWeight() uint64                       { return node.powWeight }
 func (node *BeaconBlockNode) K() uint32                               { return node.header.K() }
 func (node *BeaconBlockNode) VoteK() uint32                           { return node.header.VoteK() }
 func (node *BeaconBlockNode) Parent() IBlockNode                      { return node.parent }
+func (node *BeaconBlockNode) PowWeight() *big.Int                     { return node.powWeight }
 func (node *BeaconBlockNode) WorkSum() *big.Int                       { return node.workSum }
 func (node *BeaconBlockNode) Timestamp() int64                        { return node.timestamp }
 func (node *BeaconBlockNode) Status() BlockStatus                     { return node.status }

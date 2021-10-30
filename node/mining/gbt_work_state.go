@@ -437,7 +437,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetBeaconBlockTemplateResult{
 		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
-		ChainWeight:       strconv.FormatUint(header.ChainWeight(), 16),
+		ChainWeight:       header.ChainWeight().String(),
 		CurTime:           header.Timestamp().Unix(),
 		PreviousHash:      prevHash.Hash.String(),
 		PrevBlocksMMRRoot: header.PrevBlocksMMRRoot().String(),
@@ -532,7 +532,7 @@ func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submi
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
 	reply := jaxjson.GetShardBlockTemplateResult{
 		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
-		ChainWeight:       strconv.FormatUint(header.ChainWeight(), 16),
+		ChainWeight:       header.ChainWeight().String(),
 		CurTime:           header.Timestamp().Unix(),
 		PreviousHash:      prevHash.Hash.String(),
 		PrevBlocksMMRRoot: header.PrevBlocksMMRRoot().String(),

@@ -7,6 +7,7 @@ package wire
 import (
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -30,7 +31,7 @@ type BlockHeader interface {
 
 	Version() BVersion
 	Height() int32
-	ChainWeight() uint64
+	ChainWeight() *big.Int
 
 	PrevBlocksMMRRoot() chainhash.Hash
 	SetPrevBlocksMMRRoot(prevBlock chainhash.Hash)

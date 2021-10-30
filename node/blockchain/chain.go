@@ -688,8 +688,8 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 // the main (best) chain.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
-	view *chaindata.UtxoViewpoint) error {
+func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
+	forkRoot blocknodes.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.blocksDB.bestChain.Tip().GetHash()
@@ -791,6 +791,11 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 			}
 		}
 
+		if forkRoot != nil {
+			return chaindata.DBPutHashToSerialIDWithPrev(dbTx, node.GetHash(),
+				node.SerialID(), forkRoot.SerialID())
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -842,9 +847,14 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		return nil
 	}
 
+	var forkRoot blocknodes.IBlockNode
+
 	// Ensure the provided nodes match the current best chain.
 	tip := b.blocksDB.bestChain.Tip()
 	if detachNodes.Len() != 0 {
+		lastDetachNode := detachNodes.Back().Value.(blocknodes.IBlockNode)
+		forkRoot = lastDetachNode.Parent()
+
 		firstDetachNode := detachNodes.Front().Value.(blocknodes.IBlockNode)
 		if firstDetachNode.GetHash() != tip.GetHash() {
 			return chaindata.AssertError(fmt.Sprintf("reorganize nodes to detach are "+
@@ -1036,7 +1046,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		}
 
 		// Update the database and chain state.
-		err = b.disconnectBlock(blockNode, block, view)
+		err = b.disconnectBlock(blockNode, block, view, forkRoot)
 		if err != nil {
 			return err
 		}

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -47,7 +48,7 @@ type BeaconHeader struct {
 	bits uint32
 
 	// The total chainWeight of all blocks in the chain
-	chainWeight uint64
+	chainWeight *big.Int
 
 	// shards uint32
 	shards uint32
@@ -83,7 +84,7 @@ func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
 func NewBeaconBlockHeader(version BVersion, height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash,
-	mergeMiningRoot chainhash.Hash, timestamp time.Time, bits uint32, chainWeight uint64, nonce uint32) *BeaconHeader {
+	mergeMiningRoot chainhash.Hash, timestamp time.Time, bits uint32, chainWeight *big.Int, nonce uint32) *BeaconHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
@@ -112,8 +113,8 @@ func NewBeaconBlockHeader(version BVersion, height int32, blocksMerkleMountainRo
 func (h *BeaconHeader) BeaconHeader() *BeaconHeader                     { return h }
 func (h *BeaconHeader) SetBeaconHeader(bh *BeaconHeader, _ CoinbaseAux) { *h = *bh }
 
-func (h *BeaconHeader) Height() int32       { return h.height }
-func (h *BeaconHeader) ChainWeight() uint64 { return h.chainWeight }
+func (h *BeaconHeader) Height() int32         { return h.height }
+func (h *BeaconHeader) ChainWeight() *big.Int { return h.chainWeight }
 
 func (h *BeaconHeader) Bits() uint32        { return h.bits }
 func (h *BeaconHeader) SetBits(bits uint32) { h.bits = bits }
@@ -314,7 +315,6 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader, skipMagicCheck bool) e
 			return fmt.Errorf("invalid magic byte: 0x%0x, expected beacon(0x%0x)", magicN, beaconMagicByte)
 		}
 	}
-
 	err := ReadElements(r,
 		&bh.version,
 		&bh.height,
@@ -323,7 +323,6 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader, skipMagicCheck bool) e
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		&bh.bits,
-		&bh.chainWeight,
 		&bh.shards,
 		&bh.k,
 		&bh.voteK,
@@ -333,6 +332,12 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader, skipMagicCheck bool) e
 	if err != nil {
 		return err
 	}
+
+	bh.chainWeight, err = ReadBigInt(r)
+	if err != nil {
+		return err
+	}
+
 	bh.mergeMiningProof, err = ReadHashArray(r)
 	if err != nil {
 		return err
@@ -354,14 +359,17 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		bh.bits,
-		bh.chainWeight,
 		bh.shards,
 		bh.k,
 		bh.voteK,
 		&bh.mergeMiningNumber,
 		&bh.treeEncoding,
-		bh.treeCodingLengthBits)
+		bh.treeCodingLengthBits,
+	)
 	if err != nil {
+		return err
+	}
+	if err := WriteBigInt(w, bh.chainWeight); err != nil {
 		return err
 	}
 
@@ -400,4 +408,27 @@ func WriteHashArray(w io.Writer, data []chainhash.Hash) error {
 		}
 	}
 	return nil
+}
+
+func ReadBigInt(r io.Reader) (*big.Int, error) {
+	count, err := ReadVarInt(r, ProtocolVersion)
+	if err != nil {
+		return nil, err
+	}
+	buf := make([]byte, count)
+	err = ReadElement(r, &buf)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(buf), nil
+}
+
+func WriteBigInt(w io.Writer, val *big.Int) error {
+	data := val.Bytes()
+	count := uint64(len(data))
+	if err := WriteVarInt(w, count); err != nil {
+		return err
+	}
+
+	return WriteElement(w, &data)
 }

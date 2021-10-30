@@ -36,7 +36,7 @@ type ShardBlockNode struct {
 	hash      chainhash.Hash // hash is the double sha 256 of the block.
 	workSum   *big.Int       // workSum is the total amount of work in the chain up to and including this node.
 	serialID  int64          // serialID is the absolute unique id of current block.
-	powWeight uint64
+	powWeight *big.Int
 	timestamp int64
 
 	header wire.BlockHeader
@@ -51,13 +51,13 @@ type ShardBlockNode struct {
 // NewShardBlockNode returns a new block node for the given block ShardHeader and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
-func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64, powWeight uint64) *ShardBlockNode {
+func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *ShardBlockNode {
 	node := &ShardBlockNode{
 		hash:      blockHeader.BlockHash(),
 		workSum:   pow.CalcWork(blockHeader.Bits()),
 		timestamp: blockHeader.Timestamp().Unix(),
 		header:    blockHeader,
-		powWeight: powWeight,
+		powWeight: pow.CalcWork(blockHeader.Bits()),
 	}
 
 	if parent != nil {
@@ -77,7 +77,7 @@ func (node *ShardBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actu
 func (node *ShardBlockNode) Version() int32                          { return node.header.Version().Version() }
 func (node *ShardBlockNode) Height() int32                           { return node.header.Height() }
 func (node *ShardBlockNode) SerialID() int64                         { return node.serialID }
-func (node *ShardBlockNode) PowWeight() uint64                       { return node.powWeight }
+func (node *ShardBlockNode) PowWeight() *big.Int                     { return node.powWeight }
 func (node *ShardBlockNode) Bits() uint32                            { return node.header.Bits() }
 func (node *ShardBlockNode) K() uint32                               { return node.header.K() }
 func (node *ShardBlockNode) VoteK() uint32                           { return node.header.VoteK() }

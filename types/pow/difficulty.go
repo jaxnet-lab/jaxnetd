@@ -138,7 +138,7 @@ func BigToCompact(n *big.Int) uint32 {
 // potential division by zero and really small floating point numbers, the
 // result adds 1 to the denominator and multiplies the numerator by 2^256*2^hash_sorting_bits.
 func CalcWork(bits uint32) *big.Int {
-	hashSortingBits := uint(12) // todo: do this func argument
+	hashSortingBits := uint(10) // 1024 == 2^10
 	// Return a work value of zero if the passed difficulty bits represent
 	// a negative number. Note this should not happen in practice with valid
 	// blocks, but an invalid block could trigger it.

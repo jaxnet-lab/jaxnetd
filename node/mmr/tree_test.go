@@ -1,9 +1,10 @@
 package mmr
 
 import (
-	"github.com/stretchr/testify/assert"
+	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -162,7 +163,7 @@ func TestMerkleTree(t *testing.T) {
 
 			store := BuildMerkleTreeStore(tt.blocks)
 			root := store[len(store)-1]
-			if root.Weight != tt.expectedRoot.Weight {
+			if root.Weight.String() != tt.expectedRoot.Weight.String() {
 				t.Errorf("BuildMerkleTreeStore: chainWeight(): %v != %v", root.Weight, tt.expectedRoot.Weight)
 			}
 
@@ -171,7 +172,7 @@ func TestMerkleTree(t *testing.T) {
 			}
 
 			root, _ = BuildMerkleTreeStoreNG(tt.blocks)
-			if root.Weight != tt.expectedRoot.Weight {
+			if root.Weight.String() != tt.expectedRoot.Weight.String() {
 				t.Errorf("BuildMerkleTreeStoreNG: chainWeight(): %v != %v", root.Weight, tt.expectedRoot.Weight)
 			}
 
@@ -189,7 +190,7 @@ func TestMerkleTree(t *testing.T) {
 				tree.AddBlock(block.Hash, block.Weight)
 			}
 
-			if tree.chainWeight != tt.expectedRoot.Weight {
+			if tree.chainWeight.String() != tt.expectedRoot.Weight.String() {
 				t.Errorf("chainWeight(): %v != %v", tree.chainWeight, tt.expectedRoot.Weight)
 			}
 
@@ -205,40 +206,49 @@ func TestMerkleTreeMethods(t *testing.T) {
 	blocks := getBlocks()
 
 	altBlocks := []Leaf{
-		{Hash: hash("leaf_0_weight_0"), Weight: 143_000},
-		{Hash: hash("leaf_1_weight_1"), Weight: 143_001},
-		{Hash: hash("leaf_2_weight_2"), Weight: 143_002},
-		{Hash: hash("alt_leaf_3_weight_3"), Weight: 343_003},
-		{Hash: hash("alt_leaf_4_weight_4"), Weight: 343_004},
-		{Hash: hash("alt_leaf_5_weight_5"), Weight: 343_005},
-		{Hash: hash("alt_leaf_6_weight_6"), Weight: 343_006},
-		{Hash: hash("alt_leaf_7_weight_7"), Weight: 343_007},
-		{Hash: hash("alt_leaf_8_weight_8"), Weight: 343_008},
+		{Hash: hash("leaf_0_weight_0"), Weight: new(big.Int).SetInt64(143_000)},
+		{Hash: hash("leaf_1_weight_1"), Weight: new(big.Int).SetInt64(143_001)},
+		{Hash: hash("leaf_2_weight_2"), Weight: new(big.Int).SetInt64(143_002)},
+		{Hash: hash("alt_leaf_3_weight_3"), Weight: new(big.Int).SetInt64(343_003)},
+		{Hash: hash("alt_leaf_4_weight_4"), Weight: new(big.Int).SetInt64(343_004)},
+		{Hash: hash("alt_leaf_5_weight_5"), Weight: new(big.Int).SetInt64(343_005)},
+		{Hash: hash("alt_leaf_6_weight_6"), Weight: new(big.Int).SetInt64(343_006)},
+		{Hash: hash("alt_leaf_7_weight_7"), Weight: new(big.Int).SetInt64(343_007)},
+		{Hash: hash("alt_leaf_8_weight_8"), Weight: new(big.Int).SetInt64(343_008)},
 	}
 
 	testCases := []struct {
 		blockID            int
 		height             int32
 		expectedHash       chainhash.Hash
-		expectedTreeWeight uint64
+		expectedTreeWeight *big.Int
 	}{
 		{
 			blockID:            2,
 			height:             2,
 			expectedHash:       blocks[1].Hash,
-			expectedTreeWeight: blocks[0].Weight + blocks[1].Weight,
+			expectedTreeWeight: new(big.Int).Add(blocks[0].Weight, blocks[1].Weight),
 		},
 		{
 			blockID:            0,
 			height:             0,
 			expectedHash:       chainhash.ZeroHash,
-			expectedTreeWeight: 0,
+			expectedTreeWeight: new(big.Int).SetInt64(0),
 		},
 		{
-			blockID:            8,
-			height:             8,
-			expectedHash:       blocks[7].Hash,
-			expectedTreeWeight: blocks[0].Weight + blocks[1].Weight + blocks[2].Weight + blocks[3].Weight + blocks[4].Weight + blocks[5].Weight + blocks[6].Weight + blocks[7].Weight,
+			blockID:      8,
+			height:       8,
+			expectedHash: blocks[7].Hash,
+			expectedTreeWeight: new(big.Int).Add(
+				new(big.Int).Add(
+					new(big.Int).Add(blocks[0].Weight, blocks[1].Weight),
+					new(big.Int).Add(blocks[2].Weight, blocks[3].Weight),
+				),
+				new(big.Int).Add(
+					new(big.Int).Add(blocks[4].Weight, blocks[5].Weight),
+					new(big.Int).Add(blocks[6].Weight, blocks[7].Weight),
+				),
+			),
 		},
 	}
 	_ = altBlocks
@@ -246,7 +256,7 @@ func TestMerkleTreeMethods(t *testing.T) {
 	for _, tt := range testCases {
 		tree := getFilledTree(blocks)
 		tree.RmBlock(blocks[tt.blockID].Hash, tt.height)
-		assert.Equal(t, tt.expectedTreeWeight, tree.chainWeight)
+		assert.Equal(t, tt.expectedTreeWeight.String(), tree.chainWeight.String())
 		assert.Equal(t, tt.expectedHash, tree.Current().Hash)
 		_, ok := tree.hashToHeight[blocks[tt.blockID].Hash]
 		assert.Equal(t, false, ok)
@@ -259,29 +269,29 @@ func TestMerkleTreeResetRootTo(t *testing.T) {
 	blocks := getBlocks()
 
 	altBlocks := []Leaf{
-		{Hash: hash("leaf_0_weight_0"), Weight: 143_000},
-		{Hash: hash("leaf_1_weight_1"), Weight: 143_001},
-		{Hash: hash("leaf_2_weight_2"), Weight: 143_002},
-		{Hash: hash("alt_leaf_3_weight_3"), Weight: 343_003},
-		{Hash: hash("alt_leaf_4_weight_4"), Weight: 343_004},
-		{Hash: hash("alt_leaf_5_weight_5"), Weight: 343_005},
-		{Hash: hash("alt_leaf_6_weight_6"), Weight: 343_006},
-		{Hash: hash("alt_leaf_7_weight_7"), Weight: 343_007},
-		{Hash: hash("alt_leaf_8_weight_8"), Weight: 343_008},
+		{Hash: hash("leaf_0_weight_0"), Weight: new(big.Int).SetInt64(143_000)},
+		{Hash: hash("leaf_1_weight_1"), Weight: new(big.Int).SetInt64(143_001)},
+		{Hash: hash("leaf_2_weight_2"), Weight: new(big.Int).SetInt64(143_002)},
+		{Hash: hash("alt_leaf_3_weight_3"), Weight: new(big.Int).SetInt64(343_003)},
+		{Hash: hash("alt_leaf_4_weight_4"), Weight: new(big.Int).SetInt64(343_004)},
+		{Hash: hash("alt_leaf_5_weight_5"), Weight: new(big.Int).SetInt64(343_005)},
+		{Hash: hash("alt_leaf_6_weight_6"), Weight: new(big.Int).SetInt64(343_006)},
+		{Hash: hash("alt_leaf_7_weight_7"), Weight: new(big.Int).SetInt64(343_007)},
+		{Hash: hash("alt_leaf_8_weight_8"), Weight: new(big.Int).SetInt64(343_008)},
 	}
 
 	testCases := []struct {
 		blockID            int
 		height             int32
 		expectedHash       chainhash.Hash
-		expectedTreeWeight uint64
+		expectedTreeWeight *big.Int
 		blockSaved         bool
 	}{
 		{
 			blockID:            2,
 			height:             2,
 			expectedHash:       blocks[2].Hash,
-			expectedTreeWeight: blocks[0].Weight + blocks[1].Weight + blocks[2].Weight,
+			expectedTreeWeight: new(big.Int).Add(new(big.Int).Add(blocks[0].Weight, blocks[1].Weight), blocks[2].Weight),
 			blockSaved:         false,
 		},
 		{
@@ -292,11 +302,23 @@ func TestMerkleTreeResetRootTo(t *testing.T) {
 			blockSaved:         true,
 		},
 		{
-			blockID:            8,
-			height:             8,
-			expectedHash:       blocks[8].Hash,
-			expectedTreeWeight: blocks[0].Weight + blocks[1].Weight + blocks[2].Weight + blocks[3].Weight + blocks[4].Weight + blocks[5].Weight + blocks[6].Weight + blocks[7].Weight + blocks[8].Weight,
-			blockSaved:         false,
+			blockID:      8,
+			height:       8,
+			expectedHash: blocks[8].Hash,
+			expectedTreeWeight: new(big.Int).Add(
+				new(big.Int).Add(
+					new(big.Int).Add(
+						new(big.Int).Add(blocks[0].Weight, blocks[1].Weight),
+						new(big.Int).Add(blocks[2].Weight, blocks[3].Weight),
+					),
+					new(big.Int).Add(
+						new(big.Int).Add(blocks[4].Weight, blocks[5].Weight),
+						new(big.Int).Add(blocks[6].Weight, blocks[7].Weight),
+					),
+				),
+				blocks[8].Weight,
+			),
+			blockSaved: false,
 		},
 	}
 	_ = altBlocks
@@ -304,7 +326,7 @@ func TestMerkleTreeResetRootTo(t *testing.T) {
 	for _, tt := range testCases {
 		tree := getFilledTree(blocks)
 		tree.ResetRootTo(blocks[tt.blockID].Hash, tt.height)
-		assert.Equal(t, tt.expectedTreeWeight, tree.chainWeight)
+		assert.Equal(t, tt.expectedTreeWeight.String(), tree.chainWeight.String())
 		assert.Equal(t, tt.expectedHash, tree.Current().Hash)
 		_, ok := tree.hashToHeight[blocks[tt.blockID].Hash]
 		assert.Equal(t, tt.blockSaved, ok)
@@ -337,14 +359,14 @@ func getFilledTree(blocks []Leaf) *BlocksMMRTree {
 
 func getBlocks() []Leaf {
 	return []Leaf{
-		{Hash: hash("leaf_0_weight_0"), Weight: 143_000},
-		{Hash: hash("leaf_1_weight_1"), Weight: 143_001},
-		{Hash: hash("leaf_2_weight_2"), Weight: 143_002},
-		{Hash: hash("leaf_3_weight_3"), Weight: 143_003},
-		{Hash: hash("leaf_4_weight_4"), Weight: 143_004},
-		{Hash: hash("leaf_5_weight_5"), Weight: 143_005},
-		{Hash: hash("leaf_6_weight_6"), Weight: 143_006},
-		{Hash: hash("leaf_7_weight_7"), Weight: 143_007},
-		{Hash: hash("leaf_8_weight_8"), Weight: 143_008},
+		{Hash: hash("leaf_0_weight_0"), Weight: new(big.Int).SetInt64(143_000)},
+		{Hash: hash("leaf_1_weight_1"), Weight: new(big.Int).SetInt64(143_001)},
+		{Hash: hash("leaf_2_weight_2"), Weight: new(big.Int).SetInt64(143_002)},
+		{Hash: hash("leaf_3_weight_3"), Weight: new(big.Int).SetInt64(143_003)},
+		{Hash: hash("leaf_4_weight_4"), Weight: new(big.Int).SetInt64(143_004)},
+		{Hash: hash("leaf_5_weight_5"), Weight: new(big.Int).SetInt64(143_005)},
+		{Hash: hash("leaf_6_weight_6"), Weight: new(big.Int).SetInt64(143_006)},
+		{Hash: hash("leaf_7_weight_7"), Weight: new(big.Int).SetInt64(143_007)},
+		{Hash: hash("leaf_8_weight_8"), Weight: new(big.Int).SetInt64(143_008)},
 	}
 }

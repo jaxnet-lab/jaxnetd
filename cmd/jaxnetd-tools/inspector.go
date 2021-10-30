@@ -35,9 +35,11 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 	defer out.Close()
 	defer outFullData.Close()
 
-	_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+	_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
 		"chain",
 		"height",
+		"serial_id",
+		"prev_serial_id",
 		"hash",
 		"blocks_mmr",
 		"pow_hash",
@@ -54,7 +56,7 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 		"raw_data",
 	)
 
-	_, best, err := app.TxMan.RPC().ForBeacon().GetBestBlock()
+	best, err := app.TxMan.RPC().ForBeacon().GetLastSerialBlockNumber()
 	if err != nil {
 		return cli.NewExitError(errors.Wrap(err, "unable to GetBestBlock"), 1)
 	}
@@ -62,34 +64,37 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 	for height := int64(1); height < int64(best); height++ {
 		fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "beacon", height)
 
-		hash, err := app.TxMan.RPC().ForBeacon().GetBlockHash(height)
+		// hash, err := app.TxMan.RPC().ForBeacon().GetBlockHash(height)
+		// if err != nil {
+		// 	return cli.NewExitError(errors.Wrapf(err, "unable to get block hash by height(%d)", height), 1)
+		// }
+
+		block, err := app.TxMan.RPC().ForBeacon().GetBeaconBlockBySerialNumber(height)
 		if err != nil {
-			return cli.NewExitError(errors.Wrapf(err, "unable to get block hash by height(%d)", height), 1)
-		}
-		header, err := app.TxMan.RPC().ForBeacon().GetBeaconBlockHeader(hash)
-		if err != nil {
-			return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%s)", hash), 1)
+			return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%v)", height), 1)
 		}
 
-		_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+		_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
 			"beacon",
-			height,
-			hash.String(),
-			header.PrevBlocksMMRRoot(),
-			header.PoWHash(),
-			fmt.Sprintf("%08x", header.Bits()),
-			fmt.Sprintf("%064x", pow.CompactToBig(header.Bits())),
-			header.BeaconHeader().Nonce(),
-			header.Timestamp().Unix(),
+			block.Block.Header.Height(),
+			block.SerialID,
+			block.PrevSerialID,
+			block.Block.BlockHash().String(),
+			block.Block.Header.PrevBlocksMMRRoot(),
+			block.Block.Header.PoWHash(),
+			fmt.Sprintf("%08x", block.Block.Header.Bits()),
+			fmt.Sprintf("%064x", pow.CompactToBig(block.Block.Header.Bits())),
+			block.Block.Header.BeaconHeader().Nonce(),
+			block.Block.Header.Timestamp().Unix(),
 		)
 
 		buf := bytes.NewBuffer(nil)
-		_ = header.Write(buf)
+		_ = block.Block.Header.Write(buf)
 
 		_, _ = fmt.Fprintf(outFullData, "%v,%v,%v,%v\n",
 			"beacon",
 			height,
-			hash.String(),
+			block.Block.BlockHash().String(),
 			hex.EncodeToString(buf.Bytes()),
 		)
 
@@ -107,25 +112,27 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 			if err != nil {
 				return cli.NewExitError(errors.Wrapf(err, "unable to get block hash by height(%d)", height), 1)
 			}
-			header, err := app.TxMan.RPC().ForShard(shardID).GetShardBlockHeader(hash)
+			block, err := app.TxMan.RPC().ForShard(shardID).GetShardBlock(hash)
 			if err != nil {
 				return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%s)", hash), 1)
 			}
 
-			_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+			_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
 				"shard_"+strconv.Itoa(int(shardID)),
 				height,
+				block.SerialID,
+				block.PrevSerialID,
 				hash.String(),
-				header.PrevBlocksMMRRoot(),
-				header.PoWHash(),
-				fmt.Sprintf("%08x", header.Bits()),
-				fmt.Sprintf("%064x", pow.CompactToBig(header.Bits())),
-				header.BeaconHeader().Nonce(),
-				header.Timestamp().Unix(),
+				block.Block.Header.PrevBlocksMMRRoot(),
+				block.Block.Header.PoWHash(),
+				fmt.Sprintf("%08x", block.Block.Header.Bits()),
+				fmt.Sprintf("%064x", pow.CompactToBig(block.Block.Header.Bits())),
+				block.Block.Header.BeaconHeader().Nonce(),
+				block.Block.Header.Timestamp().Unix(),
 			)
 
 			buf := bytes.NewBuffer(nil)
-			_ = header.Write(buf)
+			_ = block.Block.Header.Write(buf)
 
 			_, _ = fmt.Fprintf(outFullData, "%v,%v,%v,%v\n",
 				"shard_"+strconv.Itoa(int(shardID)),
