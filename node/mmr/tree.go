@@ -8,6 +8,7 @@ package mmr
 
 import (
 	"encoding/json"
+	"math/big"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -23,14 +24,14 @@ type TreeLeaf struct {
 func (n *TreeLeaf) MarshalJSON() ([]byte, error) {
 	type dto struct {
 		BlockHash  string
-		Weight     uint64
+		Weight     string
 		Height     uint64
 		ActualRoot string
 	}
 
 	d := dto{
 		BlockHash:  n.Hash.String(),
-		Weight:     n.Weight,
+		Weight:     n.Weight.String(),
 		Height:     n.Height,
 		ActualRoot: n.ActualRoot.String(),
 	}
@@ -53,7 +54,7 @@ type BlocksMMRTree struct {
 	// nextHeight stores number of TreeLeaf.
 	// nextHeight - 1 is last height in chain.
 	nextHeight  uint64
-	chainWeight uint64
+	chainWeight *big.Int
 	lastNode    *TreeLeaf
 	rootHash    chainhash.Hash
 
@@ -73,20 +74,21 @@ func NewTree() *BlocksMMRTree {
 		nodes:        make([]*TreeLeaf, 1),
 		mountainTops: make(map[chainhash.Hash]uint64, 4096),
 		hashToHeight: make(map[chainhash.Hash]uint64, 4096),
+		chainWeight:  new(big.Int).SetInt64(0),
 	}
 }
 
 func (t *BlocksMMRTree) MarshalJSON() ([]byte, error) {
 	type dto struct {
 		NodeCount    uint64
-		ChainWeight  uint64
+		ChainWeight  string
 		Nodes        []*TreeLeaf
 		MountainTops map[string]uint64
 		HashToID     map[string]uint64
 	}
 	d := dto{
 		NodeCount:    t.nextHeight,
-		ChainWeight:  t.chainWeight,
+		ChainWeight:  t.chainWeight.String(),
 		Nodes:        make([]*TreeLeaf, len(t.nodes)),
 		MountainTops: make(map[string]uint64, len(t.mountainTops)),
 		HashToID:     make(map[string]uint64, len(t.mountainTops)),
@@ -133,13 +135,13 @@ func (t *BlocksMMRTree) Fork() *BlocksMMRTree {
 }
 
 // AddBlock adds block as latest leaf, increases height and rebuild tree.
-func (t *BlocksMMRTree) AddBlock(hash chainhash.Hash, difficulty uint64) {
+func (t *BlocksMMRTree) AddBlock(hash chainhash.Hash, difficulty *big.Int) {
 	t.Lock()
 	t.addBlock(hash, difficulty)
 	t.Unlock()
 }
 
-func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty uint64) {
+func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty *big.Int) {
 	_, ok := t.hashToHeight[hash]
 	if ok {
 		return
@@ -153,7 +155,7 @@ func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty uint64) {
 	t.hashToHeight[hash] = node.Height
 
 	t.nextHeight += 1
-	t.chainWeight += difficulty
+	t.chainWeight = new(big.Int).Add(t.chainWeight, difficulty)
 
 	t.rootHash = t.rebuildTree(node, node.Height+1)
 
@@ -164,7 +166,7 @@ func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty uint64) {
 
 // SetBlock sets provided block with <hash, height> as latest.
 // If block height is not latest, then reset tree to height - 1 and add AddBLock.
-func (t *BlocksMMRTree) SetBlock(hash chainhash.Hash, difficulty uint64, height int32) {
+func (t *BlocksMMRTree) SetBlock(hash chainhash.Hash, difficulty *big.Int, height int32) {
 	t.Lock()
 
 	if uint64(height) < t.nextHeight {
@@ -231,7 +233,7 @@ func (t *BlocksMMRTree) rmBlock(hash chainhash.Hash, height int32) {
 		}
 		delete(t.hashToHeight, leaf.Hash)
 		delete(t.mountainTops, leaf.ActualRoot)
-		t.chainWeight -= leaf.Weight
+		t.chainWeight = new(big.Int).Sub(t.chainWeight, leaf.Weight)
 		t.nodes[i] = nil
 	}
 
@@ -266,7 +268,7 @@ func (t *BlocksMMRTree) Current() *TreeLeaf {
 	return node
 }
 
-func (t *BlocksMMRTree) CurrenWeight() uint64 {
+func (t *BlocksMMRTree) CurrenWeight() *big.Int {
 	t.RLock()
 	node := t.chainWeight
 	t.RUnlock()
@@ -391,17 +393,18 @@ func hashMerkleBranches(left, right *TreeLeaf) (*TreeLeaf, bool) {
 		return &TreeLeaf{Leaf: Leaf{Hash: left.Hash, Weight: left.Weight}}, false
 	}
 
-	var data [80]byte
 	lv := left.Value()
 	rv := right.Value()
 
-	copy(data[:ValueSize], lv[:])
-	copy(data[ValueSize:], rv[:])
+	data := make([]byte, len(lv)+len(rv))
+
+	copy(data[:len(lv)], lv[:])
+	copy(data[len(rv):], rv[:])
 
 	return &TreeLeaf{
 		Leaf: Leaf{
 			Hash:   chainhash.HashH(data[:]),
-			Weight: left.Weight + right.Weight,
+			Weight: new(big.Int).Add(left.Weight, right.Weight),
 		},
 	}, true
 }

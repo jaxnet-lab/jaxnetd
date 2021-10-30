@@ -24,10 +24,11 @@ type ChainBlockGenerator interface {
 	NewBlockHeader(version wire.BVersion,
 		height int32,
 		blocksMMRRoot chainhash.Hash,
+		prevBlock chainhash.Hash,
 		merkleRootHash chainhash.Hash,
 		timestamp time.Time,
 		bits uint32,
-		prevWeight uint64,
+		prevWeight *big.Int,
 		nonce uint32,
 		burnReward int) (wire.BlockHeader, error)
 
@@ -57,8 +58,8 @@ func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *Shard
 	}
 }
 
-func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, merkleRootHash chainhash.Hash,
-	timestamp time.Time, bits uint32, prevWeight uint64, nonce uint32, burnReward int) (wire.BlockHeader, error) {
+func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, blocksMMRRoot, prevBlock, merkleRootHash chainhash.Hash,
+	timestamp time.Time, bits uint32, prevWeight *big.Int, nonce uint32, burnReward int) (wire.BlockHeader, error) {
 	header, cAux, err := c.generateBeaconHeader(nonce, timestamp, burnReward)
 	if err != nil {
 		return nil, err
@@ -66,9 +67,10 @@ func (c *ShardBlockGenerator) NewBlockHeader(_ wire.BVersion, height int32, bloc
 
 	return wire.NewShardBlockHeader(height,
 		blocksMMRRoot,
+		prevBlock,
 		merkleRootHash,
 		bits,
-		prevWeight+pow.CalcPowWeight(c.powLimit, bits, c.hashSortingSlotNumber),
+		prevWeight,
 		*header,
 		cAux), nil
 }

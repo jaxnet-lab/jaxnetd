@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"strings"
 	"time"
 )
@@ -58,7 +59,7 @@ type MsgVersion struct {
 	// Last block seen by the generator of the version message.
 	LastBlock int32
 
-	ChainWeight uint64
+	ChainWeight *big.Int
 
 	// Don't announce transactions to server.
 	DisableRelayTx bool
@@ -151,7 +152,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 		}
 	}
 	if buf.Len() > 0 {
-		err = ReadElement(buf, &msg.ChainWeight)
+		msg.ChainWeight, err = ReadBigInt(buf)
 		if err != nil {
 			return err
 		}
@@ -225,7 +226,7 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return err
 	}
 
-	err = WriteElement(w, msg.ChainWeight)
+	err = WriteBigInt(w, msg.ChainWeight)
 	if err != nil {
 		return err
 	}
@@ -263,7 +264,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 // Message interface using the passed parameters and defaults for the remaining
 // fields.
 func NewMsgVersion(chain HeaderConstructor, me *NetAddress, you *NetAddress, nonce uint64,
-	lastBlock int32, chainWeight uint64) *MsgVersion {
+	lastBlock int32, chainWeight *big.Int) *MsgVersion {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.

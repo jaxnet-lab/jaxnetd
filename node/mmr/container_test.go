@@ -41,7 +41,7 @@ type TBlockNode struct {
 	prevMMRRoot   chainhash.Hash
 	actualMMRRoot chainhash.Hash
 	height        int32
-	difficulty    uint64
+	difficulty    *big.Int
 	parent        *TBlockNode
 }
 
@@ -49,7 +49,7 @@ func (tn *TBlockNode) GetHash() chainhash.Hash     { return tn.hash }
 func (tn *TBlockNode) PrevMMRRoot() chainhash.Hash { return tn.prevMMRRoot }
 func (tn *TBlockNode) PrevHash() chainhash.Hash    { return tn.Parent().GetHash() }
 func (tn *TBlockNode) Height() int32               { return tn.height }
-func (tn *TBlockNode) PowWeight() uint64           { return tn.difficulty }
+func (tn *TBlockNode) PowWeight() *big.Int         { return tn.difficulty }
 
 func (tn *TBlockNode) Parent() blocknodes.IBlockNode {
 	if tn.parent == nil {

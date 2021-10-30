@@ -62,6 +62,14 @@ func (b *BlockChain) processOrphans(root chainhash.Hash, flags chaindata.Behavio
 				return err
 			}
 
+			prevHash := prevBlock.GetHash()
+			bph := orphan.block.MsgBlock().Header.PrevBlockHash()
+			if !prevHash.IsEqual(&bph) {
+				str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
+					prevHash, orphan.block.PrevMMRRoot(), bph)
+				return chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
+			}
+
 			// Potentially accept the block into the block chain.
 			_, err = b.maybeAcceptBlock(orphan.block, prevBlock, flags)
 			if err != nil {
@@ -78,9 +86,9 @@ func (b *BlockChain) processOrphans(root chainhash.Hash, flags chaindata.Behavio
 }
 
 // ProcessBlock is the main workhorse for handling insertion of new blocks into
-// the block chain.  It includes functionality such as rejecting duplicate
+// the blockchain.  It includes functionality such as rejecting duplicate
 // blocks, ensuring blocks follow all rules, orphan handling, and insertion into
-// the block chain along with best chain selection and reorganization.
+// the blockchain along with best chain selection and reorganization.
 //
 // When no errors occurred during processing, the first return value indicates
 // whether or not the block is on the main chain and the second indicates
@@ -170,6 +178,14 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 		b.blocksDB.addOrphanBlock(block, blockActualMMR)
 
 		return false, true, nil
+	}
+
+	prevHash := prevBlock.GetHash()
+	bph := block.MsgBlock().Header.PrevBlockHash()
+	if !prevHash.IsEqual(&bph) {
+		str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
+			prevHash, block.PrevMMRRoot(), bph)
+		return false, false, chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
 	}
 
 	// The block has passed all context independent checks and appears sane

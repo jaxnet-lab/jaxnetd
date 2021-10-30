@@ -218,9 +218,7 @@ func makeTestGenerator(chainCtx chainctx.IChainCtx, blockGen chaindata.ChainBloc
 		return testGenerator{}, err
 	}
 	mmrTree := mmr.NewTree()
-	mmrTree.AddBlock(genesisHash, pow.CalcWork(genesis.Header.Bits()).Uint64())
-
-	fmt.Println("GENESIS:", genesisHash, mmrTree.CurrentRoot())
+	mmrTree.AddBlock(genesisHash, pow.CalcWork(genesis.Header.Bits()))
 
 	return testGenerator{
 		chainCtx:       chainCtx,
@@ -543,17 +541,14 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	header, _ := g.blockGen.NewBlockHeader(1,
 		nextHeight,
 		currentMMRRoot,
+		g.tip.Header.BlockHash(),
 		calcMerkleRoot(txns),
 		ts,
 		powParams.PowLimitBits,
-		g.mmr.CurrenWeight()+pow.CalcPowWeight(
-			powParams.PowLimit,
-			powParams.PowLimitBits,
-			powParams.HashSortingSlotNumber),
+		g.mmr.CurrenWeight(),
 		0,
 		types.BurnJaxReward,
 	)
-
 	block := wire.MsgBlock{
 		Header:       header,
 		Transactions: txns,
@@ -583,7 +578,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	g.blocksByName[blockName] = &block
 	g.blockHeights[blockName] = nextHeight
 
-	g.mmr.AddBlock(blockHash, pow.CalcWork(header.Bits()).Uint64())
+	g.mmr.AddBlock(blockHash, pow.CalcWork(header.Bits()))
 	g.mmrRootToBlock[g.mmr.CurrentRoot()] = blockHash
 
 	g.tip = &block
@@ -610,7 +605,7 @@ func (g *testGenerator) updateBlockState(oldBlockName string, oldBlockHash chain
 	g.blocks[newBlockHash] = newBlock
 	g.blocksByName[newBlockName] = newBlock
 	g.blockHeights[newBlockName] = blockHeight
-	g.mmr.AddBlock(newBlockHash, pow.CalcWork(newBlock.Header.Bits()).Uint64())
+	g.mmr.AddBlock(newBlockHash, pow.CalcWork(newBlock.Header.Bits()))
 	g.mmrRootToBlock[g.mmr.CurrentRoot()] = newBlockHash
 
 }

@@ -13,7 +13,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
-	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -237,27 +236,6 @@ func (b *BlockChain) initChainState() error {
 				blockHash := header.BlockHash()
 
 				if !blockHash.IsEqual(b.chain.Params().GenesisHash()) {
-
-					// Load the raw block bytes for the best block.
-					blockBytes, err := dbTx.FetchBlock(&blockHash)
-					if err != nil {
-						return err
-					}
-
-					block, err := wire.DecodeBlock(bytes.NewReader(blockBytes))
-					if err != nil {
-						return err
-
-					}
-					var asm string
-					fmt.Println("FETCHED_HEADER", blockSerialID, b.db.Chain().Params().ChainName)
-					asm, _ = txscript.DisasmString(block.Transactions[0].TxIn[0].SignatureScript)
-					fmt.Println(asm)
-
-					fmt.Println("GENESIS_HEADER", b.chain.Name())
-					asm, _ = txscript.DisasmString(b.chain.Params().GenesisBlock().Transactions[0].TxIn[0].SignatureScript)
-					fmt.Println(asm)
-
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
 						b.chain.Params().GenesisHash(), blockHash))
@@ -273,6 +251,16 @@ func (b *BlockChain) initChainState() error {
 				if parent == nil {
 					return chaindata.AssertError(fmt.Sprintf(
 						"initChainState: Could not find parent for block %s", header.BlockHash()))
+				}
+			}
+
+			if parent != nil {
+				prevHash := parent.GetHash()
+				bph := header.PrevBlockHash()
+				if !prevHash.IsEqual(&bph) {
+					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
+						prevHash, header.PrevBlocksMMRRoot(), bph)
+					return chaindata.AssertError(str)
 				}
 			}
 

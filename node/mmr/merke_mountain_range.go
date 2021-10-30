@@ -7,25 +7,23 @@
 package mmr
 
 import (
-	"encoding/binary"
 	"math"
+	"math/big"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
-const ValueSize = 40
-
-type Value [ValueSize]byte
+type Value []byte
 
 func (v Value) Block() (b Leaf) {
-	copy(b.Hash[:], v[:32])
-	b.Weight = binary.LittleEndian.Uint64(v[32:])
+	copy(b.Hash[:], v[:chainhash.HashSize])
+	b.Weight = new(big.Int).SetBytes(v[chainhash.HashSize:])
 	return b
 }
 
 type Leaf struct {
 	Hash   chainhash.Hash
-	Weight uint64
+	Weight *big.Int
 
 	v      Value
 	filled bool
@@ -36,9 +34,12 @@ func (b *Leaf) Value() Value {
 		return b.v
 	}
 
-	copy(b.v[:32], b.Hash[:])
+	wBytes := b.Weight.Bytes()
 
-	binary.LittleEndian.PutUint64(b.v[32:], b.Weight)
+	b.v = make([]byte, chainhash.HashSize+len(wBytes))
+	copy(b.v[:chainhash.HashSize], b.Hash[:])
+	copy(b.v[chainhash.HashSize:], wBytes[:])
+
 	b.filled = true
 	return b.v
 }
@@ -134,16 +135,17 @@ func HashMerkleBranches(left, right *Leaf) *Leaf {
 		return &Leaf{Hash: left.Hash, Weight: left.Weight}
 	}
 
-	var data [80]byte
 	lv := left.Value()
 	rv := right.Value()
 
-	copy(data[:ValueSize], lv[:])
-	copy(data[ValueSize:], rv[:])
+	data := make([]byte, len(lv)+len(rv))
+
+	copy(data[:len(lv)], lv[:])
+	copy(data[len(rv):], rv[:])
 
 	return &Leaf{
 		Hash:   chainhash.HashH(data[:]),
-		Weight: left.Weight + right.Weight,
+		Weight: new(big.Int).Add(left.Weight, right.Weight),
 	}
 }
 

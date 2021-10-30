@@ -303,9 +303,10 @@ func newFakeChain(ctx chainctx.IChainCtx) *BlockChain {
 func newFakeNode(ctx chainctx.IChainCtx, parent blocknodes.IBlockNode, blockVersion wire.BVersion, bits uint32, timestamp time.Time) blocknodes.IBlockNode {
 	// Make up a header and create a block node from it.
 	header := wire.NewBeaconBlockHeader(
-		1, // todo: fix
 		blockVersion,
-		parent.PrevMMRRoot(), // todo: this is incorrect
+		1, // todo: fix
+		parent.PrevMMRRoot(),
+		parent.PrevHash(),
 		chainhash.ZeroHash,
 		chainhash.ZeroHash,
 		timestamp,
@@ -324,6 +325,6 @@ func newBeaconBlockGen() chaindata.ChainBlockGenerator {
 			ShardCount: func() (uint32, error) { return 0, nil },
 			BTCGen:     &chaindata.BTCBlockGen{MinerAddress: minerAddr},
 		},
-		chaincfg.TestNetParams.PowParams.PowLimitBits, // chaincfg.TestNetParams
+		chaincfg.TestNetParams.PowParams, // chaincfg.TestNetParams
 	)
 }

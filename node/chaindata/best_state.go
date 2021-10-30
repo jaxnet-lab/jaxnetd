@@ -5,6 +5,7 @@
 package chaindata
 
 import (
+	"math/big"
 	"time"
 
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
@@ -33,12 +34,12 @@ type BestState struct {
 	MedianTime     time.Time      // Median time as per CalcPastMedianTime.
 	LastSerialID   int64
 	CurrentMMRRoot chainhash.Hash // Actual root of the MMR Tree.
-	ChainWeight    uint64
+	ChainWeight    *big.Int
 }
 
 // NewBestState returns a new best stats instance for the given parameters.
 func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash,
-	blockSize, blockWeight, chainWeight, numTxns, totalTxns uint64,
+	blockSize, blockWeight uint64, chainWeight *big.Int, numTxns, totalTxns uint64,
 	medianTime time.Time, lastSerialID int64) *BestState {
 
 	return &BestState{

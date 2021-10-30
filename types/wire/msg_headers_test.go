@@ -68,7 +68,7 @@ func TestHeadersWire(t *testing.T) {
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
+	bh := NewBeaconBlockHeader(0, 1, hash, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	// Empty headers message.
 	noHeaders := NewMsgHeaders()
@@ -166,7 +166,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	bits := uint32(0x1d00ffff)
 	nonce := uint32(0x9962e301)
-	bh := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
+	bh := NewBeaconBlockHeader(0, 1, hash, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	// Headers message with one header.
 	oneHeader := NewMsgHeaders()
@@ -203,7 +203,7 @@ func TestHeadersWireErrors(t *testing.T) {
 
 	// Intentionally invalid block header that has a transaction count used
 	// to force errors.
-	bhTrans := NewBeaconBlockHeader(0, 1, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
+	bhTrans := NewBeaconBlockHeader(0, 1, hash, hash, merkleHash, mmrHash, blockOne.Header.Timestamp(), bits, 1, nonce)
 
 	transHeader := NewMsgHeaders()
 	transHeader.AddBlockHeader(bhTrans, chainhash.ZeroHash)

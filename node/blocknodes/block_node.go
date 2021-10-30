@@ -49,11 +49,11 @@ type IBlockNode interface {
 	SerialID() int64
 	Version() int32
 	Bits() uint32
-	PowWeight() uint64
 	K() uint32
 	VoteK() uint32
 	Status() BlockStatus
 	WorkSum() *big.Int
+	PowWeight() *big.Int
 	Timestamp() int64
 	ExpansionApproved() bool
 
