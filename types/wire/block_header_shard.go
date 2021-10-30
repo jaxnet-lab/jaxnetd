@@ -30,7 +30,7 @@ type ShardHeader struct {
 	prevMMRRoot chainhash.Hash
 
 	// Hash of the previous block ShardHeader in the block chain.
-	// prevBlock chainhash.Hash
+	prevBlock chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
@@ -53,14 +53,15 @@ func EmptyShardHeader() *ShardHeader { return &ShardHeader{beaconHeader: *EmptyB
 // NewShardBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewShardBlockHeader(height int32, blocksMerkleMountainRoot, merkleRootHash chainhash.Hash, bits uint32,
+func NewShardBlockHeader(height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash, bits uint32,
 	weight uint64, bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &ShardHeader{
-		prevMMRRoot:    blocksMerkleMountainRoot,
 		height:         height,
+		prevMMRRoot:    blocksMerkleMountainRoot,
+		prevBlock:      prevBlock,
 		merkleRoot:     merkleRootHash,
 		bits:           bits,
 		chainWeight:    weight,
@@ -103,6 +104,8 @@ func (h *ShardHeader) SetPrevBlocksMMRRoot(root chainhash.Hash) {
 	h.prevMMRRoot = root
 }
 
+func (h *ShardHeader) PrevBlockHash() chainhash.Hash { return h.prevBlock }
+
 func (h *ShardHeader) Timestamp() time.Time     { return h.beaconHeader.btcAux.Timestamp }
 func (h *ShardHeader) SetTimestamp(t time.Time) { h.beaconHeader.btcAux.Timestamp = t }
 
@@ -136,6 +139,7 @@ func (h *ShardHeader) ExclusiveHash() chainhash.Hash {
 	_ = WriteElements(buf,
 		h.height,
 		&h.prevMMRRoot,
+		&h.prevBlock,
 		&h.merkleRoot,
 		h.bits,
 	)
@@ -150,6 +154,7 @@ func (h *ShardHeader) BlockHash() chainhash.Hash {
 	_ = WriteElements(w,
 		h.height,
 		&h.prevMMRRoot,
+		&h.prevBlock,
 		&h.merkleRoot,
 		h.bits,
 		&beaconHash,
@@ -237,6 +242,7 @@ func readShardBlockHeader(r io.Reader, bh *ShardHeader, skipMagicCheck bool) err
 	err := ReadElements(r,
 		&bh.height,
 		&bh.prevMMRRoot,
+		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.bits,
 		&bh.chainWeight,
@@ -264,6 +270,7 @@ func WriteShardBlockHeader(w io.Writer, bh *ShardHeader) error {
 		[1]byte{shardMagic},
 		bh.height,
 		&bh.prevMMRRoot,
+		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.bits,
 		&bh.chainWeight,

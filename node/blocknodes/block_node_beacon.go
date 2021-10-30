@@ -69,18 +69,9 @@ func NewBeaconBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialI
 	return node
 }
 
-func (node *BeaconBlockNode) GetHash() chainhash.Hash { return node.hash }
-func (node *BeaconBlockNode) PrevMMRRoot() chainhash.Hash {
-	return node.header.PrevBlocksMMRRoot()
-}
-func (node *BeaconBlockNode) PrevHash() chainhash.Hash {
-	if node.parent == nil {
-		return chainhash.ZeroHash
-	}
-
-	return node.parent.GetHash()
-}
-
+func (node *BeaconBlockNode) GetHash() chainhash.Hash                 { return node.hash }
+func (node *BeaconBlockNode) PrevMMRRoot() chainhash.Hash             { return node.header.PrevBlocksMMRRoot() }
+func (node *BeaconBlockNode) PrevHash() chainhash.Hash                { return node.header.PrevBlockHash() }
 func (node *BeaconBlockNode) ActualMMRRoot() chainhash.Hash           { return node.actualMMRRoot }
 func (node *BeaconBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actualMMRRoot = mmrRoot }
 func (node *BeaconBlockNode) Version() int32                          { return node.header.Version().Version() }

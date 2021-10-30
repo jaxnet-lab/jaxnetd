@@ -38,7 +38,7 @@ type BeaconHeader struct {
 	height int32
 
 	// Hash of the previous block BeaconHeader in the block chain.
-	// prevBlock chainhash.Hash
+	prevBlock chainhash.Hash
 
 	// Merkle tree reference to hash of all transactions for the block.
 	merkleRoot chainhash.Hash
@@ -82,7 +82,7 @@ func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 // NewBeaconBlockHeader returns a new BlockHeader using the provided version, previous
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewBeaconBlockHeader(height int32, version BVersion, blocksMerkleMountainRoot, merkleRootHash chainhash.Hash,
+func NewBeaconBlockHeader(version BVersion, height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash,
 	mergeMiningRoot chainhash.Hash, timestamp time.Time, bits uint32, chainWeight uint64, nonce uint32) *BeaconHeader {
 
 	// Limit the timestamp to one second precision since the protocol
@@ -91,6 +91,7 @@ func NewBeaconBlockHeader(height int32, version BVersion, blocksMerkleMountainRo
 		height:          height,
 		version:         version,
 		prevMMRRoot:     blocksMerkleMountainRoot,
+		prevBlock:       prevBlock,
 		merkleRoot:      merkleRootHash,
 		mergeMiningRoot: mergeMiningRoot,
 		bits:            bits,
@@ -128,8 +129,7 @@ func (h *BeaconHeader) SetPrevBlocksMMRRoot(root chainhash.Hash) {
 func (h *BeaconHeader) MerkleRoot() chainhash.Hash        { return h.merkleRoot }
 func (h *BeaconHeader) SetMerkleRoot(hash chainhash.Hash) { h.merkleRoot = hash }
 
-// func (h *BeaconHeader) PrevBlock() chainhash.Hash             { return h.prevBlock }
-// func (h *BeaconHeader) SetPrevBlock(prevBlock chainhash.Hash) { h.prevBlock = prevBlock }
+func (h *BeaconHeader) PrevBlockHash() chainhash.Hash { return h.prevBlock }
 
 func (h *BeaconHeader) Timestamp() time.Time     { return h.btcAux.Timestamp }
 func (h *BeaconHeader) SetTimestamp(t time.Time) { h.btcAux.Timestamp = t }
@@ -223,6 +223,7 @@ func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 		h.version,
 		h.height,
 		&h.prevMMRRoot,
+		&h.prevBlock,
 		&h.merkleRoot,
 		&h.mergeMiningRoot,
 		h.bits,
@@ -318,6 +319,7 @@ func readBeaconBlockHeader(r io.Reader, bh *BeaconHeader, skipMagicCheck bool) e
 		&bh.version,
 		&bh.height,
 		&bh.prevMMRRoot,
+		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		&bh.bits,
@@ -348,6 +350,7 @@ func writeBeaconBlockHeader(w io.Writer, bh *BeaconHeader) error {
 		bh.version,
 		bh.height,
 		&bh.prevMMRRoot,
+		&bh.prevBlock,
 		&bh.merkleRoot,
 		&bh.mergeMiningRoot,
 		bh.bits,

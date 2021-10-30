@@ -69,7 +69,7 @@ func TestMessage(t *testing.T) {
 	msgFilterAdd := NewMsgFilterAdd([]byte{0x01})
 	msgFilterClear := NewMsgFilterClear()
 	msgFilterLoad := NewMsgFilterLoad([]byte{0x01}, 10, 0, BloomUpdateNone)
-	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 1, 0)
+	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 1, 0)
 	msgMerkleBlock := NewMsgMerkleBlock(bh)
 	msgReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	msgGetCFilters := NewMsgGetCFilters(GCSFilterRegular, 0, &chainhash.Hash{})

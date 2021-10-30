@@ -69,17 +69,9 @@ func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID
 	return node
 }
 
-func (node *ShardBlockNode) GetHash() chainhash.Hash { return node.hash }
-func (node *ShardBlockNode) PrevMMRRoot() chainhash.Hash {
-	return node.header.PrevBlocksMMRRoot()
-}
-func (node *ShardBlockNode) PrevHash() chainhash.Hash {
-	if node.parent == nil {
-		return chainhash.ZeroHash
-	}
-
-	return node.parent.GetHash()
-}
+func (node *ShardBlockNode) GetHash() chainhash.Hash                 { return node.hash }
+func (node *ShardBlockNode) PrevMMRRoot() chainhash.Hash             { return node.header.PrevBlocksMMRRoot() }
+func (node *ShardBlockNode) PrevHash() chainhash.Hash                { return node.header.PrevBlockHash() }
 func (node *ShardBlockNode) ActualMMRRoot() chainhash.Hash           { return node.actualMMRRoot }
 func (node *ShardBlockNode) SetActualMMRRoot(mmrRoot chainhash.Hash) { node.actualMMRRoot = mmrRoot }
 func (node *ShardBlockNode) Version() int32                          { return node.header.Version().Version() }

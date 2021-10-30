@@ -35,6 +35,8 @@ type BlockHeader interface {
 	PrevBlocksMMRRoot() chainhash.Hash
 	SetPrevBlocksMMRRoot(prevBlock chainhash.Hash)
 
+	PrevBlockHash() chainhash.Hash
+
 	Timestamp() time.Time
 	SetTimestamp(time.Time)
 

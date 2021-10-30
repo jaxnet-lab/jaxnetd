@@ -136,8 +136,9 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 
 	state.genesisBlock = &wire.MsgBlock{
 		Header: wire.NewBeaconBlockHeader(
-			0,
 			wire.NewBVersion(opts.Version),
+			0,
+			opts.PrevBlock,
 			opts.PrevBlock,
 			genesisMerkleRoot(name),
 			chainhash.Hash{},
@@ -200,6 +201,7 @@ func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.Ms
 	shardBlock = wire.MsgBlock{
 		Header: wire.NewShardBlockHeader(
 			0,
+			chainhash.Hash{},
 			chainhash.Hash{},
 			state.shardsGenesisMerkleRoot[shardID],
 			bits,

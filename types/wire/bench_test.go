@@ -422,7 +422,7 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
 		m.AddBlockHeader(
-			NewBeaconBlockHeader(0, 1, *hash, *hash, *hash, time.Now(), 0, 0, uint32(i)),
+			NewBeaconBlockHeader(1, 0, *hash, *hash, *hash, *hash, time.Now(), 0, 0, uint32(i)),
 			*hash,
 		)
 	}
@@ -570,7 +570,7 @@ func BenchmarkDecodeMerkleBlock(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 	}
-	m.Header = NewBeaconBlockHeader(1, 1, *hash, *hash, *hash, time.Now(), 0, 1, uint32(10000))
+	m.Header = NewBeaconBlockHeader(1, 1, *hash, *hash, *hash, *hash, time.Now(), 0, 1, uint32(10000))
 	for i := 0; i < 105; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {
