@@ -6,6 +6,7 @@ package wire
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"math"
 	"time"
@@ -234,6 +235,15 @@ func (h *CoinbaseAux) Copy() *CoinbaseAux {
 	copy(clone.TxMerkleProof, h.TxMerkleProof)
 
 	return clone
+}
+
+func (h *CoinbaseAux) Validate(merkleRoot chainhash.Hash) error {
+	coinbaseHash := h.Tx.TxHash()
+	if !chainhash.ValidateCoinbaseMerkleTreeProof(coinbaseHash, h.TxMerkleProof, merkleRoot) {
+		return errors.New("tx_merkle tree root is not match with blockMerkle root")
+	}
+
+	return nil
 }
 
 // Deserialize decodes a block header from r into the receiver using a format

@@ -14,16 +14,17 @@ import (
 )
 
 var (
-	// todo: change this before launch
-	// mainNetPowLimitBeacon is the highest proof of work value a Bitcoin block
-	// can have for the test network (version 3).  It is the value
-	// 2^256 / 2^(28-12) = 2^240 - 12 bits for hash-sorting here don't present.
-	mainNetPowLimitBeacon            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 241), bigOne)
-	mainNetPowLimitBitsBeacon uint32 = 0x1f01fff0 // 2^28 target=0001fff000000000000000000000000000000000000000000000000000000000
+	// mainNetPowLimitBeacon is the highest proof of work value a Beacon block.
+	// Desired initial difficulty = 2^64 = target(2^54) + hash-sorting (2^10)
+	// 2^256 / 2^(64-10) = 2^256 / 2^54 = 2^202; And add few bits for safety -> 2^204
+	mainNetPowLimitBeacon            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 204), bigOne)
+	mainNetPowLimitBitsBeacon uint32 = 0x1a040000 // 2^54 target=0000000000000400000000000000000000000000000000000000000000000000
 
-	// 2^256 / 2^(24-12) = 2^244 - 12 bits for hash-sorting here don't present.
-	mainNetPowLimitShard            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 245), bigOne)
-	mainNetPowLimitBitsShard uint32 = 0x1f1ff000 // 2^24 target=001ff00000000000000000000000000000000000000000000000000000000000
+	// mainNetPowLimitShard is the highest proof of work value a Shard block.
+	// Desired initial difficulty = 2^60 = target(2^50) + hash-sorting (2^10)
+	// 2^256 / 2^(60-10) = 2^256 / 2^50 = 2^206; And add few bits for safety -> 2^208
+	mainNetPowLimitShard            = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 208), bigOne)
+	mainNetPowLimitBitsShard uint32 = 0x1a400000 // 2^50 target=0000000000004000000000000000000000000000000000000000000000000000
 )
 
 // var mainPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 224), bigOne)
@@ -34,8 +35,9 @@ var MainNetParams = Params{
 	Net:            wire.MainNet,
 	DefaultPort:    "8333",
 	DefaultP2PPort: "8444",
-	DNSSeeds:       []DNSSeed{
-		// {"dnsseed.testnet.jaxdevz.space", false}
+	DNSSeeds: []DNSSeed{
+		{"dns-seed.mainnet.jaxdevz.space", false},
+		{"dns-seed.mainnet.jax.net", false},
 	},
 	IsBeacon:         true,
 	ChainID:          0,
@@ -52,8 +54,7 @@ var MainNetParams = Params{
 		MinDiffReductionTime:     0,
 		GenerateSupported:        false,
 		HashSorting:              true,
-		HashSortingSlotNumber:    16, // 2^4
-		// HashSortingSlotNumber:    4096, // 2^12
+		HashSortingSlotNumber:    1024, // 2^10
 	},
 
 	// Checkpoints ordered from oldest to newest.

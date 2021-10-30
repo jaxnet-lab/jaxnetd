@@ -1,0 +1,29 @@
+data_dir = "jaxnetd-data"
+debug_level = "info"
+
+[node]
+net = "mainnet"
+
+[node.p2p]
+listeners = ["0.0.0.0:8333"]
+peers = []
+
+[node.rpc]
+disable = false
+disable_tls = true
+user = "jax"
+password = "aWeSoMePaSss"
+maxclients = 1_000
+listeners = ["0.0.0.0:8444"]
+
+[node.shards]
+enable = true
+autorun = true
+
+[node.beacon_chain]
+tx_index = true
+addr_index = true
+auto_expand = true
+max_peers = 128
+no_relay_priority = true
+mining_addresses = ["1ERUE..."]

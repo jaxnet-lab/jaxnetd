@@ -127,7 +127,7 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 			Version:   1,
 			PrevBlock: chainhash.Hash{},          // 0000000000000000000000000000000000000000000000000000000000000000
 			Timestamp: time.Unix(1633687865, 0),  // Fri  8 Oct 10:11:52 UTC 2021
-			Bits:      mainNetPowLimitBitsBeacon, // 487587824 [0000000ffff00000000000000000000000000000000000000000000000000000]
+			Bits:      mainNetPowLimitBitsBeacon, // 0x1a040000 [0000000000000400000000000000000000000000000000000000000000000000]
 			Nonce:     0x7c2bac1d,                // 2083236893
 		}
 	}
