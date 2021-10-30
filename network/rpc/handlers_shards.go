@@ -241,13 +241,13 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	}
 
 	beaconHeader := blockHeader.BeaconHeader()
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
+	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 
 	blockReply := jaxjson.GetShardBlockVerboseResult{
 		Hash:              hash.String(),
 		ShardHash:         blockHeader.ExclusiveHash().String(),
 		MerkleRoot:        blockHeader.MerkleRoot().String(),
-		PreviousHash:      prevHash.Hash.String(),
+		PreviousHash:      blockHeader.PrevBlockHash().String(),
 		PrevBlocksMMRRoot: blockHeader.PrevBlocksMMRRoot().String(),
 		Time:              blockHeader.Timestamp().Unix(),
 		Confirmations:     int64(1 + best.Height - blockHeight),
@@ -380,7 +380,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	})
 
 	beaconHeader := blockHeader.BeaconHeader()
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
+	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 
 	blockHeaderReply := jaxjson.GetShardBlockHeaderVerboseResult{
 		Hash:              c.Hash,
@@ -390,7 +390,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 		SerialID:          serialID,
 		PrevSerialID:      prevSerialID,
 		NextHash:          nextHashString,
-		PreviousHash:      prevHash.Hash.String(),
+		PreviousHash:      blockHeader.PrevBlockHash().String(),
 		PrevBlocksMMRRoot: blockHeader.PrevBlocksMMRRoot().String(),
 		MerkleRoot:        blockHeader.MerkleRoot().String(),
 		Bits:              strconv.FormatInt(int64(blockHeader.Bits()), 16),

@@ -230,14 +230,14 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		return nil, err
 	}
 
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
+	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
 		Hash:                hash.String(),
 		Version:             int32(blockHeader.Version()),
 		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		PreviousHash:        prevHash.Hash.String(),
+		PreviousHash:        blockHeader.PrevBlockHash().String(),
 		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		Nonce:               blockHeader.Nonce(),
@@ -344,7 +344,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		return err
 	})
 
-	prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
+	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
 		Hash:                c.Hash,
 		Confirmations:       int64(1 + best.Height - blockHeight),
@@ -356,7 +356,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 		MerkleRoot:          blockHeader.MerkleRoot().String(),
 		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
 		NextHash:            nextHashString,
-		PreviousHash:        prevHash.Hash.String(),
+		PreviousHash:        blockHeader.PrevBlockHash().String(),
 		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
 		Nonce:               uint64(blockHeader.Nonce()),
 		Time:                blockHeader.Timestamp().Unix(),
