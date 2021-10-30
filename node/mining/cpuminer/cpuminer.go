@@ -616,7 +616,8 @@ func (miner *CPUMiner) submitTask(job *miningJob) {
 		}
 
 		block := jaxutil.NewBlock(&task.block)
-		task.submitted = miner.submitBlock(shardID, block)
+		miner.submitBlock(shardID, block)
+		task.submitted = true
 		job.shards[shardID] = task
 	}
 }
