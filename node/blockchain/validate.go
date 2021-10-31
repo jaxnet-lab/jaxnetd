@@ -31,7 +31,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		return chaindata.NewRuleError(chaindata.ErrInvalidBlockHeightValue, errMsg)
 	}
 
-	if header.ChainWeight().Cmp(prevNode.WorkSum()) > 0 {
+	if header.ChainWeight().Cmp(prevNode.WorkSum()) != 0 {
 		errMsg := fmt.Sprintf("block prevChainWeight is invalid: expected=%d actual=%d", prevNode.WorkSum(), header.ChainWeight())
 		return chaindata.NewRuleError(chaindata.ErrInvalidChainWeightValue, errMsg)
 	}

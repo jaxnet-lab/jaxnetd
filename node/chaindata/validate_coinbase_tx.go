@@ -182,7 +182,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 		return false, errors.Wrap(err, "invalid btc coinbase aux")
 	}
 	btcCoinbaseTx := aux.CoinbaseAux.Tx
-	if len(btcCoinbaseTx.TxOut) != 3 {
+	if len(btcCoinbaseTx.TxOut) != 3 && len(btcCoinbaseTx.TxOut) != 4 {
 		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
 			!jaxutil.BchJaxPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
@@ -249,8 +249,8 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 
 	const errMsg = "invalid format of beacon coinbase tx: "
 
-	if len(coinbase.TxOut) != 4 {
-		err = errors.New(errMsg + "must have 4 outs")
+	if len(coinbase.TxOut) < 4 || len(coinbase.TxOut) > 5 {
+		err = errors.New(errMsg + "must have 4 or 5 outs")
 		return false, err
 	}
 
