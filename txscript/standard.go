@@ -753,8 +753,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (Script
 		// Therefore, the script hash is the second item on the stack.
 		// Skip the script hash if it's invalid for some reason.
 		requiredSigs = 1
-		addr, err := jaxutil.NewAddressWitnessScriptHash(pops[1].data,
-			chainParams)
+		addr, err := jaxutil.NewAddressWitnessScriptHash(pops[1].data, chainParams)
 		if err == nil {
 			addrs = append(addrs, addr)
 		}

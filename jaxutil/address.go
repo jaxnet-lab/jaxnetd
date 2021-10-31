@@ -741,12 +741,14 @@ func (a *HTLCAddress) String() string {
 }
 
 func IsJaxnetBurnRawAddress(pkScript []byte) bool {
-	return bytes.Equal(pkScript, types.RawJaxBurnAddr)
+	return bytes.Equal(pkScript, types.RawJaxBurnScript) ||
+		bytes.Equal(pkScript, types.RawBCHJaxBurnScript)
 }
 
 func IsJaxnetBurnAddress(address string, params *chaincfg.Params) bool {
 	addr, _ := DecodeAddress(address, params)
-	return bytes.Equal(addr.ScriptAddress(), types.RawJaxBurnAddr)
+	return bytes.Equal(addr.ScriptAddress(), types.RawJaxBurnScript) ||
+		bytes.Equal(addr.ScriptAddress(), types.RawBCHJaxBurnScript)
 }
 
 func jaxnetBurnRawAddress() []byte {

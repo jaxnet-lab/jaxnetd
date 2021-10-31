@@ -109,9 +109,13 @@ func CreateBitcoinCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Ad
 	btcCoinbase.MsgTx().TxIn[0].SignatureScript, err = BTCCoinbaseScript(int64(nextHeight), make([]byte, 8), beaconHash)
 	return btcCoinbase, err
 }
-
 func CreateJaxCoinbaseTx(value, fee int64, height int32,
 	shardID uint32, addr jaxutil.Address, burnReward, beacon bool) (*jaxutil.Tx, error) {
+	return CreateJaxCoinbaseTxWithBurn(value, fee, height, shardID, addr, burnReward, beacon, types.RawBCHJaxBurnScript)
+}
+
+func CreateJaxCoinbaseTxWithBurn(value, fee int64, height int32,
+	shardID uint32, addr jaxutil.Address, burnReward, beacon bool, jaxBurnScript []byte) (*jaxutil.Tx, error) {
 	extraNonce := uint64(0)
 	coinbaseScript, err := StandardCoinbaseScript(height, shardID, extraNonce)
 	if err != nil {
@@ -123,15 +127,9 @@ func CreateJaxCoinbaseTx(value, fee int64, height int32,
 		return nil, err
 	}
 
-	jaxBurnAddr, err := jaxutil.DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
-	if err != nil {
-		return nil, err
-	}
-	jaxBurn := jaxBurnAddr.ScriptAddress()
-
 	var pkScript = feeAddress
 	if burnReward {
-		pkScript = jaxBurn
+		pkScript = jaxBurnScript
 	}
 
 	tx := wire.NewMsgTx(wire.TxVersion)
@@ -143,7 +141,7 @@ func CreateJaxCoinbaseTx(value, fee int64, height int32,
 		Sequence:         wire.MaxTxInSequenceNum,
 	})
 
-	tx.AddTxOut(&wire.TxOut{Value: 0, PkScript: jaxBurn})
+	tx.AddTxOut(&wire.TxOut{Value: 0, PkScript: jaxBurnScript})
 	if beacon {
 		switch addr.(type) {
 		case *jaxutil.AddressPubKey:

@@ -240,6 +240,7 @@ const (
 	ErrUnexpectedShardsValue
 
 	ErrInvalidBlockHeightValue
+	ErrInvalidChainWeightValue
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.
@@ -293,6 +294,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrInvalidJaxHeaderAux:       "ErrInvalidJaxHeaderAux",
 	ErrUnexpectedShardsValue:     "ErrUnexpectedShardsValue",
 	ErrInvalidBlockHeightValue:   "ErrInvalidBlockHeightValue",
+	ErrInvalidChainWeightValue:   "ErrInvalidChainWeightValue",
 }
 
 // String returns the ErrorCode as a human-readable name.
