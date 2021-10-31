@@ -6,12 +6,7 @@ net = "testnet"
 
 [node.p2p]
 listeners = ["0.0.0.0:18444"]
-peers = [
-    "164.90.150.0:18444",
-    "128.199.31.83:18444",
-    "138.68.152.77:18444",
-    "159.89.89.207:18444"
-]
+peers = []
 
 [node.rpc]
 disable = false
@@ -32,7 +27,8 @@ expansion_rule = 1
 expansion_limit = 2
 max_peers = 1_000
 no_relay_priority = true
-mining_addresses = ["mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz"]
+# PUT YOUR MINITNG ADDRESS
+mining_addresses = ["mxQs..."]
 
 [metrics]
 enable = false

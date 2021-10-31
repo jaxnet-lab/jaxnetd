@@ -69,7 +69,8 @@ configuration.
 
 ### Configuration
 
-Edit the `data_dir` and `log_dir` in [jaxnetd.testnet.toml](./jaxnetd.testnet.toml) 
+Edit the at least the `data_dir`, `mining_addresses`, `user`, `password` in [jaxnetd.testnet.toml](./jaxnetd.testnet.toml) 
+
 
 #### Windows (Installed from MSI)
 

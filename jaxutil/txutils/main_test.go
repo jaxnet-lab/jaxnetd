@@ -41,9 +41,9 @@ func TestOperator_SpendUTXO(t *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	aliceAddr := "myGdvt6vRNgrFZFtU5FNhW5gxwRqKBcLGv"
-	txHash := "8e8de99c0bf81f95b010e53f74bfd2c4d608227938f279954f062185be052cd6"
-	kd, err := NewKeyData("3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b", cfg.NetParams())
+	aliceAddr := ""
+	txHash := ""
+	kd, err := NewKeyData("", cfg.NetParams())
 	assert.NoError(t, err)
 
 	tx, err := op.SpendUTXO(*kd, txHash, 0, aliceAddr, 1_0000_0000)
@@ -54,22 +54,18 @@ func TestOperator_SpendUTXO(t *testing.T) {
 func TestMakeMultiSigScript(ot *testing.T) {
 	t := (*T)(ot)
 	var shardID uint32 = 1
-	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
-	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
-	evaAddress := "mwnAejT1i6Fra7npajqEe6G3A22DFbU5aK"
+	aliceSk := ""
+	bobSk := ""
+	evaAddress := ""
 	utxoSearchOffset := 0
 	amount := int64(1000000000) - OneCoin
 
 	// -----------------------------------------------------------------------------------------
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net:     "testnet",
-		ShardID: shardID,
-		RPC: NodeRPC{
-			Host: "116.202.107.209:18334",
-			User: "somerpc",
-			Pass: "somerpc",
-		},
+		Net:        "testnet",
+		ShardID:    shardID,
+		RPC:        NodeRPC{},
 		PrivateKey: "",
 	}
 
@@ -187,12 +183,9 @@ func TestSendTx(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			Host: "116.202.107.209:18333",
-			User: "jaxnetrpc",
-			Pass: "AUL6VBjoQnhP3bfFzl",
-			// Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
+			Host: "127.0.0.1:18333",
+			User: "somerpc",
+			Pass: "somerpc",
 		},
 		PrivateKey: "",
 	}
@@ -222,18 +215,14 @@ func TestMakeSwapTx(ot *testing.T) {
 	var shardID1 uint32 = 18
 	var shardID2 uint32 = 17
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
-	minerAddr := "mxQsksaTJb11i7vSxAUL6VBjoQnhP3bfFz"
+	minerSK := ""
+	minerAddr := ""
 	// -----------------------------------------------------------------------------------------
 
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// Host: "116.203.250.136:18333",
-			// Host: "116.202.107.209:18333",
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
 			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
@@ -330,32 +319,21 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 
 	// ---/---- PREPARE ----\----
 	cfg := ManagerCfg{
-		Net: "fastnet",
-		RPC: NodeRPC{
-			// Host: "116.203.250.136:18333",
-			// Host: "116.202.107.209:22333",
-			User: "jaxnetrpc",
-			Pass: "AUL6VBjoQnhP3bfFzl",
-			Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
-			// Host: "116.203.250.136:18333",
-			// User: "jaxnetrpc",
-			// Pass: "ec0bb2575b06bfdf",
-		},
+		Net:        "fastnet",
+		RPC:        NodeRPC{},
 		PrivateKey: "",
 	}
 
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := ""
 
-	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	aliceSk := ""
 	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
 	assert.NoError(t, err)
 
-	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	bobSk := ""
 	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
 	assert.NoError(t, err)
 
@@ -505,32 +483,22 @@ func TestTimeLockTx(ot *testing.T) {
 	t := (*T)(ot)
 
 	cfg := ManagerCfg{
-		Net: "fastnet",
-		RPC: NodeRPC{
-			Host: "116.203.250.136:18333",
-			User: "jaxnetrpc",
-			Pass: "ec0bb2575b06bfdf",
-			// Host: "116.202.107.209:18333",
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
-			// Host: "127.0.0.1:18333",
-			// User: "somerpc",
-			// Pass: "somerpc",
-		},
+		Net:        "fastnet",
+		RPC:        NodeRPC{},
 		PrivateKey: "",
 	}
 	shardID := uint32(1)
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := ""
 	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
 
-	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
+	aliceSk := ""
 	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
 	assert.NoError(t, err)
-	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
+	bobSk := ""
 	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
 	assert.NoError(t, err)
 
@@ -572,8 +540,6 @@ func TestEADRegistration(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
 			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
@@ -584,7 +550,7 @@ func TestEADRegistration(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := ""
 	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
 	//
@@ -640,12 +606,6 @@ func TestEAD(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// Host: "116.203.250.136:18333",
-			// User: "jaxnetrpc",
-			// Pass: "ec0bb2575b06bfdf",
-			// Host: "116.202.107.209:22333",
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
 			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
@@ -656,7 +616,7 @@ func TestEAD(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := ""
 	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
 	//
@@ -721,12 +681,6 @@ func TestEADSpend(ot *testing.T) {
 	cfg := ManagerCfg{
 		Net: "fastnet",
 		RPC: NodeRPC{
-			// Host: "116.203.250.136:18333",
-			// User: "jaxnetrpc",
-			// Pass: "ec0bb2575b06bfdf",
-			// Host: "116.202.107.209:18333",
-			// User: "jaxnetrpc",
-			// Pass: "AUL6VBjoQnhP3bfFzl",
 			Host: "127.0.0.1:18333",
 			User: "somerpc",
 			Pass: "somerpc",
@@ -737,7 +691,7 @@ func TestEADSpend(ot *testing.T) {
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
-	minerSK := "3c83b4d5645075c9afac0626e8844007c70225f6625efaeac5999529eb8d791b"
+	minerSK := ""
 	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
 	assert.NoError(t, err)
 

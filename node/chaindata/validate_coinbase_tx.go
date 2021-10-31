@@ -184,6 +184,10 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	}
 	btcCoinbaseTx := aux.CoinbaseAux.Tx
 	if len(btcCoinbaseTx.TxOut) != 3 && len(btcCoinbaseTx.TxOut) != 4 {
+		if len(btcCoinbaseTx.TxOut) > 7 {
+			return false, errors.New("must have less than 7 outputs")
+		}
+
 		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
 			!bch.BchJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
@@ -331,14 +335,22 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 
 	const errMsg = "invalid format of shard coinbase tx: "
 
-	if len(shardCoinbaseTx.TxOut) < 3 {
-		return errors.New(errMsg + "less than 3 out")
+	if len(shardCoinbaseTx.TxOut) < 3 || len(shardCoinbaseTx.TxOut) > 4 {
+		return errors.New(errMsg + "must have 3 or 4 outs")
 	}
 
 	shardJaxNetLinkOut := jaxutil.IsJaxnetBurnRawAddress(shardCoinbaseTx.TxOut[0].PkScript) &&
 		shardCoinbaseTx.TxOut[0].Value == 0
 	if !shardJaxNetLinkOut {
 		return errors.New(errMsg + "first out must be zero and have JaxNetLink")
+	}
+
+	if len(shardCoinbaseTx.TxOut) == 4 {
+		nullData := txscript.GetScriptClass(shardCoinbaseTx.TxOut[3].PkScript) == txscript.NullDataTy
+		if shardCoinbaseTx.TxOut[3].Value != 0 || !nullData {
+			err := errors.New(errMsg + "4th out can be only NULL_DATA with zero amount")
+			return err
+		}
 	}
 
 	shardReward := shardCoinbaseTx.TxOut[1].Value

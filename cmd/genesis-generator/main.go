@@ -28,8 +28,8 @@ import (
 // Seed investors       1407468  153d3mTjmY4Dq8AWoSeZH1oci4vS93Zd9f
 // Seed investors       1407468  1EEkyTwn7nogqL7mPMrhqCK4DBs2N5KxgS
 // Seed investors       1407468  19usb6HanE9nrQRVe7iamWH6hpBvWDiHyV
-// Long term reserves   4128948  1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC
-// Long term reserves   4128948  1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j
+// Long term reserves   4128947  1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC
+// Long term reserves   4128947  1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j
 // Strategic Investors  2000000  13Srcs6QiUtnWL5MNKZXK55tLFukizgd2Q
 // F&F                   868484  1AKZEe5KvSV8SuWwdsjbkUM1MyUV2qd4Ga
 // Advisors              341750  1LJgnPz6TiDvvFPncwCcHXzPy4QpejmiwP
@@ -55,17 +55,17 @@ func main() {
 		return
 	}
 
-	fmt.Println(hex.EncodeToString(auxData.Bytes()))
+	// fmt.Println(hex.EncodeToString(auxData.Bytes()))
 
-	hash := aux.BlockHash()
+	// hash := aux.BlockHash()
 
-	script, _ := txscript.NewScriptBuilder().
-		AddData(hash[:]).
-		AddData([]byte("Jax.Network enters the race! ")).
-		AddData([]byte{0x73, 0x68}).
-		Script()
+	// script, err := txscript.NewScriptBuilder().
+	// 	AddData(hash[:]).
+	// 	AddData([]byte(inclusion)).
+	// 	Script()
 
-	fmt.Println("JAX SIG_SCRIPT:>")
+	script := []byte(inclusion)
+	fmt.Println("JAX SIG_SCRIPT:>", err)
 	spew.Dump(script)
 
 	tx := &wire.MsgTx{
@@ -95,9 +95,9 @@ func main() {
 		// Seed investors
 		{1407468, "19usb6HanE9nrQRVe7iamWH6hpBvWDiHyV"},
 		// Long term reserves
-		{4128948, "1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC"},
+		{4128947, "1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC"},
 		// Long term reserves
-		{4128948, "1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j"},
+		{4128947, "1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j"},
 		// Strategic Investors
 		{2000000, "13Srcs6QiUtnWL5MNKZXK55tLFukizgd2Q"},
 		// F&F
@@ -122,16 +122,33 @@ func main() {
 		{850500, "1Syxe88RJZ4U7V6iwoBNqWzgAXmCsKHPk"},
 	}
 
+	var total int64
+	var totalHaberStornetta int64
+	fmt.Println()
 	for _, pair := range distributionSet {
-		address, _ := jaxutil.DecodeAddress(pair.address, &chaincfg.MainNetParams)
-		script, _ := txscript.PayToAddrScript(address)
+		address, err := jaxutil.DecodeAddress(pair.address, &chaincfg.MainNetParams)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		script, err := txscript.PayToAddrScript(address)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("-> %d\t%s\t%s\n", pair.amount, pair.address, hex.EncodeToString(script))
+
 		tx.AddTxOut(&wire.TxOut{
 			Value:    pair.amount * chaincfg.HaberStornettaPerJAXNETCoin,
 			PkScript: script,
 		})
+		total += pair.amount
+		totalHaberStornetta += pair.amount * chaincfg.HaberStornettaPerJAXNETCoin
 	}
 
-	spew.Dump(tx)
+	fmt.Println("TOTAL AMOUNT:", total, totalHaberStornetta)
+	fmt.Println()
+	// spew.Dump(tx)
 	hexTx, _ := tx.SerializeToHex()
 	println(hexTx)
 }
@@ -210,6 +227,7 @@ func CollectTxHashes(transactions []*btcdwire.MsgTx, witness bool) []chainhash.H
 
 	return hashes
 }
+
 func BtcTxToJaxTx(tx *btcdwire.MsgTx) wire.MsgTx {
 	// tx := btcBlock.Transactions[0].Copy()
 	msgTx := wire.MsgTx{
@@ -239,3 +257,22 @@ func BtcTxToJaxTx(tx *btcdwire.MsgTx) wire.MsgTx {
 	}
 	return msgTx
 }
+
+const inclusion = `Sapere Aude JaxNet
+We hope that by introducing a truly decentralized energy-standard monetary system, the JaxNet protocol will help to facilitate the transformation of humanity into a type-2 civilization and pave the way for an improved society that champions scientific advancement, justice, anti-corruption, universal basic income, a transaction-tax based government, and others. 
+It's our solemn lifetime responsibility to defend our protocol, including our network tokens (JAXNET - JXN, JAX), and work together to bring about the change we wish to see.
+On October 31, 2021, the 13th anniversary of the Bitcoin paper, we entered the race to the top...
+
+Special credits to:
+Iurii Shyshatskyi
+Taras Emelyanenko
+Lucas Leger
+Mike Sheb
+Dima Chizhevsky
+Dr. Abdelhakim Senhaji Hafid
+Satoshi Nakamoto
+Dr. W. Scott Stornetta
+Dr. Stuart Haber
+Dr. Ralph C. Merkle
+
+- aJaxPrime”`
