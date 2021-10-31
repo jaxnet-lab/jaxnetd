@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil/bch"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -184,7 +185,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	btcCoinbaseTx := aux.CoinbaseAux.Tx
 	if len(btcCoinbaseTx.TxOut) != 3 && len(btcCoinbaseTx.TxOut) != 4 {
 		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
-			!jaxutil.BchJaxPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
+			!bch.BchJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 

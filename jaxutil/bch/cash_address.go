@@ -5,6 +5,7 @@ package bch
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/txscript"
@@ -620,4 +621,12 @@ func packAddressData(addrType AddressType, addrHash []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 	return packedData, nil
+}
+
+func BchJaxVanityPrefix(pkScript []byte) bool {
+	addr, err := ExtractPkScriptAddrs(pkScript, &chaincfg.MainNetParams)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(addr.String(), "qqjax")
 }

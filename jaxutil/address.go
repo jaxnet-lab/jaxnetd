@@ -763,7 +763,3 @@ func BtcJaxVanityPrefix(pkScript []byte) bool {
 	}
 	return strings.HasPrefix(addr.String(), "1JAX")
 }
-
-func BchJaxPrefix(pkScript []byte) bool {
-	return pkScript[0] == 0x25 || pkScript[1] == 0xd3
-}
