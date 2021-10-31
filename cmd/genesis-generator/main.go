@@ -24,23 +24,23 @@ import (
 
 // Initial Distribution:
 // ----------------------------------------------------------------
-// Seed investors       1407468  1G2nSCLFVqdztGdtzHWZyxwf4kfFyLAm6a
-// Seed investors       1407468  1FH3DXshoSx2sZB3twFqanjMWHFQA3UPj
-// Seed investors       1407468  1PDgiorHZcogRU4u6Tvi19iTvogxrD7skZ
-// Seed investors       1407468  1G4VQvdh1NkkA7mqRaJEvmeSvunEJsE631
-// Long term reserves   4128948  1G4VQvdh1NkkA7mqRaJEvmeSvunEJsE631
-// Long term reserves   4128948  1JKETv3sqnSznHKc3DzX4y1oTwBkwBXaPK
-// Strategic Investors  2000000  1GHBqYN8fHHMeSBfy74aLQUzasi9caUPRS
-// F&F                   868484  1ihL7yfN5oZBAy6etZZjs974Ddc1z2GWe
-// Advisors              341750  14MYxbip8NiopYJunfV9tx831tHBk6YUCx
-// Liquidity pool       2000000  1PYrpwFkW7tCgB8tfqh9JKJEfJBxwKc7xV
-// OpEx Wallet          1750000  13D72pswMbKxCiiDcgAz2DsmLb4qmYaZjq
-// Team                  850500  15nQrfKrfxnMSBCgYsia3p2YUj1HSvf7QE
-// Team                  850500  12t9VZ9gx3b81kd6hTLs8f1N96p9oGoQxb
-// OpEx Wallet #2      10000000  1MmUCgFWnGivbtGsTgyEzCB69QFb6JCt4m
-// OpEx Wallet #3       1750000  15ShmG5K7dudRvCSRXT55RzRs43YBw133V
-// Team                  850500  15NYXZ6CQFhm2mPJmtMy8i6c3Sz4B6mZrU
-// Team                  850500  159qkF9aH3ZuLHphuawfvXFtA2HYnnJyND
+// Seed investors       1407468  165nZP8b3dPqnyoPps14Vfy16VjAQpoSM9
+// Seed investors       1407468  153d3mTjmY4Dq8AWoSeZH1oci4vS93Zd9f
+// Seed investors       1407468  1EEkyTwn7nogqL7mPMrhqCK4DBs2N5KxgS
+// Seed investors       1407468  19usb6HanE9nrQRVe7iamWH6hpBvWDiHyV
+// Long term reserves   4128948  1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC
+// Long term reserves   4128948  1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j
+// Strategic Investors  2000000  13Srcs6QiUtnWL5MNKZXK55tLFukizgd2Q
+// F&F                   868484  1AKZEe5KvSV8SuWwdsjbkUM1MyUV2qd4Ga
+// Advisors              341750  1LJgnPz6TiDvvFPncwCcHXzPy4QpejmiwP
+// Liquidity pool       2000000  1HLHHrmPQydjqQWJYvC97F1mmu5w4vhNJT
+// OpEx Wallet          1750000  1DRv2NhFoWbg5steMp1XyxATAtBs382teh
+// Team                  850500  1PAKJQ2HY36hJK4ugnCoSi1rqR66pU3VYN
+// Team                  850500  1QEZYTtk3yBaG1yYebLYXWmqb2CZ1EQAaM
+// OpEx Wallet #2      10000000  1MQa8D1ytfVTEcWmfj9gCoe5oAnHLW1yQM
+// OpEx Wallet #3       1750000  17szxFDGkCSLKrkgBomDrhZfSbAfR37Smx
+// Team                  850500  1L1ngxiSEKxtNNfTLjPmcNjX77itNs8rNC
+// Team                  850500  1Syxe88RJZ4U7V6iwoBNqWzgAXmCsKHPk
 // ----------------------------------------------------------------
 //                     36000000
 
@@ -79,39 +79,39 @@ func main() {
 
 	distributionSet := []set{
 		// Seed investors
-		{1407468, "1G2nSCLFVqdztGdtzHWZyxwf4kfFyLAm6a"},
+		{1407468, "165nZP8b3dPqnyoPps14Vfy16VjAQpoSM9"},
 		// Seed investors
-		{1407468, "1FH3DXshoSx2sZB3twFqanjMWHFQA3UPj"},
+		{1407468, "153d3mTjmY4Dq8AWoSeZH1oci4vS93Zd9f"},
 		// Seed investors
-		{1407468, "1PDgiorHZcogRU4u6Tvi19iTvogxrD7skZ"},
+		{1407468, "1EEkyTwn7nogqL7mPMrhqCK4DBs2N5KxgS"},
 		// Seed investors
-		{1407468, "1G4VQvdh1NkkA7mqRaJEvmeSvunEJsE631"},
+		{1407468, "19usb6HanE9nrQRVe7iamWH6hpBvWDiHyV"},
 		// Long term reserves
-		{4128948, "1G4VQvdh1NkkA7mqRaJEvmeSvunEJsE631"},
+		{4128948, "1EHFvipK4yTpY8R6huus5SESrZa7u4MEzC"},
 		// Long term reserves
-		{4128948, "1JKETv3sqnSznHKc3DzX4y1oTwBkwBXaPK"},
+		{4128948, "1HarDhor5U659ReyfB2aoxj4fyPWXfBy5j"},
 		// Strategic Investors
-		{2000000, "1GHBqYN8fHHMeSBfy74aLQUzasi9caUPRS"},
+		{2000000, "13Srcs6QiUtnWL5MNKZXK55tLFukizgd2Q"},
 		// F&F
-		{868484, "1ihL7yfN5oZBAy6etZZjs974Ddc1z2GWe"},
+		{868484, "1AKZEe5KvSV8SuWwdsjbkUM1MyUV2qd4Ga"},
 		// Advisors
-		{341750, "14MYxbip8NiopYJunfV9tx831tHBk6YUCx"},
+		{341750, "1LJgnPz6TiDvvFPncwCcHXzPy4QpejmiwP"},
 		// Liquidity pool
-		{2000000, "1PYrpwFkW7tCgB8tfqh9JKJEfJBxwKc7xV"},
+		{2000000, "1HLHHrmPQydjqQWJYvC97F1mmu5w4vhNJT"},
 		// OpEx Wallet
-		{1750000, "13D72pswMbKxCiiDcgAz2DsmLb4qmYaZjq"},
+		{1750000, "1DRv2NhFoWbg5steMp1XyxATAtBs382teh"},
 		// Team
-		{850500, "15nQrfKrfxnMSBCgYsia3p2YUj1HSvf7QE"},
+		{850500, "1PAKJQ2HY36hJK4ugnCoSi1rqR66pU3VYN"},
 		// Team
-		{850500, "12t9VZ9gx3b81kd6hTLs8f1N96p9oGoQxb"},
+		{850500, "1QEZYTtk3yBaG1yYebLYXWmqb2CZ1EQAaM"},
 		// OpEx Wallet #2
-		{10000000, "1MmUCgFWnGivbtGsTgyEzCB69QFb6JCt4m"},
+		{10000000, "1MQa8D1ytfVTEcWmfj9gCoe5oAnHLW1yQM"},
 		// OpEx Wallet #3
-		{1750000, "15ShmG5K7dudRvCSRXT55RzRs43YBw133V"},
+		{1750000, "17szxFDGkCSLKrkgBomDrhZfSbAfR37Smx"},
 		// Team
-		{850500, "15NYXZ6CQFhm2mPJmtMy8i6c3Sz4B6mZrU"},
+		{850500, "1L1ngxiSEKxtNNfTLjPmcNjX77itNs8rNC"},
 		// Team
-		{850500, "159qkF9aH3ZuLHphuawfvXFtA2HYnnJyND"},
+		{850500, "1Syxe88RJZ4U7V6iwoBNqWzgAXmCsKHPk"},
 	}
 
 	for _, pair := range distributionSet {

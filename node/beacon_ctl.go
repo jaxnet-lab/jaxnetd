@@ -145,7 +145,7 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 
 	err = beaconCtl.dbCtl.refillIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
 	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("failed to clean indexes")
+		beaconCtl.log.Error().Err(err).Msg("failed to refill indexes")
 		return
 	}
 

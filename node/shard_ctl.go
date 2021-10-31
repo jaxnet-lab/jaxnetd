@@ -146,6 +146,11 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 		return
 	}
 
+	err = shardCtl.dbCtl.refillIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
+	if err != nil {
+		shardCtl.log.Error().Err(err).Msg("failed to refill indexes")
+		return
+	}
 	shardCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
