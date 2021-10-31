@@ -111,7 +111,7 @@ func CreateBitcoinCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Ad
 }
 func CreateJaxCoinbaseTx(value, fee int64, height int32,
 	shardID uint32, addr jaxutil.Address, burnReward, beacon bool) (*jaxutil.Tx, error) {
-	return CreateJaxCoinbaseTxWithBurn(value, fee, height, shardID, addr, burnReward, beacon, types.RawBCHJaxBurnScript)
+	return CreateJaxCoinbaseTxWithBurn(value, fee, height, shardID, addr, burnReward, beacon, types.RawJaxBurnScript)
 }
 
 func CreateJaxCoinbaseTxWithBurn(value, fee int64, height int32,
