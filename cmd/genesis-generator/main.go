@@ -48,6 +48,14 @@ func main() {
 	aux := extractBTCAux()
 	fmt.Println("BTC AUX:>")
 	spew.Dump(aux)
+	auxData := bytes.NewBuffer(nil)
+	err := aux.Serialize(auxData)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(hex.EncodeToString(auxData.Bytes()))
 
 	hash := aux.BlockHash()
 

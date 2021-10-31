@@ -149,6 +149,7 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 		),
 		Transactions: []*wire.MsgTx{state.genesisTx},
 	}
+	state.genesisBlock.Header.BeaconHeader().SetBTCAux(getBtcAux())
 	state.genesisBlock.Header.SetK(pow.PackK(pow.K1))
 	state.genesisBlock.Header.SetVoteK(pow.PackK(pow.K1))
 	state.genesisHash = new(chainhash.Hash)
@@ -231,11 +232,10 @@ func genesisCoinbaseTx(name wire.JaxNet) wire.MsgTx {
 
 	txHex := ""
 	switch name {
-	case wire.FastTestNet:
+	case wire.FastTestNet, wire.SimNet:
 		txHex = fastNetGenesisTxHex
 	default:
-		state.genesisTx = mainNetgenesisCoinbaseTx
-		return *state.genesisTx
+		txHex = mainnetGenesisTxHex
 	}
 
 	rawTx, err := hex.DecodeString(txHex)
@@ -292,61 +292,23 @@ func shardGenesisCoinbaseTx(name wire.JaxNet, shardID uint32) wire.MsgTx {
 	return tx
 }
 
-// GenesisCoinbaseTx is the coinbase transaction for the genesis blocks for
-// the main network, regression test network, and test network (version 3).
-var mainNetgenesisCoinbaseTx = &wire.MsgTx{
-	Version: 1,
-	TxIn: []*wire.TxIn{
-		{
-			PreviousOutPoint: wire.OutPoint{
-				Hash:  chainhash.Hash{},
-				Index: 0xffffffff,
-			},
-			SignatureScript: []byte{
-				0x04, 0xff, 0xff, 0x00, 0x1d, 0x01, 0x04, 0x45, /* |.......E| */
-				0x54, 0x68, 0x65, 0x20, 0x54, 0x69, 0x6d, 0x65, /* |The Time| */
-				0x73, 0x20, 0x30, 0x33, 0x2f, 0x4a, 0x61, 0x6e, /* |s 03/Jan| */
-				0x2f, 0x32, 0x30, 0x30, 0x39, 0x20, 0x43, 0x68, /* |/2009 Ch| */
-				0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x6f, 0x72, /* |ancellor| */
-				0x20, 0x6f, 0x6e, 0x20, 0x62, 0x72, 0x69, 0x6e, /* | on brin| */
-				0x6b, 0x20, 0x6f, 0x66, 0x20, 0x73, 0x65, 0x63, /* |k of sec|*/
-				0x6f, 0x6e, 0x64, 0x20, 0x62, 0x61, 0x69, 0x6c, /* |ond bail| */
-				0x6f, 0x75, 0x74, 0x20, 0x66, 0x6f, 0x72, 0x20, /* |out for |*/
-				0x62, 0x61, 0x6e, 0x6b, 0x73, /* |banks| */
-				// 3be9e384f5472ff2ca389c36309c657a39312c6fe89976902834ee2ec45a36f5
-				0xf5, 0x36, 0x5a, 0xc4, 0x2e, 0xee, 0x34, 0x28,
-				0x90, 0x76, 0x99, 0xe8, 0x6f, 0x2c, 0x31, 0x39,
-				0x7a, 0x65, 0x9c, 0x30, 0x36, 0x9c, 0x38, 0xca,
-				0xf2, 0x2f, 0x47, 0xf5, 0x84, 0xe3, 0xe9, 0x3b,
-				// a715b1dba7700fd7d6976782ab75ec2a25e1c226749e849bea0d1fc0858ceb04
-				0x04, 0xeb, 0x8c, 0x85, 0xc0, 0x1f, 0x0d, 0xea,
-				0x9b, 0x84, 0x9e, 0x74, 0x26, 0xc2, 0xe1, 0x25,
-				0x2a, 0xec, 0x75, 0xab, 0x82, 0x67, 0x97, 0xd6,
-				0xd7, 0x0f, 0x70, 0xa7, 0xdb, 0xb1, 0x15, 0xa7,
-			},
-			Sequence: 0xffffffff,
-		},
-	},
-	TxOut: []*wire.TxOut{
-		{
-			Value: 0x12a05f200,
-			PkScript: []byte{
-				0x41, 0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, /* |A.g....U| */
-				0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, /* |H'.g..q0| */
-				0xb7, 0x10, 0x5c, 0xd6, 0xa8, 0x28, 0xe0, 0x39, /* |..\..(.9| */
-				0x09, 0xa6, 0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, /* |..yb...a| */
-				0xde, 0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, /* |..I..?L.| */
-				0x38, 0xc4, 0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1, /* |8..U....| */
-				0x12, 0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, /* |..\8M...| */
-				0x8d, 0x57, 0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, /* |.W.Lp+k.| */
-				0x1d, 0x5f, 0xac, /* |._.| */
-			},
-		},
-	},
-	LockTime: 0,
+func getBtcAux() wire.BTCBlockAux {
+	rawData, err := hex.DecodeString(btcAux)
+	if err != nil {
+		panic("invalid genesis btc aux hex-data")
+	}
+	aux := wire.BTCBlockAux{}
+	err = aux.Deserialize(bytes.NewBuffer(rawData))
+	if err != nil {
+		panic("invalid genesis btc aux hex-data")
+	}
+
+	return aux
 }
 
 const (
 	fastNetGenesisTxHex = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff44202bf70f9cbe34cf53add3ed8c96b115e64c911de96007040000000000000000001d4a61782e4e6574776f726b20656e7465727320746865207261636521200473686562ffffffff0300f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00f2052a010000001976a914b953dad0e79288eea918085c9b72c3ca5482349388ac00000000"
 	shardsGenesisTxHex  = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff170005ffffffff00000e2f503253482f6a61786e6574642fffffffff03000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a54000000000000000014bc473af4c71c45d5aa3278adc99701ded3740a5400000000000000001976a914bc473af4c71c45d5aa3278adc99701ded3740a5488ac00000000"
+	mainnetGenesisTxHex = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4220a09979e5088192d4ece5f7c49c444845a20d7bcc77cd010000000000000000001d4a61782e4e6574776f726b20656e746572732074686520726163652120027368ffffffff11006c042b028000001976a91437c052ab059140534d374a22ebd987c98b1f936f88ac006c042b028000001976a9142c5f6d1901b883fa0c8d6b801e9852f61d45898888ac006c042b028000001976a9149133bffc55515814e9ec162a6d57d9da540e0f6e88ac006c042b028000001976a91461c0dd65c120ebb073f15083c2df442e5ce0800688ac0034e28f867701001976a91491acc017b2d1a4e39f89cbb4c1fc8df6fb7d3add88ac0034e28f867701001976a914b5e8d343dec3dcbbfc55d75e4bd2b6086a1e85b688ac0080f420e6b500001976a9141ad411e604711225347dc9d494a5f5daa45a11a488ac000408f8fc4e00001976a914663b8725e17017269d258fe221fd629c97a5e39b88ac0036bcfc141f00001976a914d3c2ab8fd0a18c9da7bf3b324bdea419aeb4682088ac0080f420e6b500001976a914b32783bac902e0232da52d87781119a6bdb9231388ac00f0d55c299f00001976a9148857c122b5eb1dd56d4c5aef89fd83519af1ba3e88ac00c4093f5a4d00001976a914f315c973f7d50285e59067057530cff363611b9188ac00c4093f5a4d00001976a914fedb7732fd605fe976e9a9a72faeadc934cbfad788ac0080c6a47e8d03001976a914dfd7bbc925f22c9cf9248baa4877a240d0eb61d488ac00f0d55c299f00001976a9144b75edd9b6dc4bae8ac04a47d7b93508f9cfbfbd88ac00c4093f5a4d00001976a914d0908774ef842ca8620dfe71f0c6695e78b666e188ac00c4093f5a4d00001976a91404e9f23f9eb72a6b23ea881d9a4706bb7db38f1788ac00000000"
+	btcAux              = "04600020f76b6a887c89fdea44bd89a77006645ed6bb2701862b00000000000000000000e94c9281dc6310592352059d264aeb47e81dc0475717a6204a9c7f8099fd292bbcab7d6108040e17fb2a86e401000000010000000000000000000000000000000000000000000000000000000000000000ffffffff5c0391cb0a192f5669614254432f4d696e6564206279206f3273706e65772f2cfabe6d6d1052ee457e675a7e7b554f4b1b8a4cbb9ee852c7ccb323fded51065a8fde4506100000000000000010be75a00f1f305410e2b49d65c11c0c00ffffffff045c067125000000001976a914536ffa992491508dca0354e52f32a3a7a679a53a88ac00000000000000002b6a2952534b424c4f434b3a7067a246e981a8500e3cc22276a3d0e520bbfabe559d66eaadcdab2e003a22590000000000000000266a24b9e11b6dff982ec0c3c11f96cdc25f874e3f44b98a79f1f0dc6de65b8a479893bd9c3a380000000000000000266a24aa21a9ede8db996cdca0d8f8ddc8c1d54e318c8262c28c0110bd6483bbc23243d2d1ca66000000000c78883bde8a25eecf9aa7129bcdfb43eebbf647fc58cf74af306f2cbaa042f094b1e126b731d7ccfa626b41bafc6bd5c8ec4177435807781aa3fe2352dea399944eb94a03cd16f7c0fdf60431caca48fa13ca1db40a6de9d58334b47342fad05201229d37df1dfd998a7da8c6ce2881a377f92077e822ee48fb7ca23ee6e2f5a044692ffeb0156c29d1ecb92ddbb68b32562ea1bcebebeae8eb7ce385c174c4aba8b54a37e24cf494f73d86870b2606b0bb3cd5f0b5a20e566d2a1e28ed4ab6cd4e1b08258deb00142c2a0cd07c1cddb4ff9674585f4a7314671bdfa518bfceada8ba1c6ed99430936314837417c46b74bf3d8567e36512347668b75fc8986768e15300b77982e4b55b1c415f8bc56941dbf33d58db93bc406fe469a27ac66e10fead34a89f81e22560ff611468daf26eb82bb931afbf3606993e790d085f99edfa0ca2318b508e22858590f823ef231ecc25d1072264e2663d1b464011584876666865049313b3f07436e12c0ad636dc8d6541cf817fefd339ead7185493d0dc"
 )
