@@ -297,3 +297,67 @@ func dbFetchOrphanTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) (*datab
 func DropOrphanTxIndex(db database.DB, interrupt <-chan struct{}) error {
 	return dropIndex(db, orphanTxIndexKey, orphanTxIndexName, interrupt)
 }
+
+// ReinitOrphanTxIndex ...
+func ReinitOrphanTxIndex(db database.DB, interrupt <-chan struct{}) error {
+	err := dropIndex(db, orphanTxIndexKey, orphanTxIndexName, interrupt)
+	if err != nil {
+		return err
+	}
+
+	orphanIndx := NewOrphanTxIndex(db)
+
+	err = orphanIndx.Init()
+	if err != nil {
+		return err
+	}
+
+	var meta []chaindata.SerialIDBlockMeta
+	err = db.View(func(tx database.Tx) error {
+		var err error
+		meta, err = chaindata.DBFetchAllBlocksHashBySerialID(tx, 1, true)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return db.Update(func(tx database.Tx) error {
+		err := orphanIndx.Create(tx)
+		if err != nil {
+			return err
+		}
+		for _, blockMeta := range meta {
+			blockData, err := tx.FetchBlock(&blockMeta.Hash)
+			if err != nil {
+				return err
+			}
+			block, err := jaxutil.NewBlockFromBytes(blockData)
+			if err != nil {
+				return err
+			}
+
+			err = orphanIndx.DisconnectBlock(tx, block, nil)
+			if err != nil {
+				return err
+			}
+		}
+
+		serializedData := tx.Metadata().Get(chaindata.ChainStateKeyName)
+		state, err := chaindata.DeserializeBestChainState(serializedData)
+		if err != nil {
+			return err
+		}
+
+		height, err := chaindata.DBFetchHeightByHash(tx, &state.Hash)
+		if err != nil {
+			return err
+		}
+
+		return dbPutIndexerTip(tx, orphanTxIndexKey, &state.Hash, height)
+	})
+}

@@ -55,9 +55,8 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32,
 	serialized := indexesBucket.Get(idxKey)
 	if len(serialized) < chainhash.HashSize+4 {
 		return nil, 0, database.Error{
-			ErrorCode: database.ErrCorruption,
-			Description: fmt.Sprintf("unexpected end of data for "+
-				"index %q tip", string(idxKey)),
+			ErrorCode:   database.ErrCorruption,
+			Description: fmt.Sprintf("unexpected end of data for index %q tip", string(idxKey)),
 		}
 	}
 

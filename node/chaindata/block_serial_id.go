@@ -26,6 +26,44 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
+type SerialIDBlockMeta struct {
+	SerialID     int64
+	Hash         chainhash.Hash
+	PrevSerialID int64
+}
+
+func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan bool) ([]SerialIDBlockMeta, error) {
+	meta := dbTx.Metadata()
+	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
+	dataList := make([]SerialIDBlockMeta, 0, 256)
+
+	for id := serialID; ; id++ {
+		res := blockSerialIDHashPrevSerialID.Get(i64ToBytes(id))
+		if len(res) < chainhash.HashSize+8 {
+			break
+		}
+
+		var hash chainhash.Hash
+		copy(hash[:], res[:chainhash.HashSize])
+
+		sid := make([]byte, 8)
+		copy(sid[:], res[chainhash.HashSize:])
+
+		prevSerialID := bytesToI64(sid)
+		if onlyOrphan && id == prevSerialID+1 {
+			continue
+		}
+
+		dataList = append(dataList, SerialIDBlockMeta{
+			SerialID:     id,
+			Hash:         hash,
+			PrevSerialID: prevSerialID,
+		})
+	}
+
+	return dataList, nil
+}
+
 func DBFetchBlockHashBySerialID(dbTx database.Tx, serialID int64) (*chainhash.Hash, int64, error) {
 	meta := dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)

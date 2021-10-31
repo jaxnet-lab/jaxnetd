@@ -35,6 +35,8 @@ type Config struct {
 	TorIsolation  bool     `toml:"tor_isolation" yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
 	Whitelists    []string `toml:"whitelists" yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 
+	RefillTxIndex bool `toml:"refill_tx_index" yaml:"refill_tx_index"`
+
 	// NoPeerBloomFilters bool     `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	// UserAgentComments  []string `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
 }

@@ -105,6 +105,29 @@ func (ctrl *DBCtl) cleanIndexes(ctx context.Context, cfg *Config, db database.DB
 	return cleanPerformed, nil
 }
 
+// refillIndexes drops indexes and exit if requested.
+//
+// NOTE: The order is important here because dropping the tx index also
+// drops the address index since it relies on it.
+func (ctrl *DBCtl) refillIndexes(ctx context.Context, cfg *Config, db database.DB) error {
+	// if cfg.DropAddrIndex {
+	// 	if err := indexers.DropAddrIndex(db, ctx.Done()); err != nil {
+	// 		return cleanPerformed, err
+	// 	}
+	// }
+
+	if cfg.RefillTxIndex {
+		// 	if err := indexers.DropTxIndex(db, ctx.Done()); err != nil {
+		// 		return err
+		// 	}
+		if err := indexers.ReinitOrphanTxIndex(db, ctx.Done()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // dbPath returns the path to the block database given a database type.
 func (ctrl *DBCtl) blockDbPath(dataDir string, chain string, dbType string) string {
 	// The database name is based on the database type.
