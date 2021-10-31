@@ -213,6 +213,14 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 		}
 	}
 
+	if len(btcCoinbaseTx.TxOut) == 4 {
+		nullData := txscript.GetScriptClass(btcCoinbaseTx.TxOut[3].PkScript) == txscript.NullDataTy
+		if btcCoinbaseTx.TxOut[3].Value != 0 || !nullData {
+			err = errors.New(errMsg + "4th out can be only NULL_DATA with zero amount")
+			return false, err
+		}
+	}
+
 	rewardBurned = jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[1].PkScript)
 
 	return rewardBurned, nil
@@ -252,6 +260,14 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 	if len(coinbase.TxOut) < 4 || len(coinbase.TxOut) > 5 {
 		err = errors.New(errMsg + "must have 4 or 5 outs")
 		return false, err
+	}
+
+	if len(coinbase.TxOut) == 5 {
+		nullData := txscript.GetScriptClass(coinbase.TxOut[4].PkScript) == txscript.NullDataTy
+		if coinbase.TxOut[4].Value != 0 || !nullData {
+			err = errors.New(errMsg + "5th out can be only NULL_DATA with zero amount")
+			return false, err
+		}
 	}
 
 	jaxNetLinkOut := jaxutil.IsJaxnetBurnRawAddress(coinbase.TxOut[0].PkScript) &&
