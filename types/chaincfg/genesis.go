@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"math/big"
 	"sync"
 	"time"
 
@@ -144,7 +145,7 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 			chainhash.Hash{},
 			opts.Timestamp,
 			opts.Bits,
-			pow.CalcWork(opts.Bits),
+			new(big.Int).SetInt64(0),
 			opts.Nonce,
 		),
 		Transactions: []*wire.MsgTx{state.genesisTx},
@@ -206,7 +207,7 @@ func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.Ms
 			chainhash.Hash{},
 			state.shardsGenesisMerkleRoot[shardID],
 			bits,
-			pow.CalcWork(bits),
+			new(big.Int).SetInt64(0),
 			*beaconBlock.Header.BeaconHeader(),
 			coinbaseAux,
 		),

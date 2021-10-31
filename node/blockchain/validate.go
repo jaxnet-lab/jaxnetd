@@ -7,6 +7,7 @@ package blockchain
 
 import (
 	"fmt"
+	"math/big"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
@@ -33,6 +34,12 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 
 	if header.ChainWeight().Cmp(prevNode.WorkSum()) != 0 {
 		errMsg := fmt.Sprintf("block prevChainWeight is invalid: expected=%d actual=%d", prevNode.WorkSum(), header.ChainWeight())
+		return chaindata.NewRuleError(chaindata.ErrInvalidChainWeightValue, errMsg)
+	}
+
+	sum := new(big.Int).Add(prevNode.PowWeight(), prevNode.Header().ChainWeight())
+	if header.ChainWeight().Cmp(sum) != 0 {
+		errMsg := fmt.Sprintf("block prevChainWeight [sum] is invalid: expected=%d actual=%d", prevNode.WorkSum(), sum)
 		return chaindata.NewRuleError(chaindata.ErrInvalidChainWeightValue, errMsg)
 	}
 
