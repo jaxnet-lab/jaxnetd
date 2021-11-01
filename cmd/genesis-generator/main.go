@@ -9,6 +9,7 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -49,20 +50,16 @@ func main() {
 	fmt.Println("BTC AUX:>")
 	spew.Dump(aux)
 	auxData := bytes.NewBuffer(nil)
+
 	err := aux.Serialize(auxData)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// fmt.Println(hex.EncodeToString(auxData.Bytes()))
-
-	// hash := aux.BlockHash()
-
-	// script, err := txscript.NewScriptBuilder().
-	// 	AddData(hash[:]).
-	// 	AddData([]byte(inclusion)).
-	// 	Script()
+	hash := aux.BlockHash()
+	fmt.Println("HASH", hash)
+	fmt.Println(hex.EncodeToString(auxData.Bytes()))
 
 	script := []byte(inclusion)
 	fmt.Println("JAX SIG_SCRIPT:>", err)
@@ -154,12 +151,19 @@ func main() {
 }
 
 func extractBTCAux() (aux wire.BTCBlockAux) {
-	hexStr, err := ioutil.ReadFile("./btc_block")
+	hexStr, err := ioutil.ReadFile("./btc_block.json")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	dest := struct {
+		Result string `json:"result"`
+	}{}
+	err = json.Unmarshal(hexStr, &dest)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	rawData, err := hex.DecodeString(string(hexStr))
+	rawData, err := hex.DecodeString(dest.Result)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
