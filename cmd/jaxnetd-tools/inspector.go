@@ -51,7 +51,7 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 
 	_, _ = fmt.Fprintf(outFullData, "%v,%v,%v,%v\n",
 		"chain",
-		"height",
+		"serial_id",
 		"hash",
 		"raw_data",
 	)
@@ -61,17 +61,12 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 		return cli.NewExitError(errors.Wrap(err, "unable to GetBestBlock"), 1)
 	}
 
-	for height := int64(1); height < int64(best); height++ {
-		fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "beacon", height)
+	for serialID := int64(1); serialID < int64(best); serialID++ {
+		fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "beacon", serialID)
 
-		// hash, err := app.TxMan.RPC().ForBeacon().GetBlockHash(height)
-		// if err != nil {
-		// 	return cli.NewExitError(errors.Wrapf(err, "unable to get block hash by height(%d)", height), 1)
-		// }
-
-		block, err := app.TxMan.RPC().ForBeacon().GetBeaconBlockBySerialNumber(height)
+		block, err := app.TxMan.RPC().ForBeacon().GetBeaconBlockBySerialNumber(serialID)
 		if err != nil {
-			return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%v)", height), 1)
+			return cli.NewExitError(errors.Wrapf(err, "unable to get block by serialID(%v)", serialID), 1)
 		}
 
 		_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
@@ -93,7 +88,7 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 
 		_, _ = fmt.Fprintf(outFullData, "%v,%v,%v,%v\n",
 			"beacon",
-			height,
+			serialID,
 			block.Block.BlockHash().String(),
 			hex.EncodeToString(buf.Bytes()),
 		)
@@ -102,27 +97,24 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 
 	for shardID := uint32(1); shardID < uint32(len(res.Shards)); shardID++ {
 		fmt.Println()
-		_, best, err := app.TxMan.RPC().ForShard(shardID).GetBestBlock()
+		best, err := app.TxMan.RPC().ForShard(shardID).GetLastSerialBlockNumber()
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to GetBestBlock"), 1)
 		}
-		for height := int64(1); height < int64(best); height++ {
-			fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "shard_"+strconv.Itoa(int(shardID)), height)
-			hash, err := app.TxMan.RPC().ForShard(shardID).GetBlockHash(height)
+		for serialID := int64(1); serialID < int64(best); serialID++ {
+			fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "shard_"+strconv.Itoa(int(shardID)), serialID)
+
+			block, err := app.TxMan.RPC().ForShard(shardID).GetShardBlockBySerialNumber(serialID)
 			if err != nil {
-				return cli.NewExitError(errors.Wrapf(err, "unable to get block hash by height(%d)", height), 1)
-			}
-			block, err := app.TxMan.RPC().ForShard(shardID).GetShardBlock(hash)
-			if err != nil {
-				return cli.NewExitError(errors.Wrapf(err, "unable to get block by hash(%s)", hash), 1)
+				return cli.NewExitError(errors.Wrapf(err, "unable to get block by serialID(%v)", serialID), 1)
 			}
 
 			_, _ = fmt.Fprintf(out, "%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
 				"shard_"+strconv.Itoa(int(shardID)),
-				height,
+				block.Block.Header.Height(),
 				block.SerialID,
 				block.PrevSerialID,
-				hash.String(),
+				block.Block.BlockHash().String(),
 				block.Block.Header.PrevBlocksMMRRoot(),
 				block.Block.Header.PoWHash(),
 				fmt.Sprintf("%08x", block.Block.Header.Bits()),
@@ -136,8 +128,8 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 
 			_, _ = fmt.Fprintf(outFullData, "%v,%v,%v,%v\n",
 				"shard_"+strconv.Itoa(int(shardID)),
-				height,
-				hash.String(),
+				serialID,
+				block.Block.BlockHash().String(),
 				hex.EncodeToString(buf.Bytes()),
 			)
 		}
