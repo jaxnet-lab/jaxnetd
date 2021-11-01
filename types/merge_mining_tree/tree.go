@@ -745,8 +745,8 @@ func (tree *SparseMerkleTree) MerkleProofPath(position uint32) (pathData []chain
 	return
 }
 
-func (tree *SparseMerkleTree) ValidateOrangeTree(
-	codingBitsSize uint32, coding []byte, hashes []chainhash.Hash, mmNumber uint32, expectedRoot chainhash.Hash) (err error) {
+func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding []byte, hashes []chainhash.Hash,
+	mmNumber uint32, expectedRoot chainhash.Hash, beacon bool) (err error) {
 
 	// Shortcut method for wrapping various errors into ErrValidation.
 	validationError := func(description string) (err error) {
@@ -955,10 +955,12 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(
 		}
 	}
 
-	root := calculateRoot()
-	if bytes.Compare(root[:], expectedRoot[:]) != 0 {
-		err = fmt.Errorf("calculated root does not corresponds to the expected root: %v", ErrValidation)
-		return
+	if !beacon {
+		root := calculateRoot()
+		if bytes.Compare(root[:], expectedRoot[:]) != 0 {
+			err = fmt.Errorf("calculated root does not corresponds to the expected root: %v", ErrValidation)
+			return
+		}
 	}
 
 	return

@@ -115,7 +115,7 @@ func validateMergeMiningData(header wire.BlockHeader, beacon bool) error {
 	tree := mmtree.NewSparseMerkleTree(beaconAux.Shards())
 	orangeTreeEmpty := chainhash.NextPowerOfTwo(int(mmNumber)) == int(mmNumber) && mmNumber == beaconAux.Shards()
 	if !orangeTreeEmpty {
-		err := tree.ValidateOrangeTree(codingLen, orangeTreeEncoding, miningTreeCodingProof, mmNumber, mergeMiningRoot)
+		err := tree.ValidateOrangeTree(codingLen, orangeTreeEncoding, miningTreeCodingProof, mmNumber, mergeMiningRoot, beacon)
 		if err != nil {
 			return errors.Wrap(err, "invalid orange tree")
 		}

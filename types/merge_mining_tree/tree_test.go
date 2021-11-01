@@ -1181,7 +1181,7 @@ func TestValidationOnTopologiesRange(t *testing.T) {
 		mmNumber := uint32(sourceTree.slotsCount)
 
 		validationTree := NewSparseMerkleTree(mmNumber)
-		err := validationTree.ValidateOrangeTree(codingLengthBits, coding, hashes, mmNumber, root)
+		err := validationTree.ValidateOrangeTree(codingLengthBits, coding, hashes, mmNumber, root, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1235,7 +1235,7 @@ func TestValidationBrokenTopologies(t *testing.T) {
 			}
 
 			tree := NewSparseMerkleTree(topology.n)
-			err := tree.ValidateOrangeTree(uint32(len(topology.coding)), bits.Bytes(), hashSeq, topology.mmNumber, chainhash.Hash{})
+			err := tree.ValidateOrangeTree(uint32(len(topology.coding)), bits.Bytes(), hashSeq, topology.mmNumber, chainhash.Hash{}, false)
 			if err == nil {
 				t.Fatal("error is expected")
 			}
@@ -1280,7 +1280,7 @@ func TestSequentialShardsMiningAndValidation(t *testing.T) {
 		}
 
 		validationTree := NewSparseMerkleTree(uint32(shardsCount))
-		err = validationTree.ValidateOrangeTree(codingSize, coding, hashes, uint32(shardsCount), root)
+		err = validationTree.ValidateOrangeTree(codingSize, coding, hashes, uint32(shardsCount), root, false)
 		if err != nil {
 			t.Fatal(err)
 		}
