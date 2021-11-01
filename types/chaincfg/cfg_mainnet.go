@@ -106,5 +106,5 @@ var MainNetParams = Params{
 	// Shards Expansion policy
 	AutoExpand:            true,
 	InitialExpansionRule:  2,
-	InitialExpansionLimit: 4,
+	InitialExpansionLimit: 2,
 }
