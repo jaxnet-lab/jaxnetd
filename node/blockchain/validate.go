@@ -42,7 +42,6 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		errMsg := fmt.Sprintf("block prevChainWeight [sum] is invalid: expected=%d actual=%d", prevNode.WorkSum(), sum)
 		return chaindata.NewRuleError(chaindata.ErrInvalidChainWeightValue, errMsg)
 	}
-
 	fastAdd := flags&chaindata.BFFastAdd == chaindata.BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches
@@ -65,10 +64,11 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := prevNode.CalcPastMedianTime() //
+
 		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != wire.FastTestNet &&
 			b.chain.Params().Net != wire.SimNet {
 			str := "block timestamp of %v is not after expected %v"
-			str = fmt.Sprintf(str, header.Timestamp, medianTime)
+			str = fmt.Sprintf(str, header.Timestamp(), medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
 		}
 
