@@ -356,7 +356,8 @@ func ValidateShardCoinbase(shardHeader *wire.ShardHeader, shardCoinbaseTx *wire.
 	shardReward := shardCoinbaseTx.TxOut[1].Value
 
 	if shardReward != expectedReward {
-		return errors.New(errMsg + "value of second output not eq to expected reward")
+		return fmt.Errorf("%svalue(%d) of second output not eq to expected reward(%d); mmn(%d) k(%d) ", errMsg,
+			shardReward, expectedReward, shardHeader.BeaconHeader().MergeMiningNumber(), shardHeader.K())
 	}
 
 	beaconCoinbase := shardHeader.BeaconCoinbaseAux().Tx
