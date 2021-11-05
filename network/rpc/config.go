@@ -38,6 +38,8 @@ type Config struct {
 	// Second return value indicated is it is a limited user
 	// All standard password checks are ignored if this function is provided when creating RPC server
 	AuthProvider func(http.Header) (bool, bool)
+
+	ResponseHook func(request *jaxjson.Request, headers http.Header, response interface{}, marshalledResponse []byte)
 	// Listeners defines a slice of listeners for which the RPC Server will
 	// take ownership of and accept connections.  Since the RPC Server takes
 	// ownership of these listeners, they will be closed when the RPC Server

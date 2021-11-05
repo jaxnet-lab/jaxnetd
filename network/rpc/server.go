@@ -360,8 +360,14 @@ func (server *ServerCore) ReadJsonRPC(w http.ResponseWriter, r *http.Request, is
 		return
 	}
 
+	headers := w.Header()
+
+	if server.cfg.ResponseHook != nil {
+		server.cfg.ResponseHook(&request, headers, result, msg)
+	}
+
 	// Write the response.
-	err = server.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
+	err = server.writeHTTPResponseHeaders(r, headers, http.StatusOK, buf)
 	if err != nil {
 		server.logger.Error().Err(err).Msg("write error")
 		return
