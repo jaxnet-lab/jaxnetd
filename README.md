@@ -14,9 +14,9 @@ jaxnetd is a full node JAX.Network implementation written in Go (golang).
 
 ## Installation
 
-#### Windows - MSI Available
+#### Pre-compiled binary
 
-> todo
+Fetch archive with latest release binary from [release page](https://gitlab.com/jaxnet/jaxnetd/-/releases)
 
 #### Linux/BSD/MacOSX/POSIX - Build from Source
 
@@ -48,10 +48,6 @@ $ GO111MODULE=on go install -v . ./cmd/...
 
 ## Updating
 
-#### Windows
-
-> Install a newer MSI
-
 #### Linux/BSD/MacOSX/POSIX - Build from Source
 
 - Run the following commands to update btcd, all dependencies, and install it:
@@ -69,18 +65,14 @@ configuration.
 
 ### Configuration
 
-Edit the at least the `data_dir`, `mining_addresses`, `user`, `password` in [jaxnetd.testnet.toml](./jaxnetd.testnet.toml) 
+Edit the at least the `data_dir`, `mining_addresses`, `user`, `password` in [jaxnetd.mainnet.toml](./jaxnetd.mainnet.toml) 
 
-
-#### Windows (Installed from MSI)
-
-> Launch jaxnetd from your Start menu.
 
 #### Linux/BSD/POSIX/Source
 
 ```bash
 $ go build .
-$ ./jaxnetd -C jaxnetd.testnet.toml
+$ ./jaxnetd -C jaxnetd.mainnet.toml
 ```
 
 
