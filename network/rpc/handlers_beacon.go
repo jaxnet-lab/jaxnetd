@@ -586,7 +586,7 @@ func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCo
 	// Return the block template now if the specific block template
 	// identified by the long poll ID no longer matches the current block
 	// template as this means the provided template is stale.
-	prevTemplateHash := state.Template.Block.Header.PrevBlocksMMRRoot()
+	prevTemplateHash := state.Template.Block.Header.PrevBlockHash()
 	if !prevHash.IsEqual(&prevTemplateHash) ||
 		lastGenerated != state.LastGenerated.Unix() {
 
