@@ -149,6 +149,12 @@ func (server *CommonChainRPC) handleBlockchainNotification(notification *blockch
 			server.Log.Warn().Msg("Chain connected notification is not a block.")
 			break
 		}
+
+		// Allow any clients performing long polling via the
+		// getblocktemplate RPC to be notified when the new block causes
+		// their old block template to become stale.
+		server.gbtWorkState.NotifyBlockConnected(block.Hash())
+
 		ntf := &notificationBlockConnected{
 			Block: block,
 			Chain: server.chainProvider,
