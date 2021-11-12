@@ -65,6 +65,11 @@ func (ka *KnownAddress) chance() float64 {
 	return c
 }
 
+const (
+	monthAgo   = -1 * numMissingDays * time.Hour * 24
+	hoursInDay = 24
+)
+
 // isBad returns true if the address in question has not been tried in the last
 // minute and meets one of the following criteria:
 // 1) It claims to be from the future
@@ -84,7 +89,7 @@ func (ka *KnownAddress) isBad() bool {
 	}
 
 	// Over a month old?
-	if ka.na.Timestamp.Before(time.Now().Add(-1 * numMissingDays * time.Hour * 24)) {
+	if ka.na.Timestamp.Before(time.Now().Add(monthAgo)) {
 		return true
 	}
 
@@ -94,7 +99,7 @@ func (ka *KnownAddress) isBad() bool {
 	}
 
 	// Hasn't succeeded in too long?
-	if !ka.lastsuccess.After(time.Now().Add(-1*minBadDays*time.Hour*24)) &&
+	if !ka.lastsuccess.After(time.Now().Add(-1*minBadDays*time.Hour*hoursInDay)) &&
 		ka.attempts >= maxFailures {
 		return true
 	}

@@ -43,7 +43,7 @@ func (msg *MsgAddr) AddAddress(na *NetAddress) error {
 }
 
 // AddShardAddress adds a known active server to the message.
-func (msg *MsgAddr) AddShardAddress(shardId uint32, na *NetAddress) error {
+func (msg *MsgAddr) AddShardAddress(shardID uint32, na *NetAddress) error {
 	if len(msg.AddrList)+1 > MaxAddrPerMsg {
 		str := fmt.Sprintf("too many addresses in message [max %v]",
 			MaxAddrPerMsg)
@@ -51,7 +51,7 @@ func (msg *MsgAddr) AddShardAddress(shardId uint32, na *NetAddress) error {
 	}
 
 	msg.Shards = append(msg.Shards, &ShardAddress{
-		ShardID: shardId,
+		ShardID: shardID,
 		Address: na,
 	})
 	return nil
@@ -99,7 +99,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) err
 	msg.AddrList = make([]*NetAddress, 0, count)
 	for i := uint64(0); i < count; i++ {
 		na := &addrList[i]
-		err := readNetAddress(r, pver, na, true)
+		err := readNetAddress(r, na, true)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) err
 			return err
 		}
 		na.ShardID = uint32(id)
-		err = readNetAddress(r, pver, na.Address, true)
+		err = readNetAddress(r, na.Address, true)
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (msg *MsgAddr) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) err
 	}
 
 	for _, na := range msg.AddrList {
-		err = writeNetAddress(w, pver, na, true)
+		err = writeNetAddress(w, na, true)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (msg *MsgAddr) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) err
 			return err
 		}
 
-		err = writeNetAddress(w, pver, na.Address, true)
+		err = writeNetAddress(w, na.Address, true)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func (msg *MsgAddr) MaxPayloadLength(pver uint32) uint32 {
 	// }
 
 	// Num addresses (varInt) + max allowed addresses.
-	return MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload(pver))
+	return MaxVarIntPayload + (MaxAddrPerMsg * maxNetAddressPayload())
 }
 
 // NewMsgAddr returns a new bitcoin addr message that conforms to the
@@ -251,5 +251,4 @@ func NewMsgPortRedirect(shardID, port uint32, ip net.IP) *MsgPortRedirect {
 		ShardID: shardID,
 		IP:      ip,
 	}
-
 }

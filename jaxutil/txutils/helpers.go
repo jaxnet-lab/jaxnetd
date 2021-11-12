@@ -74,6 +74,7 @@ func (rows UTXOFromRows) GetForAmount(amount int64, shardID uint32, addresses ..
 
 	return collected, nil
 }
+
 func (rows UTXOFromRows) SelectForAmount(amount int64, shardID uint32, addresses ...string) (txmodels.UTXORows, error) {
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("not found UTXO for amount (need %d)", amount)
@@ -129,7 +130,7 @@ func DecodeTx(hexTx string) (*wire.MsgTx, error) {
 	return tx, nil
 }
 
-func TxToJson(mtx *wire.MsgTx, chainParams *chaincfg.Params) jaxjson.TxRawDecodeResult {
+func TxToJSON(mtx *wire.MsgTx, chainParams *chaincfg.Params) jaxjson.TxRawDecodeResult {
 	return jaxjson.TxRawDecodeResult{
 		Txid:     mtx.TxHash().String(),
 		Version:  mtx.Version,
@@ -198,6 +199,5 @@ func WaitForTx(rpcClient *rpcclient.Client, shardID uint32, txHash string, _ uin
 
 			time.Sleep(time.Second)
 		}
-
 	}
 }

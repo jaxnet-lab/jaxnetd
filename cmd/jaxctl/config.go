@@ -118,7 +118,7 @@ type config struct {
 
 // normalizeAddress returns addr with the passed default port appended if
 // there is not already a port specified.
-func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (string, error) {
+func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) string {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		var defaultPort string
@@ -143,9 +143,9 @@ func normalizeAddress(addr string, chain *chaincfg.Params, useWallet bool) (stri
 			}
 		}
 
-		return net.JoinHostPort(addr, defaultPort), nil
+		return net.JoinHostPort(addr, defaultPort)
 	}
-	return addr, nil
+	return addr
 }
 
 // cleanAndExpandPath expands environement variables and leading ~ in the
@@ -225,7 +225,8 @@ func loadConfig() (*config, []string, error) {
 
 	// Load additional config from file.
 	parser := flags.NewParser(&cfg, flags.Default)
-	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
+	// nolint: gomnd
+	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0o644)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
 		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
@@ -272,10 +273,7 @@ func loadConfig() (*config, []string, error) {
 
 	// Add default port to RPC server based on --testnet and --wallet flags
 	// if needed.
-	cfg.RPCServer, err = normalizeAddress(cfg.RPCServer, network, cfg.Wallet)
-	if err != nil {
-		return nil, nil, err
-	}
+	cfg.RPCServer = normalizeAddress(cfg.RPCServer, network, cfg.Wallet)
 
 	return &cfg, remainingArgs, nil
 }

@@ -38,7 +38,7 @@ func (b *Leaf) Value() Value {
 
 	b.v = make([]byte, chainhash.HashSize+len(wBytes))
 	copy(b.v[:chainhash.HashSize], b.Hash[:])
-	copy(b.v[chainhash.HashSize:], wBytes[:])
+	copy(b.v[chainhash.HashSize:], wBytes)
 
 	b.filled = true
 	return b.v
@@ -144,7 +144,7 @@ func HashMerkleBranches(left, right *Leaf) *Leaf {
 	copy(data[len(rv):], rv[:])
 
 	return &Leaf{
-		Hash:   chainhash.HashH(data[:]),
+		Hash:   chainhash.HashH(data),
 		Weight: new(big.Int).Add(left.Weight, right.Weight),
 	}
 }

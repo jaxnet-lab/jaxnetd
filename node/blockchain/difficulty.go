@@ -101,6 +101,7 @@ func (b *BlockChain) calcNextK(lastNode blocknodes.IBlockNode) uint32 {
 // CalcNextK calculates the required k coefficient
 //
 // This function is safe for concurrent access.
+// nolint: revive
 func (b *BlockChain) CalcNextK() uint32 {
 	b.chainLock.Lock()
 	kVal := b.calcNextK(b.blocksDB.bestChain.Tip())
@@ -111,6 +112,7 @@ func (b *BlockChain) CalcNextK() uint32 {
 // CalcKForHeight calculates the required k coefficient
 //
 // This function is safe for concurrent access.
+// nolint: revive
 func (b *BlockChain) CalcKForHeight(height int32) uint32 {
 	b.chainLock.Lock()
 	var kVal uint32
@@ -147,6 +149,7 @@ type retargetOpts struct {
 // This function differs from the exported CalcNextRequiredDifficulty in that
 // the exported version uses the current best chain as the previous block node
 // while this function accepts any block node.
+// nolint: gomnd
 func calcNextRequiredDifficulty(chainParams *chaincfg.Params, opts retargetOpts, lastNode blocknodes.IBlockNode, newBlockTime time.Time) (uint32, error) {
 	// Genesis block.
 	if lastNode == nil {

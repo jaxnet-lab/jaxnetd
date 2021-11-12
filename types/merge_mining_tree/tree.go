@@ -4,7 +4,8 @@
  * license that can be found in the LICENSE file.
  */
 
-package merged_mining_tree
+// nolint: gomnd
+package mergedminingtree
 
 import (
 	"bytes"
@@ -22,8 +23,10 @@ type slot = chainhash.Hash
 
 // slotsSpace and levelsSpace are defined as custom types
 // to ensure right correlation between them in case of refactoring in the future.
-type slotsSpace uint32
-type levelsSpace uint16
+type (
+	slotsSpace  uint32
+	levelsSpace uint16
+)
 
 var (
 	ErrInvalidShardPosition = errors.New("specified shard position does not correspond to the expected tree conf")
@@ -32,12 +35,10 @@ var (
 	ErrLeafIsNil            = errors.New("leaf is nil")
 )
 
-var (
-	// MH - MagicHash.
-	// Used to bound the orange tree.
-	// See the WP for the details.
-	MH = chainhash.Hash{}
-)
+// MH - MagicHash.
+// Used to bound the orange tree.
+// See the WP for the details.
+var MH = chainhash.Hash{}
 
 // node represents the node of the sparse Merkle Tree.
 type node struct {
@@ -67,7 +68,7 @@ func (n *node) SetMH() {
 // IsMH returns true in case if current node's data is magic hash.
 func (n *node) IsMH() bool {
 	if !n.IsNil() {
-		return bytes.Compare(n.data[:], MH[:]) == 0
+		return bytes.Equal(n.data[:], MH[:])
 	}
 
 	return false
@@ -112,6 +113,7 @@ type pair struct {
 // "concatBuffer" is an optional argument that is used as a memory buffer
 // to prevent redundant memory allocations and to minimize the pressure on the GC.
 // In case if it is nil - the buffer would be allocated internally.
+// nolint: staticcheck
 func (p *pair) UpdateCorrespondingHash(concatBuffer []byte) {
 	concatBufferSize := len(chainhash.Hash{}) * 2
 	concatBuffer = make([]byte, 0, concatBufferSize)
@@ -122,7 +124,6 @@ func (p *pair) UpdateCorrespondingHash(concatBuffer []byte) {
 	hash := chainhash.HashH(concatBuffer)
 	p.leftNode.parent.data = &chainhash.Hash{}
 	copy(p.leftNode.parent.data[:], hash[:])
-	return
 }
 
 var (
@@ -158,7 +159,10 @@ type SparseMerkleTree struct {
 	rootCalculationExecutionTimes uint64
 }
 
-func NewSparseMerkleTree(shardsCount uint32) (tree *SparseMerkleTree) {
+// nolint: revive
+func NewSparseMerkleTree(shardsCount uint32) *SparseMerkleTree {
+	var tree *SparseMerkleTree
+
 	// Merkle tree requires binary structure of it's levels/leafs.
 	// That means, that with each one next levelIndex - the amount of leafs doubles.
 	// Passed "shardsCount" with some probability would not fit exactly the amount of slots that are possible,
@@ -304,7 +308,7 @@ func NewSparseMerkleTree(shardsCount uint32) (tree *SparseMerkleTree) {
 	// Force initial root calculation on the first call of Root method
 	// (initial cache invalidation)
 	tree.markSlotAsModified(0)
-	return
+	return tree
 }
 
 // Height returns height of the tree including root level.
@@ -329,7 +333,7 @@ func (tree *SparseMerkleTree) SetShardHash(position uint32, hash [32]byte) (err 
 		return
 	}
 
-	if correspondingNode.data != nil && bytes.Compare(correspondingNode.data[:], hash[:]) == 0 {
+	if correspondingNode.data != nil && bytes.Equal(correspondingNode.data[:], hash[:]) {
 		// Data is the same in both places.
 		// No need to update the tree and provoke hashes re-calculation.
 		return
@@ -362,14 +366,15 @@ func (tree *SparseMerkleTree) DropShardHash(position uint32) (err error) {
 	return
 }
 
-func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
+// nolint: revive
+func (tree *SparseMerkleTree) Root() (chainhash.Hash, error) {
 	defer func() {
 		// Prevent redundant re-calculations
 		// until some changes would be done on the leafs level.
 		tree.markWholeTreeAsCached()
 	}()
 
-	setNodeNilOrMH := func(destNodeLevel levelsSpace, destNode *node, destGroup *pair) {
+	setNodeNilOrMH := func(destNode *node, destGroup *pair) {
 		if destNode == tree.root {
 			// Edge case #1
 			destNode.SetMH()
@@ -394,12 +399,11 @@ func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
 		}
 
 		destNode.SetNil()
-		return
 	}
 
-	processPair := func(p *pair, levelIndex levelsSpace) {
+	processPair := func(p *pair) {
 		if p.leftNode.IsNil() && p.rightNode.IsNil() {
-			setNodeNilOrMH(levelIndex-1, p.leftNode.parent, p.parent)
+			setNodeNilOrMH(p.leftNode.parent, p.parent)
 			// No need to reset p.right.parent (the parent of this node is the same as the left node)
 			return
 		}
@@ -462,7 +466,7 @@ func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
 	// Slots traversing
 	for _, p := range tree.levels[tree.slotsLevelIndex] {
 		if tree.isSlotChanged(slotIndex) || tree.isSlotChanged(slotIndex+1) {
-			processPair(p, tree.slotsLevelIndex)
+			processPair(p)
 		}
 
 		// Pair processing is done.
@@ -476,7 +480,7 @@ func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
 
 		for {
 			for _, p := range tree.levels[levelIndex] {
-				processPair(p, levelIndex)
+				processPair(p)
 			}
 
 			if levelIndex == 0 {
@@ -489,12 +493,13 @@ func (tree *SparseMerkleTree) Root() (root chainhash.Hash, err error) {
 
 Exit:
 	if tree.root.IsNil() {
-		err = ErrRootIsNil
-		return
+		err := ErrRootIsNil
+		return chainhash.Hash{}, err
 	}
 
+	var root chainhash.Hash
 	copy(root[:], tree.root.data[:])
-	return
+	return root, nil
 }
 
 // CatalanNumbersCoding returns binary (BigEndian) coded orange tree, that is a subset of the current merkle tree.
@@ -505,12 +510,12 @@ Exit:
 // Sequence of hashes of the orange tree is a simple bytes slice
 // which is filled with the hashes of the nodes of the orange tree
 // in the same order as they are located in the structure coding sequence.
-func (tree *SparseMerkleTree) CatalanNumbersCoding() (coding []byte, bitsCoded uint32, err error) {
-
+// nolint: gocritic
+func (tree *SparseMerkleTree) CatalanNumbersCoding() ([]byte, uint32, error) {
 	// Seems like current version of Golang has no native way to convert byte <-> bool.
 	// This method implements exactly this conversion.
 	boolToUint8 := func(b bool) (u uint8) {
-		if b == true {
+		if b {
 			return 1
 		}
 
@@ -546,15 +551,15 @@ func (tree *SparseMerkleTree) CatalanNumbersCoding() (coding []byte, bitsCoded u
 
 	if allShardsAreNotMined() || allShardsAreMined() {
 		// Corner case: no coding should be generated.
-		return
+		return nil, 0, nil
 	}
 
 	// Force tree recalculation.
 	// In case if tree has been calculate already and there was no changes -
 	// this operation is noop, so it is save for performance to call it here.
-	_, err = tree.Root()
+	_, err := tree.Root()
 	if err != nil {
-		return
+		return nil, 0, err
 	}
 
 	// Source data:
@@ -614,7 +619,7 @@ func (tree *SparseMerkleTree) CatalanNumbersCoding() (coding []byte, bitsCoded u
 
 	addMark(1, Shards)
 	if topologySet.BitLen() == 0 {
-		return
+		return nil, 0, err
 	}
 
 	// 2 trailing zeroes of the coding could be omitted:
@@ -649,8 +654,8 @@ func (tree *SparseMerkleTree) CatalanNumbersCoding() (coding []byte, bitsCoded u
 		topologyOffset++
 	}
 
-	coding = topologySet.Bytes()
-	bitsCoded = uint32(topologyOffset)
+	coding := topologySet.Bytes()
+	bitsCoded := uint32(topologyOffset)
 
 	if trailingBitGuardSet {
 		// Restoring original trailing guard bit value.
@@ -665,26 +670,25 @@ func (tree *SparseMerkleTree) CatalanNumbersCoding() (coding []byte, bitsCoded u
 		coding[mirroredDestinationByteIndex] = b
 	}
 
-	return
+	return coding, bitsCoded, nil
 }
 
 func (tree *SparseMerkleTree) MarshalOrangeTreeLeafs() (data []chainhash.Hash) {
-
 	var fillHashes func(n *node)
 	fillHashes = func(n *node) {
-		if n.isOrange == false {
+		if !n.isOrange {
 			return
 		}
 
 		if n.leftChild.isOrange {
 			fillHashes(n.leftChild)
-		} else if n.leftChild.IsMH() == false {
+		} else if !n.leftChild.IsMH() {
 			data = append(data, *n.leftChild.data)
 		}
 
 		if n.rightChild.isOrange {
 			fillHashes(n.rightChild)
-		} else if n.rightChild.IsMH() == false {
+		} else if !n.rightChild.IsMH() {
 			data = append(data, *n.rightChild.data)
 		}
 	}
@@ -695,17 +699,17 @@ func (tree *SparseMerkleTree) MarshalOrangeTreeLeafs() (data []chainhash.Hash) {
 	return
 }
 
-func (tree *SparseMerkleTree) MerkleProofPath(position uint32) (pathData []chainhash.Hash, err error) {
+func (tree *SparseMerkleTree) MerkleProofPath(position uint32) ([]chainhash.Hash, error) {
 	node, err := tree.getNode(position)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if node.IsNil() || node.IsMH() {
 		// Leaf is not initialised.
 		// No merkle path could be built.
 		err = ErrLeafIsNil
-		return
+		return nil, err
 	}
 
 	// Merkle proof path can't be build without tree's data set.
@@ -713,7 +717,7 @@ func (tree *SparseMerkleTree) MerkleProofPath(position uint32) (pathData []chain
 	// each time when MerkleProofPath() would be called.
 	_, err = tree.Root()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	var (
@@ -724,10 +728,10 @@ func (tree *SparseMerkleTree) MerkleProofPath(position uint32) (pathData []chain
 	totalLevelsCount := tree.HeightWithoutRoot()
 	pathHashesCount := totalLevelsCount
 	pathSize := int(pathHashesCount)
-	pathData = make([]chainhash.Hash, 0, pathSize)
+	pathData := make([]chainhash.Hash, 0, pathSize)
 
 	for level := totalLevelsCount; level > 0; level-- {
-		correspondingPairIndex = correspondingPairIndex / 2
+		correspondingPairIndex /= 2
 		levelIndex := level - 1
 		correspondingPair = tree.levels[levelIndex][correspondingPairIndex]
 
@@ -739,18 +743,18 @@ func (tree *SparseMerkleTree) MerkleProofPath(position uint32) (pathData []chain
 			pathData = append(pathData, *correspondingPair.leftNode.data)
 		}
 
-		position = position / 2
+		position /= 2
 	}
 
-	return
+	return pathData, nil
 }
 
 func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding []byte, hashes []chainhash.Hash,
-	mmNumber uint32, expectedRoot chainhash.Hash, beacon bool) (err error) {
+	mmNumber uint32, expectedRoot chainhash.Hash, beacon bool) error {
 
 	// Shortcut method for wrapping various errors into ErrValidation.
 	validationError := func(description string) (err error) {
-		return fmt.Errorf(fmt.Sprintf(description)+": %v", ErrValidation)
+		return fmt.Errorf(description+": %v", ErrValidation)
 	}
 
 	// Shortcut method for checking bit positiveness.
@@ -798,7 +802,6 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 		if codingBitsSize > maxCodingSizeUpTo4[d] {
 			return validationError("invalid orange tree coding size (greater than maximal expected)")
 		}
-
 	} else {
 		// d > 4
 		maxCodingSize := uint32(math.Pow(18, float64(d)))
@@ -850,7 +853,6 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 		bit := getTopologyBit(int(index))
 		if bitIsPositive(bit) {
 			j++
-
 		} else { // bit is negative
 			i++
 		}
@@ -869,8 +871,7 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 		}
 	}
 	if uint32(positiveBitsCount) != k {
-		err = fmt.Errorf("invalid tree structure occured: %v", ErrValidation)
-		return
+		return fmt.Errorf("invalid tree structure occurred: %v", ErrValidation)
 	}
 
 	// MM Number check
@@ -887,32 +888,29 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 		if bitIsPositive(bit) {
 			if node2pHeight < 2 {
 				return validationError("orange tree height error")
-			} else {
-				err := traverseOrangeTreeNode(node2pHeight / 2)
-				if err != nil {
-					return err
-				}
-				return traverseOrangeTreeNode(node2pHeight / 2)
 			}
-		} else {
-			typesBit := nodesTypesSet.Bit(typesIndex)
-			typesIndex++
-			if typesBit == 0 {
-				emptyMMTleafCount += int(node2pHeight)
+			err := traverseOrangeTreeNode(node2pHeight / 2)
+			if err != nil {
+				return err
 			}
+			return traverseOrangeTreeNode(node2pHeight / 2)
+		}
+		typesBit := nodesTypesSet.Bit(typesIndex)
+		typesIndex++
+		if typesBit == 0 {
+			emptyMMTleafCount += int(node2pHeight)
 		}
 
 		return nil
 	}
 
-	err = traverseOrangeTreeNode(t)
+	err := traverseOrangeTreeNode(t)
 	if err != nil {
-		return
+		return err
 	}
 
 	if (mmNumber + uint32(emptyMMTleafCount)) < uint32(math.Pow(2, float64(d))) {
-		err = fmt.Errorf("invalid MMNumber: %v", ErrValidation)
-		return
+		return fmt.Errorf("invalid MMNumber: %v", ErrValidation)
 	}
 
 	// Restoring original hashes count.
@@ -924,7 +922,7 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 			restoredHashesSequence = append(restoredHashesSequence, MH)
 		} else {
 			restoredHashesSequence = append(restoredHashesSequence, hashes[nextNonMHHashIndex])
-			nextNonMHHashIndex += 1
+			nextNonMHHashIndex++
 		}
 	}
 
@@ -941,41 +939,40 @@ func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding [
 			copy(hash[:], restoredHashesSequence[nextRestoredHashIndex][:])
 			nextRestoredHashIndex++
 			return
-
-		} else {
-			h1 := calculateRoot()
-			h2 := calculateRoot()
-
-			concatBuffer := make([]byte, 0, chainhash.HashSize)
-			concatBuffer = append(concatBuffer, h1[:]...)
-			concatBuffer = append(concatBuffer, h2[:]...)
-			h := chainhash.HashH(concatBuffer)
-			copy(hash[:], h[:])
-			return
 		}
+
+		h1 := calculateRoot()
+		h2 := calculateRoot()
+
+		concatBuffer := make([]byte, 0, chainhash.HashSize)
+		concatBuffer = append(concatBuffer, h1[:]...)
+		concatBuffer = append(concatBuffer, h2[:]...)
+		h := chainhash.HashH(concatBuffer)
+		copy(hash[:], h[:])
+		return
 	}
 
 	if !beacon {
 		root := calculateRoot()
-		if bytes.Compare(root[:], expectedRoot[:]) != 0 {
-			err = fmt.Errorf("calculated root does not corresponds to the expected root: %v", ErrValidation)
-			return
+		if !bytes.Equal(root[:], expectedRoot[:]) {
+			return fmt.Errorf("calculated root does not corresponds to the expected root: %v", ErrValidation)
 		}
 	}
 
-	return
+	return nil
 }
 
+// nolint: unconvert
 func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint32) {
 	l := chainhash.NextPowerOfTwo(int(nShards))*2 - 1
 	if len(result) < l {
 		res := make([]byte, l)
-		copy(res[:], result[:])
+		copy(res, result)
 		result = res
 	}
 
 	if codingSize == 0 {
-		result[0] += 1
+		result[0]++
 		return
 	}
 
@@ -996,8 +993,8 @@ func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint3
 		return byte(topologyBits.Bit(int(pos)))
 	}
 
-	var v = topologyCodingFirstBit
-	var u = nodesTypesCodingFirstBitIndex
+	v := topologyCodingFirstBit
+	u := nodesTypesCodingFirstBitIndex
 
 	var traverseTreeStep func(nodeIndex uint32)
 	treeIndexLimit := uint32(chainhash.NextPowerOfTwo(int(nShards))) + nShards - 2
@@ -1015,16 +1012,16 @@ func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint3
 		}
 
 		if result[(2*nodeIndex)+1] > 0 && result[(2*nodeIndex)+2] > 0 {
-			result[(2*nodeIndex)+1] -= 1
-			result[(2*nodeIndex)+2] -= 1
-			result[nodeIndex] += 1
+			result[(2*nodeIndex)+1]--
+			result[(2*nodeIndex)+2]--
+			result[nodeIndex]++
 			return
 		}
 
 		bit := byte(topologyBits.Bit(int(u)))
 		result[nodeIndex] += bit
 		if nodeIndex > treeIndexLimit {
-			result[nodeIndex] += 1
+			result[nodeIndex]++
 			return
 		}
 
@@ -1032,18 +1029,15 @@ func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint3
 	}
 
 	traverseTreeStep(0)
-
-	return
 }
 
 func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount uint32,
-	shardMerkleProof []chainhash.Hash, expectedShardHash, expectedRootHash chainhash.Hash) (err error) {
+	shardMerkleProof []chainhash.Hash, expectedShardHash, expectedRootHash chainhash.Hash) error {
 
 	height := int(math.Ceil(math.Log2(float64(shardsCount))))
 	if len(shardMerkleProof) != height {
-		err = fmt.Errorf("%w: the shardMerkleProof(%d) size must have %d members",
+		return fmt.Errorf("%w: the shardMerkleProof(%d) size must have %d members",
 			ErrValidation, len(shardMerkleProof), height)
-		return
 	}
 
 	totalLevelsCount := len(shardMerkleProof)
@@ -1055,32 +1049,31 @@ func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount
 
 	for level := totalLevelsCount; level > 0; level-- {
 		nextHashFromPath := shardMerkleProof[nextPathHashIndex]
-		correspondingPairIndex = correspondingPairIndex / 2
+		correspondingPairIndex /= 2
 
 		isProcessedItemLeft := position%2 == 0
 		if isProcessedItemLeft {
-			concatBuffer = append(concatBuffer, calculatedHash[:]...)
+			concatBuffer = append(concatBuffer, calculatedHash...)
 			concatBuffer = append(concatBuffer, nextHashFromPath[:]...)
 		} else {
 			// note: reverse order here
 			concatBuffer = append(concatBuffer, nextHashFromPath[:]...)
-			concatBuffer = append(concatBuffer, calculatedHash[:]...)
+			concatBuffer = append(concatBuffer, calculatedHash...)
 		}
 
 		hash := chainhash.HashH(concatBuffer)
 		calculatedHash = hash[:]
 
-		position = position / 2
+		position /= 2
 		concatBuffer = concatBuffer[:0]
-		nextPathHashIndex += 1
+		nextPathHashIndex++
 	}
 
-	if bytes.Compare(expectedRootHash[:], calculatedHash) != 0 {
-		err = fmt.Errorf("root does not match: %w", ErrValidation)
-		return
+	if !bytes.Equal(expectedRootHash[:], calculatedHash) {
+		return fmt.Errorf("root does not match: %w", ErrValidation)
 	}
 
-	return
+	return nil
 }
 
 func (tree *SparseMerkleTree) getNode(position uint32) (correspondingNode *node, err error) {
@@ -1094,7 +1087,6 @@ func (tree *SparseMerkleTree) getNode(position uint32) (correspondingNode *node,
 
 	if position%2 == 0 {
 		correspondingNode = correspondingPair.leftNode
-
 	} else {
 		correspondingNode = correspondingPair.rightNode
 	}
@@ -1121,7 +1113,7 @@ func (tree *SparseMerkleTree) isSlotChanged(slot slotsSpace) bool {
 // Sets corresponding bits of each one slot to 0
 // to prevent redundant root recalculations.
 func (tree *SparseMerkleTree) markWholeTreeAsCached() {
-	var i slotsSpace = 0
+	var i slotsSpace
 	for i = 0; i < tree.slotsCount; i++ {
 		tree.markSlotAsNonModified(i)
 	}
@@ -1134,12 +1126,10 @@ func (tree *SparseMerkleTree) containsChanges() (changesPresent bool) {
 	if tree.modifiedShardsIndex.IsInt64() {
 		changesPresent = tree.modifiedShardsIndex.Int64() != 0
 		return
-
-	} else {
-		for i := 0; slotsSpace(i) < tree.slotsCount; i++ {
-			if tree.modifiedShardsIndex.Bit(i) == 1 {
-				return true
-			}
+	}
+	for i := 0; slotsSpace(i) < tree.slotsCount; i++ {
+		if tree.modifiedShardsIndex.Bit(i) == 1 {
+			return true
 		}
 	}
 
@@ -1179,6 +1169,7 @@ func levelsCount(slotsCount slotsSpace) (count levelsSpace) {
 	return
 }
 
+// nolint: gocritic
 func addMark(nodeIndex int, D []uint8) {
 	if D[nodeIndex] == 2 {
 		// todo: skip first bit also

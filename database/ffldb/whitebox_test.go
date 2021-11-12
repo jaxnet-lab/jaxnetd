@@ -109,9 +109,9 @@ func loadBlocks(t *testing.T, dataFile string, network wire.JaxNet) ([]*jaxutil.
 	return blocks, nil
 }
 
-// checkDbError ensures the passed error is a database.Error with an error code
+// checkDBError ensures the passed error is a database.Error with an error code
 // that matches the passed  error code.
-func checkDbError(t *testing.T, testName string, gotErr error, wantErrCode database.ErrorCode) bool {
+func checkDBError(t *testing.T, testName string, gotErr error, wantErrCode database.ErrorCode) bool {
 	dbErr, ok := gotErr.(database.Error)
 	if !ok {
 		t.Errorf("%s: unexpected error type - got %T, want %T",
@@ -148,7 +148,7 @@ func TestConvertErr(t *testing.T) {
 		wantErrCode database.ErrorCode
 	}{
 		{&ldberrors.ErrCorrupted{}, database.ErrCorruption},
-		{leveldb.ErrClosed, database.ErrDbNotOpen},
+		{leveldb.ErrClosed, database.ErrDBNotOpen},
 		{leveldb.ErrSnapshotReleased, database.ErrTxClosed},
 		{leveldb.ErrIterReleased, database.ErrTxClosed},
 	}
@@ -183,7 +183,7 @@ func TestCornerCases(t *testing.T) {
 	testName := "openDB: fail due to file at target location"
 	wantErrCode := database.ErrDriverSpecific
 	idb, err := openDB(dbPath, blockDataNet, true)
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !checkDBError(t, testName, err, wantErrCode) {
 		if err == nil {
 			idb.Close()
 		}
@@ -212,7 +212,7 @@ func TestCornerCases(t *testing.T) {
 	}
 	store := idb.(*db).store
 	_, err = store.writeBlock([]byte{0x00})
-	if !checkDbError(t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(t, testName, err, database.ErrDriverSpecific) {
 		return
 	}
 	_ = os.RemoveAll(filePath)
@@ -224,20 +224,20 @@ func TestCornerCases(t *testing.T) {
 	// Ensure initilization errors in the underlying database work as
 	// expected.
 	testName = "initDB: reinitialization"
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	err = initDB(ldb)
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !checkDBError(t, testName, err, wantErrCode) {
 		return
 	}
 
 	// Ensure the View handles errors in the underlying leveldb database
 	// properly.
 	testName = "View: underlying leveldb error"
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	err = idb.View(func(tx database.Tx) error {
 		return nil
 	})
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !checkDBError(t, testName, err, wantErrCode) {
 		return
 	}
 
@@ -247,7 +247,7 @@ func TestCornerCases(t *testing.T) {
 	err = idb.Update(func(tx database.Tx) error {
 		return nil
 	})
-	if !checkDbError(t, testName, err, wantErrCode) {
+	if !checkDBError(t, testName, err, wantErrCode) {
 		return
 	}
 }
@@ -323,7 +323,7 @@ func testWriteFailures(tc *testContext) bool {
 	}
 	store.writeCursor.Unlock()
 	err := tc.db.(*db).cache.flush()
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	store.writeCursor.Lock()
@@ -378,7 +378,7 @@ func testWriteFailures(tc *testContext) bool {
 		testName := fmt.Sprintf("Force update commit failure - test "+
 			"%d, fileNum %d, maxsize %d", i, test.fileNum,
 			test.maxSize)
-		if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+		if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 			tc.t.Errorf("%v", err)
 			return false
 		}
@@ -416,12 +416,12 @@ func testBlockFileErrors(tc *testContext) bool {
 	store := tc.db.(*db).store
 	testName := "blockFile invalid file open"
 	_, err := store.blockFile(^uint32(0))
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "openFile invalid file open"
 	_, err = store.openFile(^uint32(0))
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
@@ -451,12 +451,12 @@ func testBlockFileErrors(tc *testContext) bool {
 		blockLen:     80,
 	}
 	_, err = store.readBlock(block0Hash, invalidLoc)
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 	testName = "readBlockRegion invalid file number"
 	_, err = store.readBlockRegion(invalidLoc, 0, 80)
-	if !checkDbError(tc.t, testName, err, database.ErrDriverSpecific) {
+	if !checkDBError(tc.t, testName, err, database.ErrDriverSpecific) {
 		return false
 	}
 
@@ -471,7 +471,7 @@ func testBlockFileErrors(tc *testContext) bool {
 		testName = "FetchBlock closed file"
 		wantErrCode := database.ErrDriverSpecific
 		_, err := tx.FetchBlock(block0Hash)
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
+		if !checkDBError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail
 		}
 
@@ -484,13 +484,13 @@ func testBlockFileErrors(tc *testContext) bool {
 			},
 		}
 		_, err = tx.FetchBlockRegion(&regions[0])
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
+		if !checkDBError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail
 		}
 
 		testName = "FetchBlockRegions closed file"
 		_, err = tx.FetchBlockRegions(regions)
-		if !checkDbError(tc.t, testName, err, wantErrCode) {
+		if !checkDBError(tc.t, testName, err, wantErrCode) {
 			return errSubTestFail
 		}
 
@@ -578,7 +578,7 @@ func testCorruption(tc *testContext) bool {
 			testName := fmt.Sprintf("FetchBlock (test #%d): "+
 				"corruption", i)
 			_, err := tx.FetchBlock(block0Hash)
-			if !checkDbError(tc.t, testName, err, test.wantErrCode) {
+			if !checkDBError(tc.t, testName, err, test.wantErrCode) {
 				return errSubTestFail
 			}
 
@@ -655,7 +655,7 @@ func TestFailureScenarios(t *testing.T) {
 	store.openFileFunc = func(fileNum uint32) (*lockableFile, error) {
 		// Force error when trying to open max file num.
 		if fileNum == ^uint32(0) {
-			return nil, makeDbErr(database.ErrDriverSpecific,
+			return nil, makeDBErr(database.ErrDriverSpecific,
 				"test", nil)
 		}
 		if file, ok := tc.files[fileNum]; ok {
@@ -682,7 +682,7 @@ func TestFailureScenarios(t *testing.T) {
 		}
 
 		str := fmt.Sprintf("file %d does not exist", fileNum)
-		return makeDbErr(database.ErrDriverSpecific, str, nil)
+		return makeDBErr(database.ErrDriverSpecific, str, nil)
 	}
 
 	// Load the test blocks and save in the test context for use throughout

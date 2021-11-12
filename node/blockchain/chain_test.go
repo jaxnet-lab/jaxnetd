@@ -33,7 +33,7 @@ func TestHaveBlock(t *testing.T) {
 
 	var blocks []*jaxutil.Block
 	for _, file := range testFiles {
-		blockTmp, err := loadBlocks(chainCtx, file)
+		blockTmp, err := loadBlocks(file)
 		if err != nil {
 			t.Errorf("Error loading file: %v\n", err)
 			return
@@ -54,7 +54,7 @@ func TestHaveBlock(t *testing.T) {
 	chain.TstSetCoinbaseMaturity(1)
 
 	for i := 1; i < len(blocks); i++ {
-		_, isOrphan, err := chain.ProcessBlock(blocks[i], chaindata.BFNone)
+		_, isOrphan, err := chain.ProcessBlock(blocks[i], chain.MMRTree().CurrentRoot(), chaindata.BFNone)
 		if err != nil {
 			t.Errorf("ProcessBlock fail on block %v: %v\n", i, err)
 			return

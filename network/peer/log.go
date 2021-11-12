@@ -118,7 +118,6 @@ func locatorSummary(locator []*wire.BlockLocatorMeta, stopHash *chainhash.Hash) 
 	}
 
 	return fmt.Sprintf("no locator, stop %s", stopHash)
-
 }
 
 // sanitizeString strips any characters which are even remotely dangerous, such
@@ -140,7 +139,7 @@ func sanitizeString(str string, maxLength uint) string {
 	// Limit the string to the max allowed length.
 	if maxLength > 0 && uint(len(str)) > maxLength {
 		str = str[:maxLength]
-		str = str + "..."
+		str += "..."
 	}
 	return str
 }

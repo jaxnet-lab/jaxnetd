@@ -286,12 +286,14 @@ func (a *AddrManager) pickTried(bucket int) *list.Element {
 	var oldest *KnownAddress
 	var oldestElem *list.Element
 	for e := a.addrTried[bucket].Front(); e != nil; e = e.Next() {
-		ka := e.Value.(*KnownAddress)
+		ka, ok := e.Value.(*KnownAddress)
+		if !ok {
+			return nil
+		}
 		if oldest == nil || oldest.na.Timestamp.After(ka.na.Timestamp) {
 			oldestElem = e
 			oldest = ka
 		}
-
 	}
 	return oldestElem
 }
@@ -401,7 +403,11 @@ func (a *AddrManager) savePeers() {
 		sam.TriedBuckets[i] = make([]string, a.addrTried[i].Len())
 		j := 0
 		for e := a.addrTried[i].Front(); e != nil; e = e.Next() {
-			ka := e.Value.(*KnownAddress)
+			ka, ok := e.Value.(*KnownAddress)
+			if !ok {
+				return
+			}
+
 			sam.TriedBuckets[i][j] = NetAddressKey(ka.na)
 			j++
 		}
@@ -441,8 +447,8 @@ func (a *AddrManager) loadPeers() {
 	log.Info().Str("chain", a.chainName).Msgf("Loaded %d addresses from file '%s'", a.numAddresses(), a.peersFile)
 }
 
+//  nolint: stylecheck
 func (a *AddrManager) deserializePeers(filePath string) error {
-
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return nil
@@ -664,6 +670,7 @@ func (a *AddrManager) NeedMoreAddresses() bool {
 
 // AddressCache returns the current address cache.  It must be treated as
 // read-only (but since it is a copy now, this is not as dangerous).
+// nolint: gosec, gomnd
 func (a *AddrManager) AddressCache() []*wire.NetAddress {
 	allAddr := a.getAddresses()
 
@@ -706,11 +713,15 @@ func (a *AddrManager) getAddresses() []*wire.NetAddress {
 // reset resets the address manager by reinitialising the random source
 // and allocating fresh empty bucket storage.
 func (a *AddrManager) reset() {
-
 	a.addrIndex = make(map[string]*KnownAddress)
 
 	// fill key with bytes from a good random source.
-	io.ReadFull(crand.Reader, a.key[:])
+	_, err := io.ReadFull(crand.Reader, a.key[:])
+	if err != nil {
+		log.Error().Err(err).Msg("cannot fill key with random source bytes")
+		return
+	}
+
 	for i := range a.addrNew {
 		a.addrNew[i] = make(map[string]*KnownAddress)
 	}
@@ -775,6 +786,7 @@ func NetAddressKey(na *wire.NetAddress) string {
 // random one from the possible addresses with preference given to ones that
 // have not been used recently and should not pick 'close' addresses
 // consecutively.
+// nolint: gomnd
 func (a *AddrManager) GetAddress() *KnownAddress {
 	// Protect concurrent access.
 	a.mtx.Lock()
@@ -802,7 +814,10 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 				a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0; i-- {
 				e = e.Next()
 			}
-			ka := e.Value.(*KnownAddress)
+			ka, ok := e.Value.(*KnownAddress)
+			if !ok {
+				return nil
+			}
 			randval := a.rand.Intn(large)
 			if float64(randval) < (factor * ka.chance() * float64(large)) {
 				log.Trace().Str("chain", a.chainName).Msgf("Selected %v from tried bucket",
@@ -863,6 +878,8 @@ func (a *AddrManager) Attempt(addr *wire.NetAddress) {
 	ka.lastattempt = time.Now()
 }
 
+const updateTimestampTimeout = time.Minute * 20
+
 // Connected Marks the given address as currently connected and working at the
 // current time.  The address must already be known to AddrManager else it will
 // be ignored.
@@ -878,7 +895,7 @@ func (a *AddrManager) Connected(addr *wire.NetAddress) {
 	// Update the time as long as it has been 20 minutes since last we did
 	// so.
 	now := time.Now()
-	if now.After(ka.na.Timestamp.Add(time.Minute * 20)) {
+	if now.After(ka.na.Timestamp.Add(updateTimestampTimeout)) {
 		// ka.na is immutable, so replace it.
 		naCopy := *ka.na
 		naCopy.Timestamp = time.Now()
@@ -945,7 +962,10 @@ func (a *AddrManager) Good(addr *wire.NetAddress) {
 
 	// No room, we have to evict something else.
 	entry := a.pickTried(bucket)
-	rmka := entry.Value.(*KnownAddress)
+	rmka, ok := entry.Value.(*KnownAddress)
+	if !ok {
+		return
+	}
 
 	// First bucket it would have been put in.
 	newBucket := a.getNewBucket(rmka.na, rmka.srcAddr)
@@ -1154,6 +1174,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 
 // New returns a new bitcoin address manager.
 // Use Start to begin processing asynchronous address updates.
+// nolint: gosec
 func New(dataDir, chainName string, lookupFunc func(string) ([]net.IP, error)) *AddrManager {
 	am := AddrManager{
 		peersFile:      filepath.Join(dataDir, chainName, "peers.json"),

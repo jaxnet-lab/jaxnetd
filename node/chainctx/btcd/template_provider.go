@@ -62,6 +62,7 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 	}, err
 }
 
+// nolint: gomnd
 func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
 	if bg.offline || bg.client == nil {
 		burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
@@ -165,6 +166,7 @@ func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 	return
 }
 
+// nolint: gomnd
 func unmarshalBits(hexBits string) (bits uint32, err error) {
 	bitsHex, err := hex.DecodeString(hexBits)
 	if err != nil {
@@ -181,7 +183,7 @@ func unmarshalBits(hexBits string) (bits uint32, err error) {
 }
 
 func unmarshalBitcoinTransactions(coinbaseTx *btcdjson.GetBlockTemplateResultTx,
-	txs []btcdjson.GetBlockTemplateResultTx) (transactions []*btcdwire.MsgTx, err error) {
+	txs []btcdjson.GetBlockTemplateResultTx) ([]*btcdwire.MsgTx, error) {
 
 	unmarshalBitcoinTx := func(txHash string) (tx *btcdwire.MsgTx, err error) {
 		txBinary, err := hex.DecodeString(txHash)
@@ -195,6 +197,7 @@ func unmarshalBitcoinTransactions(coinbaseTx *btcdjson.GetBlockTemplateResultTx,
 		return
 	}
 
+	transactions := make([]*btcdwire.MsgTx, 0, len(txs))
 	// Coinbase transaction must be processed first.
 	// (transactions order in transactions slice is significant)
 	if coinbaseTx != nil {
@@ -217,5 +220,5 @@ func unmarshalBitcoinTransactions(coinbaseTx *btcdjson.GetBlockTemplateResultTx,
 		transactions = append(transactions, tx)
 	}
 
-	return
+	return transactions, nil
 }

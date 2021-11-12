@@ -205,6 +205,7 @@ func (iter *Iterator) Next() bool {
 // Prev moves the iterator to the previous key/value pair and returns false when
 // the iterator is exhausted.  When invoked on a newly created iterator it will
 // position the iterator at the last item.
+// nolint:staticcheck
 func (iter *Iterator) Prev() bool {
 	if iter.isNew {
 		return iter.Last()

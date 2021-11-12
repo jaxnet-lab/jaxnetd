@@ -27,8 +27,8 @@ func init() {
 type Config struct {
 	// Disable console logging
 	DisableConsoleLog bool `yaml:"disable_console_log" toml:"disable_console_log"`
-	// LogsAsJson makes the log framework log JSON
-	LogsAsJson bool `yaml:"logs_as_json" toml:"logs_as_json"`
+	// LogsAsJSON makes the log framework log JSON
+	LogsAsJSON bool `yaml:"logs_as_json" toml:"logs_as_json"`
 	// FileLoggingEnabled makes the framework log to a file
 	// the fields below can be skipped if this value is false!
 	FileLoggingEnabled bool `yaml:"file_logging_enabled" toml:"file_logging_enabled"`
@@ -45,16 +45,22 @@ type Config struct {
 	NoColor bool `yaml:"no_color" toml:"no_color"`
 }
 
+const (
+	defaultCfgMaxSize    = 1500
+	defaultCfgMaxBackups = 3
+	defaultCfgMaxAge     = 28
+)
+
 func (Config) Default() Config {
 	return Config{
 		DisableConsoleLog:  false,
-		LogsAsJson:         false,
+		LogsAsJSON:         false,
 		FileLoggingEnabled: false,
 		Directory:          "core",
 		Filename:           "jaxnetd.log",
-		MaxSize:            150,
-		MaxBackups:         3,
-		MaxAge:             28,
+		MaxSize:            defaultCfgMaxSize,
+		MaxBackups:         defaultCfgMaxBackups,
+		MaxAge:             defaultCfgMaxAge,
 	}
 }
 
@@ -77,10 +83,10 @@ func consoleWriter(unit string, w io.Writer, noColor bool) zerolog.ConsoleWriter
 func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	var writers []io.Writer
 
-	if !config.DisableConsoleLog && !config.LogsAsJson {
+	if !config.DisableConsoleLog && !config.LogsAsJSON {
 		writers = append(writers, consoleWriter(unit, os.Stderr, config.NoColor))
 	}
-	if !config.DisableConsoleLog && config.LogsAsJson {
+	if !config.DisableConsoleLog && config.LogsAsJSON {
 		writers = append(writers, os.Stdout)
 	}
 	if config.FileLoggingEnabled {
@@ -98,7 +104,7 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 
 	logger.Trace().
 		Bool("fileLogging", config.FileLoggingEnabled).
-		Bool("jsonLogOutput", config.LogsAsJson).
+		Bool("jsonLogOutput", config.LogsAsJSON).
 		Str("logDirectory", config.Directory).
 		Str("fileName", config.Filename).
 		Int("maxSizeMB", config.MaxSize).
@@ -109,8 +115,9 @@ func New(unit string, logLevel zerolog.Level, config Config) zerolog.Logger {
 	return logger
 }
 
+// nolint: gomnd
 func newRollingFile(unit string, config Config) io.Writer {
-	if err := os.MkdirAll(config.Directory, 0744); err != nil {
+	if err := os.MkdirAll(config.Directory, 0o744); err != nil {
 		log.Error().Err(err).Str("path", config.Directory).Msg("can't create log directory")
 		return nil
 	}
@@ -121,7 +128,7 @@ func newRollingFile(unit string, config Config) io.Writer {
 		MaxSize:    config.MaxSize,    // megabytes
 		MaxAge:     config.MaxAge,     // days
 	}
-	if config.LogsAsJson {
+	if config.LogsAsJSON {
 		return fileWriter
 	}
 

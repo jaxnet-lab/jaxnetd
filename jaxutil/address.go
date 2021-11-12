@@ -44,7 +44,7 @@ var (
 
 	// ErrUnknownAddressType describes an error where an address can not
 	// decoded as a specific address type due to the string encoding
-	// begining with an identifier byte unknown to any standard or
+	// beginning with an identifier byte unknown to any standard or
 	// registered (via chaincfg.Register) network.
 	ErrUnknownAddressType = errors.New("unknown address type")
 
@@ -69,6 +69,7 @@ func encodeAddress(hash160 []byte, netID byte) string {
 
 // encodeSegWitAddress creates a bech32 encoded address string representation
 // from witness version and witness program.
+// nolint: gomnd
 func encodeSegWitAddress(hrp string, witnessVersion byte, witnessProgram []byte) (string, error) {
 	// Group the address bytes into 5 bit groups, as this is what is used to
 	// encode each character in the address string.
@@ -275,7 +276,7 @@ func NewAddressPubKeyHash(pkHash []byte, net *chaincfg.Params) (*AddressPubKeyHa
 // newAddressPubKeyHash is the internal API to create a pubkey hash address
 // with a known leading identifier byte for a network, rather than looking
 // it up through its parameters.  This is useful when creating a new address
-// structure from a string encoding where the identifer byte is already
+// structure from a string encoding where the identifier byte is already
 // known.
 func newAddressPubKeyHash(pkHash []byte, netID byte) (*AddressPubKeyHash, error) {
 	// Check for a valid pubkey hash length.
@@ -314,7 +315,7 @@ func (a *AddressPubKeyHash) String() string {
 }
 
 // Hash160 returns the underlying array of the pubkey hash.  This can be useful
-// when an array is more appropiate than a slice (for example, when used as map
+// when an array is more appropriate than a slice (for example, when used as map
 // keys).
 func (a *AddressPubKeyHash) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
@@ -342,7 +343,7 @@ func NewAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*Add
 // newAddressScriptHashFromHash is the internal API to create a script hash
 // address with a known leading identifier byte for a network, rather than
 // looking it up through its parameters.  This is useful when creating a new
-// address structure from a string encoding where the identifer byte is already
+// address structure from a string encoding where the identifier byte is already
 // known.
 func newAddressScriptHashFromHash(scriptHash []byte, netID byte) (*AddressScriptHash, error) {
 	// Check for a valid script hash length.
@@ -381,7 +382,7 @@ func (a *AddressScriptHash) String() string {
 }
 
 // Hash160 returns the underlying array of the script hash.  This can be useful
-// when an array is more appropiate than a slice (for example, when used as map
+// when an array is more appropriate than a slice (for example, when used as map
 // keys).
 func (a *AddressScriptHash) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
@@ -534,6 +535,7 @@ func NewAddressWitnessPubKeyHash(witnessProg []byte, net *chaincfg.Params) (*Add
 // newAddressWitnessPubKeyHash is an internal helper function to create an
 // AddressWitnessPubKeyHash with a known human-readable part, rather than
 // looking it up through its parameters.
+// nolint: gomnd
 func newAddressWitnessPubKeyHash(hrp string, witnessProg []byte) (*AddressWitnessPubKeyHash, error) {
 	// Check for valid program length for witness version 0, which is 20
 	// for P2WPKH.
@@ -625,6 +627,7 @@ func NewAddressWitnessScriptHash(witnessProg []byte, net *chaincfg.Params) (*Add
 // newAddressWitnessScriptHash is an internal helper function to create an
 // AddressWitnessScriptHash with a known human-readable part, rather than
 // looking it up through its parameters.
+// nolint: gomnd
 func newAddressWitnessScriptHash(hrp string, witnessProg []byte) (*AddressWitnessScriptHash, error) {
 	// Check for valid program length for witness version 0, which is 32
 	// for P2WSH.
@@ -707,7 +710,7 @@ func NewHTLCAddress(pkScript []byte, net *chaincfg.Params) (*HTLCAddress, error)
 // newAddressPubKeyHash is the internal API to create a pubkey hash address
 // with a known leading identifier byte for a network, rather than looking
 // it up through its parameters.  This is useful when creating a new address
-// structure from a string encoding where the identifer byte is already
+// structure from a string encoding where the identifier byte is already
 // known.
 func newHTLCAddress(pkHash []byte, netID byte) (*HTLCAddress, error) {
 	// todo: add some validation
@@ -718,13 +721,13 @@ func newHTLCAddress(pkHash []byte, netID byte) (*HTLCAddress, error) {
 // EncodeAddress returns the string encoding of a pay-to-pubkey-hash
 // address.  Part of the Address interface.
 func (a *HTLCAddress) EncodeAddress() string {
-	return base58.CheckEncode(a.script[:], a.netID)
+	return base58.CheckEncode(a.script, a.netID)
 }
 
 // ScriptAddress returns the bytes to be included in a txout script to pay
 // to a htlc address.  Part of the Address interface.
 func (a *HTLCAddress) ScriptAddress() []byte {
-	return a.script[:]
+	return a.script
 }
 
 // IsForNet returns whether or not the pay-to-htlc address is associated
@@ -749,11 +752,6 @@ func IsJaxnetBurnAddress(address string, params *chaincfg.Params) bool {
 	addr, _ := DecodeAddress(address, params)
 	return bytes.Equal(addr.ScriptAddress(), types.RawJaxBurnScript) ||
 		bytes.Equal(addr.ScriptAddress(), types.RawBCHJaxBurnScript)
-}
-
-func jaxnetBurnRawAddress() []byte {
-	addr, _ := DecodeAddress(types.JaxBurnAddr, &chaincfg.MainNetParams)
-	return addr.ScriptAddress()
 }
 
 func BtcJaxVanityPrefix(pkScript []byte) bool {

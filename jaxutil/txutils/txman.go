@@ -126,6 +126,7 @@ func (client *TxMan) CollectUTXO(address string, offset int64) (txmodels.UTXORow
 	return index.Rows(), count, nil
 }
 
+// nolint: gocritic
 func (client *TxMan) CollectUTXOs(opts UTXOCollectorOpts) (map[uint32]txmodels.UTXORows, int64, error) {
 	addressFilter := make(map[string]bool)
 	for _, addr := range opts.FilterAddresses {
@@ -325,6 +326,7 @@ prepareUTXO:
 	}, nil
 }
 
+// nolint
 func (client *TxMan) NewTx(destination string, amount int64, utxoPrv UTXOProvider,
 	redeemScripts ...string) (*txmodels.Transaction, error) {
 	if client.key == nil {
@@ -451,7 +453,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 		msgTx.AddTxIn(txIn)
 
 		outIndexes[destination] = ind
-		ind += 1
+		ind++
 	}
 
 	var err error
@@ -654,7 +656,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 			return nil, errors.Wrap(err, "unable to get utxo from node")
 		}
 		if out == nil {
-			skipped += 1
+			skipped++
 			continue
 		}
 
@@ -702,7 +704,7 @@ func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO,
 		return nil, nil, errors.Wrap(err, "failed to decode PK script")
 	}
 
-	var prevScript []byte = nil
+	var prevScript []byte
 	if msgTx.TxIn[inIndex].SignatureScript != nil {
 		prevScript = msgTx.TxIn[inIndex].SignatureScript
 	}

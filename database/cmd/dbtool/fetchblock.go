@@ -17,10 +17,8 @@ import (
 // fetchBlockCmd defines the configuration options for the fetchblock command.
 type fetchBlockCmd struct{}
 
-var (
-	// fetchBlockCfg defines the configuration options for the command.
-	fetchBlockCfg = fetchBlockCmd{}
-)
+// fetchBlockCfg defines the configuration options for the command.
+var fetchBlockCfg = fetchBlockCmd{}
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
 func (cmd *fetchBlockCmd) Execute(args []string) error {

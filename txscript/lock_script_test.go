@@ -68,7 +68,6 @@ func TestHTLCScript(t *testing.T) {
 			t.Fatal(errors.New("failed"))
 		}
 	}
-
 }
 
 func TestSignTxOutput_htlc(t *testing.T) {
@@ -90,7 +89,8 @@ func TestSignTxOutput_htlc(t *testing.T) {
 	tx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
 		LockTime: 0,
 	}
@@ -104,6 +104,7 @@ func TestSignTxOutput_htlc(t *testing.T) {
 	}
 }
 
+// nolint: errcheck
 func testhtlc(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hashType SigHashType, i int) bool {
 	msg := fmt.Sprintf("%d:%d", hashType, i)
 	privateKey, address, err := genKeys(t, msg)
@@ -123,7 +124,8 @@ func testhtlc(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hashType SigHa
 	parentTx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 100000, PkScript: htlcScript}},
 		LockTime: 0,
 	}
@@ -210,7 +212,8 @@ func TestSignTxOutput_htlc_multisig(t *testing.T) {
 	tx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
 		LockTime: 0,
 	}
@@ -267,7 +270,8 @@ func testHtlcForMultisig(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, has
 	parentTx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 100000, PkScript: htlcScript}},
 		LockTime: 0,
 	}
@@ -350,6 +354,7 @@ func testHtlcForMultisig(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, has
 	return true
 }
 
+// nolint: gocritic
 func failErr(t *testing.T, err error, msg string, args ...interface{}) {
 	if err != nil {
 		if msg != "" && len(args) > 0 {
@@ -393,7 +398,8 @@ func TestMultisigSanbbox(t *testing.T) {
 	parentTx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 100000, PkScript: pay2MultisigPkScript}},
 		LockTime: 0,
 	}
@@ -402,7 +408,8 @@ func TestMultisigSanbbox(t *testing.T) {
 	tx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
 		LockTime: 0,
 	}
@@ -475,5 +482,4 @@ func TestMultisigSanbbox(t *testing.T) {
 
 		fmt.Println("refund_signature_hex: ", hex.EncodeToString(sigScript))
 	}
-	return
 }

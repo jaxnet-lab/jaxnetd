@@ -31,7 +31,7 @@ func (storage *CSVStorage) open(readOnly, truncate bool) error {
 		mode = os.O_RDONLY
 	}
 
-	file, err := os.OpenFile(storage.path, mode, 0644)
+	file, err := os.OpenFile(storage.path, mode, 0o644)
 	if os.IsPermission(err) {
 		file, err = os.Create(storage.path)
 	}

@@ -14,7 +14,7 @@ import (
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
 // based on the protocol version.
-func maxNetAddressPayload(pver uint32) uint32 {
+func maxNetAddressPayload() uint32 {
 	// Services 8 bytes + ip 16 bytes + port 2 bytes.
 	plen := uint32(26)
 
@@ -92,7 +92,7 @@ func NewNetAddress(addr *net.TCPAddr, services ServiceFlag) *NetAddress {
 // readNetAddress reads an encoded NetAddress from r depending on the protocol
 // version and whether or not the timestamp is included per ts.  Some messages
 // like version do not include the timestamp.
-func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
+func readNetAddress(r io.Reader, na *NetAddress, ts bool) error {
 	var ip [16]byte
 
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
@@ -127,7 +127,7 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
 // writeNetAddress serializes a NetAddress to w depending on the protocol
 // version and whether or not the timestamp is included per ts.  Some messages
 // like version do not include the timestamp.
-func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) error {
+func writeNetAddress(w io.Writer, na *NetAddress, ts bool) error {
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
 	// stop working somewhere around 2106.  Also timestamp wasn't added until
 	// until protocol version >= NetAddressTimeVersion.

@@ -112,7 +112,6 @@ func isPubkeyHash(pops []parsedOpcode) bool {
 		pops[2].opcode.value == OP_DATA_20 &&
 		pops[3].opcode.value == OP_EQUALVERIFY &&
 		pops[4].opcode.value == OP_CHECKSIG
-
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
@@ -610,11 +609,14 @@ func EADAddressScript(data EADScriptData) ([]byte, error) {
 // [4] <expiration_date>
 // [5] <ip>
 // [6] <port>
-func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
-	var pops []parsedOpcode
-	pops, err = parseScript(script)
+func EADAddressScriptData(script []byte) (EADScriptData, error) {
+	var (
+		pops       []parsedOpcode
+		scriptData EADScriptData
+	)
+	pops, err := parseScript(script)
 	if err != nil {
-		return
+		return scriptData, err
 	}
 
 	scriptData.RawKey = make([]byte, hex.EncodedLen(len(pops[0].data)))
@@ -628,7 +630,7 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 		var rawShardID scriptNum
 		rawShardID, err = makeScriptNum(pops[3].data, true, 1)
 		if err != nil {
-			return
+			return scriptData, err
 		}
 		shardID = uint32(rawShardID)
 	}
@@ -636,12 +638,12 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	var rawTime scriptNum
 	rawTime, err = makeScriptNum(pops[4].data, false, 5)
 	if err != nil {
-		return
+		return scriptData, err
 	}
 	var rawPort scriptNum
 	rawPort, err = makeScriptNum(pops[6].data, false, 5)
 	if err != nil {
-		return
+		return scriptData, err
 	}
 
 	scriptData.ExpirationDate = int64(rawTime)
@@ -651,19 +653,19 @@ func EADAddressScriptData(script []byte) (scriptData EADScriptData, err error) {
 	scriptData.IP = net.ParseIP(string(pops[5].data))
 	if scriptData.IP == nil {
 		scriptData.URL = string(pops[5].data)
-		return
+		return scriptData, err
 	}
 
 	if len(scriptData.URL) == 0 && scriptData.IP == nil {
 		err = errors.New("ead.URL and ead.IP empty")
-		return
+		return scriptData, err
 	}
 
 	if len(scriptData.URL) > wire.MaxEADDomainLen {
 		err = fmt.Errorf("ead.URL too long: %d > %d", len(scriptData.URL), wire.MaxEADDomainLen)
-		return
+		return scriptData, err
 	}
-	return
+	return scriptData, nil
 }
 
 // PushedData returns an array of byte slices containing any pushed data found
@@ -829,6 +831,7 @@ type AtomicSwapDataPushes struct {
 //
 // This function is only defined in the txscript package due to API limitations
 // which prevent callers using txscript to parse nonstandard scripts.
+// nolint: nilerr
 func ExtractAtomicSwapDataPushes(version uint16, pkScript []byte) (*AtomicSwapDataPushes, error) {
 	pops, err := parseScript(pkScript)
 	if err != nil {

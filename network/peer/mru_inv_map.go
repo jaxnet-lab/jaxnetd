@@ -84,7 +84,10 @@ func (m *mruInventoryMap) Add(iv *wire.InvVect) {
 	// node so a new one doesn't have to be allocated.
 	if uint(len(m.invMap))+1 > m.limit {
 		node := m.invList.Back()
-		lru := node.Value.(*wire.InvVect)
+		lru, ok := node.Value.(*wire.InvVect)
+		if !ok {
+			return
+		}
 
 		// Evict least recently used item.
 		delete(m.invMap, *lru)

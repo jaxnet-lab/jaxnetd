@@ -132,7 +132,6 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 		blockActualMMRRoot, err = chaindata.DBGetMMRRootForBlock(dbTx, hash)
 		return err
 	})
-
 	if err != nil {
 		server.logger.Trace().Msgf("Unable to fetch requested block hash %v: %v", hash, err)
 
@@ -182,7 +181,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 		best := sp.serverPeerHandler.chain.BlockChain().BestSnapshot()
 		invMsg := wire.NewMsgInvSizeHint(1)
 		iv := wire.NewInvVect(wire.InvTypeBlock, &best.Hash)
-		invMsg.AddInvVect(iv)
+		_ = invMsg.AddInvVect(iv)
 		sp.QueueMessage(invMsg, doneChan)
 		sp.continueHash = nil
 	}

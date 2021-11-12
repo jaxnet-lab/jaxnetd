@@ -56,13 +56,10 @@ const (
 	//  [0:4]  Block file (4 bytes)
 	//  [4:8]  File offset (4 bytes)
 	//  [8:12] Block length (4 bytes)
-	blockLocSize = 12
 )
 
-var (
-	// castagnoli houses the Catagnoli polynomial used for CRC-32 checksums.
-	castagnoli = crc32.MakeTable(crc32.Castagnoli)
-)
+// castagnoli houses the Catagnoli polynomial used for CRC-32 checksums.
+var castagnoli = crc32.MakeTable(crc32.Castagnoli)
 
 // filer is an interface which acts very similar to a *os.File and is typically
 // implemented by it.  It exists so the test code can provide mock files for
@@ -229,15 +226,16 @@ func blockFilePath(dbPath string, fileNum uint32) string {
 // for the current file that will have all new data appended.  Unlike openFile,
 // this function does not keep track of the open file and it is not subject to
 // the maxOpenFiles limit.
+// nolint: gomnd
 func (s *blockStore) openWriteFile(fileNum uint32) (filer, error) {
 	// The current block file needs to be read-write so it is possible to
 	// append to it.  Also, it shouldn't be part of the least recently used
 	// file.
 	filePath := blockFilePath(s.basePath, fileNum)
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {
 		str := fmt.Sprintf("failed to open file %q: %v", filePath, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDBErr(database.ErrDriverSpecific, str, err)
 	}
 
 	return file, nil
@@ -255,7 +253,7 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, error) {
 	filePath := blockFilePath(s.basePath, fileNum)
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, makeDbErr(database.ErrDriverSpecific, err.Error(),
+		return nil, makeDBErr(database.ErrDriverSpecific, err.Error(),
 			err)
 	}
 	blockFile := &lockableFile{file: file}
@@ -274,7 +272,10 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, error) {
 	s.lruMutex.Lock()
 	lruList := s.openBlocksLRU
 	if lruList.Len() >= maxOpenFiles {
-		lruFileNum := lruList.Remove(lruList.Back()).(uint32)
+		lruFileNum, ok := lruList.Remove(lruList.Back()).(uint32)
+		if !ok {
+			return nil, err
+		}
 		oldBlockFile := s.openBlockFiles[lruFileNum]
 
 		// Close the old file under the write lock for the file in case
@@ -302,7 +303,7 @@ func (s *blockStore) openFile(fileNum uint32) (*lockableFile, error) {
 func (s *blockStore) deleteFile(fileNum uint32) error {
 	filePath := blockFilePath(s.basePath, fileNum)
 	if err := os.Remove(filePath); err != nil {
-		return makeDbErr(database.ErrDriverSpecific, err.Error(), err)
+		return makeDBErr(database.ErrDriverSpecific, err.Error(), err)
 	}
 
 	return nil
@@ -384,11 +385,13 @@ func (s *blockStore) writeData(data []byte, fieldName string) error {
 		str := fmt.Sprintf("failed to write %s to file %d at "+
 			"offset %d: %v", fieldName, wc.curFileNum,
 			wc.curOffset-uint32(n), err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDBErr(database.ErrDriverSpecific, str, err)
 	}
 
 	return nil
 }
+
+const extraBytesLen = 12
 
 // writeBlock appends the specified raw block bytes to the store's write cursor
 // location and increments it accordingly.  When the block would exceed the max
@@ -405,7 +408,7 @@ func (s *blockStore) writeBlock(rawBlock []byte) (blockLocation, error) {
 	// 4 bytes each for block network + 4 bytes for block length +
 	// length of raw block + 4 bytes for checksum.
 	blockLen := uint32(len(rawBlock))
-	fullLen := blockLen + 12
+	fullLen := blockLen + extraBytesLen
 
 	// Move to the next block file if adding the new block would exceed the
 	// max allowed size for the current block file.  Also detect overflow
@@ -475,7 +478,7 @@ func (s *blockStore) writeBlock(rawBlock []byte) (blockLocation, error) {
 	_, _ = hasher.Write(scratch[:])
 
 	// Serialized block.
-	if err := s.writeData(rawBlock[:], "block"); err != nil {
+	if err := s.writeData(rawBlock, "block"); err != nil {
 		return blockLocation{}, err
 	}
 	_, _ = hasher.Write(rawBlock)
@@ -522,7 +525,7 @@ func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte,
 		str := fmt.Sprintf("failed to read block %s from file %d, "+
 			"offset %d: %v", hash, loc.blockFileNum, loc.fileOffset,
 			err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDBErr(database.ErrDriverSpecific, str, err)
 	}
 
 	// Calculate the checksum of the read data and ensure it matches the
@@ -535,7 +538,7 @@ func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte,
 		str := fmt.Sprintf("block data for block %s checksum "+
 			"does not match - got %x, want %x", hash,
 			calculatedChecksum, serializedChecksum)
-		return nil, makeDbErr(database.ErrCorruption, str, nil)
+		return nil, makeDBErr(database.ErrCorruption, str, nil)
 	}
 
 	// The network associated with the block must match the current active
@@ -546,7 +549,7 @@ func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte,
 		str := fmt.Sprintf("block data for block %s is for the "+
 			"wrong network - got %d, want %d", hash, serializedNet,
 			uint32(s.network))
-		return nil, makeDbErr(database.ErrDriverSpecific, str, nil)
+		return nil, makeDBErr(database.ErrDriverSpecific, str, nil)
 	}
 
 	// The raw block excludes the network, length of the block, and
@@ -582,7 +585,7 @@ func (s *blockStore) readBlockRegion(loc blockLocation, offset, numBytes uint32)
 		str := fmt.Sprintf("failed to read region from block file %d, "+
 			"offset %d, len %d: %v", loc.blockFileNum, readOffset,
 			numBytes, err)
-		return nil, makeDbErr(database.ErrDriverSpecific, str, err)
+		return nil, makeDBErr(database.ErrDriverSpecific, str, err)
 	}
 
 	return serializedData, nil
@@ -612,7 +615,7 @@ func (s *blockStore) syncBlocks() error {
 	if err := wc.curFile.file.Sync(); err != nil {
 		str := fmt.Sprintf("failed to sync file %d: %v", wc.curFileNum,
 			err)
-		return makeDbErr(database.ErrDriverSpecific, str, err)
+		return makeDBErr(database.ErrDriverSpecific, str, err)
 	}
 
 	return nil

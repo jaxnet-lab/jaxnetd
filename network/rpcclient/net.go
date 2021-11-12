@@ -91,7 +91,7 @@ func (c *Client) NodeAsync(command jaxjson.NodeSubCmd, host string,
 // connect or diconnect a non-persistent one.
 //
 // The connectSubCmd should be set either "perm" or "temp", depending on
-// whether we are targetting a persistent or non-persistent peer. Passing nil
+// whether we are targeting a persistent or non-persistent peer. Passing nil
 // will cause the default value to be used, which currently is "temp".
 func (c *Client) Node(command jaxjson.NodeSubCmd, host string,
 	connectSubCmd *string) error {

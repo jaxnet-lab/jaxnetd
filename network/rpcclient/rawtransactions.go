@@ -134,7 +134,6 @@ func (r FutureGetTxDetails) Receive() (*jaxjson.TxRawResult, error) {
 		return nil, err
 	}
 	return &rawTxResult, nil
-
 }
 
 // GetTxDetailsAsync returns an instance of a type that can be used to get

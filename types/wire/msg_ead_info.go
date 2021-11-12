@@ -46,7 +46,6 @@ func (msg *EADAddress) HasShard(shards ...uint32) (hasOneOf bool) {
 	for _, shard := range shards {
 		if shard == msg.Shard {
 			return true
-
 		}
 	}
 	return false
@@ -144,7 +143,7 @@ func (msg *EADAddress) Eq(ip net.IP, url string, shardID uint32) bool {
 }
 
 func (msg *EADAddress) Command() string {
-	return CmdEadIp
+	return CmdEadIP
 }
 
 func (msg *EADAddress) MaxPayloadLength(uint32) uint32 {

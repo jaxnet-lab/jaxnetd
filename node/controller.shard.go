@@ -81,6 +81,7 @@ func (chainCtl *chainController) GetChainMetrics() jaxjson.GetChainMetricsResult
 	return res
 }
 
+// nolint: contextcheck
 func (chainCtl *chainController) runShards() error {
 	if err := chainCtl.syncShardsIndex(); err != nil {
 		return err
@@ -192,6 +193,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 }
 
+// nolint: gomnd
 func (chainCtl *chainController) saveShardsIndex() {
 	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	content, err := json.Marshal(chainCtl.shardsIndex)
@@ -200,12 +202,10 @@ func (chainCtl *chainController) saveShardsIndex() {
 		return
 	}
 
-	if err = ioutil.WriteFile(shardsFile, content, 0644); err != nil {
+	if err = ioutil.WriteFile(shardsFile, content, 0o644); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("unable to write shards index")
 		return
 	}
-
-	return
 }
 
 func (chainCtl *chainController) syncShardsIndex() error {

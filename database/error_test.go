@@ -18,12 +18,12 @@ func TestErrorCodeStringer(t *testing.T) {
 		in   database.ErrorCode
 		want string
 	}{
-		{database.ErrDbTypeRegistered, "ErrDbTypeRegistered"},
-		{database.ErrDbUnknownType, "ErrDbUnknownType"},
-		{database.ErrDbDoesNotExist, "ErrDbDoesNotExist"},
-		{database.ErrDbExists, "ErrDbExists"},
-		{database.ErrDbNotOpen, "ErrDbNotOpen"},
-		{database.ErrDbAlreadyOpen, "ErrDbAlreadyOpen"},
+		{database.ErrDBTypeRegistered, "ErrDBTypeRegistered"},
+		{database.ErrDBUnknownType, "ErrDBUnknownType"},
+		{database.ErrDBDoesNotExist, "ErrDBDoesNotExist"},
+		{database.ErrDBExists, "ErrDBExists"},
+		{database.ErrDBNotOpen, "ErrDBNotOpen"},
+		{database.ErrDBAlreadyOpen, "ErrDBAlreadyOpen"},
 		{database.ErrInvalid, "ErrInvalid"},
 		{database.ErrCorruption, "ErrCorruption"},
 		{database.ErrTxClosed, "ErrTxClosed"},

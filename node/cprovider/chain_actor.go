@@ -161,7 +161,7 @@ func (chainProvider *ChainProvider) DBUpdateCallback(tx database.Tx) error {
 	if feeEstimationData != nil {
 		// delete it from the database so that we don't try to restore the
 		// same thing again somehow.
-		metadata.Delete(mempool.EstimateFeeDatabaseKey)
+		_ = metadata.Delete(mempool.EstimateFeeDatabaseKey)
 
 		// If there is an error, log it and make a new fee estimator.
 		var err error
@@ -204,7 +204,6 @@ func (chainProvider *ChainProvider) initBlkTmplGenerator() {
 
 	chainProvider.gbtWorkState = mining.NewGbtWorkState(chainProvider.TimeSource,
 		chainProvider.blockTmplGenerator, chainProvider.logger)
-
 }
 
 func (chainProvider *ChainProvider) BlkTmplGenerator() *mining.BlkTmplGenerator {
@@ -234,6 +233,7 @@ func (chainProvider *ChainProvider) Stats() map[string]float64 {
 func (chainProvider *ChainProvider) BlockChain() *blockchain.BlockChain {
 	return chainProvider.blockChain
 }
+
 func (chainProvider *ChainProvider) MiningAddresses() []jaxutil.Address {
 	return chainProvider.MiningAddrs
 }
@@ -249,6 +249,7 @@ func (chainProvider *ChainProvider) ShardCount() (uint32, error) {
 func (chainProvider *ChainProvider) BestSnapshot() *chaindata.BestState {
 	return chainProvider.BlockChain().BestSnapshot()
 }
+
 func (chainProvider *ChainProvider) CalcKForHeight(height int32) uint32 {
 	return chainProvider.BlockChain().CalcKForHeight(height)
 }
@@ -258,6 +259,7 @@ func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
 	return nil
 }
 
+// nolint: staticcheck
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,
 	blockGen chaindata.ChainBlockGenerator) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)
@@ -323,6 +325,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 	return nil
 }
 
+// nolint: unparam
 func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockchain.IndexManager, []chaincfg.Checkpoint) {
 	// Create the transaction and address indexes if needed.
 	//
@@ -366,9 +369,9 @@ func (chainProvider *ChainProvider) initIndexes(cfg ChainRuntimeConfig) (blockch
 
 	// Merge given checkpoints with the default ones unless they are disabled.
 	var checkpoints []chaincfg.Checkpoint
-	if !cfg.DisableCheckpoints {
-		// checkpoints = mergeCheckpoints(chainProvider.ChainParams.Checkpoints, cfg.AddCheckpoints)
-	}
+	// if !cfg.DisableCheckpoints {
+	//	checkpoints = mergeCheckpoints(chainProvider.ChainParams.Checkpoints, cfg.AddCheckpoints)
+	// }
 
 	return indexManager, checkpoints
 }

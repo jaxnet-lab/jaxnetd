@@ -13,11 +13,11 @@ type nodeMetrics struct {
 	sync.RWMutex
 	cfg   *Config
 	stats nodeStatsProvider
-	name  string
 
 	logger        zerolog.Logger
 	metricsByName map[string]prometheus.Gauge
 }
+
 type nodeStatsProvider interface {
 	Stats() map[string]float64
 }

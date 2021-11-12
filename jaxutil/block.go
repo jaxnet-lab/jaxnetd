@@ -64,10 +64,10 @@ func (b *Block) Bytes() ([]byte, error) {
 
 	// Serialize the MsgBlock.
 	w := bytes.NewBuffer(make([]byte, 0, b.msgBlock.SerializeSize()))
-	err := b.msgBlock.Serialize(w)
-	if err != nil {
+	if err := b.msgBlock.Serialize(w); err != nil {
 		return nil, err
 	}
+
 	serializedBlock := w.Bytes()
 
 	// Cache the serialized bytes and return them.
@@ -231,7 +231,7 @@ func (b *Block) TxLoc() ([]wire.TxLoc, error) {
 	}
 	rbuf := bytes.NewBuffer(rawMsg)
 
-	var mblock = *b.msgBlock
+	mblock := *b.msgBlock
 
 	txLocs, err := mblock.DeserializeTxLoc(rbuf)
 	if err != nil {

@@ -65,7 +65,7 @@ func NewCoinSet(coins []Coin) *CoinSet {
 func (cs *CoinSet) Coins() []Coin {
 	coins := make([]Coin, cs.coinList.Len())
 	for i, e := 0, cs.coinList.Front(); e != nil; i, e = i+1, e.Next() {
-		coins[i] = e.Value.(Coin)
+		coins[i], _ = e.Value.(Coin)
 	}
 	return coins
 }
@@ -115,6 +115,7 @@ func (cs *CoinSet) ShiftCoin() Coin {
 // removeElement updates the cached value amounts in the CoinSet,
 // removes the element from the list, then returns the Coin that
 // was removed to the caller.
+//nolint: forcetypeassert
 func (cs *CoinSet) removeElement(e *list.Element) Coin {
 	c := e.Value.(Coin)
 	cs.coinList.Remove(e)
@@ -142,11 +143,9 @@ func NewMsgTxWithInputCoins(txVersion int32, inputCoins Coins) *wire.MsgTx {
 	return msgTx
 }
 
-var (
-	// ErrCoinsNoSelectionAvailable is returned when a CoinSelector believes there is no
-	// possible combination of coins which can meet the requirements provided to the selector.
-	ErrCoinsNoSelectionAvailable = errors.New("no coin selection possible")
-)
+// ErrCoinsNoSelectionAvailable is returned when a CoinSelector believes there is no
+// possible combination of coins which can meet the requirements provided to the selector.
+var ErrCoinsNoSelectionAvailable = errors.New("no coin selection possible")
 
 // satisfiesTargetValue checks that the totalValue is either exactly the targetValue
 // or is greater than the targetValue by at least the minChange amount.
@@ -294,7 +293,6 @@ func (s MinPriorityCoinSelector) CoinSelect(targetValue jaxutil.Amount, coins []
 					MinChangeAmount:        s.MinChangeAmount,
 					MinAvgValueAgePerInput: newMinAvgValueAge,
 				}).CoinSelect(newTargetValue, possibleCoins[0:cutoffIndex])
-
 				if err != nil {
 					continue
 				}

@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+// nolint: gomnd
 func readCookieFile(path string) (username, password string, err error) {
 	f, err := os.Open(path)
 	if err != nil {

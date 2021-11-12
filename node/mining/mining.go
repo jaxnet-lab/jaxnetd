@@ -153,7 +153,6 @@ func txPQByPriority(pq *txPriorityQueue, i, j int) bool {
 		return pq.items[i].feePerKB > pq.items[j].feePerKB
 	}
 	return pq.items[i].priority > pq.items[j].priority
-
 }
 
 // txPQByFee sorts a txPriorityQueue by fees per kilobyte and then transaction
@@ -214,7 +213,7 @@ func mergeUtxoView(viewA *chaindata.UtxoViewpoint, viewB *chaindata.UtxoViewpoin
 // spendTransaction updates the passed view by marking the inputs to the passed
 // transaction as spent.  It also adds all outputs in the passed transaction
 // which are not provably unspendable as available unspent transaction outputs.
-func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *jaxutil.Tx, height int32) error {
+func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *jaxutil.Tx, height int32) {
 	for _, txIn := range tx.MsgTx().TxIn {
 		entry := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if entry != nil {
@@ -223,7 +222,6 @@ func spendTransaction(utxoView *chaindata.UtxoViewpoint, tx *jaxutil.Tx, height 
 	}
 
 	utxoView.AddTxOuts(tx, height)
-	return nil
 }
 
 // logSkippedDeps logs any dependencies which are also skipped as a result of
@@ -380,10 +378,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	}
 	// Calculate the next expected block version based on the state of the
 	// rule change deployments.
-	nextBlockVersion, err := g.blockChain.CalcNextBlockVersion()
-	if err != nil {
-		return nil, err
-	}
+	nextBlockVersion := g.blockChain.CalcNextBlockVersion()
 
 	// Create a new block ready to be solved.
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
@@ -439,6 +434,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	}, nil
 }
 
+// nolint: forcetypeassert
 func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32,
 	burnRewardFlags int, prevHeader wire.BlockHeader) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
@@ -821,11 +817,11 @@ mempoolLoop:
 		BlockSigOpCost:    blockSigOpCost,
 		WitnessCommitment: witnessCommitment,
 	}, nil
-
 }
 
 // AddWitnessCommitment adds the witness commitment as an OP_RETURN outpout
 // within the coinbase tx.  The raw commitment is returned.
+// nolint: gocritic
 func AddWitnessCommitment(coinbaseTx *jaxutil.Tx, blockTxns []*jaxutil.Tx) []byte {
 	// The witness of the coinbase transaction MUST be exactly 32-bytes
 	// of all zeroes.

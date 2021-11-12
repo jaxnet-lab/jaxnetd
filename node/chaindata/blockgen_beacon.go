@@ -151,6 +151,7 @@ func (c *BeaconBlockGenerator) CalcBlockSubsidy(height int32, _ wire.BlockHeader
 	return calcBlockSubsidy(height)
 }
 
+// nolint:gomnd
 func calcBlockSubsidy(height int32) int64 {
 	const (
 		pow10      = 3072 // 3*2^10
@@ -193,6 +194,7 @@ type BTCBlockGen struct {
 	MinerAddress jaxutil.Address
 }
 
+// nolint: gomnd
 func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash.Hash) (wire.BTCBlockAux, bool, error) {
 	burnReward := burnRewardFlag&types.BurnJaxNetReward == types.BurnJaxNetReward
 	tx, err := CreateBitcoinCoinbaseTx(6_2500_0000, 0, int32(-1),
@@ -210,5 +212,4 @@ func (bg *BTCBlockGen) NewBlockTemplate(burnRewardFlag int, beaconHash chainhash
 		MerkleRoot: *tx.Hash(),
 		Timestamp:  time.Unix(time.Now().Unix(), 0),
 	}, false, nil
-
 }

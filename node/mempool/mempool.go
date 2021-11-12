@@ -269,7 +269,7 @@ func (mp *TxPool) RemoveOrphansByTag(tag Tag) uint64 {
 // orphan if adding a new one would cause it to overflow the max allowed.
 //
 // This function MUST be called with the mempool lock held (for writes).
-func (mp *TxPool) limitNumOrphans() error {
+func (mp *TxPool) limitNumOrphans() {
 	// Scan through the orphan pool and remove any expired orphans when it's
 	// time.  This is done for efficiency so the scan only happens
 	// periodically instead of on every orphan added to the pool.
@@ -299,7 +299,7 @@ func (mp *TxPool) limitNumOrphans() error {
 	// Nothing to do if adding another orphan will not cause the pool to
 	// exceed the limit.
 	if len(mp.orphans)+1 <= mp.cfg.Policy.MaxOrphanTxs {
-		return nil
+		return
 	}
 
 	// Remove a random entry from the map.  For most compilers, Go's
@@ -314,8 +314,6 @@ func (mp *TxPool) limitNumOrphans() error {
 		mp.removeOrphan(otx.tx, false)
 		break
 	}
-
-	return nil
 }
 
 // addOrphan adds an orphan transaction to the orphan pool.
@@ -924,6 +922,7 @@ func (mp *TxPool) validateReplacement(tx *jaxutil.Tx,
 // more details.
 //
 // This function MUST be called with the mempool lock held (for writes).
+// nolint: gomnd
 func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	isNew, rateLimit, rejectDupOrphans bool) ([]*chainhash.Hash, *TxDesc, error) {
 	txHash := tx.Hash()
@@ -1075,10 +1074,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 			return missingParents, nil, errors.New(err.Error() + msg)
 		}
 
-	} else {
-		if missingParentsCount > 0 {
-			return missingParents, nil, nil
-		}
+	} else if missingParentsCount > 0 {
+		return missingParents, nil, nil
 	}
 	// for the the swap tx allowed only one missing parent
 
@@ -1093,13 +1090,10 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 		return nil, nil, err
 	}
 
-	switch tx.MsgTx().Version {
-	case wire.TxVerTimeLock:
-		if !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
-			medianTimePast) {
-			return nil, nil, txRuleError(wire.RejectNonstandard,
-				"transaction's sequence locks on inputs not met")
-		}
+	if tx.MsgTx().Version == wire.TxVerTimeLock && !chaindata.SequenceLockActive(sequenceLock, nextBlockHeight,
+		medianTimePast) {
+		return nil, nil, txRuleError(wire.RejectNonstandard,
+			"transaction's sequence locks on inputs not met")
 	}
 
 	// Perform several checks on the transaction inputs using the invariant
@@ -1290,7 +1284,10 @@ func (mp *TxPool) processOrphans(acceptedTx *jaxutil.Tx) []*TxDesc {
 	for processList.Len() > 0 {
 		// Pop the transaction to process from the front of the list.
 		firstElement := processList.Remove(processList.Front())
-		processItem := firstElement.(*jaxutil.Tx)
+		processItem, ok := firstElement.(*jaxutil.Tx)
+		if !ok {
+			return nil
+		}
 
 		prevOut := wire.OutPoint{Hash: *processItem.Hash()}
 		for txOutIdx := range processItem.MsgTx().TxOut {

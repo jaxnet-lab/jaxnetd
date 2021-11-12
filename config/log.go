@@ -9,7 +9,6 @@ package config
 import (
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
-	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
@@ -83,7 +82,6 @@ func init() {
 func setLoggers() {
 	addrmgr.UseLogger(unitLogs[logUnitAMGR])
 	connmgr.UseLogger(unitLogs[logUnitCMGR])
-	database.UseLogger(unitLogs[logUnitBCDB])
 	blockchain.UseLogger(unitLogs[logUnitCHAN])
 	indexers.UseLogger(unitLogs[logUnitINDX])
 	mining.UseLogger(unitLogs[logUnitMINR])
@@ -99,7 +97,7 @@ func setLoggers() {
 // needed.
 func setLogLevel(unit, logLevel string, config corelog.Config) {
 	// Ignore invalid subsystems.
-	logger, ok := unitLogs[unit]
+	_, ok := unitLogs[unit]
 	if !ok {
 		return
 	}
@@ -109,7 +107,7 @@ func setLogLevel(unit, logLevel string, config corelog.Config) {
 		level = zerolog.InfoLevel
 	}
 
-	logger = corelog.New(unit, level, config)
+	logger := corelog.New(unit, level, config)
 	unitLogs[unit] = logger.With().Str("app.unit", unit).Logger()
 }
 

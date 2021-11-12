@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"math/big"
 	"net"
 	"reflect"
 	"testing"
@@ -49,7 +50,7 @@ func TestMessage(t *testing.T) {
 	addrMe := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8333}
 	me := NewNetAddress(addrMe, SFNodeNetwork)
 	me.Timestamp = time.Time{} // Version message has zero value timestamp.
-	msgVersion := NewMsgVersion(chain, me, you, 123123, 0, 0)
+	msgVersion := NewMsgVersion(chain, me, you, 123123, 0, big.NewInt(0))
 
 	msgVerack := NewMsgVerAck()
 	msgGetAddr := NewMsgGetAddr()
@@ -69,7 +70,7 @@ func TestMessage(t *testing.T) {
 	msgFilterAdd := NewMsgFilterAdd([]byte{0x01})
 	msgFilterClear := NewMsgFilterClear()
 	msgFilterLoad := NewMsgFilterLoad([]byte{0x01}, 10, 0, BloomUpdateNone)
-	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, 1, 0)
+	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, big.NewInt(1), 0)
 	msgMerkleBlock := NewMsgMerkleBlock(bh)
 	msgReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	msgGetCFilters := NewMsgGetCFilters(GCSFilterRegular, 0, &chainhash.Hash{})

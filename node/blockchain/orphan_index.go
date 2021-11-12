@@ -167,9 +167,6 @@ func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block, blockActualMM
 		expiration: expiration,
 	}
 	storage.orphanIndex.orphans[*block.Hash()] = oBlock
-	if !blockActualMMR.IsEqual(&chainhash.ZeroHash) {
-
-	}
 	if !blockActualMMR.IsZero() {
 		storage.orphanIndex.actualMMRToBlock[blockActualMMR] = oBlock
 	}
@@ -177,5 +174,4 @@ func (storage *rBlockStorage) addOrphanBlock(block *jaxutil.Block, blockActualMM
 	// Add to previous hash lookup index for faster dependency lookups.
 	prevMMRRoot := block.MsgBlock().Header.PrevBlocksMMRRoot()
 	storage.orphanIndex.mmrRootsOrphans[prevMMRRoot] = append(storage.orphanIndex.mmrRootsOrphans[prevMMRRoot], oBlock)
-
 }

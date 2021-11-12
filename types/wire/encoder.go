@@ -36,7 +36,6 @@ type Int64Time time.Time
 // ReadElement reads the next sequence of bytes from r using little endian
 // depending on the concrete type of element pointed to.
 func ReadElement(r io.Reader, element interface{}) error {
-
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
 	switch e := element.(type) {
@@ -295,7 +294,6 @@ func WriteElement(w io.Writer, element interface{}) error {
 	if t.Kind() == reflect.Ptr && (t.Elem().Kind() == reflect.Slice) {
 		if err := BinarySerializer.PutUint32(w, littleEndian, uint32(v.Elem().Len())); err != nil {
 			return err
-
 		}
 		bytes := make([]byte, v.Elem().Len())
 		reflect.Copy(reflect.ValueOf(bytes), v.Elem())
@@ -393,6 +391,7 @@ func PutUint32(w io.Writer, val uint32) error {
 func Uint64(r io.Reader) (uint64, error) {
 	return BinarySerializer.Uint64(r, littleEndian)
 }
+
 func PutUint64(w io.Writer, val uint64) error {
 	return BinarySerializer.PutUint64(w, littleEndian, val)
 }

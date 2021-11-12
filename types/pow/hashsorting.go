@@ -18,9 +18,8 @@ func HashSortingLastBits(powHash *big.Int, hashSortingSlotNumber uint32) uint32 
 	if len(bits) > 0 {
 		if uint32(bits[0]) < hashSortingSlotNumber {
 			return uint32(bits[0])
-		} else {
-			return uint32(bits[0]) % hashSortingSlotNumber
 		}
+		return uint32(bits[0]) % hashSortingSlotNumber
 	}
 
 	return 0

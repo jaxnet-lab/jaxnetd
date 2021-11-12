@@ -2,7 +2,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: gomnd
 package chaindata
 
 import (
@@ -50,6 +50,7 @@ import (
 // serializeSizeVLQ returns the number of bytes it would take to serialize the
 // passed number as a variable-length quantity according to the format described
 // above.
+// nolint: gomnd
 func serializeSizeVLQ(n uint64) int {
 	size := 1
 	for ; n > 0x7f; n = (n >> 7) - 1 {
@@ -64,6 +65,7 @@ func serializeSizeVLQ(n uint64) int {
 // value.  The result is placed directly into the passed byte slice which must
 // be at least large enough to handle the number of bytes returned by the
 // serializeSizeVLQ function or it will panic.
+// nolint: gomnd
 func putVLQ(target []byte, n uint64) int {
 	offset := 0
 	for ; ; offset++ {
@@ -242,6 +244,7 @@ func isPubKey(script []byte) (bool, []byte) {
 
 // compressedScriptSize returns the number of bytes the passed script would take
 // when encoded with the domain specific compression algorithm described above.
+// nolint: gomnd
 func compressedScriptSize(pkScript []byte) int {
 	// Pay-to-pubkey-Hash script.
 	if valid, _ := isPubKeyHash(pkScript); valid {
@@ -269,6 +272,7 @@ func compressedScriptSize(pkScript []byte) int {
 // script, possibly followed by other data, and returns the number of bytes it
 // occupies taking into account the special encoding of the script size by the
 // domain specific compression algorithm described above.
+// nolint: gomnd
 func decodeCompressedScriptSize(serialized []byte) int {
 	scriptSize, bytesRead := deserializeVLQ(serialized)
 	if bytesRead == 0 {
@@ -297,6 +301,7 @@ func decodeCompressedScriptSize(serialized []byte) int {
 // target byte slice.  The target byte slice must be at least large enough to
 // handle the number of bytes returned by the compressedScriptSize function or
 // it will panic.
+// nolint: gomnd
 func putCompressedScript(target, pkScript []byte) int {
 	// Pay-to-pubkey-Hash script.
 	if valid, hash := isPubKeyHash(pkScript); valid {
@@ -345,6 +350,7 @@ func putCompressedScript(target, pkScript []byte) int {
 // NOTE: The script parameter must already have been proven to be long enough
 // to contain the number of bytes returned by decodeCompressedScriptSize or it
 // will panic.  This is acceptable since it is only an internal function.
+// nolint: gomnd
 func decompressScript(compressedPkScript []byte) []byte {
 	// In practice this function will not be called with a zero-length or
 	// nil script since the nil script encoding includes the length, however
@@ -491,6 +497,7 @@ func compressTxOutAmount(amount uint64) uint64 {
 // decompressTxOutAmount returns the original amount the passed compressed
 // amount represents according to the domain specific compression algorithm
 // described above.
+// nolint: wastedassign, gomnd
 func decompressTxOutAmount(amount uint64) uint64 {
 	// No need to do any work if it's zero.
 	if amount == 0 {

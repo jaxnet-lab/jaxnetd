@@ -143,6 +143,7 @@ func (s *stack) PeekBool(idx int32) (bool, error) {
 // nipN(0): [... x1 x2 x3] -> [... x1 x2]
 // nipN(1): [... x1 x2 x3] -> [... x1 x3]
 // nipN(2): [... x1 x2 x3] -> [... x2 x3]
+// nolint: gocritic
 func (s *stack) nipN(idx int32) ([]byte, error) {
 	sz := int32(len(s.stk))
 	if idx < 0 || idx > sz-1 {

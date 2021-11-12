@@ -228,7 +228,6 @@ func (cm *ConnManager) handleFailedConn(c *ConnReq) {
 // connections so that we remain connected to the network.  Connection requests
 // are processed and mapped by their assigned ids.
 func (cm *ConnManager) connHandler() {
-
 	var (
 		// pending holds all registered conn requests that have yet to
 		// succeed.

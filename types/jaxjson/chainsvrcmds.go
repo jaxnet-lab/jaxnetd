@@ -500,8 +500,7 @@ func NewGetMiningInfoCmd() *GetMiningInfoCmd {
 }
 
 // GetNetworkInfoCmd defines the getnetworkinfo JSON-RPC command.
-type GetNetworkInfoCmd struct {
-	// Subversion string `json:"subversion"`
+type GetNetworkInfoCmd struct { // Subversion string `json:"subversion"`
 }
 
 // NewGetNetworkInfoCmd returns a new instance which can be used to issue a
@@ -554,8 +553,7 @@ type GetRawMempoolCmd struct {
 }
 
 // GetMempoolUTXOs defines the GetMempoolUTXOs JSON-RPC command.
-type GetMempoolUTXOs struct {
-}
+type GetMempoolUTXOs struct{}
 
 // NewGetRawMempoolCmd returns a new instance which can be used to issue a
 // getrawmempool JSON-RPC command.
@@ -1014,11 +1012,9 @@ type EstimateSwapLockTime struct {
 	DestinationShard uint32 `json:"destinationShard"`
 }
 
-type GetChainMetricsCmd struct {
-}
+type GetChainMetricsCmd struct{}
 
-type GetNodeMetricsCmd struct {
-}
+type GetNodeMetricsCmd struct{}
 
 func init() {
 	// No special flags for commands in this file.
@@ -1125,5 +1121,4 @@ func init() {
 	MustRegisterCmd("chain", "preciousblock", (*PreciousBlockCmd)(nil), flags)
 	MustRegisterCmd("chain", "reconsiderblock", (*ReconsiderBlockCmd)(nil), flags)
 	MustRegisterCmd("chain", "verifytxoutproof", (*VerifyTxOutProofCmd)(nil), flags)
-
 }

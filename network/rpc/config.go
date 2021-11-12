@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -125,6 +125,7 @@ func fileExists(name string) bool {
 	return true
 }
 
+// nolint: gomnd
 func genCertPair(certFile, keyFile string) error {
 	// server.logger.Info().Msgf("Generating TLS certificates...")
 
@@ -136,10 +137,10 @@ func genCertPair(certFile, keyFile string) error {
 	}
 
 	// Write cert and key files.
-	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+	if err = ioutil.WriteFile(certFile, cert, 0o666); err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+	if err = ioutil.WriteFile(keyFile, key, 0o600); err != nil {
 		os.Remove(certFile)
 		return err
 	}

@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -152,6 +152,8 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 	return results, nil
 }
 
+const microsecsInSecond = 1_000
+
 // handleGetPeerInfo implements the getpeerinfo command.
 func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	peers := server.connMgr.ConnectedPeers()
@@ -184,7 +186,7 @@ func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-cha
 		if p.ToPeer().LastPingNonce() != 0 {
 			wait := float64(time.Since(statsSnap.LastPingTime).Nanoseconds())
 			// We actually want microseconds.
-			info.PingWait = wait / 1000
+			info.PingWait = wait / microsecsInSecond
 		}
 		infos = append(infos, info)
 	}
@@ -218,7 +220,6 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 			}
 		}
 		if err != nil && peerExists(server.connMgr, addr, int32(nodeID)) {
-
 			return nil, &jaxjson.RPCError{
 				Code:    jaxjson.ErrRPCMisc,
 				Message: "can't disconnect a permanent Server, use remove",

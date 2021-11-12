@@ -20,14 +20,12 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-var (
-	// ErrWebsocketsRequired is an error to describe the condition where the
-	// caller is trying to use a websocket-only feature, such as requesting
-	// notifications or other websocket requests when the client is
-	// configured to run in HTTP POST mode.
-	ErrWebsocketsRequired = errors.New("a websocket connection is required " +
-		"to use this feature")
-)
+// ErrWebsocketsRequired is an error to describe the condition where the
+// caller is trying to use a websocket-only feature, such as requesting
+// notifications or other websocket requests when the client is
+// configured to run in HTTP POST mode.
+var ErrWebsocketsRequired = errors.New("a websocket connection is required " +
+	"to use this feature")
 
 // notificationState is used to track the current state of successfully
 // registered notification so the state can be automatically re-established on
@@ -211,6 +209,7 @@ type NotificationHandlers struct {
 // conversions to get the raw notification types into higher level types and
 // delivers the notification to the appropriate On<X> handler registered with
 // the client.
+// nolint: staticcheck
 func (c *Client) handleNotification(ntfn *rawNotification) {
 	// Ignore the notification if the client is not interested in any
 	// notifications.
@@ -947,6 +946,7 @@ func (r FutureNotifySpentResult) Receive() error {
 // notifySpentInternal is the same as notifySpentAsync except it accepts
 // the converted outpoints as a parameter so the client can more efficiently
 // recreate the previous notification state on reconnect.
+// nolint: staticcheck
 func (c *Client) notifySpentInternal(outpoints []jaxjson.OutPoint) FutureNotifySpentResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
@@ -1082,6 +1082,7 @@ func (r FutureNotifyReceivedResult) Receive() error {
 // notifyReceivedInternal is the same as notifyReceivedAsync except it accepts
 // the converted addresses as a parameter so the client can more efficiently
 // recreate the previous notification state on reconnect.
+// nolint: staticcheck
 func (c *Client) notifyReceivedInternal(addresses []string) FutureNotifyReceivedResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {

@@ -259,13 +259,11 @@ func RegisterCmd(method MethodName, cmd interface{}, flags UsageFlag, replace bo
 		// first optional field are also optional.
 		if isOptional {
 			numOptFields++
-		} else {
-			if numOptFields > 0 {
-				str := fmt.Sprintf(
-					"all fields after the first optional field must also be optional (field name %q)",
-					rtf.Name)
-				return makeError(ErrNonOptionalField, str)
-			}
+		} else if numOptFields > 0 {
+			str := fmt.Sprintf(
+				"all fields after the first optional field must also be optional (field name %q)",
+				rtf.Name)
+			return makeError(ErrNonOptionalField, str)
 		}
 
 		// Ensure the default value can be unsmarshalled into the type

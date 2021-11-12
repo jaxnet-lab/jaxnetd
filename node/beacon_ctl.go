@@ -40,8 +40,8 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 		log:   logger,
 		dbCtl: DBCtl{logger: logger},
 	}
-
 }
+
 func (beaconCtl *BeaconCtl) Init() error {
 	cfg := beaconCtl.cfg
 	params := cfg.Node.ChainParams()
@@ -131,6 +131,7 @@ func (beaconCtl *BeaconCtl) ChainProvider() *cprovider.ChainProvider {
 	return beaconCtl.chainProvider
 }
 
+// nolint: gomnd
 func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 	cleanIndexes, err := beaconCtl.dbCtl.cleanIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
 	if cleanIndexes {
@@ -160,7 +161,7 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 			beaconCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
 		} else {
 			filePath := filepath.Join(beaconCtl.cfg.DataDir, "beacon_mmr.json")
-			err = ioutil.WriteFile(filePath, data, 0755)
+			err = ioutil.WriteFile(filePath, data, 0o755)
 			if err != nil {
 				beaconCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
 			}

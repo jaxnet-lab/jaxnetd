@@ -92,7 +92,7 @@ func checkMultiSigLockScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int6
 }
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
-	hashType SigHashType, kdb KeyDB, sdb ScriptDB, previousScript []byte) error {
+	hashType SigHashType, kdb KeyDB, sdb ScriptDB) error {
 
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
@@ -954,7 +954,7 @@ func TestSignTxOutput(t *testing.T) {
 					address2.EncodeAddress(): {key2, true},
 				}), mkGetScript(map[string][]byte{
 					pay2MultisigScriptAddr.EncodeAddress(): multiSigScript,
-				}), nil); err != nil {
+				})); err != nil {
 				t.Error(err)
 				break
 			}
@@ -1126,26 +1126,6 @@ func TestSignTxOutput(t *testing.T) {
 	// }
 }
 
-func parseKeys(t *testing.T, secret, msg string) (*btcec.PrivateKey, *jaxutil.AddressPubKey, error) {
-	raw, err := hex.DecodeString(secret)
-	if err != nil {
-		t.Errorf("failed to make privKey for %s: %v", msg, err)
-		return nil, nil, err
-
-	}
-
-	key1, _ := btcec.PrivKeyFromBytes(btcec.S256(), raw)
-
-	pk1 := (*btcec.PublicKey)(&key1.PublicKey).SerializeCompressed()
-	address1, err := jaxutil.NewAddressPubKey(pk1, &chaincfg.TestNet3Params)
-	if err != nil {
-		t.Errorf("failed to make address for %s: %v", msg, err)
-		return nil, nil, err
-	}
-
-	return key1, address1, nil
-}
-
 func TestSignTxOutput_multiSigLock(t *testing.T) {
 	// t.Parallel()
 
@@ -1165,7 +1145,8 @@ func TestSignTxOutput_multiSigLock(t *testing.T) {
 	tx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
 		LockTime: 0,
 	}
@@ -1179,6 +1160,7 @@ func TestSignTxOutput_multiSigLock(t *testing.T) {
 	}
 }
 
+// nolint: errcheck
 func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hashType SigHashType, i int) bool {
 	msg := fmt.Sprintf("%d:%d", hashType, i)
 	refundKey, refundAddress, err := genKeys(t, msg)
@@ -1236,7 +1218,8 @@ func testMultiSigLockTx(t *testing.T, tx *wire.MsgTx, inputAmounts []int64, hash
 	parentTx := &wire.MsgTx{
 		Version: wire.TxVerRegular,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: math.MaxUint32}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 100000, PkScript: scriptPkScript}},
 		LockTime: 0,
 	}
@@ -1356,6 +1339,7 @@ var coinbaseOutPoint = &wire.OutPoint{
 
 // Pregenerated private key, with associated public key and pkScripts
 // for the uncompressed and compressed hash160.
+// nolint
 var (
 	privKeyD = []byte{0x6b, 0x0f, 0xd8, 0xda, 0x54, 0x22, 0xd0, 0xb7,
 		0xb4, 0xfc, 0x4e, 0x55, 0xd4, 0x88, 0x42, 0xb3, 0xa1, 0x65,
@@ -1383,8 +1367,10 @@ var (
 )
 
 // Pretend output amounts.
-const coinbaseVal = 2500000000
-const fee = 5000000
+const (
+	coinbaseVal = 2500000000
+	fee         = 5000000
+)
 
 var sigScriptTests = []tstSigScript{
 	{
@@ -1778,7 +1764,8 @@ func TestEADScript(t *testing.T) {
 	tx := &wire.MsgTx{
 		Version: wire.TxVerEADAction,
 		TxIn: []*wire.TxIn{
-			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295}},
+			{PreviousOutPoint: wire.OutPoint{Hash: chainhash.Hash{}, Index: 0}, Sequence: 4294967295},
+		},
 		TxOut:    []*wire.TxOut{{Value: 1}, {Value: 2}, {Value: 3}},
 		LockTime: 0,
 	}
@@ -1792,14 +1779,13 @@ func TestEADScript(t *testing.T) {
 			if err := signAndCheck(msg, tx, i, inputAmounts[i], script, hashType,
 				mkGetKey(map[string]addressToKey{
 					address.EncodeAddress(): {key, false},
-				}), mkGetScript(nil), nil); err != nil {
+				}), mkGetScript(nil)); err != nil {
 				t.Error(err)
 				break
 			}
 
 		}
 	}
-
 }
 
 func TestSmallInt(t *testing.T) {

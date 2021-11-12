@@ -53,6 +53,7 @@ const (
 // String returns the unit as a string.  For recognized units, the SI
 // prefix is used, or "Satoshi" for the base unit.  For all unrecognized
 // units, "1eN BTC" is returned, where N is the JXNAmountUnit.
+// nolint: gomnd
 func (u JXNAmountUnit) String() string {
 	switch u {
 	case AmountMegaJXN:
@@ -92,6 +93,7 @@ func NewJaxNetAmount(f float64) (JaxNetAmount, error) {
 
 // ToUnit converts a monetary amount counted in bitcoin base units to a
 // floating point value representing an amount of bitcoin.
+// nolint: gomnd
 func (a JaxNetAmount) ToUnit(u JXNAmountUnit) float64 {
 	return float64(a) / math.Pow10(int(u+8))
 }
@@ -100,6 +102,7 @@ func (a JaxNetAmount) ToUnit(u JXNAmountUnit) float64 {
 // string for a given unit.  The conversion will succeed for any unit,
 // however, known units will be formated with an appended label describing
 // the units with SI notation, or "Satoshi" for the base unit.
+// nolint: gomnd
 func (a JaxNetAmount) Format(u JXNAmountUnit) string {
 	units := " " + u.String()
 	return strconv.FormatFloat(a.ToUnit(u), 'f', -int(u+8), 64) + units
@@ -137,6 +140,7 @@ const (
 // String returns the unit as a string.  For recognized units, the SI
 // prefix is used, or "Satoshi" for the base unit.  For all unrecognized
 // units, "1eN BTC" is returned, where N is the JXNAmountUnit.
+// nolint: gomnd
 func (u JAXAmountUnit) String() string {
 	switch u {
 	case AmountMegaJAX:
@@ -174,6 +178,7 @@ func NewJaxAmount(f float64) (JaxAmount, error) {
 
 // ToUnit converts a monetary amount counted in bitcoin base units to a
 // floating point value representing an amount of bitcoin.
+// nolint: gomnd
 func (a JaxAmount) ToUnit(u JAXAmountUnit) float64 {
 	return float64(a) / math.Pow10(int(u+4))
 }
@@ -182,6 +187,7 @@ func (a JaxAmount) ToUnit(u JAXAmountUnit) float64 {
 // string for a given unit.  The conversion will succeed for any unit,
 // however, known units will be formated with an appended label describing
 // the units with SI notation, or "Satoshi" for the base unit.
+// nolint: gomnd
 func (a JaxAmount) Format(u JAXAmountUnit) string {
 	units := " " + u.String()
 	return strconv.FormatFloat(a.ToUnit(u), 'f', -int(u+8), 64) + units

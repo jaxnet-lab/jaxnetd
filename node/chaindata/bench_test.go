@@ -6,6 +6,7 @@
 package chaindata
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ var Block100000 = wire.MsgBlock{
 		chainhash.Hash{},
 		time.Unix(1293623863, 0),
 		0x1b04864c,
-		1,
+		big.NewInt(1),
 		0x10572b0f,
 	),
 	Transactions: []*wire.MsgTx{

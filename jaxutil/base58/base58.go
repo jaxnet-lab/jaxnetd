@@ -3,6 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+//nolint: gomnd
 package base58
 
 import (
@@ -11,8 +12,10 @@ import (
 
 //go:generate go run genalphabet.go
 
-var bigRadix = big.NewInt(58)
-var bigZero = big.NewInt(0)
+var (
+	bigRadix = big.NewInt(58)
+	bigZero  = big.NewInt(0)
+)
 
 // Decode decodes a modified base58 string to a byte slice.
 func Decode(b string) []byte {

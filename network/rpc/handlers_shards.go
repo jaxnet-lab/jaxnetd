@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -28,7 +28,6 @@ import (
 
 type ShardRPC struct {
 	*CommonChainRPC
-	shardID uint32
 }
 
 func NewShardRPC(chainProvider *cprovider.ChainProvider,
@@ -184,7 +183,6 @@ func (server *ShardRPC) getBlockBySerialID(verbosity *int, serialID int64) (inte
 
 // handleGetBlock implements the getblock command.
 func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interface{}, error) {
-
 	var blkBytes []byte
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
@@ -201,8 +199,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	// Deserialize the block.
 	blk, err := jaxutil.NewBlockFromBytes(blkBytes)
 	if err != nil {
-		context := "Failed to deserialize block"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), deserializeBlockErrorString)
 	}
 
 	var nextHashString string
@@ -216,8 +213,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 		if blockHeight != -1 && blockHeight < best.Height {
 			nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 			if err != nil {
-				context := "No next block"
-				return nil, server.InternalRPCError(err.Error(), context)
+				return nil, server.InternalRPCError(err.Error(), noNextBlock)
 			}
 			nextHashString = nextHash.String()
 		}
@@ -348,8 +344,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	// Get the block height from BlockChain.
 	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), obtainBlockHeightErrorString)
 	}
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
@@ -358,8 +353,7 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 	if blockHeight < best.Height {
 		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return nil, server.InternalRPCError(err.Error(), noNextBlock)
 		}
 		nextHashString = nextHash.String()
 	}
@@ -429,13 +423,13 @@ func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
-	mode := "template"
+	mode := templateMode
 	if request != nil && request.Mode != "" {
 		mode = request.Mode
 	}
 
 	switch mode {
-	case "template":
+	case templateMode:
 		return server.handleGetBlockTemplateRequest(request, closeChan)
 	case "proposal":
 		return server.handleGetBlockTemplateProposal(request)

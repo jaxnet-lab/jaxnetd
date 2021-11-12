@@ -45,6 +45,8 @@ import (
 // ----------------------------------------------------------------
 //                     36000000
 
+const genesisSequence = 0xffffffff
+
 func main() {
 	aux := extractBTCAux()
 	fmt.Println("BTC AUX:>")
@@ -69,9 +71,9 @@ func main() {
 		Version: 1,
 		TxIn: []*wire.TxIn{
 			{
-				PreviousOutPoint: wire.OutPoint{Index: 0xffffffff},
+				PreviousOutPoint: wire.OutPoint{Index: genesisSequence},
 				SignatureScript:  script,
-				Sequence:         0xffffffff,
+				Sequence:         genesisSequence,
 			},
 		},
 		LockTime: 0,
@@ -150,7 +152,9 @@ func main() {
 	println(hexTx)
 }
 
-func extractBTCAux() (aux wire.BTCBlockAux) {
+func extractBTCAux() wire.BTCBlockAux {
+	var aux wire.BTCBlockAux
+
 	hexStr, err := ioutil.ReadFile("./btc_block.json")
 	if err != nil {
 		log.Fatal(err.Error())
@@ -185,7 +189,7 @@ func extractBTCAux() (aux wire.BTCBlockAux) {
 		log.Fatal(err.Error())
 	}
 
-	return
+	return aux
 }
 
 func BtcBlockToBlockAux(btcBlock *btcdwire.MsgBlock) wire.BTCBlockAux {

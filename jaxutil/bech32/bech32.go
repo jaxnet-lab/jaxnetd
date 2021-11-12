@@ -2,7 +2,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+//nolint: gomnd
 package bech32
 
 import (
@@ -83,6 +83,7 @@ func Decode(bech string) (string, []byte, error) {
 // Encode encodes a byte slice into a bech32 string with the
 // human-readable part hrb. Note that the bytes must each encode 5 bits
 // (base32).
+// nolint: gocritic
 func Encode(hrp string, data []byte) (string, error) {
 	// Calculate the checksum of the data and append it at the end.
 	checksum := bech32Checksum(hrp, data)
@@ -141,11 +142,10 @@ func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, error) 
 	// added to it out of the toBits goal.
 	nextByte := byte(0)
 	filledBits := uint8(0)
-
 	for _, b := range data {
 
 		// Discard unused bits.
-		b = b << (8 - fromBits)
+		b <<= 8 - fromBits
 
 		// How many bits remaining to extract from the input data.
 		remFromBits := fromBits
@@ -166,7 +166,7 @@ func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, error) 
 
 			// Discard the bits we just extracted and get ready for
 			// next iteration.
-			b = b << toExtract
+			b <<= toExtract
 			remFromBits -= toExtract
 			filledBits += toExtract
 
@@ -182,7 +182,7 @@ func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, error) 
 
 	// We pad any unfinished group if specified.
 	if pad && filledBits > 0 {
-		nextByte = nextByte << (toBits - filledBits)
+		nextByte <<= toBits - filledBits
 		regrouped = append(regrouped, nextByte)
 		filledBits = 0
 		nextByte = 0
@@ -197,6 +197,7 @@ func ConvertBits(data []byte, fromBits, toBits uint8, pad bool) ([]byte, error) 
 }
 
 // For more details on the checksum calculation, please refer to BIP 173.
+// nolint: gomnd
 func bech32Checksum(hrp string, data []byte) []byte {
 	// Convert the bytes to list of integers, as this is needed for the
 	// checksum calculation.

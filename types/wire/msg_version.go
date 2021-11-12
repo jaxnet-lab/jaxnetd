@@ -111,7 +111,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 		}
 	}
 
-	err = readNetAddress(buf, pver, &msg.AddrYou, false)
+	err = readNetAddress(buf, &msg.AddrYou, false)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) 
 	// field and they are only considered present if there are bytes
 	// remaining in the message.
 	if buf.Len() > 0 {
-		err = readNetAddress(buf, pver, &msg.AddrMe, false)
+		err = readNetAddress(buf, &msg.AddrMe, false)
 		if err != nil {
 			return err
 		}
@@ -201,12 +201,12 @@ func (msg *MsgVersion) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) 
 		return err
 	}
 
-	err = writeNetAddress(w, pver, &msg.AddrYou, false)
+	err = writeNetAddress(w, &msg.AddrYou, false)
 	if err != nil {
 		return err
 	}
 
-	err = writeNetAddress(w, pver, &msg.AddrMe, false)
+	err = writeNetAddress(w, &msg.AddrMe, false)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 	// remote and local net addresses + nonce 8 bytes + length of user
 	// agent (varInt) + max allowed useragent length + last block 4 bytes +
 	// relay transactions flag 1 byte.
-	return 33 + (maxNetAddressPayload(pver) * 2) + MaxVarIntPayload +
+	return 33 + (maxNetAddressPayload() * 2) + MaxVarIntPayload +
 		MaxUserAgentLen
 }
 

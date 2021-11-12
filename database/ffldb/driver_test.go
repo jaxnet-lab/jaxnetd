@@ -30,9 +30,9 @@ func TestCreateOpenFail(t *testing.T) {
 
 	// Ensure that attempting to open a database that doesn't exist returns
 	// the expected error.
-	wantErrCode := database.ErrDbDoesNotExist
+	wantErrCode := database.ErrDBDoesNotExist
 	_, err := database.Open(dbType, chainctx.BeaconChain, "noexist")
-	if !checkDbError(t, "Open", err, wantErrCode) {
+	if !checkDBError(t, "Open", err, wantErrCode) {
 		return
 	}
 
@@ -114,37 +114,37 @@ func TestCreateOpenFail(t *testing.T) {
 	defer os.RemoveAll(dbPath)
 	db.Close()
 
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	err = db.View(func(tx database.Tx) error {
 		return nil
 	})
-	if !checkDbError(t, "View", err, wantErrCode) {
+	if !checkDBError(t, "View", err, wantErrCode) {
 		return
 	}
 
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	err = db.Update(func(tx database.Tx) error {
 		return nil
 	})
-	if !checkDbError(t, "Update", err, wantErrCode) {
+	if !checkDBError(t, "Update", err, wantErrCode) {
 		return
 	}
 
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	_, err = db.Begin(false)
-	if !checkDbError(t, "Begin(false)", err, wantErrCode) {
+	if !checkDBError(t, "Begin(false)", err, wantErrCode) {
 		return
 	}
 
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	_, err = db.Begin(true)
-	if !checkDbError(t, "Begin(true)", err, wantErrCode) {
+	if !checkDBError(t, "Begin(true)", err, wantErrCode) {
 		return
 	}
 
-	wantErrCode = database.ErrDbNotOpen
+	wantErrCode = database.ErrDBNotOpen
 	err = db.Close()
-	if !checkDbError(t, "Close", err, wantErrCode) {
+	if !checkDBError(t, "Close", err, wantErrCode) {
 		return
 	}
 }

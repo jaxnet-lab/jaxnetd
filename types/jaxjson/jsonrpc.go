@@ -32,6 +32,7 @@ var _, _ error = RPCError{}, (*RPCError)(nil)
 func (e RPCError) Error() string {
 	return fmt.Sprintf("%d: %s - %s", e.Code, e.Message, e.Method)
 }
+
 func (e RPCError) WithMethod(name string) RPCError {
 	e.Method = name
 	return e
@@ -73,7 +74,7 @@ func IsValidIDType(id interface{}) bool {
 // requests, however this struct it being exported in case the caller wants to
 // construct raw requests for some reason.
 type Request struct {
-	JsonRPC string            `json:"jsonrpc"`
+	JSONRPC string            `json:"jsonrpc"`
 	Method  string            `json:"method"`
 	Scope   string            `json:"scope"`
 	ShardID uint32            `json:"shard_id"`
@@ -106,7 +107,7 @@ func NewRequest(id interface{}, method MethodName, shardID uint32, params []inte
 	}
 
 	return &Request{
-		JsonRPC: "1.0",
+		JSONRPC: "1.0",
 		ID:      id,
 		Method:  method.Method,
 		Scope:   method.Scope,

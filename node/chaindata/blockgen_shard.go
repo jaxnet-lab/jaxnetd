@@ -52,7 +52,8 @@ type ShardBlockGenerator struct {
 }
 
 func NewShardBlockGen(ctx chainctx.IChainCtx, beacon BeaconBlockProvider) *ShardBlockGenerator {
-	return &ShardBlockGenerator{beacon: beacon, ctx: ctx,
+	return &ShardBlockGenerator{
+		beacon: beacon, ctx: ctx,
 		powLimit:              pow.CompactToBig(ctx.Params().PowParams.PowLimitBits),
 		hashSortingSlotNumber: ctx.Params().PowParams.HashSortingSlotNumber,
 	}
@@ -106,6 +107,7 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 	return nil
 }
 
+//nolint: forcetypeassert
 func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error {
 	err := c.ValidateMergeMiningData(block.Header)
 	if err != nil {
@@ -120,6 +122,7 @@ func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height i
 	return ValidateShardCoinbase(shardHeader, shardCoinbaseTx, expectedReward)
 }
 
+// nolint: revive
 func (c *ShardBlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
 	relativeBeaconHeight := c.ctx.GenesisBeaconHeight() + (height / 16)
 	kVal := c.beacon.CalcKForHeight(relativeBeaconHeight)

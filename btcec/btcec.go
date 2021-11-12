@@ -26,12 +26,10 @@ import (
 	"sync"
 )
 
-var (
-	// fieldOne is simply the integer 1 in field representation.  It is
-	// used to avoid needing to create it multiple times during the internal
-	// arithmetic.
-	fieldOne = new(fieldVal).SetInt(1)
-)
+// fieldOne is simply the integer 1 in field representation.  It is
+// used to avoid needing to create it multiple times during the internal
+// arithmetic.
+var fieldOne = new(fieldVal).SetInt(1)
 
 // KoblitzCurve supports a koblitz curve implementation that fits the ECC Curve
 // interface from crypto/elliptic.
@@ -763,6 +761,7 @@ func NAF(k []byte) ([]byte, []byte) {
 
 // ScalarMult returns k*(Bx, By) where k is a big endian integer.
 // Part of the elliptic.Curve interface.
+// nolint: gocritic
 func (curve *KoblitzCurve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	// Point Q = ∞ (point at infinity).
 	qx, qy, qz := new(fieldVal), new(fieldVal), new(fieldVal)
@@ -890,7 +889,7 @@ func (curve *KoblitzCurve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 // QPlus1Div4 returns the (P+1)/4 constant for the curve for use in calculating
 // square roots via exponentiation.
 //
-// DEPRECATED: The actual value returned is (P+1)/4, where as the original
+// Deprecated: The actual value returned is (P+1)/4, where as the original
 // method name implies that this value is (((P+1)/4)+1)/4. This method is kept
 // to maintain backwards compatibility of the API. Use Q() instead.
 func (curve *KoblitzCurve) QPlus1Div4() *big.Int {
@@ -903,8 +902,10 @@ func (curve *KoblitzCurve) Q() *big.Int {
 	return curve.q
 }
 
-var initonce sync.Once
-var secp256k1 KoblitzCurve
+var (
+	initonce  sync.Once
+	secp256k1 KoblitzCurve
+)
 
 func initAll() {
 	initS256()

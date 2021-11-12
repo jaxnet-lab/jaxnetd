@@ -44,6 +44,7 @@ type Filter struct {
 //
 // For more information on what values to use for both elements and fprate,
 // see https://en.wikipedia.org/wiki/Bloom_filter.
+// nolint: gomnd
 func NewFilter(elements, tweak uint32, fprate float64, flags wire.BloomUpdateType) *Filter {
 	// Massage the false positive rate to sane values.
 	if fprate > 1.0 {

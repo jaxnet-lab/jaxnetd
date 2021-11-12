@@ -15,7 +15,6 @@ const metricsNamespace = "jax_core"
 type metricsManager struct {
 	metrics  []IMetric
 	interval time.Duration
-	closing  bool
 }
 
 // IMetric metric reader
@@ -40,9 +39,7 @@ func MetricsManager(ctx context.Context, interval time.Duration) IMetricManager 
 }
 
 func (m *metricsManager) Add(metrics ...IMetric) {
-	for _, metric := range metrics {
-		m.metrics = append(m.metrics, metric)
-	}
+	m.metrics = append(m.metrics, metrics...)
 }
 
 func (m *metricsManager) collector(ctx context.Context) {

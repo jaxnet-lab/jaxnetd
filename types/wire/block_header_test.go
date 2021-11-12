@@ -148,11 +148,11 @@ func TestTreeEncoding(t *testing.T) {
 		bh.SetMergedMiningTreeCodingProof(hashes, coding, bitsSize)
 
 		// hashes2, coding2, bitsSize2 := bh.MergedMiningTreeCodingProof()
-		// if bytes.Compare(hashes, hashes2) != 0 {
+		// if bytes.Equal(hashes, hashes2) != 0 {
 		// 	t.Error("Hashes not equal at ", i)
 		// }
 
-		// if bytes.Compare(coding, coding2) != 0 {
+		// if bytes.Equal(coding, coding2) != 0 {
 		// 	t.Error("Coding not equal at ", i)
 		// }
 		// if bitsSize != bitsSize2 {
@@ -207,24 +207,24 @@ func TestShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.merkleRoot[:], sh2.merkleRoot[:]) != 0 {
+	if !bytes.Equal(sh.merkleRoot[:], sh2.merkleRoot[:]) {
 		t.Error("Merkle Root not equal")
 		return
 	}
 
-	if bytes.Compare(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) != 0 {
+	if !bytes.Equal(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) {
 		t.Error("prevBlock Root not equal")
 		return
 	}
 
 	// hashes2, coding2, bits2 := sh.beaconHeader.MergedMiningTreeCodingProof()
 
-	// if bytes.Compare(hashes, hashes2) != 0 {
+	// if bytes.Equal(hashes, hashes2) != 0 {
 	// 	t.Error("Proof hashes not equal")
 	// 	return
 	// }
 
-	// if bytes.Compare(coding, coding2) != 0 {
+	// if bytes.Equal(coding, coding2) != 0 {
 	// 	t.Error("Proof coding not equal")
 	// 	return
 	// }
@@ -290,12 +290,12 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(sh.merkleRoot[:], sh2.merkleRoot[:]) != 0 {
+	if !bytes.Equal(sh.merkleRoot[:], sh2.merkleRoot[:]) {
 		t.Error("Merkle Root not equal")
 		return
 	}
 
-	if bytes.Compare(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) != 0 {
+	if !bytes.Equal(sh.prevMMRRoot[:], sh2.prevMMRRoot[:]) {
 		t.Error("prevBlock Root not equal")
 		return
 	}
@@ -303,12 +303,12 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	hashes2, coding2, bits2 := sh2.beaconHeader.MergedMiningTreeCodingProof()
 
 	fmt.Println(hashes2, coding2, bits2)
-	// if bytes.Compare(hashes, hashes2) != 0 {
+	// if bytes.Equal(hashes, hashes2) != 0 {
 	// 	t.Error("Proof hashes not equal")
 	// 	return
 	// }
 
-	if bytes.Compare(coding, coding2) != 0 {
+	if !bytes.Equal(coding, coding2) {
 		t.Error("Proof coding not equal")
 		return
 	}

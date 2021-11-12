@@ -47,9 +47,7 @@ const (
 	rpcAuthTimeoutSeconds = 10
 )
 
-var (
-	timeZeroVal time.Time
-)
+var timeZeroVal time.Time
 
 // Errors
 var (

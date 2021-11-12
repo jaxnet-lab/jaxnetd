@@ -183,6 +183,8 @@ func dbPutTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash, serializedData 
 	return txIndex.Put(txHash[:], serializedData)
 }
 
+const minBytes = 12
+
 // dbFetchTxIndexEntry uses an existing database transaction to fetch the block
 // region for the provided transaction hash from the transaction index.  When
 // there is no entry for the provided hash, nil will be returned for the both
@@ -196,7 +198,7 @@ func dbFetchTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) (*database.Bl
 	}
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
-	if len(serializedData) < 12 {
+	if len(serializedData) < minBytes {
 		return nil, database.Error{
 			ErrorCode: database.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index "+
@@ -306,6 +308,7 @@ func (idx *TxIndex) Init() error {
 		// below.
 		var highestKnown, nextUnknown uint32
 		testBlockID := uint32(1)
+		//nolint: gomnd
 		increment := uint32(100000)
 		for {
 			_, err := dbFetchBlockHashByID(dbTx, testBlockID)
@@ -390,7 +393,6 @@ func (idx *TxIndex) Create(dbTx database.Tx) error {
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
-
 	// Increment the internal block ID to use for the block being connected
 	// and add all of the transactions in the block to the index.
 	newBlockID := idx.curBlockID + 1

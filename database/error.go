@@ -16,33 +16,33 @@ const (
 	// Errors related to driver registration.
 	// **************************************
 
-	// ErrDbTypeRegistered indicates two different database drivers
+	// ErrDBTypeRegistered indicates two different database drivers
 	// attempt to register with the name database type.
-	ErrDbTypeRegistered ErrorCode = iota
+	ErrDBTypeRegistered ErrorCode = iota
 
 	// *************************************
 	// Errors related to database functions.
 	// *************************************
 
-	// ErrDbUnknownType indicates there is no driver registered for
+	// ErrDBUnknownType indicates there is no driver registered for
 	// the specified database type.
-	ErrDbUnknownType
+	ErrDBUnknownType
 
-	// ErrDbDoesNotExist indicates open is called for a database that
+	// ErrDBDoesNotExist indicates open is called for a database that
 	// does not exist.
-	ErrDbDoesNotExist
+	ErrDBDoesNotExist
 
-	// ErrDbExists indicates create is called for a database that
+	// ErrDBExists indicates create is called for a database that
 	// already exists.
-	ErrDbExists
+	ErrDBExists
 
-	// ErrDbNotOpen indicates a database instance is accessed before
+	// ErrDBNotOpen indicates a database instance is accessed before
 	// it is opened or after it is closed.
-	ErrDbNotOpen
+	ErrDBNotOpen
 
-	// ErrDbAlreadyOpen indicates open was called on a database that
+	// ErrDBAlreadyOpen indicates open was called on a database that
 	// is already open.
-	ErrDbAlreadyOpen
+	ErrDBAlreadyOpen
 
 	// ErrInvalid indicates the specified database is not valid.
 	ErrInvalid
@@ -134,12 +134,12 @@ const (
 
 // Map of ErrorCode values back to their constant names for pretty printing.
 var errorCodeStrings = map[ErrorCode]string{
-	ErrDbTypeRegistered:   "ErrDbTypeRegistered",
-	ErrDbUnknownType:      "ErrDbUnknownType",
-	ErrDbDoesNotExist:     "ErrDbDoesNotExist",
-	ErrDbExists:           "ErrDbExists",
-	ErrDbNotOpen:          "ErrDbNotOpen",
-	ErrDbAlreadyOpen:      "ErrDbAlreadyOpen",
+	ErrDBTypeRegistered:   "ErrDBTypeRegistered",
+	ErrDBUnknownType:      "ErrDBUnknownType",
+	ErrDBDoesNotExist:     "ErrDBDoesNotExist",
+	ErrDBExists:           "ErrDBExists",
+	ErrDBNotOpen:          "ErrDBNotOpen",
+	ErrDBAlreadyOpen:      "ErrDBAlreadyOpen",
 	ErrInvalid:            "ErrInvalid",
 	ErrCorruption:         "ErrCorruption",
 	ErrTxClosed:           "ErrTxClosed",

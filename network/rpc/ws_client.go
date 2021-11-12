@@ -1,3 +1,4 @@
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -14,7 +15,6 @@ import (
 
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
-	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -48,7 +48,6 @@ type wsClient struct {
 	sync.Mutex
 
 	manager *WsManager
-	chain   chainctx.IChainCtx
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
 
@@ -218,7 +217,7 @@ out:
 		//
 		// RPC quirks can be enabled by the user to avoid compatibility issues
 		// with software relying on Core's behavior.
-		if request.ID == nil /*&& !(c.manager.server.cfg.Quirks && request.JsonRPC == "") */ {
+		if request.ID == nil /*&& !(c.manager.server.cfg.Quirks && request.JSONRPC == "") */ {
 			if !c.authenticated {
 				break out
 			}
@@ -557,6 +556,7 @@ func (c *wsClient) Disconnect() {
 }
 
 // Start begins processing input and output messages.
+// nolint: gomnd
 func (c *wsClient) Start() {
 	c.manager.logger.Trace().Str("address", c.addr).Msg("Starting websocket client")
 

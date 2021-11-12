@@ -77,6 +77,7 @@ func MinRelayFeeAmount(isBeacon bool) jaxutil.Amount {
 // calcMinRequiredTxRelayFee returns the minimum transaction fee required for a
 // transaction with the passed serialized size to be accepted into the memory
 // pool and relayed.
+// nolint: gomnd
 func calcMinRequiredTxRelayFee(serializedSize int64, minRelayTxFee jaxutil.Amount, isBeacon bool) int64 {
 	// Calculate the minimum fee for a transaction to be allowed into the
 	// mempool and relayed by scaling the base fee (which is the minimum
@@ -199,6 +200,7 @@ func checkPkScriptStandard(pkScript []byte, scriptClass txscript.ScriptClass) er
 // Dust is defined in terms of the minimum transaction relay fee.  In
 // particular, if the cost to the network to spend coins is more than 1/3 of the
 // minimum transaction relay fee, it is considered dust.
+// nolint: gomnd
 func isDust(txOut *wire.TxOut, minRelayTxFee jaxutil.Amount) bool {
 	// Unspendable outputs are considered dust.
 	if txscript.IsUnspendable(txOut.PkScript) {

@@ -188,6 +188,7 @@ func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (
 // breadth-first, assigning a height to every block with a path back to the
 // genesis block. This function modifies the height field on the blocksMap
 // entries.
+// nolint: forcetypeassert
 func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) error {
 	queue := list.New()
 
@@ -332,6 +333,7 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //    - 0x8ba5b9e763: VLQ-encoded compressed amount for 366875659 (3.66875659 BTC)
 //    - 0x01: special script type pay-to-script-Hash
 //    - 0x1d...e6: script Hash
+// nolint: gomnd
 func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, error) {
 	// Deserialize the version.
 	//

@@ -157,7 +157,7 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the txscript.LockTimeThreshold.  When it is under the
 	// threshold it is a block height.
-	blockTimeOrHeight := int64(0)
+	var blockTimeOrHeight int64
 	if lockTime < txscript.LockTimeThreshold {
 		blockTimeOrHeight = int64(blockHeight)
 	} else {
@@ -190,6 +190,7 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
+//nolint: gomnd
 func BtcCalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
 	// Equivalent to: btcBaseSubsidy / 2^(height/subsidyHalvingInterval)
 	return btcBaseSubsidy >> uint(height/210000)
@@ -395,7 +396,7 @@ func CountP2SHSigOps(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint)
 		// Ensure the referenced input transaction is available.
 		utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if utxo == nil && thisIsSwapTx {
-			missingCount += 1
+			missingCount++
 			continue
 		}
 
@@ -820,7 +821,7 @@ func ValidateVoteK(header wire.BlockHeader) error {
 }
 
 // ValidateVoteK checks that new voteK value between  between -3% TO + 1% of previous_epoch’s k_value.
-//
+// nolint: gomnd
 func validateVoteK(prevK, newVoteK uint32) error {
 	unpackedNewVoteK := pow.UnpackK(newVoteK)
 	// 0 < vote_K < 2^-60

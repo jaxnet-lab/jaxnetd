@@ -134,6 +134,7 @@ func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
 	return shardCtl.chainProvider
 }
 
+// nolint: gomnd
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
 	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
 	if cleanIndexes {
@@ -162,7 +163,7 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 			shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
 		} else {
 			filePath := filepath.Join(shardCtl.cfg.DataDir, shardCtl.chain.Name()+"_mmr.json")
-			err = ioutil.WriteFile(filePath, data, 0755)
+			err = ioutil.WriteFile(filePath, data, 0o755)
 			if err != nil {
 				shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
 			}

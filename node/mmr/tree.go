@@ -68,6 +68,7 @@ type BlocksMMRTree struct {
 	hashToHeight map[chainhash.Hash]uint64
 }
 
+// nolint: gomnd
 func NewTree() *BlocksMMRTree {
 	return &BlocksMMRTree{
 		lastNode:     &TreeLeaf{},
@@ -107,6 +108,7 @@ func (t *BlocksMMRTree) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(d)
 }
+
 func (t *BlocksMMRTree) Fork() *BlocksMMRTree {
 	t.RLock()
 	newTree := &BlocksMMRTree{
@@ -154,7 +156,7 @@ func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty *big.Int) {
 
 	t.hashToHeight[hash] = node.Height
 
-	t.nextHeight += 1
+	t.nextHeight++
 	t.chainWeight = new(big.Int).Add(t.chainWeight, difficulty)
 
 	t.rootHash = t.rebuildTree(node, node.Height+1)
@@ -175,7 +177,6 @@ func (t *BlocksMMRTree) SetBlock(hash chainhash.Hash, difficulty *big.Int, heigh
 	}
 
 	t.addBlock(hash, difficulty)
-	return
 }
 
 // ResetRootTo sets provided block with <hash, height> as latest and drops all blocks after this.
@@ -258,7 +259,6 @@ func (t *BlocksMMRTree) rmBlock(hash chainhash.Hash, height int32) {
 
 	t.lastNode = t.nodes[heightToID(int32(t.nextHeight-1))]
 	t.rootHash = t.lastNode.ActualRoot
-
 }
 
 func (t *BlocksMMRTree) Current() *TreeLeaf {
@@ -403,7 +403,7 @@ func hashMerkleBranches(left, right *TreeLeaf) (*TreeLeaf, bool) {
 
 	return &TreeLeaf{
 		Leaf: Leaf{
-			Hash:   chainhash.HashH(data[:]),
+			Hash:   chainhash.HashH(data),
 			Weight: new(big.Int).Add(left.Weight, right.Weight),
 		},
 	}, true

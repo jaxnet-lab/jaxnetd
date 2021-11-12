@@ -172,6 +172,7 @@ func (node *ShardBlockNode) CalcPastMedianTimeForN(nBlocks int) time.Time {
 	return time.Unix(medianTimestamp, 0)
 }
 
+// nolint: gomnd
 func (node *ShardBlockNode) CalcMedianVoteK() uint32 {
 	// Create a slice of the previous few block voteKs used to calculate
 	// the median per the number defined by the constant beaconMedianTimeBlocks.

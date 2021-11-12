@@ -31,10 +31,8 @@ func rawScanner(offset int, shardID uint32) error {
 	interruptChannel := make(chan os.Signal, 1)
 	signal.Notify(interruptChannel, os.Interrupt)
 	go func() {
-		select {
-		case <-interruptChannel:
-			cancelScanning()
-		}
+		<-interruptChannel
+		cancelScanning()
 	}()
 
 	eGroup := errgroup.Group{}
@@ -130,18 +128,17 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 			Timestamp:   blk.MsgBlock().Header.Timestamp().UTC().Format(time.RFC3339),
 		}
 
-		for txId, tx := range txs {
+		for txID, tx := range txs {
 			fmt.Printf("\r\033[0K-> Process Block	hash=%s	time=%s	height=%d/%d	tx=%d/%d ",
 				blk.Hash(), blk.MsgBlock().Header.Timestamp().UTC().Format(time.RFC3339),
-				blk.Height(), best.Height, txId, result.TxCount,
+				blk.Height(), best.Height, txID, result.TxCount,
 			)
 
 			result.InCount += len(tx.MsgTx().TxIn)
 			result.OutCount += len(tx.MsgTx().TxOut)
-			txId = txId
 			coinbase := chaindata.IsCoinBase(tx)
 
-			for outId, out := range tx.MsgTx().TxOut {
+			for outID, out := range tx.MsgTx().TxOut {
 				select {
 				case <-ctx.Done():
 					log.Info("\nStop scanning.")
@@ -160,10 +157,10 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 					PkScript:     hex.EncodeToString(out.PkScript),
 					PkScriptType: class.String(),
 					Addresses:    "[" + strings.Join(addresses, ";") + "]",
-					OutID:        outId,
+					OutID:        outID,
 					Amount:       out.Value,
 					TxHash:       tx.Hash().String(),
-					TxIndex:      txId,
+					TxIndex:      txID,
 					Coinbase:     coinbase,
 					BlockHash:    blk.Hash().String(),
 					BlockHeight:  int64(blk.Height()),
@@ -176,7 +173,7 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 				continue
 			}
 
-			for inId, in := range tx.MsgTx().TxIn {
+			for inID, in := range tx.MsgTx().TxIn {
 				select {
 				case <-ctx.Done():
 					log.Info("\nStop scanning.")
@@ -187,9 +184,9 @@ func scan(ctx context.Context, cancel context.CancelFunc, offset int, blocksChan
 
 				op := Input{
 					SignatureScript: hex.EncodeToString(in.SignatureScript),
-					InID:            inId,
+					InID:            inID,
 					TxHash:          tx.Hash().String(),
-					TxIndex:         txId,
+					TxIndex:         txID,
 					OriginTxHash:    in.PreviousOutPoint.Hash.String(),
 					OriginIdx:       int(in.PreviousOutPoint.Index),
 					BlockHash:       blk.Hash().String(),
@@ -255,6 +252,8 @@ func deserializeShardData(filePath string) (node.Index, error) {
 	return idx, nil
 }
 
+const maxCacheSize = 100_000
+
 func createBlockchain(db database.DB, chain chainctx.IChainCtx) (*blockchain.BlockChain, error) {
 	interrupt := make(chan struct{})
 	var checkpoints []chaincfg.Checkpoint
@@ -266,8 +265,8 @@ func createBlockchain(db database.DB, chain chainctx.IChainCtx) (*blockchain.Blo
 		Checkpoints:  checkpoints,
 		IndexManager: indexManager,
 		TimeSource:   chaindata.NewMedianTime(),
-		SigCache:     txscript.NewSigCache(100000),
-		HashCache:    txscript.NewHashCache(100000),
+		SigCache:     txscript.NewSigCache(maxCacheSize),
+		HashCache:    txscript.NewHashCache(maxCacheSize),
 		ChainCtx:     chain,
 	})
 }

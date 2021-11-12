@@ -1,11 +1,13 @@
+// nolint: forcetypeassert
 package rpc
 
 import (
+	"sync"
+
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 	"golang.org/x/crypto/ripemd160"
-	"sync"
 )
 
 // wsClientFilter tracks relevant addresses for each websocket client for
@@ -69,13 +71,13 @@ func (f *wsClientFilter) addAddress(a jaxutil.Address) {
 	case *jaxutil.AddressPubKey:
 		serializedPubKey := a.ScriptAddress()
 		switch len(serializedPubKey) {
-		case 33: // compressed
-			var compressedPubKey [33]byte
+		case compressedKeySize:
+			var compressedPubKey [compressedKeySize]byte
 			copy(compressedPubKey[:], serializedPubKey)
 			f.compressedPubKeys[compressedPubKey] = struct{}{}
 			return
-		case 65: // uncompressed
-			var uncompressedPubKey [65]byte
+		case uncompressedKeySize:
+			var uncompressedPubKey [uncompressedKeySize]byte
 			copy(uncompressedPubKey[:], serializedPubKey)
 			f.uncompressedPubKeys[uncompressedPubKey] = struct{}{}
 			return
@@ -100,6 +102,11 @@ func (f *wsClientFilter) addAddressStr(s string, params *chaincfg.Params) {
 	f.addAddress(a)
 }
 
+const (
+	compressedKeySize   = 33
+	uncompressedKeySize = 65
+)
+
 // existsAddress returns true if the passed address has been added to the
 // wsClientFilter.
 //
@@ -115,16 +122,16 @@ func (f *wsClientFilter) existsAddress(a jaxutil.Address) bool {
 	case *jaxutil.AddressPubKey:
 		serializedPubKey := a.ScriptAddress()
 		switch len(serializedPubKey) {
-		case 33: // compressed
-			var compressedPubKey [33]byte
+		case compressedKeySize:
+			var compressedPubKey [compressedKeySize]byte
 			copy(compressedPubKey[:], serializedPubKey)
 			_, ok := f.compressedPubKeys[compressedPubKey]
 			if !ok {
 				_, ok = f.pubKeyHashes[*a.AddressPubKeyHash().Hash160()]
 			}
 			return ok
-		case 65: // uncompressed
-			var uncompressedPubKey [65]byte
+		case uncompressedKeySize:
+			var uncompressedPubKey [uncompressedKeySize]byte
 			copy(uncompressedPubKey[:], serializedPubKey)
 			_, ok := f.uncompressedPubKeys[uncompressedPubKey]
 			if !ok {
@@ -136,50 +143,6 @@ func (f *wsClientFilter) existsAddress(a jaxutil.Address) bool {
 
 	_, ok := f.otherAddresses[a.EncodeAddress()]
 	return ok
-}
-
-// removeAddress removes the passed address, if it exists, from the
-// wsClientFilter.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeAddress(a jaxutil.Address) {
-	switch a := a.(type) {
-	case *jaxutil.AddressPubKeyHash:
-		delete(f.pubKeyHashes, *a.Hash160())
-		return
-	case *jaxutil.AddressScriptHash:
-		delete(f.scriptHashes, *a.Hash160())
-		return
-	case *jaxutil.AddressPubKey:
-		serializedPubKey := a.ScriptAddress()
-		switch len(serializedPubKey) {
-		case 33: // compressed
-			var compressedPubKey [33]byte
-			copy(compressedPubKey[:], serializedPubKey)
-			delete(f.compressedPubKeys, compressedPubKey)
-			return
-		case 65: // uncompressed
-			var uncompressedPubKey [65]byte
-			copy(uncompressedPubKey[:], serializedPubKey)
-			delete(f.uncompressedPubKeys, uncompressedPubKey)
-			return
-		}
-	}
-
-	delete(f.otherAddresses, a.EncodeAddress())
-}
-
-// removeAddressStr parses an address from a string and then removes it from the
-// wsClientFilter using removeAddress.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeAddressStr(s string, params *chaincfg.Params) {
-	a, err := jaxutil.DecodeAddress(s, params)
-	if err == nil {
-		f.removeAddress(a)
-	} else {
-		delete(f.otherAddresses, s)
-	}
 }
 
 // addUnspentOutPoint adds an outpoint to the wsClientFilter.
@@ -196,12 +159,4 @@ func (f *wsClientFilter) addUnspentOutPoint(op *wire.OutPoint) {
 func (f *wsClientFilter) existsUnspentOutPoint(op *wire.OutPoint) bool {
 	_, ok := f.unspent[*op]
 	return ok
-}
-
-// removeUnspentOutPoint removes the passed outpoint, if it exists, from the
-// wsClientFilter.
-//
-// NOTE: This extension was ported from github.com/decred/dcrd
-func (f *wsClientFilter) removeUnspentOutPoint(op *wire.OutPoint) {
-	delete(f.unspent, *op)
 }

@@ -394,6 +394,7 @@ func paddedAppend(size uint, dst, src []byte) []byte {
 }
 
 // String returns the extended key as a human-readable base58-encoded string.
+// nolint: gomnd
 func (k *ExtendedKey) String() string {
 	if len(k.key) == 0 {
 		return "zeroed extended key"
@@ -504,6 +505,7 @@ func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
 
 // NewKeyFromString returns a new extended key instance from a base58-encoded
 // extended key.
+// nolint: gomnd
 func NewKeyFromString(key string) (*ExtendedKey, error) {
 	// The base58-decoded extended key must consist of a serialized payload
 	// plus an additional 4 bytes for the checksum.

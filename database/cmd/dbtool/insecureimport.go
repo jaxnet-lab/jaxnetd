@@ -133,7 +133,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	}
 
 	// Don't bother trying to process orphans.
-	prevHash := block.MsgBlock().Header.PrevBlocksMMRRoot() //todo: fix this
+	prevHash := block.MsgBlock().Header.PrevBlocksMMRRoot() // todo: fix this
 	if !prevHash.IsEqual(&zeroHash) {
 		var exists bool
 		err := bi.db.View(func(tx database.Tx) error {
@@ -171,7 +171,7 @@ out:
 		// notify the status handler with the error and bail.
 		serializedBlock, err := bi.readBlock()
 		if err != nil {
-			bi.errChan <- fmt.Errorf("Error reading from input "+
+			bi.errChan <- fmt.Errorf("error reading from input "+
 				"file: %v", err.Error())
 			break out
 		}
@@ -336,7 +336,7 @@ func (cmd *importCmd) Execute(args []string) error {
 
 	// Ensure the specified block file exists.
 	if !fileExists(cmd.InFile) {
-		str := "The specified block file [%v] does not exist"
+		str := "the specified block file [%v] does not exist"
 		return fmt.Errorf(str, cmd.InFile)
 	}
 
@@ -388,7 +388,7 @@ func (cmd *importCmd) Execute(args []string) error {
 		results := <-resultsChan
 		if results.err != nil {
 			dbErr, ok := results.err.(database.Error)
-			if !ok || ok && dbErr.ErrorCode != database.ErrDbNotOpen {
+			if !ok || ok && dbErr.ErrorCode != database.ErrDBNotOpen {
 				shutdownChannel <- results.err
 				return
 			}

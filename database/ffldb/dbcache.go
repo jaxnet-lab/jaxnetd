@@ -25,19 +25,6 @@ const (
 	// threshold in between database cache flushes when the cache size has
 	// not been exceeded.
 	defaultFlushSecs = 300 // 5 minutes
-
-	// ldbBatchHeaderSize is the size of a leveldb batch header which
-	// includes the sequence header and record counter.
-	//
-	// ldbRecordIKeySize is the size of the ikey used internally by leveldb
-	// when appending a record to a batch.
-	//
-	// These are used to help preallocate space needed for a batch in one
-	// allocation instead of letting leveldb itself constantly grow it.
-	// This results in far less pressure on the GC and consequently helps
-	// prevent the GC from allocating a lot of extra unneeded space.
-	ldbBatchHeaderSize = 12
-	ldbRecordIKeySize  = 8
 )
 
 // ldbCacheIter wraps a treap iterator to provide the additional functionality
@@ -524,6 +511,8 @@ func (c *dbCache) flush() error {
 	return nil
 }
 
+const extraMemoryFactor = 1.5
+
 // needsFlush returns whether or not the database cache needs to be flushed to
 // persistent storage based on its current size, whether or not adding all of
 // the entries in the passed database transaction would cause it to exceed the
@@ -545,7 +534,7 @@ func (c *dbCache) needsFlush(tx *transaction) bool {
 	// referenced by the snapshot used by the transaction.
 	snap := tx.snapshot
 	totalSize := snap.pendingKeys.Size() + snap.pendingRemove.Size()
-	totalSize = uint64(float64(totalSize) * 1.5)
+	totalSize = uint64(float64(totalSize) * extraMemoryFactor)
 	return totalSize > c.maxSize
 }
 
@@ -644,11 +633,11 @@ func (c *dbCache) Close() error {
 	return nil
 }
 
-// newDbCache returns a new database cache instance backed by the provided
+// newDBCache returns a new database cache instance backed by the provided
 // leveldb instance.  The cache will be flushed to leveldb when the max size
 // exceeds the provided value or it has been longer than the provided interval
 // since the last flush.
-func newDbCache(ldb *leveldb.DB, store *blockStore, maxSize uint64, flushIntervalSecs uint32) *dbCache {
+func newDBCache(ldb *leveldb.DB, store *blockStore, maxSize uint64, flushIntervalSecs uint32) *dbCache {
 	return &dbCache{
 		ldb:           ldb,
 		store:         store,

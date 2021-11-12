@@ -232,6 +232,7 @@ func baseType(arg reflect.Type) (reflect.Type, int) {
 // direct type assignments, indirection, conversion of numeric types, and
 // unmarshaling of strings into arrays, slices, structs, and maps via
 // json.Unmarshal.
+// nolint: gomnd
 func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect.Value) error {
 	// Just error now when the types have no chance of being compatible.
 	destBaseType, destIndirects := baseType(dest.Type())
@@ -444,7 +445,7 @@ func assignField(paramNum int, fieldName string, dest reflect.Value, src reflect
 
 		// String -> float of varying size.
 		case reflect.Float32, reflect.Float64:
-			srcFloat, err := strconv.ParseFloat(src.String(), 0)
+			srcFloat, err := strconv.ParseFloat(src.String(), 64)
 			if err != nil {
 				str := fmt.Sprintf("parameter #%d '%s' must "+
 					"parse to a %v", paramNum, fieldName,

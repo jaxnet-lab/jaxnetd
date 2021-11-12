@@ -77,7 +77,7 @@ type Transaction struct {
 }
 
 func (t *Transaction) UnmarshalBinary(data []byte) error {
-	var dest = new(gobTx)
+	dest := new(gobTx)
 	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (t *Transaction) UnmarshalBinary(data []byte) error {
 
 func (t Transaction) MarshalBinary() ([]byte, error) {
 	var err error
-	var dest = new(gobTx)
+	dest := new(gobTx)
 
 	dest.Amount = t.Amount
 	dest.ShardID = t.ShardID
@@ -138,7 +138,7 @@ type SwapTransaction struct {
 }
 
 func (t *SwapTransaction) UnmarshalBinary(data []byte) error {
-	var dest = new(gobSwapTx)
+	dest := new(gobSwapTx)
 	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(dest)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (t *SwapTransaction) UnmarshalBinary(data []byte) error {
 
 func (t SwapTransaction) MarshalBinary() ([]byte, error) {
 	var err error
-	var dest = new(gobSwapTx)
+	dest := new(gobSwapTx)
 
 	dest.Source = []byte(t.Source)
 	dest.Destinations = t.Destinations

@@ -93,6 +93,7 @@ type Filter struct {
 // BuildGCSFilter builds a new GCS filter with the collision probability of
 // `1/(2**P)`, key `key`, and including every `[]byte` in `data` as a member of
 // the set.
+// nolint: gomnd, gocritic
 func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filter, error) {
 	// Some initial parameter checks: make sure we have data from which to
 	// build the filter, and make sure our parameters will fit the hash
@@ -176,6 +177,7 @@ func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filte
 
 // FromBytes deserializes a GCS filter from a known N, P, and serialized filter
 // as returned by Bytes().
+// nolint: gocritic
 func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
 	// Basic sanity check.
 	if P > 32 {
@@ -202,6 +204,7 @@ func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
 
 // FromNBytes deserializes a GCS filter from a known P, and serialized N and
 // filter as returned by NBytes().
+// nolint: gocritic
 func FromNBytes(P uint8, M uint64, d []byte) (*Filter, error) {
 	buffer := bytes.NewBuffer(d)
 	N, err := wire.ReadVarInt(buffer, varIntProtoVer)
@@ -321,7 +324,6 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 		// Add the delta to the previous value.
 		value += delta
 		switch {
-
 		// The current value matches our query term, success.
 		case value == term:
 			return true, nil

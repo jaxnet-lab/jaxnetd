@@ -10,14 +10,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/node"
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the block database name.  The
+	// blockDBNamePrefix is the prefix for the block database name.  The
 	// database type is appended to this value to form the full block
 	// database name.
-	blockDbNamePrefix = "blocks"
+	blockDBNamePrefix = "blocks"
 )
 
 // DoUpgrades performs upgrades to jaxnetd as new versions require it.
@@ -70,35 +71,36 @@ func oldBtcdHomeDir() string {
 // upgradeDBPathNet moves the database for a specific network from its
 // location prior to jaxnetd version 0.2.0 and uses heuristics to ascertain the old
 // database type to rename to the new format.
-func upgradeDBPathNet(cfg *node.Config, oldDbPath, netName string) error {
+func upgradeDBPathNet(cfg *node.Config, oldDBPath, netName string) error {
 	// Prior to version 0.2.0, the database was named the same thing for
 	// both sqlite and leveldb.  Use heuristics to figure out the type
 	// of the database and move it to the new path and name introduced with
 	// version 0.2.0 accordingly.
-	fi, err := os.Stat(oldDbPath)
+	fi, err := os.Stat(oldDBPath)
 	if err == nil {
-		oldDbType := "sqlite"
+		oldDBType := "sqlite"
 		if fi.IsDir() {
-			oldDbType = "leveldb"
+			oldDBType = "leveldb"
 		}
 
 		// The new database name is based on the database type and
 		// resides in a directory named after the network type.
-		newDbRoot := filepath.Join(filepath.Dir(cfg.DataDir), netName)
-		newDbName := blockDbNamePrefix + "_" + oldDbType
-		if oldDbType == "sqlite" {
-			newDbName = newDbName + ".db"
+		newDBRoot := filepath.Join(filepath.Dir(cfg.DataDir), netName)
+		newDBName := blockDBNamePrefix + "_" + oldDBType
+		if oldDBType == "sqlite" {
+			newDBName += ".db"
 		}
-		newDbPath := filepath.Join(newDbRoot, newDbName)
+		newDBPath := filepath.Join(newDBRoot, newDBName)
 
 		// Create the new path if needed.
-		err = os.MkdirAll(newDbRoot, 0700)
+		//nolint: gomnd
+		err = os.MkdirAll(newDBRoot, 0o700)
 		if err != nil {
 			return err
 		}
 
 		// Move and rename the old database.
-		err := os.Rename(oldDbPath, newDbPath)
+		err := os.Rename(oldDBPath, newDBPath)
 		if err != nil {
 			return err
 		}
@@ -114,13 +116,19 @@ func upgradeDBPaths(cfg *node.Config) error {
 	// their names were suffixed by "testnet" and "regtest" for their
 	// respective networks.  Check for the old database and update it to the
 	// new path introduced with version 0.2.0 accordingly.
-	oldDbRoot := filepath.Join(oldBtcdHomeDir(), "db")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd.db"), "mainnet")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd_testnet.db"), "testnet")
-	upgradeDBPathNet(cfg, filepath.Join(oldDbRoot, "jaxnetd_regtest.db"), "regtest")
+	oldDBRoot := filepath.Join(oldBtcdHomeDir(), "db")
+	if err := upgradeDBPathNet(cfg, filepath.Join(oldDBRoot, "jaxnetd.db"), "mainnet"); err != nil {
+		log.Error().Err(err).Msg("cannot upgrade dbpath for mainnet")
+	}
+	if err := upgradeDBPathNet(cfg, filepath.Join(oldDBRoot, "jaxnetd_testnet.db"), "testnet"); err != nil {
+		log.Error().Err(err).Msg("cannot upgrade dbpath for testnet")
+	}
+	if err := upgradeDBPathNet(cfg, filepath.Join(oldDBRoot, "jaxnetd_regtest.db"), "regtest"); err != nil {
+		log.Error().Err(err).Msg("cannot upgrade dbpath for regtestnet")
+	}
 
 	// Remove the old db directory.
-	return os.RemoveAll(oldDbRoot)
+	return os.RemoveAll(oldDBRoot)
 }
 
 // upgradeDataPaths moves the application data from its location prior to jaxnetd
@@ -138,7 +146,8 @@ func upgradeDataPaths() error {
 		// Create the new path.
 		Log.Info().Msgf("Migrating application home path from '%s' to '%s'",
 			oldHomePath, newHomePath)
-		err := os.MkdirAll(newHomePath, 0700)
+		//nolint: gomnd
+		err := os.MkdirAll(newHomePath, 0o700)
 		if err != nil {
 			return err
 		}

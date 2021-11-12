@@ -5,6 +5,7 @@
 
 package txscript
 
+// nolint: gosec
 import (
 	"bytes"
 	"crypto/sha1"
@@ -33,6 +34,7 @@ type opcode struct {
 // These constants are the values of the official opcodes used on the btc wiki,
 // in bitcoin core and in most if not all other references and software related
 // to handling BTC scripts.
+// nolint
 const (
 	OP_0                   = 0x00 // 0
 	OP_FALSE               = 0x00 // 0 - AKA OP_0
@@ -699,11 +701,12 @@ func (pop *parsedOpcode) checkMinimalDataPush() error {
 	dataLen := len(data)
 	opcode := pop.opcode.value
 
-	if dataLen == 0 && opcode != OP_0 {
+	switch {
+	case dataLen == 0 && opcode != OP_0:
 		str := fmt.Sprintf("zero length data push is encoded with "+
 			"opcode %s instead of OP_0", pop.opcode.name)
 		return scriptError(ErrMinimalData, str)
-	} else if dataLen == 1 && data[0] >= 1 && data[0] <= 16 {
+	case dataLen == 1 && data[0] >= 1 && data[0] <= 16:
 		if opcode != OP_1+data[0]-1 {
 			// Should have used OP_1 .. OP_16
 			str := fmt.Sprintf("data push of the value %d encoded "+
@@ -711,14 +714,14 @@ func (pop *parsedOpcode) checkMinimalDataPush() error {
 				pop.opcode.name, data[0])
 			return scriptError(ErrMinimalData, str)
 		}
-	} else if dataLen == 1 && data[0] == 0x81 {
+	case dataLen == 1 && data[0] == 0x81:
 		if opcode != OP_1NEGATE {
 			str := fmt.Sprintf("data push of the value -1 encoded "+
 				"with opcode %s instead of OP_1NEGATE",
 				pop.opcode.name)
 			return scriptError(ErrMinimalData, str)
 		}
-	} else if dataLen <= 75 {
+	case dataLen <= 75:
 		if int(opcode) != dataLen {
 			// Should have used a direct push
 			str := fmt.Sprintf("data push of %d bytes encoded "+
@@ -726,14 +729,14 @@ func (pop *parsedOpcode) checkMinimalDataPush() error {
 				pop.opcode.name, dataLen)
 			return scriptError(ErrMinimalData, str)
 		}
-	} else if dataLen <= 255 {
+	case dataLen <= 255:
 		if opcode != OP_PUSHDATA1 {
 			str := fmt.Sprintf("data push of %d bytes encoded "+
 				"with opcode %s instead of OP_PUSHDATA1",
 				dataLen, pop.opcode.name)
 			return scriptError(ErrMinimalData, str)
 		}
-	} else if dataLen <= 65535 {
+	case dataLen <= 65535:
 		if opcode != OP_PUSHDATA2 {
 			str := fmt.Sprintf("data push of %d bytes encoded "+
 				"with opcode %s instead of OP_PUSHDATA2",
@@ -741,6 +744,7 @@ func (pop *parsedOpcode) checkMinimalDataPush() error {
 			return scriptError(ErrMinimalData, str)
 		}
 	}
+
 	return nil
 }
 
@@ -1970,6 +1974,7 @@ func opcodeRipemd160(op *parsedOpcode, vm *Engine) error {
 // with sha1(data).
 //
 // Stack transformation: [... x1] -> [... sha1(x1)]
+// nolint: gosec
 func opcodeSha1(op *parsedOpcode, vm *Engine) error {
 	buf, err := vm.dstack.PopByteArray()
 	if err != nil {
@@ -2048,6 +2053,7 @@ func opcodeCodeSeparator(op *parsedOpcode, vm *Engine) error {
 // cryptographic methods against the provided public key.
 //
 // Stack transformation: [... signature pubkey] -> [... bool]
+// nolint: nilerr
 func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 	pkBytes, err := vm.dstack.PopByteArray()
 	if err != nil {

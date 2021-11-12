@@ -164,18 +164,18 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 // OP_ELSE <refund_pubkey> OP_CHECKSIG OP_NIP
 // OP_ENDIF
 func extractMultiSigLockAddrs(pops []parsedOpcode,
-	chainParams *chaincfg.Params) (addrs []jaxutil.Address, requiredSigs int) {
+	chainParams *chaincfg.Params) ([]jaxutil.Address, int) {
 	// In case of MultiSig activation the number of required signatures is the 5th item
 	// on the stack and the number of public keys is the 5th to last
 	// item on the stack.
 	// Otherwise, in case of refund (pay-to-pubkey),
 	// requires one signature and address is the second to last item on the stack.
-	requiredSigs = asSmallInt(pops[mslFirstMSigOpI].opcode)
+	requiredSigs := asSmallInt(pops[mslFirstMSigOpI].opcode)
 	numPubKeys := asSmallInt(pops[len(pops)-mslTailLen-2].opcode)
 
 	addrIndex := map[string]struct{}{}
 	// Extract the public keys while skipping any that are invalid.
-	addrs = make([]jaxutil.Address, 0, numPubKeys+1)
+	addrs := make([]jaxutil.Address, 0, numPubKeys+1)
 	for i := 0; i < numPubKeys; i++ {
 		addr, err := jaxutil.NewAddressPubKey(pops[mslFirstMSigOpI+1+i].data, chainParams)
 		if err == nil {
@@ -193,7 +193,7 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 		}
 	}
 
-	return
+	return addrs, requiredSigs
 }
 
 // signMultiSigLock signs as many of the outputs in the provided multisig script as

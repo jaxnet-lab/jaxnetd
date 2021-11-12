@@ -7,6 +7,7 @@
 // https://github.com/TheBlueMatt/test-scripts as well as some additional tests
 // available in the Core python port of the same.
 
+// nolint: errcheck
 package fullblocktests
 
 import (
@@ -266,6 +267,7 @@ func pushDataScript(items ...[]byte) []byte {
 // standardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
 // it starts with the block height that is required by version 2 blocks.
+// nolint
 func standardCoinbaseScript(blockHeight int32, extraNonce uint64) ([]byte, error) {
 	return txscript.NewScriptBuilder().AddInt64(int64(blockHeight)).
 		AddInt64(int64(extraNonce)).Script()
@@ -515,7 +517,6 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 			coinbaseTx.TxOut[3].Value += int64(fee)
 		} else {
 			coinbaseTx.TxOut[2].Value += int64(fee)
-
 		}
 
 		// Create a transaction that spends from the provided spendable
@@ -607,7 +608,6 @@ func (g *testGenerator) updateBlockState(oldBlockName string, oldBlockHash chain
 	g.blockHeights[newBlockName] = blockHeight
 	g.mmr.AddBlock(newBlockHash, pow.CalcWork(newBlock.Header.Bits()))
 	g.mmrRootToBlock[g.mmr.CurrentRoot()] = newBlockHash
-
 }
 
 // setTip changes the tip of the instance to the block with the provided name.
@@ -717,6 +717,7 @@ func assertScriptSigOpsCount(script []byte, expected int) {
 
 // countBlockSigOps returns the number of legacy signature operations in the
 // scripts in the passed block.
+// nolint
 func countBlockSigOps(block *wire.MsgBlock) int {
 	totalSigOps := 0
 	for _, tx := range block.Transactions {
@@ -847,6 +848,7 @@ func newBeaconBlockGen(params *chaincfg.Params) chaindata.ChainBlockGenerator {
 // contains additional information about the expected result, however that
 // information can be ignored when doing comparison tests between two
 // independent versions over the peer-to-peer network.
+//nolint
 func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	// In order to simplify the generation code which really should never
 	// fail unless the test code itself is broken, panics are used

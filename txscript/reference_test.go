@@ -116,8 +116,8 @@ func parseShortForm(script string) ([]byte, error) {
 	}
 
 	// Split only does one separator so convert all \n and tab into  space.
-	script = strings.Replace(script, "\n", " ", -1)
-	script = strings.Replace(script, "\t", " ", -1)
+	script = strings.ReplaceAll(script, "\n", " ")
+	script = strings.ReplaceAll(script, "\t", " ")
 	tokens := strings.Split(script, " ")
 	builder := NewScriptBuilder()
 
@@ -212,13 +212,15 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "PUBKEYTYPE":
 		return []ErrorCode{ErrPubKeyType}, nil
 	case "SIG_DER":
-		return []ErrorCode{ErrSigTooShort, ErrSigTooLong,
+		return []ErrorCode{
+			ErrSigTooShort, ErrSigTooLong,
 			ErrSigInvalidSeqID, ErrSigInvalidDataLen, ErrSigMissingSTypeID,
 			ErrSigMissingSLen, ErrSigInvalidSLen,
 			ErrSigInvalidRIntID, ErrSigZeroRLen, ErrSigNegativeR,
 			ErrSigTooMuchRPadding, ErrSigInvalidSIntID,
 			ErrSigZeroSLen, ErrSigNegativeS, ErrSigTooMuchSPadding,
-			ErrInvalidSigHashType}, nil
+			ErrInvalidSigHashType,
+		}, nil
 	case "EVAL_FALSE":
 		return []ErrorCode{ErrEvalFalse, ErrEmptyStack}, nil
 	case "EQUALVERIFY":
@@ -238,8 +240,10 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 	case "BAD_OPCODE":
 		return []ErrorCode{ErrReservedOpcode, ErrMalformedPush}, nil
 	case "UNBALANCED_CONDITIONAL":
-		return []ErrorCode{ErrUnbalancedConditional,
-			ErrInvalidStackOperation}, nil
+		return []ErrorCode{
+			ErrUnbalancedConditional,
+			ErrInvalidStackOperation,
+		}, nil
 	case "OP_RETURN":
 		return []ErrorCode{ErrEarlyReturn}, nil
 	case "VERIFY":

@@ -19,10 +19,8 @@ import (
 // command.
 type blockRegionCmd struct{}
 
-var (
-	// blockRegionCfg defines the configuration options for the command.
-	blockRegionCfg = blockRegionCmd{}
-)
+// blockRegionCfg defines the configuration options for the command.
+var blockRegionCfg = blockRegionCmd{}
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
 func (cmd *blockRegionCmd) Execute(args []string) error {

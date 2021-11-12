@@ -2,7 +2,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: gomnd
 package btcec
 
 import (
@@ -421,7 +421,6 @@ func RecoverCompact(curve *KoblitzCurve, signature,
 
 // signRFC6979 generates a deterministic ECDSA signature according to RFC 6979 and BIP 62.
 func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, error) {
-
 	privkey := privateKey.ToECDSA()
 	N := S256().N
 	halfOrder := S256().halfOrder
@@ -452,7 +451,6 @@ func signRFC6979(privateKey *PrivateKey, hash []byte) (*Signature, error) {
 // nonceRFC6979 generates an ECDSA nonce (`k`) deterministically according to RFC 6979.
 // It takes a 32-byte hash as an input and returns 32-byte nonce to be used in ECDSA algorithm.
 func nonceRFC6979(privkey *big.Int, hash []byte) *big.Int {
-
 	curve := S256()
 	q := curve.Params().N
 	x := privkey

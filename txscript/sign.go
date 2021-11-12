@@ -368,7 +368,10 @@ sigLoop:
 			// All multisig addresses should be pubkey addresses
 			// it is an error to call this internal function with
 			// bad input.
-			pkaddr := addr.(*jaxutil.AddressPubKey)
+			pkaddr, ok := addr.(*jaxutil.AddressPubKey)
+			if !ok {
+				return nil
+			}
 
 			pubKey := pkaddr.PubKey()
 

@@ -16,6 +16,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
+const nullStr = "null"
+
 // FutureGetBestBlockHashResult is a future promise to deliver the result of a
 // GetBestBlockAsync RPC invocation (or an applicable error).
 type FutureGetBestBlockHashResult chan *response
@@ -638,7 +640,7 @@ func (r FutureGetTxOutResult) Receive() (*jaxjson.GetTxOutResult, error) {
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
@@ -685,12 +687,12 @@ func (r FutureGetTxOutStatusResult) Receive() ([]jaxjson.TxOutStatus, error) {
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
 	// Unmarshal result as an gettxout result object.
-	var result = make([]jaxjson.TxOutStatus, 0)
+	result := make([]jaxjson.TxOutStatus, 0)
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -722,7 +724,7 @@ func (r FutureListTxOutResult) Receive() (*jaxjson.ListTxOutResult, error) {
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
@@ -766,7 +768,7 @@ func (r FutureListEADAddressesResult) Receive() (*jaxjson.ListEADAddresses, erro
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
@@ -961,7 +963,6 @@ func (r FutureGetCFilterHeaderResult) Receive() (*wire.MsgCFHeaders, error) {
 	// Assign the hash to a headers message and return it.
 	msgCFHeaders := wire.MsgCFHeaders{PrevFilterHeader: *headerHash}
 	return &msgCFHeaders, nil
-
 }
 
 // GetCFilterHeaderAsync returns an instance of a type that can be used to get
@@ -1035,9 +1036,9 @@ type FutureListShards chan *response
 // Receive waits for the response promised by the future and returns statistics
 // of a block at a certain height.
 func (r FutureListShards) Receive() (*jaxjson.ShardListResult, error) {
-	res, err := receiveFuture(r)
+	res, _ := receiveFuture(r)
 	var list jaxjson.ShardListResult
-	err = json.Unmarshal(res, &list)
+	err := json.Unmarshal(res, &list)
 	if err != nil {
 		return nil, err
 	}
@@ -1259,7 +1260,7 @@ func (r FutureGetTxResult) Receive() (*jaxjson.GetTxResult, error) {
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
@@ -1303,7 +1304,7 @@ func (r FutureGetChainMetricsResult) Receive() (*jaxjson.GetChainMetricsResult, 
 
 	// take care of the special case where the output has been spent already
 	// it should return the string "null"
-	if string(res) == "null" {
+	if string(res) == nullStr {
 		return nil, nil
 	}
 
@@ -1330,9 +1331,9 @@ func (c *Client) GetChainMetrics() (*jaxjson.GetChainMetricsResult, error) {
 type FutureGetNodeMetrics chan *response
 
 func (r FutureGetNodeMetrics) Receive() (*jaxjson.GetNodeMetricsResult, error) {
-	res, err := receiveFuture(r)
+	res, _ := receiveFuture(r)
 	var list jaxjson.GetNodeMetricsResult
-	err = json.Unmarshal(res, &list)
+	err := json.Unmarshal(res, &list)
 	if err != nil {
 		return nil, err
 	}

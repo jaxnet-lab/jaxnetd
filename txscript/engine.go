@@ -197,9 +197,7 @@ func (vm *Engine) executeOpcode(pop *parsedOpcode) error {
 
 	// Ensure all executed data push opcodes use the minimal encoding when
 	// the minimal data verification flag is set.
-	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() &&
-		pop.opcode.value >= 0 && pop.opcode.value <= OP_PUSHDATA4 {
-
+	if vm.dstack.verifyMinimalData && vm.isBranchExecuting() && pop.opcode.value <= OP_PUSHDATA4 {
 		if err := pop.checkMinimalDataPush(); err != nil {
 			return err
 		}
@@ -247,12 +245,14 @@ func (vm *Engine) curPC() (script int, off int, err error) {
 // isWitnessVersionActive returns true if a witness program was extracted
 // during the initialization of the Engine, and the program's version matches
 // the specified version.
+// nolint: unparam
 func (vm *Engine) isWitnessVersionActive(version uint) bool {
 	return vm.witnessProgram != nil && uint(vm.witnessVersion) == version
 }
 
 // verifyWitnessProgram validates the stored witness program using the passed
 // witness as input.
+// nolint: gocritic
 func (vm *Engine) verifyWitnessProgram(witness [][]byte) error {
 	if vm.isWitnessVersionActive(0) {
 		switch len(vm.witnessProgram) {
@@ -480,10 +480,12 @@ func (vm *Engine) Step() (done bool, err error) {
 
 		vm.numOps = 0 // number of ops is per script.
 		vm.scriptOff = 0
-		if vm.scriptIdx == 0 && vm.bip16 {
+
+		switch {
+		case vm.scriptIdx == 0 && vm.bip16:
 			vm.scriptIdx++
 			vm.savedFirstStack = vm.GetStack()
-		} else if vm.scriptIdx == 1 && vm.bip16 {
+		case vm.scriptIdx == 1 && vm.bip16:
 			// Put us past the end for CheckErrorCondition()
 			vm.scriptIdx++
 			// Check script ran successfully and pull the script
@@ -503,18 +505,18 @@ func (vm *Engine) Step() (done bool, err error) {
 			// Set stack to be the stack from first script minus the
 			// script itself
 			vm.SetStack(vm.savedFirstStack[:len(vm.savedFirstStack)-1])
-		} else if (vm.scriptIdx == 1 && vm.witnessProgram != nil) ||
-			(vm.scriptIdx == 2 && vm.witnessProgram != nil && vm.bip16) { // Nested P2SH.
-
+		case (vm.scriptIdx == 1 && vm.witnessProgram != nil) ||
+			(vm.scriptIdx == 2 && vm.witnessProgram != nil && vm.bip16):
 			vm.scriptIdx++
 
 			witness := vm.tx.TxIn[vm.txIdx].Witness
 			if err := vm.verifyWitnessProgram(witness); err != nil {
 				return false, err
 			}
-		} else {
+		default:
 			vm.scriptIdx++
 		}
+
 		// there are zero length scripts in the wild
 		if vm.scriptIdx < len(vm.scripts) && vm.scriptOff >= len(vm.scripts[vm.scriptIdx]) {
 			vm.scriptIdx++
@@ -884,8 +886,10 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 	// it possible to have a situation where P2SH would not be a soft fork
 	// when it should be. The same goes for segwit which will pull in
 	// additional scripts for execution from the witness stack.
-	vm := Engine{flags: flags, sigCache: sigCache, hashCache: hashCache,
-		inputAmount: inputAmount}
+	vm := Engine{
+		flags: flags, sigCache: sigCache, hashCache: hashCache,
+		inputAmount: inputAmount,
+	}
 	if vm.hasFlag(ScriptVerifyCleanStack) && (!vm.hasFlag(ScriptBip16) &&
 		!vm.hasFlag(ScriptVerifyWitness)) {
 		return nil, scriptError(ErrInvalidFlags,
@@ -986,15 +990,13 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 			if err != nil {
 				return nil, err
 			}
-		} else {
+		} else if vm.witnessProgram == nil && len(tx.TxIn[txIdx].Witness) != 0 {
 			// If we didn't find a witness program in either the
 			// pkScript or as a datapush within the sigScript, then
 			// there MUST NOT be any witness data associated with
 			// the input being validated.
-			if vm.witnessProgram == nil && len(tx.TxIn[txIdx].Witness) != 0 {
-				errStr := "non-witness inputs cannot have a witness"
-				return nil, scriptError(ErrWitnessUnexpected, errStr)
-			}
+			errStr := "non-witness inputs cannot have a witness"
+			return nil, scriptError(ErrWitnessUnexpected, errStr)
 		}
 
 	}
