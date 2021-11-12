@@ -2,6 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -172,7 +173,6 @@ func (server *BeaconRPC) getBlockBySerialID(verbosity *int, serialID int64) (int
 
 // handleGetBlock implements the getblock command.
 func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interface{}, error) {
-
 	var blkBytes []byte
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
@@ -191,8 +191,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	// Deserialize the block.
 	blk, err := jaxutil.NewBlockFromBytes(blkBytes)
 	if err != nil {
-		context := "Failed to deserialize block"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), deserializeBlockErrorString)
 	}
 
 	var nextHashString string
@@ -206,8 +205,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 		if blockHeight != -1 && blockHeight < best.Height {
 			nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 			if err != nil {
-				context := "No next block"
-				return nil, server.InternalRPCError(err.Error(), context)
+				return nil, server.InternalRPCError(err.Error(), noNextBlock)
 			}
 			nextHashString = nextHash.String()
 		}
@@ -317,8 +315,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	// Get the block height from BlockChain.
 	blockHeight, err := server.chainProvider.BlockChain().BlockHeightByHash(hash)
 	if err != nil {
-		context := "Failed to obtain block height"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), obtainBlockHeightErrorString)
 	}
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
@@ -327,8 +324,7 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 	if blockHeight < best.Height {
 		nextHash, err := server.chainProvider.BlockChain().BlockHashByHeight(blockHeight + 1)
 		if err != nil {
-			context := "No next block"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return nil, server.InternalRPCError(err.Error(), noNextBlock)
 		}
 		nextHashString = nextHash.String()
 	}
@@ -377,13 +373,13 @@ func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-cha
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
-	mode := "template"
+	mode := templateMode
 	if request != nil && request.Mode != "" {
 		mode = request.Mode
 	}
 
 	switch mode {
-	case "template":
+	case templateMode:
 		return server.handleGetBlockTemplateRequest(request, closeChan)
 	case "proposal":
 		return server.handleGetBlockTemplateProposal(request)

@@ -40,7 +40,7 @@ func (histScanner) New(shardID uint32) histScanner {
 	}
 }
 
-func (scanner *histScanner) runWriters(eGroup *errgroup.Group, writerCtx context.Context, shardID uint32) {
+func (scanner *histScanner) runWriters(writerCtx context.Context, eGroup *errgroup.Group, shardID uint32) {
 	eGroup.Go(func() error { return scanner.addresses.Write(writerCtx) })
 	eGroup.Go(func() error { return scanner.hashes.Write(writerCtx) })
 	eGroup.Go(func() error {
@@ -80,15 +80,13 @@ func historyScanner(offset int, limit *int, shardID uint32) error {
 	interruptChannel := make(chan os.Signal, 1)
 	signal.Notify(interruptChannel, os.Interrupt)
 	go func() {
-		select {
-		case <-interruptChannel:
-			cancelScanning()
-		}
+		<-interruptChannel
+		cancelScanning()
 	}()
 	scanner := histScanner{}.New(shardID)
 	eGroup := errgroup.Group{}
 
-	scanner.runWriters(&eGroup, writerCtx, shardID)
+	scanner.runWriters(writerCtx, &eGroup, shardID)
 
 	eGroup.Go(func() error {
 		return scanner.scan(ctx, cancelWrite, offset, limit, shardID)
@@ -152,15 +150,15 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 
 		timestamp := blk.MsgBlock().Header.Timestamp().UTC().Format(time.RFC3339)
 		txCount := len(txs)
-		for txId, tx := range txs {
+		for txID, tx := range txs {
 			fmt.Printf("\r\033[0K-> Process Block	hash=%s	time=%s	height=%d/%d	tx=%d/%d ",
 				blk.Hash(), timestamp,
-				blk.Height(), end, txId, txCount,
+				blk.Height(), end, txID, txCount,
 			)
 			// write to tx_hashes.csv
 			txHashID := scanner.hashes.Add(tx.Hash().String())
 
-			for outId, out := range tx.MsgTx().TxOut {
+			for outID, out := range tx.MsgTx().TxOut {
 				select {
 				case <-ctx.Done():
 					log.Info("\nStop scanning.")
@@ -169,7 +167,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 				default:
 				}
 
-				scanner.scripts.Add(txCount, outId, out.PkScript, out.Value)
+				scanner.scripts.Add(txCount, outID, out.PkScript, out.Value)
 
 				class, addrr, _, err := txscript.ExtractPkScriptAddrs(out.PkScript, activeNetParams)
 				if err != nil || class == txscript.NonStandardTy {
@@ -183,7 +181,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 						data: UTXO{
 							Address:  addressID,
 							TxHash:   txHashID,
-							OutID:    outId,
+							OutID:    outID,
 							Amount:   out.Value,
 							PkScript: hex.EncodeToString(out.PkScript),
 						},
@@ -194,7 +192,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 						data: AddressTx{
 							Address:   addressID,
 							TxHash:    txHashID,
-							OutID:     outId,
+							OutID:     outID,
 							Direction: true,
 						},
 					}
@@ -203,7 +201,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 						flush: flushOuts,
 						data: TxOperation{
 							TxHash:      tx.Hash().String(),
-							TxIndex:     txId,
+							TxIndex:     txID,
 							Address:     adr.EncodeAddress(),
 							Amount:      out.Value,
 							BlockNumber: int(blk.Height()),
@@ -220,7 +218,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 				continue
 			}
 
-			for inId, in := range tx.MsgTx().TxIn {
+			for inID, in := range tx.MsgTx().TxIn {
 				select {
 				case <-ctx.Done():
 					log.Info("\nStop scanning.")
@@ -253,7 +251,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 						data: AddressTx{
 							Address:   addressID,
 							TxHash:    txHashID,
-							OutID:     inId,
+							OutID:     inID,
 							Direction: true,
 						},
 					}
@@ -262,7 +260,7 @@ func (scanner *histScanner) scan(ctx context.Context, cancel context.CancelFunc,
 						flush: flushInputs,
 						data: TxOperation{
 							TxHash:      tx.Hash().String(),
-							TxIndex:     txId,
+							TxIndex:     txID,
 							Address:     adr.EncodeAddress(),
 							Amount:      value,
 							BlockNumber: int(blk.Height()),

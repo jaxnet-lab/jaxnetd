@@ -3,67 +3,8 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
-
-// list of commands that we recognize, but for which jaxnetd has no support because
-// it lacks support for wallet functionality. For these commands the user
-// should ask a connected instance of btcwallet.
-var rpcAskWallet = map[string]struct{}{
-	"addmultisigaddress":     {},
-	"backupwallet":           {},
-	"createencryptedwallet":  {},
-	"createmultisig":         {},
-	"dumpprivkey":            {},
-	"dumpwallet":             {},
-	"encryptwallet":          {},
-	"getaccount":             {},
-	"getaccountaddress":      {},
-	"getaddressesbyaccount":  {},
-	"getbalance":             {},
-	"getnewaddress":          {},
-	"getrawchangeaddress":    {},
-	"getreceivedbyaccount":   {},
-	"getreceivedbyaddress":   {},
-	"gettransaction":         {},
-	"gettxoutsetinfo":        {},
-	"getunconfirmedbalance":  {},
-	"getwalletinfo":          {},
-	"importprivkey":          {},
-	"importwallet":           {},
-	"keypoolrefill":          {},
-	"listaccounts":           {},
-	"listaddressgroupings":   {},
-	"listlockunspent":        {},
-	"listreceivedbyaccount":  {},
-	"listreceivedbyaddress":  {},
-	"listsinceblock":         {},
-	"listtransactions":       {},
-	"listunspent":            {},
-	"lockunspent":            {},
-	"move":                   {},
-	"sendfrom":               {},
-	"sendmany":               {},
-	"sendtoaddress":          {},
-	"setaccount":             {},
-	"settxfee":               {},
-	"signmessage":            {},
-	"signrawtransaction":     {},
-	"walletlock":             {},
-	"walletpassphrase":       {},
-	"walletpassphrasechange": {},
-}
-
-// Commands that are currently unimplemented, but should ultimately be.
-var rpcUnimplemented = map[string]struct{}{
-	"estimatepriority": {},
-	"getchaintips":     {},
-	"getmempoolentry":  {},
-	"getwork":          {},
-	"invalidateblock":  {},
-	"preciousblock":    {},
-	"reconsiderblock":  {},
-}
 
 // Commands that are available to a limited user
 var rpcLimited = map[string]struct{}{

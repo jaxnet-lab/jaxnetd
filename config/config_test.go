@@ -45,7 +45,7 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 		t.Fatalf("Failed obtaining app path: %v", err)
 	}
 	tmpConfigFile := filepath.Join(appPath, "sample-jaxnetd.conf")
-	err = ioutil.WriteFile(tmpConfigFile, data, 0644)
+	err = ioutil.WriteFile(tmpConfigFile, data, 0o644)
 	if err != nil {
 		t.Fatalf("Failed copying sample config file: %v", err)
 	}
@@ -76,6 +76,7 @@ func TestCreateDefaultConfigFile(t *testing.T) {
 		t.Error("Could not find rpcpass in generated default config file.")
 	}
 }
+
 func TestLoadConfig(t *testing.T) {
 	cfg := node.Config{
 		ConfigFile:  "",
@@ -147,7 +148,7 @@ func TestLoadConfig(t *testing.T) {
 				Enable:  false,
 				Autorun: false,
 			},
-			DbType:         "",
+			DBType:         "",
 			Net:            "",
 			EnableCPUMiner: false,
 		},

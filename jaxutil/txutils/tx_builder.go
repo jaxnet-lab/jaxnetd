@@ -51,8 +51,8 @@ func EstimateFee(inCount, outCount int, feeRate int64, addChange bool, shardID u
 	}
 
 	if addChange {
-		inCount += 1
-		outCount += 1
+		inCount++
+		outCount++
 	}
 
 	// Version 4 bytes + LockTime 4 bytes + Serialized varint size for the
@@ -329,11 +329,11 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		rows := opts.utxoRows.List()
 		for i := range rows {
 			utxo := rows[i].ToShort()
-			_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+			err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
 			if err != nil {
 				return nil, errors.Wrap(err, "unable to sing utxo")
 			}
-			txInIndex += 1
+			txInIndex++
 		}
 	}
 
@@ -388,7 +388,7 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		txInIndex := i
 		utxo := au[txInIndex].ToShort()
 
-		_, err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+		err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -422,15 +422,15 @@ func (t *txBuilder) addChangeOut(msgTx *wire.MsgTx, change int64) (*wire.MsgTx, 
 // 	- inIndex is an index, where placed this UTXO
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
-func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) ([]byte, error) {
+func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) error {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode PK script")
+		return errors.Wrap(err, "failed to decode PK script")
 	}
 
 	scriptPubKey, err := DecodeScript(pkScript, t.net.Params())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, address := range scriptPubKey.Addresses {
@@ -440,7 +440,7 @@ func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, in
 		}
 	}
 
-	var prevScript []byte = nil
+	var prevScript []byte
 	if msgTx.TxIn[inIndex].SignatureScript != nil {
 		prevScript = msgTx.TxIn[inIndex].SignatureScript
 	}
@@ -449,12 +449,12 @@ func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, in
 	sig, err = txscript.SignTxOutput(t.net.Params(), msgTx, inIndex, pkScript,
 		txscript.SigHashAll, kdb, &utxo, prevScript)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign tx output")
+		return errors.Wrap(err, "failed to sign tx output")
 	}
 
 	msgTx.TxIn[inIndex].SignatureScript = sig
 
-	return sig, nil
+	return nil
 }
 
 func (t *txBuilder) setFees(getFee FeeProviderFunc) error {
@@ -486,17 +486,17 @@ func (t *txBuilder) prepareUTXOs() error {
 		shards  = map[uint32]struct{}{}
 	)
 
-	for _, key := range t.destinations {
+	for i, key := range t.destinations {
 		utxo := key.utxo
 		if !t.swapTx && (shardID != nil && *shardID != key.shardID) {
 			return errors.Errorf("destinations are not in the same shard (%d != %d)", *shardID, key.shardID)
 		}
 
-		shardID = &key.shardID
+		shardID = &t.destinations[i].shardID
 
 		opts := t.collectedOpts[key.shardID]
 		opts.needed += key.amount
-		opts.outs += 1
+		opts.outs++
 		if opts.utxoRows == nil {
 			opts.utxoRows = utxo
 		} else {
@@ -573,5 +573,7 @@ type destinationKey struct {
 
 // FeeProviderFunc should return non-zero value either fee or feeRate rate.
 // Static fee has main priority, otherwise, the fee will be calculated using feeRate.
-type FeeProviderFunc func(shardID uint32) (fee, feeRate int64, err error)
-type GetTxOutFunc func(shardID uint32, txHash *chainhash.Hash, index uint32) (int64, error)
+type (
+	FeeProviderFunc func(shardID uint32) (fee, feeRate int64, err error)
+	GetTxOutFunc    func(shardID uint32, txHash *chainhash.Hash, index uint32) (int64, error)
+)

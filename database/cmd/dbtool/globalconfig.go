@@ -20,20 +20,20 @@ import (
 
 var (
 	jaxnetdHomeDir  = jaxutil.AppDataDir("jaxnetd", false)
-	knownDbTypes    = database.SupportedDrivers()
+	knownDBTypes    = database.SupportedDrivers()
 	activeNetParams = &chaincfg.MainNetParams
 
 	// Default global config.
 	cfg = &config{
 		DataDir: filepath.Join(jaxnetdHomeDir, "data"),
-		DbType:  "ffldb",
+		DBType:  "ffldb",
 	}
 )
 
 // config defines the global configuration options.
 type config struct {
 	DataDir        string `short:"b" long:"datadir" description:"Location of the jaxnetd data directory"`
-	DbType         string `long:"dbtype" description:"Database backend to use for the Block Chain"`
+	DBType         string `long:"dbtype" description:"Database backend to use for the Block Chain"`
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
 	SimNet         bool   `long:"simnet" description:"Use the simulation test network"`
 	TestNet3       bool   `long:"testnet" description:"Use the test network"`
@@ -50,9 +50,9 @@ func fileExists(name string) bool {
 	return true
 }
 
-// validDbType returns whether or not dbType is a supported database type.
-func validDbType(dbType string) bool {
-	for _, knownType := range knownDbTypes {
+// validDBType returns whether or not dbType is a supported database type.
+func validDBType(dbType string) bool {
+	for _, knownType := range knownDBTypes {
 		if dbType == knownType {
 			return true
 		}
@@ -84,6 +84,7 @@ func netName(chainParams *chaincfg.Params) string {
 // setupGlobalConfig examine the global configuration options for any conditions
 // which are invalid as well as performs any addition setup necessary after the
 // initial parse.
+//  nolint: stylecheck
 func setupGlobalConfig() error {
 	// Multiple networks can't be selected simultaneously.
 	// Count number of network flags passed; assign active network params
@@ -107,10 +108,10 @@ func setupGlobalConfig() error {
 	}
 
 	// Validate database type.
-	if !validDbType(cfg.DbType) {
+	if !validDBType(cfg.DBType) {
 		str := "The specified database type [%v] is invalid -- " +
 			"supported types %v"
-		return fmt.Errorf(str, cfg.DbType, knownDbTypes)
+		return fmt.Errorf(str, cfg.DBType, knownDBTypes)
 	}
 
 	// Append the network type to the data directory so it is "namespaced"

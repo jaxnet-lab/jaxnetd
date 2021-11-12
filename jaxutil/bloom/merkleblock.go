@@ -6,6 +6,7 @@
 package bloom
 
 import (
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -79,6 +80,7 @@ func (m *merkleBlock) traverseAndBuild(height, pos uint32) {
 
 // NewMerkleBlock returns a new *wire.MsgMerkleBlock and an array of the matched
 // transaction index numbers based on the passed block and filter.
+// nolint: gomnd
 func NewMerkleBlock(block *jaxutil.Block, filter *Filter) (*wire.MsgMerkleBlock, []uint32) {
 	numTx := uint32(len(block.Transactions()))
 	mBlock := merkleBlock{
@@ -116,7 +118,9 @@ func NewMerkleBlock(block *jaxutil.Block, filter *Filter) (*wire.MsgMerkleBlock,
 		Flags:        make([]byte, (len(mBlock.bits)+7)/8),
 	}
 	for _, hash := range mBlock.finalHashes {
-		msgMerkleBlock.AddTxHash(hash)
+		if err := msgMerkleBlock.AddTxHash(hash); err != nil {
+			log.Error().Err(err).Msgf("cannot add txHash %s to block", hash)
+		}
 	}
 	for i := uint32(0); i < uint32(len(mBlock.bits)); i++ {
 		msgMerkleBlock.Flags[i/8] |= mBlock.bits[i] << (i % 8)

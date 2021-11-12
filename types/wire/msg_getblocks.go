@@ -151,16 +151,15 @@ func (msg *BlockLocatorMeta) String() string {
 	return fmt.Sprintf("(hash=%s)", msg.Hash)
 	// return fmt.Sprintf("(hash=%s, prev_mmr_root=%s, chainWeight=%d, height=%d)", msg.Hash, msg.PrevMMRRoot, msg.Weight, msg.Height)
 }
+
 func (msg *BlockLocatorMeta) SerializeSize() int {
 	return chainhash.HashSize // *2 + 8 + 4
 }
 
 func (msg *BlockLocatorMeta) Serialize(w io.Writer) error {
 	return WriteElements(w, &msg.Hash) // &msg.PrevMMRRoot, &msg.Weight, &msg.Height,
-
 }
 
 func (msg *BlockLocatorMeta) Deserialize(r io.Reader) error {
 	return ReadElements(r, &msg.Hash) // &msg.PrevMMRRoot, &msg.Weight, &msg.Height,
-
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -31,6 +31,14 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
+const (
+	deserializeTranErrorString   = "Failed to deserialize transaction"
+	deserializeBlockErrorString  = "Failed to deserialize block"
+	templateMode                 = "template"
+	noNextBlock                  = "No next block"
+	obtainBlockHeightErrorString = "Failed to obtain block height"
+)
+
 type CommonChainRPC struct {
 	Mux
 
@@ -42,7 +50,6 @@ type CommonChainRPC struct {
 
 	chainProvider *cprovider.ChainProvider
 	gbtWorkState  *mining.GBTWorkState
-	ntfnMgr       *WsManager
 	helpCache     *helpCacher
 }
 
@@ -227,8 +234,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 		var msgTx wire.MsgTx
 		err = msgTx.Deserialize(bytes.NewReader(txBytes))
 		if err != nil {
-			context := "Failed to deserialize transaction"
-			return nil, server.InternalRPCError(err.Error(), context)
+			return nil, server.InternalRPCError(err.Error(), deserializeTranErrorString)
 		}
 
 		// Add the referenced output to the map.
@@ -277,19 +283,6 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 	server.Log.Info().Msgf("Chain verify completed successfully")
 
 	return nil
-}
-
-// handleUnimplemented is the handler for commands that should ultimately be
-// supported but are not yet implemented.
-func (server *CommonChainRPC) handleUnimplemented(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return nil, ErrRPCUnimplemented
-}
-
-// handleAskWallet is the handler for commands that are recognized as valid, but
-// are unable to answer correctly since it involves wallet state.
-// These commands will be implemented in btcwallet.
-func (server *CommonChainRPC) handleAskWallet(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	return nil, ErrRPCNoWallet
 }
 
 // handleDecodeScript handles decodescript commands.
@@ -551,7 +544,9 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 		}
 	}
 
-	hash.SetBytes(headerBytes)
+	if err := hash.SetBytes(headerBytes); err != nil {
+		log.Error().Err(err).Msg("cannot set header bytes")
+	}
 	return hash.String(), nil
 }
 
@@ -753,6 +748,7 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 }
 
 // handleValidateAddress implements the validateaddress command.
+// nolint: nilerr
 func (server *CommonChainRPC) handleValidateAddress(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.ValidateAddressCmd)
 
@@ -786,6 +782,7 @@ func (server *CommonChainRPC) handleVerifyChain(cmd interface{}, closeChan <-cha
 }
 
 // handleVerifyMessage implements the verifymessage command.
+// nolint: nilerr
 func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.VerifyMessageCmd)
 
@@ -819,8 +816,8 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 	// Validate the signature - this just shows that it was valid at all.
 	// we will compare it with the key next.
 	var buf bytes.Buffer
-	wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
-	wire.WriteVarString(&buf, 0, c.Message)
+	_ = wire.WriteVarString(&buf, 0, "Bitcoin Signed Message:\n")
+	_ = wire.WriteVarString(&buf, 0, c.Message)
 	expectedMessageHash := chainhash.DoubleHashB(buf.Bytes())
 	pk, wasCompressed, err := btcec.RecoverCompact(btcec.S256(), sig,
 		expectedMessageHash)
@@ -901,6 +898,7 @@ func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-c
 }
 
 // handleGetNetworkHashPS implements the getnetworkhashps command.
+// nolint: gomnd
 func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	// Note: All valid error return paths should return an int64.
 	// Literal zeros are inferred as int, and won't coerce to int64
@@ -1021,7 +1019,10 @@ func (server *CommonChainRPC) handleGetDifficulty(cmd interface{}, closeChan <-c
 	return server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
 }
 
+const lockTimeBlocks = 20_000
+
 // handleGetDifficulty implements the getdifficulty command.
+// nolint: gomnd
 func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	c := cmd.(*jaxjson.EstimateLockTime)
 
@@ -1039,9 +1040,9 @@ func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan 
 		return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil
 	}
 
-	if n > 20000 {
+	if n > lockTimeBlocks {
 		return nil, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
-			fmt.Sprintf("lock time more than 2000 blocks"))
+			"lock time more than 2000 blocks")
 	}
 
 	return jaxjson.EstimateLockTimeResult{NBlocks: int64(n)}, nil

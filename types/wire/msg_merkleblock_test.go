@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io"
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ func TestMerkleBlock(t *testing.T) {
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := NewBeaconBlockHeader(1, 1, prevHash, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, 1, nonce)
+	bh := NewBeaconBlockHeader(1, 1, prevHash, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, big.NewInt(1), nonce)
 
 	// Ensure the command is expected value.
 	wantCmd := "merkleblock"
@@ -121,7 +122,7 @@ func TestMerkleBlockCrossProtocol(t *testing.T) {
 	// mmrHash := blockOne.Header.MergeMiningRoot()
 	bits := blockOne.Header.Bits()
 	nonce := blockOne.Header.Nonce()
-	bh := NewBeaconBlockHeader(1, 1, prevHash, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, 1, nonce)
+	bh := NewBeaconBlockHeader(1, 1, prevHash, prevHash, merkleHash, chainhash.Hash{}, time.Now(), bits, big.NewInt(1), nonce)
 
 	msg := NewMsgMerkleBlock(bh)
 
@@ -381,7 +382,7 @@ var merkleBlockOne = MsgMerkleBlock{
 		chainhash.Hash{},
 		time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
 		0x1d00ffff,               // 486604799
-		1,
+		big.NewInt(1),
 		0x9962e301, // 2573394689
 	),
 	Transactions: 1,

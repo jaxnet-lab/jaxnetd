@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/bloom"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
@@ -293,6 +294,8 @@ func (sp *serverPeer) OnVerAck(_ *peer.Peer, _ *wire.MsgVerAck) {
 	sp.serverPeerHandler.AddPeer(sp)
 }
 
+const defaultTransientBanScore = 33
+
 // OnMemPool is invoked when a peer receives a mempool bitcoin message.
 // It creates and sends an inventory message with the contents of the memory
 // pool up to the maximum inventory allowed per message.  When the peer has a
@@ -310,8 +313,8 @@ func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 	// A decaying ban score increase is applied to prevent flooding.
 	// The ban score accumulates and passes the ban threshold if a burst of
 	// mempool messages comes from a peer. The score decays each minute to
-	// half of its value.
-	sp.addBanScore(0, 33, "mempool")
+	// half of its value.33
+	sp.addBanScore(0, defaultTransientBanScore, "mempool")
 
 	// Generate inventory message with the available transactions in the
 	// transaction memory pool.  Limit it to the max allowed inventory
@@ -328,7 +331,9 @@ func (sp *serverPeer) OnMemPool(_ *peer.Peer, msg *wire.MsgMemPool) {
 		// one.
 		if !sp.filter.IsLoaded() || sp.filter.MatchTxAndUpdate(txDesc.Tx) {
 			iv := wire.NewInvVect(wire.InvTypeTx, txDesc.Tx.Hash())
-			invMsg.AddInvVect(iv)
+			if err := invMsg.AddInvVect(iv); err != nil {
+				log.Error().Err(err).Msg("cannot add inventory vector")
+			}
 			if len(invMsg.InvList)+1 > wire.MaxInvPerMsg {
 				break
 			}
@@ -488,7 +493,9 @@ func (sp *serverPeer) OnGetData(_ *peer.Peer, msg *wire.MsgGetData) {
 			continue
 		}
 		if err != nil {
-			notFound.AddInvVect(iv)
+			if err := notFound.AddInvVect(iv); err != nil {
+				log.Error().Err(err).Msg("cannot add inventory vector")
+			}
 
 			// When there is a failure fetching the final entry
 			// and the done channel was sent in due to there
@@ -536,7 +543,9 @@ func (sp *serverPeer) OnGetBlocks(_ *peer.Peer, msg *wire.MsgGetBlocks) {
 	invMsg := wire.NewMsgInv()
 	for i := range hashList {
 		iv := wire.NewInvVect(wire.InvTypeBlock, &hashList[i])
-		invMsg.AddInvVect(iv)
+		if err := invMsg.AddInvVect(iv); err != nil {
+			log.Error().Err(err).Msg("cannot add inventory vector")
+		}
 	}
 
 	// Send the inventory message if there is anything to send.
@@ -577,9 +586,7 @@ func (sp *serverPeer) OnGetHeaders(_ *peer.Peer, msg *wire.MsgGetHeaders) {
 
 	// Send found headers to the requesting peer.
 	blockHeaders := make([]wire.HeaderBox, len(headers))
-	for i := range headers {
-		blockHeaders[i] = headers[i]
-	}
+	copy(blockHeaders, headers)
 	sp.QueueMessage(&wire.MsgHeaders{Headers: blockHeaders}, nil)
 }
 
@@ -745,7 +752,9 @@ func (sp *serverPeer) OnGetCFHeaders(_ *peer.Peer, msg *wire.MsgGetCFHeaders) {
 			return
 		}
 
-		headersMsg.AddCFHash(filterHash)
+		if err := headersMsg.AddCFHash(filterHash); err != nil {
+			log.Error().Err(err).Msg("cannot add CF hash")
+		}
 	}
 
 	headersMsg.FilterType = msg.FilterType
@@ -821,6 +830,7 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 			sp.logger.Info().Msgf("Growing size of checkpoint cache from %v to %v "+
 				"block hashes", len(checkptCache), len(blockHashes))
 
+			// nolint: gocritic
 			checkptCache = append(
 				sp.serverPeerHandler.cfCheckptCaches[msg.FilterType],
 				newEntries...,
@@ -850,7 +860,9 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	// query, we'll populate our check point message with the cache as is.
 	// Shortly below, we'll populate the new elements of the cache.
 	for i := 0; i < forkIdx; i++ {
-		checkptMsg.AddCFHeader(&checkptCache[i].filterHeader)
+		if err := checkptMsg.AddCFHeader(&checkptCache[i].filterHeader); err != nil {
+			log.Error().Err(err).Msg("cannot add cf header")
+		}
 	}
 
 	// We'll now collect the set of hashes that are beyond our cache so we
@@ -883,7 +895,9 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 			return
 		}
 
-		checkptMsg.AddCFHeader(filterHeader)
+		if err := checkptMsg.AddCFHeader(filterHeader); err != nil {
+			log.Error().Err(err).Msg("cannot add cf header")
+		}
 
 		// If the new main BlockChain is longer than what's in the cache,
 		// then we'll override it beyond the fork point.
@@ -904,6 +918,8 @@ func (sp *serverPeer) OnGetCFCheckpt(_ *peer.Peer, msg *wire.MsgGetCFCheckpt) {
 	sp.QueueMessage(checkptMsg, nil)
 }
 
+const consistentBanScore = 100
+
 // enforceNodeBloomFlag disconnects the peer if the server is not configured to
 // allow bloom filters.  Additionally, if the peer has negotiated to a protocol
 // version  that is high enough to observe the bloom filter service support bit,
@@ -923,7 +939,7 @@ func (sp *serverPeer) enforceNodeBloomFlag(cmd string) bool {
 
 			// Disconnect the peer regardless of whether it was
 			// banned.
-			sp.addBanScore(100, 0, cmd)
+			sp.addBanScore(consistentBanScore, 0, cmd)
 			sp.Disconnect()
 			return false
 		}
@@ -1047,6 +1063,8 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *wire.MsgGetAddr) {
 	sp.pushAddrMsg(addrCache)
 }
 
+const timestampOffset = -1 * time.Hour * 24 * 5
+
 // OnAddr is invoked when a peer receives an addr bitcoin message and is
 // used to notify the Server about advertised addresses.
 func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
@@ -1074,7 +1092,7 @@ func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *wire.MsgAddr) {
 		// removed when space is needed.
 		now := time.Now()
 		if na.Timestamp.After(now.Add(time.Minute * 10)) {
-			na.Timestamp = now.Add(-1 * time.Hour * 24 * 5)
+			na.Timestamp = now.Add(timestampOffset)
 		}
 
 		// Add address to known addresses for this peer.

@@ -35,6 +35,7 @@ var mainNetParams = params{
 // testNet3Params contains parameters specific to the test network (version 3)
 // (types.TestNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
+// nolint
 var testNet3Params = params{
 	Params:  &chaincfg.TestNet3Params,
 	rpcPort: "18334",
@@ -42,6 +43,7 @@ var testNet3Params = params{
 
 // simNetParams contains parameters specific to the simulation test network
 // (wire.SimNet).
+// nolint
 var simNetParams = params{
 	Params:  &chaincfg.SimNetParams,
 	rpcPort: "18556",

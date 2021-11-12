@@ -15,16 +15,15 @@ import (
 )
 
 var (
-	// ignoreDbTypes are types which should be ignored when running tests
-	// that iterate all supported DB types.  This allows some tests to add
-	// bogus drivers for testing purposes while still allowing other tests
-	// to easily iterate all supported drivers.
-	ignoreDbTypes = map[string]bool{"createopenfail": true}
+// ignoreDbTypes are types which should be ignored when running tests
+// that iterate all supported DB types.  This allows some tests to add
+// bogus drivers for testing purposes while still allowing other tests
+// to easily iterate all supported drivers.
 )
 
-// checkDbError ensures the passed error is a database.Error with an error code
+// checkDBError ensures the passed error is a database.Error with an error code
 // that matches the passed  error code.
-func checkDbError(t *testing.T, testName string, gotErr error, wantErrCode database.ErrorCode) bool {
+func checkDBError(t *testing.T, testName string, gotErr error, wantErrCode database.ErrorCode) bool {
 	dbErr, ok := gotErr.(database.Error)
 	if !ok {
 		t.Errorf("%s: unexpected error type - got %T, want %T",
@@ -63,13 +62,13 @@ func TestAddDuplicateDriver(t *testing.T) {
 	// create and open functions to a function that causes a test failure if
 	// they are invoked.
 	driver := database.Driver{
-		DbType: dbType,
+		DBType: dbType,
 		Create: bogusCreateDB,
 		Open:   bogusCreateDB,
 	}
 	testName := "duplicate driver registration"
 	err := database.RegisterDriver(driver)
-	if !checkDbError(t, testName, err, database.ErrDbTypeRegistered) {
+	if !checkDBError(t, testName, err, database.ErrDBTypeRegistered) {
 		return
 	}
 }
@@ -90,7 +89,7 @@ func TestCreateOpenFail(t *testing.T) {
 	// Create and add driver that intentionally fails when created or opened
 	// to ensure errors on database open and create are handled properly.
 	driver := database.Driver{
-		DbType: dbType,
+		DBType: dbType,
 		Create: bogusCreateDB,
 		Open:   bogusCreateDB,
 	}
@@ -124,7 +123,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	testName := "create with unsupported database type"
 	dbType := "unsupported"
 	_, err := database.Create(dbType, ch)
-	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !checkDBError(t, testName, err, database.ErrDBUnknownType) {
 		return
 	}
 
@@ -132,7 +131,7 @@ func TestCreateOpenUnsupported(t *testing.T) {
 	// expected error.
 	testName = "open with unsupported database type"
 	_, err = database.Open(dbType, ch)
-	if !checkDbError(t, testName, err, database.ErrDbUnknownType) {
+	if !checkDBError(t, testName, err, database.ErrDBUnknownType) {
 		return
 	}
 }

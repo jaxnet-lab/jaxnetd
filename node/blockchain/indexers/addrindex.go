@@ -8,6 +8,7 @@ package indexers
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -145,7 +146,7 @@ type fetchBlockHashFunc func(serializedID []byte) (*chainhash.Hash, error)
 // location according to the format described in detail above.
 func serializeAddrIndexEntry(blockID uint32, txLoc wire.TxLoc) []byte {
 	// Serialize the entry.
-	serialized := make([]byte, 12)
+	serialized := make([]byte, minBytes)
 	byteOrder.PutUint32(serialized, blockID)
 	byteOrder.PutUint32(serialized[4:], uint32(txLoc.TxStart))
 	byteOrder.PutUint32(serialized[8:], uint32(txLoc.TxLen))
@@ -447,7 +448,7 @@ func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte,
 	// and gaps are not allowed, so this also keeps track of the lowest
 	// empty level so the code below knows how far to backfill in case it is
 	// required.
-	lowestEmptyLevel := uint8(255)
+	lowestEmptyLevel := uint8(math.MaxUint8)
 	curLevelData := pendingUpdates[highestLoadedLevel]
 	curLevelMaxEntries := maxEntriesForLevel(highestLoadedLevel)
 	for level := highestLoadedLevel; level > 0; level-- {
@@ -749,7 +750,6 @@ func (idx *AddrIndex) indexBlock(data writeIndexData, block *jaxutil.Block,
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
-
 	// The offset and length of the transactions within the serialized
 	// block.
 	txLocs, err := block.TxLoc()

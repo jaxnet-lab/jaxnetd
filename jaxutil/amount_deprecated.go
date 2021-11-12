@@ -14,7 +14,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 )
 
-// DEPRECATED: please use IAmount and JaxNetAmount & JaxAmount.
+// Deprecated: please use IAmount and JaxNetAmount & JaxAmount.
 // Amount represents the base bitcoin monetary unit (colloquially referred
 // to as a `Satoshi').  A single Amount is equal to 1e-8 of a bitcoin.
 type Amount int64
@@ -66,11 +66,13 @@ func (a Amount) ToBTC() float64 {
 }
 
 // ToJax ...
+// nolint: gomnd
 func (a Amount) ToJax() float64 {
 	return float64(a) / 10_000
 }
 
 // ToJaxNet ...
+// nolint: gomnd
 func (a Amount) ToJaxNet() float64 {
 	return float64(a) / 100_000_000
 }

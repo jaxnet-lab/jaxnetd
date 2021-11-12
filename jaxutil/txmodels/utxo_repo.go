@@ -42,7 +42,7 @@ func NewUTXORepo(dataDir string, additionalKeys ...string) UTXORepo {
 }
 
 func (collector *UTXORepo) GetForAmount(amount int64, shardID uint32, addresses ...string) (*UTXO, error) {
-	var filter map[string]struct{} = nil
+	var filter map[string]struct{}
 	if len(addresses) > 0 {
 		filter = make(map[string]struct{}, len(addresses))
 
@@ -59,7 +59,7 @@ func (collector *UTXORepo) GetForAmount(amount int64, shardID uint32, addresses 
 }
 
 func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, addresses ...string) (UTXORows, error) {
-	var filter map[string]struct{} = nil
+	var filter map[string]struct{}
 	if len(addresses) > 0 {
 		filter = make(map[string]struct{}, len(addresses))
 
@@ -79,7 +79,7 @@ func (collector *UTXORepo) SelectForAmount(amount int64, shardID uint32, address
 	return rows, nil
 }
 
-func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, error) {
+func (collector *UTXORepo) Balance(shardID uint32, addresses ...string) (int64, error) {
 	filter := make(map[string]struct{}, len(addresses))
 	for _, address := range addresses {
 		filter[address] = struct{}{}
@@ -93,7 +93,7 @@ func (collector *UTXORepo) Balance(shardId uint32, addresses ...string) (int64, 
 		}
 		_, ok := filter[utxo.Address]
 
-		if (ok || allowAll) && utxo.ShardID == shardId && !utxo.Used {
+		if (ok || allowAll) && utxo.ShardID == shardID && !utxo.Used {
 			sum += utxo.Value
 		}
 	}
@@ -151,7 +151,7 @@ func (collector *UTXORepo) SaveIndex() error {
 		return errors.Wrap(err, "unable to marshal index")
 	}
 
-	err = ioutil.WriteFile(collector.file, data, 0644)
+	err = ioutil.WriteFile(collector.file, data, 0o644)
 	if err != nil {
 		return errors.Wrap(err, "unable to save index")
 	}

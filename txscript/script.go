@@ -19,6 +19,7 @@ import (
 // Bip16Activation is the timestamp where BIP0016 is valid to use in the
 // blockchain.  To be used to determine if BIP0016 should be called for or not.
 // This timestamp corresponds to Sun Apr 1 00:00:00 UTC 2012.
+// nolint: gomnd
 var Bip16Activation = time.Unix(1333238400, 0)
 
 // SigHashType represents hash type bits at the end of a signature.
@@ -377,7 +378,6 @@ func removeOpcodeByData(pkscript []parsedOpcode, data []byte) []parsedOpcode {
 		}
 	}
 	return retScript
-
 }
 
 // calcHashPrevOuts calculates a single hash of all the previous outputs
@@ -428,7 +428,9 @@ func calcHashSequence(tx *wire.MsgTx) chainhash.Hash {
 func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 	var b bytes.Buffer
 	for _, out := range tx.TxOut {
-		wire.WriteTxOut(&b, 0, 0, out)
+		if err := wire.WriteTxOut(&b, 0, out); err != nil {
+			log.Error().Err(err).Msg("cannot write txOut")
+		}
 	}
 
 	return chainhash.DoubleHashH(b.Bytes())
@@ -445,6 +447,7 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // being spent, in addition to the final transaction fee. In the case the
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
+// nolint: gocritic
 func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
 
@@ -511,7 +514,9 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		// the original script, with all code separators removed,
 		// serialized with a var int length prefix.
 		rawScript, _ := unparseScript(subScript)
-		wire.WriteVarBytes(&sigHash, 0, rawScript)
+		if err := wire.WriteVarBytes(&sigHash, 0, rawScript); err != nil {
+			log.Error().Err(err).Msg("cannot write var bytes")
+		}
 	}
 
 	// Next, add the input amount, and sequence number of the input being
@@ -532,7 +537,10 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		sigHash.Write(sigHashes.HashOutputs[:])
 	} else if hashType&sigHashMask == SigHashSingle && idx < len(tx.TxOut) {
 		var b bytes.Buffer
-		wire.WriteTxOut(&b, 0, 0, tx.TxOut[idx])
+		err := wire.WriteTxOut(&b, 0, tx.TxOut[idx])
+		if err != nil {
+			log.Error().Err(err).Msg("cannot write tx out")
+		}
 		sigHash.Write(chainhash.DoubleHashB(b.Bytes()))
 	} else {
 		sigHash.Write(zeroHash[:])
@@ -641,6 +649,7 @@ func CalcSignatureHash(script []byte, hashType SigHashType, tx *wire.MsgTx, idx 
 // calcSignatureHash will, given a script and hash type for the current script
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
+//  nolint: stylecheck, gocritic
 func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.MsgTx, idx int) []byte {
 	// The SigHashSingle signature type signs only the corresponding input
 	// and output (the output with the same index number as the input).
@@ -728,8 +737,10 @@ func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.Msg
 	// transaction and the hash type (encoded as a 4-byte little-endian
 	// value) appended.
 	wbuf := bytes.NewBuffer(make([]byte, 0, txCopy.SerializeSizeStripped()+4))
-	txCopy.SerializeNoWitness(wbuf)
-	binary.Write(wbuf, binary.LittleEndian, hashType)
+	if err := txCopy.SerializeNoWitness(wbuf); err != nil {
+		log.Error().Err(err).Msg("cannot serialize no witness tx")
+	}
+	_ = binary.Write(wbuf, binary.LittleEndian, hashType)
 	return chainhash.DoubleHashB(wbuf.Bytes())
 }
 
@@ -875,8 +886,7 @@ func getWitnessSigOps(pkScript []byte, witness wire.TxWitness) int {
 		return 0
 	}
 
-	switch witnessVersion {
-	case 0:
+	if witnessVersion == 0 {
 		switch {
 		case len(witnessProgram) == payToWitnessPubKeyHashDataSize:
 			return 1

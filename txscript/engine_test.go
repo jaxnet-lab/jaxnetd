@@ -253,7 +253,6 @@ func TestCheckPubKeyEncoding(t *testing.T) {
 				"when it should have failed", test.name)
 		}
 	}
-
 }
 
 // TestCheckSignatureEncoding ensures the internal checkSignatureEncoding

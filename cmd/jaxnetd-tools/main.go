@@ -117,7 +117,7 @@ func (app *App) getCommands() cli.Commands {
 					Action: func(c *cli.Context) error {
 						script := c.String("block")
 						shard := c.Bool("shard")
-						var block = wire.EmptyBeaconBlock()
+						block := wire.EmptyBeaconBlock()
 						if shard {
 							block = wire.EmptyShardBlock()
 						}
@@ -148,7 +148,7 @@ func (app *App) getCommands() cli.Commands {
 							return cli.NewExitError(err, 1)
 						}
 
-						jsonTx := txutils.TxToJson(tx, app.config.NetParams())
+						jsonTx := txutils.TxToJSON(tx, app.config.NetParams())
 						data, _ := json.MarshalIndent(jsonTx, "", "  ")
 						println(string(data))
 						return nil
@@ -311,6 +311,7 @@ func (app *App) SyncUTXOCmd(c *cli.Context) error {
 	return nil
 }
 
+// nolint: gomnd
 func (app *App) sendTxCmd(*cli.Context) error {
 	if app.config.Cmd.SendTxs == nil {
 		return cli.NewExitError("invalid configuration - cmd.send_tx is nil", 1)
@@ -324,7 +325,7 @@ func (app *App) sendTxCmd(*cli.Context) error {
 	for _, dest := range app.config.Cmd.SendTxs.Destinations {
 		fmt.Println("")
 		fmt.Printf("Try to send %d satoshi to %s ", dest.Amount, dest.Address)
-		txHash, err := sendTx(app.TxMan, key, dest.ShardID, dest.Address, dest.Amount, 0)
+		txHash, err := sendTx(app.TxMan, key, dest.ShardID, dest.Address, dest.Amount)
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to creat and publish tx"), 1)
 		}
@@ -522,10 +523,10 @@ func (*App) genKp(*cli.Context) error {
 
 	fmt.Printf("PrivateKey: %x\n", key.Serialize())
 
-	for _, net := range nets {
+	for i, net := range nets {
 		fmt.Println("\n" + net.Name + ":")
 
-		wif, err := jaxutil.NewWIF(key, &net, true)
+		wif, err := jaxutil.NewWIF(key, &nets[i], true)
 		if err != nil {
 			println("[error] " + err.Error())
 			return cli.NewExitError("failed to generate wif", 1)
@@ -537,7 +538,7 @@ func (*App) genKp(*cli.Context) error {
 			fmt.Println()
 			fmt.Println("   PubKey [" + pubKeyTy + "]:")
 
-			addressPubKey, err := jaxutil.NewAddressPubKey(pk, &net)
+			addressPubKey, err := jaxutil.NewAddressPubKey(pk, &nets[i])
 			if err != nil {
 				println("[error] " + err.Error())
 				return cli.NewExitError("failed to generate kp", 1)
@@ -551,7 +552,7 @@ func (*App) genKp(*cli.Context) error {
 	return nil
 }
 
-func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
+func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64) (string, error) {
 	senderAddress := senderKP.Address.EncodeAddress()
 	senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 

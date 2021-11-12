@@ -955,7 +955,7 @@ func TestMultiSigTimeLockScript(t *testing.T) {
 		println(scriptAddr.EncodeAddress())
 
 		println(hex.EncodeToString(script))
-		asm, err := DisasmString(script)
+		asm, _ := DisasmString(script)
 		println(asm)
 		if asm != test.expected {
 			t.Errorf("MultiSigLockScript #%d got: %x\nwant: %x",

@@ -77,6 +77,7 @@ const (
 	stallResponseTimeout = 30 * time.Second
 )
 
+// nolint: gomnd
 var (
 	// nodeCount is the total number of peer connections made since startup
 	// and is used to assign an id to a peer.
@@ -937,6 +938,7 @@ func (peer *Peer) PushAddrMsg(addresses []*wire.NetAddress) ([]*wire.NetAddress,
 	copy(msg.AddrList, addresses)
 
 	// Randomize the addresses sent if there are more than the maximum allowed.
+	// nolint: gosec
 	if addressCount > wire.MaxAddrPerMsg {
 		// Shuffle the address list.
 		for i := 0; i < wire.MaxAddrPerMsg; i++ {
@@ -1622,6 +1624,7 @@ out:
 // a muxer for various sources of input so we can ensure that server and peer
 // handlers will not block on us sending a message.  That data is then passed on
 // to outHandler to be actually written.
+// nolint: forcetypeassert
 func (peer *Peer) queueHandler() {
 	pendingMsgs := list.New()
 	invSendQueue := list.New()
@@ -1679,7 +1682,10 @@ out:
 					iv.Type == wire.InvTypeWitnessBlock {
 
 					invMsg := wire.NewMsgInvSizeHint(1)
-					invMsg.AddInvVect(iv)
+					if err := invMsg.AddInvVect(iv); err != nil {
+						log.Error().Err(err).Msg("cannot add vector to inventory")
+					}
+
 					waiting = queuePacket(outMsg{msg: invMsg},
 						pendingMsgs, waiting)
 				} else {
@@ -1700,7 +1706,10 @@ out:
 			// drain the inventory send queue.
 			invMsg := wire.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
-				iv := invSendQueue.Remove(e).(*wire.InvVect)
+				iv, ok := invSendQueue.Remove(e).(*wire.InvVect)
+				if !ok {
+					return
+				}
 
 				// Don't send inventory that became known after
 				// the initial check.
@@ -1708,7 +1717,9 @@ out:
 					continue
 				}
 
-				invMsg.AddInvVect(iv)
+				if err := invMsg.AddInvVect(iv); err != nil {
+					log.Error().Err(err).Msg("cannot add inventory vector")
+				}
 				if len(invMsg.InvList) >= maxInvTrickleSize {
 					waiting = queuePacket(
 						outMsg{msg: invMsg},
@@ -1784,6 +1795,7 @@ func (peer *Peer) shouldLogWriteError(err error) bool {
 // outHandler handles all outgoing messages for the peer.  It must be run as a
 // goroutine.  It uses a buffered channel to serialize output messages while
 // allowing the sender to continue running asynchronously.
+// nolint: gocritic
 func (peer *Peer) outHandler() {
 out:
 	for {
@@ -2124,8 +2136,8 @@ func (peer *Peer) readRemoteVerAckMsg() error {
 
 // localVersionMsg creates a version message that can be used to send to the
 // remote peer.
-func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
-	var bestState = new(chaindata.BestState)
+func (peer *Peer) localVersionMsg() *wire.MsgVersion {
+	bestState := new(chaindata.BestState)
 	if peer.cfg.NewestBlock != nil {
 		bestState = peer.cfg.NewestBlock()
 	}
@@ -2160,13 +2172,16 @@ func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	// Generate a unique nonce for this peer so self connections can be
 	// detected.  This is accomplished by adding it to a size-limited map of
 	// recently seen nonces.
+	// nolint: gosec
 	nonce := uint64(rand.Int63())
 	sentNonces.Add(nonce)
 
 	// Version message.
 	msg := wire.NewMsgVersion(peer.chain, ourNA, theirNA, nonce, bestState.Height, bestState.ChainWeight)
-	msg.AddUserAgent(peer.cfg.UserAgentName, peer.cfg.UserAgentVersion,
-		peer.cfg.UserAgentComments...)
+	if err := msg.AddUserAgent(peer.cfg.UserAgentName, peer.cfg.UserAgentVersion,
+		peer.cfg.UserAgentComments...); err != nil {
+		log.Error().Err(err).Msg("cannot add user agent to version message")
+	}
 
 	// Advertise local services.
 	msg.Services = peer.cfg.Services
@@ -2177,16 +2192,12 @@ func (peer *Peer) localVersionMsg() (*wire.MsgVersion, error) {
 	// Advertise if inv messages for transactions are desired.
 	msg.DisableRelayTx = peer.cfg.DisableRelayTx
 
-	return msg, nil
+	return msg
 }
 
 // writeLocalVersionMsg writes our version message to the remote peer.
 func (peer *Peer) writeLocalVersionMsg() error {
-	localVerMsg, err := peer.localVersionMsg()
-	if err != nil {
-		return err
-	}
-
+	localVerMsg := peer.localVersionMsg()
 	return peer.writeMessage(localVerMsg, wire.LatestEncoding)
 }
 

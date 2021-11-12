@@ -61,7 +61,7 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 		return cli.NewExitError(errors.Wrap(err, "unable to GetBestBlock"), 1)
 	}
 
-	for serialID := int64(1); serialID < int64(best); serialID++ {
+	for serialID := int64(1); serialID < best; serialID++ {
 		fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "beacon", serialID)
 
 		block, err := app.TxMan.RPC().ForBeacon().GetBeaconBlockBySerialNumber(serialID)
@@ -101,7 +101,7 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 		if err != nil {
 			return cli.NewExitError(errors.Wrap(err, "unable to GetBestBlock"), 1)
 		}
-		for serialID := int64(1); serialID < int64(best); serialID++ {
+		for serialID := int64(1); serialID < best; serialID++ {
 			fmt.Printf("\r\033[0K Processing: chain %s block %d ...", "shard_"+strconv.Itoa(int(shardID)), serialID)
 
 			block, err := app.TxMan.RPC().ForShard(shardID).GetShardBlockBySerialNumber(serialID)
@@ -138,10 +138,13 @@ func (app *App) SyncHeadersCmd(c *cli.Context) error {
 	return nil
 }
 
+// nolint: gomnd
 func openFile(path, name string) (*os.File, error) {
 	if _, err := os.Stat(path + "/" + name); os.IsNotExist(err) {
-		os.MkdirAll(path, 0700) // Create file
+		if err := os.MkdirAll(path, 0o700); err != nil {
+			return nil, err
+		} // Create file
 	}
 
-	return os.OpenFile(path+"/"+name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0755)
+	return os.OpenFile(path+"/"+name, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o755)
 }

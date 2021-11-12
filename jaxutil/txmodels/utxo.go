@@ -289,10 +289,12 @@ type UTXOs interface {
 
 type UTXORows []UTXO
 
-func (rows UTXORows) Len() int                 { return len(rows) }
-func (rows UTXORows) Less(i, j int) bool       { return rows[i].Value < rows[j].Value }
-func (rows UTXORows) Swap(i, j int)            { rows[i], rows[j] = rows[j], rows[i] }
-func (rows UTXORows) List() []UTXO             { return rows }
+func (rows UTXORows) Len() int           { return len(rows) }
+func (rows UTXORows) Less(i, j int) bool { return rows[i].Value < rows[j].Value }
+func (rows UTXORows) Swap(i, j int)      { rows[i], rows[j] = rows[j], rows[i] }
+func (rows UTXORows) List() []UTXO       { return rows }
+
+// nolint: predeclared
 func (rows UTXORows) Append(new ...UTXO) UTXOs { return append(rows, new...) }
 
 func (rows UTXORows) GetSum() int64 {
@@ -307,7 +309,7 @@ func (rows UTXORows) GetSum() int64 {
 }
 
 func (rows UTXORows) CollectForAmount(amount int64, shardID uint32) (UTXOs, int64) {
-	var res UTXORows
+	res := make(UTXORows, 0, len(rows))
 	change := amount
 
 	for i := range rows {
@@ -345,11 +347,14 @@ func (rows UTXORows) GetSingle(amount int64, shardID uint32) *UTXO {
 
 type EADUTXOs []UTXO
 
-func (rows EADUTXOs) Len() int                 { return len(rows) }
-func (rows EADUTXOs) Less(i, j int) bool       { return rows[i].Value < rows[j].Value }
-func (rows EADUTXOs) Swap(i, j int)            { rows[i], rows[j] = rows[j], rows[i] }
-func (rows EADUTXOs) List() []UTXO             { return rows }
+func (rows EADUTXOs) Len() int           { return len(rows) }
+func (rows EADUTXOs) Less(i, j int) bool { return rows[i].Value < rows[j].Value }
+func (rows EADUTXOs) Swap(i, j int)      { rows[i], rows[j] = rows[j], rows[i] }
+func (rows EADUTXOs) List() []UTXO       { return rows }
+
+// nolint: predeclared
 func (rows EADUTXOs) Append(new ...UTXO) UTXOs { return append(rows, new...) }
+
 func (rows EADUTXOs) GetSum() int64 {
 	var sum int64
 	for _, txOut := range rows {
@@ -377,7 +382,7 @@ func (rows EADUTXOs) GetSingle(amount int64, shardID uint32) *UTXO {
 }
 
 func (rows EADUTXOs) CollectForAmount(amount int64, shardID uint32) (UTXOs, int64) {
-	var res UTXORows
+	res := make(UTXORows, 0, len(rows))
 	change := amount
 
 	for i := range rows {

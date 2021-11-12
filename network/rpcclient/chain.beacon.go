@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -42,7 +43,7 @@ func (r FutureGetBeaconBlockResult) Receive() (*BlockResult, error) {
 	}
 
 	// Deserialize the block and return it.
-	var msgBlock = wire.EmptyBeaconBlock()
+	msgBlock := wire.EmptyBeaconBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
 		return nil, err
@@ -433,7 +434,7 @@ func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*BlockResult, error
 	}
 
 	// Deserialize the block and return it.
-	var msgBlock = wire.EmptyBeaconBlock()
+	msgBlock := wire.EmptyBeaconBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
 		return nil, err
@@ -499,7 +500,7 @@ func (r FutureListBeaconBlocksBySerialNumberResult) Receive() ([]*BlockResult, e
 		}
 
 		// Deserialize the block and return it.
-		var msgBlock = wire.EmptyBeaconBlock()
+		msgBlock := wire.EmptyBeaconBlock()
 		err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 		if err != nil {
 			return nil, err
@@ -591,6 +592,7 @@ func (c *Client) GetBeaconBlockVerboseBySerialNumber(serialID int64) (*jaxjson.G
 // waitForGetBlockBySerialNumberRes waits for the response of a getblock request. If the
 // response indicates an invalid parameter was provided, a legacy style of the
 // request is resent and its response is returned instead.
+// nolint: unparam
 func (c *Client) waitForGetBlockBySerialNumberRes(respChan chan *response, cmd string, serialID int64,
 	verbose, verboseTx bool) ([]byte, error) {
 

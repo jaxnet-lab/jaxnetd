@@ -44,7 +44,7 @@ func (r FutureGetShardBlockResult) Receive() (*BlockResult, error) {
 	}
 
 	// Deserialize the block and return it.
-	var msgBlock = wire.EmptyShardBlock()
+	msgBlock := wire.EmptyShardBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
 		return nil, err
@@ -443,7 +443,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error)
 	}
 
 	// Deserialize the block and return it.
-	var msgBlock = wire.EmptyShardBlock()
+	msgBlock := wire.EmptyShardBlock()
 	err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 	if err != nil {
 		return nil, err
@@ -508,7 +508,7 @@ func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, er
 		}
 
 		// Deserialize the block and return it.
-		var msgBlock = wire.EmptyShardBlock()
+		msgBlock := wire.EmptyShardBlock()
 		err = msgBlock.Deserialize(bytes.NewReader(serializedBlock))
 		if err != nil {
 			return nil, err

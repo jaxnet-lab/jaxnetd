@@ -17,6 +17,8 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 )
 
+const defaultTimeCertValidYears = 10
+
 type config struct {
 	Directory    string   `short:"d" long:"directory" description:"Directory to write certificate pair"`
 	Force        bool     `short:"f" long:"force" description:"Force overwriting of any old certs and keys"`
@@ -25,9 +27,10 @@ type config struct {
 	Years        int      `short:"y" long:"years" description:"How many years a certificate is valid for"`
 }
 
+// nolint: gomnd
 func main() {
 	cfg := config{
-		Years:        10,
+		Years:        defaultTimeCertValidYears,
 		Organization: "gencerts",
 	}
 	parser := flags.NewParser(&cfg, flags.Default)
@@ -66,11 +69,12 @@ func main() {
 	}
 
 	// Write cert and key files.
-	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+	// nolint: gosec
+	if err = ioutil.WriteFile(certFile, cert, 0o666); err != nil {
 		fmt.Fprintf(os.Stderr, "cannot write cert: %v\n", err)
 		os.Exit(1)
 	}
-	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+	if err = ioutil.WriteFile(keyFile, key, 0o600); err != nil {
 		os.Remove(certFile)
 		fmt.Fprintf(os.Stderr, "cannot write key: %v\n", err)
 		os.Exit(1)

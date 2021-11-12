@@ -44,12 +44,10 @@ const (
 	hashUpdateSecs = 15
 )
 
-var (
-	// defaultNumWorkers is the default number of workers to use for mining
-	// and is based on the number of processor cores.  This helps ensure the
-	// system stays reasonably responsive under heavy load.
-	defaultNumWorkers = uint32(1) // uint32(runtime.NumCPU())
-)
+// defaultNumWorkers is the default number of workers to use for mining
+// and is based on the number of processor cores.  This helps ensure the
+// system stays reasonably responsive under heavy load.
+var defaultNumWorkers = uint32(1) // uint32(runtime.NumCPU())
 
 // Config is a descriptor containing the cpu miner configuration.
 type Config struct {
@@ -114,6 +112,8 @@ type CPUMiner struct {
 	log               zerolog.Logger
 }
 
+const hashesInKilohash = 1_000
+
 // speedMonitor handles tracking the number of hashes per second the mining
 // process is performing.  It must be run as a goroutine.
 func (miner *CPUMiner) speedMonitor() {
@@ -141,7 +141,7 @@ out:
 			hashesPerSec = (hashesPerSec + curHashesPerSec) / 2
 			totalHashes = 0
 			if hashesPerSec != 0 {
-				miner.log.Debug().Msgf("Hash speed: %6.0f kilohashes/s", hashesPerSec/1000)
+				miner.log.Debug().Msgf("Hash speed: %6.0f kilohashes/s", hashesPerSec/hashesInKilohash)
 			}
 
 		// Request for the number of hashes per second.
@@ -251,7 +251,7 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 // stale block such as a new block showing up or periodically when there are
 // new transactions and enough time has elapsed without finding a solution.
 func (miner *CPUMiner) solveBlock(job *miningJob,
-	ticker *time.Ticker, quit chan struct{}, worker uint32) bool {
+	ticker *time.Ticker, quit chan struct{}) bool {
 
 	// Choose a random extra nonce offset for this block template and
 	// worker.
@@ -311,7 +311,9 @@ func (miner *CPUMiner) solveBlock(job *miningJob,
 					return false
 				}
 
-				miner.beacon.BlockTemplateGenerator.UpdateBlockTime(&job.beacon.block)
+				if err := miner.beacon.BlockTemplateGenerator.UpdateBlockTime(&job.beacon.block); err != nil {
+					miner.log.Error().Err(err).Msg("cannot update block time")
+				}
 
 			default:
 				// Non-blocking select to fall through
@@ -395,15 +397,6 @@ func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce 
 	return beaconBlock, aux, nil
 }
 
-func updateMerkleRoot(msgBlock *wire.MsgBlock) {
-	// Recalculate the merkle root with the updated extra nonce.
-	block := jaxutil.NewBlock(msgBlock)
-
-	txs := block.Transactions()
-	merkles := chaindata.BuildMerkleTreeStore(txs, false)
-	msgBlock.Header.SetMerkleRoot(*merkles[len(merkles)-1])
-}
-
 func packUint64LE(n uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, n)
@@ -417,14 +410,14 @@ func packUint64LE(n uint64) []byte {
 // is submitted.
 //
 // It must be run as a goroutine.
-func (miner *CPUMiner) generateBlocks(quit chan struct{}, worker uint32) {
-
+// nolint: gomnd
+func (miner *CPUMiner) generateBlocks(quit chan struct{}) {
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.
 	ticker := time.NewTicker(time.Second * hashUpdateSecs)
 	defer ticker.Stop()
 
-	var job = new(miningJob)
+	job := new(miningJob)
 	job.beacon = chainTask{}
 	job.shards = make(map[uint32]chainTask, len(miner.shards))
 	time.Sleep(5 * time.Second)
@@ -472,7 +465,7 @@ out:
 		// with false when conditions that trigger a stale block, so
 		// a new block template can be generated.  When the return is
 		// true a solution was found, so submit the solved block.
-		if miner.solveBlock(job, ticker, quit, worker) {
+		if miner.solveBlock(job, ticker, quit) {
 			miner.submitTask(job)
 		}
 	}
@@ -540,12 +533,12 @@ func (miner *CPUMiner) updateTasks(job *miningJob) bool {
 	return false
 }
 
-func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
+func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) error {
 	knownShardsCount := len(miner.shards)
 	fetchedShardsCount := len(job.shards)
 
 	if knownShardsCount == 0 || fetchedShardsCount == 0 {
-		return
+		return nil
 	}
 
 	tree := mergedMiningTree.NewSparseMerkleTree(uint32(knownShardsCount))
@@ -555,25 +548,25 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 		slotIndex := id - 1
 
 		shardBlockHash := shard.block.Header.(*wire.ShardHeader).ExclusiveHash()
-		err = tree.SetShardHash(slotIndex, shardBlockHash)
+		err := tree.SetShardHash(slotIndex, shardBlockHash)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	root, err := tree.Root()
 	if err != nil {
-		return
+		return err
 	}
 
 	rootHash, err := chainhash.NewHash(root[:])
 	if err != nil {
-		return
+		return err
 	}
 
 	coding, codingBitLength, err := tree.CatalanNumbersCoding()
 	if err != nil {
-		return
+		return err
 	}
 
 	hashes := tree.MarshalOrangeTreeLeafs()
@@ -596,7 +589,8 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) (err error) {
 		job.shards[id].block.Header.BeaconHeader().SetMergeMiningNumber(uint32(len(job.shards)))
 		job.shards[id].block.Header.BeaconHeader().SetMergedMiningTreeCodingProof(hashes, coding, codingBitLength)
 	}
-	return
+
+	return nil
 }
 
 func (miner *CPUMiner) submitTask(job *miningJob) {
@@ -623,9 +617,8 @@ func (miner *CPUMiner) submitTask(job *miningJob) {
 }
 
 type miningJob struct {
-	beacon            chainTask
-	shards            map[uint32]chainTask
-	beaconCoinbaseAux wire.CoinbaseAux
+	beacon chainTask
+	shards map[uint32]chainTask
 }
 
 type chainTask struct {
@@ -651,7 +644,7 @@ func (miner *CPUMiner) miningWorkerController() {
 			runningWorkers = append(runningWorkers, quit)
 
 			miner.workerWg.Add(1)
-			go miner.generateBlocks(quit, i)
+			go miner.generateBlocks(quit)
 		}
 	}
 
@@ -822,6 +815,7 @@ func (miner *CPUMiner) NumWorkers() int32 {
 // detecting when it is performing stale work and reacting accordingly by
 // generating a new block template.  When a block is solved, it is submitted.
 // The function returns a list of the hashes of generated blocks.
+// nolint: staticcheck
 func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 	miner.Lock()
 

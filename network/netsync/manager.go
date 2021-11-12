@@ -232,6 +232,7 @@ func (sm *SyncManager) findNextHeaderCheckpoint(height int32) *chaincfg.Checkpoi
 // download/sync the blockchain from.  When syncing is already running, it
 // simply returns.  It also examines the candidates for any which are no longer
 // candidates and removes them as needed.
+// nolint: gosec
 func (sm *SyncManager) startSync() {
 	// Return now if we're already syncing.
 	if sm.syncPeer != nil {
@@ -248,7 +249,8 @@ func (sm *SyncManager) startSync() {
 	}
 
 	best := sm.chain.BestSnapshot()
-	var higherPeers, equalPeers []*peerpkg.Peer
+	higherPeers := make([]*peerpkg.Peer, 0, len(sm.peerStates))
+	var equalPeers []*peerpkg.Peer
 	for peer, state := range sm.peerStates {
 		if !state.syncCandidate {
 			continue
@@ -335,13 +337,17 @@ func (sm *SyncManager) startSync() {
 		// downloads when in regression test mode.
 		if sm.nextCheckpoint != nil &&
 			best.Height < sm.nextCheckpoint.Height {
-			bestPeer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
+			if err := bestPeer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash); err != nil {
+				log.Error().Err(err).Msg("cannot push get headers msg")
+			}
 			sm.headersFirstMode = true
 			sm.progressLogger.subsystemLogger.Info().Msgf("Downloading headers for blocks %d to "+
 				"%d from peer %s", best.Height+1,
 				sm.nextCheckpoint.Height, bestPeer.Addr())
 		} else {
-			bestPeer.PushGetBlocksMsg(locator, &zeroHash)
+			if err := bestPeer.PushGetBlocksMsg(locator, &zeroHash); err != nil {
+				log.Error().Err(err).Msg("cannot push get blocks msg")
+			}
 		}
 		sm.syncPeer = bestPeer
 
@@ -650,7 +656,11 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	if sm.headersFirstMode {
 		firstNodeEl := sm.headerList.Front()
 		if firstNodeEl != nil {
-			firstNode := firstNodeEl.Value.(*headerNode)
+			firstNode, ok := firstNodeEl.Value.(*headerNode)
+			if !ok {
+				sm.progressLogger.subsystemLogger.Warn().Msg("Received block message and couldn't convert value to headerNode")
+				return
+			}
 			if blockMeta.Hash.IsEqual(firstNode.hash) {
 				behaviorFlags |= chaindata.BFFastAdd
 				if firstNode.hash.IsEqual(sm.nextCheckpoint.Hash) {
@@ -735,7 +745,10 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 			sm.progressLogger.subsystemLogger.Warn().Msgf("Failed to get block locator for the "+
 				"latest block: %v", err)
 		} else {
-			peer.PushGetBlocksMsg(locator, orphanRoot)
+			err := peer.PushGetBlocksMsg(locator, orphanRoot)
+			if err != nil {
+				log.Error().Err(err).Msg("cannot push get blocks msg")
+			}
 		}
 	} else {
 		if peer == sm.syncPeer {
@@ -866,7 +879,9 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 				iv.Type = wire.InvTypeWitnessBlock
 			}
 
-			gdmsg.AddInvVect(iv)
+			if err := gdmsg.AddInvVect(iv); err != nil {
+				log.Error().Err(err).Msg("cannot add inventory vector")
+			}
 			numRequested++
 		}
 		sm.startHeader = e.Next()
@@ -881,6 +896,7 @@ func (sm *SyncManager) fetchHeaderBlocks() {
 
 // handleHeadersMsg handles block header messages from all peers.  Headers are
 // requested when performing a headers-first sync.
+// nolint: forcetypeassert
 func (sm *SyncManager) handleHeadersMsg(hmsg *headersMsg) {
 	peer := hmsg.peer
 	_, exists := sm.peerStates[peer]
@@ -1165,7 +1181,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 						"%v", err)
 					continue
 				}
-				peer.PushGetBlocksMsg(locator, orphanRoot)
+				if err := peer.PushGetBlocksMsg(locator, orphanRoot); err != nil {
+					log.Error().Err(err).Msg("cannot push get blocks msg")
+				}
 				continue
 			}
 
@@ -1178,7 +1196,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 				// final one the remote peer knows about (zero
 				// stop hash).
 				locator := sm.chain.BlockLocatorFromHash(&iv.Hash)
-				peer.PushGetBlocksMsg(locator, &zeroHash)
+				if err := peer.PushGetBlocksMsg(locator, &zeroHash); err != nil {
+					log.Error().Err(err).Msg("cannot push get blocks msg")
+				}
 			}
 		}
 	}
@@ -1208,7 +1228,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 					iv.Type = wire.InvTypeWitnessBlock
 				}
 
-				gdmsg.AddInvVect(iv)
+				if err := gdmsg.AddInvVect(iv); err != nil {
+					log.Error().Err(err).Msg("cannot push inventory msg")
+				}
 				numRequested++
 			}
 
@@ -1228,7 +1250,9 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 					iv.Type = wire.InvTypeWitnessTx
 				}
 
-				gdmsg.AddInvVect(iv)
+				if err := gdmsg.AddInvVect(iv); err != nil {
+					log.Error().Err(err).Msg("cannot add inventory vector")
+				}
 				numRequested++
 			}
 		}
@@ -1396,7 +1420,6 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		// Register block with the fee estimator, if it exists.
 		if sm.feeEstimator != nil {
 			err := sm.feeEstimator.RegisterBlock(block)
-
 			// If an error is somehow generated then the fee estimator
 			// has entered an invalid state. Since it doesn't know how
 			// to recover, create a new one.
@@ -1430,7 +1453,9 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 
 		// Rollback previous block recorded by the fee estimator.
 		if sm.feeEstimator != nil {
-			sm.feeEstimator.Rollback(block.Hash())
+			if err := sm.feeEstimator.Rollback(block.Hash()); err != nil {
+				log.Error().Err(err).Msg("cannot rollback previous block")
+			}
 		}
 	}
 }
@@ -1566,6 +1591,7 @@ func (sm *SyncManager) Pause() chan<- struct{} {
 
 // New constructs a new SyncManager. Use Start to begin processing asynchronous
 // block, tx, and inv updates.
+// nolint: gomnd
 func New(config *Config) (*SyncManager, error) {
 	sm := SyncManager{
 		peerNotifier:    config.PeerNotifier,

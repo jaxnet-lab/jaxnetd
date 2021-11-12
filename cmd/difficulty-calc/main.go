@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"time"
 
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
 
+// nolint: gomnd
 func main() {
 	pcHashRate := 893_000 // hash per sec
 	hcShard := uint64(pcHashRate * 375 / 10)
@@ -43,6 +42,7 @@ func targetByPowOfTwo(powOfTwo uint) uint32 {
 	return pow.BigToCompact(target)
 }
 
+// nolint: gomnd
 var (
 	bigOne    = new(big.Int).SetInt64(1)
 	oneLsh256 = new(big.Int).Lsh(bigOne, 256)
@@ -57,24 +57,4 @@ func PowerOfTwo(n uint64) uint64 {
 	// Figure out and return the next power of two.
 	exponent := uint64(math.Log2(float64(n)))
 	return exponent // 2^exponent
-}
-
-func mesureHashRate() {
-	block := chaincfg.MainNetParams.GenesisBlock().Copy()
-	//
-	timer := time.NewTimer(time.Minute)
-	count := 0
-
-	for {
-		select {
-		case <-timer.C:
-			fmt.Printf("Hash speed: %v kilohashes/s", (count/60)/1000)
-			break
-
-		default:
-			hash := block.BlockHash()
-			_ = hash
-			count += 2
-		}
-	}
 }

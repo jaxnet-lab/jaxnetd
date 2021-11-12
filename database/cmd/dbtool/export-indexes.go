@@ -9,10 +9,8 @@ import (
 // command.
 type ExportIndexesCmd struct{}
 
-var (
-	// ExportIndexesCfg defines the configuration options for the command.
-	ExportIndexesCfg = ExportIndexesCmd{}
-)
+// ExportIndexesCfg defines the configuration options for the command.
+var ExportIndexesCfg = ExportIndexesCmd{}
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
 func (cmd *ExportIndexesCmd) Execute(args []string) error {
@@ -31,7 +29,7 @@ func (cmd *ExportIndexesCmd) Execute(args []string) error {
 		return errors.New("wrong shardID format specified")
 	}
 
-	var offset = 0
+	offset := 0
 	if len(args) >= 3 {
 		offset, err = strconv.Atoi(args[2])
 		if err != nil {

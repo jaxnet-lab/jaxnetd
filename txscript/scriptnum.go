@@ -90,6 +90,7 @@ func checkMinimalDataEncoding(v []byte) error {
 //    -32767 -> [0xff 0xff]
 //     32768 -> [0x00 0x80 0x00]
 //    -32768 -> [0x00 0x80 0x80]
+// nolint: gomnd
 func (n scriptNum) Bytes() []byte {
 	// Zero encodes as an empty byte slice.
 	if n == 0 {

@@ -172,7 +172,8 @@ func (CoinbaseAux) New() CoinbaseAux {
 		Version: 0,
 		TxIn: []*TxIn{
 			{PreviousOutPoint: OutPoint{Hash: chainhash.ZeroHash, Index: math.MaxUint32}},
-		}}
+		},
+	}
 	return CoinbaseAux{
 		Tx:            tx,
 		TxMerkleProof: []chainhash.Hash{tx.TxHash()},

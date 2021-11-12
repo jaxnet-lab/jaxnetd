@@ -27,6 +27,7 @@ func newHashFromStr(hexStr string) *chainhash.Hash {
 // there is an error.  This is only provided for the hard-coded constants so
 // errors in the source code can be detected. It will only (and must only) be
 // called for initialization purposes.
+// nolint
 func fromHex(s string) []byte {
 	r, err := hex.DecodeString(s)
 	if err != nil {
@@ -42,4 +43,5 @@ func fromHex(s string) []byte {
 // in the chaincfg package since the intent is to be able to generate known
 // good tests which exercise that code.  Using the chaincfg parameters would
 // allow them to change out from under the tests potentially invalidating them.
+// nolint
 var regressionNetParams = &chaincfg.SimNetParams

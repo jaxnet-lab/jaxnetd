@@ -104,6 +104,7 @@ func (t *Mutable) relinkGrandparent(node, parent, grandparent *treapNode) {
 }
 
 // Put inserts the passed key/value pair.
+// nolint: gosec
 func (t *Mutable) Put(key, value []byte) {
 	// Use an empty byte slice for the value when none was provided.  This
 	// ultimately allows key existence to be determined from the value since
@@ -176,7 +177,8 @@ func (t *Mutable) Put(key, value []byte) {
 	}
 }
 
-// Delete removes the passed key if it exists.
+// Delete removes the passed key if it exists
+// nolint: gocritic
 func (t *Mutable) Delete(key []byte) {
 	// Find the node for the key along with its parent.  There is nothing to
 	// do if the key does not exist.

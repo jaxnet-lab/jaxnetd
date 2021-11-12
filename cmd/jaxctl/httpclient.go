@@ -38,6 +38,7 @@ func newHTTPClient(cfg *config) (*http.Client, error) {
 	}
 
 	// Configure TLS if needed.
+	// nolint: gosec
 	var tlsConfig *tls.Config
 	if !cfg.NoTLS && cfg.RPCCert != "" {
 		pem, err := ioutil.ReadFile(cfg.RPCCert)

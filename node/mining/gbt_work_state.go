@@ -27,11 +27,6 @@ import (
 )
 
 const (
-
-	// uint256Size is the number of bytes needed to represent an unsigned
-	// 256-bit integer.
-	uint256Size = 32
-
 	// gbtNonceRange is two 32-bit big-endian hexadecimal integers which
 	// represent the valid ranges of nonces returned by the getblocktemplate
 	// RPC.
@@ -239,6 +234,7 @@ func (state *GBTWorkState) BlockTemplate(chainProvider chainProvider, useCoinbas
 // addresses.
 //
 // This function MUST be called with the state locked.
+// nolint: gosec
 func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useCoinbaseValue bool, burnRewardFlags int) error {
 	lastTxUpdate := state.generator.TxSource().LastUpdated()
 	if lastTxUpdate.IsZero() {
@@ -487,6 +483,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 // and returned to the caller.
 //
 // This function MUST be called with the state locked.
+// nolint: gomnd
 func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetShardBlockTemplateResult, error) {
 	// Ensure the timestamps are still in valid range for the template.
 	// This should really only ever happen if the local clock is changed
@@ -582,6 +579,7 @@ type coinbaseData struct {
 	CoinbaseValue *int64                             `json:"coinbasevalue,omitempty"`
 }
 
+// nolint: golint, revive
 func (state *GBTWorkState) CoinbaseData(template *chaindata.BlockTemplate, useCoinbaseValue bool) (*coinbaseData, error) {
 	reply := new(coinbaseData)
 
@@ -630,7 +628,6 @@ func (state *GBTWorkState) CoinbaseData(template *chaindata.BlockTemplate, useCo
 }
 
 func (state *GBTWorkState) TransformTxs(template *chaindata.BlockTemplate) ([]jaxjson.GetBlockTemplateResultTx, error) {
-
 	// Convert each transaction in the block template to a template result
 	// transaction.  The result does not include the coinbase, so notice
 	// the adjustments to the various lengths and indices.
@@ -682,5 +679,4 @@ func (state *GBTWorkState) TransformTxs(template *chaindata.BlockTemplate) ([]ja
 		transactions = append(transactions, resultTx)
 	}
 	return transactions, nil
-
 }

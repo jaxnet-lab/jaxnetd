@@ -1,5 +1,5 @@
 // https://github.com/cpacia/bchutil/blob/master/cashaddr.go
-
+// nolint: staticcheck, gomnd
 package bch
 
 import (
@@ -13,9 +13,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-var (
-	Prefixes map[string]string
-)
+var Prefixes map[string]string
 
 type AddressType int
 
@@ -33,6 +31,7 @@ func init() {
 const CHARSET string = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
 // CHARSET_REV The cashaddr character set for decoding.
+// nolint: golint, revive, stylecheck
 var CHARSET_REV = [128]int8{
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -164,6 +163,7 @@ func LowerCase(c byte) byte {
 }
 
 // ExpandPrefix expands the address prefix for the checksum computation.
+// nolint: unconvert
 func ExpandPrefix(prefix string) []byte {
 	ret := make([]byte, len(prefix)+1)
 	for i := 0; i < len(prefix); i++ {
@@ -205,12 +205,13 @@ func Encode(prefix string, payload []byte) string {
 	return ret
 }
 
+// nolint: stylecheck
 func DecodeCashAddress(str string) (string, []byte, error) {
 	// Go over the string and do some sanity checks.
 	lower, upper := false, false
 	prefixSize := 0
 	for i := 0; i < len(str); i++ {
-		c := byte(str[i])
+		c := str[i]
 		if c >= 'a' && c <= 'z' {
 			lower = true
 			continue
@@ -265,7 +266,7 @@ func DecodeCashAddress(str string) (string, []byte, error) {
 	valuesSize := len(str) - 1 - prefixSize
 	values := make([]byte, valuesSize)
 	for i := 0; i < valuesSize; i++ {
-		c := byte(str[i+prefixSize+1])
+		c := str[i+prefixSize+1]
 		// We have an invalid char in there.
 		if c > 127 || CHARSET_REV[c] == -1 {
 			return "", nil, errors.New("Invalid character")
@@ -291,6 +292,7 @@ func CheckEncodeCashAddress(input []byte, prefix string, t AddressType) string {
 }
 
 // CheckDecodeCashAddress decodes a string that was encoded with CheckEncode and verifies the checksum.
+//  nolint: stylecheck
 func CheckDecodeCashAddress(input string) (result []byte, prefix string, t AddressType, err error) {
 	prefix, data, err := DecodeCashAddress(input)
 	if err != nil {
@@ -375,7 +377,7 @@ func NewCashAddressPubKeyHash(pkHash []byte, net *chaincfg.Params) (*CashAddress
 // newAddressPubKeyHash is the internal API to create a pubkey hash address
 // with a known leading identifier byte for a network, rather than looking
 // it up through its parameters.  This is useful when creating a new address
-// structure from a string encoding where the identifer byte is already
+// structure from a string encoding where the identifier byte is already
 // known.
 func newCashAddressPubKeyHash(pkHash []byte, net *chaincfg.Params) (*CashAddressPubKeyHash, error) {
 	// Check for a valid pubkey hash length.
@@ -423,7 +425,7 @@ func (a *CashAddressPubKeyHash) String() string {
 }
 
 // Hash160 returns the underlying array of the pubkey hash.  This can be useful
-// when an array is more appropiate than a slice (for example, when used as map
+// when an array is more appropriate than a slice (for example, when used as map
 // keys).
 func (a *CashAddressPubKeyHash) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
@@ -451,7 +453,7 @@ func NewCashAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (
 // newAddressScriptHashFromHash is the internal API to create a script hash
 // address with a known leading identifier byte for a network, rather than
 // looking it up through its parameters.  This is useful when creating a new
-// address structure from a string encoding where the identifer byte is already
+// address structure from a string encoding where the identifier byte is already
 // known.
 func newCashAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*CashAddressScriptHash, error) {
 	// Check for a valid script hash length.
@@ -499,7 +501,7 @@ func (a *CashAddressScriptHash) String() string {
 }
 
 // Hash160 returns the underlying array of the script hash.  This can be useful
-// when an array is more appropiate than a slice (for example, when used as map
+// when an array is more appropriate than a slice (for example, when used as map
 // keys).
 func (a *CashAddressScriptHash) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
@@ -566,7 +568,7 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (jaxuti
 
 func convertBits(data []byte, fromBits uint, tobits uint, pad bool) ([]byte, error) {
 	// General power-of-2 base conversion.
-	var uintArr []uint
+	uintArr := make([]uint, 0, len(data))
 	for _, i := range data {
 		uintArr = append(uintArr, uint(i))
 	}
@@ -590,7 +592,8 @@ func convertBits(data []byte, fromBits uint, tobits uint, pad bool) ([]byte, err
 	} else if bits >= fromBits || ((acc<<(tobits-bits))&maxv) != 0 {
 		return nil, errors.New("encoding padding error")
 	}
-	var dataArr []byte
+
+	dataArr := make([]byte, 0, len(ret))
 	for _, i := range ret {
 		dataArr = append(dataArr, byte(i))
 	}
@@ -607,14 +610,14 @@ func packAddressData(addrType AddressType, addrHash []byte) ([]byte, error) {
 	if (len(addrHash)-20)%4 != 0 {
 		return nil, errors.New("invalid addrhash size")
 	}
-	if encodedSize < 0 || encodedSize > 8 {
+	if encodedSize > 8 {
 		return nil, errors.New("encoded size out of valid range")
 	}
 	versionByte |= encodedSize
-	var addrHashUint []byte
-	for _, e := range addrHash {
-		addrHashUint = append(addrHashUint, byte(e))
-	}
+
+	addrHashUint := make([]byte, 0, len(addrHash))
+	addrHashUint = append(addrHashUint, addrHash...)
+
 	data := append([]byte{byte(versionByte)}, addrHashUint...)
 	packedData, err := convertBits(data, 8, 5, true)
 	if err != nil {
@@ -623,7 +626,7 @@ func packAddressData(addrType AddressType, addrHash []byte) ([]byte, error) {
 	return packedData, nil
 }
 
-func BchJaxVanityPrefix(pkScript []byte) bool {
+func JaxVanityPrefix(pkScript []byte) bool {
 	addr, err := ExtractPkScriptAddrs(pkScript, &chaincfg.MainNetParams)
 	if err != nil {
 		return false

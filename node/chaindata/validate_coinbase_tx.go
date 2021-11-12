@@ -110,6 +110,7 @@ func CreateBitcoinCoinbaseTx(value, fee int64, nextHeight int32, addr jaxutil.Ad
 	btcCoinbase.MsgTx().TxIn[0].SignatureScript, err = BTCCoinbaseScript(int64(nextHeight), make([]byte, 8), beaconHash)
 	return btcCoinbase, err
 }
+
 func CreateJaxCoinbaseTx(value, fee int64, height int32,
 	shardID uint32, addr jaxutil.Address, burnReward, beacon bool) (*jaxutil.Tx, error) {
 	return CreateJaxCoinbaseTxWithBurn(value, fee, height, shardID, addr, burnReward, beacon, types.RawJaxBurnScript)
@@ -128,7 +129,7 @@ func CreateJaxCoinbaseTxWithBurn(value, fee int64, height int32,
 		return nil, err
 	}
 
-	var pkScript = feeAddress
+	pkScript := feeAddress
 	if burnReward {
 		pkScript = jaxBurnScript
 	}
@@ -178,6 +179,7 @@ func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error
 	return nil
 }
 
+// nolint: gomnd
 func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
 		return false, errors.Wrap(err, "invalid btc coinbase aux")
@@ -189,7 +191,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 		}
 
 		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
-			!bch.BchJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
+			!bch.JaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
 			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 
@@ -231,6 +233,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	return rewardBurned, nil
 }
 
+//nolint: gomnd
 func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
 	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
 	if err != nil {
@@ -286,12 +289,12 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 	if err != nil || lockScript.Class() != txscript.HTLCScriptTy {
 		err = errors.New(errMsg + "third output must be lock-script")
 		return false, err
-	} else {
-		lockTime, err := txscript.ExtractHTLCLockTime(coinbase.TxOut[2].PkScript)
-		if err != nil || lockTime != chaincfg.BeaconRewardLockPeriod {
-			return false, fmt.Errorf("%s third output must be lock-script for %d blocks",
-				errMsg, chaincfg.BeaconRewardLockPeriod)
-		}
+	}
+
+	lockTime, err := txscript.ExtractHTLCLockTime(coinbase.TxOut[2].PkScript)
+	if err != nil || lockTime != chaincfg.BeaconRewardLockPeriod {
+		return false, fmt.Errorf("%s third output must be lock-script for %d blocks",
+			errMsg, chaincfg.BeaconRewardLockPeriod)
 	}
 
 	jxnBurnReward := jaxutil.IsJaxnetBurnRawAddress(coinbase.TxOut[1].PkScript)

@@ -24,10 +24,11 @@ const (
 // is suitable for general hash-based lookups.  The seed can be used to
 // effectively randomize the hash function.  This makes it ideal for use in
 // bloom filters which need multiple independent hash functions.
+// nolint: gomnd
 func MurmurHash3(seed uint32, data []byte) uint32 {
 	dataLen := uint32(len(data))
 	hash := seed
-	k := uint32(0)
+	var k uint32
 	numBlocks := dataLen / 4
 
 	// Calculate the hash in 4-byte chunks.

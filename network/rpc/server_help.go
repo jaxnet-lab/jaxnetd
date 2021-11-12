@@ -122,7 +122,7 @@ func (c *helpCacher) rpcMethodHelp(method string) (string, error) {
 // rpcUsage returns one-line usage for all support RPC commands.
 //
 // This function is safe for concurrent access.
-func (c *helpCacher) rpcUsage(includeWebsockets bool) (string, error) {
+func (c *helpCacher) rpcUsage() (string, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -513,7 +513,7 @@ var helpDescsEnUS = map[string]string{
 
 	// GetCurrentNetCmd help.
 	"getcurrentnet--synopsis": "Get bitcoin network the Server is running on.",
-	"getcurrentnet--result0":  "The network identifer",
+	"getcurrentnet--result0":  "The network identifier",
 
 	// GetDifficultyCmd help.
 	"getdifficulty--synopsis": "Returns the proof-of-work difficulty as a multiple of the minimum difficulty.",

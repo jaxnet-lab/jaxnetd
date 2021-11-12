@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/config"
 	"gitlab.com/jaxnet/jaxnetd/internal/limits"
 	"gitlab.com/jaxnet/jaxnetd/node"
@@ -26,6 +27,11 @@ import (
 // as a service and reacts accordingly.
 var winServiceMain func() (bool, error)
 
+const (
+	defaultGCPercent = 10
+	osErrorExit      = 2
+)
+
 func main() {
 	// Use all processor cores.
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -34,7 +40,7 @@ func main() {
 	// limits the garbage collector from excessively overallocating during
 	// bursts.  This value was arrived at with the help of profiling live
 	// usage.
-	debug.SetGCPercent(10)
+	debug.SetGCPercent(defaultGCPercent)
 
 	// Up some limits.
 	if err := limits.SetLimits(); err != nil {
@@ -69,7 +75,6 @@ func main() {
 // notified with the server once it is setup so it can gracefully stop it when
 // requested from the service control manager.
 func shardCoreMain() error {
-
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	cfg, _, err := config.LoadConfig()
@@ -108,7 +113,9 @@ func shardCoreMain() error {
 			config.Log.Error().Err(err).Msg("Unable to create cpu profile")
 			return err
 		}
-		pprof.StartCPUProfile(f)
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Error().Err(err).Msg("cannot start CPU profile")
+		}
 		defer f.Close()
 		defer pprof.StopCPUProfile()
 	}
@@ -124,17 +131,17 @@ func shardCoreMain() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	sigChan := interruptListener(config.Log.With().Str("ctx", "interruptListener").Logger())
 	go func() {
-		select {
-		case <-sigChan:
-			config.Log.Info().Msg("propagate stop signal")
-			cancel()
-		}
+		<-sigChan
+		config.Log.Info().Msg("propagate stop signal")
+		cancel()
 	}()
 
 	controller := node.Controller(config.Log.With().Str("ctx", "NodeController").Logger())
+	// nolint: gocritic
 	if err := controller.Run(ctx, cfg); err != nil {
 		config.Log.Error().Err(err).Msg("Can't run Chains")
-		os.Exit(2)
+		pprof.StopCPUProfile()
+		os.Exit(osErrorExit)
 	}
 
 	return nil

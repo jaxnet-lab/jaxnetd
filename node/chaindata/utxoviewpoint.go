@@ -257,7 +257,7 @@ func (view *UtxoViewpoint) ConnectTransaction(tx *jaxutil.Tx, blockHeight int32,
 		// Only create the stxo details if requested.
 		if stxos != nil {
 			// Populate the stxo details using the utxo entry.
-			var stxo = SpentTxOut{
+			stxo := SpentTxOut{
 				Amount:     entry.Amount(),
 				PkScript:   entry.PkScript(),
 				Height:     entry.BlockHeight(),
@@ -323,7 +323,7 @@ func (view *UtxoViewpoint) connectSwapTransaction(tx *jaxutil.Tx, blockHeight in
 		// Only create the stxo details if requested.
 		if stxos != nil {
 			// Populate the stxo details using the utxo entry.
-			var stxo = SpentTxOut{
+			stxo := SpentTxOut{
 				Amount:     entry.Amount(),
 				PkScript:   entry.PkScript(),
 				Height:     entry.BlockHeight(),
@@ -447,7 +447,7 @@ func CountSpentOutputs(block *jaxutil.Block) int {
 	var numSpent int
 	for _, tx := range block.Transactions()[1:] {
 		if tx.MsgTx().SwapTx() {
-			numSpent = numSpent + (len(tx.MsgTx().TxIn) / 2)
+			numSpent += len(tx.MsgTx().TxIn) / 2
 		} else {
 			numSpent += len(tx.MsgTx().TxIn)
 		}
@@ -749,7 +749,6 @@ func (view *UtxoViewpoint) FetchInputUtxos(db database.DB, block *jaxutil.Block)
 			neededSet[txIn.PreviousOutPoint] = struct{}{}
 		}
 		// }
-
 	}
 
 	// Request the input utxos from the database.
@@ -822,5 +821,4 @@ func (eSet *eadAddrSet) remove(scriptData txscript.EADScriptData) {
 
 	address.Addresses = filtered
 	eSet.data[ownerKey] = address
-	return
 }

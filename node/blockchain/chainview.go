@@ -373,6 +373,7 @@ func (c *chainView) FindFork(node blocknodes.IBlockNode) blocknodes.IBlockNode {
 // See the exported BlockLocator function comments for more details.
 //
 // This function MUST be called with the view mutex locked (for reads).
+// nolint: gomnd
 func (c *chainView) blockLocator(node blocknodes.IBlockNode) BlockLocator {
 	// Use the current tip if requested.
 	if node == nil {

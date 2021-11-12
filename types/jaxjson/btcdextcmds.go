@@ -167,5 +167,4 @@ func init() {
 	// No special flags for commands in this file.
 	flags := UsageFlag(0)
 	MustRegisterCmd("chain", "generateToAddress", (*GenerateToAddressCmd)(nil), flags)
-
 }

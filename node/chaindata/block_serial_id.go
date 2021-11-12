@@ -35,6 +35,7 @@ type SerialIDBlockMeta struct {
 func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan bool) ([]SerialIDBlockMeta, error) {
 	meta := dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
+	//nolint: gomnd
 	dataList := make([]SerialIDBlockMeta, 0, 256)
 
 	for id := serialID; ; id++ {
@@ -47,7 +48,7 @@ func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan
 		copy(hash[:], res[:chainhash.HashSize])
 
 		sid := make([]byte, 8)
-		copy(sid[:], res[chainhash.HashSize:])
+		copy(sid, res[chainhash.HashSize:])
 
 		prevSerialID := bytesToI64(sid)
 		if onlyOrphan && id == prevSerialID+1 {
@@ -76,7 +77,7 @@ func DBFetchBlockHashBySerialID(dbTx database.Tx, serialID int64) (*chainhash.Ha
 	copy(hash[:], res[:chainhash.HashSize])
 
 	sid := make([]byte, 8)
-	copy(sid[:], res[chainhash.HashSize:])
+	copy(sid, res[chainhash.HashSize:])
 
 	return &hash, bytesToI64(sid), nil
 }
@@ -116,7 +117,7 @@ func DBPutHashToSerialIDWithPrev(dbTx database.Tx, hash chainhash.Hash, serialID
 
 	buf := make([]byte, chainhash.HashSize+8)
 	copy(buf[:chainhash.HashSize], hash[:])
-	copy(buf[chainhash.HashSize:], i64ToBytes(prevSerialID)[:])
+	copy(buf[chainhash.HashSize:], i64ToBytes(prevSerialID))
 
 	return blockSerialIDHashPrevSerialID.Put(i64ToBytes(serialID), buf)
 }

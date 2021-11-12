@@ -4,6 +4,7 @@ services:
 
 stages:
   - build
+  - lint
   - release
 
 variables:
@@ -51,6 +52,15 @@ build:release:
       - dist
   only:
     - master
+
+golangci-lint:
+    image: golangci/golangci-lint:v1.43.0
+    stage: lint
+    allow_failure: true
+    tags:
+      - docker
+    script:
+      - golangci-lint run --new-from-rev=HEAD~ -v
 
 release:
   stage: release

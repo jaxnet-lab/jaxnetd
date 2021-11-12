@@ -7,6 +7,7 @@ package wire
 
 import (
 	"bytes"
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestBlockHeader(t *testing.T) {
 	hash := mainNetGenesisHash
 	merkleHash := mainNetGenesisMerkleRoot
 	bits := uint32(0x1d00ffff)
-	bh := NewBeaconBlockHeader(1, 1, hash, hash, merkleHash, hash, time.Now(), bits, 1, nonce)
+	bh := NewBeaconBlockHeader(1, 1, hash, hash, merkleHash, hash, time.Now(), bits, big.NewInt(1), nonce)
 
 	// Ensure we get the same data back out.
 	if bh.PrevBlocksMMRRoot() != hash {

@@ -162,7 +162,6 @@ func beaconGenesisBlock(name wire.JaxNet) *wire.MsgBlock {
 	*state.genesisHash = state.genesisBlock.BlockHash()
 
 	return state.genesisBlock
-
 }
 
 func shardGenesisHash(name wire.JaxNet, shardID uint32) *chainhash.Hash {
@@ -227,16 +226,16 @@ func setShardGenesisBlock(name wire.JaxNet, shardID uint32, beaconBlock *wire.Ms
 
 // genesisCoinbaseTx is the coinbase transaction for the genesis blocks for
 // the main network, regression test network, and test network (version 3).
-func genesisCoinbaseTx(name wire.JaxNet) wire.MsgTx {
+func genesisCoinbaseTx(name wire.JaxNet) {
 	state := genesisStorage[name]
 
 	if state.genesisTx != nil {
-		return *state.genesisTx
+		return
 	}
 
 	state.genesisTx = new(wire.MsgTx)
 
-	txHex := ""
+	var txHex string
 	switch name {
 	case wire.FastTestNet, wire.SimNet:
 		txHex = fastNetGenesisTxHex
@@ -254,8 +253,6 @@ func genesisCoinbaseTx(name wire.JaxNet) wire.MsgTx {
 	if err != nil {
 		panic("invalid genesis tx data")
 	}
-
-	return *state.genesisTx
 }
 
 func shardGenesisCoinbaseTx(name wire.JaxNet, shardID uint32) wire.MsgTx {

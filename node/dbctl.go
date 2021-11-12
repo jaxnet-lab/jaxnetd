@@ -24,13 +24,14 @@ type DBCtl struct {
 // contains additional logic such warning the user if there are multiple
 // databases which consume space on the file system and ensuring the regression
 // test database is clean when in regression test mode.
+// nolint: gomnd
 func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg InstanceConfig) (database.DB, error) {
 	// The memdb backend does not have a file path associated with it, so
 	// handle it uniquely.  We also don't want to worry about the multiple
 	// database type warnings when running with the memory database.
-	if cfg.DbType == "memdb" {
+	if cfg.DBType == "memdb" {
 		ctrl.logger.Info().Msg("Creating block database in memory.")
-		db, err := database.Create(cfg.DbType, chain)
+		db, err := database.Create(cfg.DBType, chain)
 		if err != nil {
 			return nil, err
 		}
@@ -41,7 +42,7 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg Ins
 	ctrl.warnMultipleDBs(dataDir, chainName, cfg)
 
 	// The database name is based on the database type.
-	dbPath := ctrl.blockDbPath(dataDir, chainName, cfg.DbType)
+	dbPath := ctrl.blockDBPath(dataDir, chainName, cfg.DBType)
 	ctrl.logger.Debug().Str("path", dbPath).Msg("dbPath")
 
 	// The regression test is special in that it needs a clean database for
@@ -50,22 +51,22 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg Ins
 
 	ctrl.logger.Info().Msgf("Loading block database from '%s'", dbPath)
 
-	db, err := database.Open(cfg.DbType, chain, dbPath)
+	db, err := database.Open(cfg.DBType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't exist.
 		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
+			database.ErrDBDoesNotExist {
 
 			return nil, err
 		}
 
 		// Create the db if it does not exist.
-		err = os.MkdirAll(dataDir, 0700)
+		err = os.MkdirAll(dataDir, 0o700)
 		if err != nil {
 			return nil, err
 		}
 
-		db, err = database.Create(cfg.DbType, chain, dbPath)
+		db, err = database.Create(cfg.DBType, chain, dbPath)
 		if err != nil {
 			return nil, err
 		}
@@ -129,11 +130,11 @@ func (ctrl *DBCtl) refillIndexes(ctx context.Context, cfg *Config, db database.D
 }
 
 // dbPath returns the path to the block database given a database type.
-func (ctrl *DBCtl) blockDbPath(dataDir string, chain string, dbType string) string {
+func (ctrl *DBCtl) blockDBPath(dataDir string, chain string, dbType string) string {
 	// The database name is based on the database type.
-	dbName := blockDbNamePrefix + "_" + dbType
+	dbName := blockDBNamePrefix + "_" + dbType
 	if dbType == "sqlite" {
-		dbName = dbName + ".db"
+		dbName += ".db"
 	}
 	dbPath := filepath.Join(dataDir, chain, dbName)
 	return dbPath
@@ -147,27 +148,27 @@ func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg InstanceCon
 	// on the database types compiled into the binary since we want to
 	// detect legacy db types as well.
 	dbTypes := []string{"ffldb", "leveldb", "sqlite"}
-	duplicateDbPaths := make([]string, 0, len(dbTypes)-1)
+	duplicateDBPaths := make([]string, 0, len(dbTypes)-1)
 	for _, dbType := range dbTypes {
-		if dbType == cfg.DbType {
+		if dbType == cfg.DBType {
 			continue
 		}
 
 		// Store db path as a duplicate db if it exists.
-		dbPath := ctrl.blockDbPath(dataDir, chain, dbType)
+		dbPath := ctrl.blockDBPath(dataDir, chain, dbType)
 		if fileExists(dbPath) {
-			duplicateDbPaths = append(duplicateDbPaths, dbPath)
+			duplicateDBPaths = append(duplicateDBPaths, dbPath)
 		}
 	}
 
 	// Warn if there are extra databases.
-	if len(duplicateDbPaths) > 0 {
-		selectedDbPath := ctrl.blockDbPath(dataDir, chain, cfg.DbType)
+	if len(duplicateDBPaths) > 0 {
+		selectedDBPath := ctrl.blockDBPath(dataDir, chain, cfg.DBType)
 		ctrl.logger.Info().Msgf("WARNING: There are multiple block chain databases "+
 			"using different database types.\nYou probably don't "+
 			"want to waste disk space by having more than one.\n"+
 			"Your current database is located at [%v].\nThe "+
-			"additional database is located at %v", selectedDbPath,
-			duplicateDbPaths)
+			"additional database is located at %v", selectedDBPath,
+			duplicateDBPaths)
 	}
 }

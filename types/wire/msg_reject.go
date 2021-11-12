@@ -163,14 +163,11 @@ func (msg *MsgReject) Command() string {
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
 func (msg *MsgReject) MaxPayloadLength(pver uint32) uint32 {
-	plen := uint32(0)
-
 	// Unfortunately the bitcoin protocol does not enforce a sane
 	// limit on the length of the reason, so the max payload is the
 	// overall maximum message payload.
-	plen = MaxMessagePayload
-
-	return plen
+	plen := MaxMessagePayload
+	return uint32(plen)
 }
 
 // NewMsgReject returns a new bitcoin reject message that conforms to the

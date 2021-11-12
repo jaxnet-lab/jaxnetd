@@ -207,6 +207,7 @@ func (node *BeaconBlockNode) CalcMedianVoteK() uint32 {
 	return pow.PackK(medianVoteK)
 }
 
+// nolint: gomnd
 func (node *BeaconBlockNode) ExpansionApproved() bool {
 	nBlocks := chaincfg.ExpansionEpochLength
 
@@ -220,7 +221,7 @@ func (node *BeaconBlockNode) ExpansionApproved() bool {
 	for i := 0; i < nBlocks && iterNode != nil; i++ {
 		version := iterNode.Header().Version()
 		if version.ExpansionApproved() {
-			expansionApprove += 1
+			expansionApprove++
 		}
 		treeEncodings[i] = iterNode.Header().BeaconHeader().MergedMiningTree()
 		treeEncodingsSizes[i] = iterNode.Header().BeaconHeader().MergedMiningTreeSize()

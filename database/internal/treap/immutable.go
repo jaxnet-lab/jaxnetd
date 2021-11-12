@@ -106,6 +106,7 @@ func (t *Immutable) Get(key []byte) []byte {
 }
 
 // Put inserts the passed key/value pair.
+// nolint: gosec, gocritic
 func (t *Immutable) Put(key, value []byte) *Immutable {
 	// Use an empty byte slice for the value when none was provided.  This
 	// ultimately allows key existence to be determined from the value since
@@ -212,6 +213,7 @@ func (t *Immutable) Put(key, value []byte) *Immutable {
 // Delete removes the passed key from the treap and returns the resulting treap
 // if it exists.  The original immutable treap is returned if the key does not
 // exist.
+// nolint: gocritic
 func (t *Immutable) Delete(key []byte) *Immutable {
 	// Find the node for the key while constructing a list of parents while
 	// doing so.

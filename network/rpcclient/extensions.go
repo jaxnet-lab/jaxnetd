@@ -240,6 +240,7 @@ type FutureExportWatchingWalletResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // exported wallet.
+// nolint: stylecheck
 func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
@@ -278,7 +279,6 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
 	}
 
 	return walletBytes, txStoreBytes, nil
-
 }
 
 // ExportWatchingWalletAsync returns an instance of a type that can be used to

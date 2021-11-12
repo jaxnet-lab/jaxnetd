@@ -62,7 +62,7 @@ const (
 	CmdCFCheckpt    = "cfcheckpt"
 	CmdPortRedirect = "portredirect"
 	CmdEadAddresses = "eaddresses"
-	CmdEadIp        = "eadip"
+	CmdEadIP        = "eadip"
 )
 
 const (
@@ -188,7 +188,7 @@ func makeEmptyMessage(command string) (Message, error) {
 
 	case CmdCFCheckpt:
 		msg = &MsgCFCheckpt{}
-	case CmdEadIp:
+	case CmdEadIP:
 		msg = &EADAddress{}
 	case CmdEadAddresses:
 		msg = &EADAddresses{}

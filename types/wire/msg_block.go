@@ -68,14 +68,12 @@ func (msg *MsgBlock) Copy() *MsgBlock {
 	}
 
 	return clone
-
 }
 
 // AddTransaction adds a transaction to the message.
 func (msg *MsgBlock) AddTransaction(tx *MsgTx) error {
 	msg.Transactions = append(msg.Transactions, tx)
 	return nil
-
 }
 
 // ClearTransactions removes all transactions from the message.

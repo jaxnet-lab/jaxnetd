@@ -74,7 +74,6 @@ func (b *BlockChain) ListUtxoEntry(limit int) (map[wire.OutPoint]*chaindata.Utxo
 		entries, err = chaindata.DBFetchUtxoEntries(dbTx, limit)
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,6 @@ func (b *BlockChain) ListEADAddresses() (map[string]*wire.EADAddresses, error) {
 		entries, err = chaindata.DBFetchAllEADAddresses(dbTx)
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}

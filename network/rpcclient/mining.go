@@ -11,8 +11,8 @@ import (
 	"errors"
 
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
-	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
 // FutureGenerateResult is a future promise to deliver the result of a
@@ -434,7 +434,6 @@ func (r FutureSubmitBlockResult) Receive() error {
 	}
 
 	return nil
-
 }
 
 // SubmitBlockAsync returns an instance of a type that can be used to get the

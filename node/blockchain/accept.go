@@ -56,7 +56,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 	}
 
 	// Incrementing lastSerialID, because block was stored.
-	b.blocksDB.lastSerialID += 1
+	b.blocksDB.lastSerialID++
 
 	// Create a new block node for the block and add it to the node index. Even
 	// if the block ultimately gets connected to the main chain, it starts out

@@ -227,7 +227,7 @@ func New(config *Config) (*BlockChain, error) {
 	}
 
 	// Perform any upgrades to the various chain-specific buckets as needed.
-	if err := b.maybeUpgradeDbBuckets(config.Interrupt); err != nil {
+	if err := b.maybeUpgradeDBBuckets(config.Interrupt); err != nil {
 		return nil, err
 	}
 
@@ -400,6 +400,7 @@ func (b *BlockChain) CalcSequenceLock(tx *jaxutil.Tx, utxoView *chaindata.UtxoVi
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the chain state lock held (for writes).
+// nolint: gomnd
 func (b *BlockChain) calcSequenceLock(node blocknodes.IBlockNode, tx *jaxutil.Tx,
 	utxoView *chaindata.UtxoViewpoint, mempool bool) (*chaindata.SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
@@ -841,6 +842,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 // This function may modify node statuses in the block index without flushing.
 //
 // This function MUST be called with the chain state lock held (for writes).
+// nolint: forcetypeassert
 func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error {
 	// Nothing to do if no reorganize nodes were provided.
 	if detachNodes.Len() == 0 && attachNodes.Len() == 0 {
@@ -853,6 +855,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 	tip := b.blocksDB.bestChain.Tip()
 	if detachNodes.Len() != 0 {
 		lastDetachNode := detachNodes.Back().Value.(blocknodes.IBlockNode)
+
 		forkRoot = lastDetachNode.Parent()
 
 		firstDetachNode := detachNodes.Front().Value.(blocknodes.IBlockNode)
@@ -1673,12 +1676,12 @@ func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Has
 	return headers
 }
 
-// maybeUpgradeDbBuckets checks the database version of the buckets used by this
+// maybeUpgradeDBBuckets checks the database version of the buckets used by this
 // package and performs any needed upgrades to bring them to the latest version.
 //
 // All buckets used by this package are guaranteed to be the latest version if
 // this function returns without error.
-func (b *BlockChain) maybeUpgradeDbBuckets(interrupt <-chan struct{}) error {
+func (b *BlockChain) maybeUpgradeDBBuckets(interrupt <-chan struct{}) error {
 	// Load or create bucket versions as needed.
 	var utxoSetVersion uint32
 	err := b.db.Update(func(dbTx database.Tx) error {

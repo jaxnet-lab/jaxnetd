@@ -17,6 +17,7 @@ type beaconChain struct {
 	chainParams *chaincfg.Params
 }
 
+// nolint: golint, revive
 func NewBeaconChain(params *chaincfg.Params) *beaconChain {
 	clone := *params
 	clone.ChainName = "beacon"
@@ -33,6 +34,5 @@ func (c *beaconChain) GenesisBlock() *wire.MsgBlock { return c.chainParams.Genes
 func (c *beaconChain) GenesisBeaconHeight() int32   { return 0 }
 
 func (c *beaconChain) NewNode(blockHeader wire.BlockHeader, parent blocknodes.IBlockNode, serialID int64) blocknodes.IBlockNode {
-
 	return blocknodes.NewBeaconBlockNode(blockHeader, parent, serialID)
 }

@@ -95,6 +95,7 @@ func calcInputValueAge(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBl
 // of each of its input values multiplied by their age (# of confirmations).
 // Thus, the final formula for the priority is:
 // sum(inputValue * inputAge) / adjustedTxSize
+// nolint: gomnd
 func CalcPriority(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBlockHeight int32) float64 {
 	// In order to encourage spending multiple old unspent transaction
 	// outputs thereby reducing the total set, don't count the constant
@@ -118,7 +119,7 @@ func CalcPriority(tx *wire.MsgTx, utxoView *chaindata.UtxoViewpoint, nextBlockHe
 	// Thus 1 + 73 + 1 + 1 + 33 + 1 = 110
 	overhead := 0
 	for _, txIn := range tx.TxIn {
-		//todo: TBD, not sure, that is proper solution for the case with swapTx
+		// todo: TBD, not sure, that is proper solution for the case with swapTx
 		entry := utxoView.LookupEntry(txIn.PreviousOutPoint)
 		if entry != nil && !entry.IsSpent() {
 			// Max inputs + size can't possibly overflow here.

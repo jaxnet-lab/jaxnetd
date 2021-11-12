@@ -31,7 +31,7 @@ func (ui *UniqueIndex) Add(val string) (int, bool) {
 	if ok {
 		return id, ok
 	}
-	ui.lastID += 1
+	ui.lastID++
 	ui.index[val] = ui.lastID
 	return ui.lastID, false
 }
@@ -52,7 +52,6 @@ func NewAddressIndex(shardID uint32) AddressUniqueIndex {
 func (ui *AddressUniqueIndex) Add(val string) int {
 	id, exist := ui.UniqueIndex.Add(val)
 	if !exist {
-
 		ui.input <- row{
 			flush: id%1000 == 0,
 			data:  Address{ID: id, Address: val},
@@ -93,7 +92,8 @@ func NewUTXOIndex() UTXOIndex {
 		scriptIndex: map[string]struct {
 			value  int64
 			script []byte
-		}{}}
+		}{},
+	}
 }
 
 func (ui *UTXOIndex) Add(hash, id int, script []byte, value int64) {

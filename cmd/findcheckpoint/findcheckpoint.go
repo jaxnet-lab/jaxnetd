@@ -2,7 +2,8 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-//+build deprecated_tests
+//go:build deprecated_tests
+// +build deprecated_tests
 
 package main
 
@@ -30,10 +31,10 @@ func loadBlockDB() (database.DB, error) {
 
 	chain := chainctx.NewBeaconChain(&chaincfg.TestNet3Params)
 	// The database name is based on the database type.
-	dbName := blockDbNamePrefix + "_" + cfg.DbType
+	dbName := blockDbNamePrefix + "_" + cfg.DBType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
 	fmt.Printf("Loading block database from '%s'\n", dbPath)
-	db, err := database.Open(cfg.DbType, chain, dbPath)
+	db, err := database.Open(cfg.DBType, chain, dbPath)
 	if err != nil {
 		return nil, err
 	}

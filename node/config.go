@@ -52,7 +52,7 @@ type InstanceConfig struct {
 	RPC            rpc.Config                   `yaml:"rpc" toml:"rpc"`
 	P2P            p2p.Config                   `yaml:"p2p" toml:"p2p"`
 	Shards         ShardConfig                  `yaml:"shards" toml:"shards"`
-	DbType         string                       `yaml:"db_type" toml:"db_type" description:"Database backend to use for the Block Chain"`
+	DBType         string                       `yaml:"db_type" toml:"db_type" description:"Database backend to use for the Block Chain"`
 	Net            string                       `yaml:"net" toml:"net"`
 	EnableCPUMiner bool                         `yaml:"enable_cpu_miner" toml:"enable_cpu_miner"`
 	DumpMMR        bool                         `yaml:"dump_mmr" toml:"dump_mmr"`

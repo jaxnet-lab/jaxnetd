@@ -18,6 +18,7 @@ type shardChain struct {
 	beaconHeight int32
 }
 
+// nolint: golint, revive
 func ShardChain(shardID uint32, params *chaincfg.Params, beaconBlock *wire.MsgBlock, height int32) *shardChain {
 	chainParams := params.ShardParams(shardID, beaconBlock)
 

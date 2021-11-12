@@ -97,12 +97,13 @@ func subStructUsage(structType reflect.Type) string {
 // subArrayUsage returns a string for use in the one-line usage for the given
 // array or slice.  It also contains logic to convert plural field names to
 // singular so the generated usage string reads better.
+// nolint: gocritic
 func subArrayUsage(arrayType reflect.Type, fieldName string) string {
 	// Convert plural field names to singular.  Only works for English.
 	singularFieldName := fieldName
 	if strings.HasSuffix(fieldName, "ies") {
 		singularFieldName = strings.TrimSuffix(fieldName, "ies")
-		singularFieldName = singularFieldName + "y"
+		singularFieldName += "y"
 	} else if strings.HasSuffix(fieldName, "es") {
 		singularFieldName = strings.TrimSuffix(fieldName, "es")
 	} else if strings.HasSuffix(fieldName, "s") {

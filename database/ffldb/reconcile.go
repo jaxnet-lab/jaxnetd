@@ -40,7 +40,7 @@ func deserializeWriteRow(writeRow []byte) (uint32, uint32, error) {
 		str := fmt.Sprintf("metadata for write cursor does not match "+
 			"the expected checksum - got %d, want %d", gotChecksum,
 			wantChecksum)
-		return 0, 0, makeDbErr(database.ErrCorruption, str, nil)
+		return 0, 0, makeDBErr(database.ErrCorruption, str, nil)
 	}
 
 	fileNum := byteOrder.Uint32(writeRow[0:4])
@@ -65,7 +65,7 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 		writeRow := tx.Metadata().Get(writeLocKeyName)
 		if writeRow == nil {
 			str := "write cursor does not exist"
-			return makeDbErr(database.ErrCorruption, str, nil)
+			return makeDBErr(database.ErrCorruption, str, nil)
 		}
 
 		var err error
@@ -111,7 +111,7 @@ func reconcileDB(pdb *db, create bool) (database.DB, error) {
 			"block data is at file %d, offset %d", curFileNum,
 			curOffset, wc.curFileNum, wc.curOffset)
 		log.Warn().Msgf("***Database corruption detected***: %v", str)
-		return nil, makeDbErr(database.ErrCorruption, str, nil)
+		return nil, makeDBErr(database.ErrCorruption, str, nil)
 	}
 
 	return pdb, nil

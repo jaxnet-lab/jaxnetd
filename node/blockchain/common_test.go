@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,11 +28,11 @@ import (
 )
 
 const (
-	// testDbType is the database backend type to use for the tests.
-	testDbType = "ffldb"
+	// testDBType is the database backend type to use for the tests.
+	testDBType = "ffldb"
 
-	// testDbRoot is the root directory used to create all test databases.
-	testDbRoot = "testdbs"
+	// testDBRoot is the root directory used to create all test databases.
+	testDBRoot = "testdbs"
 
 	// blockDataNet is the expected network in the test block data.
 	blockDataNet = wire.MainNet
@@ -47,9 +48,9 @@ func fileExists(name string) bool {
 	return true
 }
 
-// isSupportedDbType returns whether or not the passed database type is
+// isSupportedDBType returns whether or not the passed database type is
 // currently supported.
-func isSupportedDbType(dbType string) bool {
+func isSupportedDBType(dbType string) bool {
 	supportedDrivers := database.SupportedDrivers()
 	for _, driver := range supportedDrivers {
 		if dbType == driver {
@@ -63,16 +64,16 @@ func isSupportedDbType(dbType string) bool {
 // loadBlocks reads files containing bitcoin block data (gzipped but otherwise
 // in the format bitcoind writes) from disk and returns them as an array of
 // jaxutil.Block.  This is largely borrowed from the test code in btcdb.
-func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil.Block, err error) {
+func loadBlocks(filename string) ([]*jaxutil.Block, error) {
 	filename = filepath.Join("testdata/", filename)
 
 	var network = wire.MainNet
 	var dr io.Reader
 	var fi io.ReadCloser
 
-	fi, err = os.Open(filename)
+	fi, err := os.Open(filename)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if strings.HasSuffix(filename, ".bz2") {
@@ -82,9 +83,11 @@ func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil
 	}
 	defer fi.Close()
 
-	var block *jaxutil.Block
+	var (
+		block  *jaxutil.Block
+		blocks []*jaxutil.Block
+	)
 
-	err = nil
 	for height := int64(1); err == nil; height++ {
 		var rintbuf uint32
 		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
@@ -100,7 +103,7 @@ func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil
 		if rintbuf != uint32(network) {
 			break
 		}
-		err = binary.Read(dr, binary.LittleEndian, &rintbuf)
+		_ = binary.Read(dr, binary.LittleEndian, &rintbuf)
 		blocklen := rintbuf
 
 		rbytes := make([]byte, blocklen)
@@ -110,28 +113,28 @@ func loadBlocks(chainCtx chainctx.IChainCtx, filename string) (blocks []*jaxutil
 
 		block, err = jaxutil.NewBlockFromBytes(rbytes)
 		if err != nil {
-			return
+			return nil, err
 		}
 		blocks = append(blocks, block)
 	}
 
-	return
+	return blocks, nil
 }
 
 // chainSetup is used to create a new db and chain instance with the genesis
 // block already inserted.  In addition to the new chain instance, it returns
 // a teardown function the caller should invoke when done testing to clean up.
 func chainSetup(dbName string, chainCtx chainctx.IChainCtx) (*BlockChain, func(), error) {
-	if !isSupportedDbType(testDbType) {
-		return nil, nil, fmt.Errorf("unsupported db type %v", testDbType)
+	if !isSupportedDBType(testDBType) {
+		return nil, nil, fmt.Errorf("unsupported db type %v", testDBType)
 	}
 
 	// Handle memory database specially since it doesn't need the disk
 	// specific handling.
 	var db database.DB
 	var teardown func()
-	if testDbType == "memdb" {
-		ndb, err := database.Create(testDbType, chainCtx)
+	if testDBType == "memdb" {
+		ndb, err := database.Create(testDBType, chainCtx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating db: %v", err)
 		}
@@ -144,8 +147,8 @@ func chainSetup(dbName string, chainCtx chainctx.IChainCtx) (*BlockChain, func()
 		}
 	} else {
 		// Create the root directory for test databases.
-		if !fileExists(testDbRoot) {
-			if err := os.MkdirAll(testDbRoot, 0700); err != nil {
+		if !fileExists(testDBRoot) {
+			if err := os.MkdirAll(testDBRoot, 0700); err != nil {
 				err := fmt.Errorf("unable to create test db "+
 					"root: %v", err)
 				return nil, nil, err
@@ -153,9 +156,9 @@ func chainSetup(dbName string, chainCtx chainctx.IChainCtx) (*BlockChain, func()
 		}
 
 		// Create a new database to store the accepted blocks into.
-		dbPath := filepath.Join(testDbRoot, dbName)
+		dbPath := filepath.Join(testDBRoot, dbName)
 		_ = os.RemoveAll(dbPath)
-		ndb, err := database.Create(testDbType, chainCtx, dbPath)
+		ndb, err := database.Create(testDBType, chainCtx, dbPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating db: %v", err)
 		}
@@ -166,7 +169,7 @@ func chainSetup(dbName string, chainCtx chainctx.IChainCtx) (*BlockChain, func()
 		teardown = func() {
 			db.Close()
 			os.RemoveAll(dbPath)
-			os.RemoveAll(testDbRoot)
+			os.RemoveAll(testDBRoot)
 		}
 	}
 
@@ -311,7 +314,7 @@ func newFakeNode(ctx chainctx.IChainCtx, parent blocknodes.IBlockNode, blockVers
 		chainhash.ZeroHash,
 		timestamp,
 		bits,
-		1, // todo: fix
+		big.NewInt(1),
 		0,
 	)
 

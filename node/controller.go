@@ -14,15 +14,14 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/network/rpc"
-	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mining/cpuminer"
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the block database name.  The
+	// blockDBNamePrefix is the prefix for the block database name.  The
 	// database type is appended to this value to form the full block
 	// database name.
-	blockDbNamePrefix = "blocks"
+	blockDBNamePrefix = "blocks"
 )
 
 type chainController struct {
@@ -50,6 +49,7 @@ type chainController struct {
 	metrics IMetricManager
 }
 
+// nolint: golint, revive
 func Controller(logger zerolog.Logger) *chainController {
 	res := &chainController{
 		logger:    logger,
@@ -64,6 +64,7 @@ func Controller(logger zerolog.Logger) *chainController {
 	return res
 }
 
+// nolint
 func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	// todo: fix after p2p refactoring
 	cfg.Node.P2P.GetChainPort = chainCtl.ports.Get
@@ -83,7 +84,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		}()
 	}
 
-	if err := chainCtl.runRpc(chainCtl.ctx, cfg); err != nil {
+	if err := chainCtl.runRPC(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
 		return err
 	}
@@ -139,18 +140,6 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 
 	chainCtl.miner = cpuminer.New(beacon, shards, miningAddrs[0],
 		chainCtl.logger.With().Str("ctx", "miner").Logger())
-	return
-}
-
-func (chainCtl *chainController) runShardMiner(chainProvider *cprovider.ChainProvider) {
-	chainCtl.miner.AddChain(chainProvider.ChainCtx.ShardID(), cpuminer.Config{
-		ChainParams:            chainProvider.ChainParams,
-		BlockTemplateGenerator: chainProvider.BlkTmplGenerator(),
-		MiningAddrs:            chainProvider.MiningAddrs,
-		ProcessBlock:           chainProvider.SyncManager.ProcessBlock,
-		IsCurrent:              chainProvider.SyncManager.IsCurrent,
-		ConnectedCount:         func() int32 { return 1 },
-	})
 }
 
 func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
@@ -178,10 +167,9 @@ type rpcRO struct {
 	beacon  *rpc.BeaconRPC
 	node    *rpc.NodeRPC
 	connMgr netsync.P2PConnManager
-	wsMgr   *rpc.WsManager
 }
 
-func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error {
+func (chainCtl *chainController) runRPC(ctx context.Context, cfg *Config) error {
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
 	chainCtl.logger.Info().Msg("Create WS RPC server")
@@ -199,7 +187,6 @@ func (chainCtl *chainController) runRpc(ctx context.Context, cfg *Config) error 
 
 	chainCtl.wg.Add(1)
 	go func() {
-
 		chainCtl.logger.Info().Msg("Run RPC server")
 		chainCtl.rpc.server.Run(ctx)
 		chainCtl.wg.Done()
@@ -232,7 +219,7 @@ func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Conf
 }
 
 func (chainCtl *chainController) Stats() map[string]float64 {
-	var activeClients int32 = 0
+	var activeClients int32
 	if chainCtl.rpc.server != nil {
 		activeClients = chainCtl.rpc.server.ActiveClients()
 	}

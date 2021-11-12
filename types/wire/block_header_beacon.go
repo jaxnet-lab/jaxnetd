@@ -107,7 +107,6 @@ func NewBeaconBlockHeader(version BVersion, height int32, blocksMerkleMountainRo
 			CoinbaseAux: CoinbaseAux{}.New(),
 		},
 	}
-
 }
 
 func (h *BeaconHeader) BeaconHeader() *BeaconHeader                     { return h }

@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -21,7 +22,6 @@ type MultiChainRPC struct {
 	beaconRPC   *BeaconRPC
 	shardRPCs   map[uint32]*ShardRPC
 	chainsMutex sync.RWMutex
-	helpCache   *helpCacher
 	wsManager   *WsManager
 }
 

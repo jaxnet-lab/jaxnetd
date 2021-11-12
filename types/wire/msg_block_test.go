@@ -8,6 +8,7 @@ package wire
 import (
 	"bytes"
 	"io"
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -472,7 +473,7 @@ var blockOne = MsgBlock{
 		chainhash.Hash{},
 		time.Unix(0x4966bc61, 0), // 2009-01-08 20:54:25 -0600 CST
 		0x1d00ffff,               // 486604799
-		42,
+		big.NewInt(42),
 		0x9962e301, // 2573394689
 	),
 	Transactions: []*MsgTx{

@@ -69,7 +69,7 @@ func useLogger(logger zerolog.Logger) {
 func init() {
 	// Register the driver.
 	driver := database.Driver{
-		DbType:    dbType,
+		DBType:    dbType,
 		Create:    createDBDriver,
 		Open:      openDBDriver,
 		UseLogger: useLogger,

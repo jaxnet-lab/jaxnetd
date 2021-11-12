@@ -463,7 +463,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 		{
 			name: "unregistered type",
 			request: jaxjson.Request{
-				JsonRPC: "1.0",
+				JSONRPC: "1.0",
 				Method:  "bogusmethod",
 				Params:  nil,
 				ID:      nil,
@@ -473,7 +473,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 		{
 			name: "incorrect number of params",
 			request: jaxjson.Request{
-				JsonRPC: "1.0",
+				JSONRPC: "1.0",
 				Method:  "getblockcount",
 				Params:  []json.RawMessage{[]byte(`"bogusparam"`)},
 				ID:      nil,
@@ -483,7 +483,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 		{
 			name: "invalid type for a parameter",
 			request: jaxjson.Request{
-				JsonRPC: "1.0",
+				JSONRPC: "1.0",
 				Method:  "getblock",
 				Params:  []json.RawMessage{[]byte("1")},
 				ID:      nil,
@@ -493,7 +493,7 @@ func TestUnmarshalCmdErrors(t *testing.T) {
 		{
 			name: "invalid JSON for a parameter",
 			request: jaxjson.Request{
-				JsonRPC: "1.0",
+				JSONRPC: "1.0",
 				Method:  "getblock",
 				Params:  []json.RawMessage{[]byte(`"1`)},
 				ID:      nil,

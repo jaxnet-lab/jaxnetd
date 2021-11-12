@@ -1,8 +1,10 @@
+// nolint: forcetypeassert
 package rpc
 
 import (
 	"errors"
 	"fmt"
+
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
@@ -20,6 +22,7 @@ type wsHandler struct {
 	handlers map[string]wsCommandHandler
 }
 
+// nolint: golint, revive
 func WebSocketHandlers(core *MultiChainRPC) *wsHandler {
 	res := &wsHandler{
 		core:     core,
@@ -144,6 +147,7 @@ func (h *wsHandler) handleNotifyNewTransactions(chain *cprovider.ChainProvider, 
 	return nil, nil
 }
 
+// nolint: staticcheck
 func (h *wsHandler) handleNotifyReceived(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
 	cmd, ok := icmd.(*jaxjson.NotifyReceivedCmd)
 	if !ok {
@@ -161,6 +165,7 @@ func (h *wsHandler) handleNotifyReceived(chain *cprovider.ChainProvider, wsc *ws
 	return nil, nil
 }
 
+// nolint: staticcheck
 func (h *wsHandler) handleNotifySpent(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
 	cmd, ok := icmd.(*jaxjson.NotifySpentCmd)
 	if !ok {
@@ -190,6 +195,7 @@ func (h *wsHandler) handleStopNotifyNewTransactions(chain *cprovider.ChainProvid
 	return nil, nil
 }
 
+// nolint: staticcheck
 func (h *wsHandler) handleStopNotifySpent(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
 	cmd, ok := icmd.(*jaxjson.StopNotifySpentCmd)
 	if !ok {
@@ -208,6 +214,7 @@ func (h *wsHandler) handleStopNotifySpent(chain *cprovider.ChainProvider, wsc *w
 	return nil, nil
 }
 
+// nolint: staticcheck
 func (h *wsHandler) handleStopNotifyReceived(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
 	cmd, ok := icmd.(*jaxjson.StopNotifyReceivedCmd)
 	if !ok {
@@ -229,11 +236,11 @@ func (h *wsHandler) handleStopNotifyReceived(chain *cprovider.ChainProvider, wsc
 }
 
 func (h *wsHandler) handleRescan(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	return nil, errors.New("Not Implemented")
+	return nil, errors.New("not Implemented")
 }
 
 func (h *wsHandler) handleRescanBlocks(chain *cprovider.ChainProvider, wsc *wsClient, icmd interface{}) (interface{}, error) {
-	return nil, errors.New("Not Implemented")
+	return nil, errors.New("not Implemented")
 }
 
 //

@@ -245,6 +245,7 @@ func (xt ToolsXt) EncodeTemplateID(prevHash *chainhash.Hash, lastGenerated time.
 // that are using long polling for block templates.  The ID consists of the
 // previous block hash for the associated template and the time the associated
 // template was generated.
+// nolint: gomnd
 func (xt ToolsXt) DecodeTemplateID(templateID string) (*chainhash.Hash, int64, error) {
 	fields := strings.Split(templateID, "-")
 	if len(fields) != 2 {

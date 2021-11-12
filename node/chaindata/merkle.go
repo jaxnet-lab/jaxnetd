@@ -27,19 +27,17 @@ const (
 	CoinbaseWitnessPkScriptLength = 38
 )
 
-var (
-	// WitnessMagicBytes is the prefix marker within the public key script
-	// of a coinbase output to indicate that this output holds the witness
-	// commitment for a block.
-	WitnessMagicBytes = []byte{
-		txscript.OP_RETURN,
-		txscript.OP_DATA_36,
-		0xaa,
-		0x21,
-		0xa9,
-		0xed,
-	}
-)
+// WitnessMagicBytes is the prefix marker within the public key script
+// of a coinbase output to indicate that this output holds the witness
+// commitment for a block.
+var WitnessMagicBytes = []byte{
+	txscript.OP_RETURN,
+	txscript.OP_DATA_36,
+	0xaa,
+	0x21,
+	0xa9,
+	0xed,
+}
 
 // BuildMerkleTreeStore creates a merkle tree from a slice of transactions,
 // stores it using a linear array, and returns a slice of the backing array.  A
@@ -93,7 +91,6 @@ func BuildMerkleTreeStore(transactions []*jaxutil.Tx, witness bool) []*chainhash
 		default:
 			merkles[i] = *tx.Hash()
 		}
-
 	}
 	return chainhash.BuildMerkleTreeStore(merkles)
 }

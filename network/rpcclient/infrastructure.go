@@ -267,7 +267,10 @@ func (c *Client) removeRequest(id uint64) *jsonRequest {
 	element := c.requestMap[id]
 	if element != nil {
 		delete(c.requestMap, id)
-		request := c.requestList.Remove(element).(*jsonRequest)
+		request, ok := c.requestList.Remove(element).(*jsonRequest)
+		if !ok {
+			return nil
+		}
 		return request
 	}
 
@@ -286,6 +289,7 @@ func (c *Client) removeAllRequests() {
 // trackRegisteredNtfns examines the passed command to see if it is one of
 // the notification commands and updates the notification state that is used
 // to automatically re-establish registered notifications on reconnects.
+// nolint: staticcheck
 func (c *Client) trackRegisteredNtfns(cmd interface{}) {
 	// Nothing to do if the caller is not interested in notifications.
 	if c.ntfnHandlers == nil {
@@ -304,7 +308,6 @@ func (c *Client) trackRegisteredNtfns(cmd interface{}) {
 			c.ntfnState.notifyNewTxVerbose = true
 		} else {
 			c.ntfnState.notifyNewTx = true
-
 		}
 
 	case *jaxjson.NotifySpentCmd:
@@ -639,7 +642,11 @@ func (c *Client) resendRequests() {
 	for e := c.requestList.Front(); e != nil; e = nextElem {
 		nextElem = e.Next()
 
-		jReq := e.Value.(*jsonRequest)
+		jReq, ok := e.Value.(*jsonRequest)
+		if !ok {
+			return
+		}
+
 		if _, ok := ignoreResends[jReq.method]; ok {
 			// If a request is not sent on reconnect, remove it
 			// from the request structures, since no reply is
@@ -822,7 +829,6 @@ cleanup:
 	}
 	c.wg.Done()
 	log.Trace().Msgf("RPC client send handler done for %s", c.config.Host)
-
 }
 
 // sendPostRequest sends the passed HTTP request to the RPC server using the
@@ -1010,6 +1016,8 @@ func (c *Client) Disconnected() bool {
 	}
 }
 
+const wsCloseDeadline = time.Second * 5
+
 // doDisconnect disconnects the websocket associated with the client if it
 // hasn't already been disconnected.  It will return false if the disconnect is
 // not needed or the client is running in HTTP POST mode.
@@ -1028,7 +1036,7 @@ func (c *Client) doDisconnect() bool {
 		return false
 	}
 
-	err := c.wsConn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "closing connection"), time.Now().Add(time.Second*5))
+	err := c.wsConn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "closing connection"), time.Now().Add(wsCloseDeadline))
 	if err != nil {
 		log.Trace().Msgf("Error sending close message to WS server %s", err)
 	}
@@ -1065,6 +1073,7 @@ func (c *Client) doShutdown() bool {
 // created with the DisableAutoReconnect flag.
 //
 // This function has no effect when the client is running in HTTP POST mode.
+// nolint: forcetypeassert
 func (c *Client) Disconnect() {
 	// Nothing to do if already disconnected or running in HTTP POST mode.
 	if !c.doDisconnect() {
@@ -1092,6 +1101,7 @@ func (c *Client) Disconnect() {
 // Shutdown shuts down the client by disconnecting any connections associated
 // with the client and, when automatic reconnect is enabled, preventing future
 // attempts to reconnect.  It also stops all goroutines.
+// nolint: forcetypeassert
 func (c *Client) Shutdown() {
 	// Do the shutdown under the request lock to prevent clients from
 	// adding new requests while the client shutdown process is initiated.
@@ -1119,6 +1129,7 @@ func (c *Client) Shutdown() {
 }
 
 // start begins processing input and output messages.
+// nolint: gomnd
 func (c *Client) start() {
 	log.Trace().Msgf("Starting RPC client %s", c.config.Host)
 
@@ -1247,9 +1258,11 @@ func (config *ConnConfig) getAuth() (username, passphrase string, err error) {
 	return config.retrieveCookie()
 }
 
+const checkTimeTimeout = 30 * time.Second
+
 // retrieveCookie returns the cookie username and passphrase.
 func (config *ConnConfig) retrieveCookie() (username, passphrase string, err error) {
-	if !config.cookieLastCheckTime.IsZero() && time.Now().Before(config.cookieLastCheckTime.Add(30*time.Second)) {
+	if !config.cookieLastCheckTime.IsZero() && time.Now().Before(config.cookieLastCheckTime.Add(checkTimeTimeout)) {
 		return config.cookieLastUser, config.cookieLastPass, config.cookieLastErr
 	}
 
@@ -1284,6 +1297,7 @@ func newHTTPClient(config *ConnConfig) (*http.Client, error) {
 	}
 
 	// Configure TLS if needed.
+	// nolint: gosec
 	var tlsConfig *tls.Config
 	if !config.DisableTLS {
 		if len(config.Certificates) > 0 {
@@ -1310,7 +1324,7 @@ func newHTTPClient(config *ConnConfig) (*http.Client, error) {
 func dial(config *ConnConfig) (*websocket.Conn, error) {
 	// Setup TLS if not disabled.
 	var tlsConfig *tls.Config
-	var scheme = "ws"
+	scheme := "ws"
 	if !config.DisableTLS {
 		tlsConfig = &tls.Config{
 			MinVersion: tls.VersionTLS12,
@@ -1349,8 +1363,12 @@ func dial(config *ConnConfig) (*websocket.Conn, error) {
 	requestHeader.Add("Authorization", auth)
 
 	// Dial the connection.
-	connUrl := fmt.Sprintf("%s://%s/%s", scheme, config.Host, config.Endpoint)
-	wsConn, resp, err := dialer.Dial(connUrl, requestHeader)
+	connURL := fmt.Sprintf("%s://%s/%s", scheme, config.Host, config.Endpoint)
+	wsConn, resp, err := dialer.Dial(connURL, requestHeader)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
 	if err != nil {
 		if err != websocket.ErrBadHandshake || resp == nil {
 			return nil, err
@@ -1397,15 +1415,13 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		if !config.DisableConnectOnNew {
-			var err error
-			wsConn, err = dial(config)
-			if err != nil {
-				return nil, err
-			}
-			start = true
+	} else if !config.DisableConnectOnNew {
+		var err error
+		wsConn, err = dial(config)
+		if err != nil {
+			return nil, err
 		}
+		start = true
 	}
 
 	client := &Client{

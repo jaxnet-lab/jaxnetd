@@ -3,7 +3,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -45,7 +45,9 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 
 	// Clear the read deadline that was set before the websocket hijacked
 	// the connection.
-	conn.SetReadDeadline(timeZeroVal)
+	if err := conn.SetReadDeadline(timeZeroVal); err != nil {
+		log.Error().Err(err).Msg("cannot set read deadline")
+	}
 
 	// Limit max number of websocket clients.
 	server.logger.Info().Str("remote", remoteAddr).Msg("New websocket client")
@@ -55,7 +57,9 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	if server.wsManager.NumClients()+1 > server.cfg.MaxWebsockets {
 
 		server.logger.Info().Str("remote", remoteAddr).Int("MaxNumber", server.cfg.MaxWebsockets).Msg("Max websocket clients exceeded")
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			log.Error().Err(err).Msg("cannot close connection")
+		}
 		return
 	}
 
@@ -66,7 +70,9 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	client, err := newWebsocketClient(wsManager, conn, remoteAddr, authenticated, isAdmin)
 	if err != nil {
 		server.logger.Error().Str("remote", remoteAddr).Err(err).Msg("Failed to serve client")
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			log.Error().Err(err).Msg("cannot close connection")
+		}
 		return
 	}
 	server.logger.Info().Msg("Register client")
@@ -110,6 +116,8 @@ type WsManager struct {
 	numClients chan int
 }
 
+const notificationChanLen = 1000
+
 // newWsNotificationManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
 func WebSocketManager(server *MultiChainRPC) *WsManager {
@@ -119,7 +127,7 @@ func WebSocketManager(server *MultiChainRPC) *WsManager {
 	wsManager = &WsManager{
 		handler:           WebSocketHandlers(server),
 		server:            server,
-		queueNotification: make(chan interface{}, 1000),
+		queueNotification: make(chan interface{}, notificationChanLen),
 		notificationMsgs:  make(chan interface{}),
 		numClients:        make(chan int),
 		logger:            log,
@@ -222,7 +230,6 @@ func (m *WsManager) UnregisterSpentRequest(chain *cprovider.ChainProvider, wsc *
 // in or quit channels are closed, and closes out before returning, without
 // waiting to send any variables still remaining in the queue.
 func queueHandler(ctx context.Context, in chan interface{}, out chan<- interface{}) {
-
 	var q []interface{}
 	var dequeue chan<- interface{}
 	skipQueue := out
@@ -277,6 +284,7 @@ type wsBlockNotification struct {
 	Chain *cprovider.ChainProvider
 }
 
+// nolint: structcheck
 type wsTransactionNotification struct {
 	Client *wsClient
 	isNew  bool
@@ -285,38 +293,49 @@ type wsTransactionNotification struct {
 }
 
 //// Notification types
-type notificationBlockConnected wsBlockNotification
-type notificationBlockDisconnected wsBlockNotification
-type notificationTxAcceptedByMempool wsTransactionNotification
+type (
+	notificationBlockConnected      wsBlockNotification
+	notificationBlockDisconnected   wsBlockNotification
+	notificationTxAcceptedByMempool wsTransactionNotification
+)
 
 // Notification control requests
-type notificationRegisterClient wsClient
-type notificationUnregisterClient wsClient
-type notificationRegisterBlocks struct {
-	wsc     *wsClient
-	shardID uint32
-}
+type (
+	notificationRegisterClient   wsClient
+	notificationUnregisterClient wsClient
+	notificationRegisterBlocks   struct {
+		wsc     *wsClient
+		shardID uint32
+	}
+)
+
 type notificationUnregisterBlocks struct {
 	wsc     *wsClient
 	shardID uint32
 }
-type notificationRegisterNewMempoolTxs wsClient
-type notificationUnregisterNewMempoolTxs wsClient
-type notificationRegisterSpent struct {
-	wsc   *wsClient
-	ops   []*wire.OutPoint
-	chain *cprovider.ChainProvider
-}
+
+type (
+	notificationRegisterNewMempoolTxs   wsClient
+	notificationUnregisterNewMempoolTxs wsClient
+	notificationRegisterSpent           struct {
+		wsc   *wsClient
+		ops   []*wire.OutPoint
+		chain *cprovider.ChainProvider
+	}
+)
+
 type notificationUnregisterSpent struct {
 	chain *cprovider.ChainProvider
 	wsc   *wsClient
 	op    *wire.OutPoint
 }
+
 type notificationRegisterAddr struct {
 	chain *cprovider.ChainProvider
 	wsc   *wsClient
 	addrs []string
 }
+
 type notificationUnregisterAddr struct {
 	chain *cprovider.ChainProvider
 	wsc   *wsClient
@@ -391,7 +410,7 @@ out:
 				m.notifyRelevantTxAccepted(n.Chain, n.tx, clients)
 
 			case *notificationRegisterBlocks:
-				wsc := (*wsClient)(n.wsc)
+				wsc := n.wsc
 				if bnMap, ok := shardIDBlockNotifications[n.shardID]; !ok {
 					shardIDBlockNotifications[n.shardID] = make(map[chan struct{}]*wsClient)
 					shardIDBlockNotifications[n.shardID][wsc.quit] = wsc
@@ -399,7 +418,7 @@ out:
 					bnMap[wsc.quit] = wsc
 				}
 
-				//this block optimises unsubscribing of the given client from all subscriptions
+				// this block optimises unsubscribing of the given client from all subscriptions
 				// in a case when the connection is lost for any reason
 				if shardMap, ok := shardIDClients[wsc.quit]; !ok {
 					shardMap = make(map[uint32]bool)
@@ -412,7 +431,7 @@ out:
 				}
 
 			case *notificationUnregisterBlocks:
-				wsc := (*wsClient)(n.wsc)
+				wsc := n.wsc
 				if bnMap, ok := shardIDBlockNotifications[n.shardID]; ok {
 					delete(bnMap, wsc.quit)
 				}
@@ -428,8 +447,8 @@ out:
 				delete(blockNotifications, wsc.quit)
 
 				if shardMap, ok := shardIDClients[wsc.quit]; ok {
-					for shardID, _ := range shardMap {
-						//unsubscribe from block notifications
+					for shardID := range shardMap {
+						// unsubscribe from block notifications
 						if bnMap, ok := shardIDBlockNotifications[shardID]; ok {
 							delete(bnMap, wsc.quit)
 						}
@@ -502,8 +521,8 @@ func (m *WsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.Out
 // websocket clients of the transaction if an output spends to a watched
 // address.  A spent notification request is automatically registered for
 // the client for each matching output.
+// nolint: staticcheck
 func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
-
 	// Nothing to do if nobody is listening for address notifications.
 	if len(addrs) == 0 {
 		return
@@ -542,7 +561,9 @@ func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 
 				if _, ok := wscNotified[wscQuit]; !ok {
 					wscNotified[wscQuit] = struct{}{}
-					wsc.QueueNotification(marshalledJSON)
+					if err := wsc.QueueNotification(marshalledJSON); err != nil {
+						log.Error().Err(err).Msg("cannot queue notification")
+					}
 				}
 			}
 		}
@@ -554,7 +575,6 @@ func (m *WsManager) notifyForTxOuts(chain *cprovider.ChainProvider, ops map[wire
 // spend a watched output.  If block is non-nil, any matching spent
 // requests are removed.
 func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
-
 	// Nothing to do if nobody is watching outpoints.
 	if len(ops) == 0 {
 		return
@@ -580,7 +600,9 @@ func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.
 
 				if _, ok := wscNotified[wscQuit]; !ok {
 					wscNotified[wscQuit] = struct{}{}
-					wsc.QueueNotification(marshalledJSON)
+					if err := wsc.QueueNotification(marshalledJSON); err != nil {
+						log.Error().Err(err).Msg("cannot queue notification")
+					}
 				}
 			}
 		}
@@ -591,12 +613,15 @@ func (m *WsManager) notifyForTxIns(chain *cprovider.ChainProvider, ops map[wire.
 func txHexString(tx *wire.MsgTx) string {
 	buf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 	// Ignore Serialize's error, as writing to a bytes.buffer cannot fail.
-	tx.Serialize(buf)
+	if err := tx.Serialize(buf); err != nil {
+		log.Error().Err(err).Msg("cannot serialize tx")
+	}
 	return hex.EncodeToString(buf.Bytes())
 }
 
 // newRedeemingTxNotification returns a new marshalled redeemingtx notification
 // with the passed parameters.
+// nolint: staticcheck
 func newRedeemingTxNotification(chain *cprovider.ChainProvider, txHex string, index int, block *jaxutil.Block) ([]byte, error) {
 	// Create and marshal the notification.
 	ntfn := jaxjson.NewRedeemingTxNtfn(txHex, blockDetails(block, index))
@@ -702,7 +727,9 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 	for _, wsc := range clients {
 		if wsc.verboseTxUpdates {
 			if marshalledJSONVerbose != nil {
-				wsc.QueueNotification(marshalledJSONVerbose)
+				if err := wsc.QueueNotification(marshalledJSONVerbose); err != nil {
+					log.Error().Err(err).Msg("cannot queue notification")
+				}
 				continue
 			}
 
@@ -718,15 +745,20 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 				m.logger.Error().Err(err).Msg("Failed to marshal verbose tx notification")
 				return
 			}
-			wsc.QueueNotification(marshalledJSONVerbose)
+			if err := wsc.QueueNotification(marshalledJSONVerbose); err != nil {
+				log.Error().Err(err).Msg("cannot queue notification")
+			}
 		} else {
-			wsc.QueueNotification(marshalledJSON)
+			if err := wsc.QueueNotification(marshalledJSON); err != nil {
+				log.Error().Err(err).Msg("cannot queue notification")
+			}
 		}
 	}
 }
 
 // notifyBlockConnected notifies websocket clients that have registered for
 // block updates when a block is connected to the main BlockChain.
+// nolint: staticcheck
 func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
 	block *jaxutil.Block) {
 
@@ -739,7 +771,9 @@ func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 		return
 	}
 	for _, wsc := range clients {
-		wsc.QueueNotification(marshalledJSON)
+		if err := wsc.QueueNotification(marshalledJSON); err != nil {
+			log.Error().Err(err).Msg("cannot queue notification")
+		}
 	}
 }
 
@@ -782,10 +816,13 @@ func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider,
 			m.logger.Error().Err(err).Msg("Failed to marshal filtered block connected notification")
 			return
 		}
-		wsc.QueueNotification(marshalledJSON)
+		if err := wsc.QueueNotification(marshalledJSON); err != nil {
+			log.Error().Err(err).Msg("cannot queue notification")
+		}
 	}
 }
 
+// nolint: staticcheck
 func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient, block *jaxutil.Block) {
 	// Skip notification creation if no clients have requested block
 	// connected/disconnected notifications.
@@ -802,7 +839,9 @@ func (m *WsManager) notifyBlockDisconnected(chain *cprovider.ChainProvider, clie
 		return
 	}
 	for _, wsc := range clients {
-		wsc.QueueNotification(marshalledJSON)
+		if err := wsc.QueueNotification(marshalledJSON); err != nil {
+			log.Error().Err(err).Msg("cannot queue notification")
+		}
 	}
 }
 
@@ -818,7 +857,6 @@ func (m *WsManager) NumClients() (n int) {
 // client's filters are updated based on this transaction's outputs and output
 // addresses that may be relevant for a client.
 func (m *WsManager) subscribedClients(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) map[chan struct{}]struct{} {
-
 	// Use a map of client quit channels as keys to prevent duplicates when
 	// multiple inputs and/or outputs are relevant to the client.
 	subscribed := make(map[chan struct{}]struct{})
@@ -900,7 +938,9 @@ func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 		return
 	}
 	for _, wsc := range clients {
-		wsc.QueueNotification(marshalledJSON)
+		if err := wsc.QueueNotification(marshalledJSON); err != nil {
+			log.Error().Err(err).Msg("cannot queue notification")
+		}
 	}
 }
 
@@ -911,7 +951,6 @@ func (m *WsManager) notifyFilteredBlockDisconnected(chain *cprovider.ChainProvid
 // watched address result in the output being watched as well for future
 // notifications.
 func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx *jaxutil.Tx, clients map[chan struct{}]*wsClient) {
-
 	clientsToNotify := m.subscribedClients(chain, tx, clients)
 
 	if len(clientsToNotify) != 0 {
@@ -922,7 +961,9 @@ func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx 
 			return
 		}
 		for quitChan := range clientsToNotify {
-			clients[quitChan].QueueNotification(marshalled)
+			if err := clients[quitChan].QueueNotification(marshalled); err != nil {
+				log.Error().Err(err).Msg("cannot queue notification")
+			}
 		}
 	}
 }

@@ -84,6 +84,7 @@ func GetTransactionWeight(tx *jaxutil.Tx) int64 {
 // legacy sig op count scaled according to the WitnessScaleFactor, the sig op
 // count for all p2sh inputs scaled by the WitnessScaleFactor, and finally the
 // unscaled sig op count for any inputs spending witness programs.
+// nolint: nilerr
 func GetSigOpCost(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bip16, segWit bool) (int, error) {
 	numSigOps := CountSigOps(tx) * WitnessScaleFactor
 	if bip16 {
@@ -104,7 +105,7 @@ func GetSigOpCost(tx *jaxutil.Tx, isCoinBaseTx bool, utxoView *UtxoViewpoint, bi
 			// already been spent.
 			utxo := utxoView.LookupEntry(txIn.PreviousOutPoint)
 			if utxo == nil && thisIsSwapTx {
-				missingCount += 1
+				missingCount++
 				continue
 			}
 

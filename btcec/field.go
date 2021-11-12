@@ -77,10 +77,6 @@ const (
 	// 2^(fieldBase*i) where i is the word position.
 	fieldBase = 26
 
-	// fieldOverflowBits is the minimum number of "overflow" bits for each
-	// word in the field value.
-	fieldOverflowBits = 32 - fieldBase
-
 	// fieldBaseMask is the mask for the bits in each word needed to
 	// represent the numeric base of each word (except the most significant
 	// word).
@@ -103,19 +99,17 @@ const (
 	fieldPrimeWordOne = 0x3ffffbf
 )
 
-var (
-	// fieldQBytes is the value Q = (P+1)/4 for the secp256k1 prime P. This
-	// value is used to efficiently compute the square root of values in the
-	// field via exponentiation. The value of Q in hex is:
-	//
-	//   Q = 3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
-	fieldQBytes = []byte{
-		0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xbf, 0xff, 0xff, 0x0c,
-	}
-)
+// fieldQBytes is the value Q = (P+1)/4 for the secp256k1 prime P. This
+// value is used to efficiently compute the square root of values in the
+// field via exponentiation. The value of Q in hex is:
+//
+//   Q = 3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
+var fieldQBytes = []byte{
+	0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xbf, 0xff, 0xff, 0x0c,
+}
 
 // fieldVal implements optimized fixed-precision arithmetic over the
 // secp256k1 finite field.  This means all arithmetic is performed modulo
@@ -292,26 +286,26 @@ func (f *fieldVal) Normalize() *fieldVal {
 	// additional carry to bit 256 (bit 22 of the high order word).
 	t9 := f.n[9]
 	m := t9 >> fieldMSBBits
-	t9 = t9 & fieldMSBMask
+	t9 &= fieldMSBMask
 	t0 := f.n[0] + m*977
 	t1 := (t0 >> fieldBase) + f.n[1] + (m << 6)
-	t0 = t0 & fieldBaseMask
+	t0 &= fieldBaseMask
 	t2 := (t1 >> fieldBase) + f.n[2]
-	t1 = t1 & fieldBaseMask
+	t1 &= fieldBaseMask
 	t3 := (t2 >> fieldBase) + f.n[3]
-	t2 = t2 & fieldBaseMask
+	t2 &= fieldBaseMask
 	t4 := (t3 >> fieldBase) + f.n[4]
-	t3 = t3 & fieldBaseMask
+	t3 &= fieldBaseMask
 	t5 := (t4 >> fieldBase) + f.n[5]
-	t4 = t4 & fieldBaseMask
+	t4 &= fieldBaseMask
 	t6 := (t5 >> fieldBase) + f.n[6]
-	t5 = t5 & fieldBaseMask
+	t5 &= fieldBaseMask
 	t7 := (t6 >> fieldBase) + f.n[7]
-	t6 = t6 & fieldBaseMask
+	t6 &= fieldBaseMask
 	t8 := (t7 >> fieldBase) + f.n[8]
-	t7 = t7 & fieldBaseMask
+	t7 &= fieldBaseMask
 	t9 = (t8 >> fieldBase) + t9
-	t8 = t8 & fieldBaseMask
+	t8 &= fieldBaseMask
 
 	// At this point, the magnitude is guaranteed to be one, however, the
 	// value could still be greater than the prime if there was either a
@@ -346,26 +340,26 @@ func (f *fieldVal) Normalize() *fieldVal {
 	} else {
 		m |= 0
 	}
-	t0 = t0 + m*977
+	t0 += m * 977
 	t1 = (t0 >> fieldBase) + t1 + (m << 6)
-	t0 = t0 & fieldBaseMask
+	t0 &= fieldBaseMask
 	t2 = (t1 >> fieldBase) + t2
-	t1 = t1 & fieldBaseMask
+	t1 &= fieldBaseMask
 	t3 = (t2 >> fieldBase) + t3
-	t2 = t2 & fieldBaseMask
+	t2 &= fieldBaseMask
 	t4 = (t3 >> fieldBase) + t4
-	t3 = t3 & fieldBaseMask
+	t3 &= fieldBaseMask
 	t5 = (t4 >> fieldBase) + t5
-	t4 = t4 & fieldBaseMask
+	t4 &= fieldBaseMask
 	t6 = (t5 >> fieldBase) + t6
-	t5 = t5 & fieldBaseMask
+	t5 &= fieldBaseMask
 	t7 = (t6 >> fieldBase) + t7
-	t6 = t6 & fieldBaseMask
+	t6 &= fieldBaseMask
 	t8 = (t7 >> fieldBase) + t8
-	t7 = t7 & fieldBaseMask
+	t7 &= fieldBaseMask
 	t9 = (t8 >> fieldBase) + t9
-	t8 = t8 & fieldBaseMask
-	t9 = t9 & fieldMSBMask // Remove potential multiple of 2^256.
+	t8 &= fieldBaseMask
+	t9 &= fieldMSBMask // Remove potential multiple of 2^256.
 
 	// Finally, set the normalized and reduced words.
 	f.n[0] = t0
@@ -863,7 +857,7 @@ func (f *fieldVal) Mul2(val *fieldVal, val2 *fieldVal) *fieldVal {
 	t8 = m & fieldBaseMask
 	m = (m >> fieldBase) + t9 + t18*1024 + t19*68719492368
 	t9 = m & fieldMSBMask
-	m = m >> fieldMSBBits
+	m >>= fieldMSBBits
 
 	// At this point, if the magnitude is greater than 0, the overall value
 	// is greater than the max possible 256-bit value.  In particular, it is
@@ -1096,7 +1090,7 @@ func (f *fieldVal) SquareVal(val *fieldVal) *fieldVal {
 	t8 = m & fieldBaseMask
 	m = (m >> fieldBase) + t9 + t18*1024 + t19*68719492368
 	t9 = m & fieldMSBMask
-	m = m >> fieldMSBBits
+	m >>= fieldMSBBits
 
 	// At this point, if the magnitude is greater than 0, the overall value
 	// is greater than the max possible 256-bit value.  In particular, it is

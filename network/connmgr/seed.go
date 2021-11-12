@@ -7,7 +7,7 @@ package connmgr
 
 import (
 	"fmt"
-	mrand "math/rand"
+	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -43,8 +43,6 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
 		}
 
 		go func(host string) {
-			randSource := mrand.New(mrand.NewSource(time.Now().UnixNano()))
-
 			seedpeers, err := lookupFn(host)
 			if err != nil {
 				log.Info().Str("chain", chainParams.ChainName).
@@ -68,7 +66,7 @@ func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
 					// a time randomly selected between 3
 					// and 7 days ago.
 					time.Now().Add(-1*time.Second*time.Duration(secondsIn3Days+
-						randSource.Int31n(secondsIn4Days))),
+						rand.Int31n(secondsIn4Days))),
 					0, peer, uint16(intPort))
 			}
 

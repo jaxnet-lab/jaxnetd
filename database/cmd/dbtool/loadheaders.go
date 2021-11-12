@@ -18,14 +18,15 @@ type headersCmd struct {
 	Bulk bool `long:"bulk" description:"Use bulk loading of headers instead of one at a time"`
 }
 
-var (
-	// headersCfg defines the configuration options for the command.
-	headersCfg = headersCmd{
-		Bulk: false,
-	}
-)
+// headersCfg defines the configuration options for the command.
+var headersCfg = headersCmd{
+	Bulk: false,
+}
+
+const maxHashes = 500_000
 
 // Execute is the main entry point for the command.  It's invoked by the parser.
+// nolint: errcheck
 func (cmd *headersCmd) Execute(args []string) error {
 	// Setup the global config options and ensure they are valid.
 	if err := setupGlobalConfig(); err != nil {
@@ -82,7 +83,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 	// Bulk load headers.
 	err = db.View(func(tx database.Tx) error {
 		blockIdxBucket := tx.Metadata().Bucket(blockIdxName)
-		hashes := make([]chainhash.Hash, 0, 500000)
+		hashes := make([]chainhash.Hash, 0, maxHashes)
 		blockIdxBucket.ForEach(func(k, v []byte) error {
 			var hash chainhash.Hash
 			copy(hash[:], k)

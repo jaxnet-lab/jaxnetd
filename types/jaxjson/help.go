@@ -268,12 +268,8 @@ func resultTypeHelp(xT descLookupFunc, rt reflect.Type, fieldDescKey string) str
 	var formatted bytes.Buffer
 	w := new(tabwriter.Writer)
 	w.Init(&formatted, 0, 4, 1, ' ', 0)
-	for i, text := range results {
-		if i == len(results)-1 {
-			fmt.Fprintf(w, text)
-		} else {
-			fmt.Fprintln(w, text)
-		}
+	for _, text := range results {
+		fmt.Fprintln(w, text)
 	}
 	w.Flush()
 	return formatted.String()
@@ -394,6 +390,7 @@ func argHelp(xT descLookupFunc, rtp reflect.Type, defaults map[int]reflect.Value
 // methodHelp generates and returns the help output for the provided command
 // and method info.  This is the main work horse for the exported MethodHelp
 // function.
+// nolint: gocritic
 func methodHelp(xT descLookupFunc, rtp reflect.Type, defaults map[int]reflect.Value, method string, resultTypes []interface{}) string {
 	// Start off with the method usage and help synopsis.
 	help := fmt.Sprintf("%s\n\n%s\n", methodUsageText(rtp, defaults, method),

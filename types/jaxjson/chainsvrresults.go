@@ -466,7 +466,7 @@ type GetMempoolEntryResult struct {
 	AncestorCount   int64       `json:"ancestorcount"`
 	AncestorSize    int64       `json:"ancestorsize"`
 	AncestorFees    float64     `json:"ancestorfees"`
-	WTxId           string      `json:"wtxid"`
+	WTxID           string      `json:"wtxid"`
 	Fees            MempoolFees `json:"fees"`
 	Depends         []string    `json:"depends"`
 }

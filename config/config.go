@@ -25,10 +25,8 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
 	"github.com/pelletier/go-toml"
-	_ "github.com/pelletier/go-toml"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
 	"gitlab.com/jaxnet/jaxnetd/database"
-	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
@@ -38,8 +36,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/node/mempool"
-	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,7 +50,7 @@ const (
 	defaultMaxRPCClients         = 100
 	defaultMaxRPCWebsockets      = 25
 	defaultMaxRPCConcurrentReqs  = 20
-	defaultDbType                = "ffldb"
+	defaultDBType                = "ffldb"
 	defaultFreeTxRelayLimit      = 15.0
 	defaultTrickleInterval       = peer.DefaultTrickleInterval
 	defaultBlockMinSize          = 0
@@ -74,7 +70,7 @@ const (
 
 var (
 	defaultHomeDir     = jaxutil.AppDataDir("jaxnetd", false)
-	knownDbTypes       = database.SupportedDrivers()
+	knownDBTypes       = database.SupportedDrivers()
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
 )
@@ -148,6 +144,7 @@ func supportedSubsystems() []string {
 // parseAndSetDebugLevels attempts to parse the specified debug level and set
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
+//  nolint: stylecheck
 func parseAndSetDebugLevels(debugLevel string, logConfig corelog.Config) error {
 	// When the specified string doesn't have any delimters, treat it as
 	// the log level for all subsystems.
@@ -197,9 +194,9 @@ func parseAndSetDebugLevels(debugLevel string, logConfig corelog.Config) error {
 	return nil
 }
 
-// validDbType returns whether or not dbType is a supported database type.
-func validDbType(dbType string) bool {
-	for _, knownType := range knownDbTypes {
+// validDBType returns whether or not dbType is a supported database type.
+func validDBType(dbType string) bool {
+	for _, knownType := range knownDBTypes {
 		if dbType == knownType {
 			return true
 		}
@@ -242,54 +239,6 @@ func normalizeAddresses(addrs []string, defaultPort string) []string {
 	return removeDuplicateAddresses(addrs)
 }
 
-// newCheckpointFromStr parses checkpoints in the '<height>:<hash>' format.
-func newCheckpointFromStr(checkpoint string) (chaincfg.Checkpoint, error) {
-	parts := strings.Split(checkpoint, ":")
-	if len(parts) != 2 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
-			"checkpoint %q -- use the syntax <height>:<hash>",
-			checkpoint)
-	}
-
-	height, err := strconv.ParseInt(parts[0], 10, 32)
-	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
-			"checkpoint %q due to malformed height", checkpoint)
-	}
-
-	if len(parts[1]) == 0 {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
-			"checkpoint %q due to missing hash", checkpoint)
-	}
-	hash, err := chainhash.NewHashFromStr(parts[1])
-	if err != nil {
-		return chaincfg.Checkpoint{}, fmt.Errorf("unable to parse "+
-			"checkpoint %q due to malformed hash", checkpoint)
-	}
-
-	return chaincfg.Checkpoint{
-		Height: int32(height),
-		Hash:   hash,
-	}, nil
-}
-
-// parseCheckpoints checks the checkpoint strings for valid syntax
-// ('<height>:<hash>') and parses them to chaincfg.Checkpoint instances.
-func parseCheckpoints(checkpointStrings []string) ([]chaincfg.Checkpoint, error) {
-	if len(checkpointStrings) == 0 {
-		return nil, nil
-	}
-	checkpoints := make([]chaincfg.Checkpoint, len(checkpointStrings))
-	for i, cpString := range checkpointStrings {
-		checkpoint, err := newCheckpointFromStr(cpString)
-		if err != nil {
-			return nil, err
-		}
-		checkpoints[i] = checkpoint
-	}
-	return checkpoints, nil
-}
-
 // filesExists reports whether the named file or directory exists.
 func fileExists(name string) bool {
 	if _, err := os.Stat(name); err != nil {
@@ -304,7 +253,9 @@ func fileExists(name string) bool {
 func newConfigParser(cfg *node.Config, so *serviceOptions, options flags.Options) *flags.Parser {
 	parser := flags.NewParser(cfg, options)
 	if runtime.GOOS == "windows" {
-		parser.AddGroup("Service Options", "Service Options", so)
+		if _, err := parser.AddGroup("Service Options", "Service Options", so); err != nil {
+			Log.Error().Msg("cannot add group to parser")
+		}
 	}
 	return parser
 }
@@ -321,8 +272,8 @@ func newConfigParser(cfg *node.Config, so *serviceOptions, options flags.Options
 // The above results in jaxnetd functioning properly without any config settings
 // while still allowing the user to override settings with config files and
 // command line options.  Command line options always take precedence.
+// nolint: gocritic, gomnd
 func LoadConfig() (*node.Config, []string, error) {
-
 	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
 		dataDir = defaultHomeDir
@@ -338,7 +289,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	cfg := node.Config{
 		Node: node.InstanceConfig{
 			Net:    ActiveNetParams.Name,
-			DbType: defaultDbType,
+			DBType: defaultDBType,
 			BeaconChain: cprovider.ChainRuntimeConfig{
 				BlockMinSize:      defaultBlockMinSize,
 				BlockMaxSize:      defaultBlockMaxSize,
@@ -423,7 +374,7 @@ func LoadConfig() (*node.Config, []string, error) {
 		}
 	}
 
-	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0644)
+	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0o644)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
 		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
@@ -459,7 +410,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "LoadConfig"
-	err = os.MkdirAll(dataDir, 0700)
+	err = os.MkdirAll(dataDir, 0o700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -534,10 +485,10 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	// Validate database type.
-	if !validDbType(cfg.Node.DbType) {
+	if !validDBType(cfg.Node.DBType) {
 		str := "%s: The specified database type [%v] is invalid -- " +
 			"supported types %v"
-		err := fmt.Errorf(str, funcName, cfg.Node.DbType, knownDbTypes)
+		err := fmt.Errorf(str, funcName, cfg.Node.DBType, knownDBTypes)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
@@ -985,11 +936,14 @@ func LoadConfig() (*node.Config, []string, error) {
 	return &cfg, remainingArgs, nil
 }
 
+const randomBytesLen = 20
+
 // createDefaultConfig copies the file sample-jaxnetd.conf to the given destination path,
 // and populates it with some randomly generated RPC username and password.
+// nolint: gomnd
 func createDefaultConfigFile(destinationPath string) error {
 	// Create the destination directory if it does not exists
-	err := os.MkdirAll(filepath.Dir(destinationPath), 0700)
+	err := os.MkdirAll(filepath.Dir(destinationPath), 0o700)
 	if err != nil {
 		return err
 	}
@@ -1002,7 +956,7 @@ func createDefaultConfigFile(destinationPath string) error {
 	sampleConfigPath := filepath.Join(cfgPath, sampleConfigFilename)
 
 	// We generate a random user and password
-	randomBytes := make([]byte, 20)
+	randomBytes := make([]byte, randomBytesLen)
 	_, err = rand.Read(randomBytes)
 	if err != nil {
 		return err
@@ -1022,7 +976,7 @@ func createDefaultConfigFile(destinationPath string) error {
 	defer src.Close()
 
 	dest, err := os.OpenFile(destinationPath,
-		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

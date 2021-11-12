@@ -92,7 +92,7 @@ func ExampleBlockChain_ProcessBlock() {
 
 	msgBlock := wire.EmptyBeaconBlock()
 	genesisBlock := jaxutil.NewBlock(&msgBlock)
-	isMainChain, isOrphan, err := testChain.ProcessBlock(genesisBlock, 0)
+	isMainChain, isOrphan, err := testChain.ProcessBlock(genesisBlock, testChain.MMRTree().CurrentRoot(), 0)
 	if err != nil {
 		fmt.Printf("Failed to process block: %v\n", err)
 		return

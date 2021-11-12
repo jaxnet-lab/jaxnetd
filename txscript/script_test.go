@@ -22,12 +22,16 @@ func TestParseOpcode(t *testing.T) {
 	// Deep copy the array and make one of the opcodes invalid by setting it
 	// to the wrong length.
 	fakeArray := opcodeArray
-	fakeArray[OP_PUSHDATA4] = opcode{value: OP_PUSHDATA4,
-		name: "OP_PUSHDATA4", length: -8, opfunc: opcodePushData}
+	fakeArray[OP_PUSHDATA4] = opcode{
+		value: OP_PUSHDATA4,
+		name:  "OP_PUSHDATA4", length: -8, opfunc: opcodePushData,
+	}
 
 	// This script would be fine if -8 was a valid length.
-	_, err := parseScriptTemplate([]byte{OP_PUSHDATA4, 0x1, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00}, &fakeArray)
+	_, err := parseScriptTemplate([]byte{
+		OP_PUSHDATA4, 0x1, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00,
+	}, &fakeArray)
 	if err == nil {
 		t.Errorf("no error with dodgy opcode array!")
 	}
@@ -3689,7 +3693,7 @@ func TestUnparsingInvalidOpcodes(t *testing.T) {
 func TestPushedData(t *testing.T) {
 	t.Parallel()
 
-	var tests = []struct {
+	tests := []struct {
 		script string
 		out    [][]byte
 		valid  bool
@@ -3846,7 +3850,6 @@ func TestGetPreciseSigOps(t *testing.T) {
 		if count != test.nSigOps {
 			t.Errorf("%s: expected count of %d, got %d", test.name,
 				test.nSigOps, count)
-
 		}
 	}
 }
@@ -3934,7 +3937,6 @@ func TestGetWitnessSigOpCount(t *testing.T) {
 		if count != test.numSigOps {
 			t.Errorf("%s: expected count of %d, got %d", test.name,
 				test.numSigOps, count)
-
 		}
 	}
 }
@@ -4300,10 +4302,12 @@ func TestIsUnspendable(t *testing.T) {
 		},
 		{
 			// Spendable
-			pkScript: []byte{0x76, 0xa9, 0x14, 0x29, 0x95, 0xa0,
+			pkScript: []byte{
+				0x76, 0xa9, 0x14, 0x29, 0x95, 0xa0,
 				0xfe, 0x68, 0x43, 0xfa, 0x9b, 0x95, 0x45,
 				0x97, 0xf0, 0xdc, 0xa7, 0xa4, 0x4d, 0xf6,
-				0xfa, 0x0b, 0x5c, 0x88, 0xac},
+				0xfa, 0x0b, 0x5c, 0x88, 0xac,
+			},
 			expected: false,
 		},
 	}
@@ -4412,7 +4416,6 @@ func TestInputAge(t *testing.T) {
 			t.Errorf("testcase %d failed; err=%v", i, err)
 		}
 	}
-
 }
 
 func activateTraceLogger() {
@@ -4425,5 +4428,4 @@ func assertNoErr(t *testing.T, err error) {
 		t.Error(err)
 		t.FailNow()
 	}
-
 }

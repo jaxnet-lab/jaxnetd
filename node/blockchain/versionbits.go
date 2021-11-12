@@ -116,10 +116,7 @@ func (c bitConditionChecker) Condition(node blocknodes.IBlockNode) (bool, error)
 		return false, nil
 	}
 
-	blockVersion, err := c.chain.calcNextBlockVersion(node.Parent())
-	if err != nil {
-		return false, err
-	}
+	blockVersion := c.chain.calcNextBlockVersion(node.Parent())
 	expectedVersion := blockVersion.Version()
 	return uint32(expectedVersion)&conditionMask == 0, nil
 }
@@ -201,16 +198,16 @@ func (c deploymentChecker) Condition(node blocknodes.IBlockNode) (bool, error) {
 // while this function accepts any block node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.BVersion, error) {
+func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) wire.BVersion {
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
 	expectedVersion := uint32(vbLegacyBlockVersion)
 	if !b.chain.IsBeacon() {
 		if prevNode != nil {
-			return prevNode.Header().Version(), nil
+			return prevNode.Header().Version()
 		}
-		return wire.BVersion(expectedVersion), nil
+		return wire.BVersion(expectedVersion)
 	}
 
 	// todo: return this logic in future
@@ -231,7 +228,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 		UnsetExpansionApproved().
 		UnsetExpansionMade()
 	if prevNode == nil {
-		return version, nil
+		return version
 	}
 
 	var prevHeight int32
@@ -248,7 +245,7 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 			version = wire.BVersion(expectedVersion).SetExpansionMade()
 		}
 
-		return version, nil
+		return version
 	}
 
 	if !limitExceeded {
@@ -256,20 +253,20 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 		allowed := !limitExceeded && (prevHeight%b.chain.Params().InitialExpansionRule) == 0 && prevHeight != 0
 		if b.chain.Params().AutoExpand && allowed {
 			version = wire.BVersion(expectedVersion).SetExpansionMade()
-			return version, nil
+			return version
 		}
 	}
 
 	if (prevNode.Height()+1)%chaincfg.ExpansionEpochLength != 0 {
-		return version, nil
+		return version
 	}
 
 	if prevNode.ExpansionApproved() {
 		version = wire.BVersion(expectedVersion).SetExpansionMade()
-		return version, nil
+		return version
 	}
 
-	return version, nil
+	return version
 }
 
 // CalcNextBlockVersion calculates the expected version of the block after the
@@ -277,12 +274,12 @@ func (b *BlockChain) calcNextBlockVersion(prevNode blocknodes.IBlockNode) (wire.
 // rule change deployments.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcNextBlockVersion() (wire.BVersion, error) {
+func (b *BlockChain) CalcNextBlockVersion() wire.BVersion {
 	b.chainLock.Lock()
-	version, err := b.calcNextBlockVersion(b.blocksDB.bestChain.Tip())
+	version := b.calcNextBlockVersion(b.blocksDB.bestChain.Tip())
 	b.chainLock.Unlock()
 
-	return version, err
+	return version
 }
 
 // warnUnknownRuleActivations displays a warning when any unknown new rules are
@@ -333,10 +330,7 @@ func (b *BlockChain) warnUnknownVersions(node blocknodes.IBlockNode) error {
 	// Warn if enough previous blocks have unexpected versions.
 	numUpgraded := uint32(0)
 	for i := uint32(0); i < unknownVerNumToCheck && node != nil; i++ {
-		blockVersion, err := b.calcNextBlockVersion(node.Parent())
-		if err != nil {
-			return err
-		}
+		blockVersion := b.calcNextBlockVersion(node.Parent())
 		expectedVersion := blockVersion.Version()
 		if expectedVersion > vbLegacyBlockVersion &&
 			(node.Version() & ^expectedVersion) != 0 {

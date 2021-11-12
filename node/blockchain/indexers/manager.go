@@ -6,7 +6,6 @@
 package indexers
 
 import (
-	"bytes"
 	"fmt"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
@@ -15,14 +14,11 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/mmr"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
-	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-var (
-	// indexTipsBucketName is the name of the db bucket used to house the
-	// current tip of each index.
-	indexTipsBucketName = []byte("idxtips")
-)
+// indexTipsBucketName is the name of the db bucket used to house the
+// current tip of each index.
+var indexTipsBucketName = []byte("idxtips")
 
 // -----------------------------------------------------------------------------
 // The index manager tracks the current tip of each index by using a parent
@@ -307,7 +303,6 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			var block *jaxutil.Block
 			err := m.db.View(func(dbTx database.Tx) error {
 				blockBytes, err := dbTx.FetchBlock(hash)
-
 				if err != nil {
 					return err
 				}
@@ -476,41 +471,12 @@ func indexNeedsInputs(index Indexer) bool {
 	return false
 }
 
-// dbFetchTx looks up the passed transaction hash in the transaction index and
-// loads it from the database.
-func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, error) {
-	// Look up the location of the transaction.
-	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
-	if err != nil {
-		return nil, err
-	}
-	if blockRegion == nil {
-		return nil, fmt.Errorf("transaction %v not found", hash)
-	}
-
-	// Load the raw transaction bytes from the database.
-	txBytes, err := dbTx.FetchBlockRegion(blockRegion)
-	if err != nil {
-		return nil, err
-	}
-
-	// Deserialize the transaction.
-	var msgTx wire.MsgTx
-	err = msgTx.Deserialize(bytes.NewReader(txBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	return &msgTx, nil
-}
-
 // ConnectBlock must be invoked when a block is extending the main chain.  It
 // keeps track of the state of each index it is managing, performs some sanity
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
-
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
@@ -559,6 +525,7 @@ func NewManager(db database.DB, enabledIndexes []Indexer, name string) *Manager 
 // keep memory usage to reasonable levels.  It also marks the drop in progress
 // so the drop can be resumed if it is stopped before it is done before the
 // index can be used again.
+// nolint: gocritic, nilerr
 func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
 	// Nothing to do if the index doesn't already exist.
 	var needsDelete bool
@@ -671,7 +638,7 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 		}
 
 		// Drop the bucket itself.
-		err = db.Update(func(dbTx database.Tx) error {
+		_ = db.Update(func(dbTx database.Tx) error {
 			bucket := dbTx.Metadata()
 			for j := 0; j < len(bucketName)-1; j++ {
 				bucket = bucket.Bucket(bucketName[j])

@@ -151,6 +151,7 @@ func (server *Server) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 
 // handleDonePeerMsg deals with peers that have signalled they are done.  It is
 // invoked from the peerHandler goroutine.
+// nolint: gocritic
 func (server *Server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 	var list map[int32]*serverPeer
 	if sp.persistent {
@@ -175,17 +176,15 @@ func (server *Server) handleDonePeerMsg(state *peerState, sp *serverPeer) {
 			ShardID:   server.chain.ChainCtx.ShardID(),
 			Permanent: sp.persistent,
 		})
-	} else {
+	} else if !sp.Inbound() {
 		// Regardless of whether the peer was found in our list, we'll inform
 		// our connection manager about the disconnection. This can happen if we
 		// process a peer's `done` message before its `add`.
-		if !sp.Inbound() {
-			if sp.persistent {
-				server.ConnManager.Disconnect(sp.connReq.ID())
-			} else {
-				server.ConnManager.Remove(sp.connReq.ID())
-				go server.ConnManager.NewConnReq()
-			}
+		if sp.persistent {
+			server.ConnManager.Disconnect(sp.connReq.ID())
+		} else {
+			server.ConnManager.Remove(sp.connReq.ID())
+			go server.ConnManager.NewConnReq()
 		}
 	}
 

@@ -130,13 +130,6 @@ func IsDeserializeErr(err error) bool {
 	return ok
 }
 
-// isDbBucketNotFoundErr returns whether or not the passed error is a
-// database.Error with an error code of database.ErrBucketNotFound.
-func isDbBucketNotFoundErr(err error) bool {
-	dbErr, ok := err.(database.Error)
-	return ok && dbErr.ErrorCode == database.ErrBucketNotFound
-}
-
 // dbFetchVersion fetches an individual version with the given key from the
 // metadata bucket.  It is primarily used to track versions on entities such as
 // buckets.  It returns zero if the provided key does not exist.
@@ -146,7 +139,7 @@ func dbFetchVersion(dbTx database.Tx, key []byte) uint32 {
 		return 0
 	}
 
-	return byteOrder.Uint32(serialized[:])
+	return byteOrder.Uint32(serialized)
 }
 
 // DBPutVersion uses an existing database transaction to update the provided
@@ -326,6 +319,7 @@ func putSpentTxOut(target []byte, stxo *SpentTxOut) int {
 // decodeSpentTxOut decodes the passed serialized stxo entry, possibly followed
 // by other data, into the passed stxo struct.  It returns the number of bytes
 // read.
+// nolint: gomnd
 func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 	// Ensure there are bytes to decode.
 	if len(serialized) == 0 {
@@ -597,7 +591,10 @@ func outpointKey(outpoint wire.OutPoint) *[]byte {
 	// A VLQ employs an MSB encoding, so they are useful not only to reduce
 	// the amount of storage space, but also so iteration of utxos when
 	// doing byte-wise comparisons will produce them in order.
-	key := outpointKeyPool.Get().(*[]byte)
+	key, ok := outpointKeyPool.Get().(*[]byte)
+	if !ok {
+		return nil
+	}
 	idx := uint64(outpoint.Index)
 	*key = (*key)[:chainhash.HashSize+serializeSizeVLQ(idx)]
 	copy(*key, outpoint.Hash[:])
@@ -658,7 +655,7 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 	// transaction output.
 	serialized := make([]byte, size)
 	offset := putVLQ(serialized, headerCode)
-	offset += putCompressedTxOut(serialized[offset:], uint64(entry.Amount()),
+	putCompressedTxOut(serialized[offset:], uint64(entry.Amount()),
 		entry.PkScript())
 
 	return serialized, nil
@@ -667,6 +664,7 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 // DeserializeUtxoEntry decodes a utxo entry from the passed serialized byte
 // slice into a new UtxoEntry using a format that is suitable for long-term
 // storage.  The format is described in detail above.
+//nolint: gomnd
 func DeserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	// Deserialize the header code.
 	code, offset := deserializeVLQ(serialized)
@@ -812,7 +810,7 @@ func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEnt
 		}
 
 		view[outpoint] = entry
-		count += 1
+		count++
 		return nil
 	})
 
@@ -902,7 +900,7 @@ func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, er
 			return nil
 		}
 
-		var eadAddress = new(wire.EADAddresses)
+		eadAddress := new(wire.EADAddresses)
 		r := bytes.NewBuffer(serializedData)
 		err := eadAddress.BtcDecode(r, wire.ProtocolVersion, wire.BaseEncoding)
 		if err != nil {
@@ -928,7 +926,7 @@ func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, 
 		return nil, nil
 	}
 
-	var eadAddress = new(wire.EADAddresses)
+	eadAddress := new(wire.EADAddresses)
 	r := bytes.NewBuffer(serializedData)
 	err := eadAddress.BtcDecode(r, wire.ProtocolVersion, wire.BaseEncoding)
 	if err != nil {
@@ -1011,25 +1009,6 @@ func DBFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) 
 	return int32(byteOrder.Uint32(serializedHeight)), nil
 }
 
-// dbFetchHashByHeight uses an existing database transaction to retrieve the
-// Hash for the provided height from the index.
-func dbFetchHashByHeight(dbTx database.Tx, height int32) (*chainhash.Hash, error) {
-	var serializedHeight [4]byte
-	byteOrder.PutUint32(serializedHeight[:], uint32(height))
-
-	meta := dbTx.Metadata()
-	heightIndex := meta.Bucket(HeightIndexBucketName)
-	hashBytes := heightIndex.Get(serializedHeight[:])
-	if hashBytes == nil {
-		str := fmt.Sprintf("no block at height %d exists", height)
-		return nil, ErrNotInMainChain(str)
-	}
-
-	var hash chainhash.Hash
-	copy(hash[:], hashBytes)
-	return &hash, nil
-}
-
 // -----------------------------------------------------------------------------
 // The best chain state consists of the best block hash and height, the total
 // number of transactions up to and including those in the best block, and the
@@ -1089,7 +1068,7 @@ func serializeBestChainState(state BestChainState) []byte {
 	byteOrder.PutUint32(serializedData[offset:], workSumBytesLen)
 	offset += 4
 	copy(serializedData[offset:], workSumBytes)
-	return serializedData[:]
+	return serializedData
 }
 
 // DeserializeBestChainState deserializes the passed serialized best chain
@@ -1175,33 +1154,6 @@ func DeserializeBlockRow(blockRow []byte) (wire.BlockHeader, blocknodes.BlockSta
 	blockSerialID := byteOrder.Uint64(dest)
 
 	return header, blocknodes.BlockStatus(statusByte), int64(blockSerialID), nil
-}
-
-// dbFetchHeaderByHash uses an existing database transaction to retrieve the
-// block header for the provided Hash.
-func dbFetchHeaderByHash(dbTx database.Tx, hash *chainhash.Hash) (wire.BlockHeader, error) {
-	headerBytes, err := dbTx.FetchBlockHeader(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	header, err := wire.DecodeHeader(bytes.NewReader(headerBytes))
-	if err != nil {
-		return nil, err
-	}
-
-	return header, nil
-}
-
-// dbFetchHeaderByHeight uses an existing database transaction to retrieve the
-// block header for the provided height.
-func dbFetchHeaderByHeight(dbTx database.Tx, height int32) (wire.BlockHeader, error) {
-	hash, err := dbFetchHashByHeight(dbTx, height)
-	if err != nil {
-		return nil, err
-	}
-
-	return dbFetchHeaderByHash(dbTx, hash)
 }
 
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
@@ -1296,7 +1248,7 @@ func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhas
 		return chainhash.ZeroHash, errors.New("actual root not found for block " + blockHash.String())
 	}
 	root := chainhash.Hash{}
-	copy(root[:], val[:])
+	copy(root[:], val)
 
 	return root, nil
 }

@@ -97,6 +97,7 @@ func (b *ScriptBuilder) AddOps(opcodes []byte) *ScriptBuilder {
 
 // canonicalDataSize returns the number of bytes the canonical encoding of the
 // data will take.
+// nolint: gocritic
 func canonicalDataSize(data []byte) int {
 	dataLen := len(data)
 
@@ -126,6 +127,7 @@ func canonicalDataSize(data []byte) int {
 // end of the script.  It automatically chooses canonical opcodes depending on
 // the length of the data.  A zero length buffer will lead to a push of empty
 // data onto the stack (OP_0).  No data limits are enforced with this function.
+// nolint: gocritic
 func (b *ScriptBuilder) addData(data []byte) *ScriptBuilder {
 	dataLen := len(data)
 

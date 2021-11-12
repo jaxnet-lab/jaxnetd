@@ -58,9 +58,9 @@ var (
 
 // dbFetchFilterIdxEntry retrieves a data blob from the filter index database.
 // An entry's absence is not considered an error.
-func dbFetchFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) ([]byte, error) {
+func dbFetchFilterIdxEntry(dbTx database.Tx, key []byte, h *chainhash.Hash) []byte {
 	idx := dbTx.Metadata().Bucket(cfIndexParentBucketKey).Bucket(key)
-	return idx.Get(h[:]), nil
+	return idx.Get(h[:])
 }
 
 // dbStoreFilterIdxEntry stores a data blob in the filter index database.
@@ -186,10 +186,7 @@ func storeFilter(dbTx database.Tx, block *jaxutil.Block, ph chainhash.Hash, f *g
 	if ph.IsEqual(&zeroHash) {
 		prevHeader = &zeroHash
 	} else {
-		pfh, err := dbFetchFilterIdxEntry(dbTx, hkey, &ph)
-		if err != nil {
-			return err
-		}
+		pfh := dbFetchFilterIdxEntry(dbTx, hkey, &ph)
 
 		// Construct the new block's filter header, and store it.
 		prevHeader, err = chainhash.NewHash(pfh)
@@ -209,7 +206,6 @@ func storeFilter(dbTx database.Tx, block *jaxutil.Block, ph chainhash.Hash, f *g
 // connected to the main chain. This indexer adds a hash-to-cf mapping for
 // every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chainhash.Hash, stxos []chaindata.SpentTxOut) error {
-
 	prevScripts := make([][]byte, len(stxos))
 	for i, stxo := range stxos {
 		prevScripts[i] = stxo.PkScript
@@ -265,9 +261,8 @@ func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
 
 	var entry []byte
 	err := idx.db.View(func(dbTx database.Tx) error {
-		var err error
-		entry, err = dbFetchFilterIdxEntry(dbTx, key, h)
-		return err
+		entry = dbFetchFilterIdxEntry(dbTx, key, h)
+		return nil
 	})
 	return entry, err
 }
@@ -285,10 +280,7 @@ func (idx *CfIndex) entriesByBlockHashes(filterTypeKeys [][]byte,
 	entries := make([][]byte, 0, len(blockHashes))
 	err := idx.db.View(func(dbTx database.Tx) error {
 		for _, blockHash := range blockHashes {
-			entry, err := dbFetchFilterIdxEntry(dbTx, key, blockHash)
-			if err != nil {
-				return err
-			}
+			entry := dbFetchFilterIdxEntry(dbTx, key, blockHash)
 			entries = append(entries, entry)
 		}
 		return nil

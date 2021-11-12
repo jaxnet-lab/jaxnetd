@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -254,6 +254,7 @@ func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan 
 
 // EstimateLockInChain estimates desired period in block for locking funds
 // in shard during the CrossShard Swap Tx.
+// nolint: gomnd
 func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 	kd := pow.MultBitsAndK(bits, k)
 	n := float64(amount/chaincfg.JuroPerJAXCoin) / kd
@@ -261,9 +262,8 @@ func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 	if n < 4 {
 		n = 4 * 30
 	}
-	if n > 20000 {
-		return 0, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected,
-			fmt.Sprintf("lock time more than 2000 blocks"))
+	if n > lockTimeBlocks {
+		return 0, jaxjson.NewRPCError(jaxjson.ErrRPCTxRejected, "lock time more than 2000 blocks")
 	}
 	return int64(n), nil
 }
@@ -348,7 +348,7 @@ func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (i
 		command = *c.Command
 	}
 	if scope == "" || command == "" {
-		usage, err := server.helpCache.rpcUsage(false)
+		usage, err := server.helpCache.rpcUsage()
 		if err != nil {
 			context := "Failed to generate RPC usage"
 			return nil, server.InternalRPCError(err.Error(), context)

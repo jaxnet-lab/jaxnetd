@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	// blockDbNamePrefix is the prefix for the jaxnetd block database.
-	blockDbNamePrefix = "blocks"
+	// blockDBNamePrefix is the prefix for the jaxnetd block database.
+	blockDBNamePrefix = "blocks"
 )
 
 var (
@@ -30,27 +30,28 @@ var (
 )
 
 // loadBlockDB opens the block database and returns a handle to it.
+// nolint: gomnd
 func loadBlockDB(chain chainctx.IChainCtx) (database.DB, error) {
 	// The database name is based on the database type.
-	dbName := blockDbNamePrefix + "_" + cfg.DbType
+	dbName := blockDBNamePrefix + "_" + cfg.DBType
 	dbPath := filepath.Join(cfg.DataDir, getChainDir(chain.ShardID()), dbName)
 	log.Infof("Loading block database from '%s'", dbPath)
-	db, err := database.Open(cfg.DbType, chain, dbPath)
+	db, err := database.Open(cfg.DBType, chain, dbPath)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
 		if dbErr, ok := err.(database.Error); !ok || dbErr.ErrorCode !=
-			database.ErrDbDoesNotExist {
+			database.ErrDBDoesNotExist {
 
 			return nil, err
 		}
 
 		// Create the db if it does not exist.
-		err = os.MkdirAll(cfg.DataDir, 0700)
+		err = os.MkdirAll(cfg.DataDir, 0o700)
 		if err != nil {
 			return nil, err
 		}
-		db, err = database.Create(cfg.DbType, chain, dbPath)
+		db, err = database.Create(cfg.DBType, chain, dbPath)
 		if err != nil {
 			return nil, err
 		}
@@ -62,6 +63,7 @@ func loadBlockDB(chain chainctx.IChainCtx) (database.DB, error) {
 
 // realMain is the real main function for the utility.  It is necessary to work
 // around the fact that deferred functions do not run when os.Exit() is called.
+// nolint: errcheck
 func realMain() error {
 	// Setup logging.
 	backendLogger := btclog.NewBackend(os.Stdout)

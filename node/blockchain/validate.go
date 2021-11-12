@@ -446,15 +446,11 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 			if err != nil {
 				return err
 			}
-			switch tx.MsgTx().Version {
-			case wire.TxVerTimeLock:
-				if !chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
-					str := fmt.Sprintf(
-						"block contains transaction whose input sequence locks are not met")
-					return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
-				}
-			}
 
+			if tx.MsgTx().Version == wire.TxVerTimeLock && !chaindata.SequenceLockActive(sequenceLock, node.Height(), medianTime) {
+				str := "block contains transaction whose input sequence locks are not met"
+				return chaindata.NewRuleError(chaindata.ErrUnfinalizedTx, str)
+			}
 		}
 	}
 

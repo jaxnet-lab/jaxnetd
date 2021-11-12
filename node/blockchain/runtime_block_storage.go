@@ -9,7 +9,6 @@ package blockchain
 import (
 	"container/list"
 	"fmt"
-	"sync"
 
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
@@ -19,10 +18,6 @@ import (
 
 // rBlockStorage is main housekeeper for block & block headers storage.
 type rBlockStorage struct {
-	// chainLock protects concurrent access to the vast majority of the
-	// fields in this struct below this point.
-	chainLock sync.RWMutex
-
 	// These fields are related to the memory block index.  They both have
 	// their own locks, however they are often also protected by the chain
 	// lock to help prevent logic races when blocks are being processed.
@@ -97,7 +92,7 @@ func (storage *rBlockStorage) getBlockParent(prevMMRRoot chainhash.Hash) (blockn
 
 // getBlockParentHash returns: correspondingBlockHash, found, inMainChain
 func (storage *rBlockStorage) getBlockParentHash(prevMMRRoot chainhash.Hash) (chainhash.Hash, bool, bool) {
-	var inMainChain = true
+	inMainChain := true
 	prevHash, found := storage.bestChain.HashByMMR(prevMMRRoot)
 	if !found {
 		prevHash, found = storage.index.HashByMMR(prevMMRRoot)
@@ -127,6 +122,7 @@ func (storage *rBlockStorage) getMMRRootForHash(blockHash chainhash.Hash) (chain
 // This function may modify node statuses in the block index without flushing.
 //
 // This function MUST be called with the chain state lock held (for reads).
+// nolint: forcetypeassert
 func (storage *rBlockStorage) getReorganizeNodes(node blocknodes.IBlockNode) (*list.List, *list.List) {
 	attachNodes := list.New()
 	detachNodes := list.New()

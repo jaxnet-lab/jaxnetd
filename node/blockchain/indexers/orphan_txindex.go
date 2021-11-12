@@ -98,6 +98,7 @@ func (idx *OrphanTxIndex) Init() error {
 		// below.
 		var highestKnown, nextUnknown uint32
 		testBlockID := uint32(1)
+		//nolint: gomnd
 		increment := uint32(100000)
 		for {
 			_, err := dbFetchOrphanTxBlockHashByID(dbTx, testBlockID)
@@ -163,7 +164,6 @@ func (idx *OrphanTxIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block
 	}
 	idx.curBlockID = newBlockID
 	return nil
-
 }
 
 func (idx *OrphanTxIndex) TxBlockRegion(hash *chainhash.Hash) (*database.BlockRegion, error) {
@@ -266,7 +266,7 @@ func dbFetchOrphanTxIndexEntry(dbTx database.Tx, txHash *chainhash.Hash) (*datab
 	}
 
 	// Ensure the serialized data has enough bytes to properly deserialize.
-	if len(serializedData) < 12 {
+	if len(serializedData) < minBytes {
 		return nil, database.Error{
 			ErrorCode:   database.ErrCorruption,
 			Description: fmt.Sprintf("corrupt transaction index entry for %s", txHash),

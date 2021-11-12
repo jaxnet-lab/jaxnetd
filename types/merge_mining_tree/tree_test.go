@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-package merged_mining_tree
+package mergedminingtree
 
 import (
 	"bytes"
@@ -61,11 +61,6 @@ func assertBitsCoded(coded, expected uint32, t *testing.T) {
 	}
 }
 
-func randomHash() (h chainhash.Hash) {
-	rand.Read(h[:])
-	return
-}
-
 func TestTreeNoSlots(t *testing.T) {
 	tree := NewSparseMerkleTree(0)
 
@@ -77,7 +72,7 @@ func TestTreeNoSlots(t *testing.T) {
 }
 
 // Generates topology according to assets/topology_a
-func topologyA(t *testing.T) *SparseMerkleTree {
+func topologyA() *SparseMerkleTree {
 	tree := NewSparseMerkleTree(2)
 	return tree
 }
@@ -151,7 +146,7 @@ func topologyL3(t *testing.T) *SparseMerkleTree {
 }
 
 // Generates topology according to assets/topology_S_1
-func topologyS1(t *testing.T) *SparseMerkleTree {
+func topologyS1() *SparseMerkleTree {
 	tree := NewSparseMerkleTree(4)
 	return tree
 }
@@ -268,8 +263,8 @@ func TestLinking(t *testing.T) {
 		copy(tree.levels[level-1][parentX].rightNode.data[:], shardsFixtures[fixtureIndex][:])
 		copy(tree.levels[level-1][parentX].leftNode.data[:], shardsFixtures[fixtureIndex][:])
 
-		leftOK := bytes.Compare(tree.levels[level][x].parent.leftNode.data[:], shardsFixtures[fixtureIndex][:]) == 0
-		rightOK := bytes.Compare(tree.levels[level][x].parent.rightNode.data[:], shardsFixtures[fixtureIndex][:]) == 0
+		leftOK := bytes.Equal(tree.levels[level][x].parent.leftNode.data[:], shardsFixtures[fixtureIndex][:])
+		rightOK := bytes.Equal(tree.levels[level][x].parent.rightNode.data[:], shardsFixtures[fixtureIndex][:])
 
 		if !leftOK || !rightOK {
 			t.Fatal("Upside linking seems to not to work properly")
@@ -289,17 +284,17 @@ func TestLinking(t *testing.T) {
 		copy(tree.levels[level+1][rightChildrenX].rightNode.data[:], shardsFixtures[rightChildrenFixture][:])
 		copy(tree.levels[level+1][rightChildrenX].leftNode.data[:], shardsFixtures[rightChildrenFixture][:])
 
-		leftA := bytes.Compare(
-			tree.levels[level][x].childrenLeft.leftNode.data[:], shardsFixtures[leftChildrenFixture][:]) == 0
+		leftA := bytes.Equal(
+			tree.levels[level][x].childrenLeft.leftNode.data[:], shardsFixtures[leftChildrenFixture][:])
 
-		leftB := bytes.Compare(
-			tree.levels[level][x].childrenLeft.rightNode.data[:], shardsFixtures[leftChildrenFixture][:]) == 0
+		leftB := bytes.Equal(
+			tree.levels[level][x].childrenLeft.rightNode.data[:], shardsFixtures[leftChildrenFixture][:])
 
-		rightA := bytes.Compare(
-			tree.levels[level][x].childrenRight.leftNode.data[:], shardsFixtures[rightChildrenFixture][:]) == 0
+		rightA := bytes.Equal(
+			tree.levels[level][x].childrenRight.leftNode.data[:], shardsFixtures[rightChildrenFixture][:])
 
-		rightB := bytes.Compare(
-			tree.levels[level][x].childrenRight.rightNode.data[:], shardsFixtures[rightChildrenFixture][:]) == 0
+		rightB := bytes.Equal(
+			tree.levels[level][x].childrenRight.rightNode.data[:], shardsFixtures[rightChildrenFixture][:])
 
 		if !leftA || !leftB || !rightA || !rightB {
 			t.Fatal("Downside linking seems to not to work properly")
@@ -354,7 +349,7 @@ func TestShardsSetting(t *testing.T) {
 		// Checking data has been set into corresponding node.
 		lastLevelIndex := tree.Height() - 1 - 1
 		actualShardData := tree.levels[lastLevelIndex][0].leftNode.data
-		if bytes.Compare(actualShardData[:], shardsFixtures[0][:]) != 0 {
+		if !bytes.Equal(actualShardData[:], shardsFixtures[0][:]) {
 			t.Fatal()
 		}
 
@@ -383,12 +378,12 @@ func TestShardsSetting(t *testing.T) {
 		lastLevelIndex := tree.Height() - 1 - 1
 
 		shardAData := tree.levels[lastLevelIndex][0].leftNode.data
-		if bytes.Compare(shardAData[:], shardsFixtures[0][:]) != 0 {
+		if !bytes.Equal(shardAData[:], shardsFixtures[0][:]) {
 			t.Fatal()
 		}
 
 		shardBData := tree.levels[lastLevelIndex][0].rightNode.data
-		if bytes.Compare(shardBData[:], shardsFixtures[1][:]) != 0 {
+		if !bytes.Equal(shardBData[:], shardsFixtures[1][:]) {
 			t.Fatal()
 		}
 	}
@@ -480,7 +475,7 @@ func TestTopologyA(t *testing.T) {
 		MH = shardsFixtures[0]
 	}()
 
-	tree := topologyA(t)
+	tree := topologyA()
 
 	// Both slots are set to nil by default.
 	// But to force root recalculation - initial cache of the tree must be dropped.
@@ -517,7 +512,7 @@ func TestTopologyB(t *testing.T) {
 		228, 72, 183, 59, 126, 2, 185, 189,
 	}
 
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -539,7 +534,7 @@ func TestTopologyC(t *testing.T) {
 	root, err := tree.Root()
 	failOnErr(err, t)
 
-	if bytes.Compare(tree.levels[0][0].rightNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[0][0].rightNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -554,7 +549,7 @@ func TestTopologyC(t *testing.T) {
 		131, 76, 217, 218, 155, 150, 15, 139,
 		122, 167, 207, 223, 249, 2, 253, 251,
 	}
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -576,7 +571,7 @@ func TestTopologyD(t *testing.T) {
 	root, err := tree.Root()
 	failOnErr(err, t)
 
-	if bytes.Compare(tree.levels[0][0].leftNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[0][0].leftNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -591,7 +586,7 @@ func TestTopologyD(t *testing.T) {
 		116, 70, 212, 185, 30, 75, 169, 15,
 		253, 238, 48, 94, 145, 89, 128, 232,
 	}
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -609,12 +604,12 @@ func TestTopologyS1(t *testing.T) {
 		MH = defaultMH
 	}()
 
-	tree := topologyS1(t)
+	tree := topologyS1()
 	_, err := tree.Root()
 	failOnErr(err, t)
 
 	// Checking MH node placements
-	if bytes.Compare(tree.root.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.root.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -826,7 +821,7 @@ func TestTopologyL1(t *testing.T) {
 	failOnErr(err, t)
 
 	// Checking MH node placements
-	if bytes.Compare(tree.levels[0][0].rightNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[0][0].rightNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -841,7 +836,7 @@ func TestTopologyL1(t *testing.T) {
 		16, 209, 65, 176, 34, 218, 83, 192,
 		189, 189, 215, 57, 22, 67, 191, 68,
 	}
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -864,7 +859,7 @@ func TestTopologyL2(t *testing.T) {
 	failOnErr(err, t)
 
 	// Checking MH node placements
-	if bytes.Compare(tree.levels[1][1].rightNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[1][1].rightNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -882,7 +877,7 @@ func TestTopologyL2(t *testing.T) {
 		121, 232, 67, 125, 141, 140, 159, 208, 11, 31, 86, 232, 49, 176,
 		22, 142, 170, 29, 74, 230, 3, 1, 53, 97, 199, 125, 144, 156, 243, 185, 45, 184,
 	}
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -905,11 +900,11 @@ func TestTopologyL3(t *testing.T) {
 	failOnErr(err, t)
 
 	// Checking MH node placements
-	if bytes.Compare(tree.levels[1][1].rightNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[1][1].rightNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
-	if bytes.Compare(tree.levels[2][2].rightNode.data[:], MH[:]) != 0 {
+	if !bytes.Equal(tree.levels[2][2].rightNode.data[:], MH[:]) {
 		t.Fatal()
 	}
 
@@ -931,7 +926,7 @@ func TestTopologyL3(t *testing.T) {
 		233, 123, 96, 120, 70, 16, 75, 108, 1, 77, 64, 207, 173,
 		166, 123, 214, 121, 22, 130, 142, 176, 138, 110, 212, 203, 97, 96, 131, 206, 220, 116, 138,
 	}
-	if bytes.Compare(root[:], resultFixture[:]) != 0 {
+	if !bytes.Equal(root[:], resultFixture[:]) {
 		t.Fatal()
 	}
 }
@@ -950,7 +945,7 @@ func TestOrangeTreeCodingTopologyB(t *testing.T) {
 
 // Tests /assets/tests/topology_S_1.png
 func TestOrangeTreeCodingTopologyS1(t *testing.T) {
-	tree := topologyS1(t)
+	tree := topologyS1()
 	coding, bitsCoded, err := tree.CatalanNumbersCoding()
 	if err != nil {
 		t.Fatal()
@@ -1253,7 +1248,7 @@ func TestRepetitiveRootCalculation(t *testing.T) {
 	root2, err2 := tree.Root()
 	failOnErr(err2, t)
 
-	if bytes.Compare(root1[:], root2[:]) != 0 {
+	if !bytes.Equal(root1[:], root2[:]) {
 		t.Fatal("Calculated hashes must be equal")
 	}
 }

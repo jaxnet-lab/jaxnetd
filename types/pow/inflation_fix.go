@@ -44,12 +44,10 @@ const (
 	ShardEpochLen            = 16 * 4096
 )
 
-var (
-	// K1 = 1 / (1 << 60 ) == 2^-60
-	K1 = new(big.Float).Quo(
-		new(big.Float).SetFloat64(1),
-		new(big.Float).SetInt(oneLsh60),
-	)
+// K1 = 1 / (1 << 60 ) == 2^-60
+var K1 = new(big.Float).Quo(
+	new(big.Float).SetFloat64(1),
+	new(big.Float).SetInt(oneLsh60),
 )
 
 func BeaconEpoch(height int32) int32 {
@@ -60,18 +58,19 @@ func ShardEpoch(height int32) int32 {
 	return (height / ShardEpochLen) + 1
 }
 
+// nolint
 var (
 	// todo: review this
 	kValMask   = new(big.Int).Lsh(bigOne, 1000) // 1 << 100 == 2^100
 	kPrecision = new(big.Float).SetInt(kValMask)
 
-	oneLsh64 = new(big.Int).Lsh(bigOne, 64)
+	//	oneLsh64 = new(big.Int).Lsh(bigOne, 64)
 	oneLsh60 = new(big.Int).Lsh(bigOne, 60)
 
-	jCoefficient = new(big.Float).Quo(
-		new(big.Float).SetInt64(1),
-		new(big.Float).SetInt(oneLsh64),
-	)
+	//jCoefficient = new(big.Float).Quo(
+	//	new(big.Float).SetInt64(1),
+	//	new(big.Float).SetInt(oneLsh64),
+	//)
 )
 
 func KValFloatToInt(val *big.Float) *big.Int {

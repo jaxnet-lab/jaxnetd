@@ -147,7 +147,8 @@ func main() {
 
 	// Choose how to display the result based on its type.
 	strResult := string(result)
-	if strings.HasPrefix(strResult, "{") || strings.HasPrefix(strResult, "[") {
+	switch {
+	case strings.HasPrefix(strResult, "{"), strings.HasPrefix(strResult, "["):
 		var dst bytes.Buffer
 		if err := json.Indent(&dst, result, "", "  "); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to format result: %v",
@@ -155,8 +156,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(dst.String())
-
-	} else if strings.HasPrefix(strResult, `"`) {
+	case strings.HasPrefix(strResult, `"`):
 		var str string
 		if err := json.Unmarshal(result, &str); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to unmarshal result: %v",
@@ -164,8 +164,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(str)
-
-	} else if strResult != "null" {
+	case strResult != "null":
 		fmt.Println(strResult)
 	}
 }

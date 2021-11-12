@@ -12,6 +12,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
+// nolint: gomnd
 var (
 	// rfc1918Nets specifies the IPv4 private address blocks as defined by
 	// by RFC1918 (10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16).
@@ -235,6 +236,7 @@ func IsRoutable(na *wire.NetAddress) bool {
 // "local" for a local address, the string "tor:key" where key is the /4 of the
 // onion address for Tor address, and the string "unroutable" for an unroutable
 // address.
+// nolint: gomnd
 func GroupKey(na *wire.NetAddress) string {
 	if IsLocal(na) {
 		return "local"
@@ -254,8 +256,8 @@ func GroupKey(na *wire.NetAddress) string {
 	if IsRFC3964(na) {
 		ip := na.IP[2:6]
 		return ip.Mask(net.CIDRMask(16, 32)).String()
-
 	}
+
 	if IsRFC4380(na) {
 		// teredo tunnels have the last 4 bytes as the v4 address XOR
 		// 0xff.

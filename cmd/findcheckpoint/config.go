@@ -22,22 +22,23 @@ const (
 	minCandidates        = 1
 	maxCandidates        = 20
 	defaultNumCandidates = 5
-	defaultDbType        = "ffldb"
+	defaultDBType        = "ffldb"
 )
 
 var (
 	jaxnetdHomeDir  = jaxutil.AppDataDir("jaxnetd", false)
-	defaultDataDir  = filepath.Join(jaxnetdHomeDir, "data")
-	knownDbTypes    = database.SupportedDrivers()
-	activeNetParams = &chaincfg.MainNetParams
+	defaultDataDir  = filepath.Join(jaxnetdHomeDir, "data") //nolint
+	knownDbTypes    = database.SupportedDrivers()           //nolint
+	activeNetParams = &chaincfg.MainNetParams               //nolint
 )
 
 // config defines the configuration options for findcheckpoint.
 //
 // See loadConfig for details on the configuration load process.
+// nolint
 type config struct {
 	DataDir        string `short:"b" long:"datadir" description:"Location of the jaxnetd data directory"`
-	DbType         string `long:"dbtype" description:"Database backend to use for the Block Chain"`
+	DBType         string `long:"dbtype" description:"Database backend to use for the Block Chain"`
 	UseGoOutput    bool   `short:"g" long:"gooutput" description:"Display the candidates using Go syntax that is ready to insert into the btcchain checkpoint list"`
 	NumCandidates  int    `short:"n" long:"numcandidates" description:"Max num of checkpoint candidates to show {1-20}"`
 	RegressionTest bool   `long:"regtest" description:"Use the regression test network"`
@@ -46,6 +47,7 @@ type config struct {
 }
 
 // validDbType returns whether or not dbType is a supported database type.
+// nolint
 func validDbType(dbType string) bool {
 	for _, knownType := range knownDbTypes {
 		if dbType == knownType {
@@ -65,6 +67,7 @@ func validDbType(dbType string) bool {
 // A proper upgrade to move the data and log directories for this network to
 // "testnet" is planned for the future, at which point this function can be
 // removed and the network parameter's name used instead.
+// nolint
 func netName(chainParams *chaincfg.Params) string {
 	switch chainParams.Net {
 	case wire.TestNet:
@@ -74,12 +77,13 @@ func netName(chainParams *chaincfg.Params) string {
 	}
 }
 
-// loadConfig initializes and parses the config using command line options.
+// loadConfig initializes and parses the config using command line options
+// nolint
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
 		DataDir:       defaultDataDir,
-		DbType:        defaultDbType,
+		DBType:        defaultDBType,
 		NumCandidates: defaultNumCandidates,
 	}
 
@@ -116,10 +120,10 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Validate database type.
-	if !validDbType(cfg.DbType) {
+	if !validDbType(cfg.DBType) {
 		str := "%s: The specified database type [%v] is invalid -- " +
 			"supported types %v"
-		err := fmt.Errorf(str, "loadConfig", cfg.DbType, knownDbTypes)
+		err := fmt.Errorf(str, "loadConfig", cfg.DBType, knownDbTypes)
 		fmt.Fprintln(os.Stderr, err)
 		parser.WriteHelp(os.Stderr)
 		return nil, nil, err

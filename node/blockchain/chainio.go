@@ -157,7 +157,7 @@ func (b *BlockChain) createChainState() error {
 
 		if b.chain.IsBeacon() {
 			view := chaindata.NewUtxoViewpoint(b.chain.IsBeacon())
-			err := view.ConnectTransactions(genesisBlock, nil)
+			_ = view.ConnectTransactions(genesisBlock, nil)
 
 			// Update the utxo set using the state of the utxo view.  This
 			// entails removing all of the utxos spent and adding the new
@@ -176,6 +176,7 @@ func (b *BlockChain) createChainState() error {
 // initChainState attempts to load and initialize the chain state from the
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
+// nolint: gocritic
 func (b *BlockChain) initChainState() error {
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
@@ -196,7 +197,6 @@ func (b *BlockChain) initChainState() error {
 
 	// Attempt to load the chain state from the database.
 	err = b.db.View(func(dbTx database.Tx) error {
-
 		// Fetch the stored chain state from the database metadata.
 		// When it doesn't exist, it means the database hasn't been
 		// initialized for use with chain yet, so break out now to allow

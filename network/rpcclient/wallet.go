@@ -1482,6 +1482,7 @@ type FutureGetBalanceParseResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // available balance from the server for the specified account.
+// nolint: gomnd
 func (r FutureGetBalanceParseResult) Receive() (jaxutil.Amount, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
@@ -1695,7 +1696,6 @@ func (c *Client) GetReceivedByAddressAsync(address jaxutil.Address) FutureGetRec
 	addr := address.EncodeAddress()
 	cmd := jaxjson.NewGetReceivedByAddressCmd(addr, nil)
 	return c.sendCmd(cmd)
-
 }
 
 // GetReceivedByAddress returns the total amount received by the specified
@@ -1959,6 +1959,7 @@ func (r FutureWalletPassphraseChangeResult) Receive() error {
 // function on the returned instance.
 //
 // See WalletPassphraseChange for the blocking version and more details.
+// nolint: predeclared
 func (c *Client) WalletPassphraseChangeAsync(old, new string) FutureWalletPassphraseChangeResult {
 	cmd := jaxjson.NewWalletPassphraseChangeCmd(old, new)
 	return c.sendCmd(cmd)
@@ -1966,6 +1967,7 @@ func (c *Client) WalletPassphraseChangeAsync(old, new string) FutureWalletPassph
 
 // WalletPassphraseChange changes the wallet passphrase from the specified old
 // to new passphrase.
+// nolint: predeclared
 func (c *Client) WalletPassphraseChange(old, new string) error {
 	return c.WalletPassphraseChangeAsync(old, new).Receive()
 }

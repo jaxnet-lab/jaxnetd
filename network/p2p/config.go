@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -204,7 +205,9 @@ func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.Se
 			}
 
 			netAddr := wire.NewNetAddressIPPort(ifaceIP, uint16(port), services)
-			addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio)
+			if err := addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio); err != nil {
+				log.Error().Err(err).Msg("cannot add local address")
+			}
 		}
 	} else {
 		netAddr, err := addrMgr.HostToNetAddress(host, uint16(port), services)
@@ -212,7 +215,9 @@ func addLocalAddress(addrMgr *addrmgr.AddrManager, addr string, services wire.Se
 			return err
 		}
 
-		addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio)
+		if err := addrMgr.AddLocalAddress(netAddr, addrmgr.BoundPrio); err != nil {
+			log.Error().Err(err).Msg("cannot add local address")
+		}
 	}
 
 	return nil

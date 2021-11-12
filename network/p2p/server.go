@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
@@ -35,9 +36,6 @@ type INodeServer interface {
 	Stop() error
 	NotifyNewTransactions(txns []*mempool.TxDesc)
 }
-
-// zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
-var zeroHash chainhash.Hash
 
 // broadcastMsg provides the ability to house a bitcoin message to be broadcast
 // to all connected peers except specified excluded peers.
@@ -93,8 +91,7 @@ type Server struct {
 
 	// cfCheckptCaches stores a cached slice of filter headers for cfcheckpt
 	// messages for each filter type.
-	cfCheckptCaches    map[wire.FilterType][]cfHeaderKV
-	cfCheckptCachesMtx sync.RWMutex
+	cfCheckptCaches map[wire.FilterType][]cfHeaderKV
 
 	// agentBlacklist is a list of blacklisted substrings by which to filter
 	// user agents.
@@ -247,19 +244,23 @@ func (server *Server) Run(ctx context.Context) {
 	<-ctx.Done()
 
 	// Save fee estimator state in the database.
-	server.chain.DB.Update(func(tx database.Tx) error {
+	err := server.chain.DB.Update(func(tx database.Tx) error {
 		metadata := tx.Metadata()
-		metadata.Put(mempool.EstimateFeeDatabaseKey, server.chain.FeeEstimator.Save())
+		err := metadata.Put(mempool.EstimateFeeDatabaseKey, server.chain.FeeEstimator.Save())
+		if err != nil {
+			log.Error().Err(err).Msg("cannot put metadata into db")
+		}
 
 		return nil
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("cannot update fee estimator state in db")
+	}
 
 	// Signal the remaining goroutines to quit.
 	close(server.quit)
 
 	server.wg.Wait()
-
-	return
 }
 
 // Stop gracefully shuts down the Server by stopping and disconnecting all
@@ -272,12 +273,17 @@ func (server *Server) Stop() error {
 	}
 
 	// Save fee estimator state in the database.
-	server.chain.DB.Update(func(tx database.Tx) error {
+	err := server.chain.DB.Update(func(tx database.Tx) error {
 		metadata := tx.Metadata()
-		metadata.Put(mempool.EstimateFeeDatabaseKey, server.chain.FeeEstimator.Save())
+		if err := metadata.Put(mempool.EstimateFeeDatabaseKey, server.chain.FeeEstimator.Save()); err != nil {
+			log.Error().Err(err).Msg("cannot put metadata")
+		}
 
 		return nil
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("cannot save fee estimator state in database")
+	}
 
 	// Signal the remaining goroutines to quit.
 	close(server.quit)
@@ -308,10 +314,12 @@ func (server *Server) ScheduleShutdown(duration time.Duration) {
 			select {
 			case <-done:
 				ticker.Stop()
-				server.Stop()
+				if err := server.Stop(); err != nil {
+					log.Error().Err(err).Msg("cannot stop server")
+				}
 				break out
 			case <-ticker.C:
-				remaining = remaining - tickDuration
+				remaining -= tickDuration
 				if remaining < time.Second {
 					continue
 				}
@@ -613,7 +621,7 @@ func (server *Server) inboundPeerConnected(conn net.Conn) {
 // manager of the attempt.
 func (server *Server) outboundPeerConnected(connReq *connmgr.ConnReq, conn net.Conn) {
 	if server.cfg.DisableOutbound {
-		server.logger.Debug().Msgf("Outbound Conn disabled: can't create outbound peer %s: %v", connReq.Addr)
+		server.logger.Debug().Msgf("Outbound Conn disabled: can't create outbound peer %s", connReq.Addr)
 		return
 	}
 	sp := newServerPeer(newServerPeerHandler(server), connReq.Permanent)
@@ -736,8 +744,13 @@ out:
 	}
 
 	server.ConnManager.Stop()
-	server.chain.SyncManager.Stop()
-	server.addrManager.Stop()
+	if err := server.chain.SyncManager.Stop(); err != nil {
+		log.Error().Err(err).Msg("cannot stop sync manager")
+	}
+
+	if err := server.addrManager.Stop(); err != nil {
+		log.Error().Err(err).Msg("cannot stop addr manager")
+	}
 
 	// Drain channels before exiting so nothing is left waiting around
 	// to send.
@@ -830,12 +843,17 @@ func (server *Server) UpdatePeerHeights(latestBlkHash *chainhash.Hash, latestHei
 	}
 }
 
+const (
+	secondsIn30Mins = 1800
+	rebroadcastWait = 5 * time.Minute
+)
+
 // rebroadcastHandler keeps track of user submitted inventories that we have
 // sent out but have not yet made it into a block. We periodically rebroadcast
 // them in case our peers restarted or otherwise lost track of them.
 func (server *Server) rebroadcastHandler() {
 	// Wait 5 min before first tx rebroadcast.
-	timer := time.NewTimer(5 * time.Minute)
+	timer := time.NewTimer(rebroadcastWait)
 	pendingInvs := make(map[wire.InvVect]interface{})
 
 out:
@@ -864,7 +882,7 @@ out:
 			// Process at a random time up to 30mins (in seconds)
 			// in the future.
 			timer.Reset(time.Second *
-				time.Duration(randomUint16Number(1800)))
+				time.Duration(randomUint16Number(secondsIn30Mins)))
 
 		case <-server.quit:
 			break out
@@ -886,6 +904,11 @@ cleanup:
 	server.wg.Done()
 }
 
+const (
+	resetTimeout              = 15 * time.Minute
+	portMappingTimeoutSeconds = 20 * 60
+)
+
 func (server *Server) upnpUpdateThread() {
 	// Go off immediately to prevent code duplication, thereafter we renew
 	// lease every 15 minutes.
@@ -902,7 +925,7 @@ out:
 			// listen port?
 			// XXX this assumes timeout is in seconds.
 			listenPort, err := server.nat.AddPortMapping("tcp", int(lport), int(lport),
-				"shard BlockChain p2p listen port", 20*60)
+				"shard BlockChain p2p listen port", portMappingTimeoutSeconds)
 			if err != nil {
 				server.logger.Warn().Msgf("can't add UPnP port mapping: %v", err)
 			}
@@ -916,14 +939,11 @@ out:
 				}
 				na := wire.NewNetAddressIPPort(externalIP, uint16(listenPort),
 					server.services)
-				err = server.addrManager.AddLocalAddress(na, addrmgr.UpnpPrio)
-				if err != nil {
-					// XXX DeletePortMapping?
-				}
+				_ = server.addrManager.AddLocalAddress(na, addrmgr.UpnpPrio)
 				server.logger.Warn().Msgf("Successfully bound via UPnP to %s", addrmgr.NetAddressKey(na))
 				first = false
 			}
-			timer.Reset(time.Minute * 15)
+			timer.Reset(resetTimeout)
 		case <-server.quit:
 			break out
 		}
@@ -954,7 +974,6 @@ func changePort(addr string, shardID uint32, defaultPort int) string {
 		port = defaultPort + int(shardID)
 	}
 	return net.JoinHostPort(host, strconv.Itoa(port))
-
 }
 
 // addrStringToNetAddr takes an address in the form of 'host:port' and returns
@@ -1007,6 +1026,7 @@ func (server *Server) addrStringToNetAddr(addr string) (net.Addr, error) {
 
 // isWhitelisted returns whether the IP address is included in the whitelisted
 // networks and IPs.
+// nolint: unparam
 func (server *Server) isWhitelisted(addr net.Addr) bool {
 	// TODO(mike): return whitelist
 	// if len(server.cfg.Whitelists) == 0 {
@@ -1057,6 +1077,7 @@ func (server *Server) netDial(addr net.Addr) (net.Conn, error) {
 // tick duration based on remaining time.  It is primarily used during
 // server shutdown to make shutdown warnings more frequent as the shutdown time
 // approaches.
+// nolint: gomnd
 func dynamicTickDuration(remaining time.Duration) time.Duration {
 	switch {
 	case remaining <= time.Second*5:

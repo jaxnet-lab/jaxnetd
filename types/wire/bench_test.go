@@ -10,6 +10,7 @@ import (
 	"compress/bzip2"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"os"
 	"testing"
@@ -190,7 +191,7 @@ func BenchmarkReadOutPoint(b *testing.B) {
 	var op OutPoint
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		readOutPoint(r, 0, 0, &op)
+		readOutPoint(r, &op)
 	}
 }
 
@@ -202,7 +203,7 @@ func BenchmarkWriteOutPoint(b *testing.B) {
 		Index: 0,
 	}
 	for i := 0; i < b.N; i++ {
-		writeOutPoint(ioutil.Discard, 0, 0, op)
+		writeOutPoint(ioutil.Discard, op)
 	}
 }
 
@@ -228,7 +229,7 @@ func BenchmarkReadTxOut(b *testing.B) {
 	var txOut TxOut
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		readTxOut(r, 0, 0, &txOut)
+		readTxOut(r, 0, &txOut)
 		scriptPool.Return(txOut.PkScript)
 	}
 }
@@ -238,7 +239,7 @@ func BenchmarkReadTxOut(b *testing.B) {
 func BenchmarkWriteTxOut(b *testing.B) {
 	txOut := blockOne.Transactions[0].TxOut[0]
 	for i := 0; i < b.N; i++ {
-		WriteTxOut(ioutil.Discard, 0, 0, txOut)
+		WriteTxOut(ioutil.Discard, 0, txOut)
 	}
 }
 
@@ -259,7 +260,7 @@ func BenchmarkReadTxIn(b *testing.B) {
 	var txIn TxIn
 	for i := 0; i < b.N; i++ {
 		r.Seek(0, 0)
-		readTxIn(r, 0, 0, &txIn)
+		readTxIn(r, 0, &txIn)
 		scriptPool.Return(txIn.SignatureScript)
 	}
 }
@@ -269,7 +270,7 @@ func BenchmarkReadTxIn(b *testing.B) {
 func BenchmarkWriteTxIn(b *testing.B) {
 	txIn := blockOne.Transactions[0].TxIn[0]
 	for i := 0; i < b.N; i++ {
-		writeTxIn(ioutil.Discard, 0, 0, txIn)
+		writeTxIn(ioutil.Discard, 0, txIn)
 	}
 }
 
@@ -422,7 +423,7 @@ func BenchmarkDecodeHeaders(b *testing.B) {
 			b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 		}
 		m.AddBlockHeader(
-			NewBeaconBlockHeader(1, 0, *hash, *hash, *hash, *hash, time.Now(), 0, 0, uint32(i)),
+			NewBeaconBlockHeader(1, 0, *hash, *hash, *hash, *hash, time.Now(), 0, big.NewInt(0), uint32(i)),
 			*hash,
 		)
 	}
@@ -570,7 +571,7 @@ func BenchmarkDecodeMerkleBlock(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewHashFromStr: unexpected error: %v", err)
 	}
-	m.Header = NewBeaconBlockHeader(1, 1, *hash, *hash, *hash, *hash, time.Now(), 0, 1, uint32(10000))
+	m.Header = NewBeaconBlockHeader(1, 1, *hash, *hash, *hash, *hash, time.Now(), 0, big.NewInt(1), uint32(10000))
 	for i := 0; i < 105; i++ {
 		hash, err := chainhash.NewHashFromStr(fmt.Sprintf("%x", i))
 		if err != nil {

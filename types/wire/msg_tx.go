@@ -513,7 +513,7 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error
 		// and needs to be returned to the pool on error.
 		ti := &txIns[i]
 		msg.TxIn[i] = ti
-		err = readTxIn(r, pver, msg.Version, ti)
+		err = readTxIn(r, pver, ti)
 		if err != nil {
 			returnScriptBuffers()
 			return err
@@ -546,7 +546,7 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error
 		// and needs to be returned to the pool on error.
 		to := &txOuts[i]
 		msg.TxOut[i] = to
-		err = readTxOut(r, pver, msg.Version, to)
+		err = readTxOut(r, pver, to)
 		if err != nil {
 			returnScriptBuffers()
 			return err
@@ -730,7 +730,7 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error
 	}
 
 	for _, ti := range msg.TxIn {
-		err = writeTxIn(w, pver, msg.Version, ti)
+		err = writeTxIn(w, pver, ti)
 		if err != nil {
 			return err
 		}
@@ -743,7 +743,7 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error
 	}
 
 	for _, to := range msg.TxOut {
-		err = WriteTxOut(w, pver, msg.Version, to)
+		err = WriteTxOut(w, pver, to)
 		if err != nil {
 			return err
 		}
@@ -754,7 +754,7 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error
 	// within the transaction.
 	if doWitness {
 		for _, ti := range msg.TxIn {
-			err = writeTxWitness(w, pver, msg.Version, ti.Witness)
+			err = writeTxWitness(w, pver, ti.Witness)
 			if err != nil {
 				return err
 			}
@@ -929,7 +929,7 @@ func NewMsgTx(version int32) *MsgTx {
 }
 
 // readOutPoint reads the next sequence of bytes from r as an OutPoint.
-func readOutPoint(r io.Reader, pver uint32, version int32, op *OutPoint) error {
+func readOutPoint(r io.Reader, op *OutPoint) error {
 	_, err := io.ReadFull(r, op.Hash[:])
 	if err != nil {
 		return err
@@ -941,7 +941,7 @@ func readOutPoint(r io.Reader, pver uint32, version int32, op *OutPoint) error {
 
 // writeOutPoint encodes op to the bitcoin protocol encoding for an OutPoint
 // to w.
-func writeOutPoint(w io.Writer, pver uint32, version int32, op *OutPoint) error {
+func writeOutPoint(w io.Writer, op *OutPoint) error {
 	_, err := w.Write(op.Hash[:])
 	if err != nil {
 		return err
@@ -983,8 +983,8 @@ func readScript(r io.Reader, pver uint32, maxAllowed uint32, fieldName string) (
 
 // readTxIn reads the next sequence of bytes from r as a transaction input
 // (TxIn).
-func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn) error {
-	err := readOutPoint(r, pver, version, &ti.PreviousOutPoint)
+func readTxIn(r io.Reader, pver uint32, ti *TxIn) error {
+	err := readOutPoint(r, &ti.PreviousOutPoint)
 	if err != nil {
 		return err
 	}
@@ -1000,8 +1000,8 @@ func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn) error {
 
 // writeTxIn encodes ti to the bitcoin protocol encoding for a transaction
 // input (TxIn) to w.
-func writeTxIn(w io.Writer, pver uint32, version int32, ti *TxIn) error {
-	err := writeOutPoint(w, pver, version, &ti.PreviousOutPoint)
+func writeTxIn(w io.Writer, pver uint32, ti *TxIn) error {
+	err := writeOutPoint(w, &ti.PreviousOutPoint)
 	if err != nil {
 		return err
 	}
@@ -1016,7 +1016,7 @@ func writeTxIn(w io.Writer, pver uint32, version int32, ti *TxIn) error {
 
 // readTxOut reads the next sequence of bytes from r as a transaction output
 // (TxOut).
-func readTxOut(r io.Reader, pver uint32, version int32, to *TxOut) error {
+func readTxOut(r io.Reader, pver uint32, to *TxOut) error {
 	err := ReadElement(r, &to.Value)
 	if err != nil {
 		return err
@@ -1032,7 +1032,7 @@ func readTxOut(r io.Reader, pver uint32, version int32, to *TxOut) error {
 //
 // NOTE: This function is exported in order to allow txscript to compute the
 // new sighashes for witness transactions (BIP0143).
-func WriteTxOut(w io.Writer, pver uint32, version int32, to *TxOut) error {
+func WriteTxOut(w io.Writer, pver uint32, to *TxOut) error {
 	err := BinarySerializer.PutUint64(w, littleEndian, uint64(to.Value))
 	if err != nil {
 		return err
@@ -1043,7 +1043,7 @@ func WriteTxOut(w io.Writer, pver uint32, version int32, to *TxOut) error {
 
 // writeTxWitness encodes the bitcoin protocol encoding for a transaction
 // input's witness into to w.
-func writeTxWitness(w io.Writer, pver uint32, version int32, wit [][]byte) error {
+func writeTxWitness(w io.Writer, pver uint32, wit [][]byte) error {
 	err := WriteVarInt(w, uint64(len(wit)))
 	if err != nil {
 		return err

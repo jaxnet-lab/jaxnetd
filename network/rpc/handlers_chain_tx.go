@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-
+// nolint: forcetypeassert
 package rpc
 
 import (
@@ -78,7 +78,8 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	res := jaxjson.EstimateSmartFeeResult{
 		BtcPerKB:    &btcPerKB,
 		SatoshiPerB: &satoshiPerB,
-		Blocks:      c.ConfTarget}
+		Blocks:      c.ConfTarget,
+	}
 	return res, nil
 }
 
@@ -336,6 +337,7 @@ func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-ch
 	return *rawTxn, nil
 }
 
+// nolint: nilerr
 func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, mempool, orphan bool) (*txInfo, error) {
 	if mempool {
 		tx, err := server.chainProvider.TxMemPool.FetchTransaction(txHash)
@@ -401,8 +403,7 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, mempool, orphan bool
 	var msgTx wire.MsgTx
 	err = msgTx.Deserialize(bytes.NewReader(txBytes))
 	if err != nil {
-		context := "Failed to deserialize transaction"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), deserializeTranErrorString)
 	}
 
 	return &txInfo{
@@ -451,7 +452,7 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 		return nil, nil, server.InternalRPCError(err.Error(), context)
 	}
 
-	var inputsFromAnotherChain = map[int]struct{}{}
+	inputsFromAnotherChain := map[int]struct{}{}
 	if detailedIn && !rawTxn.CoinbaseTx {
 		for i, in := range rawTxn.Vin {
 			hashStr := in.Coinbase
@@ -794,11 +795,11 @@ func (server *CommonChainRPC) handleGetTxOutsStatus(cmd interface{}, closeChan <
 		filter[txOut{txHash: *txHash, vout: out.Index}] = false
 	}
 
-	return server.getTxOutStatus(filter, onlyMempool)
+	return server.getTxOutStatus(filter, onlyMempool), nil
 }
 
 // getTxOutStatus handles getTxOutStatus commands.
-func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool bool) ([]jaxjson.TxOutStatus, error) {
+func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool bool) []jaxjson.TxOutStatus {
 	result := make([]jaxjson.TxOutStatus, 0, len(filter))
 	for _, txDesc := range server.chainProvider.TxMemPool.MiningDescs() {
 		for _, in := range txDesc.Tx.MsgTx().TxIn {
@@ -835,7 +836,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 				InMempool: false,
 			})
 		}
-		return result, nil
+		return result
 	}
 
 	for out, found := range filter {
@@ -865,7 +866,7 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 		})
 	}
 
-	return result, nil
+	return result
 }
 
 // handleGetBlockTxOps handles getblocktxops commands.
@@ -894,8 +895,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 	// Deserialize the block.
 	blk, err := jaxutil.NewBlockFromBytes(blkBytes)
 	if err != nil {
-		context := "Failed to deserialize block"
-		return nil, server.InternalRPCError(err.Error(), context)
+		return nil, server.InternalRPCError(err.Error(), deserializeBlockErrorString)
 	}
 
 	best := server.chainProvider.BlockChain().BestSnapshot()
@@ -917,22 +917,22 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 		Ops:           make([]jaxjson.TxOperation, 0, len(txs)*2),
 	}
 
-	for txId, tx := range txs {
+	for txID, tx := range txs {
 		coinbase := chaindata.IsCoinBase(tx)
-		var missedInputs = map[int]struct{}{}
+		missedInputs := map[int]struct{}{}
 
 		if chaindata.IsCoinBase(tx) {
 			goto outsAnalysis
 		}
 
-		for inId, in := range tx.MsgTx().TxIn {
-			out, found, err := server.getParentOut(tx.MsgTx().SwapTx(), in, inId, tx.Hash())
+		for inID, in := range tx.MsgTx().TxIn {
+			out, found, err := server.getParentOut(tx.MsgTx().SwapTx(), in, inID, tx.Hash())
 			if err != nil {
 				return nil, err
 			}
 
 			if !found {
-				missedInputs[inId] = struct{}{}
+				missedInputs[inID] = struct{}{}
 				continue
 			}
 
@@ -946,10 +946,10 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 				Input:        true,
 				PkScript:     hex.EncodeToString(out.PkScript),
 				Addresses:    addresses,
-				Idx:          uint32(inId),
+				Idx:          uint32(inID),
 				Amount:       out.Value,
 				TxHash:       tx.Hash().String(),
-				TxIndex:      uint32(txId),
+				TxIndex:      uint32(txID),
 				Coinbase:     false,
 				OriginTxHash: in.PreviousOutPoint.Hash.String(),
 				OriginIdx:    in.PreviousOutPoint.Index,
@@ -961,8 +961,8 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 		}
 
 	outsAnalysis:
-		for outId, out := range tx.MsgTx().TxOut {
-			_, missedInput := missedInputs[outId]
+		for outID, out := range tx.MsgTx().TxOut {
+			_, missedInput := missedInputs[outID]
 			if tx.MsgTx().SwapTx() && missedInput {
 				continue
 			}
@@ -977,13 +977,13 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 				Input:        false,
 				PkScript:     hex.EncodeToString(out.PkScript),
 				Addresses:    addresses,
-				Idx:          uint32(outId),
+				Idx:          uint32(outID),
 				Amount:       out.Value,
 				TxHash:       tx.Hash().String(),
-				TxIndex:      uint32(txId),
+				TxIndex:      uint32(txID),
 				Coinbase:     coinbase,
 				OriginTxHash: tx.Hash().String(),
-				OriginIdx:    uint32(outId),
+				OriginIdx:    uint32(outID),
 				CSTx:         tx.MsgTx().SwapTx(),
 				ShardID:      server.chainProvider.ChainCtx.ShardID(),
 			}
@@ -996,11 +996,12 @@ func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan stru
 	return result, nil
 }
 
-func (server *CommonChainRPC) getParentOut(swapTx bool, in *wire.TxIn, inId int, txHash *chainhash.Hash) (out *wire.TxOut, found bool, err error) {
+// nolint: nilerr
+func (server *CommonChainRPC) getParentOut(swapTx bool, in *wire.TxIn, inID int, txHash *chainhash.Hash) (out *wire.TxOut, found bool, err error) {
 	parentTx, err := server.getTx(&in.PreviousOutPoint.Hash, true, true)
 	switch {
 	case err != nil && !swapTx:
-		context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inId, txHash.String())
+		context := fmt.Sprintf("unable to fetch input(%d) details for tx(%s)", inID, txHash.String())
 		err = rpcNoTxInfoError(&in.PreviousOutPoint.Hash)
 		return nil, false, server.InternalRPCError(err.Error(), context)
 	case err != nil && swapTx:
@@ -1019,18 +1020,20 @@ func (server *CommonChainRPC) getParentOut(swapTx bool, in *wire.TxIn, inId int,
 	return parentTx.tx.TxOut[in.PreviousOutPoint.Index], true, nil
 }
 
+const utxoEntryLimit = 1000
+
 // handleListTxOut handles listtxout commands.
 func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
 	_ = cmd.(*jaxjson.ListTxOutCmd)
 
-	entries, err := server.chainProvider.BlockChain().ListUtxoEntry(1000)
+	entries, err := server.chainProvider.BlockChain().ListUtxoEntry(utxoEntryLimit)
 	if err != nil {
 		return nil, rpcNoTxInfoError(nil)
 	}
 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
-	var reply = make([]jaxjson.ExtendedTxOutResult, 0, len(entries))
+	reply := make([]jaxjson.ExtendedTxOutResult, 0, len(entries))
 	for out, entry := range entries {
 		var confirmations int32
 		var pkScript []byte
@@ -1093,7 +1096,7 @@ func (server *CommonChainRPC) handleListEADAddresses(cmd interface{}, closeChan 
 		return nil, rpcNoTxInfoError(nil)
 	}
 
-	var reply = make(map[string]jaxjson.EADAddresses, len(listEADAddresses))
+	reply := make(map[string]jaxjson.EADAddresses, len(listEADAddresses))
 	for pubKey, eadAddresses := range listEADAddresses {
 		if opts.EadPublicKey != nil && pubKey != *opts.EadPublicKey {
 			continue
@@ -1342,9 +1345,8 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 			mtx = new(wire.MsgTx)
 			err := mtx.Deserialize(bytes.NewReader(rtx.txBytes))
 			if err != nil {
-				context := "Failed to deserialize transaction"
 				return nil, server.InternalRPCError(err.Error(),
-					context)
+					deserializeTranErrorString)
 			}
 		} else {
 			mtx = rtx.tx.MsgTx()
@@ -1382,8 +1384,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 			// Get the block height from BlockChain.
 			height, err := server.chainProvider.BlockChain().BlockHeightByHash(blkHash)
 			if err != nil {
-				context := "Failed to obtain block height"
-				return nil, server.InternalRPCError(err.Error(), context)
+				return nil, server.InternalRPCError(err.Error(), obtainBlockHeightErrorString)
 			}
 
 			blkHeader = header
