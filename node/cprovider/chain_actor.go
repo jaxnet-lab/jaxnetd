@@ -27,24 +27,24 @@ import (
 const defaultMaxOrphanTxSize = 100000
 
 type ChainRuntimeConfig struct {
-	SigCacheMaxSize    uint     `yaml:"sig_cache_max_size" toml:"sig_cache_max_size" long:"sigcachemaxsize" description:"The maximum number of entries in the signature verification cache"`
-	AddCheckpoints     []string `yaml:"add_checkpoints" toml:"add_checkpoints" long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
-	AddrIndex          bool     `yaml:"addr_index" toml:"addr_index" long:"addrindex" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
-	MaxPeers           int      `yaml:"max_peers" toml:"max_peers" long:"maxpeers" description:"Max number of inbound and outbound peers"`
-	BlockMaxSize       uint32   `yaml:"block_max_size" toml:"block_max_size" long:"blockmaxsize" description:"Maximum block size in bytes to be used when creating a block"`
-	BlockMinSize       uint32   `yaml:"block_min_size" toml:"block_min_size" long:"blockminsize" description:"Mininum block size in bytes to be used when creating a block"`
-	BlockMaxWeight     uint32   `yaml:"block_max_weight" toml:"block_max_weight" long:"blockmaxweight" description:"Maximum block weight to be used when creating a block"`
-	BlockMinWeight     uint32   `yaml:"block_min_weight" toml:"block_min_weight" long:"blockminweight" description:"Mininum block weight to be used when creating a block"`
-	BlockPrioritySize  uint32   `yaml:"block_priority_size" toml:"block_priority_size" long:"blockprioritysize" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
+	SigCacheMaxSize    uint     `yaml:"sig_cache_max_size" toml:"sig_cache_max_size" description:"The maximum number of entries in the signature verification cache"`
+	AddCheckpoints     []string `yaml:"add_checkpoints" toml:"add_checkpoints" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
+	AddrIndex          bool     `yaml:"addr_index" toml:"addr_index" description:"Maintain a full address-based transaction index which makes the searchrawtransactions RPC available"`
+	MaxPeers           int      `yaml:"max_peers" toml:"max_peers" description:"Max number of inbound and outbound peers"`
+	BlockMaxSize       uint32   `yaml:"block_max_size" toml:"block_max_size" description:"Maximum block size in bytes to be used when creating a block"`
+	BlockMinSize       uint32   `yaml:"block_min_size" toml:"block_min_size" description:"Mininum block size in bytes to be used when creating a block"`
+	BlockMaxWeight     uint32   `yaml:"block_max_weight" toml:"block_max_weight" description:"Maximum block weight to be used when creating a block"`
+	BlockMinWeight     uint32   `yaml:"block_min_weight" toml:"block_min_weight" description:"Mininum block weight to be used when creating a block"`
+	BlockPrioritySize  uint32   `yaml:"block_priority_size" toml:"block_priority_size" description:"Size in bytes for high-priority/low-fee transactions when creating a block"`
 	TxIndex            bool     `yaml:"tx_index" toml:"tx_index" long:"txindex" description:"Maintain a full hash-based transaction index which makes all transactions available via the getrawtransaction RPC"`
-	NoRelayPriority    bool     `yaml:"no_relay_priority" toml:"no_relay_priority" long:"norelaypriority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
-	RejectReplacement  bool     `yaml:"reject_replacement" toml:"reject_replacement" long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
-	RelayNonStd        bool     `yaml:"relay_non_std" toml:"relay_non_std" long:"relaynonstd" description:"Relay non-standard transactions regardless of the default settings for the active network."`
-	FreeTxRelayLimit   float64  `yaml:"free_tx_relay_limit" toml:"free_tx_relay_limit" long:"limitfreerelay" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
-	MaxOrphanTxs       int      `yaml:"max_orphan_txs" toml:"max_orphan_txs" long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
-	MinRelayTxFee      int64    `yaml:"min_relay_tx_fee" toml:"min_relay_tx_fee" long:"minrelaytxfee" description:"The minimum transaction fee in satoshi/kB to be considered a non-zero fee."`
-	NoCFilters         bool     `yaml:"no_c_filters" toml:"no_c_filters" long:"nocfilters" description:"Disable committed filtering (CF) support"`
-	DisableCheckpoints bool     `yaml:"disable_checkpoints" toml:"disable_checkpoints" long:"nocheckpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
+	NoRelayPriority    bool     `yaml:"no_relay_priority" toml:"no_relay_priority" description:"Do not require free or low-fee transactions to have high priority for relaying"`
+	RejectReplacement  bool     `yaml:"reject_replacement" toml:"reject_replacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Fee (RBF) signaling policy."`
+	RelayNonStd        bool     `yaml:"relay_non_std" toml:"relay_non_std" description:"Relay non-standard transactions regardless of the default settings for the active network."`
+	FreeTxRelayLimit   float64  `yaml:"free_tx_relay_limit" toml:"free_tx_relay_limit" description:"Limit relay of transactions with no transaction fee to the given amount in thousands of bytes per minute"`
+	MaxOrphanTxs       int      `yaml:"max_orphan_txs" toml:"max_orphan_txs" description:"Max number of orphan transactions to keep in memory"`
+	MinRelayTxFee      int64    `yaml:"min_relay_tx_fee" toml:"min_relay_tx_fee" description:"The minimum transaction fee in satoshi/kB to be considered a non-zero fee."`
+	NoCFilters         bool     `yaml:"no_c_filters" toml:"no_c_filters" description:"Disable committed filtering (CF) support"`
+	DisableCheckpoints bool     `yaml:"disable_checkpoints" toml:"disable_checkpoints" description:"Disable built-in checkpoints.  Don't do this unless you know what you're doing."`
 	MiningAddresses    []string `yaml:"mining_addresses" toml:"mining_addresses"`
 	AutoExpand         bool     `yaml:"auto_expand" toml:"auto_expand"`
 	ExpansionRule      int32    `yaml:"expansion_rule" toml:"expansion_rule"`
