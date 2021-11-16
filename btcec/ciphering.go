@@ -11,10 +11,11 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
 	"io"
+
+	"github.com/minio/sha256-simd"
 )
 
 var (

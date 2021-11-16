@@ -8,9 +8,10 @@ package txscript
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"math/big"
+
+	"github.com/minio/sha256-simd"
 
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 

@@ -27,6 +27,9 @@ import (
 	"github.com/pelletier/go-toml"
 	"gitlab.com/jaxnet/jaxnetd/corelog"
 	"gitlab.com/jaxnet/jaxnetd/database"
+
+	// this is done fo fill the supported drivers
+	_ "gitlab.com/jaxnet/jaxnetd/database/ffldb"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/connmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"

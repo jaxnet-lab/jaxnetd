@@ -8,7 +8,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
@@ -25,6 +24,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/minio/sha256-simd"
 
 	"github.com/btcsuite/websocket"
 	"github.com/rs/zerolog"
