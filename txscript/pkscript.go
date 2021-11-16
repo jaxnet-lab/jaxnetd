@@ -5,9 +5,10 @@
 package txscript
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
+
+	"github.com/minio/sha256-simd"
 
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"

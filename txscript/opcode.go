@@ -9,10 +9,11 @@ package txscript
 import (
 	"bytes"
 	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"hash"
+
+	"github.com/minio/sha256-simd"
 
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"

@@ -6,7 +6,9 @@
 package chainhash
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"math/rand"
 	"testing"
 )
 
@@ -134,4 +136,75 @@ func TestDoubleHashFuncs(t *testing.T) {
 			continue
 		}
 	}
+}
+
+var result [32]byte
+
+func BenchmarkHash(b *testing.B) {
+	algos := []struct {
+		name string
+		f    func(inputSize int, b *testing.B)
+	}{
+		{name: "crypto/sha256", f: benchmarkHashH},
+		{name: "github.com/minio/sha256-simd", f: benchmarkHashHOptimized},
+	}
+
+	sizes := []struct {
+		name      string
+		sizeBytes int
+	}{
+		{"32Bytes", 32},
+		{"64Bytes", 64},
+		{"1KByte", 1024},
+		{"32KByte", 1024 * 32},
+	}
+
+	for _, a := range algos {
+		for _, y := range sizes {
+			n := a.name + " " + y.name
+			b.Run(n, func(b *testing.B) {
+				a.f(y.sizeBytes, b)
+			})
+		}
+	}
+
+}
+
+func benchmarkHashHOptimized(inputSize int, b *testing.B) {
+	b.StopTimer()
+	inputs := generateRandomStrings(b.N, inputSize)
+	var r [32]byte
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		r = HashH([]byte(inputs[i]))
+	}
+
+	result = r
+}
+
+// this benchmark uses default sha256 implementation from standard lib
+func benchmarkHashH(inputSize int, b *testing.B) {
+	b.StopTimer()
+	inputs := generateRandomStrings(b.N, inputSize)
+	var r [32]byte
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		sha256.Sum256([]byte(inputs[i]))
+	}
+
+	result = r
+}
+
+func generateRandomStrings(n, size int) []string {
+	var letterRunes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	var res []string
+	for i := 0; i < n; i++ {
+		tmp := make([]byte, size)
+		for j := 0; j < size; j++ {
+			tmp[j] = letterRunes[rand.Intn(len(letterRunes))%size]
+		}
+		res = append(res, string(tmp))
+	}
+
+	return res
 }

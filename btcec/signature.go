@@ -10,11 +10,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/hmac"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"hash"
 	"math/big"
+
+	"github.com/minio/sha256-simd"
 )
 
 // Errors returned by canonicalPadding.

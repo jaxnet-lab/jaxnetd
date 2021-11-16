@@ -6,8 +6,9 @@
 package jaxutil
 
 import (
-	"crypto/sha256"
 	"hash"
+
+	"github.com/minio/sha256-simd"
 
 	"golang.org/x/crypto/ripemd160"
 )
