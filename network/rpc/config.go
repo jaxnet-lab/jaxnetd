@@ -24,14 +24,14 @@ type Config struct {
 	MaxClients        int      `yaml:"maxclients" toml:"maxclients"`
 	User              string   `yaml:"user" toml:"user"`
 	Password          string   `yaml:"password" toml:"password"`
-	Disable           bool     `yaml:"disable" toml:"disable" long:"norpc" description:"Disable built-in RPC Server -- NOTE: The RPC Server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
-	RPCCert           string   `yaml:"rpc_cert" toml:"rpc_cert" long:"rpccert" description:"File containing the certificate file"`
-	RPCKey            string   `yaml:"rpc_key" toml:"rpc_key" long:"rpckey" description:"File containing the certificate key"`
+	Disable           bool     `yaml:"disable" toml:"disable" description:"Disable built-in RPC Server -- NOTE: The RPC Server is disabled by default if no rpcuser/rpcpass or rpclimituser/rpclimitpass is specified"`
+	RPCCert           string   `yaml:"rpc_cert" toml:"rpc_cert" description:"File containing the certificate file"`
+	RPCKey            string   `yaml:"rpc_key" toml:"rpc_key" description:"File containing the certificate key"`
 	LimitPass         string   `yaml:"limit_pass" toml:"limit_pass"`
 	LimitUser         string   `yaml:"limit_user" toml:"limit_user"`
-	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" toml:"rpc_max_concurrent_reqs" long:"rpcmaxconcurrentreqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
-	MaxWebsockets     int      `yaml:"rpc_max_websockets" toml:"rpc_max_websockets" long:"rpcmaxwebsockets" description:"Max number of RPC websocket connections"`
-	DisableTLS        bool     `yaml:"disable_tls" toml:"disable_tls" long:"notls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
+	MaxConcurrentReqs int      `yaml:"rpc_max_concurrent_reqs" toml:"rpc_max_concurrent_reqs" description:"Max number of concurrent RPC requests that may be processed concurrently"`
+	MaxWebsockets     int      `yaml:"rpc_max_websockets" toml:"rpc_max_websockets" description:"Max number of RPC websocket connections"`
+	DisableTLS        bool     `yaml:"disable_tls" toml:"disable_tls" description:"Disable TLS for the RPC Server -- NOTE: This is only allowed if the RPC Server is bound to localhost"`
 	WSEnable          bool     `yaml:"ws_enable" toml:"ws_enable"`
 
 	// custom handler for auth, instead of standard login and password. First return value indicates if user is authorized or not.
