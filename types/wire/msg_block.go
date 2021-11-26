@@ -122,7 +122,7 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) (e
 
 	txCount, err := ReadVarInt(r, pver)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// Prevent more transactions than could possibly fit into a block.
