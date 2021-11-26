@@ -176,7 +176,6 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 		log.Info().Str("chain", b.chain.Name()).
 			Msgf("Adding orphan block %v with mmr root %v", blockHash, block.PrevMMRRoot())
 		b.blocksDB.addOrphanBlock(block, blockActualMMR)
-
 		return false, true, nil
 	}
 

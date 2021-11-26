@@ -65,8 +65,7 @@ func (b *BlockChain) checkBlockHeaderContext(header wire.BlockHeader, prevNode b
 		// median time of the last several blocks (medianTimeBlocks).
 		medianTime := prevNode.CalcPastMedianTime() //
 
-		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != wire.FastTestNet &&
-			b.chain.Params().Net != wire.SimNet {
+		if !header.Timestamp().After(medianTime) && b.chain.Params().Net != wire.FastTestNet {
 			str := "block timestamp of %v is not after expected %v"
 			str = fmt.Sprintf(str, header.Timestamp(), medianTime)
 			return chaindata.NewRuleError(chaindata.ErrTimeTooOld, str)
