@@ -69,7 +69,7 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 	for i := len(lifoToAdd) - 1; i >= 0; i-- {
 		bNode := lifoToAdd[i]
 		mmrTree.AddBlock(bNode.Hash, bNode.Weight)
-		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
+		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = bNode.Hash
 		node.SetActualMMRRoot(mmrTree.CurrentRoot())
 	}
 

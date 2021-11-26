@@ -572,7 +572,6 @@ func CheckBlockSanityWF(block *jaxutil.Block, chainParams *chaincfg.Params, time
 		// overflow.
 		lastSigOps := totalSigOps
 		totalSigOps += CountSigOps(tx) * WitnessScaleFactor
-
 		if totalSigOps < lastSigOps || totalSigOps > MaxBlockSigOpsCost {
 			str := fmt.Sprintf("block contains too many signature operations - got %v, max %v",
 				totalSigOps, MaxBlockSigOpsCost)
