@@ -358,7 +358,6 @@ func solveBlock(block wire.MsgBlock, powParams *chaincfg.PowParams) bool {
 	quit := make(chan bool)
 	results := make(chan sbResult)
 	solver := func(hdr wire.BlockHeader, startNonce, stopNonce uint32) {
-
 		for extraNonce := uint64(0); extraNonce < ^uint64(0); extraNonce++ {
 			if block.Transactions != nil {
 				updateBeaconExtraNonce(block, int64(block.Header.BeaconHeader().Height()), extraNonce)

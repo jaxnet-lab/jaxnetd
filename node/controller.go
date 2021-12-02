@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
@@ -45,8 +44,7 @@ type chainController struct {
 
 	// -------------------------------
 
-	miner   *cpuminer.CPUMiner
-	metrics IMetricManager
+	miner *cpuminer.CPUMiner
 }
 
 // nolint: golint, revive
@@ -74,14 +72,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Beacon error")
 		return err
-	}
-
-	if cfg.Metrics.Enable {
-		go func() {
-			if err := chainCtl.runMetricsServer(chainCtl.ctx, cfg); err != nil {
-				chainCtl.logger.Error().Err(err).Msg("listen metrics server")
-			}
-		}()
 	}
 
 	if err := chainCtl.runRPC(chainCtl.ctx, cfg); err != nil {
@@ -196,26 +186,6 @@ func (chainCtl *chainController) runRPC(ctx context.Context, cfg *Config) error 
 	chainCtl.rpc.beacon = beaconRPC
 	chainCtl.rpc.connMgr = connMgr
 	return nil
-}
-
-func (chainCtl *chainController) runMetricsServer(ctx context.Context, cfg *Config) error {
-	chainCtl.logger.Info().Msg("Metrics Enabled")
-	interval := cfg.Metrics.Interval
-	if interval == 0 {
-		interval = 5
-	}
-	port := cfg.Metrics.Port
-	if port == 0 {
-		port = 2112
-	}
-
-	chainCtl.metrics = MetricsManager(ctx, time.Duration(interval)*time.Second)
-	chainCtl.metrics.Add(
-		MetricsOfChain(&chainCtl.beacon, chainCtl.logger),
-		MetricsOfNode(chainCtl.cfg, chainCtl, chainCtl.logger),
-	)
-
-	return chainCtl.metrics.Listen("/metrics", port)
 }
 
 func (chainCtl *chainController) Stats() map[string]float64 {

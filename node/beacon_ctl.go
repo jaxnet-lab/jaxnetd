@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -189,5 +190,10 @@ func (beaconCtl *BeaconCtl) Stats() map[string]float64 {
 	chainStats["p2p_peer_state_outgroups"] = float64(stats.OutboundGroups)
 	chainStats["p2p_peer_state_total"] = float64(stats.Total)
 
+	tip := beaconCtl.chainProvider.BlockChain().BestSnapshot()
+	target := tip.Bits
+	workToPass := pow.BigToCompact(pow.CalcWork(target))
+
+	chainStats["difficulty"] = float64(workToPass)
 	return chainStats
 }

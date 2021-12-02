@@ -19,6 +19,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
+	"gitlab.com/jaxnet/jaxnetd/version"
 )
 
 func (chainCtl *chainController) EnableShard(shardID uint32) error {
@@ -63,7 +64,7 @@ func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 
 func (chainCtl *chainController) GetNodeMetrics() jaxjson.GetNodeMetricsResult {
 	statsMap := chainCtl.Stats()
-	return jaxjson.GetNodeMetricsResult{Stats: statsMap}
+	return jaxjson.GetNodeMetricsResult{Stats: statsMap, Version: version.GetVersion()}
 }
 
 func (chainCtl *chainController) GetChainMetrics() jaxjson.GetChainMetricsResult {
@@ -186,10 +187,6 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	if autoInit {
 		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), shardCtl.p2pServer.P2PConnManager(), chainCtl.logger)
 		chainCtl.rpc.server.AddShard(shardID, shardRPC)
-	}
-
-	if chainCtl.cfg.Metrics.Enable {
-		chainCtl.metrics.Add(MetricsOfChain(shardCtl, chainCtl.logger))
 	}
 }
 
