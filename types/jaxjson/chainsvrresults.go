@@ -1012,7 +1012,8 @@ type EstimateSwapLockTimeResult struct {
 }
 
 type GetNodeMetricsResult struct {
-	Stats map[string]float64 `json:"stats"`
+	Stats   map[string]float64 `json:"stats"`
+	Version string             `json:"version"`
 }
 
 type GetChainMetricsResult struct {

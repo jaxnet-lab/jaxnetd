@@ -21,7 +21,6 @@ type Config struct {
 
 	Node      InstanceConfig     `toml:"node" yaml:"node"`
 	LogConfig corelog.Config     `toml:"log_config" yaml:"log_config" `
-	Metrics   MetricsConfig      `toml:"metrics" yaml:"metrics"`
 	BTCD      btcd.Configuration `toml:"btcd" yaml:"btcd"`
 
 	DataDir       string   `toml:"data_dir" yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
@@ -39,12 +38,6 @@ type Config struct {
 
 	// NoPeerBloomFilters bool     `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	// UserAgentComments  []string `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
-}
-
-type MetricsConfig struct {
-	Enable   bool   `yaml:"enable" toml:"enable"`
-	Interval int    `yaml:"interval" toml:"interval"`
-	Port     uint16 `yaml:"port" toml:"port"`
 }
 
 type InstanceConfig struct {
