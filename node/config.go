@@ -40,14 +40,16 @@ type Config struct {
 }
 
 type InstanceConfig struct {
-	BeaconChain    cprovider.ChainRuntimeConfig `yaml:"beacon_chain" toml:"beacon_chain"`
-	RPC            rpc.Config                   `yaml:"rpc" toml:"rpc"`
-	P2P            p2p.Config                   `yaml:"p2p" toml:"p2p"`
-	Shards         ShardConfig                  `yaml:"shards" toml:"shards"`
-	DBType         string                       `yaml:"db_type" toml:"db_type" description:"Database backend to use for the Block Chain"`
-	Net            string                       `yaml:"net" toml:"net"`
-	EnableCPUMiner bool                         `yaml:"enable_cpu_miner" toml:"enable_cpu_miner"`
-	DumpMMR        bool                         `yaml:"dump_mmr" toml:"dump_mmr"`
+	BeaconChain         cprovider.ChainRuntimeConfig `yaml:"beacon_chain" toml:"beacon_chain"`
+	RPC                 rpc.Config                   `yaml:"rpc" toml:"rpc"`
+	P2P                 p2p.Config                   `yaml:"p2p" toml:"p2p"`
+	Shards              ShardConfig                  `yaml:"shards" toml:"shards"`
+	DBType              string                       `yaml:"db_type" toml:"db_type" description:"Database backend to use for the Block Chain"`
+	Net                 string                       `yaml:"net" toml:"net"`
+	EnableCPUMiner      bool                         `yaml:"enable_cpu_miner" toml:"enable_cpu_miner"`
+	DumpMMR             bool                         `yaml:"dump_mmr" toml:"dump_mmr"`
+	AutominingEnabled   bool                         `yaml:"automining_enabled" toml:"automining_enabled"`
+	AutominingThreshold int32                        `yaml:"automining_threshold" toml:"automining_threshold"`
 }
 
 type ShardConfig struct {

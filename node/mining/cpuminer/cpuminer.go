@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -83,6 +84,9 @@ type Config struct {
 	// not current since any solved blocks would be on a side chain and and
 	// up orphaned anyways.
 	IsCurrent func() bool
+
+	AutominingEnabled   bool
+	AutominingThreshold int32
 }
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
@@ -110,6 +114,9 @@ type CPUMiner struct {
 	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
 	log               zerolog.Logger
+
+	autominingEnabled   bool
+	autominingThreshold int32
 }
 
 const hashesInKilohash = 1_000
@@ -403,6 +410,8 @@ func packUint64LE(n uint64) []byte {
 	return b
 }
 
+const mineAfterAutominingCheck = 10
+
 // generateBlocks is a worker that is controlled by the miningWorkerController.
 // It is self contained in that it creates block templates and attempts to solve
 // them while detecting when it is performing stale work and reacting
@@ -421,6 +430,8 @@ func (miner *CPUMiner) generateBlocks(quit chan struct{}) {
 	job.beacon = chainTask{}
 	job.shards = make(map[uint32]chainTask, len(miner.shards))
 	time.Sleep(5 * time.Second)
+
+	var toMineWithoutCheck int
 out:
 	for {
 		// Quit when the miner is stopped.
@@ -451,6 +462,19 @@ out:
 			miner.submitBlockLock.Unlock()
 			time.Sleep(time.Second)
 			continue
+		}
+
+		if toMineWithoutCheck > 0 {
+			toMineWithoutCheck--
+		}
+
+		if miner.autominingEnabled && haveEnoughBlocks(job, miner.autominingThreshold) && toMineWithoutCheck == 0 {
+			if !haveEnoughTxs(job) {
+				miner.submitBlockLock.Unlock()
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			toMineWithoutCheck = mineAfterAutominingCheck
 		}
 
 		curHeight := miner.beacon.BlockTemplateGenerator.BestSnapshot().Height
@@ -691,8 +715,9 @@ out:
 	miner.wg.Done()
 }
 
-func (miner *CPUMiner) Run(ctx context.Context) {
+func (miner *CPUMiner) Run(ctx context.Context, wg *sync.WaitGroup) {
 	miner.Start()
+	wg.Done()
 	<-ctx.Done()
 	miner.Stop()
 }
@@ -815,11 +840,10 @@ func (miner *CPUMiner) NumWorkers() int32 {
 // detecting when it is performing stale work and reacting accordingly by
 // generating a new block template.  When a block is solved, it is submitted.
 // The function returns a list of the hashes of generated blocks.
-// nolint: staticcheck
-func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
+// nolint: staticcheck, gomnd
+func (miner *CPUMiner) GenerateNBlocks(quit chan struct{}, n uint32) ([]*chainhash.Hash, error) {
 	miner.Lock()
 
-	// Respond with an error if server is already mining.
 	if miner.started || miner.discreteMining {
 		miner.Unlock()
 		return nil, errors.New(
@@ -837,64 +861,88 @@ func (miner *CPUMiner) GenerateNBlocks(n uint32) ([]*chainhash.Hash, error) {
 
 	miner.log.Debug().Msgf("Generating %d blocks", n)
 
-	// i := uint32(0)
-	// blockHashes := make([]*chainhash.Hash, n)
+	i := uint32(0)
+	blockHashes := make([]*chainhash.Hash, n)
 
 	// Start a ticker which is used to signal checks for stale work and
 	// updates to the speed monitor.
 	ticker := time.NewTicker(time.Second * hashUpdateSecs)
 	defer ticker.Stop()
 
-	for {
-		// Read updateNumWorkers in case someone tries a `setgenerate` while
-		// we're generating. We can ignore it as the `generate` RPC call only
-		// uses 1 worker.
+	job := new(miningJob)
+	job.beacon = chainTask{}
+	job.shards = make(map[uint32]chainTask, len(miner.shards))
+	time.Sleep(5 * time.Second)
+out:
+	for i < n {
+		// Quit when the miner is stopped.
 		select {
-		case <-miner.updateNumWorkers:
+		case <-quit:
+			break out
 		default:
+			// Non-blocking select to fall through
 		}
 
-		// Grab the lock used for block submission, since the current block will
-		// be changing and this would otherwise end up building a new block
-		// template on a block that is in the process of becoming stale.
-		// miner.submitBlockLock.Lock()
-		// curHeight := miner.cfg.BlockTemplateGenerator.BestSnapshot().Height
-		//
-		// Choose a payment address at random.
-		// rand.Seed(time.Now().UnixNano())
-		// payToAddr := miner.cfg.MiningAddrs[rand.Intn(len(miner.cfg.MiningAddrs))]
-		//
-		// Create a new block template using the available transactions
-		// in the memory pool as a source of transactions to potentially
-		// include in the block.
-		// template, err := miner.cfg.BlockTemplateGenerator.NewBlockTemplate(payToAddr, 7)
-		// miner.submitBlockLock.Unlock()
-		// if err != nil {
-		// 	miner.log.Error().Err(err).Msg("Failed to create new block template")
+		// Wait until there is a connection to at least one other peer
+		// since there is no way to relay a found block or receive
+		// transactions to work on when there are no connected peers.
+		// if miner.beacon.ConnectedCount() == 0 {
+		// 	time.Sleep(time.Second)
 		// 	continue
 		// }
+
+		// No point in searching for a solution before the chain is
+		// synced.  Also, grab the same lock as used for block
+		// submission, since the current block will be changing and
+		// this would otherwise end up building a new block template on
+		// a block that is in the process of becoming stale.
+		miner.submitBlockLock.Lock()
+
+		needToSleep := miner.updateTasks(job)
+		if needToSleep {
+			miner.submitBlockLock.Unlock()
+			time.Sleep(time.Second)
+			continue
+		}
+
+		curHeight := miner.beacon.BlockTemplateGenerator.BestSnapshot().Height
+		if curHeight != 0 && !miner.beacon.IsCurrent() {
+			miner.submitBlockLock.Unlock()
+			time.Sleep(time.Second)
+			continue
+		}
+		miner.submitBlockLock.Unlock()
 
 		// Attempt to solve the block.  The function will exit early
 		// with false when conditions that trigger a stale block, so
 		// a new block template can be generated.  When the return is
 		// true a solution was found, so submit the solved block.
-		// if miner.solveBlock(template.Block, curHeight+1, ticker, nil, 1000) {
-		// 	block := jaxutil.NewBlock(template.Block)
-		// 	miner.submitBlock(block)
-		// 	blockHashes[i] = block.Hash()
-		// 	i++
-		// 	if i == n {
-		// 		miner.log.Debug().Msgf(fmt.Sprintf("Generated %d blocks", i))
-		// 		miner.Lock()
-		// 		close(miner.speedMonitorQuit)
-		// 		miner.wg.Wait()
-		// 		miner.started = false
-		// 		miner.discreteMining = false
-		// 		miner.Unlock()
-		// 		return blockHashes, nil
-		// 	}
-		// }
+		if miner.solveBlock(job, ticker, quit) {
+			miner.submitTask(job)
+
+			if !job.beacon.notSolved {
+				hash := job.beacon.block.BlockHash()
+				blockHashes[i] = &hash
+			}
+
+			for _, shardJob := range job.shards {
+				hash := shardJob.block.BlockHash()
+				if !shardJob.notSolved {
+					blockHashes[i] = &hash
+				}
+			}
+			i++
+		}
 	}
+	miner.log.Debug().Msgf(fmt.Sprintf("Generated %d blocks", i))
+	miner.Lock()
+	close(miner.speedMonitorQuit)
+	miner.wg.Wait()
+	miner.started = false
+	miner.discreteMining = false
+	miner.Unlock()
+
+	return blockHashes, nil
 }
 
 func (miner *CPUMiner) AddChain(shardID uint32, cfg Config) {
@@ -908,13 +956,43 @@ func (miner *CPUMiner) AddChain(shardID uint32, cfg Config) {
 // type for more details.
 func New(beacon Config, shards map[uint32]Config, address jaxutil.Address, log zerolog.Logger) *CPUMiner {
 	return &CPUMiner{
-		log:               log,
-		beacon:            beacon,
-		shards:            shards,
-		miningAddrs:       address,
-		numWorkers:        defaultNumWorkers,
-		updateNumWorkers:  make(chan struct{}),
-		queryHashesPerSec: make(chan float64),
-		updateHashes:      make(chan uint64),
+		log:                 log,
+		beacon:              beacon,
+		shards:              shards,
+		miningAddrs:         address,
+		numWorkers:          defaultNumWorkers,
+		updateNumWorkers:    make(chan struct{}),
+		queryHashesPerSec:   make(chan float64),
+		updateHashes:        make(chan uint64),
+		autominingEnabled:   beacon.AutominingEnabled,
+		autominingThreshold: beacon.AutominingThreshold,
 	}
+}
+
+func haveEnoughBlocks(job *miningJob, threshold int32) bool {
+	if job.beacon.blockHeight > threshold {
+		return true
+	}
+
+	for _, shardJob := range job.shards {
+		if shardJob.blockHeight > threshold {
+			return true
+		}
+	}
+
+	return false
+}
+
+func haveEnoughTxs(job *miningJob) bool {
+	if len(job.beacon.block.Transactions) > 1 {
+		return true
+	}
+
+	for _, shardJob := range job.shards {
+		if len(shardJob.block.Transactions) > 1 {
+			return true
+		}
+	}
+
+	return false
 }

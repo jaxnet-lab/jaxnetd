@@ -32,15 +32,18 @@ type NodeRPC struct {
 	helpCache   *helpCacher
 	StartupTime int64
 	MiningAddrs []jaxutil.Address
-	CPUMiner    cpuminer.CPUMiner
+	CPUMiner    *cpuminer.CPUMiner
 }
 
-func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger, metricsMgr MetricsManager) *NodeRPC {
+func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger, metricsMgr MetricsManager,
+	cpuMiner *cpuminer.CPUMiner) *NodeRPC {
 	rpc := &NodeRPC{
 		Mux:         NewRPCMux(logger),
 		shardsMgr:   shardsMgr,
 		metricsMgr:  metricsMgr,
 		beaconChain: beaconChain,
+		MiningAddrs: beaconChain.MiningAddrs,
+		CPUMiner:    cpuMiner,
 	}
 	rpc.ComposeHandlers()
 
@@ -132,15 +135,15 @@ func (server *NodeRPC) handleGenerate(ctx CmdCtx) (interface{}, error) {
 
 	// Respond with an error if there's virtually 0 chance of mining a block
 	// with the CPU.
-	// if !s.cfg.ChainParams.GenerateSupported {
-	// 	return nil, &jaxjson.RPCError{
-	// 		Code: jaxjson.ErrRPCDifficulty,
-	// 		Message: fmt.Sprintf("No support for `generate` on "+
-	// 			"the current network, %s, as it's unlikely to "+
-	// 			"be possible to mine a block with the CPU.",
-	// 			s.cfg.ChainParams.Net),
-	// 	}
-	// }
+	if !server.beaconChain.ChainParams.PowParams.GenerateSupported {
+		return nil, &jaxjson.RPCError{
+			Code: jaxjson.ErrRPCDifficulty,
+			Message: fmt.Sprintf("No support for `generate` on "+
+				"the current network, %s, as it's unlikely to "+
+				"be possible to mine a block with the CPU.",
+				server.beaconChain.ChainParams.Net),
+		}
+	}
 
 	c := ctx.Cmd.(*jaxjson.GenerateCmd)
 
@@ -154,8 +157,8 @@ func (server *NodeRPC) handleGenerate(ctx CmdCtx) (interface{}, error) {
 
 	// Create a reply
 	reply := make([]string, c.NumBlocks)
-
-	blockHashes, err := server.CPUMiner.GenerateNBlocks(c.NumBlocks)
+	quit := make(chan struct{})
+	blockHashes, err := server.CPUMiner.GenerateNBlocks(quit, c.NumBlocks)
 	if err != nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCInternal.Code,
@@ -270,37 +273,37 @@ func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 
 // handleSetGenerate implements the setgenerate command.
 func (server *NodeRPC) handleSetGenerate(ctx CmdCtx) (interface{}, error) {
-	//	c := ctx.Cmd.(*jaxjson.SetGenerateCmd)
-	//
-	//	// Disable generation regardless of the provided generate flag if the
-	//	// maximum number of threads (goroutines for our purposes) is 0.
-	//	// Otherwise enable or disable it depending on the provided flag.
-	//	generate := c.Generate
-	//	genProcLimit := -1
-	//	if c.GenProcLimit != nil {
-	//		genProcLimit = *c.GenProcLimit
-	//	}
-	//	if genProcLimit == 0 {
-	//		generate = false
-	//	}
-	//
-	//	if !generate {
-	//		s.beaconChain.CPUMiner.Stop()
-	//	} else {
-	//		// Respond with an error if there are no addresses to pay the
-	//		// created blocks to.
-	//		if len(s.cfg.MiningAddrs) == 0 {
-	//			return nil, &jaxjson.RPCError{
-	//				Code: jaxjson.ErrRPCInternal.Code,
-	//				Message: "No payment addresses specified " +
-	//					"via --miningaddr",
-	//			}
-	//		}
-	//
-	//		// It's safe to call start even if it's already started.
-	//		s.beaconChain.CPUMiner.SetNumWorkers(int32(genProcLimit))
-	//		s.beaconChain.CPUMiner.Start()
-	//	}
+	c := ctx.Cmd.(*jaxjson.SetGenerateCmd)
+
+	// Disable generation regardless of the provided generate flag if the
+	// maximum number of threads (goroutines for our purposes) is 0.
+	// Otherwise enable or disable it depending on the provided flag.
+	generate := c.Generate
+	genProcLimit := -1
+	if c.GenProcLimit != nil {
+		genProcLimit = *c.GenProcLimit
+	}
+	if genProcLimit == 0 {
+		generate = false
+	}
+
+	if !generate {
+		server.CPUMiner.Stop()
+	} else {
+		// Respond with an error if there are no addresses to pay the
+		// created blocks to.
+		if len(server.beaconChain.MiningAddrs) == 0 {
+			return nil, &jaxjson.RPCError{
+				Code: jaxjson.ErrRPCInternal.Code,
+				Message: "No payment addresses specified " +
+					"via --miningaddr",
+			}
+		}
+
+		// It's safe to call start even if it's already started.
+		server.CPUMiner.SetNumWorkers(int32(genProcLimit))
+		server.CPUMiner.Start()
+	}
 	return nil, nil
 }
 

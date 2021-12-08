@@ -74,6 +74,22 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
+	if chainCtl.cfg.Node.EnableCPUMiner {
+		if len(chainCtl.beacon.chainProvider.MiningAddrs) == 0 {
+			err := errors.New("you need so specify mining addresses in config in order to run CPU miner")
+			return err
+		}
+		chainCtl.InitCPUMiner(func() int32 { return 1 })
+		chainCtl.wg.Add(1)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer chainCtl.wg.Done()
+			chainCtl.miner.Run(chainCtl.ctx, wg)
+		}(&wg)
+		wg.Wait()
+	}
+
 	if err := chainCtl.runRPC(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
 		return err
@@ -91,19 +107,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		chainCtl.beacon.chainProvider.BlockChain().Subscribe(chainCtl.shardsAutorunCallback)
 	}
 
-	if chainCtl.cfg.Node.EnableCPUMiner {
-		if len(chainCtl.beacon.chainProvider.MiningAddrs) == 0 {
-			err := errors.New("you need so specify mining addresses in config in order to run CPU miner")
-			return err
-		}
-		chainCtl.InitCPUMiner(func() int32 { return 1 })
-		chainCtl.wg.Add(1)
-		go func() {
-			defer chainCtl.wg.Done()
-			chainCtl.miner.Run(chainCtl.ctx)
-		}()
-	}
-
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
@@ -115,9 +118,11 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
 		BlockTemplateGenerator: chainCtl.beacon.chainProvider.BlkTmplGenerator(),
 
-		ProcessBlock:   chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
-		IsCurrent:      chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
-		ConnectedCount: connectedCount,
+		ProcessBlock:        chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
+		IsCurrent:           chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
+		ConnectedCount:      connectedCount,
+		AutominingEnabled:   chainCtl.cfg.Node.AutominingEnabled,
+		AutominingThreshold: chainCtl.cfg.Node.AutominingThreshold,
 	}
 
 	shards := map[uint32]cpuminer.Config{}
@@ -129,6 +134,8 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 			ProcessBlock:           ro.ctl.chainProvider.SyncManager.ProcessBlock,
 			IsCurrent:              ro.ctl.chainProvider.SyncManager.IsCurrent,
 			ConnectedCount:         connectedCount,
+			AutominingEnabled:      chainCtl.cfg.Node.AutominingEnabled,
+			AutominingThreshold:    chainCtl.cfg.Node.AutominingThreshold,
 		}
 	}
 
@@ -167,8 +174,7 @@ func (chainCtl *chainController) runRPC(ctx context.Context, cfg *Config) error 
 	connMgr := chainCtl.beacon.p2pServer.P2PConnManager()
 
 	chainCtl.logger.Info().Msg("Create WS RPC server")
-
-	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger, chainCtl)
+	nodeRPC := rpc.NewNodeRPC(chainCtl.beacon.ChainProvider(), chainCtl, chainCtl.logger, chainCtl, chainCtl.miner)
 	beaconRPC := rpc.NewBeaconRPC(chainCtl.beacon.ChainProvider(), connMgr, chainCtl.logger)
 
 	shardRPCs := map[uint32]*rpc.ShardRPC{}
