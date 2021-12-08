@@ -51,7 +51,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 
-		authenticated, isAdmin, err := server.checkAuth(r, false)
+		_, authenticated, isAdmin, err := server.checkAuth(r, false)
 		if err != nil {
 			jsonAuthFail(w)
 			return
@@ -131,7 +131,11 @@ func (server *Mux) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (
 	handler, ok := server.handlers[method]
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
-		return handler(cmd.Cmd, closeChan)
+		return handler(CmdCtx{
+			Cmd:       cmd.Cmd,
+			CloseChan: closeChan,
+			AuthCtx:   cmd.AuthCtx,
+		})
 	}
 
 	return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())

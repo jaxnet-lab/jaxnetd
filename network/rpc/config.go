@@ -37,7 +37,7 @@ type Config struct {
 	// custom handler for auth, instead of standard login and password. First return value indicates if user is authorized or not.
 	// Second return value indicated is it is a limited user
 	// All standard password checks are ignored if this function is provided when creating RPC server
-	AuthProvider func(http.Header) (bool, bool)
+	AuthProvider func(r *http.Request) (interface{}, bool, bool)
 
 	ResponseHook func(request *jaxjson.Request, headers http.Header, response interface{}, marshalledResponse []byte)
 	// Listeners defines a slice of listeners for which the RPC Server will

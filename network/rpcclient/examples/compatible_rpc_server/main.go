@@ -60,7 +60,11 @@ func main() {
 
 			handlerFunc, ok := cmdHandler.Handlers()[method]
 			if ok {
-				return handlerFunc(cmd.Cmd, closeChan)
+				return handlerFunc(rpc.CmdCtx{
+					Cmd:       cmd.Cmd,
+					CloseChan: closeChan,
+					AuthCtx:   cmd.AuthCtx,
+				})
 			}
 
 			return nil, jaxjson.ErrRPCMethodNotFound.WithMethod(method.String())
@@ -79,8 +83,8 @@ func (srv *CmdHandler) Handlers() map[jaxjson.MethodName]rpc.CommandHandler {
 	}
 }
 
-func (srv *CmdHandler) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*btcdjson.GetBlockTemplateCmd)
+func (srv *CmdHandler) handleGetBlockTemplate(ctx rpc.CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*btcdjson.GetBlockTemplateCmd)
 	request := c.Request
 
 	// TODO: ...
@@ -89,10 +93,10 @@ func (srv *CmdHandler) handleGetBlockTemplate(cmd interface{}, closeChan <-chan 
 	return nil, nil
 }
 
-func authProvider(reqHeader http.Header) (isAuthorized bool, isLimited bool) {
-	if reqHeader.Get("isAuth") == "true" {
-		return true, true
+func authProvider(req *http.Request) (authCtx interface{}, isAuthorized bool, isLimited bool) {
+	if req.Header.Get("isAuth") == "true" {
+		return authCtx, true, true
 	}
 
-	return false, false
+	return authCtx, false, false
 }

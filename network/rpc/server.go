@@ -161,7 +161,7 @@ func (server *ServerCore) WSHandleFunc() func(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		authenticated, isAdmin, err := server.checkAuth(r, false)
+		_, authenticated, isAdmin, err := server.checkAuth(r, false)
 		if err != nil {
 			jsonAuthFail(w)
 			return
@@ -178,6 +178,7 @@ func (server *ServerCore) WSHandleFunc() func(w http.ResponseWriter, r *http.Req
 			return
 		}
 		_, _, _ = ws, authenticated, isAdmin
+		// TODO:
 		// server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
 	}
 }
@@ -218,19 +219,19 @@ func (server *ServerCore) HandleFunc(handler commandMux) func(w http.ResponseWri
 		// Keep track of the number of connected clientserver.
 		server.incrementClients()
 		defer server.decrementClients()
-		_, isAdmin, err := server.checkAuth(r, true)
+		authCtx, _, isAdmin, err := server.checkAuth(r, true)
 		if err != nil {
 			jsonAuthFail(w)
 			return
 		}
 
 		// Read and respond to the request.
-		server.ReadJSONRPC(w, r, isAdmin, handler)
+		server.ReadJSONRPC(w, r, isAdmin, authCtx, handler)
 	}
 }
 
 // ReadJSONRPC handles reading and responding to RPC messages.
-func (server *ServerCore) ReadJSONRPC(w http.ResponseWriter, r *http.Request, isAdmin bool, handler commandMux) {
+func (server *ServerCore) ReadJSONRPC(w http.ResponseWriter, r *http.Request, isAdmin bool, authCtx interface{}, handler commandMux) {
 	if atomic.LoadInt32(&server.shutdown) != 0 {
 		return
 	}
@@ -350,6 +351,7 @@ func (server *ServerCore) ReadJSONRPC(w http.ResponseWriter, r *http.Request, is
 			if parsedCmd.Err != nil {
 				jsonErr = parsedCmd.Err
 			} else {
+				parsedCmd.AuthCtx = authCtx
 				result, jsonErr = handler(parsedCmd, closeChan)
 			}
 		}
@@ -488,15 +490,15 @@ func (server *ServerCore) ActiveClients() int32 {
 // the second bool return value specifies whether the user can change the state
 // of the server (true) or whether the user is limited (false). The second is
 // always false if the first is.
-func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, error) {
+func (server *ServerCore) checkAuth(r *http.Request, require bool) (interface{}, bool, bool, error) {
 	if server.cfg.AuthProvider != nil {
-		isAuthorized, isLimited := server.cfg.AuthProvider(r.Header)
+		authCtx, isAuthorized, isLimited := server.cfg.AuthProvider(r)
 		if !isAuthorized {
 			server.logger.Warn().Msgf("RPC authentication failure from %s", r.RemoteAddr)
-			return false, isLimited, errors.New("auth failure")
+			return authCtx, false, isLimited, errors.New("auth failure")
 		}
 
-		return true, isLimited, nil
+		return authCtx, true, isLimited, nil
 	}
 
 	authhdr := r.Header["Authorization"]
@@ -504,10 +506,10 @@ func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, 
 		if require {
 			server.logger.Warn().Msgf("RPC authentication failure from %s",
 				r.RemoteAddr)
-			return false, false, errors.New("auth failure")
+			return nil, false, false, errors.New("auth failure")
 		}
 
-		return false, false, nil
+		return nil, false, false, nil
 	}
 
 	authsha := sha256.Sum256([]byte(authhdr[0]))
@@ -516,18 +518,18 @@ func (server *ServerCore) checkAuth(r *http.Request, require bool) (bool, bool, 
 	// are probably expected to have a higher volume of calls
 	limitcmp := subtle.ConstantTimeCompare(authsha[:], server.limitAuthSHA[:])
 	if limitcmp == 1 {
-		return true, false, nil
+		return nil, true, false, nil
 	}
 
 	// Check for admin-level auth
 	cmp := subtle.ConstantTimeCompare(authsha[:], server.authSHA[:])
 	if cmp == 1 {
-		return true, true, nil
+		return nil, true, true, nil
 	}
 
 	// Request'server auth doesn't match either user
 	server.logger.Warn().Msgf("RPC authentication failure from %s", r.RemoteAddr)
-	return false, false, errors.New("auth failure")
+	return nil, false, false, errors.New("auth failure")
 }
 
 // createMarshalledReply returns a new marshalled JSON-RPC response given the

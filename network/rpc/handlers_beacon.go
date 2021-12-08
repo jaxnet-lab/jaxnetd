@@ -65,8 +65,8 @@ func (server *BeaconRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
 //
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
-func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBeaconHeadersCmd)
+func (server *BeaconRPC) handleGetHeaders(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBeaconHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -108,8 +108,8 @@ func (server *BeaconRPC) handleGetHeaders(cmd interface{}, closeChan <-chan stru
 }
 
 // handleGetBlock implements the getblock command.
-func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBeaconBlockCmd)
+func (server *BeaconRPC) handleGetBlock(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBeaconBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -119,15 +119,15 @@ func (server *BeaconRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct
 }
 
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
-func (server *BeaconRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBeaconBlockBySerialNumberCmd)
+func (server *BeaconRPC) handleGetBlockBySerialNumber(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBeaconBlockBySerialNumberCmd)
 	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
 }
 
 // handleListBlocksBySerialNumber - returns transaction with specified serialNumber + number of txs which is equal to limit
 // so if you specify serialNumber = 10 and limit 2, then you will receive blocks with serialNumbers 10,11,12
-func (server *BeaconRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.ListBeaconBlocksBySerialNumberCmd)
+func (server *BeaconRPC) handleListBlocksBySerialNumber(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.ListBeaconBlocksBySerialNumberCmd)
 
 	// this variable is for showing in which direction we are heading
 	// if limit < 0 then we are going downwards. This is achieved by multiplying offset
@@ -282,8 +282,8 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 }
 
 // handleGetBlockHeader implements the getblockheader command.
-func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBeaconBlockHeaderCmd)
+func (server *BeaconRPC) handleGetBlockHeader(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBeaconBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -368,8 +368,8 @@ func (server *BeaconRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan 
 //
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBeaconBlockTemplateCmd)
+func (server *BeaconRPC) handleGetBlockTemplate(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBeaconBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -380,7 +380,7 @@ func (server *BeaconRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-cha
 
 	switch mode {
 	case templateMode:
-		return server.handleGetBlockTemplateRequest(request, closeChan)
+		return server.handleGetBlockTemplateRequest(request, ctx.CloseChan)
 	case "proposal":
 		return server.handleGetBlockTemplateProposal(request)
 	}

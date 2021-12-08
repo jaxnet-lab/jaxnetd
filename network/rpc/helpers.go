@@ -17,7 +17,7 @@ import (
 
 type (
 	commandMux     func(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (interface{}, error)
-	CommandHandler func(interface{}, <-chan struct{}) (interface{}, error)
+	CommandHandler func(CmdCtx) (interface{}, error)
 
 	// ParsedRPCCmd represents a JSON-RPC request object that has been parsed into
 	// a known concrete command along with any error that might have happened while
@@ -29,6 +29,13 @@ type (
 		ShardID uint32
 		Cmd     interface{}
 		Err     *jaxjson.RPCError
+		AuthCtx interface{}
+	}
+
+	CmdCtx struct {
+		Cmd       interface{}
+		CloseChan <-chan struct{}
+		AuthCtx   interface{}
 	}
 )
 

@@ -76,8 +76,8 @@ func (server *ShardRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
 //
 // NOTE: This is a btcsuite extension originally ported from
 // github.com/decred/dcrd.
-func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetShardHeadersCmd)
+func (server *ShardRPC) handleGetHeaders(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetShardHeadersCmd)
 
 	// Fetch the requested headers from BlockChain while respecting the provided
 	// block locators and stop hash.
@@ -116,8 +116,8 @@ func (server *ShardRPC) handleGetHeaders(cmd interface{}, closeChan <-chan struc
 }
 
 // handleGetBlock implements the getblock command.
-func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetShardBlockCmd)
+func (server *ShardRPC) handleGetBlock(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetShardBlockCmd)
 
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
@@ -127,14 +127,14 @@ func (server *ShardRPC) handleGetBlock(cmd interface{}, closeChan <-chan struct{
 }
 
 // handleGetBlockBySerialNumber implements the getBlockBySerialNumber command.
-func (server *ShardRPC) handleGetBlockBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetShardBlockBySerialNumberCmd)
+func (server *ShardRPC) handleGetBlockBySerialNumber(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetShardBlockBySerialNumberCmd)
 
 	return server.getBlockBySerialID(c.Verbosity, c.SerialNumber)
 }
 
-func (server *ShardRPC) handleListBlocksBySerialNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.ListShardBlocksBySerialNumberCmd)
+func (server *ShardRPC) handleListBlocksBySerialNumber(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.ListShardBlocksBySerialNumberCmd)
 
 	// this variable is for showing in which direction we are heading
 	// if limit < 0 then we are going downwards. This is achieved by multiplying offset
@@ -311,8 +311,8 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 }
 
 // handleGetBlockHeader implements the getblockheader command.
-func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetShardBlockHeaderCmd)
+func (server *ShardRPC) handleGetBlockHeader(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetShardBlockHeaderCmd)
 
 	// Fetch the header from BlockChain.
 	hash, err := chainhash.NewHashFromStr(c.Hash)
@@ -418,8 +418,8 @@ func (server *ShardRPC) handleGetBlockHeader(cmd interface{}, closeChan <-chan s
 //
 // See https://en.bitcoin.it/wiki/BIP_0022 and
 // https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetShardBlockTemplateCmd)
+func (server *ShardRPC) handleGetBlockTemplate(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetShardBlockTemplateCmd)
 	request := c.Request
 
 	// Set the default mode and override it if supplied.
@@ -430,7 +430,7 @@ func (server *ShardRPC) handleGetBlockTemplate(cmd interface{}, closeChan <-chan
 
 	switch mode {
 	case templateMode:
-		return server.handleGetBlockTemplateRequest(request, closeChan)
+		return server.handleGetBlockTemplateRequest(request, ctx.CloseChan)
 	case "proposal":
 		return server.handleGetBlockTemplateProposal(request)
 	}
