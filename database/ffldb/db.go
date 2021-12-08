@@ -663,6 +663,24 @@ func (b *bucket) CreateBucket(key []byte) (database.Bucket, error) {
 	return &bucket{tx: b.tx, id: childID}, nil
 }
 
+func (b *bucket) GetOrCreateBucket(key []byte) (database.Bucket, error) {
+	// Ensure transaction state is valid.
+	if err := b.tx.checkClosed(); err != nil {
+		return nil, err
+	}
+
+	// Attempt to fetch the ID for the child bucket.  The bucket does not
+	// exist if the bucket index entry does not exist.
+	childID := b.tx.fetchKey(bucketIndexKey(b.id, key))
+	if childID != nil {
+		childBucket := &bucket{tx: b.tx}
+		copy(childBucket.id[:], childID)
+		return childBucket, nil
+	}
+
+	return b.CreateBucket(key)
+}
+
 // CreateBucketIfNotExists creates and returns a new nested bucket with the
 // given key if it does not already exist.
 //

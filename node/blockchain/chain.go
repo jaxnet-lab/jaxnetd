@@ -146,6 +146,8 @@ type Config struct {
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
 	HashCache *txscript.HashCache
+
+	DBFullRescan bool
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -217,6 +219,7 @@ func New(config *Config) (*BlockChain, error) {
 
 		warningCaches:    newThresholdCaches(vbNumBits),
 		deploymentCaches: newThresholdCaches(chaincfg.DefinedDeployments),
+		dbFullRescan:     config.DBFullRescan,
 	}
 
 	// Initialize the chain state from the passed database.  When the db
@@ -337,6 +340,9 @@ type BlockChain struct {
 	// certain blockchain events.
 	notificationsLock sync.RWMutex
 	notifications     []NotificationCallback
+
+	// incidates if we are rescanning the whole db. Needed to enable fast catch-up, with processing only best chain
+	dbFullRescan bool
 }
 
 // HaveBlock returns whether or not the chain instance has the block represented
@@ -1748,4 +1754,20 @@ func (b *BlockChain) BlockIDsByHash(hash *chainhash.Hash) (int32, int64, int64, 
 	}
 
 	return height, serialID, prevSerialID, err
+}
+
+func (b *BlockChain) SaveBestChainSerialIDs() error {
+	serialIDs := make([]int64, 0, len(b.blocksDB.bestChain.nodes))
+	for i := range b.blocksDB.bestChain.nodes {
+		serialIDs = append(serialIDs, b.blocksDB.bestChain.nodes[i].SerialID())
+	}
+
+	err := b.db.Update(func(dbTx database.Tx) error {
+		return chaindata.DBPutSerialIDsList(dbTx, serialIDs)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

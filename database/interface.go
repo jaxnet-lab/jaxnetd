@@ -195,6 +195,8 @@ type Bucket interface {
 	//   - ErrTxNotWritable if attempted against a read-only transaction
 	//   - ErrTxClosed if the transaction has already been closed
 	Delete(key []byte) error
+
+	GetOrCreateBucket(key []byte) (Bucket, error)
 }
 
 // BlockRegion specifies a particular region of a block identified by the

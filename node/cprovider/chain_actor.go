@@ -49,6 +49,7 @@ type ChainRuntimeConfig struct {
 	AutoExpand         bool     `yaml:"auto_expand" toml:"auto_expand"`
 	ExpansionRule      int32    `yaml:"expansion_rule" toml:"expansion_rule"`
 	ExpansionLimit     int32    `yaml:"expansion_limit" toml:"expansion_limit"`
+	DBFullRescan       bool     `yaml:"db_full_rescan" toml:"db_full_rescan"`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]jaxutil.Address, error) {
@@ -277,6 +278,7 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 		HashCache:    chainProvider.HashCache,
 		ChainCtx:     chainProvider.ChainCtx,
 		BlockGen:     blockGen,
+		DBFullRescan: chainProvider.config.DBFullRescan,
 	})
 	if err != nil {
 		return err

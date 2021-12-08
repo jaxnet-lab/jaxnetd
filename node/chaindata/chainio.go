@@ -93,6 +93,11 @@ var (
 	// net addresses of Exchange Agents.
 	EADAddressesBucketNameV2 = []byte("ead_addresses_v2")
 
+	// BestChainSerialIDsBucketName - is the name of the db bucket used to house the
+	// list of serialIDs of the blocks in the best chain. Values are written to it on node shutdown.
+	// Bucket is used for quick catch-up launch
+	BestChainSerialIDsBucketName = []byte("bestchain_serialids")
+
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
