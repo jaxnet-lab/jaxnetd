@@ -16,7 +16,7 @@ import (
 )
 
 // handleGetNetTotals implements the getnettotals command.
-func (server *CommonChainRPC) handleGetNetTotals(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetNetTotals(ctx CmdCtx) (interface{}, error) {
 	totalBytesRecv, totalBytesSent := server.connMgr.NetTotals()
 	reply := &jaxjson.GetNetTotalsResult{
 		TotalBytesRecv: totalBytesRecv,
@@ -27,13 +27,13 @@ func (server *CommonChainRPC) handleGetNetTotals(cmd interface{}, closeChan <-ch
 }
 
 // handleGetConnectionCount implements the getconnectioncount command.
-func (server *CommonChainRPC) handleGetConnectionCount(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetConnectionCount(ctx CmdCtx) (interface{}, error) {
 	return server.connMgr.ConnectedCount(), nil
 }
 
 // handleAddNode handles addnode commands.
-func (server *CommonChainRPC) handleAddNode(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.AddNodeCmd)
+func (server *CommonChainRPC) handleAddNode(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.AddNodeCmd)
 
 	addr := normalizeAddress(c.Addr, server.chainProvider.ChainParams.DefaultPort)
 	var err error
@@ -63,8 +63,8 @@ func (server *CommonChainRPC) handleAddNode(cmd interface{}, closeChan <-chan st
 }
 
 // handleGetAddedNodeInfo handles getaddednodeinfo commands.
-func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetAddedNodeInfoCmd)
+func (server *CommonChainRPC) handleGetAddedNodeInfo(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetAddedNodeInfoCmd)
 
 	// Retrieve a list of persistent (added) peers from the Server and
 	// filter the list of peers per the specified address (if any).
@@ -155,7 +155,7 @@ func (server *CommonChainRPC) handleGetAddedNodeInfo(cmd interface{}, closeChan 
 const microsecsInSecond = 1_000
 
 // handleGetPeerInfo implements the getpeerinfo command.
-func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetPeerInfo(ctx CmdCtx) (interface{}, error) {
 	peers := server.connMgr.ConnectedPeers()
 	syncPeerID := server.chainProvider.SyncManager.SyncPeerID()
 	infos := make([]*jaxjson.GetPeerInfoResult, 0, len(peers))
@@ -194,8 +194,8 @@ func (server *CommonChainRPC) handleGetPeerInfo(cmd interface{}, closeChan <-cha
 }
 
 // handleNode handles chainProvider commands.
-func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.NodeCmd)
+func (server *CommonChainRPC) handleNode(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.NodeCmd)
 
 	var addr string
 	var nodeID uint64
@@ -287,7 +287,7 @@ func (server *CommonChainRPC) handleNode(cmd interface{}, closeChan <-chan struc
 }
 
 // handlePing implements the ping command.
-func (server *CommonChainRPC) handlePing(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handlePing(ctx CmdCtx) (interface{}, error) {
 	// Ask server to ping \o_
 	nonce, err := wire.RandomUint64()
 	if err != nil {

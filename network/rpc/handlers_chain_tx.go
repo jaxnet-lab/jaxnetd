@@ -36,8 +36,8 @@ type retrievedTx struct {
 }
 
 // handleEstimateFee handles estimatefee commands.
-func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.EstimateFeeCmd)
+func (server *CommonChainRPC) handleEstimateFee(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.EstimateFeeCmd)
 
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
@@ -57,8 +57,8 @@ func (server *CommonChainRPC) handleEstimateFee(cmd interface{}, closeChan <-cha
 }
 
 // estimatesmartfee
-func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.EstimateSmartFeeCmd)
+func (server *CommonChainRPC) handleEstimateSmartFee(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.EstimateSmartFeeCmd)
 	if server.chainProvider.FeeEstimator == nil {
 		return nil, errors.New("Fee estimation disabled")
 	}
@@ -83,7 +83,7 @@ func (server *CommonChainRPC) handleEstimateSmartFee(cmd interface{}, closeChan 
 	return res, nil
 }
 
-func (server *CommonChainRPC) handleGetExtendedFee(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetExtendedFee(ctx CmdCtx) (interface{}, error) {
 	var err error
 	result := jaxjson.ExtendedFeeFeeResult{}
 
@@ -137,8 +137,8 @@ func (server *CommonChainRPC) estimateFeeForTarget(target int64) (jaxjson.Fee, e
 }
 
 // handleDecodeRawTransaction handles decoderawtransaction commands.
-func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.DecodeRawTransactionCmd)
+func (server *CommonChainRPC) handleDecodeRawTransaction(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.DecodeRawTransactionCmd)
 
 	// Deserialize the transaction.
 	hexStr := c.HexTx
@@ -170,8 +170,8 @@ func (server *CommonChainRPC) handleDecodeRawTransaction(cmd interface{}, closeC
 }
 
 // handleCreateRawTransaction handles createrawtransaction commands.
-func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.CreateRawTransactionCmd)
+func (server *CommonChainRPC) handleCreateRawTransaction(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.CreateRawTransactionCmd)
 
 	// Validate the locktime, if given.
 	if c.LockTime != nil &&
@@ -275,8 +275,8 @@ func (server *CommonChainRPC) handleCreateRawTransaction(cmd interface{}, closeC
 }
 
 // handleGetRawTransaction implements the getrawtransaction command.
-func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetRawTransactionCmd)
+func (server *CommonChainRPC) handleGetRawTransaction(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetRawTransactionCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -316,8 +316,8 @@ func (server *CommonChainRPC) handleGetRawTransaction(cmd interface{}, closeChan
 	return *rawTxn, nil
 }
 
-func (server *CommonChainRPC) handleGetTxDetails(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetTxDetailsCmd)
+func (server *CommonChainRPC) handleGetTxDetails(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetTxDetailsCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -498,8 +498,8 @@ func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bo
 	return rawTxn, txInfo.tx, err
 }
 
-func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.SendRawTransactionCmd)
+func (server *CommonChainRPC) handleSendRawTransaction(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.SendRawTransactionCmd)
 
 	// Deserialize and send off to tx relay
 	hexStr := c.HexTx
@@ -614,8 +614,8 @@ func (server *CommonChainRPC) handleSendRawTransaction(cmd interface{}, closeCha
 }
 
 // handleGetTxOut handles gettxout commands.
-func (server *CommonChainRPC) handleGetTx(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetTxCmd)
+func (server *CommonChainRPC) handleGetTx(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetTxCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -655,8 +655,8 @@ func (server *CommonChainRPC) handleGetTx(cmd interface{}, closeChan <-chan stru
 }
 
 // handleGetTxOut handles gettxout commands.
-func (server *CommonChainRPC) handleGetTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetTxOutCmd)
+func (server *CommonChainRPC) handleGetTxOut(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetTxOutCmd)
 
 	// Convert the provided transaction hash hex to a Hash.
 	txHash, err := chainhash.NewHashFromStr(c.Txid)
@@ -777,8 +777,8 @@ type txOut struct {
 }
 
 // handleGetTxOut handles gettxout commands.
-func (server *CommonChainRPC) handleGetTxOutsStatus(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetTxOutStatus)
+func (server *CommonChainRPC) handleGetTxOutsStatus(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetTxOutStatus)
 	onlyMempool := true
 	if c.OnlyMempool != nil {
 		onlyMempool = *c.OnlyMempool
@@ -870,8 +870,8 @@ func (server *CommonChainRPC) getTxOutStatus(filter map[txOut]bool, onlyMempool 
 }
 
 // handleGetBlockTxOps handles getblocktxops commands.
-func (server *CommonChainRPC) handleGetBlockTxOps(cmd interface{}, _ <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBlockTxOpsCmd)
+func (server *CommonChainRPC) handleGetBlockTxOps(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBlockTxOpsCmd)
 
 	// Convert the provided block hash hex to a Hash.
 	hash, err := chainhash.NewHashFromStr(c.BlockHash)
@@ -1023,8 +1023,8 @@ func (server *CommonChainRPC) getParentOut(swapTx bool, in *wire.TxIn, inID int,
 const utxoEntryLimit = 1000
 
 // handleListTxOut handles listtxout commands.
-func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*jaxjson.ListTxOutCmd)
+func (server *CommonChainRPC) handleListTxOut(ctx CmdCtx) (interface{}, error) {
+	_ = ctx.Cmd.(*jaxjson.ListTxOutCmd)
 
 	entries, err := server.chainProvider.BlockChain().ListUtxoEntry(utxoEntryLimit)
 	if err != nil {
@@ -1088,8 +1088,8 @@ func (server *CommonChainRPC) handleListTxOut(cmd interface{}, closeChan <-chan 
 }
 
 // handleListEADAddresses handles listEADAddresses commands.
-func (server *CommonChainRPC) handleListEADAddresses(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	opts := cmd.(*jaxjson.ListEADAddressesCmd)
+func (server *CommonChainRPC) handleListEADAddresses(ctx CmdCtx) (interface{}, error) {
+	opts := ctx.Cmd.(*jaxjson.ListEADAddressesCmd)
 
 	listEADAddresses, err := server.chainProvider.BlockChain().ListEADAddresses()
 	if err != nil {
@@ -1146,7 +1146,7 @@ func (server *CommonChainRPC) handleListEADAddresses(cmd interface{}, closeChan 
 }
 
 // handleSearchRawTransactions implements the searchrawtransactions command.
-func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleSearchRawTransactions(ctx CmdCtx) (interface{}, error) {
 	// Respond with an error if the address index is not enabled.
 	addrIndex := server.chainProvider.AddrIndex
 	if addrIndex == nil {
@@ -1158,7 +1158,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 
 	// Override the flag for including extra previous output information in
 	// each input if needed.
-	c := cmd.(*jaxjson.SearchRawTransactionsCmd)
+	c := ctx.Cmd.(*jaxjson.SearchRawTransactionsCmd)
 	vinExtra := false
 	if c.VinExtra != nil {
 		vinExtra = *c.VinExtra != 0
@@ -1407,7 +1407,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(cmd interface{}, close
 }
 
 // handleGetMempoolInfo implements the getmempoolinfo command.
-func (server *CommonChainRPC) handleGetMempoolInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetMempoolInfo(ctx CmdCtx) (interface{}, error) {
 	mempoolTxns := server.chainProvider.TxMemPool.TxDescs()
 
 	var numBytes int64
@@ -1424,8 +1424,8 @@ func (server *CommonChainRPC) handleGetMempoolInfo(cmd interface{}, closeChan <-
 }
 
 // handleGetRawMempool implements the getrawmempool command.
-func (server *CommonChainRPC) handleGetRawMempool(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetRawMempoolCmd)
+func (server *CommonChainRPC) handleGetRawMempool(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetRawMempoolCmd)
 	mp := server.chainProvider.TxMemPool
 
 	if c.Verbose != nil && *c.Verbose {
@@ -1445,8 +1445,8 @@ func (server *CommonChainRPC) handleGetRawMempool(cmd interface{}, closeChan <-c
 
 // handleGetMempoolUTXOs implements the gGetMempoolUTXOs command.
 // return list of UTXO used by txs in mempool
-func (server *CommonChainRPC) handleGetMempoolUTXOs(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*jaxjson.GetMempoolUTXOs)
+func (server *CommonChainRPC) handleGetMempoolUTXOs(ctx CmdCtx) (interface{}, error) {
+	_ = ctx.Cmd.(*jaxjson.GetMempoolUTXOs)
 	mp := server.chainProvider.TxMemPool
 
 	result := make([]jaxjson.MempoolUTXO, 0, len(mp.TxDescs()))

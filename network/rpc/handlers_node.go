@@ -75,7 +75,7 @@ func (server *NodeRPC) OwnHandlers() map[jaxjson.MethodName]CommandHandler {
 // handleVersion implements the version command.
 //
 // NOTE: This is a btcsuite extension ported from github.com/decred/dcrd.
-func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleVersion(ctx CmdCtx) (interface{}, error) {
 	return jaxjson.NodeVersion{
 		Node: version.GetExtendedVersion(),
 		RPC: jaxjson.VersionResult{
@@ -88,13 +88,13 @@ func (server *NodeRPC) handleVersion(cmd interface{}, closeChan <-chan struct{})
 }
 
 // handleUptime implements the uptime command.
-func (server *NodeRPC) handleUptime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleUptime(ctx CmdCtx) (interface{}, error) {
 	return time.Now().Unix() - server.StartupTime, nil
 }
 
 // handleGetInfo implements the getinfo command. We only return the fields
 // that are not related to wallet functionality.
-func (server *NodeRPC) handleGetInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleGetInfo(ctx CmdCtx) (interface{}, error) {
 	// best := server.beaconChain.BlockChain.BestSnapshot()
 	// ratio, err := server.GetDifficultyRatio(best.Bits, server.beaconChain.ChainParams)
 	// if err != nil {
@@ -119,7 +119,7 @@ func (server *NodeRPC) handleGetInfo(cmd interface{}, closeChan <-chan struct{})
 }
 
 // handleGenerate handles generate commands.
-func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleGenerate(ctx CmdCtx) (interface{}, error) {
 	// Respond with an error if there are no addresses to pay the
 	// created blocks to.
 	if len(server.MiningAddrs) == 0 {
@@ -142,7 +142,7 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	// 	}
 	// }
 
-	c := cmd.(*jaxjson.GenerateCmd)
+	c := ctx.Cmd.(*jaxjson.GenerateCmd)
 
 	// Respond with an error if the client is requesting 0 blocks to be generated.
 	if c.NumBlocks == 0 {
@@ -172,8 +172,8 @@ func (server *NodeRPC) handleGenerate(cmd interface{}, closeChan <-chan struct{}
 	return reply, nil
 }
 
-func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.ManageShardsCmd)
+func (server *NodeRPC) handleManageShards(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.ManageShardsCmd)
 
 	var err error
 	switch c.Action {
@@ -195,14 +195,14 @@ func (server *NodeRPC) handleManageShards(cmd interface{}, closeChan <-chan stru
 	return nil, nil
 }
 
-func (server *NodeRPC) handleListShards(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleListShards(ctx CmdCtx) (interface{}, error) {
 	shards := server.shardsMgr.ListShards()
 	return shards, nil
 }
 
 // handleGetDifficulty implements the getdifficulty command.
-func (server *NodeRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.EstimateSwapLockTime)
+func (server *NodeRPC) handleEstimateLockTime(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.EstimateSwapLockTime)
 
 	isMainNet := server.beaconChain.ChainParams.Net == wire.MainNet
 
@@ -269,8 +269,8 @@ func EstimateLockInChain(bits, k uint32, amount int64) (int64, error) {
 }
 
 // handleSetGenerate implements the setgenerate command.
-func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	//	c := cmd.(*jaxjson.SetGenerateCmd)
+func (server *NodeRPC) handleSetGenerate(ctx CmdCtx) (interface{}, error) {
+	//	c := ctx.Cmd.(*jaxjson.SetGenerateCmd)
 	//
 	//	// Disable generation regardless of the provided generate flag if the
 	//	// maximum number of threads (goroutines for our purposes) is 0.
@@ -305,8 +305,8 @@ func (server *NodeRPC) handleSetGenerate(cmd interface{}, closeChan <-chan struc
 }
 
 // handleDebugLevel handles debuglevel commands.
-func (server *NodeRPC) handleDebugLevel(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// c := cmd.(*jaxjson.DebugLevelCmd)
+func (server *NodeRPC) handleDebugLevel(ctx CmdCtx) (interface{}, error) {
+	// c := ctx.Cmd.(*jaxjson.DebugLevelCmd)
 
 	// Special show command to list supported subsystems.
 	// if c.LevelSpec == "show" {
@@ -325,7 +325,7 @@ func (server *NodeRPC) handleDebugLevel(cmd interface{}, closeChan <-chan struct
 }
 
 // handleStop implements the stop command.
-func (server *NodeRPC) handleStop(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleStop(ctx CmdCtx) (interface{}, error) {
 	// todo
 	// select {
 	// case server.requestProcessShutdown <- struct{}{}:
@@ -335,8 +335,8 @@ func (server *NodeRPC) handleStop(cmd interface{}, closeChan <-chan struct{}) (i
 }
 
 // handleHelp implements the help command.
-func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.HelpCmd)
+func (server *NodeRPC) handleHelp(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.HelpCmd)
 
 	// Provide a usage overview of all commands when no specific command
 	// was specified.
@@ -377,12 +377,12 @@ func (server *NodeRPC) handleHelp(cmd interface{}, closeChan <-chan struct{}) (i
 	return help, nil
 }
 
-func (server *NodeRPC) handleGetNodeMetrics(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleGetNodeMetrics(ctx CmdCtx) (interface{}, error) {
 	res := server.metricsMgr.GetNodeMetrics()
 	return res, nil
 }
 
-func (server *NodeRPC) handleGetChainMetrics(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *NodeRPC) handleGetChainMetrics(ctx CmdCtx) (interface{}, error) {
 	res := server.metricsMgr.GetChainMetrics()
 	return res, nil
 }

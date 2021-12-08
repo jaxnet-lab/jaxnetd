@@ -285,9 +285,24 @@ func (server *CommonChainRPC) verifyChain(level, depth int32) error {
 	return nil
 }
 
+// handleUnimplemented is the handler for commands that should ultimately be
+// supported but are not yet implemented.
+// nolint: unused
+func (server *CommonChainRPC) handleUnimplemented(ctx CmdCtx) (interface{}, error) {
+	return nil, ErrRPCUnimplemented
+}
+
+// handleAskWallet is the handler for commands that are recognized as valid, but
+// are unable to answer correctly since it involves wallet state.
+// These commands will be implemented in btcwallet.
+// nolint: unused
+func (server *CommonChainRPC) handleAskWallet(ctx CmdCtx) (interface{}, error) {
+	return nil, ErrRPCNoWallet
+}
+
 // handleDecodeScript handles decodescript commands.
-func (server *CommonChainRPC) handleDecodeScript(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.DecodeScriptCmd)
+func (server *CommonChainRPC) handleDecodeScript(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.DecodeScriptCmd)
 
 	// Convert the hex script to bytes.
 	hexStr := c.HexScript
@@ -334,7 +349,7 @@ func (server *CommonChainRPC) handleDecodeScript(cmd interface{}, closeChan <-ch
 }
 
 // handleGetBestBlock implements the getbestblock command.
-func (server *CommonChainRPC) handleGetBestBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetBestBlock(ctx CmdCtx) (interface{}, error) {
 	// All other "get block" commands give either the height, the
 	// hash, or both but require the block SHA.  This gets both for
 	// the best block.
@@ -347,13 +362,13 @@ func (server *CommonChainRPC) handleGetBestBlock(cmd interface{}, closeChan <-ch
 }
 
 // handleGetBestBlockHash implements the getbestblockhash command.
-func (server *CommonChainRPC) handleGetBestBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetBestBlockHash(ctx CmdCtx) (interface{}, error) {
 	best := server.chainProvider.BlockChain().BestSnapshot()
 	return best.Hash.String(), nil
 }
 
 // handleGetBlockChainInfo implements the getblockchaininfo command.
-func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetBlockChainInfo(ctx CmdCtx) (interface{}, error) {
 	// Obtain a snapshot of the current best known blockchain state. We'll
 	// populate the response to this call primarily from this snapshot.
 	params := server.chainProvider.ChainParams
@@ -471,14 +486,14 @@ func (server *CommonChainRPC) handleGetBlockChainInfo(cmd interface{}, closeChan
 }
 
 // handleGetBlockCount implements the getblockcount command.
-func (server *CommonChainRPC) handleGetBlockCount(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetBlockCount(ctx CmdCtx) (interface{}, error) {
 	best := server.chainProvider.BlockChain().BestSnapshot()
 	return int64(best.Height), nil
 }
 
 // handleGetBlockHash implements the getblockhash command.
-func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.GetBlockHashCmd)
+func (server *CommonChainRPC) handleGetBlockHash(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.GetBlockHashCmd)
 	hash, err := server.chainProvider.BlockChain().BlockHashByHeight(int32(c.Index))
 	if err != nil {
 		return nil, &jaxjson.RPCError{
@@ -491,7 +506,7 @@ func (server *CommonChainRPC) handleGetBlockHash(cmd interface{}, closeChan <-ch
 }
 
 // handleGetCFilter implements the getcfilter command.
-func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetCFilter(ctx CmdCtx) (interface{}, error) {
 	if server.chainProvider.CfIndex == nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCNoCFIndex,
@@ -499,7 +514,7 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 		}
 	}
 
-	c := cmd.(*jaxjson.GetCFilterCmd)
+	c := ctx.Cmd.(*jaxjson.GetCFilterCmd)
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
@@ -519,7 +534,7 @@ func (server *CommonChainRPC) handleGetCFilter(cmd interface{}, closeChan <-chan
 }
 
 // handleGetCFilterHeader implements the getcfilterheader command.
-func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetCFilterHeader(ctx CmdCtx) (interface{}, error) {
 	if server.chainProvider.CfIndex == nil {
 		return nil, &jaxjson.RPCError{
 			Code:    jaxjson.ErrRPCNoCFIndex,
@@ -527,7 +542,7 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 		}
 	}
 
-	c := cmd.(*jaxjson.GetCFilterHeaderCmd)
+	c := ctx.Cmd.(*jaxjson.GetCFilterHeaderCmd)
 	hash, err := chainhash.NewHashFromStr(c.Hash)
 	if err != nil {
 		return nil, rpcDecodeHexError(c.Hash)
@@ -551,7 +566,7 @@ func (server *CommonChainRPC) handleGetCFilterHeader(cmd interface{}, closeChan 
 }
 
 // handleGetCurrentNet implements the getcurrentnet command.
-func (server *CommonChainRPC) handleGetCurrentNet(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetCurrentNet(ctx CmdCtx) (interface{}, error) {
 	return server.chainProvider.ChainParams.Net, nil
 }
 
@@ -714,8 +729,8 @@ func (server *CommonChainRPC) NotifyNewTransactions(txns []*mempool.TxDesc) {
 }
 
 // handleSubmitBlock implements the submitblock command.
-func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.SubmitBlockCmd)
+func (server *CommonChainRPC) handleSubmitBlock(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.SubmitBlockCmd)
 
 	// Deserialize the submitted block.
 	hexStr := c.HexBlock
@@ -749,8 +764,8 @@ func (server *CommonChainRPC) handleSubmitBlock(cmd interface{}, closeChan <-cha
 
 // handleValidateAddress implements the validateaddress command.
 // nolint: nilerr
-func (server *CommonChainRPC) handleValidateAddress(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.ValidateAddressCmd)
+func (server *CommonChainRPC) handleValidateAddress(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.ValidateAddressCmd)
 
 	result := jaxjson.ValidateAddressChainResult{}
 	addr, err := jaxutil.DecodeAddress(c.Address, server.chainProvider.ChainParams)
@@ -766,8 +781,8 @@ func (server *CommonChainRPC) handleValidateAddress(cmd interface{}, closeChan <
 }
 
 // handleVerifyChain implements the verifychain command.
-func (server *CommonChainRPC) handleVerifyChain(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.VerifyChainCmd)
+func (server *CommonChainRPC) handleVerifyChain(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.VerifyChainCmd)
 
 	var checkLevel, checkDepth int32
 	if c.CheckLevel != nil {
@@ -783,8 +798,8 @@ func (server *CommonChainRPC) handleVerifyChain(cmd interface{}, closeChan <-cha
 
 // handleVerifyMessage implements the verifymessage command.
 // nolint: nilerr
-func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.VerifyMessageCmd)
+func (server *CommonChainRPC) handleVerifyMessage(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.VerifyMessageCmd)
 
 	// Decode the provided address.
 	params := server.chainProvider.ChainParams
@@ -846,7 +861,7 @@ func (server *CommonChainRPC) handleVerifyMessage(cmd interface{}, closeChan <-c
 }
 
 // handleGetLastSerialBlockNumber implements the getLastSerialBlockNumber command.
-func (server *CommonChainRPC) handleGetLastSerialBlockNumber(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetLastSerialBlockNumber(ctx CmdCtx) (interface{}, error) {
 	return &jaxjson.GetLastSerialBlockNumberResult{
 		LastSerial: server.chainProvider.BlockChain().BestSnapshot().LastSerialID,
 	}, nil
@@ -863,11 +878,11 @@ func directionString(inbound bool) string {
 
 // handleGetMiningInfo implements the getmininginfo command. We only return the
 // fields that are not related to wallet functionality.
-func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetMiningInfo(ctx CmdCtx) (interface{}, error) {
 	// Create a default getnetworkhashps command to use defaults and make
 	// use of the existing getnetworkhashps handler.
 	gnhpsCmd := jaxjson.NewGetNetworkHashPSCmd(nil, nil)
-	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(gnhpsCmd, closeChan)
+	networkHashesPerSecIface, err := server.handleGetNetworkHashPS(CmdCtx{Cmd: gnhpsCmd, CloseChan: ctx.CloseChan})
 	if err != nil {
 		return nil, err
 	}
@@ -899,12 +914,12 @@ func (server *CommonChainRPC) handleGetMiningInfo(cmd interface{}, closeChan <-c
 
 // handleGetNetworkHashPS implements the getnetworkhashps command.
 // nolint: gomnd
-func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetNetworkHashPS(ctx CmdCtx) (interface{}, error) {
 	// Note: All valid error return paths should return an int64.
 	// Literal zeros are inferred as int, and won't coerce to int64
 	// because the return value is an interface{}.
 
-	c := cmd.(*jaxjson.GetNetworkHashPSCmd)
+	c := ctx.Cmd.(*jaxjson.GetNetworkHashPSCmd)
 	if server.chainProvider.BlockChain() == nil {
 		return int64(0), nil
 	}
@@ -993,19 +1008,19 @@ func (server *CommonChainRPC) handleGetNetworkHashPS(cmd interface{}, closeChan 
 	return hashesPerSec.Int64(), nil
 }
 
-func (server *CommonChainRPC) handleGetBlockStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	// c := cmd.(*jaxjson.GetBlockStatsCmd)
+func (server *CommonChainRPC) handleGetBlockStats(ctx CmdCtx) (interface{}, error) {
+	// c := ctx.Cmd.(*jaxjson.GetBlockStatsCmd)
 	res := jaxjson.GetBlockStatsResult{}
 	return res, nil
 }
 
-func (server *CommonChainRPC) handleGetChaintxStats(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	_ = cmd.(*jaxjson.GetChainStatsCmd)
+func (server *CommonChainRPC) handleGetChaintxStats(ctx CmdCtx) (interface{}, error) {
+	_ = ctx.Cmd.(*jaxjson.GetChainStatsCmd)
 	res := jaxjson.GetChainStatsResult{}
 	return res, nil
 }
 
-func (server *CommonChainRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetnetworkinfo(ctx CmdCtx) (interface{}, error) {
 	return struct {
 		Subversion string `json:"subversion"`
 	}{
@@ -1014,17 +1029,17 @@ func (server *CommonChainRPC) handleGetnetworkinfo(cmd interface{}, closeChan <-
 }
 
 // handleGetDifficulty implements the getdifficulty command.
-func (server *CommonChainRPC) handleGetDifficulty(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+func (server *CommonChainRPC) handleGetDifficulty(ctx CmdCtx) (interface{}, error) {
 	best := server.chainProvider.BlockChain().BestSnapshot()
 	return server.GetDifficultyRatio(best.Bits, server.chainProvider.ChainParams)
 }
 
 const lockTimeBlocks = 20_000
 
-// handleGetDifficulty implements the getdifficulty command.
+// handleEstimateLockTime implements the estimatelocktime command.
 // nolint: gomnd
-func (server *CommonChainRPC) handleEstimateLockTime(cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*jaxjson.EstimateLockTime)
+func (server *CommonChainRPC) handleEstimateLockTime(ctx CmdCtx) (interface{}, error) {
+	c := ctx.Cmd.(*jaxjson.EstimateLockTime)
 
 	best := server.chainProvider.BlockChain().BestSnapshot()
 
