@@ -408,7 +408,7 @@ func solveBlock(block wire.MsgBlock, powParams *chaincfg.PowParams) bool {
 			block.Header.SetNonce(result.nonce)
 			var aux wire.CoinbaseAux
 			if block.Transactions != nil {
-				_, aux, _ = updateBeaconExtraNonce(block, int64(block.Header.BeaconHeader().Height()), result.extraNonce)
+				aux, _ = updateBeaconExtraNonce(block, int64(block.Header.BeaconHeader().Height()), result.extraNonce)
 			}
 			block.Header.SetBeaconHeader(block.Header.BeaconHeader(), aux)
 			return true
@@ -418,17 +418,17 @@ func solveBlock(block wire.MsgBlock, powParams *chaincfg.PowParams) bool {
 	return false
 }
 
-func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce uint64) (wire.MsgBlock, wire.CoinbaseAux, error) {
+func updateBeaconExtraNonce(beaconBlock wire.MsgBlock, height int64, extraNonce uint64) (wire.CoinbaseAux, error) {
 	bh := beaconBlock.Header.BeaconHeader().BeaconExclusiveHash()
 	coinbaseScript, err := chaindata.BTCCoinbaseScript(height, packUint64LE(extraNonce), bh.CloneBytes())
 	if err != nil {
-		return wire.MsgBlock{}, wire.CoinbaseAux{}, err
+		return wire.CoinbaseAux{}, err
 	}
 
 	beaconBlock.Header.UpdateCoinbaseScript(coinbaseScript)
 	aux := wire.CoinbaseAux{}.FromBlock(&beaconBlock, true)
 
-	return beaconBlock, aux, nil
+	return aux, nil
 }
 
 func packUint64LE(n uint64) []byte {
@@ -549,6 +549,7 @@ func (g *testGenerator) blocksByMMMRoot(mmrRoot chainhash.Hash) *wire.MsgBlock {
 // applied after all munge functions have been invoked:
 // - The merkle root will be recalculated unless it was manually changed
 // - The block will be solved unless the nonce was changed
+// nolint: ineffassign
 func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers ...func(*wire.MsgBlock)) *wire.MsgBlock {
 	// Create coinbase transaction for the block using any additional
 	// subsidy if specified.
@@ -584,12 +585,6 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	}
 
 	powParams := g.chainCtx.Params().PowParams
-	weight, ok := g.blockToChainWeight[g.tip.BlockHash()]
-	if !ok {
-		weight = g.mmr.CurrenWeight()
-	}
-
-	weight = g.mmr.CurrenWeight()
 	header, _ := g.blockGen.NewBlockHeader(1,
 		nextHeight,
 		g.mmr.CurrentRoot(),
@@ -597,7 +592,7 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 		calcMerkleRoot(txns),
 		ts,
 		powParams.PowLimitBits,
-		weight,
+		g.mmr.CurrenWeight(),
 		0,
 		types.BurnJaxReward,
 	)

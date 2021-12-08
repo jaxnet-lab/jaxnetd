@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog"
+	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
@@ -70,7 +71,12 @@ func (beaconCtl *BeaconCtl) Init() error {
 			return err
 		}
 
-		btcdProvider, err := btcd.NewBlockProvider(beaconCtl.cfg.BTCD, mAddreses[0])
+		var mAddress jaxutil.Address
+		if len(mAddreses) > 0 {
+			mAddress = mAddreses[0]
+		}
+
+		btcdProvider, err := btcd.NewBlockProvider(beaconCtl.cfg.BTCD, mAddress)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("Can't init jaxnetdProvider")
 			return err

@@ -44,6 +44,7 @@ archives:
       - README.md
       - CHANGELOG.md
       - jaxnetd.testnet.toml
+      - jaxnetd.mainnet.toml
       - docs/*
 
 nfpms:

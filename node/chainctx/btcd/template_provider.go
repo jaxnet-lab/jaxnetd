@@ -46,6 +46,11 @@ func NewBlockProvider(cfg Configuration, minerAddress jaxutil.Address) (*BlockPr
 	if !cfg.Enable {
 		return &BlockProvider{offline: true, minerAddress: minerAddress}, nil
 	}
+
+	if minerAddress == nil {
+		return nil, errors.New("mining address not set")
+	}
+
 	client, err := btcrpc.New(&btcrpc.ConnConfig{
 		Host:         cfg.RPC.Host,
 		User:         cfg.RPC.User,

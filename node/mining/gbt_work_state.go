@@ -267,7 +267,12 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 		// full coinbase as opposed to only the pertinent details needed
 		// to create their own coinbase.
 		var payAddr jaxutil.Address
-		if !useCoinbaseValue && len(miningAddrs) <= 1 {
+		if !useCoinbaseValue && len(miningAddrs) == 0 {
+			return jaxjson.NewRPCError(jaxjson.ErrRPCInternal.Code,
+				"mining address is not set; configure it first")
+		}
+
+		if !useCoinbaseValue && len(miningAddrs) == 1 {
 			payAddr = miningAddrs[0]
 		}
 		if !useCoinbaseValue && len(miningAddrs) > 0 {
