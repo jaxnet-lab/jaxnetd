@@ -122,6 +122,64 @@ func DBPutHashToSerialIDWithPrev(dbTx database.Tx, hash chainhash.Hash, serialID
 	return blockSerialIDHashPrevSerialID.Put(i64ToBytes(serialID), buf)
 }
 
+const serialIDByteSize = 8
+
+func DBPutSerialIDsList(dbTx database.Tx, serialIDs []int64) error {
+	meta := dbTx.Metadata()
+	bucket, err := meta.GetOrCreateBucket(BestChainSerialIDsBucketName)
+	if err != nil {
+		return err
+	}
+
+	count := len(serialIDs)
+	buf := make([]byte, serialIDByteSize*(count+1)+1)
+
+	var startOffset int64
+
+	copy(buf[:startOffset+serialIDByteSize], i64ToBytes(int64(count)))
+	startOffset += serialIDByteSize
+
+	for i := range serialIDs {
+		copy(buf[startOffset:startOffset+serialIDByteSize], i64ToBytes(serialIDs[i]))
+		startOffset += serialIDByteSize
+	}
+
+	return bucket.Put(BestChainSerialIDsBucketName, buf)
+}
+
+type BestChainBlockRecord struct {
+	SerialID int64           `json:"serial_id"`
+	Hash     *chainhash.Hash `json:"hash"`
+}
+
+func DBGetSerialIDsList(dbTx database.Tx) ([]BestChainBlockRecord, error) {
+	var res []BestChainBlockRecord
+	meta := dbTx.Metadata()
+	bucket := meta.Bucket(BestChainSerialIDsBucketName)
+
+	var startOffset int64
+
+	record := bucket.Get(BestChainSerialIDsBucketName)
+	count := bytesToI64(record[:serialIDByteSize])
+	startOffset += serialIDByteSize
+
+	for i := int64(0); i < count; i++ {
+		serialID := bytesToI64(record[startOffset : startOffset+serialIDByteSize])
+		hash, _, err := DBFetchBlockHashBySerialID(dbTx, serialID)
+		if err != nil {
+			return nil, err
+		}
+
+		startOffset += serialIDByteSize
+		res = append(res, BestChainBlockRecord{
+			SerialID: serialID,
+			Hash:     hash,
+		})
+	}
+
+	return res, nil
+}
+
 func i64ToBytes(val int64) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(val))

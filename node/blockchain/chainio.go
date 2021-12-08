@@ -96,6 +96,7 @@ func (b *BlockChain) createChainState() error {
 			chaindata.SerialIDToPrevBlock,
 			chaindata.MMRRootsToHashBucketName,
 			chaindata.HashToMMRRootBucketName,
+			chaindata.BestChainSerialIDsBucketName,
 		}
 		if b.chain.IsBeacon() {
 			buckets = append(buckets,
@@ -180,13 +181,22 @@ func (b *BlockChain) createChainState() error {
 func (b *BlockChain) initChainState() error {
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
-	var initialized bool
+	var (
+		initialized             bool
+		bestChainSnapshotExists bool
+	)
+
 	err := b.db.View(func(dbTx database.Tx) error {
 		initialized = dbTx.Metadata().Get(chaindata.ChainStateKeyName) != nil
+		bestChainSnapshotExists = dbTx.Metadata().Bucket(chaindata.BestChainSerialIDsBucketName) != nil
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+
+	if bestChainSnapshotExists && !b.dbFullRescan {
+		return b.fastInitChainState()
 	}
 
 	if !initialized {
@@ -382,4 +392,106 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 		return err
 	})
 	return block, err
+}
+
+func (b *BlockChain) fastInitChainState() error {
+	var lastNode blocknodes.IBlockNode
+	err := b.db.View(func(dbTx database.Tx) error {
+		serialIDsData, err := chaindata.DBGetSerialIDsList(dbTx)
+		if err != nil {
+			return err
+		}
+
+		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
+		log.Trace().Str("chain", b.chain.Name()).Msgf("Serialized chain state: %x", serializedData)
+		state, err := chaindata.DeserializeBestChainState(serializedData)
+		if err != nil {
+			return err
+		}
+
+		var hashs []chainhash.Hash
+
+		for i := range serialIDsData {
+			hashs = append(hashs, *serialIDsData[i].Hash)
+		}
+
+		log.Info().Str("chain", b.chain.Name()).Msgf("Loading best chain blocks...")
+
+		bls, err := dbTx.FetchBlocks(hashs)
+		if err != nil {
+			return err
+		}
+
+		var blocks []wire.BlockHeader
+		for i := range bls {
+			a, err := wire.DecodeHeader(bytes.NewReader(bls[i]))
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, a)
+		}
+
+		for i := range blocks {
+			parent := lastNode
+			if parent != nil {
+				prevHash := parent.GetHash()
+				bph := blocks[i].PrevBlockHash()
+				if !prevHash.IsEqual(&bph) {
+					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
+						prevHash, blocks[i].PrevBlocksMMRRoot(), bph)
+					return chaindata.AssertError(str)
+				}
+			}
+
+			// Initialize the block node for the block, connect it,
+			// and add it to the block index.
+			node := b.chain.NewNode(blocks[i], parent, serialIDsData[i].SerialID)
+			node.SetStatus(blocknodes.StatusValid)
+
+			b.blocksDB.index.addNode(node)
+
+			lastNode = node
+		}
+
+		b.blocksDB.lastSerialID = state.LastSerialID
+
+		// Set the best chain view to the stored best state.
+		tip := b.blocksDB.index.LookupNode(&state.Hash)
+		if tip == nil {
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: cannot find chain tip %s in block index", state.Hash))
+		}
+		b.blocksDB.bestChain.SetTip(tip)
+
+		// Load the raw block bytes for the best block.
+		blockBytes, err := dbTx.FetchBlock(&state.Hash)
+		if err != nil {
+			return err
+		}
+
+		block, err := wire.DecodeBlock(bytes.NewReader(blockBytes))
+		if err != nil {
+			return err
+		}
+
+		// Initialize the state related to the best block.
+		blockSize := uint64(len(blockBytes))
+		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(block)))
+		numTxns := uint64(len(block.Transactions))
+		b.stateSnapshot = chaindata.NewBestState(tip,
+			b.blocksDB.bestChain.mmrTree.CurrentRoot(),
+			blockSize,
+			blockWeight,
+			b.blocksDB.bestChain.mmrTree.CurrenWeight(),
+			numTxns,
+			state.TotalTxns,
+			tip.CalcPastMedianTime(),
+			state.LastSerialID,
+		)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return b.blocksDB.index.flushToDB()
 }

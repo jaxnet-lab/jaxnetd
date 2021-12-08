@@ -28,7 +28,6 @@ func TestTreeContainer_SetNodeToMmrWithReorganization(t *testing.T) {
 		difficulty:    tBlockNodes[5].PowWeight(),
 		parent:        tBlockNodes[5],
 	}
-
 	ok := mmrContainer.SetNodeToMmrWithReorganization(toInsert)
 
 	assert.Equal(t, true, ok)
