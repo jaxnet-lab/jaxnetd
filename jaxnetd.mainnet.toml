@@ -26,4 +26,5 @@ addr_index = true
 auto_expand = true
 max_peers = 128
 no_relay_priority = true
-mining_addresses = ["1ERUE..."]
+# PUT YOUR MINITNG ADDRESS
+# mining_addresses = ["1ERUE..."]

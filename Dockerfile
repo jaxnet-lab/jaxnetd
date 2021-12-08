@@ -22,6 +22,7 @@ WORKDIR /
 COPY --from=build-env /jaxnetd /
 COPY --from=build-env /jaxctl /
 COPY /jaxnetd.testnet.toml /
+COPY /jaxnetd.mainnet.toml /
 
 # default p2p port
 EXPOSE 18444

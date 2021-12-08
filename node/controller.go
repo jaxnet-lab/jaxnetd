@@ -92,6 +92,10 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 	}
 
 	if chainCtl.cfg.Node.EnableCPUMiner {
+		if len(chainCtl.beacon.chainProvider.MiningAddrs) == 0 {
+			err := errors.New("you need so specify mining addresses in config in order to run CPU miner")
+			return err
+		}
 		chainCtl.InitCPUMiner(func() int32 { return 1 })
 		chainCtl.wg.Add(1)
 		go func() {
