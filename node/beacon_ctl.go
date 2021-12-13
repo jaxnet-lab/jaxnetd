@@ -161,6 +161,11 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 
 	<-ctx.Done()
 
+	beaconCtl.log.Info().Msg("Writing best chain serialIDs to database...")
+	if err := beaconCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
+		beaconCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
+	}
+
 	if beaconCtl.cfg.Node.DumpMMR {
 		tree := beaconCtl.chainProvider.BlockChain().MMRTree()
 		data, err := json.Marshal(tree)
@@ -175,10 +180,6 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 		}
 	}
 
-	beaconCtl.log.Info().Msg("Writing bestchain serialIDs to database...")
-	if err := beaconCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
-		beaconCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
-	}
 	beaconCtl.log.Info().Msg("Gracefully shutting down the database...")
 	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
 		beaconCtl.log.Error().Err(err).Msg("Can't close db")

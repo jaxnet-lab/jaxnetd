@@ -157,6 +157,11 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 
 	<-ctx.Done()
 
+	shardCtl.log.Info().Msg("Writing best chain serialIDs to database...")
+	if err := shardCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
+		shardCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
+	}
+
 	if shardCtl.cfg.Node.DumpMMR {
 		tree := shardCtl.chainProvider.BlockChain().MMRTree()
 		data, err := json.Marshal(tree)

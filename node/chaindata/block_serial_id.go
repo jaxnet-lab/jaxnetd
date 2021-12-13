@@ -35,7 +35,7 @@ type SerialIDBlockMeta struct {
 func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan bool) ([]SerialIDBlockMeta, error) {
 	meta := dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
-	//nolint: gomnd
+	// nolint: gomnd
 	dataList := make([]SerialIDBlockMeta, 0, 256)
 
 	for id := serialID; ; id++ {
@@ -160,6 +160,10 @@ func DBGetSerialIDsList(dbTx database.Tx) ([]BestChainBlockRecord, error) {
 	var startOffset int64
 
 	record := bucket.Get(BestChainSerialIDsBucketName)
+	if len(record) < serialIDByteSize {
+		return nil, nil
+	}
+
 	count := bytesToI64(record[:serialIDByteSize])
 	startOffset += serialIDByteSize
 

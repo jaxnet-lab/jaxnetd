@@ -92,7 +92,7 @@ func (server *MultiChainRPC) Run(ctx context.Context) {
 			prcPtr, ok := server.shardRPCs[cmd.ShardID]
 			server.chainsMutex.RUnlock()
 			if !ok {
-				server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.ShardID)
+				// server.logger.Error().Msgf("Provided ShardID (%d) does not match with any present", cmd.ShardID)
 				return nil, &jaxjson.RPCError{
 					Code:    jaxjson.ErrShardIDMismatch,
 					Message: fmt.Sprintf("Provided ShardID (%d) does not match with any present", cmd.ShardID),

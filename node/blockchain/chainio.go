@@ -195,14 +195,17 @@ func (b *BlockChain) initChainState() error {
 		return err
 	}
 
-	if bestChainSnapshotExists && !b.dbFullRescan {
-		return b.fastInitChainState()
-	}
-
 	if !initialized {
 		// At this point the database has not already been initialized, so
 		// initialize both it and the chain state to the genesis block.
 		return b.createChainState()
+	}
+
+	if bestChainSnapshotExists && !b.dbFullRescan {
+		rescanRequired, err := b.fastInitChainState()
+		if !rescanRequired || err != nil {
+			return err
+		}
 	}
 
 	// Attempt to load the chain state from the database.
@@ -394,12 +397,17 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 	return block, err
 }
 
-func (b *BlockChain) fastInitChainState() error {
+func (b *BlockChain) fastInitChainState() (bool, error) {
 	var lastNode blocknodes.IBlockNode
+	var fullScanRequired bool
 	err := b.db.View(func(dbTx database.Tx) error {
 		serialIDsData, err := chaindata.DBGetSerialIDsList(dbTx)
 		if err != nil {
 			return err
+		}
+		if len(serialIDsData) == 0 {
+			fullScanRequired = true
+			return nil
 		}
 
 		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
@@ -409,15 +417,14 @@ func (b *BlockChain) fastInitChainState() error {
 			return err
 		}
 
-		var hashs []chainhash.Hash
-
+		var hashes = make([]chainhash.Hash, len(serialIDsData))
 		for i := range serialIDsData {
-			hashs = append(hashs, *serialIDsData[i].Hash)
+			hashes[i] = *serialIDsData[i].Hash
 		}
 
 		log.Info().Str("chain", b.chain.Name()).Msgf("Loading best chain blocks...")
 
-		bls, err := dbTx.FetchBlocks(hashs)
+		bls, err := dbTx.FetchBlocks(hashes)
 		if err != nil {
 			return err
 		}
@@ -490,8 +497,10 @@ func (b *BlockChain) fastInitChainState() error {
 		)
 		return nil
 	})
-	if err != nil {
-		return err
+
+	if err != nil || fullScanRequired {
+		return fullScanRequired, err
 	}
-	return b.blocksDB.index.flushToDB()
+
+	return false, b.blocksDB.index.flushToDB()
 }
