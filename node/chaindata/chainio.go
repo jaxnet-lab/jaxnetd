@@ -98,6 +98,8 @@ var (
 	// Bucket is used for quick catch-up launch
 	BestChainSerialIDsBucketName = []byte("bestchain_serialids")
 
+	ShardCreationsBucketName = []byte("shard_creations")
+
 	// byteOrder is the preferred byte order used for serializing numeric
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
@@ -1256,4 +1258,79 @@ func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhas
 	copy(root[:], val)
 
 	return root, nil
+}
+
+type ShardInfo struct {
+	ID            uint32 `json:"id"`
+	GenesisHeight int32  `json:"genesis_height"`
+	GenesisHash   string `json:"genesis_hash"`
+	SerialID      int64  `json:"serial_id"`
+}
+
+func DBStoreShardGenesisInfo(dbTx database.Tx, shardID uint32, blockHeight int32, blockHash *chainhash.Hash, blockSerialID int64) error {
+	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+	val := make([]byte, chainhash.HashSize+4+8)
+	copy(val[:chainhash.HashSize], blockHash[:])
+	binary.LittleEndian.PutUint32(val[chainhash.HashSize:chainhash.HashSize+4], uint32(blockHeight))
+	binary.LittleEndian.PutUint64(val[chainhash.HashSize+4:chainhash.HashSize+4+8], uint64(blockSerialID))
+
+	key := make([]byte, 4)
+	binary.LittleEndian.PutUint32(key, shardID)
+
+	valueAtKey := bucket.Get(key)
+	if valueAtKey != nil {
+		return fmt.Errorf("shard with specified ID %d already exists", shardID)
+	}
+
+	return bucket.Put(key, val)
+}
+
+func DBStoreLastShardInfo(dbTx database.Tx, shardID uint32) error {
+	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+	val := make([]byte, 4)
+	binary.LittleEndian.PutUint32(val, shardID)
+
+	return bucket.Put([]byte("last_shard_id"), val)
+}
+
+func DBGetShardGenesisInfo(dbTx database.Tx) (map[uint32]ShardInfo, uint32) {
+	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+	lastShardIDByte := bucket.Get([]byte("last_shard_id"))
+	if len(lastShardIDByte) == 0 {
+		return nil, 0
+	}
+	lastShardID := binary.LittleEndian.Uint32(lastShardIDByte)
+
+	shards := make(map[uint32]ShardInfo, lastShardID)
+
+	for i := uint32(1); i <= lastShardID; i++ {
+		key := make([]byte, 4)
+		binary.LittleEndian.PutUint32(key, i)
+		data := bucket.Get(key)
+
+		hash, blockHeight, serialID := decodeShardGenesisInfo(data)
+		shards[i] = ShardInfo{
+			ID:            i,
+			GenesisHeight: blockHeight,
+			GenesisHash:   hash.String(),
+			SerialID:      serialID,
+		}
+	}
+
+	return shards, lastShardID
+}
+
+func decodeShardGenesisInfo(data []byte) (chainhash.Hash, int32, int64) {
+	var hash [32]byte
+	copy(hash[:], data[:chainhash.HashSize])
+
+	blockHeightBytes := make([]byte, 4)
+	copy(blockHeightBytes, data[chainhash.HashSize:chainhash.HashSize+4])
+	blockHeight := binary.LittleEndian.Uint32(blockHeightBytes)
+
+	serialIDBytes := make([]byte, 8)
+	copy(blockHeightBytes, data[chainhash.HashSize+4:chainhash.HashSize+4+8])
+	serialID := binary.LittleEndian.Uint64(serialIDBytes)
+
+	return hash, int32(blockHeight), int64(serialID)
 }

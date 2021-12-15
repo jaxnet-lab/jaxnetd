@@ -277,7 +277,6 @@ func newConfigParser(cfg *node.Config, so *serviceOptions, options flags.Options
 // command line options.  Command line options always take precedence.
 // nolint: gocritic, gomnd
 func LoadConfig() (*node.Config, []string, error) {
-	fmt.Println("load load load")
 	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
 		dataDir = defaultHomeDir

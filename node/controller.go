@@ -100,7 +100,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 			chainCtl.logger.Error().Err(err).Msg("Shards error")
 			return err
 		}
-		defer chainCtl.saveShardsIndex()
 	}
 
 	if cfg.Node.Shards.Autorun {
