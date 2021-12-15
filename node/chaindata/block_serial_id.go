@@ -158,7 +158,6 @@ func DBGetSerialIDsList(dbTx database.Tx) ([]BestChainBlockRecord, error) {
 	bucket := meta.Bucket(BestChainSerialIDsBucketName)
 
 	var startOffset int64
-
 	record := bucket.Get(BestChainSerialIDsBucketName)
 	count := bytesToI64(record[:serialIDByteSize])
 	startOffset += serialIDByteSize

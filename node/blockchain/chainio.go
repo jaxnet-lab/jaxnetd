@@ -102,6 +102,7 @@ func (b *BlockChain) createChainState() error {
 			buckets = append(buckets,
 				// Create the bucket that houses the EAD addresses index.
 				chaindata.EADAddressesBucketNameV2, // EAD registration is possible only at beacon
+				chaindata.ShardCreationsBucketName,
 			)
 		}
 
