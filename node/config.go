@@ -53,8 +53,9 @@ type InstanceConfig struct {
 }
 
 type ShardConfig struct {
-	Enable  bool `yaml:"enable" toml:"enable"`
-	Autorun bool `yaml:"autorun" toml:"autorun"`
+	Enable        bool     `yaml:"enable" toml:"enable"`
+	Autorun       bool     `yaml:"autorun" toml:"autorun"`
+	EnabledShards []uint32 `yaml:"enabled_shards" toml:"enabled_shards"`
 }
 
 func (cfg *InstanceConfig) ChainParams() *chaincfg.Params {

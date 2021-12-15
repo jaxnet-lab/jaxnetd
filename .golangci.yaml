@@ -55,6 +55,7 @@ run:
   skip-files:
     - ".*/.*/.*_test.go"
     - ".*/.*_test.go"
+    - "tmp/*"
 
 linters:
   enable:

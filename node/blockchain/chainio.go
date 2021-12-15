@@ -418,7 +418,7 @@ func (b *BlockChain) fastInitChainState() (bool, error) {
 			return err
 		}
 
-		var hashes = make([]chainhash.Hash, len(serialIDsData))
+		hashes := make([]chainhash.Hash, len(serialIDsData))
 		for i := range serialIDsData {
 			hashes[i] = *serialIDsData[i].Hash
 		}

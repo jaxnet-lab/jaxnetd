@@ -16,6 +16,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
@@ -85,14 +86,31 @@ func (chainCtl *chainController) runShards() error {
 		return err
 	}
 
+	shardsLimitOn := len(chainCtl.cfg.Node.Shards.EnabledShards) > 0
+	enabledShards := make(map[uint32]struct{}, len(chainCtl.cfg.Node.Shards.EnabledShards))
+
+	for _, shardID := range chainCtl.cfg.Node.Shards.EnabledShards {
+		enabledShards[shardID] = struct{}{}
+	}
+
 	for _, info := range chainCtl.shardsIndex.Shards {
-		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHeight(info.GenesisHeight)
+		if _, ok := enabledShards[info.ID]; shardsLimitOn && !ok {
+			chainCtl.logger.Info().Uint32("shard", info.ShardInfo.ID).Msgf("shard disabled by configuration")
+			continue
+		}
+
+		gHash, err := chainhash.NewHashFromStr(info.GenesisHash)
 		if err != nil {
 			return err
 		}
 
-		version := block.MsgBlock().Header.Version()
-		if !version.ExpansionMade() {
+		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHash(gHash)
+		if err != nil {
+			// todo: need to cope with the situation when the shard becomes an orphan
+			return err
+		}
+
+		if !block.MsgBlock().Header.Version().ExpansionMade() {
 			return errors.New("invalid start genesis block, expansion not made at this height")
 		}
 
@@ -118,8 +136,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
-	version := block.MsgBlock().Header.Version()
-	if !version.ExpansionMade() {
+	if !block.MsgBlock().Header.Version().ExpansionMade() {
 		return
 	}
 
@@ -228,10 +245,10 @@ func (chainCtl *chainController) syncShardsIndex() error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
+
 	var maxHeight int32
 	snapshot := chainCtl.beacon.chainProvider.BlockChain().BestSnapshot()
 	if snapshot != nil {

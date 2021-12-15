@@ -252,6 +252,7 @@ func New(config *Config) (*BlockChain, error) {
 	log.Info().Str("chain", b.chain.Name()).Msgf("Chain state (height %d, hash %v, totaltx %d, work %v)",
 		bestNode.Height(), bestNode.GetHash(), b.stateSnapshot.TotalTxns,
 		bestNode.WorkSum())
+	log.Info().Msgf("THE %s CHAIN IS READY", b.chain.Name())
 
 	return &b, nil
 }
@@ -1267,7 +1268,7 @@ func (b *BlockChain) isCurrent() bool {
 	}
 
 	chainName := b.chain.Params().Net
-	developmentEnv := chainName == chaincfg.FastNetParams.Net
+	developmentEnv := chainName == wire.FastTestNet || chainName == wire.TestNet
 	if developmentEnv {
 		return true
 	}

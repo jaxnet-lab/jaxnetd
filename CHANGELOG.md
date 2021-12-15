@@ -7,6 +7,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.3]
+- Replaced standard `sha256` by  [sha256-simd](https://github.com/minio/sha256-simd).
+- Improved speed of the catching up of the chain by saving of the index of the best chain.  
+- Removed prometheus metrics, use standalone [monitoring daemon](https://gitlab.com/jaxnet/core/jaxnetd-monitor) instead. 
+- Added saving the index of the best chain to the database. This speeds up the startup of the node.
+- Dropped support of the `shard.json`. Now this data is housed in the beacon database.
+- Added the automining mode for the CPU-miner.
+- Allowed mining of the outdated testnet chain.
+- Configuration: made `mining_address` optional.
+- Configuration: added optional `enabled_shards` list configuration.
+
+## [0.4.2]
+- Changed default jaxBurnScript and validation of vanity prefixes
+- Finalized Mainnet Genesis with BTC Block 707634
+- Fix vanity check for BCH
+- Small clean-up
+- Updated MMT validation
+- Updated coinbase validation
+
 ## [0.4.1]
 
 - Fixed shard genesis generation.
@@ -17,7 +36,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added magic byte as first bytes in serialized header and blocks. This allows you to automatically handle what type of
   data is BeaconHeader or ShardHeader.
 - Replaced CmdBlock by CmdBlockBox. This allows to push Actual MMR Root for the Block during sync.
-- Extend 
 
 ## [0.4.0]
 
@@ -72,13 +90,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fix the `getTxOutsStatus` method;
 - Added the network diagram to docs.
 
-## [0.3.7]
-
-- Added `estimateLockTime` and `getMempoolUTXOs` RPC calls
-- Normalize fee for the shard chains;
-- Fix the `getTxOutsStatus` method;
-- Added the network diagram to docs.
-
 ## [0.3.5] - 2021-06-30: Initial testnet release
 
 - Implemented basic Jax.Net protocol:
@@ -91,3 +102,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Improve and extend RPC Api;
 - Added `jaxutils/txmodels` and `jaxutils/txutils` packages for building transactions;
 - Introduces `zerolog` for structured logging and `prometheus` for monitoring.
+
+[0.4.3]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.3
+[0.4.2]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.2
+[0.4.1]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.1
+[0.4.0]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.0
+[0.3.12-14]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.14
+[0.3.11]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.11
+[0.3.10]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.10
+[0.3.9]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.9
+[0.3.8]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.8
+[0.3.7]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.7
+[0.3.5]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.5

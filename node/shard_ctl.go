@@ -173,11 +173,6 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 		}
 	}
 
-	shardCtl.log.Info().Msg("Writing bestchain serialIDs to database...")
-	if err := shardCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
-	}
-
 	shardCtl.log.Info().Msg("ShardChain p2p server shutdown complete")
 	shardCtl.log.Info().Msg("Gracefully shutting down the database...")
 	if err := shardCtl.chainProvider.DB.Close(); err != nil {
