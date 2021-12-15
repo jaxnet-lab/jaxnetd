@@ -21,16 +21,12 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
-	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
 type ShardInfo struct {
-	ID            uint32         `json:"id"`
-	LastVersion   wire.BVersion  `json:"last_version"`
-	GenesisHeight int32          `json:"genesis_height"`
-	GenesisHash   string         `json:"genesis_hash"`
-	Enabled       bool           `json:"enabled"`
-	P2PInfo       p2p.ListenOpts `json:"p2p_info"`
+	chaindata.ShardInfo
+	Enabled bool           `json:"enabled"`
+	P2PInfo p2p.ListenOpts `json:"p2p_info"`
 }
 
 type Index struct {
@@ -49,12 +45,13 @@ func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
 	}
 
 	index.Shards[shardID] = ShardInfo{
-		ID:            shardID,
-		LastVersion:   block.MsgBlock().Header.Version(),
-		GenesisHeight: block.Height(),
-		GenesisHash:   block.Hash().String(),
-		Enabled:       true,
-		P2PInfo:       opts,
+		ShardInfo: chaindata.ShardInfo{
+			ID:            shardID,
+			GenesisHeight: block.Height(),
+			GenesisHash:   block.Hash().String(),
+		},
+		Enabled: true,
+		P2PInfo: opts,
 	}
 
 	return shardID
@@ -174,6 +171,11 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 				shardCtl.log.Error().Err(err).Msg("Can't serialize MMT Tree")
 			}
 		}
+	}
+
+	shardCtl.log.Info().Msg("Writing bestchain serialIDs to database...")
+	if err := shardCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
+		shardCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
 	}
 
 	shardCtl.log.Info().Msg("ShardChain p2p server shutdown complete")

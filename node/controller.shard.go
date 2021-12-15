@@ -6,17 +6,15 @@ package node
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 
+	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
 	"gitlab.com/jaxnet/jaxnetd/network/rpc"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/version"
@@ -49,7 +47,6 @@ func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 	for _, shardInfo := range chainCtl.shardsIndex.Shards {
 		list[shardInfo.ID] = jaxjson.ShardInfo{
 			ID:            shardInfo.ID,
-			LastVersion:   int32(shardInfo.LastVersion),
 			GenesisHeight: shardInfo.GenesisHeight,
 			GenesisHash:   shardInfo.GenesisHash,
 			Enabled:       shardInfo.Enabled,
@@ -126,6 +123,10 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 		return
 	}
 
+	if err := chainCtl.saveNewShard(block); err != nil {
+		return
+	}
+
 	opts := p2p.ListenOpts{}
 	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners,
 		block.MsgBlock().Header.BeaconHeader().Shards(), // todo: change this
@@ -190,39 +191,47 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 }
 
-// nolint: gomnd
-func (chainCtl *chainController) saveShardsIndex() {
-	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
-	content, err := json.Marshal(chainCtl.shardsIndex)
-	if err != nil {
-		chainCtl.logger.Error().Err(err).Msg("unable to marshal shards index")
-		return
-	}
-
-	if err = ioutil.WriteFile(shardsFile, content, 0o644); err != nil {
-		chainCtl.logger.Error().Err(err).Msg("unable to write shards index")
-		return
-	}
-}
-
 func (chainCtl *chainController) syncShardsIndex() error {
-	shardsFile := filepath.Join(chainCtl.cfg.DataDir, "shards.json")
 	chainCtl.shardsIndex = &Index{
 		Shards: map[uint32]ShardInfo{},
 	}
-
-	if _, err := os.Stat(shardsFile); err == nil {
-		file, err := ioutil.ReadFile(shardsFile)
-		if err != nil {
-			return err
-		}
-
-		err = json.Unmarshal(file, chainCtl.shardsIndex)
-		if err != nil {
-			return err
-		}
+	chainCtl.beacon.shardsIndex = &Index{
+		Shards: map[uint32]ShardInfo{},
 	}
 
+	err := chainCtl.beacon.chainProvider.DB.Update(func(tx database.Tx) error {
+		if tx.Metadata().Bucket(chaindata.ShardCreationsBucketName) == nil {
+			_, err := tx.Metadata().CreateBucket(chaindata.ShardCreationsBucketName)
+			return err
+		}
+
+		idx := &Index{
+			Shards: map[uint32]ShardInfo{},
+		}
+		shardsData, lastShardID := chaindata.DBGetShardGenesisInfo(tx)
+		for shardID, data := range shardsData {
+			idx.Shards[shardID] = ShardInfo{
+				ShardInfo: chaindata.ShardInfo{
+					ID:            data.ID,
+					GenesisHeight: data.GenesisHeight,
+					GenesisHash:   data.GenesisHash,
+					SerialID:      data.SerialID,
+				},
+				Enabled: true,
+			}
+		}
+		idx.LastShardID = lastShardID
+		idx.LastBeaconHeight = idx.Shards[lastShardID].GenesisHeight
+
+		chainCtl.shardsIndex = idx
+		chainCtl.beacon.shardsIndex = idx
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
 	var maxHeight int32
 	snapshot := chainCtl.beacon.chainProvider.BlockChain().BestSnapshot()
 	if snapshot != nil {
@@ -246,8 +255,19 @@ func (chainCtl *chainController) syncShardsIndex() error {
 			continue
 		}
 		chainCtl.shardsIndex.AddShard(block, p2p.ListenOpts{})
+		chainCtl.beacon.shardsIndex.AddShard(block, p2p.ListenOpts{})
 	}
 
-	chainCtl.saveShardsIndex()
-	return nil
+	return chainCtl.beacon.saveShardsIndex()
+}
+
+func (chainCtl *chainController) saveNewShard(block *jaxutil.Block) error {
+	return chainCtl.beacon.chainProvider.DB.Update(func(tx database.Tx) error {
+		serialID, _, err := chaindata.DBFetchBlockSerialID(tx, block.Hash())
+		if err != nil {
+			return err
+		}
+
+		return chaindata.DBStoreShardGenesisInfo(tx, block.MsgBlock().Header.BeaconHeader().Shards(), block.Height(), block.Hash(), serialID)
+	})
 }

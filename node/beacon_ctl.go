@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog"
+	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/network/addrmgr"
 	"gitlab.com/jaxnet/jaxnetd/network/p2p"
@@ -19,6 +20,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -32,6 +34,8 @@ type BeaconCtl struct {
 
 	p2pServer     *p2p.Server
 	chainProvider *cprovider.ChainProvider
+
+	shardsIndex *Index
 }
 
 func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) BeaconCtl {
@@ -180,6 +184,12 @@ func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
 		}
 	}
 
+	if beaconCtl.cfg.Node.Shards.Enable {
+		if err := beaconCtl.saveShardsIndex(); err != nil {
+			beaconCtl.log.Error().Err(err).Msg("can't save shards index in db")
+		}
+	}
+
 	beaconCtl.log.Info().Msg("Gracefully shutting down the database...")
 	if err := beaconCtl.chainProvider.DB.Close(); err != nil {
 		beaconCtl.log.Error().Err(err).Msg("Can't close db")
@@ -207,4 +217,31 @@ func (beaconCtl *BeaconCtl) Stats() map[string]float64 {
 
 	chainStats["difficulty"] = float64(workToPass)
 	return chainStats
+}
+
+func (beaconCtl *BeaconCtl) saveShardsIndex() error {
+	err := beaconCtl.chainProvider.DB.Update(func(tx database.Tx) error {
+		for _, shardInfo := range beaconCtl.shardsIndex.Shards {
+			blockHash, err := chainhash.NewHashFromStr(shardInfo.GenesisHash)
+			if err != nil {
+				continue
+			}
+
+			serialID, _, err := chaindata.DBFetchBlockSerialID(tx, blockHash)
+			if err != nil {
+				continue
+			}
+			err = chaindata.DBStoreShardGenesisInfo(tx, shardInfo.ID, shardInfo.GenesisHeight, blockHash, serialID)
+			if err != nil {
+				continue
+			}
+		}
+
+		return chaindata.DBStoreLastShardInfo(tx, beaconCtl.shardsIndex.LastShardID)
+	})
+	if err != nil {
+		beaconCtl.log.Error().Err(err).Msg("unable to write shards index")
+	}
+
+	return err
 }
