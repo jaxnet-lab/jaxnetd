@@ -65,7 +65,7 @@ func newChainView(tip blocknodes.IBlockNode) *chainView {
 		RootToBlock:   map[chainhash.Hash]chainhash.Hash{},
 	}
 
-	c.setTip(tip)
+	c.setTip(tip, false)
 	return &c
 }
 
@@ -124,7 +124,7 @@ func (c *chainView) Tip() blocknodes.IBlockNode {
 // up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (c *chainView) setTip(node blocknodes.IBlockNode) {
+func (c *chainView) setTip(node blocknodes.IBlockNode, quickAdd bool) {
 	if node == nil {
 		// Keep the backing array around for potential future use.
 		c.nodes = c.nodes[:0]
@@ -152,7 +152,11 @@ func (c *chainView) setTip(node blocknodes.IBlockNode) {
 		}
 	}
 
-	c.mmrTree.SetNodeToMmrWithReorganization(node)
+	if quickAdd {
+		c.mmrTree.SetNodeQuick(node)
+	} else {
+		c.mmrTree.SetNodeToMmrWithReorganization(node)
+	}
 
 	for node != nil && c.nodes[node.Height()] != node {
 		c.nodes[node.Height()] = node
@@ -169,7 +173,13 @@ func (c *chainView) setTip(node blocknodes.IBlockNode) {
 // This function is safe for concurrent access.
 func (c *chainView) SetTip(node blocknodes.IBlockNode) {
 	c.mtx.Lock()
-	c.setTip(node)
+	c.setTip(node, false)
+	c.mtx.Unlock()
+}
+
+func (c *chainView) SetQuickTip(node blocknodes.IBlockNode) {
+	c.mtx.Lock()
+	c.setTip(node, true)
 	c.mtx.Unlock()
 }
 

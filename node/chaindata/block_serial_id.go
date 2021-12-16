@@ -152,7 +152,7 @@ type BestChainBlockRecord struct {
 	Hash     *chainhash.Hash `json:"hash"`
 }
 
-func DBGetSerialIDsList(dbTx database.Tx) ([]BestChainBlockRecord, error) {
+func DBGetBestChainSerialIDs(dbTx database.Tx) ([]BestChainBlockRecord, error) {
 	var res []BestChainBlockRecord
 	meta := dbTx.Metadata()
 	bucket := meta.Bucket(BestChainSerialIDsBucketName)

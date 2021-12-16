@@ -671,7 +671,7 @@ func serializeUtxoEntry(entry *UtxoEntry) ([]byte, error) {
 // DeserializeUtxoEntry decodes a utxo entry from the passed serialized byte
 // slice into a new UtxoEntry using a format that is suitable for long-term
 // storage.  The format is described in detail above.
-//nolint: gomnd
+// nolint: gomnd
 func DeserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	// Deserialize the header code.
 	code, offset := deserializeVLQ(serialized)
@@ -1246,6 +1246,29 @@ func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
 
 	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
 	return bucket.Put(blockHash[:], mmrRoot[:])
+}
+
+func DBGetBlocksMMRRoots(dbTx database.Tx) (map[chainhash.Hash]chainhash.Hash, error) {
+	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+	res := make(map[chainhash.Hash]chainhash.Hash, 4096)
+	err := bucket.ForEach(func(key, val []byte) error {
+		var keyHash chainhash.Hash
+		if len(key) != chainhash.HashSize {
+			return fmt.Errorf("invalid hash length of %v, want %v", len(key), chainhash.HashSize)
+		}
+		copy(keyHash[:], key)
+
+		var value chainhash.Hash
+		if len(val) != chainhash.HashSize {
+			return fmt.Errorf("invalid hash length of %v, want %v", len(val), chainhash.HashSize)
+		}
+		copy(value[:], val)
+
+		res[keyHash] = value
+		return nil
+	})
+
+	return res, err
 }
 
 func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhash.Hash, error) {

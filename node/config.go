@@ -28,9 +28,9 @@ type Config struct {
 	CPUProfile    string   `toml:"cpu_profile" yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	DebugLevel    string   `toml:"debug_level" yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	Profile       string   `toml:"profile" yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	DropAddrIndex bool     `toml:"drop_addr_index" yaml:"drop_addr_index" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropCfIndex   bool     `toml:"drop_cf_index" yaml:"drop_cf_index" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
-	DropTxIndex   bool     `toml:"drop_tx_index" yaml:"drop_tx_index" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+	DropAddrIndex bool     `toml:"-" yaml:"-" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropCfIndex   bool     `toml:"-" yaml:"-" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
+	DropTxIndex   bool     `toml:"-" yaml:"-" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
 	TorIsolation  bool     `toml:"tor_isolation" yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
 	Whitelists    []string `toml:"whitelists" yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
 

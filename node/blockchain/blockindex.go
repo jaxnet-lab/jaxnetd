@@ -103,7 +103,7 @@ func (bi *blockIndex) LookupNode(hash *chainhash.Hash) blocknodes.IBlockNode {
 // This function is safe for concurrent access.
 func (bi *blockIndex) AddNode(node blocknodes.IBlockNode) {
 	bi.Lock()
-	bi.addNode(node)
+	bi.addNode(node, false)
 	bi.dirty[node] = struct{}{}
 	bi.Unlock()
 }
@@ -112,8 +112,12 @@ func (bi *blockIndex) AddNode(node blocknodes.IBlockNode) {
 // dirty. This can be used while initializing the block index.
 //
 // This function is NOT safe for concurrent access.
-func (bi *blockIndex) addNode(node blocknodes.IBlockNode) {
+func (bi *blockIndex) addNode(node blocknodes.IBlockNode, quickAdd bool) {
 	bi.index[node.GetHash()] = node
+	if quickAdd {
+		bi.mmrTree.SetNodeQuick(node)
+		return
+	}
 
 	bi.mmrTree.SetNodeToMmrWithReorganization(node)
 }

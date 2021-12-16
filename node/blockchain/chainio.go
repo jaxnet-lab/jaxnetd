@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
@@ -53,7 +54,7 @@ func (b *BlockChain) createChainState() error {
 	b.blocksDB.bestChain.SetTip(genesisNode)
 
 	// Add the new node to the index which is used for faster lookups.
-	b.blocksDB.index.addNode(genesisNode)
+	b.blocksDB.index.addNode(genesisNode, false)
 
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
@@ -283,7 +284,7 @@ func (b *BlockChain) initChainState() error {
 			node := b.chain.NewNode(header, parent, blockSerialID)
 			node.SetStatus(status)
 
-			b.blocksDB.index.addNode(node)
+			b.blocksDB.index.addNode(node, false)
 
 			lastNode = node
 			i++
@@ -402,63 +403,84 @@ func (b *BlockChain) fastInitChainState() (bool, error) {
 	var lastNode blocknodes.IBlockNode
 	var fullScanRequired bool
 	err := b.db.View(func(dbTx database.Tx) error {
-		serialIDsData, err := chaindata.DBGetSerialIDsList(dbTx)
+		bestStateData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
+		log.Trace().Str("chain", b.chain.Name()).Msgf("Serialized chain state: %x", bestStateData)
+		state, err := chaindata.DeserializeBestChainState(bestStateData)
 		if err != nil {
 			return err
 		}
-		if len(serialIDsData) == 0 {
+
+		bestChain, err := chaindata.DBGetBestChainSerialIDs(dbTx)
+		if err != nil {
+			return err
+		}
+		if len(bestChain) == 0 {
 			fullScanRequired = true
 			return nil
 		}
 
-		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
-		log.Trace().Str("chain", b.chain.Name()).Msgf("Serialized chain state: %x", serializedData)
-		state, err := chaindata.DeserializeBestChainState(serializedData)
+		mmrRoots, err := chaindata.DBGetBlocksMMRRoots(dbTx)
 		if err != nil {
-			return err
-		}
-
-		hashes := make([]chainhash.Hash, len(serialIDsData))
-		for i := range serialIDsData {
-			hashes[i] = *serialIDsData[i].Hash
+			return errors.Wrap(err, "can't get blocks mmr roots")
 		}
 
 		log.Info().Str("chain", b.chain.Name()).Msgf("Loading best chain blocks...")
 
-		bls, err := dbTx.FetchBlocks(hashes)
-		if err != nil {
-			return err
-		}
+		b.blocksDB.index.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
+		b.blocksDB.bestChain.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
 
-		var blocks []wire.BlockHeader
-		for i := range bls {
-			a, err := wire.DecodeHeader(bytes.NewReader(bls[i]))
-			if err != nil {
-				return err
-			}
-			blocks = append(blocks, a)
-		}
-
-		for i := range blocks {
+		for _, record := range bestChain {
 			parent := lastNode
+
+			rawBlock, err := dbTx.FetchBlock(record.Hash)
+			if err != nil {
+				return errors.Wrap(err, "can't fetch block")
+			}
+
+			lastBlock, err := wire.DecodeBlock(bytes.NewBuffer(rawBlock))
+			if err != nil {
+				return errors.Wrap(err, "can't decode block")
+			}
+
+			header := lastBlock.Header
+
 			if parent != nil {
 				prevHash := parent.GetHash()
-				bph := blocks[i].PrevBlockHash()
+				bph := header.PrevBlockHash()
 				if !prevHash.IsEqual(&bph) {
 					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-						prevHash, blocks[i].PrevBlocksMMRRoot(), bph)
+						prevHash, header.PrevBlocksMMRRoot(), bph)
 					return chaindata.AssertError(str)
 				}
 			}
 
 			// Initialize the block node for the block, connect it,
 			// and add it to the block index.
-			node := b.chain.NewNode(blocks[i], parent, serialIDsData[i].SerialID)
+			node := b.chain.NewNode(header, parent, record.SerialID)
 			node.SetStatus(blocknodes.StatusValid)
 
-			b.blocksDB.index.addNode(node)
+			root, ok := mmrRoots[node.GetHash()]
+			if !ok && node.Height() == 0 {
+				root = node.GetHash()
+			}
 
+			if !ok && node.Height() > 0 {
+				log.Error().Stringer("block_hash", node.GetHash()).
+					Int32("height", node.Height()).Msg("mmr root for block not found")
+				fullScanRequired = true
+				return nil
+			}
+
+			node.SetActualMMRRoot(root)
+
+			b.blocksDB.index.addNode(node, true)
+			b.blocksDB.bestChain.setTip(node, true)
 			lastNode = node
+		}
+		lastHash := lastNode.GetHash()
+		if !lastHash.IsEqual(&state.Hash) {
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: last node hash(%s) does not match with chain tip(%s)", lastHash, state.Hash))
 		}
 
 		b.blocksDB.lastSerialID = state.LastSerialID
@@ -469,7 +491,6 @@ func (b *BlockChain) fastInitChainState() (bool, error) {
 			return chaindata.AssertError(fmt.Sprintf(
 				"initChainState: cannot find chain tip %s in block index", state.Hash))
 		}
-		b.blocksDB.bestChain.SetTip(tip)
 
 		// Load the raw block bytes for the best block.
 		blockBytes, err := dbTx.FetchBlock(&state.Hash)
@@ -486,7 +507,7 @@ func (b *BlockChain) fastInitChainState() (bool, error) {
 		blockSize := uint64(len(blockBytes))
 		blockWeight := uint64(chaindata.GetBlockWeight(jaxutil.NewBlock(block)))
 		numTxns := uint64(len(block.Transactions))
-		b.stateSnapshot = chaindata.NewBestState(tip,
+		b.stateSnapshot = chaindata.NewBestState(lastNode,
 			b.blocksDB.bestChain.mmrTree.CurrentRoot(),
 			blockSize,
 			blockWeight,
@@ -501,6 +522,15 @@ func (b *BlockChain) fastInitChainState() (bool, error) {
 
 	if err != nil || fullScanRequired {
 		return fullScanRequired, err
+	}
+
+	err = b.blocksDB.index.mmrTree.RebuildTreeAndAssert()
+	if err != nil {
+		return true, errors.Wrap(err, "index.mmrTree is inconsistent")
+	}
+	err = b.blocksDB.bestChain.mmrTree.RebuildTreeAndAssert()
+	if err != nil {
+		return true, errors.Wrap(err, "bestChain.mmrTree is inconsistent")
 	}
 
 	return false, b.blocksDB.index.flushToDB()

@@ -19,6 +19,11 @@ type TreeContainer struct {
 	RootToBlock map[chainhash.Hash]chainhash.Hash
 }
 
+func (mmrTree *TreeContainer) SetNodeQuick(node blocknodes.IBlockNode) {
+	mmrTree.RootToBlock[node.ActualMMRRoot()] = node.GetHash()
+	mmrTree.AddBlockWithoutRebuild(node.GetHash(), node.ActualMMRRoot(), node.Height(), node.PowWeight())
+}
+
 func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBlockNode) bool {
 	prevNodesMMRRoot := node.PrevMMRRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()

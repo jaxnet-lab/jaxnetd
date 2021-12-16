@@ -8,6 +8,7 @@ package mmr
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -109,32 +110,33 @@ func (t *BlocksMMRTree) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-func (t *BlocksMMRTree) Fork() *BlocksMMRTree {
-	t.RLock()
-	newTree := &BlocksMMRTree{
-		nextHeight:   t.nextHeight,
-		chainWeight:  t.chainWeight,
-		rootHash:     chainhash.Hash{},
-		lastNode:     t.lastNode.Clone(),
-		nodes:        make([]*TreeLeaf, len(t.nodes)),
-		mountainTops: make(map[chainhash.Hash]uint64, len(t.mountainTops)),
-		hashToHeight: make(map[chainhash.Hash]uint64, len(t.hashToHeight)),
-	}
-
-	for u, node := range t.nodes {
-		newTree.nodes[u] = node.Clone()
-	}
-	for top, nodeID := range t.mountainTops {
-		newTree.mountainTops[top] = nodeID
-	}
-
-	for hash, nodeID := range t.hashToHeight {
-		newTree.hashToHeight[hash] = nodeID
-	}
-
-	t.RUnlock()
-	return newTree
-}
+//
+// func (t *BlocksMMRTree) Fork() *BlocksMMRTree {
+// 	t.RLock()
+// 	newTree := &BlocksMMRTree{
+// 		nextHeight:   t.nextHeight,
+// 		chainWeight:  t.chainWeight,
+// 		rootHash:     chainhash.Hash{},
+// 		lastNode:     t.lastNode.Clone(),
+// 		nodes:        make([]*TreeLeaf, len(t.nodes)),
+// 		mountainTops: make(map[chainhash.Hash]uint64, len(t.mountainTops)),
+// 		hashToHeight: make(map[chainhash.Hash]uint64, len(t.hashToHeight)),
+// 	}
+//
+// 	for u, node := range t.nodes {
+// 		newTree.nodes[u] = node.Clone()
+// 	}
+// 	for top, nodeID := range t.mountainTops {
+// 		newTree.mountainTops[top] = nodeID
+// 	}
+//
+// 	for hash, nodeID := range t.hashToHeight {
+// 		newTree.hashToHeight[hash] = nodeID
+// 	}
+//
+// 	t.RUnlock()
+// 	return newTree
+// }
 
 // AddBlock adds block as latest leaf, increases height and rebuild tree.
 func (t *BlocksMMRTree) AddBlock(hash chainhash.Hash, difficulty *big.Int) {
@@ -164,6 +166,71 @@ func (t *BlocksMMRTree) addBlock(hash chainhash.Hash, difficulty *big.Int) {
 	t.nodes[heightToID(int32(node.Height))].ActualRoot = t.rootHash
 	t.mountainTops[t.rootHash] = node.Height
 	t.lastNode = node
+}
+
+// AllocForFastAdd allocates tree containers to hold expected number of blocks.
+//
+// IMPORTANT! this function is not safe!
+//
+// AllocForFastAdd should be used only on empty tree instances and only for quick block adding.
+// Quick Block Adding must be done like this:
+//
+//  tree := NewTree()
+//  tree.AllocForFastAdd(n)
+//  for _, block := range blocks {
+//     tree.AddBlockWithoutRebuild(....)
+//  }
+//  err := tree.RebuildTreeAndAssert()
+func (t *BlocksMMRTree) AllocForFastAdd(blockCount uint64) {
+	nextPoT := nextPowerOfTwo(blockCount + 1)
+	arraySize := uint64(nextPoT*2 - 1)
+	t.nodes = make([]*TreeLeaf, arraySize)
+	t.mountainTops = make(map[chainhash.Hash]uint64, blockCount)
+	t.hashToHeight = make(map[chainhash.Hash]uint64, blockCount)
+}
+
+// AddBlockWithoutRebuild adds block as latest leaf, increases height and weight, but without tree rebuild.
+//
+// IMPORTANT! This function is not safe!
+//
+// AddBlockWithoutRebuild  should be used only for quick block adding.
+//
+// Quick Block Adding must be done like this:
+//
+//  tree := NewTree()
+//  tree.AllocForFastAdd(n)
+//  for _, block := range blocks {
+//     tree.AddBlockWithoutRebuild(....)
+//  }
+//  err := tree.RebuildTreeAndAssert()
+func (t *BlocksMMRTree) AddBlockWithoutRebuild(hash, actualMMR chainhash.Hash, height int32, difficulty *big.Int) {
+	t.hashToHeight[hash] = uint64(height)
+	t.mountainTops[actualMMR] = uint64(height)
+	t.nodes[heightToID(height)] = &TreeLeaf{
+		Leaf:       Leaf{Hash: hash, Weight: difficulty},
+		Height:     t.nextHeight,
+		ActualRoot: actualMMR,
+	}
+
+	t.rootHash = actualMMR
+	t.lastNode = t.nodes[heightToID(height)]
+	t.nextHeight = uint64(height + 1)
+	t.chainWeight = new(big.Int).Add(t.chainWeight, difficulty)
+}
+
+// RebuildTreeAndAssert just rebuild the whole tree and checks is root match with actual.
+func (t *BlocksMMRTree) RebuildTreeAndAssert() error {
+	t.Lock()
+	var root chainhash.Hash
+
+	root = t.rebuildTree(t.lastNode, t.lastNode.Height)
+	if !t.rootHash.IsEqual(&root) {
+		t.Unlock()
+		return fmt.Errorf("mmr_root(%s) of tree mismatches with calculated root(%s) ", t.rootHash, root)
+	}
+
+	t.Unlock()
+	return nil
 }
 
 // SetBlock sets provided block with <hash, height> as latest.

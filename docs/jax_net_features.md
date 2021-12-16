@@ -44,32 +44,32 @@ One pair corresponds to the one chain. The second is for another. The order is n
   - {TxIn_0, TxIn_1, TxOut_0, TxOut_1 } ∈ Shard_X
   - {TxIn_2, TxIn_3, TxOut_2, TxOut_3 } ∈ Shard_Y
 
-| # | []TxIn | --- | []TxOut | # |                        |
-|---|--------|-----|---------|---|------------------------|
-| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
-| 1 | TxIn_1 | --> | TxOut_1 | 1 | spend or fee @ Shard X |
-| 2 | TxIn_2 | --> | TxOut_2 | 2 | spend or fee @ Shard Y |
-| 3 | TxIn_3 | --> | TxOut_3 | 3 | spend or fee @ Shard Y |
+| #   | []TxIn | --- | []TxOut | #   |                        |
+|-----|--------|-----|---------|-----|------------------------|
+| 0   | TxIn_0 | --> | TxOut_0 | 0   | spend or fee @ Shard X |
+| 1   | TxIn_1 | --> | TxOut_1 | 1   | spend or fee @ Shard X |
+| 2   | TxIn_2 | --> | TxOut_2 | 2   | spend or fee @ Shard Y |
+| 3   | TxIn_3 | --> | TxOut_3 | 3   | spend or fee @ Shard Y |
 
 2. Scheme 2x2:
   - {TxIn_0, TxOut_0 } ∈ Shard_X
   - {TxIn_1, TxOut_1 } ∈ Shard_Y
 
-| # | []TxIn | --- | []TxOut | # |                        |
-|---|--------|-----|---------|---|------------------------|
-| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
-| 1 | TxIn_1 | --> | TxOut_1 | 1 | spend or fee @ Shard Y |
+| #   | []TxIn | --- | []TxOut | #   |                        |
+|-----|--------|-----|---------|-----|------------------------|
+| 0   | TxIn_0 | --> | TxOut_0 | 0   | spend or fee @ Shard X |
+| 1   | TxIn_1 | --> | TxOut_1 | 1   | spend or fee @ Shard Y |
 
 3. Scheme 4x2:
   - {TxIn_0, TxIn_1, TxOut_0 } ∈ Shard_X
   - {TxIn_2, TxIn_3, TxOut_1 } ∈ Shard_Y
 
-| # | []TxIn | --- | []TxOut | # |                        |
-|---|--------|-----|---------|---|------------------------|
-| 0 | TxIn_0 | --> | TxOut_0 | 0 | spend or fee @ Shard X |
-| 1 | TxIn_1 | --- |         |   | spend or fee @ Shard X |
-| 2 | TxIn_2 | --> | TxOut_1 | 1 | spend or fee @ Shard Y |
-| 3 | TxIn_3 | --- |         |   | spend or fee @ Shard Y |
+| #   | []TxIn | --- | []TxOut | #   |                        |
+|-----|--------|-----|---------|-----|------------------------|
+| 0   | TxIn_0 | --> | TxOut_0 | 0   | spend or fee @ Shard X |
+| 1   | TxIn_1 | --- |         |     | spend or fee @ Shard X |
+| 2   | TxIn_2 | --> | TxOut_1 | 1   | spend or fee @ Shard Y |
+| 3   | TxIn_3 | --- |         |     | spend or fee @ Shard Y |
 
 
 ### MultiSig Lock with Refund
@@ -148,9 +148,9 @@ Exchange Agents (EAs) can register their IPv4/IPv6 (and potentially in future DN
 then would accept connections from clients in p2p manner on these interfaces and process the exchange operations in a
 p2p manner.
 
-| # | []TxIn |     | []TxOut | # |
-|---|--------|-----|---------|---|
-| 0 | TxIn_0 | --> | TxOut_0 | 0 |
-| . | ------ | --> | TxOut_1 | 1 |
-| . | ------ | --> | ....... | . |
-| . | ------ | --> | TxOut_N | N |
+| #   | []TxIn |     | []TxOut | #   |
+|-----|--------|-----|---------|-----|
+| 0   | TxIn_0 | --> | TxOut_0 | 0   |
+| .   | ------ | --> | TxOut_1 | 1   |
+| .   | ------ | --> | ....... | .   |
+| .   | ------ | --> | TxOut_N | N   |

@@ -10,6 +10,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.3]
 - Replaced standard `sha256` by  [sha256-simd](https://github.com/minio/sha256-simd).
 - Improved speed of the catching up of the chain by saving of the index of the best chain.  
+- Added the ability to batch initialize the MMR tree.
 - Removed prometheus metrics, use standalone [monitoring daemon](https://gitlab.com/jaxnet/core/jaxnetd-monitor) instead. 
 - Added saving the index of the best chain to the database. This speeds up the startup of the node.
 - Dropped support of the `shard.json`. Now this data is housed in the beacon database.
@@ -17,6 +18,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Allowed mining of the outdated testnet chain.
 - Configuration: made `mining_address` optional.
 - Configuration: added optional `enabled_shards` list configuration.
+- Added simple db-inspector to check the db sanity.
 
 ## [0.4.2]
 - Changed default jaxBurnScript and validation of vanity prefixes
