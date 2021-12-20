@@ -31,7 +31,7 @@ func (r FutureGetBeaconBlockResult) Receive() (*BlockResult, error) {
 
 	// Unmarshal result as a string.
 	var blockResult jaxjson.GetBeaconBlockResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (r FutureGetBeaconBlockVerboseResult) Receive() (*jaxjson.GetBeaconBlockVer
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetBeaconBlockVerboseResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (r FutureGetBeaconBlockVerboseTxResult) Receive() (*jaxjson.GetBeaconBlockV
 	}
 
 	var blockResult jaxjson.GetBeaconBlockVerboseTxResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func (r FutureGetBeaconBlockHeaderVerboseResult) Receive() (*jaxjson.GetBeaconBl
 
 	// Unmarshal result as a string.
 	var bh jaxjson.GetBeaconBlockHeaderVerboseResult
-	err = json.Unmarshal(res, &bh)
+	err = bh.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +310,7 @@ func (r FutureGetBeaconBlockTemplateAsync) Receive() (*jaxjson.GetBeaconBlockTem
 
 	// Unmarshal result as a getwork result object.
 	var result jaxjson.GetBeaconBlockTemplateResult
-	err = json.Unmarshal(res, &result)
+	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +422,7 @@ func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*BlockResult, error
 	}
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetBeaconBlockResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -486,8 +486,8 @@ func (r FutureListBeaconBlocksBySerialNumberResult) Receive() ([]*BlockResult, e
 		return nil, err
 	}
 	// Unmarshal the raw result into a BlockResult.
-	var blockResults []jaxjson.GetBeaconBlockResult
-	err = json.Unmarshal(res, &blockResults)
+	var blockResults jaxjson.GetBeaconBlockResults
+	err = blockResults.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -557,7 +557,7 @@ func (r FutureGetBeaconBlockVerboseBySerialNumberResult) Receive() (*jaxjson.Get
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetBeaconBlockVerboseResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}

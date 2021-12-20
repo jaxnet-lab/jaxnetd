@@ -314,7 +314,7 @@ func (r FutureGetMempoolEntryResult) Receive() (*jaxjson.GetMempoolEntryResult, 
 
 	// Unmarshal the result as an array of strings.
 	var mempoolEntryResult jaxjson.GetMempoolEntryResult
-	err = json.Unmarshal(res, &mempoolEntryResult)
+	err = mempoolEntryResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -403,8 +403,8 @@ func (r FutureGetRawMempoolVerboseResult) Receive() (map[string]jaxjson.GetRawMe
 
 	// Unmarshal the result as a map of strings (tx shas) to their detailed
 	// results.
-	var mempoolItems map[string]jaxjson.GetRawMempoolVerboseResult
-	err = json.Unmarshal(res, &mempoolItems)
+	var mempoolItems jaxjson.GetRawMempoolVerboseResultMap
+	err = mempoolItems.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +480,7 @@ func (r FutureEstimateSmartFeeResult) Receive() (*jaxjson.EstimateSmartFeeResult
 	}
 
 	var verified jaxjson.EstimateSmartFeeResult
-	err = json.Unmarshal(res, &verified)
+	err = verified.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func (r FutureGetExtendedFeeResult) Receive() (*jaxjson.ExtendedFeeFeeResult, er
 	}
 
 	var result jaxjson.ExtendedFeeFeeResult
-	err = json.Unmarshal(res, &result)
+	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +646,7 @@ func (r FutureGetTxOutResult) Receive() (*jaxjson.GetTxOutResult, error) {
 
 	// Unmarshal result as an gettxout result object.
 	var txOutInfo *jaxjson.GetTxOutResult
-	err = json.Unmarshal(res, &txOutInfo)
+	err = txOutInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -692,8 +692,8 @@ func (r FutureGetTxOutStatusResult) Receive() ([]jaxjson.TxOutStatus, error) {
 	}
 
 	// Unmarshal result as an gettxout result object.
-	result := make([]jaxjson.TxOutStatus, 0)
-	err = json.Unmarshal(res, &result)
+	var result jaxjson.TxOutStatuses
+	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +730,7 @@ func (r FutureListTxOutResult) Receive() (*jaxjson.ListTxOutResult, error) {
 
 	// Unmarshal result as an gettxout result object.
 	listTxOut := &jaxjson.ListTxOutResult{}
-	err = json.Unmarshal(res, listTxOut)
+	err = listTxOut.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -774,7 +774,7 @@ func (r FutureListEADAddressesResult) Receive() (*jaxjson.ListEADAddresses, erro
 
 	// Unmarshal result as an ListEADAddresses result object.
 	listTxOut := &jaxjson.ListEADAddresses{}
-	err = json.Unmarshal(res, listTxOut)
+	err = listTxOut.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1001,7 +1001,7 @@ func (r FutureGetBlockStatsResult) Receive() (*jaxjson.GetBlockStatsResult, erro
 	}
 
 	var blockStats jaxjson.GetBlockStatsResult
-	err = json.Unmarshal(res, &blockStats)
+	err = blockStats.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1038,7 +1038,7 @@ type FutureListShards chan *response
 func (r FutureListShards) Receive() (*jaxjson.ShardListResult, error) {
 	res, _ := receiveFuture(r)
 	var list jaxjson.ShardListResult
-	err := json.Unmarshal(res, &list)
+	err := list.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1128,7 +1128,7 @@ func (r FutureGetBlockTxOpsResult) Receive() (*jaxjson.BlockTxOperations, error)
 
 	// Unmarshal result as an getblocktxops result object.
 	listTxOut := &jaxjson.BlockTxOperations{}
-	err = json.Unmarshal(res, listTxOut)
+	err = listTxOut.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1162,8 +1162,8 @@ func (r FutureGetMempoolUTXOs) Receive() ([]jaxjson.MempoolUTXO, error) {
 		return nil, err
 	}
 
-	listTxOut := make([]jaxjson.MempoolUTXO, 0)
-	err = json.Unmarshal(res, &listTxOut)
+	var listTxOut jaxjson.MempoolUTXOs
+	err = listTxOut.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1266,7 +1266,7 @@ func (r FutureGetTxResult) Receive() (*jaxjson.GetTxResult, error) {
 
 	// Unmarshal result as an gettx result object.
 	var txInfo *jaxjson.GetTxResult
-	err = json.Unmarshal(res, &txInfo)
+	err = txInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1310,7 +1310,7 @@ func (r FutureGetChainMetricsResult) Receive() (*jaxjson.GetChainMetricsResult, 
 
 	// Unmarshal result as an gettx result object.
 	var txInfo *jaxjson.GetChainMetricsResult
-	err = json.Unmarshal(res, &txInfo)
+	err = txInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -1333,7 +1333,7 @@ type FutureGetNodeMetrics chan *response
 func (r FutureGetNodeMetrics) Receive() (*jaxjson.GetNodeMetricsResult, error) {
 	res, _ := receiveFuture(r)
 	var list jaxjson.GetNodeMetricsResult
-	err := json.Unmarshal(res, &list)
+	err := list.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}

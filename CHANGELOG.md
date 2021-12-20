@@ -19,6 +19,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Configuration: made `mining_address` optional.
 - Configuration: added optional `enabled_shards` list configuration.
 - Added simple db-inspector to check the db sanity.
+- Replaced standard `encoding/json` in RPC client to [easyjson](https://github.com/mailru/easyjson)
 
 ## [0.4.2]
 - Changed default jaxBurnScript and validation of vanity prefixes

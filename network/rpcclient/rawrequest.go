@@ -50,7 +50,7 @@ func (c *Client) RawRequestAsync(method string, params []json.RawMessage) Future
 		Method:  method,
 		Params:  params,
 	}
-	marshalledJSON, err := json.Marshal(rawRequest)
+	marshalledJSON, err := rawRequest.MarshalJSON()
 	if err != nil {
 		return newFutureError(err)
 	}

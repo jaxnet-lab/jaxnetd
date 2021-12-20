@@ -111,8 +111,8 @@ func (r FutureGetAddedNodeInfoResult) Receive() ([]jaxjson.GetAddedNodeInfoResul
 	}
 
 	// Unmarshal as an array of getaddednodeinfo result objects.
-	var nodeInfo []jaxjson.GetAddedNodeInfoResult
-	err = json.Unmarshal(res, &nodeInfo)
+	var nodeInfo jaxjson.GetAddedNodeInfoResults
+	err = nodeInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func (r FutureGetNetworkInfoResult) Receive() (*jaxjson.GetNetworkInfoResult, er
 
 	// Unmarshal result as an array of getpeerinfo result objects.
 	var networkInfo jaxjson.GetNetworkInfoResult
-	err = json.Unmarshal(res, &networkInfo)
+	err = networkInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +295,8 @@ func (r FutureGetPeerInfoResult) Receive() ([]jaxjson.GetPeerInfoResult, error) 
 	}
 
 	// Unmarshal result as an array of getpeerinfo result objects.
-	var peerInfo []jaxjson.GetPeerInfoResult
-	err = json.Unmarshal(res, &peerInfo)
+	var peerInfo jaxjson.GetPeerInfoResults
+	err = peerInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}

@@ -10,9 +10,12 @@ import (
 	"time"
 )
 
+//go:generate easyjson --omit_empty chainsvrresults.go jsonrpc.go
+
 // GetBeaconBlockHeaderVerboseResult models the data from the getBeaconBlockHeader command when
 // the verbose flag is set.  When the verbose flag is not set, getBeaconBlockHeader
 // returns a hex-encoded string.
+// easyjson:json
 type GetBeaconBlockHeaderVerboseResult struct {
 	Hash                string  `json:"hash"`
 	Confirmations       int64   `json:"confirmations"`
@@ -37,6 +40,7 @@ type GetBeaconBlockHeaderVerboseResult struct {
 // GetShardBlockHeaderVerboseResult models the data from the getShardBlockHeader command when
 // the verbose flag is set.  When the verbose flag is not set, getShardBlockHeader
 // returns a hex-encoded string.
+// easyjson:json
 type GetShardBlockHeaderVerboseResult struct {
 	Hash              string                            `json:"hash"`
 	ShardHash         string                            `json:"shardhash"`
@@ -56,6 +60,7 @@ type GetShardBlockHeaderVerboseResult struct {
 	BCHeader          GetBeaconBlockHeaderVerboseResult `json:"bcheader"`
 }
 
+// easyjson:json
 type GetChainStatsResult struct {
 	Time                   int64  `json:"time"`
 	Txs                    int64  `json:"txcount"`
@@ -68,6 +73,7 @@ type GetChainStatsResult struct {
 }
 
 // GetBlockStatsResult models the data from the getblockstats command.
+// easyjson:json
 type GetBlockStatsResult struct {
 	AverageFee         int64   `json:"avgfee"`
 	AverageFeeRate     int64   `json:"avgfeerate"`
@@ -107,6 +113,7 @@ type GetBlockStatsResult struct {
 // whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetBeaconBlockVerboseTxResult to unmarshal data received from passing verbose=2 to getBeaconBlock.
+// easyjson:json
 type GetBeaconBlockVerboseResult struct {
 	Hash                string        `json:"hash"`
 	Confirmations       int64         `json:"confirmations"`
@@ -140,6 +147,7 @@ type GetBeaconBlockVerboseResult struct {
 // whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
 // getShardBlock returns an object whose tx field is an array of raw transactions.
 // Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=2 to getShardBlock.
+// easyjson:json
 type GetShardBlockVerboseResult struct {
 	Hash              string                      `json:"hash"`
 	ShardHash         string                      `json:"shardhash"`
@@ -170,6 +178,7 @@ type GetShardBlockVerboseResult struct {
 // whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetBeaconBlockVerboseResult to unmarshal data received from passing verbose=1 to getBeaconBlock.
+// easyjson:json
 type GetBeaconBlockVerboseTxResult struct {
 	Hash          string `json:"hash"`
 	Confirmations int64  `json:"confirmations"`
@@ -199,6 +208,7 @@ type GetBeaconBlockVerboseTxResult struct {
 // whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
 // getBeaconBlock returns an object whose tx field is an array of raw transactions.
 // Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=1 to getShardBlock.
+// easyjson:json
 type GetShardBlockVerboseTxResult struct {
 	Hash          string                        `json:"hash"`
 	Confirmations int64                         `json:"confirmations"`
@@ -243,11 +253,15 @@ type GetAddedNodeInfoResultAddr struct {
 }
 
 // GetAddedNodeInfoResult models the data from the getaddednodeinfo command.
+// easyjson:json
 type GetAddedNodeInfoResult struct {
 	AddedNode string                        `json:"addednode"`
 	Connected *bool                         `json:"connected,omitempty"`
 	Addresses *[]GetAddedNodeInfoResultAddr `json:"addresses,omitempty"`
 }
+
+// easyjson:json
+type GetAddedNodeInfoResults []GetAddedNodeInfoResult
 
 // SoftForkDescription describes the current state of a soft-fork which was
 // deployed using a super-majority block signalling.
@@ -339,6 +353,7 @@ type GetBlockTemplateResultAux struct {
 
 // GetBeaconBlockTemplateResult models the data returned from the getblocktemplate
 // command.
+// easyjson:json
 type GetBeaconBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
 	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
@@ -390,6 +405,7 @@ type GetBeaconBlockTemplateResult struct {
 
 // GetShardBlockTemplateResult models the data returned from the getblocktemplate
 // command.
+// easyjson:json
 type GetShardBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
 	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
@@ -450,6 +466,7 @@ type MempoolFees struct {
 
 // GetMempoolEntryResult models the data returned from the getmempoolentry
 // command.
+// easyjson:json
 type GetMempoolEntryResult struct {
 	VSize       int32   `json:"vsize"`
 	Size        int32   `json:"size"`
@@ -497,6 +514,7 @@ type LocalAddressesResult struct {
 
 // GetNetworkInfoResult models the data returned from the getnetworkinfo
 // command.
+// easyjson:json
 type GetNetworkInfoResult struct {
 	Version         int32                  `json:"version"`
 	SubVersion      string                 `json:"subversion"`
@@ -514,6 +532,7 @@ type GetNetworkInfoResult struct {
 }
 
 // GetPeerInfoResult models the data returned from the getpeerinfo command.
+// easyjson:json
 type GetPeerInfoResult struct {
 	ID             int32   `json:"id"`
 	Addr           string  `json:"addr"`
@@ -538,9 +557,13 @@ type GetPeerInfoResult struct {
 	SyncNode       bool    `json:"syncnode"`
 }
 
+// easyjson:json
+type GetPeerInfoResults []GetPeerInfoResult
+
 // GetRawMempoolVerboseResult models the data returned from the getrawmempool
 // command when the verbose flag is set.  When the verbose flag is not set,
 // getrawmempool returns an array of transaction hashes.
+// easyjson:json
 type GetRawMempoolVerboseResult struct {
 	Size             int32    `json:"size"`
 	Vsize            int32    `json:"vsize"`
@@ -554,6 +577,9 @@ type GetRawMempoolVerboseResult struct {
 	PreciseFee       int64    `json:"precise_fee"`
 }
 
+// easyjson:json
+type GetRawMempoolVerboseResultMap map[string]GetRawMempoolVerboseResult
+
 // ScriptPubKeyResult models the scriptPubKey data of a tx script.  It is
 // defined separately since it is used by multiple commands.
 type ScriptPubKeyResult struct {
@@ -565,6 +591,7 @@ type ScriptPubKeyResult struct {
 }
 
 // GetTxOutResult models the data from the gettxout command.
+// easyjson:json
 type GetTxOutResult struct {
 	BestBlock     string             `json:"bestblock"`
 	Confirmations int64              `json:"confirmations"`
@@ -576,6 +603,7 @@ type GetTxOutResult struct {
 }
 
 // GetTxResult models the data from the gettx command.
+// easyjson:json
 type GetTxResult struct {
 	BestBlock     string `json:"bestblock"`
 	Block         string `json:"block"`
@@ -595,6 +623,7 @@ type TxOutKey struct {
 	Index  uint32 `json:"outIndex"`
 }
 
+//easyjson:json
 type TxOutStatus struct {
 	OutTxHash string `json:"outTxHash"`
 	OutIndex  uint32 `json:"outIndex"`
@@ -603,7 +632,11 @@ type TxOutStatus struct {
 	InMempool bool   `json:"isMempool"`
 }
 
+//easyjson:json
+type TxOutStatuses []TxOutStatus
+
 // ExtendedTxOutResult models the data from the gettxout command.
+// easyjson:json
 type ExtendedTxOutResult struct {
 	TxHash        string             `json:"txHash"`
 	Index         uint32             `json:"index"`
@@ -615,6 +648,7 @@ type ExtendedTxOutResult struct {
 	Used          bool               `json:"used"`
 }
 
+// easyjson:json
 type ListTxOutResult struct {
 	List []ExtendedTxOutResult
 }
@@ -641,6 +675,7 @@ type EADAddress struct {
 	TxOutIndex int    `json:"tx_out_index"`
 }
 
+//easyjson:json
 type ListEADAddresses struct {
 	Agents map[string]EADAddresses `json:"agents"`
 }
@@ -820,6 +855,7 @@ type Vout struct {
 }
 
 // GetMiningInfoResult models the data from the getmininginfo command.
+// easyjson:json
 type GetMiningInfoResult struct {
 	Blocks             int64   `json:"blocks"`
 	CurrentBlockSize   uint64  `json:"currentblocksize"`
@@ -855,6 +891,7 @@ type InfoChainResult struct {
 }
 
 // TxRawResult models the data from the getrawtransaction command.
+// easyjson:json
 type TxRawResult struct {
 	Hex           string `json:"hex"`
 	Txid          string `json:"txid"`
@@ -880,6 +917,7 @@ type TxRawResult struct {
 
 // SearchRawTransactionsResult models the data from the searchrawtransaction
 // command.
+// easyjson:json
 type SearchRawTransactionsResult struct {
 	Hex           string       `json:"hex,omitempty"`
 	Txid          string       `json:"txid"`
@@ -896,6 +934,9 @@ type SearchRawTransactionsResult struct {
 	Time          int64        `json:"time,omitempty"`
 	Blocktime     int64        `json:"blocktime,omitempty"`
 }
+
+// easyjson:json
+type SearchRawTransactionsResults []*SearchRawTransactionsResult
 
 // TxRawDecodeResult models the data from the decoderawtransaction command.
 type TxRawDecodeResult struct {
@@ -915,6 +956,7 @@ type ValidateAddressChainResult struct {
 
 // EstimateSmartFeeResult models the data returned buy the chain server
 // estimatesmartfee command
+// easyjson:json
 type EstimateSmartFeeResult struct {
 	BtcPerKB    *float64 `json:"btc_per_kb"`
 	SatoshiPerB *float64 `json:"satoshi_per_b"`
@@ -922,6 +964,7 @@ type EstimateSmartFeeResult struct {
 	Blocks      int64    `json:"blocks"`
 }
 
+// easyjson:json
 type Fee struct {
 	CoinsPerKB  float64 `json:"coins_per_kb"`
 	SatoshiPerB float64 `json:"satoshi_per_b"`
@@ -929,16 +972,19 @@ type Fee struct {
 	Estimated   bool    `json:"estimated"`
 }
 
+// easyjson:json
 type ExtendedFeeFeeResult struct {
 	Fast     Fee `json:"fast"`
 	Moderate Fee `json:"moderate"`
 	Slow     Fee `json:"slow"`
 }
 
+// easyjson:json
 type ShardListResult struct {
 	Shards map[uint32]ShardInfo `json:"shards"`
 }
 
+// easyjson:json
 type ShardInfo struct {
 	ID            uint32 `json:"id"`
 	LastVersion   int32  `json:"last_version"`
@@ -953,6 +999,7 @@ type GetLastSerialBlockNumberResult struct {
 	LastSerial int64 `json:"lastserial"`
 }
 
+// easyjson:json
 type GetBeaconBlockResult struct {
 	Block        string `json:"block"`
 	Height       int32  `json:"height"`
@@ -960,6 +1007,10 @@ type GetBeaconBlockResult struct {
 	PrevSerialID int64  `json:"prev_serial_id"`
 }
 
+// easyjson:json
+type GetBeaconBlockResults []GetBeaconBlockResult
+
+// easyjson:json
 type GetShardBlockResult struct {
 	Block        string `json:"block"`
 	Height       int32  `json:"height"`
@@ -967,6 +1018,10 @@ type GetShardBlockResult struct {
 	PrevSerialID int64  `json:"prev_serial_id"`
 }
 
+// easyjson:json
+type GetShardBlockResults []GetBeaconBlockResult
+
+// easyjson:json
 type TxOperation struct {
 	Input        bool     `json:"input"`        // indicates is this tx input or output
 	PkScript     string   `json:"pkScript"`     // hex encoded pkScript
@@ -983,6 +1038,7 @@ type TxOperation struct {
 	ShardID uint32 `json:"shardId"`
 }
 
+// easyjson:json
 type BlockTxOperations struct {
 	BlockHash     string        `json:"blockHash"`
 	BlockHeight   int64         `json:"blockHeight"`
@@ -995,12 +1051,16 @@ type GetBlockTxOpsCmd struct {
 	BlockHash string `json:"blockHash"`
 }
 
+// easyjson:json
 type MempoolUTXO struct {
 	UTXOHash      string `json:"utxoHash"`
 	UTXOIndex     uint32 `json:"utxoIndex"`
 	UsedByTxHash  string `json:"usedByTxHash"`
 	UsedByTxIndex uint32 `json:"usedByTxIndex"`
 }
+
+// easyjson:json
+type MempoolUTXOs []MempoolUTXO
 
 type EstimateLockTimeResult struct {
 	NBlocks int64 `json:"nBlocks"`
@@ -1011,11 +1071,13 @@ type EstimateSwapLockTimeResult struct {
 	NBlocksAtDest   int64 `json:"NBlocksAtDest"`
 }
 
+// easyjson:json
 type GetNodeMetricsResult struct {
 	Stats   map[string]float64 `json:"stats"`
 	Version string             `json:"version"`
 }
 
+// easyjson:json
 type GetChainMetricsResult struct {
 	ChainStats map[uint32]map[string]float64 `json:"chainStats"`
 	NetName    string                        `json:"netName"`
