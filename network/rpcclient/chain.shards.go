@@ -32,7 +32,7 @@ func (r FutureGetShardBlockResult) Receive() (*BlockResult, error) {
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetShardBlockResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (r FutureGetShardBlockVerboseResult) Receive() (*jaxjson.GetShardBlockVerbo
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetShardBlockVerboseResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (r FutureGetShardBlockVerboseTxResult) Receive() (*jaxjson.GetShardBlockVer
 	}
 
 	var blockResult jaxjson.GetShardBlockVerboseTxResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (r FutureGetShardBlockHeaderVerboseResult) Receive() (*jaxjson.GetShardBloc
 
 	// Unmarshal result as a string.
 	var bh jaxjson.GetShardBlockHeaderVerboseResult
-	err = json.Unmarshal(res, &bh)
+	err = bh.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func (r FutureGetShardBlockTemplateAsync) Receive() (*jaxjson.GetShardBlockTempl
 
 	// Unmarshal result as a getwork result object.
 	var result jaxjson.GetShardBlockTemplateResult
-	err = json.Unmarshal(res, &result)
+	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +431,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error)
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetShardBlockResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -494,8 +494,8 @@ func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, er
 		return nil, err
 	}
 	// Unmarshal the raw result into a BlockResult.
-	var blockResults []jaxjson.GetShardBlockResult
-	err = json.Unmarshal(res, &blockResults)
+	var blockResults jaxjson.GetShardBlockResults
+	err = blockResults.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -565,7 +565,7 @@ func (r FutureGetShardBlockVerboseBySerialNumberResult) Receive() (*jaxjson.GetS
 
 	// Unmarshal the raw result into a BlockResult.
 	var blockResult jaxjson.GetShardBlockVerboseResult
-	err = json.Unmarshal(res, &blockResult)
+	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}

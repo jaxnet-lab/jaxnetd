@@ -129,7 +129,7 @@ func (r FutureGetTxDetails) Receive() (*jaxjson.TxRawResult, error) {
 
 	// Unmarshal result as a gettrawtransaction result object.
 	var rawTxResult jaxjson.TxRawResult
-	err = json.Unmarshal(res, &rawTxResult)
+	err = rawTxResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (r FutureGetRawTransactionVerboseResult) Receive() (*jaxjson.TxRawResult, e
 
 	// Unmarshal result as a gettrawtransaction result object.
 	var rawTxResult jaxjson.TxRawResult
-	err = json.Unmarshal(res, &rawTxResult)
+	err = rawTxResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func (r FutureDecodeRawTransactionResult) Receive() (*jaxjson.TxRawResult, error
 
 	// Unmarshal result as a decoderawtransaction result object.
 	var rawTxResult jaxjson.TxRawResult
-	err = json.Unmarshal(res, &rawTxResult)
+	err = rawTxResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}
@@ -658,8 +658,8 @@ func (r FutureSearchRawTransactionsVerboseResult) Receive() ([]*jaxjson.SearchRa
 	}
 
 	// Unmarshal as an array of raw transaction results.
-	var result []*jaxjson.SearchRawTransactionsResult
-	err = json.Unmarshal(res, &result)
+	var result jaxjson.SearchRawTransactionsResults
+	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
 	}

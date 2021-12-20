@@ -73,6 +73,7 @@ func IsValidIDType(id interface{}) bool {
 // statically typed command infrastructure which handles creation of these
 // requests, however this struct it being exported in case the caller wants to
 // construct raw requests for some reason.
+// easyjson:json
 type Request struct {
 	JSONRPC string            `json:"jsonrpc"`
 	Method  string            `json:"method"`

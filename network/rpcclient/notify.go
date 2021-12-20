@@ -766,7 +766,7 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*jaxjson.TxRawR
 
 	// Unmarshal first parameter as a raw transaction result object.
 	var rawTx jaxjson.TxRawResult
-	err := json.Unmarshal(params[0], &rawTx)
+	err := rawTx.UnmarshalJSON(params[0])
 	if err != nil {
 		return nil, err
 	}

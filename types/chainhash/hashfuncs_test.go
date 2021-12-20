@@ -167,7 +167,6 @@ func BenchmarkHash(b *testing.B) {
 			})
 		}
 	}
-
 }
 
 func benchmarkHashHOptimized(inputSize int, b *testing.B) {

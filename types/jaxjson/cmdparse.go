@@ -62,7 +62,7 @@ func MarshalCmd(id interface{}, shardID uint32, cmd interface{}) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(rawCmd)
+	return rawCmd.MarshalJSON()
 }
 
 // checkNumParams ensures the supplied number of params is at least the minimum

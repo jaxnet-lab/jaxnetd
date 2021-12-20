@@ -31,6 +31,15 @@ DATE="$(date -I'seconds')"
 PKG=$SERVICE/version
 LD_FLAG="-X ${PKG}.commit=$COMMIT -X ${PKG}.tag=$TAG -X ${PKG}.date=${DATE}"
 
+set -e
+
+if ! [ -x "$(command -v easyjson)" ]; then
+   go get github.com/mailru/easyjson
+   go install github.com/mailru/easyjson/...@latest
+fi
+
+go generate ./types/jaxjson/chainsvrresults.go
+
 if [ "$1" != "" ]; then
   go build -o "${1}" -ldflags "$LD_FLAG" .
   exit 0
