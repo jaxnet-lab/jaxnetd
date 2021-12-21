@@ -277,5 +277,5 @@ func getGenesisBlock(shardID uint32, idx node.Index, blockChain *blockchain.Bloc
 		return nil, errors.New("errror")
 	}
 
-	return blockChain.BlockByHeight(shardInfo.GenesisHeight)
+	return blockChain.BlockByHeight(shardInfo.ExpansionHeight)
 }

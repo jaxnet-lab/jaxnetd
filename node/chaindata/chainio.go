@@ -1284,10 +1284,17 @@ func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhas
 }
 
 type ShardInfo struct {
-	ID            uint32 `json:"id"`
-	GenesisHeight int32  `json:"genesis_height"`
-	GenesisHash   string `json:"genesis_hash"`
-	SerialID      int64  `json:"serial_id"`
+	// ID of the shard chain.
+	ID uint32
+	// ExpansionHeight chain height of beacon block
+	// when expansion has happened for this shard.
+	ExpansionHeight int32
+	// ExpansionHash hash of beacon block
+	// when expansion has happened for this shard.
+	ExpansionHash chainhash.Hash
+	// ExpansionHeight serial id of beacon block
+	// when expansion has happened for this shard.
+	SerialID int64
 }
 
 func DBStoreShardGenesisInfo(dbTx database.Tx, shardID uint32, blockHeight int32, blockHash *chainhash.Hash, blockSerialID int64) error {
@@ -1333,10 +1340,10 @@ func DBGetShardGenesisInfo(dbTx database.Tx) (map[uint32]ShardInfo, uint32) {
 
 		hash, blockHeight, serialID := decodeShardGenesisInfo(data)
 		shards[i] = ShardInfo{
-			ID:            i,
-			GenesisHeight: blockHeight,
-			GenesisHash:   hash.String(),
-			SerialID:      serialID,
+			ID:              i,
+			ExpansionHeight: blockHeight,
+			ExpansionHash:   hash,
+			SerialID:        serialID,
 		}
 	}
 

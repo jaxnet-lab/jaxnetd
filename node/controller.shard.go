@@ -16,7 +16,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/version"
 )
@@ -47,11 +46,12 @@ func (chainCtl *chainController) ListShards() jaxjson.ShardListResult {
 
 	for _, shardInfo := range chainCtl.shardsIndex.Shards {
 		list[shardInfo.ID] = jaxjson.ShardInfo{
-			ID:            shardInfo.ID,
-			GenesisHeight: shardInfo.GenesisHeight,
-			GenesisHash:   shardInfo.GenesisHash,
-			Enabled:       shardInfo.Enabled,
-			P2PPort:       shardInfo.P2PInfo.DefaultPort,
+			ID:                    shardInfo.ID,
+			BeaconExpansionHeight: shardInfo.ExpansionHeight,
+			BeaconExpansionHash:   shardInfo.ExpansionHash.String(),
+			GenesisHash:           shardInfo.ShardGenesisHash.String(),
+			Enabled:               shardInfo.Enabled,
+			P2PPort:               shardInfo.P2PInfo.DefaultPort,
 		}
 	}
 
@@ -99,12 +99,7 @@ func (chainCtl *chainController) runShards() error {
 			continue
 		}
 
-		gHash, err := chainhash.NewHashFromStr(info.GenesisHash)
-		if err != nil {
-			return err
-		}
-
-		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHash(gHash)
+		block, err := chainCtl.beacon.chainProvider.BlockChain().BlockByHash(&info.ExpansionHash)
 		if err != nil {
 			// todo: need to cope with the situation when the shard becomes an orphan
 			return err
@@ -172,6 +167,7 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	}
 
 	shardChainCtx := chainctx.ShardChain(shardID, chainCtl.cfg.Node.ChainParams(), block.MsgBlock(), block.Height())
+	chainCtl.shardsIndex.SetShardGenesis(shardID, shardChainCtx.Params().GenesisHash())
 
 	nCtx, cancel := context.WithCancel(chainCtl.ctx)
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, shardChainCtx, opts)
@@ -222,23 +218,21 @@ func (chainCtl *chainController) syncShardsIndex() error {
 			return err
 		}
 
-		idx := &Index{
-			Shards: map[uint32]ShardInfo{},
-		}
+		idx := &Index{Shards: map[uint32]ShardInfo{}}
 		shardsData, lastShardID := chaindata.DBGetShardGenesisInfo(tx)
 		for shardID, data := range shardsData {
 			idx.Shards[shardID] = ShardInfo{
 				ShardInfo: chaindata.ShardInfo{
-					ID:            data.ID,
-					GenesisHeight: data.GenesisHeight,
-					GenesisHash:   data.GenesisHash,
-					SerialID:      data.SerialID,
+					ID:              data.ID,
+					ExpansionHeight: data.ExpansionHeight,
+					ExpansionHash:   data.ExpansionHash,
+					SerialID:        data.SerialID,
 				},
 				Enabled: true,
 			}
 		}
 		idx.LastShardID = lastShardID
-		idx.LastBeaconHeight = idx.Shards[lastShardID].GenesisHeight
+		idx.LastBeaconHeight = idx.Shards[lastShardID].ExpansionHeight
 
 		chainCtl.shardsIndex = idx
 		chainCtl.beacon.shardsIndex = idx
@@ -266,9 +260,7 @@ func (chainCtl *chainController) syncShardsIndex() error {
 		}
 
 		msgBlock := block.MsgBlock()
-		version := msgBlock.Header.Version()
-
-		if !version.ExpansionMade() {
+		if !msgBlock.Header.Version().ExpansionMade() {
 			continue
 		}
 		chainCtl.shardsIndex.AddShard(block, p2p.ListenOpts{})

@@ -20,7 +20,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx/btcd"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
@@ -222,16 +221,12 @@ func (beaconCtl *BeaconCtl) Stats() map[string]float64 {
 func (beaconCtl *BeaconCtl) saveShardsIndex() error {
 	err := beaconCtl.chainProvider.DB.Update(func(tx database.Tx) error {
 		for _, shardInfo := range beaconCtl.shardsIndex.Shards {
-			blockHash, err := chainhash.NewHashFromStr(shardInfo.GenesisHash)
+			serialID, _, err := chaindata.DBFetchBlockSerialID(tx, &shardInfo.ExpansionHash)
 			if err != nil {
 				continue
 			}
-
-			serialID, _, err := chaindata.DBFetchBlockSerialID(tx, blockHash)
-			if err != nil {
-				continue
-			}
-			err = chaindata.DBStoreShardGenesisInfo(tx, shardInfo.ID, shardInfo.GenesisHeight, blockHash, serialID)
+			err = chaindata.DBStoreShardGenesisInfo(tx, shardInfo.ID, shardInfo.ExpansionHeight,
+				&shardInfo.ExpansionHash, serialID)
 			if err != nil {
 				continue
 			}

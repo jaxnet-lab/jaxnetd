@@ -986,12 +986,13 @@ type ShardListResult struct {
 
 // easyjson:json
 type ShardInfo struct {
-	ID            uint32 `json:"id"`
-	LastVersion   int32  `json:"last_version"`
-	GenesisHeight int32  `json:"genesis_height"`
-	GenesisHash   string `json:"genesis_hash"`
-	Enabled       bool   `json:"enabled"`
-	P2PPort       int    `json:"p2p_port"`
+	ID                    uint32 `json:"id"`
+	LastVersion           int32  `json:"last_version"`
+	BeaconExpansionHeight int32  `json:"beacon_expansion_height"`
+	BeaconExpansionHash   string `json:"beacon_expansion_hash"`
+	GenesisHash           string `json:"genesis_hash"`
+	Enabled               bool   `json:"enabled"`
+	P2PPort               int    `json:"p2p_port"`
 }
 
 // GetLastSerialBlockNumberResult ...

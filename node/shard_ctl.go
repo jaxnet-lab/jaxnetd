@@ -20,19 +20,21 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/pow"
 )
 
 type ShardInfo struct {
 	chaindata.ShardInfo
-	Enabled bool           `json:"enabled"`
-	P2PInfo p2p.ListenOpts `json:"p2p_info"`
+	ShardGenesisHash chainhash.Hash
+	Enabled          bool
+	P2PInfo          p2p.ListenOpts
 }
 
 type Index struct {
-	LastShardID      uint32               `json:"last_shard_id"`
-	LastBeaconHeight int32                `json:"last_beacon_height"`
-	Shards           map[uint32]ShardInfo `json:"shards"`
+	LastShardID      uint32
+	LastBeaconHeight int32
+	Shards           map[uint32]ShardInfo
 }
 
 func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
@@ -46,15 +48,21 @@ func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
 
 	index.Shards[shardID] = ShardInfo{
 		ShardInfo: chaindata.ShardInfo{
-			ID:            shardID,
-			GenesisHeight: block.Height(),
-			GenesisHash:   block.Hash().String(),
+			ID:              shardID,
+			ExpansionHeight: block.Height(),
+			ExpansionHash:   *block.Hash(),
 		},
 		Enabled: true,
 		P2PInfo: opts,
 	}
 
 	return shardID
+}
+
+func (index *Index) SetShardGenesis(shardID uint32, genesisHash *chainhash.Hash) {
+	info := index.Shards[shardID]
+	info.ShardGenesisHash = *genesisHash
+	index.Shards[shardID] = info
 }
 
 type shardRO struct {

@@ -1268,7 +1268,7 @@ func (b *BlockChain) isCurrent() bool {
 	}
 
 	chainName := b.chain.Params().Net
-	developmentEnv := chainName == wire.FastTestNet || chainName == wire.TestNet
+	developmentEnv := chainName == wire.FastTestNet || chainName == wire.SimNet || chainName == wire.TestNet
 	if developmentEnv {
 		return true
 	}

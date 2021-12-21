@@ -1348,8 +1348,10 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson9(in *jlexer.Lexer,
 			out.ID = uint32(in.Uint32())
 		case "last_version":
 			out.LastVersion = int32(in.Int32())
-		case "genesis_height":
-			out.GenesisHeight = int32(in.Int32())
+		case "beacon_expansion_height":
+			out.BeaconExpansionHeight = int32(in.Int32())
+		case "beacon_expansion_hash":
+			out.BeaconExpansionHash = string(in.String())
 		case "genesis_hash":
 			out.GenesisHash = string(in.String())
 		case "enabled":
@@ -1386,15 +1388,25 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson9(out *jwriter.Writ
 		}
 		out.Int32(int32(in.LastVersion))
 	}
-	if in.GenesisHeight != 0 {
-		const prefix string = ",\"genesis_height\":"
+	if in.BeaconExpansionHeight != 0 {
+		const prefix string = ",\"beacon_expansion_height\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
 		} else {
 			out.RawString(prefix)
 		}
-		out.Int32(int32(in.GenesisHeight))
+		out.Int32(int32(in.BeaconExpansionHeight))
+	}
+	if in.BeaconExpansionHash != "" {
+		const prefix string = ",\"beacon_expansion_hash\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.BeaconExpansionHash))
 	}
 	if in.GenesisHash != "" {
 		const prefix string = ",\"genesis_hash\":"
