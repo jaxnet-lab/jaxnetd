@@ -2928,1816 +2928,7 @@ func (v *GetTxOutResult) UnmarshalJSON(data []byte) error {
 func (v *GetTxOutResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson21(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(in *jlexer.Lexer, out *GetShardBlockVerboseTxResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "strippedsize":
-			out.StrippedSize = int32(in.Int32())
-		case "size":
-			out.Size = int32(in.Int32())
-		case "weight":
-			out.Weight = int32(in.Int32())
-		case "height":
-			out.Height = int64(in.Int64())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "tx":
-			if in.IsNull() {
-				in.Skip()
-				out.Tx = nil
-			} else {
-				in.Delim('[')
-				if out.Tx == nil {
-					if !in.IsDelim(']') {
-						out.Tx = make([]TxRawResult, 0, 0)
-					} else {
-						out.Tx = []TxRawResult{}
-					}
-				} else {
-					out.Tx = (out.Tx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v47 TxRawResult
-					(v47).UnmarshalEasyJSON(in)
-					out.Tx = append(out.Tx, v47)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "time":
-			out.Time = int64(in.Int64())
-		case "nonce":
-			out.Nonce = uint32(in.Uint32())
-		case "bits":
-			out.Bits = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		case "bcblock":
-			(out.BCBlock).UnmarshalEasyJSON(in)
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(out *jwriter.Writer, in GetShardBlockVerboseTxResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.StrippedSize != 0 {
-		const prefix string = ",\"strippedsize\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.StrippedSize))
-	}
-	if in.Size != 0 {
-		const prefix string = ",\"size\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Size))
-	}
-	if in.Weight != 0 {
-		const prefix string = ",\"weight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Weight))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if len(in.Tx) != 0 {
-		const prefix string = ",\"tx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v48, v49 := range in.Tx {
-				if v48 > 0 {
-					out.RawByte(',')
-				}
-				(v49).MarshalEasyJSON(out)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Nonce != 0 {
-		const prefix string = ",\"nonce\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.Nonce))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	if true {
-		const prefix string = ",\"bcblock\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		(in.BCBlock).MarshalEasyJSON(out)
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockVerboseTxResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockVerboseTxResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockVerboseTxResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockVerboseTxResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(in *jlexer.Lexer, out *GetShardBlockVerboseResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "shardhash":
-			out.ShardHash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "strippedsize":
-			out.StrippedSize = int32(in.Int32())
-		case "size":
-			out.Size = int32(in.Int32())
-		case "weight":
-			out.Weight = int32(in.Int32())
-		case "height":
-			out.Height = int64(in.Int64())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "tx":
-			if in.IsNull() {
-				in.Skip()
-				out.Tx = nil
-			} else {
-				in.Delim('[')
-				if out.Tx == nil {
-					if !in.IsDelim(']') {
-						out.Tx = make([]string, 0, 4)
-					} else {
-						out.Tx = []string{}
-					}
-				} else {
-					out.Tx = (out.Tx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v50 string
-					v50 = string(in.String())
-					out.Tx = append(out.Tx, v50)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "rawtx":
-			if in.IsNull() {
-				in.Skip()
-				out.RawTx = nil
-			} else {
-				in.Delim('[')
-				if out.RawTx == nil {
-					if !in.IsDelim(']') {
-						out.RawTx = make([]TxRawResult, 0, 0)
-					} else {
-						out.RawTx = []TxRawResult{}
-					}
-				} else {
-					out.RawTx = (out.RawTx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v51 TxRawResult
-					(v51).UnmarshalEasyJSON(in)
-					out.RawTx = append(out.RawTx, v51)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "time":
-			out.Time = int64(in.Int64())
-		case "bits":
-			out.Bits = string(in.String())
-		case "k":
-			out.K = string(in.String())
-		case "voteK":
-			out.VoteK = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "prevblocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		case "bcblock":
-			(out.BCBlock).UnmarshalEasyJSON(in)
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(out *jwriter.Writer, in GetShardBlockVerboseResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.ShardHash != "" {
-		const prefix string = ",\"shardhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.ShardHash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.StrippedSize != 0 {
-		const prefix string = ",\"strippedsize\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.StrippedSize))
-	}
-	if in.Size != 0 {
-		const prefix string = ",\"size\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Size))
-	}
-	if in.Weight != 0 {
-		const prefix string = ",\"weight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Weight))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if len(in.Tx) != 0 {
-		const prefix string = ",\"tx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v52, v53 := range in.Tx {
-				if v52 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v53))
-			}
-			out.RawByte(']')
-		}
-	}
-	if len(in.RawTx) != 0 {
-		const prefix string = ",\"rawtx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v54, v55 := range in.RawTx {
-				if v54 > 0 {
-					out.RawByte(',')
-				}
-				(v55).MarshalEasyJSON(out)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.K != "" {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.K))
-	}
-	if in.VoteK != "" {
-		const prefix string = ",\"voteK\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VoteK))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"prevblocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	if true {
-		const prefix string = ",\"bcblock\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		(in.BCBlock).MarshalEasyJSON(out)
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockVerboseResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockVerboseResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockVerboseResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockVerboseResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(in *jlexer.Lexer, out *GetShardBlockTemplateResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "bits":
-			out.Bits = string(in.String())
-		case "chainweight":
-			out.ChainWeight = string(in.String())
-		case "curtime":
-			out.CurTime = int64(in.Int64())
-		case "height":
-			out.Height = int64(in.Int64())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "prevblocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "sigoplimit":
-			out.SigOpLimit = int64(in.Int64())
-		case "sizelimit":
-			out.SizeLimit = int64(in.Int64())
-		case "weightlimit":
-			out.WeightLimit = int64(in.Int64())
-		case "transactions":
-			if in.IsNull() {
-				in.Skip()
-				out.Transactions = nil
-			} else {
-				in.Delim('[')
-				if out.Transactions == nil {
-					if !in.IsDelim(']') {
-						out.Transactions = make([]GetBlockTemplateResultTx, 0, 0)
-					} else {
-						out.Transactions = []GetBlockTemplateResultTx{}
-					}
-				} else {
-					out.Transactions = (out.Transactions)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v56 GetBlockTemplateResultTx
-					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in, &v56)
-					out.Transactions = append(out.Transactions, v56)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "version":
-			out.Version = int32(in.Int32())
-		case "coinbaseaux":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseAux = nil
-			} else {
-				if out.CoinbaseAux == nil {
-					out.CoinbaseAux = new(GetBlockTemplateResultAux)
-				}
-				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(in, out.CoinbaseAux)
-			}
-		case "coinbasetxn":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseTxn = nil
-			} else {
-				if out.CoinbaseTxn == nil {
-					out.CoinbaseTxn = new(GetBlockTemplateResultTx)
-				}
-				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in, out.CoinbaseTxn)
-			}
-		case "coinbasevalue":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseValue = nil
-			} else {
-				if out.CoinbaseValue == nil {
-					out.CoinbaseValue = new(int64)
-				}
-				*out.CoinbaseValue = int64(in.Int64())
-			}
-		case "workid":
-			out.WorkID = string(in.String())
-		case "default_witness_commitment":
-			out.DefaultWitnessCommitment = string(in.String())
-		case "longpollid":
-			out.LongPollID = string(in.String())
-		case "longpolluri":
-			out.LongPollURI = string(in.String())
-		case "submitold":
-			if in.IsNull() {
-				in.Skip()
-				out.SubmitOld = nil
-			} else {
-				if out.SubmitOld == nil {
-					out.SubmitOld = new(bool)
-				}
-				*out.SubmitOld = bool(in.Bool())
-			}
-		case "target":
-			out.Target = string(in.String())
-		case "expires":
-			out.Expires = int64(in.Int64())
-		case "maxtime":
-			out.MaxTime = int64(in.Int64())
-		case "mintime":
-			out.MinTime = int64(in.Int64())
-		case "mutable":
-			if in.IsNull() {
-				in.Skip()
-				out.Mutable = nil
-			} else {
-				in.Delim('[')
-				if out.Mutable == nil {
-					if !in.IsDelim(']') {
-						out.Mutable = make([]string, 0, 4)
-					} else {
-						out.Mutable = []string{}
-					}
-				} else {
-					out.Mutable = (out.Mutable)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v57 string
-					v57 = string(in.String())
-					out.Mutable = append(out.Mutable, v57)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "noncerange":
-			out.NonceRange = string(in.String())
-		case "capabilities":
-			if in.IsNull() {
-				in.Skip()
-				out.Capabilities = nil
-			} else {
-				in.Delim('[')
-				if out.Capabilities == nil {
-					if !in.IsDelim(']') {
-						out.Capabilities = make([]string, 0, 4)
-					} else {
-						out.Capabilities = []string{}
-					}
-				} else {
-					out.Capabilities = (out.Capabilities)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v58 string
-					v58 = string(in.String())
-					out.Capabilities = append(out.Capabilities, v58)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "reject-reason":
-			out.RejectReason = string(in.String())
-		case "btcAux":
-			out.BTCAux = string(in.String())
-		case "k":
-			out.K = uint32(in.Uint32())
-		case "vote_k":
-			out.VoteK = uint32(in.Uint32())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(out *jwriter.Writer, in GetShardBlockTemplateResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Bits))
-	}
-	if in.ChainWeight != "" {
-		const prefix string = ",\"chainweight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.ChainWeight))
-	}
-	if in.CurTime != 0 {
-		const prefix string = ",\"curtime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.CurTime))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"prevblocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.SigOpLimit != 0 {
-		const prefix string = ",\"sigoplimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SigOpLimit))
-	}
-	if in.SizeLimit != 0 {
-		const prefix string = ",\"sizelimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SizeLimit))
-	}
-	if in.WeightLimit != 0 {
-		const prefix string = ",\"weightlimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.WeightLimit))
-	}
-	if len(in.Transactions) != 0 {
-		const prefix string = ",\"transactions\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v59, v60 := range in.Transactions {
-				if v59 > 0 {
-					out.RawByte(',')
-				}
-				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out, v60)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Version != 0 {
-		const prefix string = ",\"version\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Version))
-	}
-	if in.CoinbaseAux != nil {
-		const prefix string = ",\"coinbaseaux\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(out, *in.CoinbaseAux)
-	}
-	if in.CoinbaseTxn != nil {
-		const prefix string = ",\"coinbasetxn\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out, *in.CoinbaseTxn)
-	}
-	if in.CoinbaseValue != nil {
-		const prefix string = ",\"coinbasevalue\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(*in.CoinbaseValue))
-	}
-	if in.WorkID != "" {
-		const prefix string = ",\"workid\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.WorkID))
-	}
-	if in.DefaultWitnessCommitment != "" {
-		const prefix string = ",\"default_witness_commitment\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.DefaultWitnessCommitment))
-	}
-	if in.LongPollID != "" {
-		const prefix string = ",\"longpollid\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.LongPollID))
-	}
-	if in.LongPollURI != "" {
-		const prefix string = ",\"longpolluri\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.LongPollURI))
-	}
-	if in.SubmitOld != nil {
-		const prefix string = ",\"submitold\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Bool(bool(*in.SubmitOld))
-	}
-	if in.Target != "" {
-		const prefix string = ",\"target\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Target))
-	}
-	if in.Expires != 0 {
-		const prefix string = ",\"expires\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Expires))
-	}
-	if in.MaxTime != 0 {
-		const prefix string = ",\"maxtime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.MaxTime))
-	}
-	if in.MinTime != 0 {
-		const prefix string = ",\"mintime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.MinTime))
-	}
-	if len(in.Mutable) != 0 {
-		const prefix string = ",\"mutable\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v61, v62 := range in.Mutable {
-				if v61 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v62))
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.NonceRange != "" {
-		const prefix string = ",\"noncerange\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NonceRange))
-	}
-	if len(in.Capabilities) != 0 {
-		const prefix string = ",\"capabilities\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v63, v64 := range in.Capabilities {
-				if v63 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v64))
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.RejectReason != "" {
-		const prefix string = ",\"reject-reason\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.RejectReason))
-	}
-	if in.BTCAux != "" {
-		const prefix string = ",\"btcAux\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.BTCAux))
-	}
-	if in.K != 0 {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.K))
-	}
-	if in.VoteK != 0 {
-		const prefix string = ",\"vote_k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.VoteK))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockTemplateResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockTemplateResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockTemplateResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockTemplateResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(in *jlexer.Lexer, out *GetBlockTemplateResultAux) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "flags":
-			out.Flags = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(out *jwriter.Writer, in GetBlockTemplateResultAux) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Flags != "" {
-		const prefix string = ",\"flags\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Flags))
-	}
-	out.RawByte('}')
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in *jlexer.Lexer, out *GetBlockTemplateResultTx) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "data":
-			out.Data = string(in.String())
-		case "hash":
-			out.Hash = string(in.String())
-		case "depends":
-			if in.IsNull() {
-				in.Skip()
-				out.Depends = nil
-			} else {
-				in.Delim('[')
-				if out.Depends == nil {
-					if !in.IsDelim(']') {
-						out.Depends = make([]int64, 0, 8)
-					} else {
-						out.Depends = []int64{}
-					}
-				} else {
-					out.Depends = (out.Depends)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v65 int64
-					v65 = int64(in.Int64())
-					out.Depends = append(out.Depends, v65)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "fee":
-			out.Fee = int64(in.Int64())
-		case "sigops":
-			out.SigOps = int64(in.Int64())
-		case "weight":
-			out.Weight = int64(in.Int64())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out *jwriter.Writer, in GetBlockTemplateResultTx) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Data != "" {
-		const prefix string = ",\"data\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Data))
-	}
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Hash))
-	}
-	if len(in.Depends) != 0 {
-		const prefix string = ",\"depends\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v66, v67 := range in.Depends {
-				if v66 > 0 {
-					out.RawByte(',')
-				}
-				out.Int64(int64(v67))
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Fee != 0 {
-		const prefix string = ",\"fee\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Fee))
-	}
-	if in.SigOps != 0 {
-		const prefix string = ",\"sigops\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SigOps))
-	}
-	if in.Weight != 0 {
-		const prefix string = ",\"weight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Weight))
-	}
-	out.RawByte('}')
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(in *jlexer.Lexer, out *GetShardBlockResults) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		in.Skip()
-		*out = nil
-	} else {
-		in.Delim('[')
-		if *out == nil {
-			if !in.IsDelim(']') {
-				*out = make(GetShardBlockResults, 0, 1)
-			} else {
-				*out = GetShardBlockResults{}
-			}
-		} else {
-			*out = (*out)[:0]
-		}
-		for !in.IsDelim(']') {
-			var v68 GetBeaconBlockResult
-			(v68).UnmarshalEasyJSON(in)
-			*out = append(*out, v68)
-			in.WantComma()
-		}
-		in.Delim(']')
-	}
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(out *jwriter.Writer, in GetShardBlockResults) {
-	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
-		out.RawString("null")
-	} else {
-		out.RawByte('[')
-		for v69, v70 := range in {
-			if v69 > 0 {
-				out.RawByte(',')
-			}
-			(v70).MarshalEasyJSON(out)
-		}
-		out.RawByte(']')
-	}
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockResults) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockResults) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockResults) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockResults) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson28(in *jlexer.Lexer, out *GetShardBlockResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "block":
-			out.Block = string(in.String())
-		case "height":
-			out.Height = int32(in.Int32())
-		case "serial_id":
-			out.SerialID = int64(in.Int64())
-		case "prev_serial_id":
-			out.PrevSerialID = int64(in.Int64())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson28(out *jwriter.Writer, in GetShardBlockResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Block != "" {
-		const prefix string = ",\"block\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Block))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serial_id\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prev_serial_id\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson28(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson28(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson28(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson28(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson29(in *jlexer.Lexer, out *GetShardBlockHeaderVerboseResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "shardhash":
-			out.ShardHash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "height":
-			out.Height = int32(in.Int32())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "time":
-			out.Time = int64(in.Int64())
-		case "bits":
-			out.Bits = string(in.String())
-		case "k":
-			out.K = string(in.String())
-		case "voteK":
-			out.VoteK = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "prevblocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		case "bcheader":
-			(out.BCHeader).UnmarshalEasyJSON(in)
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson29(out *jwriter.Writer, in GetShardBlockHeaderVerboseResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.ShardHash != "" {
-		const prefix string = ",\"shardhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.ShardHash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.K != "" {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.K))
-	}
-	if in.VoteK != "" {
-		const prefix string = ",\"voteK\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VoteK))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"prevblocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	if true {
-		const prefix string = ",\"bcheader\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		(in.BCHeader).MarshalEasyJSON(out)
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetShardBlockHeaderVerboseResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson29(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetShardBlockHeaderVerboseResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson29(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetShardBlockHeaderVerboseResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson29(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetShardBlockHeaderVerboseResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson29(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(in *jlexer.Lexer, out *GetRawMempoolVerboseResultMap) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(in *jlexer.Lexer, out *GetRawMempoolVerboseResultMap) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		in.Skip()
@@ -4751,9 +2942,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(in *jlexer.Lexer
 		for !in.IsDelim('}') {
 			key := string(in.String())
 			in.WantColon()
-			var v71 GetRawMempoolVerboseResult
-			(v71).UnmarshalEasyJSON(in)
-			(*out)[key] = v71
+			var v47 GetRawMempoolVerboseResult
+			(v47).UnmarshalEasyJSON(in)
+			(*out)[key] = v47
 			in.WantComma()
 		}
 		in.Delim('}')
@@ -4762,21 +2953,21 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(out *jwriter.Writer, in GetRawMempoolVerboseResultMap) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(out *jwriter.Writer, in GetRawMempoolVerboseResultMap) {
 	if in == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
 		out.RawString(`null`)
 	} else {
 		out.RawByte('{')
-		v72First := true
-		for v72Name, v72Value := range in {
-			if v72First {
-				v72First = false
+		v48First := true
+		for v48Name, v48Value := range in {
+			if v48First {
+				v48First = false
 			} else {
 				out.RawByte(',')
 			}
-			out.String(string(v72Name))
+			out.String(string(v48Name))
 			out.RawByte(':')
-			(v72Value).MarshalEasyJSON(out)
+			(v48Value).MarshalEasyJSON(out)
 		}
 		out.RawByte('}')
 	}
@@ -4785,27 +2976,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetRawMempoolVerboseResultMap) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetRawMempoolVerboseResultMap) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson22(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetRawMempoolVerboseResultMap) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetRawMempoolVerboseResultMap) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson22(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(in *jlexer.Lexer, out *GetRawMempoolVerboseResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(in *jlexer.Lexer, out *GetRawMempoolVerboseResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -4856,9 +3047,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(in *jlexer.Lexer
 					out.Depends = (out.Depends)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v73 string
-					v73 = string(in.String())
-					out.Depends = append(out.Depends, v73)
+					var v49 string
+					v49 = string(in.String())
+					out.Depends = append(out.Depends, v49)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -4875,7 +3066,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(out *jwriter.Writer, in GetRawMempoolVerboseResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(out *jwriter.Writer, in GetRawMempoolVerboseResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -4965,11 +3156,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v74, v75 := range in.Depends {
-				if v74 > 0 {
+			for v50, v51 := range in.Depends {
+				if v50 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v75))
+				out.String(string(v51))
 			}
 			out.RawByte(']')
 		}
@@ -4990,27 +3181,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetRawMempoolVerboseResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetRawMempoolVerboseResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson23(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetRawMempoolVerboseResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetRawMempoolVerboseResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson23(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(in *jlexer.Lexer, out *GetPeerInfoResults) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(in *jlexer.Lexer, out *GetPeerInfoResults) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		in.Skip()
@@ -5027,9 +3218,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(in *jlexer.Lexer
 			*out = (*out)[:0]
 		}
 		for !in.IsDelim(']') {
-			var v76 GetPeerInfoResult
-			(v76).UnmarshalEasyJSON(in)
-			*out = append(*out, v76)
+			var v52 GetPeerInfoResult
+			(v52).UnmarshalEasyJSON(in)
+			*out = append(*out, v52)
 			in.WantComma()
 		}
 		in.Delim(']')
@@ -5038,16 +3229,16 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(out *jwriter.Writer, in GetPeerInfoResults) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(out *jwriter.Writer, in GetPeerInfoResults) {
 	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 		out.RawString("null")
 	} else {
 		out.RawByte('[')
-		for v77, v78 := range in {
-			if v77 > 0 {
+		for v53, v54 := range in {
+			if v53 > 0 {
 				out.RawByte(',')
 			}
-			(v78).MarshalEasyJSON(out)
+			(v54).MarshalEasyJSON(out)
 		}
 		out.RawByte(']')
 	}
@@ -5056,27 +3247,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetPeerInfoResults) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetPeerInfoResults) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson24(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetPeerInfoResults) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetPeerInfoResults) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson24(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(in *jlexer.Lexer, out *GetPeerInfoResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in *jlexer.Lexer, out *GetPeerInfoResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5147,7 +3338,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(out *jwriter.Writer, in GetPeerInfoResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out *jwriter.Writer, in GetPeerInfoResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -5363,27 +3554,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetPeerInfoResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetPeerInfoResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetPeerInfoResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetPeerInfoResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(in *jlexer.Lexer, out *GetNodeMetricsResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(in *jlexer.Lexer, out *GetNodeMetricsResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5415,9 +3606,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(in *jlexer.Lexer
 				for !in.IsDelim('}') {
 					key := string(in.String())
 					in.WantColon()
-					var v79 float64
-					v79 = float64(in.Float64())
-					(out.Stats)[key] = v79
+					var v55 float64
+					v55 = float64(in.Float64())
+					(out.Stats)[key] = v55
 					in.WantComma()
 				}
 				in.Delim('}')
@@ -5434,7 +3625,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(out *jwriter.Writer, in GetNodeMetricsResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(out *jwriter.Writer, in GetNodeMetricsResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -5444,16 +3635,16 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(out *jwriter.Wri
 		out.RawString(prefix[1:])
 		{
 			out.RawByte('{')
-			v80First := true
-			for v80Name, v80Value := range in.Stats {
-				if v80First {
-					v80First = false
+			v56First := true
+			for v56Name, v56Value := range in.Stats {
+				if v56First {
+					v56First = false
 				} else {
 					out.RawByte(',')
 				}
-				out.String(string(v80Name))
+				out.String(string(v56Name))
 				out.RawByte(':')
-				out.Float64(float64(v80Value))
+				out.Float64(float64(v56Value))
 			}
 			out.RawByte('}')
 		}
@@ -5474,27 +3665,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetNodeMetricsResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetNodeMetricsResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetNodeMetricsResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetNodeMetricsResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(in *jlexer.Lexer, out *GetNetworkInfoResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(in *jlexer.Lexer, out *GetNetworkInfoResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5545,9 +3736,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(in *jlexer.Lexer
 					out.Networks = (out.Networks)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v81 NetworksResult
-					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in, &v81)
-					out.Networks = append(out.Networks, v81)
+					var v57 NetworksResult
+					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson28(in, &v57)
+					out.Networks = append(out.Networks, v57)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -5572,9 +3763,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(in *jlexer.Lexer
 					out.LocalAddresses = (out.LocalAddresses)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v82 LocalAddressesResult
-					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson37(in, &v82)
-					out.LocalAddresses = append(out.LocalAddresses, v82)
+					var v58 LocalAddressesResult
+					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson29(in, &v58)
+					out.LocalAddresses = append(out.LocalAddresses, v58)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -5591,7 +3782,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(out *jwriter.Writer, in GetNetworkInfoResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(out *jwriter.Writer, in GetNetworkInfoResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -5681,11 +3872,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v83, v84 := range in.Networks {
-				if v83 > 0 {
+			for v59, v60 := range in.Networks {
+				if v59 > 0 {
 					out.RawByte(',')
 				}
-				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out, v84)
+				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson28(out, v60)
 			}
 			out.RawByte(']')
 		}
@@ -5720,11 +3911,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v85, v86 := range in.LocalAddresses {
-				if v85 > 0 {
+			for v61, v62 := range in.LocalAddresses {
+				if v61 > 0 {
 					out.RawByte(',')
 				}
-				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson37(out, v86)
+				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson29(out, v62)
 			}
 			out.RawByte(']')
 		}
@@ -5745,27 +3936,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetNetworkInfoResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetNetworkInfoResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson27(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetNetworkInfoResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetNetworkInfoResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson27(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson37(in *jlexer.Lexer, out *LocalAddressesResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson29(in *jlexer.Lexer, out *LocalAddressesResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5800,7 +3991,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson37(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson37(out *jwriter.Writer, in LocalAddressesResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson29(out *jwriter.Writer, in LocalAddressesResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -5832,7 +4023,7 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson37(out *jwriter.Wri
 	}
 	out.RawByte('}')
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in *jlexer.Lexer, out *NetworksResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson28(in *jlexer.Lexer, out *NetworksResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5871,7 +4062,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out *jwriter.Writer, in NetworksResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson28(out *jwriter.Writer, in NetworksResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -5923,7 +4114,7 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out *jwriter.Wri
 	}
 	out.RawByte('}')
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(in *jlexer.Lexer, out *GetMiningInfoResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(in *jlexer.Lexer, out *GetMiningInfoResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -5970,7 +4161,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(out *jwriter.Writer, in GetMiningInfoResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(out *jwriter.Writer, in GetMiningInfoResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6066,27 +4257,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetMiningInfoResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetMiningInfoResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson30(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetMiningInfoResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetMiningInfoResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson30(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(in *jlexer.Lexer, out *GetMempoolEntryResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(in *jlexer.Lexer, out *GetMempoolEntryResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -6136,7 +4327,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(in *jlexer.Lexer
 		case "wtxid":
 			out.WTxID = string(in.String())
 		case "fees":
-			easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(in, &out.Fees)
+			easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(in, &out.Fees)
 		case "depends":
 			if in.IsNull() {
 				in.Skip()
@@ -6153,9 +4344,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(in *jlexer.Lexer
 					out.Depends = (out.Depends)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v87 string
-					v87 = string(in.String())
-					out.Depends = append(out.Depends, v87)
+					var v63 string
+					v63 = string(in.String())
+					out.Depends = append(out.Depends, v63)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -6170,7 +4361,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(out *jwriter.Writer, in GetMempoolEntryResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(out *jwriter.Writer, in GetMempoolEntryResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6328,7 +4519,7 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(out *jwriter.Wri
 		} else {
 			out.RawString(prefix)
 		}
-		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(out, in.Fees)
+		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(out, in.Fees)
 	}
 	if len(in.Depends) != 0 {
 		const prefix string = ",\"depends\":"
@@ -6340,11 +4531,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v88, v89 := range in.Depends {
-				if v88 > 0 {
+			for v64, v65 := range in.Depends {
+				if v64 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v89))
+				out.String(string(v65))
 			}
 			out.RawByte(']')
 		}
@@ -6355,27 +4546,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetMempoolEntryResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetMempoolEntryResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson31(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetMempoolEntryResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetMempoolEntryResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson31(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(in *jlexer.Lexer, out *MempoolFees) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson32(in *jlexer.Lexer, out *MempoolFees) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -6412,7 +4603,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(out *jwriter.Writer, in MempoolFees) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson32(out *jwriter.Writer, in MempoolFees) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6454,7 +4645,7 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(out *jwriter.Wri
 	}
 	out.RawByte('}')
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(in *jlexer.Lexer, out *GetChainStatsResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(in *jlexer.Lexer, out *GetChainStatsResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -6499,7 +4690,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(out *jwriter.Writer, in GetChainStatsResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(out *jwriter.Writer, in GetChainStatsResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6585,27 +4776,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetChainStatsResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetChainStatsResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson33(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetChainStatsResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetChainStatsResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson33(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(in *jlexer.Lexer, out *GetChainMetricsResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(in *jlexer.Lexer, out *GetChainMetricsResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -6637,27 +4828,27 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(in *jlexer.Lexer
 				for !in.IsDelim('}') {
 					key := uint32(in.Uint32Str())
 					in.WantColon()
-					var v90 map[string]float64
+					var v66 map[string]float64
 					if in.IsNull() {
 						in.Skip()
 					} else {
 						in.Delim('{')
 						if !in.IsDelim('}') {
-							v90 = make(map[string]float64)
+							v66 = make(map[string]float64)
 						} else {
-							v90 = nil
+							v66 = nil
 						}
 						for !in.IsDelim('}') {
 							key := string(in.String())
 							in.WantColon()
-							var v91 float64
-							v91 = float64(in.Float64())
-							(v90)[key] = v91
+							var v67 float64
+							v67 = float64(in.Float64())
+							(v66)[key] = v67
 							in.WantComma()
 						}
 						in.Delim('}')
 					}
-					(out.ChainStats)[key] = v90
+					(out.ChainStats)[key] = v66
 					in.WantComma()
 				}
 				in.Delim('}')
@@ -6674,7 +4865,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(out *jwriter.Writer, in GetChainMetricsResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(out *jwriter.Writer, in GetChainMetricsResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6684,29 +4875,29 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(out *jwriter.Wri
 		out.RawString(prefix[1:])
 		{
 			out.RawByte('{')
-			v92First := true
-			for v92Name, v92Value := range in.ChainStats {
-				if v92First {
-					v92First = false
+			v68First := true
+			for v68Name, v68Value := range in.ChainStats {
+				if v68First {
+					v68First = false
 				} else {
 					out.RawByte(',')
 				}
-				out.Uint32Str(uint32(v92Name))
+				out.Uint32Str(uint32(v68Name))
 				out.RawByte(':')
-				if v92Value == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
+				if v68Value == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
 					out.RawString(`null`)
 				} else {
 					out.RawByte('{')
-					v93First := true
-					for v93Name, v93Value := range v92Value {
-						if v93First {
-							v93First = false
+					v69First := true
+					for v69Name, v69Value := range v68Value {
+						if v69First {
+							v69First = false
 						} else {
 							out.RawByte(',')
 						}
-						out.String(string(v93Name))
+						out.String(string(v69Name))
 						out.RawByte(':')
-						out.Float64(float64(v93Value))
+						out.Float64(float64(v69Value))
 					}
 					out.RawByte('}')
 				}
@@ -6730,27 +4921,776 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetChainMetricsResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetChainMetricsResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson34(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetChainMetricsResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetChainMetricsResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson34(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(in *jlexer.Lexer, out *GetBlockStatsResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(in *jlexer.Lexer, out *GetBlockTemplateResult) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "bits":
+			out.Bits = string(in.String())
+		case "chainweight":
+			out.ChainWeight = string(in.String())
+		case "curtime":
+			out.CurTime = int64(in.Int64())
+		case "height":
+			out.Height = int64(in.Int64())
+		case "previousblockhash":
+			out.PreviousHash = string(in.String())
+		case "prevblocksmmrroot":
+			out.PrevBlocksMMRRoot = string(in.String())
+		case "serialID":
+			out.SerialID = int64(in.Int64())
+		case "prevSerialID":
+			out.PrevSerialID = int64(in.Int64())
+		case "sigoplimit":
+			out.SigOpLimit = int64(in.Int64())
+		case "sizelimit":
+			out.SizeLimit = int64(in.Int64())
+		case "weightlimit":
+			out.WeightLimit = int64(in.Int64())
+		case "transactions":
+			if in.IsNull() {
+				in.Skip()
+				out.Transactions = nil
+			} else {
+				in.Delim('[')
+				if out.Transactions == nil {
+					if !in.IsDelim(']') {
+						out.Transactions = make([]GetBlockTemplateResultTx, 0, 0)
+					} else {
+						out.Transactions = []GetBlockTemplateResultTx{}
+					}
+				} else {
+					out.Transactions = (out.Transactions)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v70 GetBlockTemplateResultTx
+					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in, &v70)
+					out.Transactions = append(out.Transactions, v70)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "version":
+			out.Version = int32(in.Int32())
+		case "shards":
+			out.Shards = uint32(in.Uint32())
+		case "coinbaseaux":
+			if in.IsNull() {
+				in.Skip()
+				out.CoinbaseAux = nil
+			} else {
+				if out.CoinbaseAux == nil {
+					out.CoinbaseAux = new(GetBlockTemplateResultAux)
+				}
+				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson37(in, out.CoinbaseAux)
+			}
+		case "coinbasetxn":
+			if in.IsNull() {
+				in.Skip()
+				out.CoinbaseTxn = nil
+			} else {
+				if out.CoinbaseTxn == nil {
+					out.CoinbaseTxn = new(GetBlockTemplateResultTx)
+				}
+				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in, out.CoinbaseTxn)
+			}
+		case "coinbasevalue":
+			if in.IsNull() {
+				in.Skip()
+				out.CoinbaseValue = nil
+			} else {
+				if out.CoinbaseValue == nil {
+					out.CoinbaseValue = new(int64)
+				}
+				*out.CoinbaseValue = int64(in.Int64())
+			}
+		case "workid":
+			out.WorkID = string(in.String())
+		case "default_witness_commitment":
+			out.DefaultWitnessCommitment = string(in.String())
+		case "longpollid":
+			out.LongPollID = string(in.String())
+		case "longpolluri":
+			out.LongPollURI = string(in.String())
+		case "submitold":
+			if in.IsNull() {
+				in.Skip()
+				out.SubmitOld = nil
+			} else {
+				if out.SubmitOld == nil {
+					out.SubmitOld = new(bool)
+				}
+				*out.SubmitOld = bool(in.Bool())
+			}
+		case "target":
+			out.Target = string(in.String())
+		case "expires":
+			out.Expires = int64(in.Int64())
+		case "maxtime":
+			out.MaxTime = int64(in.Int64())
+		case "mintime":
+			out.MinTime = int64(in.Int64())
+		case "mutable":
+			if in.IsNull() {
+				in.Skip()
+				out.Mutable = nil
+			} else {
+				in.Delim('[')
+				if out.Mutable == nil {
+					if !in.IsDelim(']') {
+						out.Mutable = make([]string, 0, 4)
+					} else {
+						out.Mutable = []string{}
+					}
+				} else {
+					out.Mutable = (out.Mutable)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v71 string
+					v71 = string(in.String())
+					out.Mutable = append(out.Mutable, v71)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "noncerange":
+			out.NonceRange = string(in.String())
+		case "capabilities":
+			if in.IsNull() {
+				in.Skip()
+				out.Capabilities = nil
+			} else {
+				in.Delim('[')
+				if out.Capabilities == nil {
+					if !in.IsDelim(']') {
+						out.Capabilities = make([]string, 0, 4)
+					} else {
+						out.Capabilities = []string{}
+					}
+				} else {
+					out.Capabilities = (out.Capabilities)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v72 string
+					v72 = string(in.String())
+					out.Capabilities = append(out.Capabilities, v72)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "reject-reason":
+			out.RejectReason = string(in.String())
+		case "btcAux":
+			out.BTCAux = string(in.String())
+		case "k":
+			out.K = uint32(in.Uint32())
+		case "vote_k":
+			out.VoteK = uint32(in.Uint32())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(out *jwriter.Writer, in GetBlockTemplateResult) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Bits != "" {
+		const prefix string = ",\"bits\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Bits))
+	}
+	if in.ChainWeight != "" {
+		const prefix string = ",\"chainweight\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.ChainWeight))
+	}
+	if in.CurTime != 0 {
+		const prefix string = ",\"curtime\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.CurTime))
+	}
+	if in.Height != 0 {
+		const prefix string = ",\"height\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Height))
+	}
+	if in.PreviousHash != "" {
+		const prefix string = ",\"previousblockhash\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.PreviousHash))
+	}
+	if in.PrevBlocksMMRRoot != "" {
+		const prefix string = ",\"prevblocksmmrroot\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.PrevBlocksMMRRoot))
+	}
+	if in.SerialID != 0 {
+		const prefix string = ",\"serialID\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.SerialID))
+	}
+	if in.PrevSerialID != 0 {
+		const prefix string = ",\"prevSerialID\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.PrevSerialID))
+	}
+	if in.SigOpLimit != 0 {
+		const prefix string = ",\"sigoplimit\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.SigOpLimit))
+	}
+	if in.SizeLimit != 0 {
+		const prefix string = ",\"sizelimit\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.SizeLimit))
+	}
+	if in.WeightLimit != 0 {
+		const prefix string = ",\"weightlimit\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.WeightLimit))
+	}
+	if len(in.Transactions) != 0 {
+		const prefix string = ",\"transactions\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v73, v74 := range in.Transactions {
+				if v73 > 0 {
+					out.RawByte(',')
+				}
+				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out, v74)
+			}
+			out.RawByte(']')
+		}
+	}
+	if in.Version != 0 {
+		const prefix string = ",\"version\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int32(int32(in.Version))
+	}
+	if in.Shards != 0 {
+		const prefix string = ",\"shards\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Uint32(uint32(in.Shards))
+	}
+	if in.CoinbaseAux != nil {
+		const prefix string = ",\"coinbaseaux\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson37(out, *in.CoinbaseAux)
+	}
+	if in.CoinbaseTxn != nil {
+		const prefix string = ",\"coinbasetxn\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out, *in.CoinbaseTxn)
+	}
+	if in.CoinbaseValue != nil {
+		const prefix string = ",\"coinbasevalue\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(*in.CoinbaseValue))
+	}
+	if in.WorkID != "" {
+		const prefix string = ",\"workid\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.WorkID))
+	}
+	if in.DefaultWitnessCommitment != "" {
+		const prefix string = ",\"default_witness_commitment\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.DefaultWitnessCommitment))
+	}
+	if in.LongPollID != "" {
+		const prefix string = ",\"longpollid\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.LongPollID))
+	}
+	if in.LongPollURI != "" {
+		const prefix string = ",\"longpolluri\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.LongPollURI))
+	}
+	if in.SubmitOld != nil {
+		const prefix string = ",\"submitold\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Bool(bool(*in.SubmitOld))
+	}
+	if in.Target != "" {
+		const prefix string = ",\"target\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Target))
+	}
+	if in.Expires != 0 {
+		const prefix string = ",\"expires\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Expires))
+	}
+	if in.MaxTime != 0 {
+		const prefix string = ",\"maxtime\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.MaxTime))
+	}
+	if in.MinTime != 0 {
+		const prefix string = ",\"mintime\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.MinTime))
+	}
+	if len(in.Mutable) != 0 {
+		const prefix string = ",\"mutable\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v75, v76 := range in.Mutable {
+				if v75 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v76))
+			}
+			out.RawByte(']')
+		}
+	}
+	if in.NonceRange != "" {
+		const prefix string = ",\"noncerange\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.NonceRange))
+	}
+	if len(in.Capabilities) != 0 {
+		const prefix string = ",\"capabilities\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v77, v78 := range in.Capabilities {
+				if v77 > 0 {
+					out.RawByte(',')
+				}
+				out.String(string(v78))
+			}
+			out.RawByte(']')
+		}
+	}
+	if in.RejectReason != "" {
+		const prefix string = ",\"reject-reason\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.RejectReason))
+	}
+	if in.BTCAux != "" {
+		const prefix string = ",\"btcAux\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.BTCAux))
+	}
+	if in.K != 0 {
+		const prefix string = ",\"k\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Uint32(uint32(in.K))
+	}
+	if in.VoteK != 0 {
+		const prefix string = ",\"vote_k\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Uint32(uint32(in.VoteK))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v GetBlockTemplateResult) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v GetBlockTemplateResult) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson35(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *GetBlockTemplateResult) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *GetBlockTemplateResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson35(l, v)
+}
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson37(in *jlexer.Lexer, out *GetBlockTemplateResultAux) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "flags":
+			out.Flags = string(in.String())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson37(out *jwriter.Writer, in GetBlockTemplateResultAux) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Flags != "" {
+		const prefix string = ",\"flags\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Flags))
+	}
+	out.RawByte('}')
+}
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson36(in *jlexer.Lexer, out *GetBlockTemplateResultTx) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "data":
+			out.Data = string(in.String())
+		case "hash":
+			out.Hash = string(in.String())
+		case "depends":
+			if in.IsNull() {
+				in.Skip()
+				out.Depends = nil
+			} else {
+				in.Delim('[')
+				if out.Depends == nil {
+					if !in.IsDelim(']') {
+						out.Depends = make([]int64, 0, 8)
+					} else {
+						out.Depends = []int64{}
+					}
+				} else {
+					out.Depends = (out.Depends)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v79 int64
+					v79 = int64(in.Int64())
+					out.Depends = append(out.Depends, v79)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "fee":
+			out.Fee = int64(in.Int64())
+		case "sigops":
+			out.SigOps = int64(in.Int64())
+		case "weight":
+			out.Weight = int64(in.Int64())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson36(out *jwriter.Writer, in GetBlockTemplateResultTx) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if in.Data != "" {
+		const prefix string = ",\"data\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.String(string(in.Data))
+	}
+	if in.Hash != "" {
+		const prefix string = ",\"hash\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.String(string(in.Hash))
+	}
+	if len(in.Depends) != 0 {
+		const prefix string = ",\"depends\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v80, v81 := range in.Depends {
+				if v80 > 0 {
+					out.RawByte(',')
+				}
+				out.Int64(int64(v81))
+			}
+			out.RawByte(']')
+		}
+	}
+	if in.Fee != 0 {
+		const prefix string = ",\"fee\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Fee))
+	}
+	if in.SigOps != 0 {
+		const prefix string = ",\"sigops\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.SigOps))
+	}
+	if in.Weight != 0 {
+		const prefix string = ",\"weight\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Weight))
+	}
+	out.RawByte('}')
+}
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(in *jlexer.Lexer, out *GetBlockStatsResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -6791,15 +5731,17 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(in *jlexer.Lexer
 					out.FeeratePercentiles = (out.FeeratePercentiles)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v94 int64
-					v94 = int64(in.Int64())
-					out.FeeratePercentiles = append(out.FeeratePercentiles, v94)
+					var v82 int64
+					v82 = int64(in.Int64())
+					out.FeeratePercentiles = append(out.FeeratePercentiles, v82)
 					in.WantComma()
 				}
 				in.Delim(']')
 			}
 		case "blockhash":
 			out.Hash = string(in.String())
+		case "height":
+			out.Height = int64(in.Int64())
 		case "serialID":
 			out.SerialID = int64(in.Int64())
 		case "prevSerialID":
@@ -6858,7 +5800,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out *jwriter.Writer, in GetBlockStatsResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(out *jwriter.Writer, in GetBlockStatsResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -6898,11 +5840,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v95, v96 := range in.FeeratePercentiles {
-				if v95 > 0 {
+			for v83, v84 := range in.FeeratePercentiles {
+				if v83 > 0 {
 					out.RawByte(',')
 				}
-				out.Int64(int64(v96))
+				out.Int64(int64(v84))
 			}
 			out.RawByte(']')
 		}
@@ -6916,6 +5858,16 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out *jwriter.Wri
 			out.RawString(prefix)
 		}
 		out.String(string(in.Hash))
+	}
+	if in.Height != 0 {
+		const prefix string = ",\"height\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.Height))
 	}
 	if in.SerialID != 0 {
 		const prefix string = ",\"serialID\":"
@@ -7163,1316 +6115,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetBlockStatsResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetBlockStatsResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson38(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetBlockStatsResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetBlockStatsResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson38(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(in *jlexer.Lexer, out *GetBeaconBlockVerboseTxResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "strippedsize":
-			out.StrippedSize = int32(in.Int32())
-		case "size":
-			out.Size = int32(in.Int32())
-		case "weight":
-			out.Weight = int32(in.Int32())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "version":
-			out.Version = int32(in.Int32())
-		case "versionHex":
-			out.VersionHex = string(in.String())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "tx":
-			if in.IsNull() {
-				in.Skip()
-				out.Tx = nil
-			} else {
-				in.Delim('[')
-				if out.Tx == nil {
-					if !in.IsDelim(']') {
-						out.Tx = make([]TxRawResult, 0, 0)
-					} else {
-						out.Tx = []TxRawResult{}
-					}
-				} else {
-					out.Tx = (out.Tx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v97 TxRawResult
-					(v97).UnmarshalEasyJSON(in)
-					out.Tx = append(out.Tx, v97)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "time":
-			out.Time = int64(in.Int64())
-		case "nonce":
-			out.Nonce = uint32(in.Uint32())
-		case "bits":
-			out.Bits = string(in.String())
-		case "k":
-			out.K = string(in.String())
-		case "voteK":
-			out.VoteK = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(out *jwriter.Writer, in GetBeaconBlockVerboseTxResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.StrippedSize != 0 {
-		const prefix string = ",\"strippedsize\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.StrippedSize))
-	}
-	if in.Size != 0 {
-		const prefix string = ",\"size\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Size))
-	}
-	if in.Weight != 0 {
-		const prefix string = ",\"weight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Weight))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.Version != 0 {
-		const prefix string = ",\"version\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Version))
-	}
-	if in.VersionHex != "" {
-		const prefix string = ",\"versionHex\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VersionHex))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if len(in.Tx) != 0 {
-		const prefix string = ",\"tx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v98, v99 := range in.Tx {
-				if v98 > 0 {
-					out.RawByte(',')
-				}
-				(v99).MarshalEasyJSON(out)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Nonce != 0 {
-		const prefix string = ",\"nonce\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.Nonce))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.K != "" {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.K))
-	}
-	if in.VoteK != "" {
-		const prefix string = ",\"voteK\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VoteK))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockVerboseTxResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockVerboseTxResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockVerboseTxResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockVerboseTxResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(in *jlexer.Lexer, out *GetBeaconBlockVerboseResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "strippedsize":
-			out.StrippedSize = int32(in.Int32())
-		case "size":
-			out.Size = int32(in.Int32())
-		case "weight":
-			out.Weight = int32(in.Int32())
-		case "height":
-			out.Height = int64(in.Int64())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "version":
-			out.Version = int32(in.Int32())
-		case "versionHex":
-			out.VersionHex = string(in.String())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "tx":
-			if in.IsNull() {
-				in.Skip()
-				out.Tx = nil
-			} else {
-				in.Delim('[')
-				if out.Tx == nil {
-					if !in.IsDelim(']') {
-						out.Tx = make([]string, 0, 4)
-					} else {
-						out.Tx = []string{}
-					}
-				} else {
-					out.Tx = (out.Tx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v100 string
-					v100 = string(in.String())
-					out.Tx = append(out.Tx, v100)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "rawtx":
-			if in.IsNull() {
-				in.Skip()
-				out.RawTx = nil
-			} else {
-				in.Delim('[')
-				if out.RawTx == nil {
-					if !in.IsDelim(']') {
-						out.RawTx = make([]TxRawResult, 0, 0)
-					} else {
-						out.RawTx = []TxRawResult{}
-					}
-				} else {
-					out.RawTx = (out.RawTx)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v101 TxRawResult
-					(v101).UnmarshalEasyJSON(in)
-					out.RawTx = append(out.RawTx, v101)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "time":
-			out.Time = int64(in.Int64())
-		case "nonce":
-			out.Nonce = uint32(in.Uint32())
-		case "bits":
-			out.Bits = string(in.String())
-		case "k":
-			out.K = string(in.String())
-		case "voteK":
-			out.VoteK = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "powhash":
-			out.PoWHash = string(in.String())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "blocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		case "mmr":
-			out.MerkleMountainRange = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(out *jwriter.Writer, in GetBeaconBlockVerboseResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.StrippedSize != 0 {
-		const prefix string = ",\"strippedsize\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.StrippedSize))
-	}
-	if in.Size != 0 {
-		const prefix string = ",\"size\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Size))
-	}
-	if in.Weight != 0 {
-		const prefix string = ",\"weight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Weight))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.Version != 0 {
-		const prefix string = ",\"version\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Version))
-	}
-	if in.VersionHex != "" {
-		const prefix string = ",\"versionHex\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VersionHex))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if len(in.Tx) != 0 {
-		const prefix string = ",\"tx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v102, v103 := range in.Tx {
-				if v102 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v103))
-			}
-			out.RawByte(']')
-		}
-	}
-	if len(in.RawTx) != 0 {
-		const prefix string = ",\"rawtx\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v104, v105 := range in.RawTx {
-				if v104 > 0 {
-					out.RawByte(',')
-				}
-				(v105).MarshalEasyJSON(out)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Nonce != 0 {
-		const prefix string = ",\"nonce\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.Nonce))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.K != "" {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.K))
-	}
-	if in.VoteK != "" {
-		const prefix string = ",\"voteK\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VoteK))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PoWHash != "" {
-		const prefix string = ",\"powhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PoWHash))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"blocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	if in.MerkleMountainRange != "" {
-		const prefix string = ",\"mmr\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleMountainRange))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockVerboseResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockVerboseResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockVerboseResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockVerboseResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(in *jlexer.Lexer, out *GetBeaconBlockTemplateResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "bits":
-			out.Bits = string(in.String())
-		case "chainweight":
-			out.ChainWeight = string(in.String())
-		case "curtime":
-			out.CurTime = int64(in.Int64())
-		case "height":
-			out.Height = int64(in.Int64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "prevblocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "sigoplimit":
-			out.SigOpLimit = int64(in.Int64())
-		case "sizelimit":
-			out.SizeLimit = int64(in.Int64())
-		case "weightlimit":
-			out.WeightLimit = int64(in.Int64())
-		case "transactions":
-			if in.IsNull() {
-				in.Skip()
-				out.Transactions = nil
-			} else {
-				in.Delim('[')
-				if out.Transactions == nil {
-					if !in.IsDelim(']') {
-						out.Transactions = make([]GetBlockTemplateResultTx, 0, 0)
-					} else {
-						out.Transactions = []GetBlockTemplateResultTx{}
-					}
-				} else {
-					out.Transactions = (out.Transactions)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v106 GetBlockTemplateResultTx
-					easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in, &v106)
-					out.Transactions = append(out.Transactions, v106)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "version":
-			out.Version = int32(in.Int32())
-		case "shards":
-			out.Shards = uint32(in.Uint32())
-		case "coinbaseaux":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseAux = nil
-			} else {
-				if out.CoinbaseAux == nil {
-					out.CoinbaseAux = new(GetBlockTemplateResultAux)
-				}
-				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson26(in, out.CoinbaseAux)
-			}
-		case "coinbasetxn":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseTxn = nil
-			} else {
-				if out.CoinbaseTxn == nil {
-					out.CoinbaseTxn = new(GetBlockTemplateResultTx)
-				}
-				easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson25(in, out.CoinbaseTxn)
-			}
-		case "coinbasevalue":
-			if in.IsNull() {
-				in.Skip()
-				out.CoinbaseValue = nil
-			} else {
-				if out.CoinbaseValue == nil {
-					out.CoinbaseValue = new(int64)
-				}
-				*out.CoinbaseValue = int64(in.Int64())
-			}
-		case "workid":
-			out.WorkID = string(in.String())
-		case "default_witness_commitment":
-			out.DefaultWitnessCommitment = string(in.String())
-		case "longpollid":
-			out.LongPollID = string(in.String())
-		case "longpolluri":
-			out.LongPollURI = string(in.String())
-		case "submitold":
-			if in.IsNull() {
-				in.Skip()
-				out.SubmitOld = nil
-			} else {
-				if out.SubmitOld == nil {
-					out.SubmitOld = new(bool)
-				}
-				*out.SubmitOld = bool(in.Bool())
-			}
-		case "target":
-			out.Target = string(in.String())
-		case "expires":
-			out.Expires = int64(in.Int64())
-		case "maxtime":
-			out.MaxTime = int64(in.Int64())
-		case "mintime":
-			out.MinTime = int64(in.Int64())
-		case "mutable":
-			if in.IsNull() {
-				in.Skip()
-				out.Mutable = nil
-			} else {
-				in.Delim('[')
-				if out.Mutable == nil {
-					if !in.IsDelim(']') {
-						out.Mutable = make([]string, 0, 4)
-					} else {
-						out.Mutable = []string{}
-					}
-				} else {
-					out.Mutable = (out.Mutable)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v107 string
-					v107 = string(in.String())
-					out.Mutable = append(out.Mutable, v107)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "noncerange":
-			out.NonceRange = string(in.String())
-		case "capabilities":
-			if in.IsNull() {
-				in.Skip()
-				out.Capabilities = nil
-			} else {
-				in.Delim('[')
-				if out.Capabilities == nil {
-					if !in.IsDelim(']') {
-						out.Capabilities = make([]string, 0, 4)
-					} else {
-						out.Capabilities = []string{}
-					}
-				} else {
-					out.Capabilities = (out.Capabilities)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v108 string
-					v108 = string(in.String())
-					out.Capabilities = append(out.Capabilities, v108)
-					in.WantComma()
-				}
-				in.Delim(']')
-			}
-		case "reject-reason":
-			out.RejectReason = string(in.String())
-		case "btcAux":
-			out.BTCAux = string(in.String())
-		case "k":
-			out.K = uint32(in.Uint32())
-		case "vote_k":
-			out.VoteK = uint32(in.Uint32())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(out *jwriter.Writer, in GetBeaconBlockTemplateResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Bits))
-	}
-	if in.ChainWeight != "" {
-		const prefix string = ",\"chainweight\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.ChainWeight))
-	}
-	if in.CurTime != 0 {
-		const prefix string = ",\"curtime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.CurTime))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Height))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"prevblocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.SigOpLimit != 0 {
-		const prefix string = ",\"sigoplimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SigOpLimit))
-	}
-	if in.SizeLimit != 0 {
-		const prefix string = ",\"sizelimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SizeLimit))
-	}
-	if in.WeightLimit != 0 {
-		const prefix string = ",\"weightlimit\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.WeightLimit))
-	}
-	if len(in.Transactions) != 0 {
-		const prefix string = ",\"transactions\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v109, v110 := range in.Transactions {
-				if v109 > 0 {
-					out.RawByte(',')
-				}
-				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out, v110)
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.Version != 0 {
-		const prefix string = ",\"version\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Version))
-	}
-	if in.Shards != 0 {
-		const prefix string = ",\"shards\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.Shards))
-	}
-	if in.CoinbaseAux != nil {
-		const prefix string = ",\"coinbaseaux\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson26(out, *in.CoinbaseAux)
-	}
-	if in.CoinbaseTxn != nil {
-		const prefix string = ",\"coinbasetxn\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson25(out, *in.CoinbaseTxn)
-	}
-	if in.CoinbaseValue != nil {
-		const prefix string = ",\"coinbasevalue\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(*in.CoinbaseValue))
-	}
-	if in.WorkID != "" {
-		const prefix string = ",\"workid\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.WorkID))
-	}
-	if in.DefaultWitnessCommitment != "" {
-		const prefix string = ",\"default_witness_commitment\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.DefaultWitnessCommitment))
-	}
-	if in.LongPollID != "" {
-		const prefix string = ",\"longpollid\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.LongPollID))
-	}
-	if in.LongPollURI != "" {
-		const prefix string = ",\"longpolluri\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.LongPollURI))
-	}
-	if in.SubmitOld != nil {
-		const prefix string = ",\"submitold\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Bool(bool(*in.SubmitOld))
-	}
-	if in.Target != "" {
-		const prefix string = ",\"target\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Target))
-	}
-	if in.Expires != 0 {
-		const prefix string = ",\"expires\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Expires))
-	}
-	if in.MaxTime != 0 {
-		const prefix string = ",\"maxtime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.MaxTime))
-	}
-	if in.MinTime != 0 {
-		const prefix string = ",\"mintime\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.MinTime))
-	}
-	if len(in.Mutable) != 0 {
-		const prefix string = ",\"mutable\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v111, v112 := range in.Mutable {
-				if v111 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v112))
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.NonceRange != "" {
-		const prefix string = ",\"noncerange\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NonceRange))
-	}
-	if len(in.Capabilities) != 0 {
-		const prefix string = ",\"capabilities\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		{
-			out.RawByte('[')
-			for v113, v114 := range in.Capabilities {
-				if v113 > 0 {
-					out.RawByte(',')
-				}
-				out.String(string(v114))
-			}
-			out.RawByte(']')
-		}
-	}
-	if in.RejectReason != "" {
-		const prefix string = ",\"reject-reason\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.RejectReason))
-	}
-	if in.BTCAux != "" {
-		const prefix string = ",\"btcAux\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.BTCAux))
-	}
-	if in.K != 0 {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.K))
-	}
-	if in.VoteK != 0 {
-		const prefix string = ",\"vote_k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint32(uint32(in.VoteK))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockTemplateResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockTemplateResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockTemplateResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockTemplateResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(in *jlexer.Lexer, out *GetBeaconBlockResults) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(in *jlexer.Lexer, out *GetBlockResults) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		in.Skip()
@@ -8481,17 +6144,17 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(in *jlexer.Lexer
 		in.Delim('[')
 		if *out == nil {
 			if !in.IsDelim(']') {
-				*out = make(GetBeaconBlockResults, 0, 1)
+				*out = make(GetBlockResults, 0, 1)
 			} else {
-				*out = GetBeaconBlockResults{}
+				*out = GetBlockResults{}
 			}
 		} else {
 			*out = (*out)[:0]
 		}
 		for !in.IsDelim(']') {
-			var v115 GetBeaconBlockResult
-			(v115).UnmarshalEasyJSON(in)
-			*out = append(*out, v115)
+			var v85 GetBlockResult
+			(v85).UnmarshalEasyJSON(in)
+			*out = append(*out, v85)
 			in.WantComma()
 		}
 		in.Delim(']')
@@ -8500,45 +6163,45 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(out *jwriter.Writer, in GetBeaconBlockResults) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(out *jwriter.Writer, in GetBlockResults) {
 	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 		out.RawString("null")
 	} else {
 		out.RawByte('[')
-		for v116, v117 := range in {
-			if v116 > 0 {
+		for v86, v87 := range in {
+			if v86 > 0 {
 				out.RawByte(',')
 			}
-			(v117).MarshalEasyJSON(out)
+			(v87).MarshalEasyJSON(out)
 		}
 		out.RawByte(']')
 	}
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockResults) MarshalJSON() ([]byte, error) {
+func (v GetBlockResults) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockResults) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(w, v)
+func (v GetBlockResults) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson39(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockResults) UnmarshalJSON(data []byte) error {
+func (v *GetBlockResults) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockResults) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(l, v)
+func (v *GetBlockResults) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson39(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(in *jlexer.Lexer, out *GetBeaconBlockResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(in *jlexer.Lexer, out *GetBlockResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -8575,7 +6238,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(out *jwriter.Writer, in GetBeaconBlockResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(out *jwriter.Writer, in GetBlockResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -8619,300 +6282,29 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(out *jwriter.Wri
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockResult) MarshalJSON() ([]byte, error) {
+func (v GetBlockResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(w, v)
+func (v GetBlockResult) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson40(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockResult) UnmarshalJSON(data []byte) error {
+func (v *GetBlockResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(l, v)
+func (v *GetBlockResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson40(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson49(in *jlexer.Lexer, out *GetBeaconBlockHeaderVerboseResult) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "hash":
-			out.Hash = string(in.String())
-		case "confirmations":
-			out.Confirmations = int64(in.Int64())
-		case "height":
-			out.Height = int32(in.Int32())
-		case "serialID":
-			out.SerialID = int64(in.Int64())
-		case "prevSerialID":
-			out.PrevSerialID = int64(in.Int64())
-		case "version":
-			out.Version = int32(in.Int32())
-		case "versionHex":
-			out.VersionHex = string(in.String())
-		case "merkleroot":
-			out.MerkleRoot = string(in.String())
-		case "mmr":
-			out.MerkleMountainRange = string(in.String())
-		case "time":
-			out.Time = int64(in.Int64())
-		case "nonce":
-			out.Nonce = uint64(in.Uint64())
-		case "bits":
-			out.Bits = string(in.String())
-		case "k":
-			out.K = string(in.String())
-		case "voteK":
-			out.VoteK = string(in.String())
-		case "difficulty":
-			out.Difficulty = float64(in.Float64())
-		case "previousblockhash":
-			out.PreviousHash = string(in.String())
-		case "prevblocksmmrroot":
-			out.PrevBlocksMMRRoot = string(in.String())
-		case "nextblockhash":
-			out.NextHash = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson49(out *jwriter.Writer, in GetBeaconBlockHeaderVerboseResult) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	if in.Hash != "" {
-		const prefix string = ",\"hash\":"
-		first = false
-		out.RawString(prefix[1:])
-		out.String(string(in.Hash))
-	}
-	if in.Confirmations != 0 {
-		const prefix string = ",\"confirmations\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Confirmations))
-	}
-	if in.Height != 0 {
-		const prefix string = ",\"height\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Height))
-	}
-	if in.SerialID != 0 {
-		const prefix string = ",\"serialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.SerialID))
-	}
-	if in.PrevSerialID != 0 {
-		const prefix string = ",\"prevSerialID\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.PrevSerialID))
-	}
-	if in.Version != 0 {
-		const prefix string = ",\"version\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int32(int32(in.Version))
-	}
-	if in.VersionHex != "" {
-		const prefix string = ",\"versionHex\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VersionHex))
-	}
-	if in.MerkleRoot != "" {
-		const prefix string = ",\"merkleroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleRoot))
-	}
-	if in.MerkleMountainRange != "" {
-		const prefix string = ",\"mmr\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.MerkleMountainRange))
-	}
-	if in.Time != 0 {
-		const prefix string = ",\"time\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int64(int64(in.Time))
-	}
-	if in.Nonce != 0 {
-		const prefix string = ",\"nonce\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint64(uint64(in.Nonce))
-	}
-	if in.Bits != "" {
-		const prefix string = ",\"bits\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Bits))
-	}
-	if in.K != "" {
-		const prefix string = ",\"k\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.K))
-	}
-	if in.VoteK != "" {
-		const prefix string = ",\"voteK\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.VoteK))
-	}
-	if in.Difficulty != 0 {
-		const prefix string = ",\"difficulty\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Float64(float64(in.Difficulty))
-	}
-	if in.PreviousHash != "" {
-		const prefix string = ",\"previousblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PreviousHash))
-	}
-	if in.PrevBlocksMMRRoot != "" {
-		const prefix string = ",\"prevblocksmmrroot\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.PrevBlocksMMRRoot))
-	}
-	if in.NextHash != "" {
-		const prefix string = ",\"nextblockhash\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.NextHash))
-	}
-	out.RawByte('}')
-}
-
-// MarshalJSON supports json.Marshaler interface
-func (v GetBeaconBlockHeaderVerboseResult) MarshalJSON() ([]byte, error) {
-	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson49(&w, v)
-	return w.Buffer.BuildBytes(), w.Error
-}
-
-// MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GetBeaconBlockHeaderVerboseResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson49(w, v)
-}
-
-// UnmarshalJSON supports json.Unmarshaler interface
-func (v *GetBeaconBlockHeaderVerboseResult) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson49(&r, v)
-	return r.Error()
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GetBeaconBlockHeaderVerboseResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson49(l, v)
-}
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson50(in *jlexer.Lexer, out *GetAddedNodeInfoResults) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(in *jlexer.Lexer, out *GetAddedNodeInfoResults) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		in.Skip()
@@ -8929,9 +6321,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson50(in *jlexer.Lexer
 			*out = (*out)[:0]
 		}
 		for !in.IsDelim(']') {
-			var v118 GetAddedNodeInfoResult
-			(v118).UnmarshalEasyJSON(in)
-			*out = append(*out, v118)
+			var v88 GetAddedNodeInfoResult
+			(v88).UnmarshalEasyJSON(in)
+			*out = append(*out, v88)
 			in.WantComma()
 		}
 		in.Delim(']')
@@ -8940,16 +6332,16 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson50(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson50(out *jwriter.Writer, in GetAddedNodeInfoResults) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(out *jwriter.Writer, in GetAddedNodeInfoResults) {
 	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 		out.RawString("null")
 	} else {
 		out.RawByte('[')
-		for v119, v120 := range in {
-			if v119 > 0 {
+		for v89, v90 := range in {
+			if v89 > 0 {
 				out.RawByte(',')
 			}
-			(v120).MarshalEasyJSON(out)
+			(v90).MarshalEasyJSON(out)
 		}
 		out.RawByte(']')
 	}
@@ -8958,27 +6350,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson50(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetAddedNodeInfoResults) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson50(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetAddedNodeInfoResults) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson50(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson41(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetAddedNodeInfoResults) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson50(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetAddedNodeInfoResults) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson50(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson41(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson51(in *jlexer.Lexer, out *GetAddedNodeInfoResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(in *jlexer.Lexer, out *GetAddedNodeInfoResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9032,9 +6424,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson51(in *jlexer.Lexer
 						*out.Addresses = (*out.Addresses)[:0]
 					}
 					for !in.IsDelim(']') {
-						var v121 GetAddedNodeInfoResultAddr
-						easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson52(in, &v121)
-						*out.Addresses = append(*out.Addresses, v121)
+						var v91 GetAddedNodeInfoResultAddr
+						easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(in, &v91)
+						*out.Addresses = append(*out.Addresses, v91)
 						in.WantComma()
 					}
 					in.Delim(']')
@@ -9050,7 +6442,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson51(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson51(out *jwriter.Writer, in GetAddedNodeInfoResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(out *jwriter.Writer, in GetAddedNodeInfoResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9082,11 +6474,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson51(out *jwriter.Wri
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v122, v123 := range *in.Addresses {
-				if v122 > 0 {
+			for v92, v93 := range *in.Addresses {
+				if v92 > 0 {
 					out.RawByte(',')
 				}
-				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson52(out, v123)
+				easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out, v93)
 			}
 			out.RawByte(']')
 		}
@@ -9097,27 +6489,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson51(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v GetAddedNodeInfoResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson51(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GetAddedNodeInfoResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson51(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson42(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GetAddedNodeInfoResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson51(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GetAddedNodeInfoResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson51(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson42(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson52(in *jlexer.Lexer, out *GetAddedNodeInfoResultAddr) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson43(in *jlexer.Lexer, out *GetAddedNodeInfoResultAddr) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9150,7 +6542,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson52(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson52(out *jwriter.Writer, in GetAddedNodeInfoResultAddr) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson43(out *jwriter.Writer, in GetAddedNodeInfoResultAddr) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9172,7 +6564,7 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson52(out *jwriter.Wri
 	}
 	out.RawByte('}')
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson53(in *jlexer.Lexer, out *Fee) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(in *jlexer.Lexer, out *Fee) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9209,7 +6601,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson53(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson53(out *jwriter.Writer, in Fee) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(out *jwriter.Writer, in Fee) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9255,27 +6647,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson53(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v Fee) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson53(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Fee) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson53(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson44(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Fee) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson53(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Fee) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson53(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson44(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson54(in *jlexer.Lexer, out *ExtendedTxOutResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(in *jlexer.Lexer, out *ExtendedTxOutResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9320,7 +6712,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson54(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson54(out *jwriter.Writer, in ExtendedTxOutResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(out *jwriter.Writer, in ExtendedTxOutResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9406,27 +6798,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson54(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v ExtendedTxOutResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson54(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ExtendedTxOutResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson54(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson45(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ExtendedTxOutResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson54(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ExtendedTxOutResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson54(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson45(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson55(in *jlexer.Lexer, out *ExtendedFeeFeeResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(in *jlexer.Lexer, out *ExtendedFeeFeeResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9461,7 +6853,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson55(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson55(out *jwriter.Writer, in ExtendedFeeFeeResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(out *jwriter.Writer, in ExtendedFeeFeeResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9497,27 +6889,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson55(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v ExtendedFeeFeeResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson55(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ExtendedFeeFeeResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson55(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson46(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ExtendedFeeFeeResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson55(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ExtendedFeeFeeResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson55(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson46(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson56(in *jlexer.Lexer, out *EstimateSmartFeeResult) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(in *jlexer.Lexer, out *EstimateSmartFeeResult) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9572,9 +6964,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson56(in *jlexer.Lexer
 					out.Errors = (out.Errors)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v124 string
-					v124 = string(in.String())
-					out.Errors = append(out.Errors, v124)
+					var v94 string
+					v94 = string(in.String())
+					out.Errors = append(out.Errors, v94)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -9591,7 +6983,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson56(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson56(out *jwriter.Writer, in EstimateSmartFeeResult) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(out *jwriter.Writer, in EstimateSmartFeeResult) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9621,11 +7013,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson56(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v125, v126 := range in.Errors {
-				if v125 > 0 {
+			for v95, v96 := range in.Errors {
+				if v95 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v126))
+				out.String(string(v96))
 			}
 			out.RawByte(']')
 		}
@@ -9646,27 +7038,27 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson56(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v EstimateSmartFeeResult) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson56(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v EstimateSmartFeeResult) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson56(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson47(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *EstimateSmartFeeResult) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson56(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *EstimateSmartFeeResult) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson56(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson47(l, v)
 }
-func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson57(in *jlexer.Lexer, out *BlockTxOperations) {
+func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(in *jlexer.Lexer, out *BlockTxOperations) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -9707,9 +7099,9 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson57(in *jlexer.Lexer
 					out.Ops = (out.Ops)[:0]
 				}
 				for !in.IsDelim(']') {
-					var v127 TxOperation
-					(v127).UnmarshalEasyJSON(in)
-					out.Ops = append(out.Ops, v127)
+					var v97 TxOperation
+					(v97).UnmarshalEasyJSON(in)
+					out.Ops = append(out.Ops, v97)
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -9724,7 +7116,7 @@ func easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson57(in *jlexer.Lexer
 		in.Consumed()
 	}
 }
-func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson57(out *jwriter.Writer, in BlockTxOperations) {
+func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(out *jwriter.Writer, in BlockTxOperations) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -9764,11 +7156,11 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson57(out *jwriter.Wri
 		}
 		{
 			out.RawByte('[')
-			for v128, v129 := range in.Ops {
-				if v128 > 0 {
+			for v98, v99 := range in.Ops {
+				if v98 > 0 {
 					out.RawByte(',')
 				}
-				(v129).MarshalEasyJSON(out)
+				(v99).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -9779,23 +7171,23 @@ func easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson57(out *jwriter.Wri
 // MarshalJSON supports json.Marshaler interface
 func (v BlockTxOperations) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson57(&w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v BlockTxOperations) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson57(w, v)
+	easyjson7c474aeaEncodeGitlabComJaxnetJaxnetdTypesJaxjson48(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *BlockTxOperations) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson57(&r, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *BlockTxOperations) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson57(l, v)
+	easyjson7c474aeaDecodeGitlabComJaxnetJaxnetdTypesJaxjson48(l, v)
 }

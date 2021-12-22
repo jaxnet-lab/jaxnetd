@@ -10,55 +10,7 @@ import (
 	"time"
 )
 
-//go:generate easyjson --omit_empty chainsvrresults.go jsonrpc.go
-
-// GetBeaconBlockHeaderVerboseResult models the data from the getBeaconBlockHeader command when
-// the verbose flag is set.  When the verbose flag is not set, getBeaconBlockHeader
-// returns a hex-encoded string.
-// easyjson:json
-type GetBeaconBlockHeaderVerboseResult struct {
-	Hash                string  `json:"hash"`
-	Confirmations       int64   `json:"confirmations"`
-	Height              int32   `json:"height"`
-	SerialID            int64   `json:"serialID"`
-	PrevSerialID        int64   `json:"prevSerialID"`
-	Version             int32   `json:"version"`
-	VersionHex          string  `json:"versionHex"`
-	MerkleRoot          string  `json:"merkleroot"`
-	MerkleMountainRange string  `json:"mmr"`
-	Time                int64   `json:"time"`
-	Nonce               uint64  `json:"nonce"`
-	Bits                string  `json:"bits"`
-	K                   string  `json:"k"`
-	VoteK               string  `json:"voteK"`
-	Difficulty          float64 `json:"difficulty"`
-	PreviousHash        string  `json:"previousblockhash,omitempty"`
-	PrevBlocksMMRRoot   string  `json:"prevblocksmmrroot,omitempty"`
-	NextHash            string  `json:"nextblockhash,omitempty"`
-}
-
-// GetShardBlockHeaderVerboseResult models the data from the getShardBlockHeader command when
-// the verbose flag is set.  When the verbose flag is not set, getShardBlockHeader
-// returns a hex-encoded string.
-// easyjson:json
-type GetShardBlockHeaderVerboseResult struct {
-	Hash              string                            `json:"hash"`
-	ShardHash         string                            `json:"shardhash"`
-	Confirmations     int64                             `json:"confirmations"`
-	Height            int32                             `json:"height"`
-	SerialID          int64                             `json:"serialID"`
-	PrevSerialID      int64                             `json:"prevSerialID"`
-	MerkleRoot        string                            `json:"merkleroot"`
-	Time              int64                             `json:"time"`
-	Bits              string                            `json:"bits"`
-	K                 string                            `json:"k"`
-	VoteK             string                            `json:"voteK"`
-	Difficulty        float64                           `json:"difficulty"`
-	PreviousHash      string                            `json:"previousblockhash,omitempty"`
-	PrevBlocksMMRRoot string                            `json:"prevblocksmmrroot,omitempty"`
-	NextHash          string                            `json:"nextblockhash,omitempty"`
-	BCHeader          GetBeaconBlockHeaderVerboseResult `json:"bcheader"`
-}
+//go:generate easyjson --omit_empty chainsvrresults.go  chainsvrresults_blocks.go jsonrpc.go
 
 // easyjson:json
 type GetChainStatsResult struct {
@@ -80,153 +32,31 @@ type GetBlockStatsResult struct {
 	AverageTxSize      int64   `json:"avgtxsize"`
 	FeeratePercentiles []int64 `json:"feerate_percentiles"`
 	Hash               string  `json:"blockhash"`
-	// Height             int64   `json:"height"`
-	SerialID          int64 `json:"serialID"`
-	PrevSerialID      int64 `json:"prevSerialID"`
-	Ins               int64 `json:"ins"`
-	MaxFee            int64 `json:"maxfee"`
-	MaxFeeRate        int64 `json:"maxfeerate"`
-	MaxTxSize         int64 `json:"maxtxsize"`
-	MedianFee         int64 `json:"medianfee"`
-	MedianTime        int64 `json:"mediantime"`
-	MedianTxSize      int64 `json:"mediantxsize"`
-	MinFee            int64 `json:"minfee"`
-	MinFeeRate        int64 `json:"minfeerate"`
-	MinTxSize         int64 `json:"mintxsize"`
-	Outs              int64 `json:"outs"`
-	SegWitTotalSize   int64 `json:"swtotal_size"`
-	SegWitTotalWeight int64 `json:"swtotal_weight"`
-	SegWitTxs         int64 `json:"swtxs"`
-	Subsidy           int64 `json:"subsidy"`
-	Time              int64 `json:"time"`
-	TotalOut          int64 `json:"total_out"`
-	TotalSize         int64 `json:"total_size"`
-	TotalWeight       int64 `json:"total_weight"`
-	Txs               int64 `json:"txs"`
-	UTXOIncrease      int64 `json:"utxo_increase"`
-	UTXOSizeIncrease  int64 `json:"utxo_size_inc"`
-}
-
-// GetBeaconBlockVerboseResult models the data from the getBeaconBlock command when the
-// verbose flag is set to 1.  When the verbose flag is set to 0, getBeaconBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getBeaconBlock returns an object whose tx field is an array of raw transactions.
-// Use GetBeaconBlockVerboseTxResult to unmarshal data received from passing verbose=2 to getBeaconBlock.
-// easyjson:json
-type GetBeaconBlockVerboseResult struct {
-	Hash                string        `json:"hash"`
-	Confirmations       int64         `json:"confirmations"`
-	StrippedSize        int32         `json:"strippedsize"`
-	Size                int32         `json:"size"`
-	Weight              int32         `json:"weight"`
-	Height              int64         `json:"height"`
-	SerialID            int64         `json:"serialID"`
-	PrevSerialID        int64         `json:"prevSerialID"`
-	Version             int32         `json:"version"`
-	VersionHex          string        `json:"versionHex"`
-	MerkleRoot          string        `json:"merkleroot"`
-	Tx                  []string      `json:"tx,omitempty"`
-	RawTx               []TxRawResult `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time                int64         `json:"time"`
-	Nonce               uint32        `json:"nonce"`
-	Bits                string        `json:"bits"`
-	K                   string        `json:"k"`
-	VoteK               string        `json:"voteK"`
-	Difficulty          float64       `json:"difficulty"`
-	PoWHash             string        `json:"powhash"`
-	PreviousHash        string        `json:"previousblockhash"`
-	PrevBlocksMMRRoot   string        `json:"blocksmmrroot,omitempty"`
-	NextHash            string        `json:"nextblockhash,omitempty"`
-	MerkleMountainRange string        `json:"mmr"`
-}
-
-// GetShardBlockVerboseResult models the data from the getShardBlock command when the
-// verbose flag is set to 1.  When the verbose flag is set to 0, getShardBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getShardBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getShardBlock returns an object whose tx field is an array of raw transactions.
-// Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=2 to getShardBlock.
-// easyjson:json
-type GetShardBlockVerboseResult struct {
-	Hash              string                      `json:"hash"`
-	ShardHash         string                      `json:"shardhash"`
-	Confirmations     int64                       `json:"confirmations"`
-	StrippedSize      int32                       `json:"strippedsize"`
-	Size              int32                       `json:"size"`
-	Weight            int32                       `json:"weight"`
-	Height            int64                       `json:"height"`
-	SerialID          int64                       `json:"serialID"`
-	PrevSerialID      int64                       `json:"prevSerialID"`
-	MerkleRoot        string                      `json:"merkleroot"`
-	Tx                []string                    `json:"tx,omitempty"`
-	RawTx             []TxRawResult               `json:"rawtx,omitempty"` // Note: this field is always empty when verbose != 2.
-	Time              int64                       `json:"time"`
-	Bits              string                      `json:"bits"`
-	K                 string                      `json:"k"`
-	VoteK             string                      `json:"voteK"`
-	Difficulty        float64                     `json:"difficulty"`
-	PreviousHash      string                      `json:"previousblockhash"`
-	PrevBlocksMMRRoot string                      `json:"prevblocksmmrroot,omitempty"`
-	NextHash          string                      `json:"nextblockhash,omitempty"`
-	BCBlock           GetBeaconBlockVerboseResult `json:"bcblock"`
-}
-
-// GetBeaconBlockVerboseTxResult models the data from the getBeaconBlock command when the
-// verbose flag is set to 2.  When the verbose flag is set to 0, getBeaconBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getBeaconBlock returns an object whose tx field is an array of raw transactions.
-// Use GetBeaconBlockVerboseResult to unmarshal data received from passing verbose=1 to getBeaconBlock.
-// easyjson:json
-type GetBeaconBlockVerboseTxResult struct {
-	Hash          string `json:"hash"`
-	Confirmations int64  `json:"confirmations"`
-	StrippedSize  int32  `json:"strippedsize"`
-	Size          int32  `json:"size"`
-	Weight        int32  `json:"weight"`
-	// Height        int64         `json:"height"`
-	SerialID     int64         `json:"serialID"`
-	PrevSerialID int64         `json:"prevSerialID"`
-	Version      int32         `json:"version"`
-	VersionHex   string        `json:"versionHex"`
-	MerkleRoot   string        `json:"merkleroot"`
-	Tx           []TxRawResult `json:"tx,omitempty"`
-	Time         int64         `json:"time"`
-	Nonce        uint32        `json:"nonce"`
-	Bits         string        `json:"bits"`
-	K            string        `json:"k"`
-	VoteK        string        `json:"voteK"`
-	Difficulty   float64       `json:"difficulty"`
-	PreviousHash string        `json:"previousblockhash"`
-	NextHash     string        `json:"nextblockhash,omitempty"`
-}
-
-// GetShardBlockVerboseTxResult models the data from the getBeaconBlock command when the
-// verbose flag is set to 2.  When the verbose flag is set to 0, getBeaconBlock returns a
-// hex-encoded string. When the verbose flag is set to 1, getBeaconBlock returns an object
-// whose tx field is an array of transaction hashes. When the verbose flag is set to 2,
-// getBeaconBlock returns an object whose tx field is an array of raw transactions.
-// Use GetShardBlockVerboseResult to unmarshal data received from passing verbose=1 to getShardBlock.
-// easyjson:json
-type GetShardBlockVerboseTxResult struct {
-	Hash          string                        `json:"hash"`
-	Confirmations int64                         `json:"confirmations"`
-	StrippedSize  int32                         `json:"strippedsize"`
-	Size          int32                         `json:"size"`
-	Weight        int32                         `json:"weight"`
-	Height        int64                         `json:"height"`
-	SerialID      int64                         `json:"serialID"`
-	PrevSerialID  int64                         `json:"prevSerialID"`
-	MerkleRoot    string                        `json:"merkleroot"`
-	Tx            []TxRawResult                 `json:"tx,omitempty"`
-	Time          int64                         `json:"time"`
-	Nonce         uint32                        `json:"nonce"`
-	Bits          string                        `json:"bits"`
-	Difficulty    float64                       `json:"difficulty"`
-	PreviousHash  string                        `json:"previousblockhash"`
-	NextHash      string                        `json:"nextblockhash,omitempty"`
-	BCBlock       GetBeaconBlockVerboseTxResult `json:"bcblock"`
+	Height             int64   `json:"height"`
+	SerialID           int64   `json:"serialID"`
+	PrevSerialID       int64   `json:"prevSerialID"`
+	Ins                int64   `json:"ins"`
+	MaxFee             int64   `json:"maxfee"`
+	MaxFeeRate         int64   `json:"maxfeerate"`
+	MaxTxSize          int64   `json:"maxtxsize"`
+	MedianFee          int64   `json:"medianfee"`
+	MedianTime         int64   `json:"mediantime"`
+	MedianTxSize       int64   `json:"mediantxsize"`
+	MinFee             int64   `json:"minfee"`
+	MinFeeRate         int64   `json:"minfeerate"`
+	MinTxSize          int64   `json:"mintxsize"`
+	Outs               int64   `json:"outs"`
+	SegWitTotalSize    int64   `json:"swtotal_size"`
+	SegWitTotalWeight  int64   `json:"swtotal_weight"`
+	SegWitTxs          int64   `json:"swtxs"`
+	Subsidy            int64   `json:"subsidy"`
+	Time               int64   `json:"time"`
+	TotalOut           int64   `json:"total_out"`
+	TotalSize          int64   `json:"total_size"`
+	TotalWeight        int64   `json:"total_weight"`
+	Txs                int64   `json:"txs"`
+	UTXOIncrease       int64   `json:"utxo_increase"`
+	UTXOSizeIncrease   int64   `json:"utxo_size_inc"`
 }
 
 // CreateMultiSigResult models the data returned from the createmultisig
@@ -351,10 +181,10 @@ type GetBlockTemplateResultAux struct {
 	Flags string `json:"flags"`
 }
 
-// GetBeaconBlockTemplateResult models the data returned from the getblocktemplate
+// GetBlockTemplateResult models the data returned from the getblocktemplate
 // command.
 // easyjson:json
-type GetBeaconBlockTemplateResult struct {
+type GetBlockTemplateResult struct {
 	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
 	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
 	Bits              string                     `json:"bits"`
@@ -371,57 +201,6 @@ type GetBeaconBlockTemplateResult struct {
 	Transactions      []GetBlockTemplateResultTx `json:"transactions"`
 	Version           int32                      `json:"version"`
 	Shards            uint32                     `json:"shards"`
-	CoinbaseAux       *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
-	CoinbaseTxn       *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
-	CoinbaseValue     *int64                     `json:"coinbasevalue,omitempty"`
-	WorkID            string                     `json:"workid,omitempty"`
-
-	// Witness commitment defined in BIP 0141.
-	DefaultWitnessCommitment string `json:"default_witness_commitment,omitempty"`
-
-	// Optional long polling from BIP 0022.
-	LongPollID  string `json:"longpollid,omitempty"`
-	LongPollURI string `json:"longpolluri,omitempty"`
-	SubmitOld   *bool  `json:"submitold,omitempty"`
-
-	// Basic pool extension from BIP 0023.
-	Target  string `json:"target,omitempty"`
-	Expires int64  `json:"expires,omitempty"`
-
-	// Mutations from BIP 0023.
-	MaxTime    int64    `json:"maxtime,omitempty"`
-	MinTime    int64    `json:"mintime,omitempty"`
-	Mutable    []string `json:"mutable,omitempty"`
-	NonceRange string   `json:"noncerange,omitempty"`
-
-	// Block proposal from BIP 0023.
-	Capabilities []string `json:"capabilities,omitempty"`
-	RejectReason string   `json:"reject-reason,omitempty"`
-
-	BTCAux string `json:"btcAux"`
-	K      uint32 `json:"k"`
-	VoteK  uint32 `json:"vote_k"`
-}
-
-// GetShardBlockTemplateResult models the data returned from the getblocktemplate
-// command.
-// easyjson:json
-type GetShardBlockTemplateResult struct {
-	// Base fields from BIP 0022.  CoinbaseAux is optional.  One of
-	// CoinbaseTxn or CoinbaseValue must be specified, but not both.
-	Bits              string                     `json:"bits"`
-	ChainWeight       string                     `json:"chainweight"`
-	CurTime           int64                      `json:"curtime"`
-	Height            int64                      `json:"height"`
-	SerialID          int64                      `json:"serialID"`
-	PrevSerialID      int64                      `json:"prevSerialID"`
-	PreviousHash      string                     `json:"previousblockhash"` // DEPRECATED use PrevBlocksMMRRoot.
-	PrevBlocksMMRRoot string                     `json:"prevblocksmmrroot"`
-	SigOpLimit        int64                      `json:"sigoplimit,omitempty"`
-	SizeLimit         int64                      `json:"sizelimit,omitempty"`
-	WeightLimit       int64                      `json:"weightlimit,omitempty"`
-	Transactions      []GetBlockTemplateResultTx `json:"transactions"`
-	Version           int32                      `json:"version"`
 	CoinbaseAux       *GetBlockTemplateResultAux `json:"coinbaseaux,omitempty"`
 	CoinbaseTxn       *GetBlockTemplateResultTx  `json:"coinbasetxn,omitempty"`
 	CoinbaseValue     *int64                     `json:"coinbasevalue,omitempty"`
@@ -1001,7 +780,7 @@ type GetLastSerialBlockNumberResult struct {
 }
 
 // easyjson:json
-type GetBeaconBlockResult struct {
+type GetBlockResult struct {
 	Block        string `json:"block"`
 	Height       int32  `json:"height"`
 	SerialID     int64  `json:"serial_id"`
@@ -1009,18 +788,7 @@ type GetBeaconBlockResult struct {
 }
 
 // easyjson:json
-type GetBeaconBlockResults []GetBeaconBlockResult
-
-// easyjson:json
-type GetShardBlockResult struct {
-	Block        string `json:"block"`
-	Height       int32  `json:"height"`
-	SerialID     int64  `json:"serial_id"`
-	PrevSerialID int64  `json:"prev_serial_id"`
-}
-
-// easyjson:json
-type GetShardBlockResults []GetBeaconBlockResult
+type GetBlockResults []GetBlockResult
 
 // easyjson:json
 type TxOperation struct {

@@ -8,10 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Unreleased
 
 ## [0.4.3]
+
 - Replaced standard `sha256` by  [sha256-simd](https://github.com/minio/sha256-simd).
-- Improved speed of the catching up of the chain by saving of the index of the best chain.  
+- Improved speed of the catching up of the chain by saving of the index of the best chain.
 - Added the ability to batch initialize the MMR tree.
-- Removed prometheus metrics, use standalone [monitoring daemon](https://gitlab.com/jaxnet/core/jaxnetd-monitor) instead. 
+- Removed prometheus metrics, use standalone [monitoring daemon](https://gitlab.com/jaxnet/core/jaxnetd-monitor)
+  instead.
 - Added saving the index of the best chain to the database. This speeds up the startup of the node.
 - Dropped support of the `shard.json`. Now this data is housed in the beacon database.
 - Added the automining mode for the CPU-miner.
@@ -21,8 +23,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added simple db-inspector to check the db sanity.
 - Replaced standard `encoding/json` in RPC client to [easyjson](https://github.com/mailru/easyjson)
 - Extended ListShard response with shard genesis hash.
+- **[RPC BREAKING CHANGES]** - The `GetShardBlockTemplate` and `GetBeaconBlockTemplate` methods are no longer supported,
+  use `GetBlockTemplate`.
+- **[RPC BREAKING CHANGES]** - The responses of methods `GetBeaconBlockHeaderVerbose`,  `GetShardBlockHeaderVerbose`
+  ,  `GetBeaconBlockVerbose`, `GetShardBlockVerbose`  `GetBeaconBlockVerboseTx`, `GetShardBlockVerboseTx` have been
+  extended.
 
 ## [0.4.2]
+
 - Changed default jaxBurnScript and validation of vanity prefixes
 - Finalized Mainnet Genesis with BTC Block 707634
 - Fix vanity check for BCH
@@ -108,13 +116,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Introduces `zerolog` for structured logging and `prometheus` for monitoring.
 
 [0.4.3]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.3
+
 [0.4.2]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.2
+
 [0.4.1]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.1
+
 [0.4.0]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.0
+
 [0.3.12-14]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.14
+
 [0.3.11]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.11
+
 [0.3.10]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.10
+
 [0.3.9]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.9
+
 [0.3.8]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.8
+
 [0.3.7]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.7
+
 [0.3.5]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.3.5

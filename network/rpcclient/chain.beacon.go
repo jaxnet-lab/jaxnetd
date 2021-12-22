@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpcclient
 
 import (
@@ -30,7 +31,7 @@ func (r FutureGetBeaconBlockResult) Receive() (*BlockResult, error) {
 	}
 
 	// Unmarshal result as a string.
-	var blockResult jaxjson.GetBeaconBlockResult
+	var blockResult jaxjson.GetBlockResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -147,13 +148,13 @@ type FutureGetBeaconBlockVerboseTxResult struct {
 
 // Receive waits for the response promised by the future and returns a verbose
 // version of the block including detailed information about its transactions.
-func (r FutureGetBeaconBlockVerboseTxResult) Receive() (*jaxjson.GetBeaconBlockVerboseTxResult, error) {
+func (r FutureGetBeaconBlockVerboseTxResult) Receive() (*jaxjson.GetBeaconBlockVerboseResult, error) {
 	res, err := r.client.waitForGetBlockRes(r.Response, "getBeaconBlock", r.hash, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	var blockResult jaxjson.GetBeaconBlockVerboseTxResult
+	var blockResult jaxjson.GetBeaconBlockVerboseResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -190,7 +191,7 @@ func (c *Client) GetBeaconBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureG
 //
 // See GetBeaconBlockVerbose if only transaction hashes are preferred.
 // See GetBeaconBlock to retrieve a raw block instead.
-func (c *Client) GetBeaconBlockVerboseTx(blockHash *chainhash.Hash) (*jaxjson.GetBeaconBlockVerboseTxResult, error) {
+func (c *Client) GetBeaconBlockVerboseTx(blockHash *chainhash.Hash) (*jaxjson.GetBeaconBlockVerboseResult, error) {
 	return c.GetBeaconBlockVerboseTxAsync(blockHash).Receive()
 }
 
@@ -302,14 +303,14 @@ type FutureGetBeaconBlockTemplateAsync chan *response
 
 // Receive waits for the response promised by the future and returns the hash
 // data to work on.
-func (r FutureGetBeaconBlockTemplateAsync) Receive() (*jaxjson.GetBeaconBlockTemplateResult, error) {
+func (r FutureGetBeaconBlockTemplateAsync) Receive() (*jaxjson.GetBlockTemplateResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a getwork result object.
-	var result jaxjson.GetBeaconBlockTemplateResult
+	var result jaxjson.GetBlockTemplateResult
 	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -328,8 +329,9 @@ func (c *Client) GetBeaconBlockTemplateAsync(reqData *jaxjson.TemplateRequest) F
 	return c.ForBeacon().sendCmd(cmd)
 }
 
+// DEPRECATED will be removed in next release. Use the GetBlockTemplate insead.
 // GetBeaconBlockTemplate deals with generating and returning block templates to the caller.
-func (c *Client) GetBeaconBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBeaconBlockTemplateResult, error) {
+func (c *Client) GetBeaconBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBlockTemplateResult, error) {
 	return c.GetBeaconBlockTemplateAsync(reqData).Receive()
 }
 
@@ -421,7 +423,7 @@ func (r FutureGetBeaconBlockBySerialNumberResult) Receive() (*BlockResult, error
 		return nil, err
 	}
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult jaxjson.GetBeaconBlockResult
+	var blockResult jaxjson.GetBlockResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -486,7 +488,7 @@ func (r FutureListBeaconBlocksBySerialNumberResult) Receive() ([]*BlockResult, e
 		return nil, err
 	}
 	// Unmarshal the raw result into a BlockResult.
-	var blockResults jaxjson.GetBeaconBlockResults
+	var blockResults jaxjson.GetBlockResults
 	err = blockResults.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err

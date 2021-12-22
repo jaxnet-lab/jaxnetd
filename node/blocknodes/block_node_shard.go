@@ -48,7 +48,7 @@ type ShardBlockNode struct {
 	actualMMRRoot chainhash.Hash
 }
 
-// NewShardBlockNode returns a new block node for the given block ShardHeader and parent
+// NewShardBlockNode returns a new block node for the given block ShardBlockHeader and parent
 // node, calculating the height and workSum from the respective fields on the
 // parent. This function is NOT safe for concurrent access.
 func NewShardBlockNode(blockHeader wire.BlockHeader, parent IBlockNode, serialID int64) *ShardBlockNode {
@@ -89,7 +89,7 @@ func (node *ShardBlockNode) SetStatus(status BlockStatus)            { node.stat
 func (node *ShardBlockNode) NewHeader() wire.BlockHeader             { return wire.EmptyShardHeader() }
 func (node *ShardBlockNode) ExpansionApproved() bool                 { return false }
 
-// Header constructs a block ShardHeader from the node and returns it.
+// Header constructs a block ShardBlockHeader from the node and returns it.
 //
 // This function is safe for concurrent access.
 func (node *ShardBlockNode) Header() wire.BlockHeader {

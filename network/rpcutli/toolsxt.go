@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
+
 package rpcutli
 
 import (
@@ -153,7 +154,7 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, 
 
 // CreateTxRawResult converts the passed transaction and associated parameters
 // to a raw transaction JSON object.
-func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
+func (xt ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader wire.BlockHeader, blkHash string,
 	blkHeight int32, chainHeight int32) (*jaxjson.TxRawResult, error) {
 
@@ -194,6 +195,123 @@ func (xt *ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.Msg
 	}
 
 	return txReply, nil
+}
+
+func WireHeaderToBeaconJSON(params *chaincfg.Params, header wire.BlockHeader, actualMMR string, verboseTx bool) jaxjson.BeaconBlockHeader {
+	utils := ToolsXt{}
+	diff, _ := utils.GetDifficultyRatio(header.Bits(), params)
+
+	mergeMiningProof, treeEncoding, treeCodingLengthBits := header.BeaconHeader().MergedMiningTreeCodingProof()
+	mergeMiningProofStr := make([]string, len(mergeMiningProof))
+
+	for i := range mergeMiningProof {
+		mergeMiningProofStr[i] = mergeMiningProof[i].String()
+	}
+
+	btcAux := header.BeaconHeader().BTCAux()
+
+	var tx *jaxjson.TxRawResult
+	var rawTx string
+	if verboseTx {
+		tx, _ = utils.CreateTxRawResult(params, &btcAux.CoinbaseAux.Tx,
+			btcAux.CoinbaseAux.Tx.WitnessHash().String(), nil, "", 0, 0)
+	} else {
+		rawTx, _ = btcAux.CoinbaseAux.Tx.SerializeToHex()
+	}
+
+	coinbaseProof := make([]string, len(btcAux.CoinbaseAux.TxMerkleProof))
+	for i := range btcAux.CoinbaseAux.TxMerkleProof {
+		coinbaseProof[i] = btcAux.CoinbaseAux.TxMerkleProof[i].String()
+	}
+	return jaxjson.BeaconBlockHeader{
+		Hash:                header.BlockHash().String(),
+		Version:             int32(header.Version()),
+		VersionHex:          fmt.Sprintf("%08x", header.Version()),
+		MerkleRoot:          header.MerkleRoot().String(),
+		PreviousHash:        header.PrevBlockHash().String(),
+		PrevBlocksMMRRoot:   header.PrevBlocksMMRRoot().String(),
+		ExclusiveHash:       header.ExclusiveHash().String(),
+		ActualBlocksMMRRoot: actualMMR,
+
+		Nonce:      header.Nonce(),
+		Time:       header.Timestamp().Unix(),
+		Shards:     header.BeaconHeader().Shards(),
+		Height:     int64(header.Height()),
+		Bits:       strconv.FormatInt(int64(header.Bits()), 16),
+		K:          strconv.FormatInt(int64(header.K()), 16),
+		VoteK:      strconv.FormatInt(int64(header.VoteK()), 16),
+		PoWHash:    header.PoWHash().String(),
+		Difficulty: diff,
+
+		MergeMiningRoot:      header.BeaconHeader().MergeMiningRoot().String(),
+		MergeMiningNumber:    header.BeaconHeader().MergeMiningNumber(),
+		TreeEncoding:         hex.EncodeToString(treeEncoding),
+		MergeMiningProof:     mergeMiningProofStr,
+		TreeCodingLengthBits: treeCodingLengthBits,
+
+		BTCAux: jaxjson.BTCBlockAux{
+			Version:             btcAux.Version,
+			VersionHex:          fmt.Sprintf("%08x", btcAux.Version),
+			Hash:                btcAux.BlockHash().String(),
+			PreviousHash:        btcAux.PrevBlock.String(),
+			MerkleRoot:          btcAux.MerkleRoot.String(),
+			Time:                btcAux.Timestamp.Unix(),
+			Nonce:               btcAux.Nonce,
+			Bits:                strconv.FormatInt(int64(btcAux.Bits), 16),
+			Difficulty:          0,
+			CoinbaseTx:          tx,
+			CoinbaseTxHex:       rawTx,
+			CoinbaseMerkleProof: coinbaseProof,
+		},
+	}
+}
+
+func WireHeaderToShardJSON(params *chaincfg.Params, header wire.BlockHeader, actualMMR string, verboseTx bool) jaxjson.ShardBlockHeader {
+	utils := ToolsXt{}
+	diff, _ := utils.GetDifficultyRatio(header.Bits(), params)
+
+	shardMerkleProof := make([]string, len(header.ShardMerkleProof()))
+	for i, sHash := range header.ShardMerkleProof() {
+		shardMerkleProof[i] = sHash.String()
+	}
+
+	beaconTxAux := header.(*wire.ShardHeader).BeaconCoinbaseAux()
+
+	var rawTx string
+	var tx *jaxjson.TxRawResult
+	if verboseTx {
+		tx, _ = utils.CreateTxRawResult(params, &beaconTxAux.Tx,
+			beaconTxAux.Tx.WitnessHash().String(), nil, "", 0, 0)
+	} else {
+		rawTx, _ = beaconTxAux.Tx.SerializeToHex()
+	}
+
+	coinbaseProof := make([]string, len(beaconTxAux.TxMerkleProof))
+	for i := range beaconTxAux.TxMerkleProof {
+		coinbaseProof[i] = beaconTxAux.TxMerkleProof[i].String()
+	}
+
+	return jaxjson.ShardBlockHeader{
+		Hash:                header.BlockHash().String(),
+		Version:             int32(header.Version()),
+		VersionHex:          fmt.Sprintf("%08x", header.Version()),
+		MerkleRoot:          header.MerkleRoot().String(),
+		PreviousHash:        header.PrevBlockHash().String(),
+		PrevBlocksMMRRoot:   header.PrevBlocksMMRRoot().String(),
+		ExclusiveHash:       header.ExclusiveHash().String(),
+		ActualBlocksMMRRoot: actualMMR,
+
+		Height:     int64(header.Height()),
+		Bits:       strconv.FormatInt(int64(header.Bits()), 16),
+		PoWHash:    header.PoWHash().String(),
+		Difficulty: diff,
+
+		ShardMerkleProof:          shardMerkleProof,
+		BeaconAuxHeader:           WireHeaderToBeaconJSON(params, header.BeaconHeader(), "", verboseTx),
+		BeaconCoinbaseTx:          tx,
+		BeaconCoinbaseTxHex:       rawTx,
+		BeaconCoinbaseMerkleProof: coinbaseProof,
+	}
 }
 
 // GetDifficultyRatio returns the proof-of-work difficulty as a multiple of the

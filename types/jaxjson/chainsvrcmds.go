@@ -351,11 +351,13 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// DEPRECATED
 // GetBeaconBlockTemplateCmd defines the getBeaconBlockTemplate JSON-RPC command.
 type GetBeaconBlockTemplateCmd struct {
 	Request *TemplateRequest
 }
 
+// DEPRECATED
 // NewGetBeaconBlockTemplateCmd returns a new instance which can be used to issue a
 // getblocktemplate JSON-RPC command.
 //
@@ -367,11 +369,13 @@ func NewGetBeaconBlockTemplateCmd(request *TemplateRequest) *GetBeaconBlockTempl
 	}
 }
 
+// DEPRECATED
 // GetShardBlockTemplateCmd defines the getShardBlockTemplate JSON-RPC command.
 type GetShardBlockTemplateCmd struct {
 	Request *TemplateRequest
 }
 
+// DEPRECATED
 // NewGetShardBlockTemplateCmd returns a new instance which can be used to issue a
 // getblocktemplate JSON-RPC command.
 //
@@ -381,6 +385,11 @@ func NewGetShardBlockTemplateCmd(request *TemplateRequest) *GetShardBlockTemplat
 	return &GetShardBlockTemplateCmd{
 		Request: request,
 	}
+}
+
+// GetBlockTemplateCmd defines the getShardBlockTemplate JSON-RPC command.
+type GetBlockTemplateCmd struct {
+	Request *TemplateRequest
 }
 
 // GetCFilterCmd defines the getcfilter JSON-RPC command.
@@ -1063,7 +1072,7 @@ func init() {
 	MustRegisterCmd("chain", "submitBlock", (*SubmitBlockCmd)(nil), flags)
 
 	MustRegisterCmd("chain", "getLastSerialBlockNumber", (*GetLastSerialBlockNumberCmd)(nil), flags)
-
+	MustRegisterCmd("chain", "getBlockTemplate", (*GetBlockTemplateCmd)(nil), flags)
 	MustRegisterCmd("chain", "getNetworkInfo", (*GetNetworkInfoCmd)(nil), flags)
 	MustRegisterCmd("chain", "getDifficulty", (*GetDifficultyCmd)(nil), flags)
 	MustRegisterCmd("chain", "getMiningInfo", (*GetMiningInfoCmd)(nil), flags)

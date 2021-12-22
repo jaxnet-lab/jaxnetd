@@ -1250,7 +1250,7 @@ func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
 
 func DBGetBlocksMMRRoots(dbTx database.Tx) (map[chainhash.Hash]chainhash.Hash, error) {
 	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
-	res := make(map[chainhash.Hash]chainhash.Hash, 4096)
+	res := make(map[chainhash.Hash]chainhash.Hash, 4096) // nolint:gomnd
 	err := bucket.ForEach(func(key, val []byte) error {
 		var keyHash chainhash.Hash
 		if len(key) != chainhash.HashSize {

@@ -387,12 +387,12 @@ func (state *GBTWorkState) UpdateBlockTemplate(chainProvider chainProvider, useC
 	return nil
 }
 
-// BeaconBlockTemplateResult returns the current block template associated with the
+// BlockTemplateResult returns the current block template associated with the
 // state as a jaxjson.GetBeaconBlockTemplateResult that is ready to be encoded to JSON
 // and returned to the caller.
 //
 // This function MUST be called with the state locked.
-func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetBeaconBlockTemplateResult, error) {
+func (state *GBTWorkState) BlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetBlockTemplateResult, error) {
 	// Ensure the timestamps are still in valid range for the template.
 	// This should really only ever happen if the local clock is changed
 	// after the template is generated, but it's important to avoid serving
@@ -436,7 +436,7 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 	//  Omitting CoinbaseTxn -> coinbase, generation
 	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
 	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
-	reply := jaxjson.GetBeaconBlockTemplateResult{
+	reply := jaxjson.GetBlockTemplateResult{
 		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
 		ChainWeight:       header.ChainWeight().String(),
 		CurTime:           header.Timestamp().Unix(),
@@ -459,105 +459,9 @@ func (state *GBTWorkState) BeaconBlockTemplateResult(useCoinbaseValue bool, subm
 		Mutable:           gbtMutableFields,
 		NonceRange:        gbtNonceRange,
 		Capabilities:      gbtCapabilities,
-
-		K:      header.K(),
-		VoteK:  header.VoteK(),
-		BTCAux: hex.EncodeToString(btcAuxBuf.Bytes()),
-	}
-
-	// If the generated block template includes transactions with witness
-	// data, then include the witness commitment in the GBT result.
-	if template.WitnessCommitment != nil {
-		reply.DefaultWitnessCommitment = hex.EncodeToString(template.WitnessCommitment)
-	}
-
-	cData, err := state.CoinbaseData(template, useCoinbaseValue)
-	if err != nil {
-		return nil, err
-	}
-
-	reply.CoinbaseAux = cData.CoinbaseAux
-	reply.CoinbaseValue = cData.CoinbaseValue
-	reply.CoinbaseTxn = cData.CoinbaseTxn
-
-	return &reply, nil
-}
-
-// ShardBlockTemplateResult returns the current block template associated with the
-// state as a jaxjson.GetShardBlockTemplateResult that is ready to be encoded to JSON
-// and returned to the caller.
-//
-// This function MUST be called with the state locked.
-// nolint: gomnd
-func (state *GBTWorkState) ShardBlockTemplateResult(useCoinbaseValue bool, submitOld *bool) (*jaxjson.GetShardBlockTemplateResult, error) {
-	// Ensure the timestamps are still in valid range for the template.
-	// This should really only ever happen if the local clock is changed
-	// after the template is generated, but it's important to avoid serving
-	// invalid block templates.
-	template := state.Template
-	msgBlock := template.Block
-	header := msgBlock.Header
-	adjustedTime := state.timeSource.AdjustedTime()
-	maxTime := adjustedTime.Add(time.Second * chaindata.MaxTimeOffsetSeconds)
-
-	if header.Timestamp().After(maxTime) {
-		return nil, &jaxjson.RPCError{
-			Code: jaxjson.ErrRPCOutOfRange,
-			Message: fmt.Sprintf("The template time is after the maximum allowed time for a block - template "+
-				"time %v, maximum time %v", adjustedTime,
-				maxTime),
-		}
-	}
-
-	transactions, err := state.TransformTxs(template)
-	if err != nil {
-		return nil, err
-	}
-	mmrRoot := header.PrevBlocksMMRRoot()
-	prevHash, _ := state.generator.blockChain.MMRTree().LookupNodeByRoot(mmrRoot)
-	prevSerialID, _, err := state.generator.blockChain.BlockSerialIDByHash(&prevHash.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	btcAuxBuf := bytes.NewBuffer(nil)
-	err = header.BeaconHeader().BTCAux().Serialize(btcAuxBuf)
-	if err != nil {
-		return nil, err
-	}
-
-	// Generate the block template reply.  Note that following mutations are
-	// implied by the included or omission of fields:
-	//  Including MinTime -> time/decrement
-	//  Omitting CoinbaseTxn -> coinbase, generation
-	targetDifficulty := fmt.Sprintf("%064x", pow.CompactToBig(header.Bits()))
-	templateID := rpcutli.ToolsXt{}.EncodeTemplateID(state.prevHash, state.LastGenerated)
-	reply := jaxjson.GetShardBlockTemplateResult{
-		Bits:              strconv.FormatInt(int64(header.Bits()), 16),
-		ChainWeight:       header.ChainWeight().String(),
-		CurTime:           header.Timestamp().Unix(),
-		PreviousHash:      header.PrevBlockHash().String(),
-		PrevBlocksMMRRoot: header.PrevBlocksMMRRoot().String(),
-		Height:            int64(template.Height),
-		SerialID:          prevSerialID + 1,
-		PrevSerialID:      prevSerialID,
-		Version:           int32(header.Version()),
-		WeightLimit:       chaindata.MaxBlockWeight,
-		SigOpLimit:        chaindata.MaxBlockSigOpsCost,
-		SizeLimit:         wire.MaxBlockPayload,
-		Transactions:      transactions,
-		LongPollID:        templateID,
-		SubmitOld:         submitOld,
-		Target:            targetDifficulty,
-		MinTime:           state.minTimestamp.Unix(),
-		MaxTime:           maxTime.Unix(),
-		Mutable:           gbtMutableFields,
-		NonceRange:        gbtNonceRange,
-		Capabilities:      gbtCapabilities,
-
-		K:      header.K(),
-		VoteK:  header.VoteK(),
-		BTCAux: hex.EncodeToString(btcAuxBuf.Bytes()),
+		K:                 header.K(),
+		VoteK:             header.VoteK(),
+		BTCAux:            hex.EncodeToString(btcAuxBuf.Bytes()),
 	}
 
 	// If the generated block template includes transactions with witness

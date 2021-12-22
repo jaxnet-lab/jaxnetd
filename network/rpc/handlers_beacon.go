@@ -8,9 +8,7 @@ package rpc
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"math"
-	"strconv"
 
 	"gitlab.com/jaxnet/jaxnetd/network/rpcutli"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
@@ -21,7 +19,6 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/network/netsync"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 	"gitlab.com/jaxnet/jaxnetd/node/cprovider"
-	"gitlab.com/jaxnet/jaxnetd/types"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
@@ -53,7 +50,7 @@ func (server *BeaconRPC) Handlers() map[jaxjson.MethodName]CommandHandler {
 		jaxjson.ScopedMethod("beacon", "getBeaconBlockBySerialNumber"):   server.handleGetBlockBySerialNumber,
 		jaxjson.ScopedMethod("beacon", "listBeaconBlocksBySerialNumber"): server.handleListBlocksBySerialNumber,
 		jaxjson.ScopedMethod("beacon", "getBlockHeader"):                 server.handleGetBlockHeader,
-		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):         server.handleGetBlockTemplate,
+		jaxjson.ScopedMethod("beacon", "getBeaconBlockTemplate"):         server.handleGetBlockTemplate, // DEPRECATED
 		jaxjson.ScopedMethod("beacon", "listEADAddresses"):               server.handleListEADAddresses,
 		// jaxjson.ScopedMethod("beacon", "getBeaconBlockHash"):     server.handleGetBlockHash,
 		// jaxjson.ScopedMethod("beacon", "setAllowExpansion"): server.handleSetAllowExpansion,
@@ -213,7 +210,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 
 	// If verbosity is 0, return the serialized block as a hex encoded string.
 	if verbosity != nil && *verbosity == 0 {
-		return jaxjson.GetBeaconBlockResult{
+		return jaxjson.GetBlockResult{
 			Block:        hex.EncodeToString(blkBytes),
 			Height:       blockHeight,
 			SerialID:     serialID,
@@ -223,46 +220,26 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 
 	params := server.chainProvider.ChainParams
 	blockHeader := blk.MsgBlock().Header
-	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
-	if err != nil {
-		return nil, err
-	}
-
-	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
-
+	dontBVerboseTx := verbosity != nil && *verbosity == 1
 	blockReply := jaxjson.GetBeaconBlockVerboseResult{
-		Hash:                hash.String(),
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		PreviousHash:        blockHeader.PrevBlockHash().String(),
-		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
-		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
-		Nonce:               blockHeader.Nonce(),
-		Time:                blockHeader.Timestamp().Unix(),
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		SerialID:            serialID,
-		PrevSerialID:        prevSerialID,
-		Height:              int64(blockHeight),
-		Size:                int32(len(blkBytes)),
-		StrippedSize:        int32(blk.MsgBlock().SerializeSizeStripped()),
-		Weight:              int32(chaindata.GetBlockWeight(blk)),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
-		VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
-		PoWHash:             blockHeader.PoWHash().String(),
-		Difficulty:          diff,
-		NextHash:            nextHashString,
+		BeaconBlockHeader: rpcutli.WireHeaderToBeaconJSON(params, blockHeader, "", !dontBVerboseTx), // TODO: add actual mmr root
+		Confirmations:     int64(1 + best.Height - blockHeight),
+		SerialID:          serialID,
+		PrevSerialID:      prevSerialID,
+		Size:              int32(len(blkBytes)),
+		StrippedSize:      int32(blk.MsgBlock().SerializeSizeStripped()),
+		Weight:            int32(chaindata.GetBlockWeight(blk)),
+		NextHash:          nextHashString,
 	}
 
-	if verbosity != nil && *verbosity == 1 {
+	if dontBVerboseTx {
 		transactions := blk.Transactions()
 		txNames := make([]string, len(transactions))
 		for i, tx := range transactions {
 			txNames[i] = tx.Hash().String()
 		}
 
-		blockReply.Tx = txNames
+		blockReply.TxHashes = txNames
 	} else {
 		txns := blk.Transactions()
 		rawTxns := make([]jaxjson.TxRawResult, len(txns))
@@ -275,7 +252,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 			}
 			rawTxns[i] = *rawTxn
 		}
-		blockReply.RawTx = rawTxns
+		blockReply.Tx = rawTxns
 	}
 
 	return blockReply, nil
@@ -330,312 +307,18 @@ func (server *BeaconRPC) handleGetBlockHeader(ctx CmdCtx) (interface{}, error) {
 	}
 
 	params := server.chainProvider.ChainParams
-	diff, err := server.GetDifficultyRatio(blockHeader.Bits(), params)
-	if err != nil {
-		return nil, err
-	}
 	var serialID, prevSerialID int64
 	_ = server.chainProvider.DB.View(func(tx database.Tx) error {
 		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
 		return err
 	})
 
-	// prevHash, _ := server.chainProvider.BlockChain().MMRTree().LookupNodeByRoot(blockHeader.PrevBlocksMMRRoot())
 	blockHeaderReply := jaxjson.GetBeaconBlockHeaderVerboseResult{
-		Hash:                c.Hash,
-		Confirmations:       int64(1 + best.Height - blockHeight),
-		Height:              blockHeight,
-		SerialID:            serialID,
-		PrevSerialID:        prevSerialID,
-		Version:             int32(blockHeader.Version()),
-		VersionHex:          fmt.Sprintf("%08x", blockHeader.Version()),
-		MerkleRoot:          blockHeader.MerkleRoot().String(),
-		MerkleMountainRange: blockHeader.BeaconHeader().MergeMiningRoot().String(),
-		NextHash:            nextHashString,
-		PreviousHash:        blockHeader.PrevBlockHash().String(),
-		PrevBlocksMMRRoot:   blockHeader.PrevBlocksMMRRoot().String(),
-		Nonce:               uint64(blockHeader.Nonce()),
-		Time:                blockHeader.Timestamp().Unix(),
-		Bits:                strconv.FormatInt(int64(blockHeader.Bits()), 16),
-		K:                   strconv.FormatInt(int64(blockHeader.K()), 16),
-		VoteK:               strconv.FormatInt(int64(blockHeader.VoteK()), 16),
-		Difficulty:          diff,
+		BeaconBlockHeader: rpcutli.WireHeaderToBeaconJSON(params, blockHeader, "", false), // TODO: add actual mmr root
+		Confirmations:     int64(1 + best.Height - blockHeight),
+		SerialID:          serialID,
+		PrevSerialID:      prevSerialID,
+		NextHash:          nextHashString,
 	}
 	return blockHeaderReply, nil
-}
-
-// handleGetBlockTemplate implements the getblocktemplate command.
-//
-// See https://en.bitcoin.it/wiki/BIP_0022 and
-// https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *BeaconRPC) handleGetBlockTemplate(ctx CmdCtx) (interface{}, error) {
-	c := ctx.Cmd.(*jaxjson.GetBeaconBlockTemplateCmd)
-	request := c.Request
-
-	// Set the default mode and override it if supplied.
-	mode := templateMode
-	if request != nil && request.Mode != "" {
-		mode = request.Mode
-	}
-
-	switch mode {
-	case templateMode:
-		return server.handleGetBlockTemplateRequest(request, ctx.CloseChan)
-	case "proposal":
-		return server.handleGetBlockTemplateProposal(request)
-	}
-
-	return nil, &jaxjson.RPCError{
-		Code:    jaxjson.ErrRPCInvalidParameter,
-		Message: "Invalid mode",
-	}
-}
-
-// handleGetBlockTemplateRequest is a helper for handleGetBlockTemplate which
-// deals with generating and returning block templates to the caller.  It
-// handles both long poll requests as specified by BIP 0022 as well as regular
-// requests.  In addition, it detects the capabilities reported by the caller
-// in regards to whether or not it supports creating its own coinbase (the
-// coinbasetxn and coinbasevalue capabilities) and modifies the returned block
-// template accordingly.
-func (server *BeaconRPC) handleGetBlockTemplateRequest(request *jaxjson.TemplateRequest, closeChan <-chan struct{}) (interface{}, error) {
-	// Extract the relevant passed capabilities and restrict the result to
-	// either a coinbase value or a coinbase transaction object depending on
-	// the request.  Default to only providing a coinbase value.
-	useCoinbaseValue := true
-	burnReward := 0
-	if request != nil {
-		var hasCoinbaseValue, hasCoinbaseTxn bool
-		for _, capability := range request.Capabilities {
-			switch capability {
-			case "coinbasetxn":
-				hasCoinbaseTxn = true
-			case "coinbasevalue":
-				hasCoinbaseValue = true
-			case "burnbtcreward", "burnjaxnetreward":
-				burnReward |= types.BurnJaxNetReward
-			case "burnjaxreward":
-				burnReward |= types.BurnJaxReward
-			}
-		}
-
-		if hasCoinbaseTxn && !hasCoinbaseValue {
-			useCoinbaseValue = false
-		}
-	}
-
-	// When a coinbase transaction has been requested, respond with an error
-	// if there are no addresses to pay the created block template to.
-	if !useCoinbaseValue && len(server.chainProvider.MiningAddrs) == 0 {
-		return nil, &jaxjson.RPCError{
-			Code: jaxjson.ErrRPCInternal.Code,
-			Message: "A coinbase transaction has been requested, " +
-				"but the Server has not been configured with " +
-				"any payment addresses via --miningaddr",
-		}
-	}
-
-	// Return an error if there are no peers connected since there is no
-	// way to relay a found block or receive transactions to work on.
-	// However, allow this state when running in the regression test or
-	// simulation test mode.
-	netType := server.chainProvider.ChainParams.Net
-	if !(netType == wire.FastTestNet || netType == wire.SimNet) &&
-		server.connMgr.ConnectedCount() == 0 {
-
-		return nil, &jaxjson.RPCError{
-			Code:    jaxjson.ErrRPCClientNotConnected,
-			Message: "JaxNetD Beacon Chain is not connected",
-		}
-	}
-
-	// No point in generating or accepting work before the BlockChain is synced.
-	currentHeight := server.chainProvider.BlockChain().BestSnapshot().Height
-	if currentHeight != 0 && !server.chainProvider.SyncManager.IsCurrent() {
-		return nil, &jaxjson.RPCError{
-			Code:    jaxjson.ErrRPCClientInInitialDownload,
-			Message: "JaxNetD Beacon Chain is downloading blocks...",
-		}
-	}
-
-	// When a long poll ID was provided, this is a long poll request by the
-	// client to be notified when block template referenced by the ID should
-	// be replaced with a new one.
-	if request != nil && request.LongPollID != "" {
-		return server.handleGetBlockTemplateLongPoll(request.LongPollID, useCoinbaseValue, burnReward, closeChan)
-	}
-
-	// Protect concurrent access when updating block templates.
-	state := server.gbtWorkState
-	state.Lock()
-	defer state.Unlock()
-
-	// Get and return a block template.  A new block template will be
-	// generated when the current best block has changed or the transactions
-	// in the memory pool have been updated and it has been at least five
-	// seconds since the last template was generated.  Otherwise, the
-	// timestamp for the existing block template is updated (and possibly
-	// the difficulty on testnet per the consesus rules).
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
-		return nil, err
-	}
-	return state.BeaconBlockTemplateResult(useCoinbaseValue, nil)
-}
-
-// handleGetBlockTemplateProposal is a helper for handleGetBlockTemplate which
-// deals with block proposals.
-//
-// See https://en.bitcoin.it/wiki/BIP_0023 for more details.
-func (server *BeaconRPC) handleGetBlockTemplateProposal(request *jaxjson.TemplateRequest) (interface{}, error) {
-	hexData := request.Data
-	if hexData == "" {
-		return false, &jaxjson.RPCError{
-			Code: jaxjson.ErrRPCType,
-			Message: fmt.Sprintf("Data must contain the " +
-				"hex-encoded serialized block that is being " +
-				"proposed"),
-		}
-	}
-
-	// Ensure the provided data is sane and deserialize the proposed block.
-	if len(hexData)%2 != 0 {
-		hexData = "0" + hexData
-	}
-	dataBytes, err := hex.DecodeString(hexData)
-	if err != nil {
-		return false, &jaxjson.RPCError{
-			Code: jaxjson.ErrRPCDeserialization,
-			Message: fmt.Sprintf("Data must be "+
-				"hexadecimal string (not %q)", hexData),
-		}
-	}
-
-	msgBlock, err := wire.DecodeBlock(bytes.NewReader(dataBytes))
-	if err != nil {
-		return nil, &jaxjson.RPCError{
-			Code:    jaxjson.ErrRPCDeserialization,
-			Message: "Block decode failed: " + err.Error(),
-		}
-	}
-	block := jaxutil.NewBlock(msgBlock)
-
-	// Ensure the block is building from the expected previous block.
-	expectedPrevMMRRoot := server.chainProvider.BlockChain().BestSnapshot().CurrentMMRRoot
-	mmrRoot := block.MsgBlock().Header.PrevBlocksMMRRoot()
-	if !expectedPrevMMRRoot.IsEqual(&mmrRoot) {
-		return "bad-prevblk", nil
-	}
-
-	if err := server.chainProvider.BlockChain().CheckConnectBlockTemplate(block, false); err != nil {
-		if _, ok := err.(chaindata.RuleError); !ok {
-			errStr := fmt.Sprintf("Failed to process block proposal: %v", err)
-			server.Log.Error().Msg(errStr)
-			return nil, &jaxjson.RPCError{
-				Code:    jaxjson.ErrRPCVerify,
-				Message: errStr,
-			}
-		}
-
-		server.Log.Info().Msgf("Rejected block proposal. %s", err.Error())
-		return server.ChainErrToGBTErrString(err), nil
-	}
-
-	return nil, nil
-}
-
-// handleGetBlockTemplateLongPoll is a helper for handleGetBlockTemplateRequest
-// which deals with handling long polling for block templates.  When a caller
-// sends a request with a long poll ID that was previously returned, a response
-// is not sent until the caller should stop working on the previous block
-// template in favor of the new one.  In particular, this is the case when the
-// old block template is no longer valid due to a solution already being found
-// and added to the block BlockChain, or new transactions have shown up and some time
-// has passed without finding a solution.
-//
-// See https://en.bitcoin.it/wiki/BIP_0022 for more details.
-func (server *BeaconRPC) handleGetBlockTemplateLongPoll(longPollID string, useCoinbaseValue bool, burnReward int, closeChan <-chan struct{}) (interface{}, error) {
-	state := server.gbtWorkState
-	state.Lock()
-	// The state unlock is intentionally not deferred here since it needs to
-	// be manually unlocked before waiting for a notification about block
-	// template changes.
-
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
-		state.Unlock()
-		return nil, err
-	}
-
-	// Just return the current block template if the long poll ID provided by
-	// the caller is invalid.
-	prevHash, lastGenerated, err := server.DecodeTemplateID(longPollID)
-	if err != nil {
-		result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, nil)
-		if err != nil {
-			state.Unlock()
-			return nil, err
-		}
-
-		state.Unlock()
-		return result, nil
-	}
-
-	// Return the block template now if the specific block template
-	// identified by the long poll ID no longer matches the current block
-	// template as this means the provided template is stale.
-	prevTemplateHash := state.Template.Block.Header.PrevBlockHash()
-	if !prevHash.IsEqual(&prevTemplateHash) ||
-		lastGenerated != state.LastGenerated.Unix() {
-
-		// Include whether or not it is valid to submit work against the
-		// old block template depending on whether or not a solution has
-		// already been found and added to the block BlockChain.
-		submitOld := prevHash.IsEqual(&prevTemplateHash)
-		result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, &submitOld)
-		if err != nil {
-			state.Unlock()
-			return nil, err
-		}
-
-		state.Unlock()
-		return result, nil
-	}
-
-	// Register the previous hash and last generated time for notifications
-	// Get a channel that will be notified when the template associated with
-	// the provided ID is stale and a new block template should be returned to
-	// the caller.
-	longPollChan := state.
-		TemplateUpdateChan(prevHash, lastGenerated)
-	state.Unlock()
-
-	select {
-	// When the client closes before it'server time to send a reply, just return
-	// now so the goroutine doesn't hang around.
-	case <-closeChan:
-		return nil, ErrClientQuit
-
-	// Wait until signal received to send the reply.
-	case <-longPollChan:
-		// Fallthrough
-	}
-
-	// Get the lastest block template
-	state.Lock()
-	defer state.Unlock()
-
-	if err := state.UpdateBlockTemplate(server.chainProvider, useCoinbaseValue, burnReward); err != nil {
-		return nil, err
-	}
-
-	// Include whether or not it is valid to submit work against the old
-	// block template depending on whether or not a solution has already
-	// been found and added to the block BlockChain.
-	h := state.Template.Block.Header.PrevBlocksMMRRoot()
-	submitOld := prevHash.IsEqual(&h)
-	result, err := state.BeaconBlockTemplateResult(useCoinbaseValue, &submitOld)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }

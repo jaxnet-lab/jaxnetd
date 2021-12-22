@@ -221,9 +221,8 @@ func (t *BlocksMMRTree) AddBlockWithoutRebuild(hash, actualMMR chainhash.Hash, h
 // RebuildTreeAndAssert just rebuild the whole tree and checks is root match with actual.
 func (t *BlocksMMRTree) RebuildTreeAndAssert() error {
 	t.Lock()
-	var root chainhash.Hash
 
-	root = t.rebuildTree(t.lastNode, t.lastNode.Height)
+	root := t.rebuildTree(t.lastNode, t.lastNode.Height)
 	if !t.rootHash.IsEqual(&root) {
 		t.Unlock()
 		return fmt.Errorf("mmr_root(%s) of tree mismatches with calculated root(%s) ", t.rootHash, root)

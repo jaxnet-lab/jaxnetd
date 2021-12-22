@@ -65,14 +65,12 @@ var (
 	// ErrNotWebsocketClient is an error to describe the condition of
 	// calling a Client method intended for a websocket client when the
 	// client has been configured to run in HTTP POST mode instead.
-	ErrNotWebsocketClient = errors.New("client is not configured for " +
-		"websockets")
+	ErrNotWebsocketClient = errors.New("client is not configured for websockets")
 
 	// ErrClientAlreadyConnected is an error to describe the condition where
 	// a new client connection cannot be established due to a websocket
 	// client having already connected to the RPC server.
-	ErrClientAlreadyConnected = errors.New("websocket client has already " +
-		"connected")
+	ErrClientAlreadyConnected = errors.New("websocket client has already connected")
 )
 
 const (

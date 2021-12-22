@@ -31,7 +31,7 @@ func (r FutureGetShardBlockResult) Receive() (*BlockResult, error) {
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult jaxjson.GetShardBlockResult
+	var blockResult jaxjson.GetBlockResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -148,13 +148,13 @@ type FutureGetShardBlockVerboseTxResult struct {
 
 // Receive waits for the response promised by the future and returns a verbose
 // version of the block including detailed information about its transactions.
-func (r FutureGetShardBlockVerboseTxResult) Receive() (*jaxjson.GetShardBlockVerboseTxResult, error) {
+func (r FutureGetShardBlockVerboseTxResult) Receive() (*jaxjson.GetShardBlockVerboseResult, error) {
 	res, err := r.client.waitForGetBlockRes(r.Response, "getShardBlock", r.hash, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	var blockResult jaxjson.GetShardBlockVerboseTxResult
+	var blockResult jaxjson.GetShardBlockVerboseResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (c *Client) GetShardBlockVerboseTxAsync(blockHash *chainhash.Hash) FutureGe
 //
 // See GetShardBlockVerbose if only transaction hashes are preferred.
 // See GetShardBlock to retrieve a raw block instead.
-func (c *Client) GetShardBlockVerboseTx(blockHash *chainhash.Hash) (*jaxjson.GetShardBlockVerboseTxResult, error) {
+func (c *Client) GetShardBlockVerboseTx(blockHash *chainhash.Hash) (*jaxjson.GetShardBlockVerboseResult, error) {
 	return c.GetShardBlockVerboseTxAsync(blockHash).Receive()
 }
 
@@ -297,20 +297,57 @@ func (c *Client) GetShardBlockHeaderVerbose(blockHash *chainhash.Hash) (*jaxjson
 	return c.GetShardBlockHeaderVerboseAsync(blockHash).Receive()
 }
 
-// FutureGetShardBlockTemplateAsync is a future promise to deliver the result of a
+// FutureGetBlockTemplateAsync is a future promise to deliver the result of a
 // GetWorkAsync RPC invocation (or an applicable error).
-type FutureGetShardBlockTemplateAsync chan *response
+type FutureGetBlockTemplateAsync chan *response
 
 // Receive waits for the response promised by the future and returns the hash
 // data to work on.
-func (r FutureGetShardBlockTemplateAsync) Receive() (*jaxjson.GetShardBlockTemplateResult, error) {
+func (r FutureGetBlockTemplateAsync) Receive() (*jaxjson.GetBlockTemplateResult, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal result as a getwork result object.
-	var result jaxjson.GetShardBlockTemplateResult
+	var result jaxjson.GetBlockTemplateResult
+	err = result.UnmarshalJSON(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// GetBlockTemplateAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetWork for the blocking version and more details.
+func (c *Client) GetBlockTemplateAsync(reqData *jaxjson.TemplateRequest) FutureGetBlockTemplateAsync {
+	cmd := &jaxjson.GetBlockTemplateCmd{Request: reqData}
+	return c.sendCmd(cmd)
+}
+
+// GetBlockTemplate deals with generating and returning block templates to the caller.
+func (c *Client) GetBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBlockTemplateResult, error) {
+	return c.GetBlockTemplateAsync(reqData).Receive()
+}
+
+// FutureGetShardBlockTemplateAsync is a future promise to deliver the result of a
+// GetWorkAsync RPC invocation (or an applicable error).
+type FutureGetShardBlockTemplateAsync chan *response
+
+// Receive waits for the response promised by the future and returns the hash
+// data to work on.
+func (r FutureGetShardBlockTemplateAsync) Receive() (*jaxjson.GetBlockTemplateResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a getwork result object.
+	var result jaxjson.GetBlockTemplateResult
 	err = result.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -329,8 +366,9 @@ func (c *Client) GetShardBlockTemplateAsync(reqData *jaxjson.TemplateRequest) Fu
 	return c.sendCmd(cmd)
 }
 
+// DEPRECATED will be removed in next release. Use the GetBlockTemplate insead.
 // GetShardBlockTemplate deals with generating and returning block templates to the caller.
-func (c *Client) GetShardBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetShardBlockTemplateResult, error) {
+func (c *Client) GetShardBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBlockTemplateResult, error) {
 	return c.GetShardBlockTemplateAsync(reqData).Receive()
 }
 
@@ -430,7 +468,7 @@ func (r FutureGetShardBlockBySerialNumberResult) Receive() (*BlockResult, error)
 	}
 
 	// Unmarshal the raw result into a BlockResult.
-	var blockResult jaxjson.GetShardBlockResult
+	var blockResult jaxjson.GetBlockResult
 	err = blockResult.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -494,7 +532,7 @@ func (r FutureListShardBlocksBySerialNumberResult) Receive() ([]*BlockResult, er
 		return nil, err
 	}
 	// Unmarshal the raw result into a BlockResult.
-	var blockResults jaxjson.GetShardBlockResults
+	var blockResults jaxjson.GetBlockResults
 	err = blockResults.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
