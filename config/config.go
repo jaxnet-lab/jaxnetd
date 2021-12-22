@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/types/wire"
+
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/jessevdk/go-flags"
 	"github.com/pelletier/go-toml"
@@ -282,13 +284,6 @@ func LoadConfig() (*node.Config, []string, error) {
 		dataDir = defaultHomeDir
 	}
 
-	configFile := path.Join(dataDir, defaultConfigFilename)
-	// Default config.
-	fileName := os.Getenv("configName")
-	if fileName != "" {
-		configFile = filepath.Join(dataDir, fileName)
-	}
-
 	cfg := node.Config{
 		Node: node.InstanceConfig{
 			Net:    ActiveNetParams.Name,
@@ -320,8 +315,6 @@ func LoadConfig() (*node.Config, []string, error) {
 				RPCCert:           defaultRPCCertFile,
 			},
 		},
-
-		ConfigFile: configFile,
 		DebugLevel: defaultLogLevel,
 		DataDir:    dataDir,
 		// Generate:             defaultGenerate,
@@ -344,6 +337,11 @@ func LoadConfig() (*node.Config, []string, error) {
 		}
 	}
 
+	cfg = defaultCfg(wire.MainNet, &preCfg)
+	if preCfg.TestNet {
+		cfg = defaultCfg(wire.TestNet, &preCfg)
+	}
+
 	// Show the version and exit if the version flag was specified.
 	appName := filepath.Base(os.Args[0])
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
@@ -363,52 +361,17 @@ func LoadConfig() (*node.Config, []string, error) {
 		os.Exit(0)
 	}
 
-	// Load additional config from file.
-	var configFileError error
-	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
+	var (
+		remainingArgs   []string
+		configFileError error
+	)
 
-	stats, err := os.Stat(preCfg.ConfigFile)
-	if stats == nil || os.IsNotExist(err) {
-		// todo(mike): fix the default cfg.
-		err := createDefaultConfigFile(preCfg.ConfigFile)
+	// Load additional config from file if file is specified.
+	if configFileSpecified(preCfg.ConfigFile) {
+		remainingArgs, configFileError = readAndParseConfigFile(&preCfg, &cfg, serviceOpts, usageMessage)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating a "+
-				"default config file: %v\n", err)
+			return nil, nil, err
 		}
-	}
-
-	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0o644)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
-		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}
-
-	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
-		_, _ = fmt.Fprintln(os.Stderr, "WARNING! YAML configuration is deprecated and will be removed in next release. Use TOML.")
-
-		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
-		if err != nil {
-			configFileError = err
-		}
-	} else if strings.HasSuffix(preCfg.ConfigFile, ".toml") {
-		err = toml.NewDecoder(cfgFile).Decode(&cfg)
-		if err != nil {
-			configFileError = err
-		}
-	} else {
-		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .toml")
-		return nil, nil, errors.New("invalid file extension, must be .toml")
-	}
-
-	// Parse command line options again to ensure they take precedence.
-	remainingArgs, err := parser.Parse()
-	if err != nil {
-		fmt.Println(err)
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-			fmt.Fprintln(os.Stderr, usageMessage)
-		}
-		return nil, nil, err
 	}
 
 	// Create the home directory if it doesn't already exist.
@@ -1007,4 +970,122 @@ func createDefaultConfigFile(destinationPath string) error {
 	}
 
 	return nil
+}
+
+func defaultCfg(net wire.JaxNet, preCfg *node.Config) node.Config {
+	if net == wire.TestNet {
+		ActiveNetParams = &testNet3Params
+	}
+
+	cfg := node.Config{
+		Node: node.InstanceConfig{
+			Net:    ActiveNetParams.Name,
+			DBType: defaultDBType,
+			BeaconChain: cprovider.ChainRuntimeConfig{
+				BlockMinSize:      defaultBlockMinSize,
+				BlockMaxSize:      defaultBlockMaxSize,
+				BlockMinWeight:    defaultBlockMinWeight,
+				BlockMaxWeight:    defaultBlockMaxWeight,
+				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
+				MaxPeers:          defaultMaxPeers,
+				MinRelayTxFee:     0,
+				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
+				TxIndex:           defaultTxIndex,
+				AddrIndex:         defaultAddrIndex,
+				MaxOrphanTxs:      defaultMaxOrphanTransactions,
+				SigCacheMaxSize:   defaultSigCacheMaxSize,
+			},
+			P2P: p2p.Config{
+				Listeners:       []string{"127.0.0.1:18444"},
+				BanThreshold:    defaultBanThreshold,
+				BanDuration:     defaultBanDuration,
+				TrickleInterval: defaultTrickleInterval,
+			},
+			RPC: rpc.Config{
+				MaxClients:        defaultMaxRPCClients,
+				MaxWebsockets:     defaultMaxRPCWebsockets,
+				MaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
+				RPCKey:            defaultRPCKeyFile,
+				RPCCert:           defaultRPCCertFile,
+			},
+			Shards: node.ShardConfig{
+				Enable:  true,
+				Autorun: true,
+			},
+		},
+		DebugLevel: defaultLogLevel,
+		DataDir:    defaultHomeDir,
+	}
+
+	if preCfg.DataDir != "" {
+		cfg.DataDir = preCfg.DataDir
+	}
+	cfg.Node.RPC.User = preCfg.Node.RPC.User
+	cfg.Node.RPC.Password = preCfg.Node.RPC.Password
+
+	return cfg
+}
+
+func configFileSpecified(confPath string) bool {
+	return confPath != ""
+}
+
+// nolint: gomnd, gocritic
+func readAndParseConfigFile(preCfg, cfg *node.Config, serviceOpts serviceOptions, usageMessage string) ([]string, error) {
+	parser := newConfigParser(cfg, &serviceOpts, flags.Default)
+	cfgFile, err := os.OpenFile(preCfg.ConfigFile, os.O_RDONLY, 0o644)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error parsing config file: %v\n", err)
+		_, _ = fmt.Fprintln(os.Stderr, usageMessage)
+		return nil, err
+	}
+
+	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
+		_, _ = fmt.Fprintln(os.Stderr, "WARNING! YAML configuration is deprecated and will be removed in next release. Use TOML.")
+
+		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			return nil, err
+		}
+	} else if strings.HasSuffix(preCfg.ConfigFile, ".toml") {
+		err = toml.NewDecoder(cfgFile).Decode(&cfg)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, _ = fmt.Fprintln(os.Stderr, "Invalid file extension, must be .toml")
+		return nil, errors.New("invalid file extension, must be .toml")
+	}
+
+	// Parse command line options again to ensure they take precedence.
+	remainingArgs, err := parser.Parse()
+	if err != nil {
+		fmt.Println(err)
+		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+			fmt.Fprintln(os.Stderr, usageMessage)
+		}
+		return nil, err
+	}
+
+	// Create the home directory if it doesn't already exist.
+	funcName := "LoadConfig"
+	err = os.MkdirAll(defaultHomeDir, 0o700)
+	if err != nil {
+		// Show a nicer error message if it's because a symlink is
+		// linked to a directory that does not exist (probably because
+		// it's not mounted).
+		if e, ok := err.(*os.PathError); ok && os.IsExist(err) {
+			if link, lerr := os.Readlink(e.Path); lerr == nil {
+				str := "is symlink %s -> %s mounted?"
+				err = fmt.Errorf(str, e.Path, link)
+			}
+		}
+
+		str := "%s: Failed to create home directory: %v"
+		err := fmt.Errorf(str, funcName, err)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+
+	return remainingArgs, nil
 }
