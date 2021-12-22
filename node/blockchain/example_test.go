@@ -58,7 +58,7 @@ func ExampleBlockChain_ProcessBlock() {
 		ChainCtx: chainctx.NewBeaconChain(&chaincfg.Params{
 			Name:                          "test",
 			Net:                           0,
-			DefaultPort:                   "",
+			DefaultRPCPort:                "",
 			DNSSeeds:                      []chaincfg.DNSSeed{},
 			CoinbaseMaturity:              0,
 			Checkpoints:                   []chaincfg.Checkpoint{},

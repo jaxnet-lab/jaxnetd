@@ -28,11 +28,11 @@ var (
 var FastNetParams = Params{
 	Name:             "fastnet",
 	Net:              wire.FastTestNet,
-	DefaultPort:      "18333",
+	DefaultRPCPort:   "19334",
+	DefaultP2PPort:   "19333",
 	IsBeacon:         true,
 	ChainID:          0,
 	ChainName:        "beacon",
-	DefaultP2PPort:   "18444",
 	DNSSeeds:         []DNSSeed{},
 	CoinbaseMaturity: 5,
 

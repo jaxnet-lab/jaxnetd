@@ -33,7 +33,7 @@ var (
 var MainNetParams = Params{
 	Name:           "mainnet",
 	Net:            wire.MainNet,
-	DefaultPort:    "8333",
+	DefaultRPCPort: "8333",
 	DefaultP2PPort: "8444",
 	DNSSeeds: []DNSSeed{
 		{"dns-seed.mainnet.jaxdevz.space", false},

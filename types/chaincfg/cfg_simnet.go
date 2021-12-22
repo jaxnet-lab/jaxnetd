@@ -27,7 +27,8 @@ var simNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
 var SimNetParams = Params{
 	Name:             "simnet",
 	Net:              wire.SimNet,
-	DefaultPort:      "18555",
+	DefaultRPCPort:   "18556",
+	DefaultP2PPort:   "18555",
 	DNSSeeds:         []DNSSeed{}, // NOTE: There must NOT be any seeds.
 	IsBeacon:         true,
 	ChainID:          0,

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 
 	"github.com/btcsuite/go-socks/socks"
@@ -284,42 +285,6 @@ func LoadConfig() (*node.Config, []string, error) {
 		dataDir = defaultHomeDir
 	}
 
-	cfg := node.Config{
-		Node: node.InstanceConfig{
-			Net:    ActiveNetParams.Name,
-			DBType: defaultDBType,
-			BeaconChain: cprovider.ChainRuntimeConfig{
-				BlockMinSize:      defaultBlockMinSize,
-				BlockMaxSize:      defaultBlockMaxSize,
-				BlockMinWeight:    defaultBlockMinWeight,
-				BlockMaxWeight:    defaultBlockMaxWeight,
-				BlockPrioritySize: mempool.DefaultBlockPrioritySize,
-				MaxPeers:          defaultMaxPeers,
-				MinRelayTxFee:     0,
-				FreeTxRelayLimit:  defaultFreeTxRelayLimit,
-				TxIndex:           defaultTxIndex,
-				AddrIndex:         defaultAddrIndex,
-				MaxOrphanTxs:      defaultMaxOrphanTransactions,
-				SigCacheMaxSize:   defaultSigCacheMaxSize,
-			},
-			P2P: p2p.Config{
-				BanThreshold:    defaultBanThreshold,
-				BanDuration:     defaultBanDuration,
-				TrickleInterval: defaultTrickleInterval,
-			},
-			RPC: rpc.Config{
-				MaxClients:        defaultMaxRPCClients,
-				MaxWebsockets:     defaultMaxRPCWebsockets,
-				MaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
-				RPCKey:            defaultRPCKeyFile,
-				RPCCert:           defaultRPCCertFile,
-			},
-		},
-		DebugLevel: defaultLogLevel,
-		DataDir:    dataDir,
-		// Generate:             defaultGenerate,
-	}
-
 	// Service options which are only added on Windows.
 	serviceOpts := serviceOptions{}
 
@@ -327,7 +292,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	// file or the version flag was specified.  Any errors aside from the
 	// help message error can be ignored here since they will be caught by
 	// the final parse below.
-	preCfg := cfg
+	preCfg := node.Config{}
 	preParser := newConfigParser(&preCfg, &serviceOpts, flags.HelpFlag)
 	_, err := preParser.Parse()
 	if err != nil {
@@ -337,9 +302,9 @@ func LoadConfig() (*node.Config, []string, error) {
 		}
 	}
 
-	cfg = defaultCfg(wire.MainNet, &preCfg)
+	cfg := defaultCfg(wire.MainNet)
 	if preCfg.TestNet {
-		cfg = defaultCfg(wire.TestNet, &preCfg)
+		cfg = defaultCfg(wire.TestNet)
 	}
 
 	// Show the version and exit if the version flag was specified.
@@ -394,7 +359,7 @@ func LoadConfig() (*node.Config, []string, error) {
 		return nil, nil, err
 	}
 
-	ActiveNetParams.Params = cfg.Node.ChainParams()
+	ActiveNetParams = cfg.Node.ChainParams()
 
 	// Set the default policy for relaying non-standard transactions
 	// according to the default of the active network. The set
@@ -414,12 +379,12 @@ func LoadConfig() (*node.Config, []string, error) {
 		cfg.LogDir = path.Join(cfg.DataDir, "logs")
 	}
 
-	cfg.DataDir = filepath.Join(cfg.DataDir, netName(ActiveNetParams))
+	cfg.DataDir = filepath.Join(cfg.DataDir, ActiveNetParams.Name)
 
 	// Append the network type to the log directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
-	cfg.LogDir = filepath.Join(cfg.LogDir, netName(ActiveNetParams))
+	cfg.LogDir = filepath.Join(cfg.LogDir, ActiveNetParams.Name)
 
 	// Special show command to list supported subsystems and exit.
 	if cfg.DebugLevel == "show" {
@@ -452,8 +417,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Validate database type.
 	if !validDBType(cfg.Node.DBType) {
-		str := "%s: The specified database type [%v] is invalid -- " +
-			"supported types %v"
+		str := "%s: The specified database type [%v] is invalid -- supported types %v"
 		err := fmt.Errorf(str, funcName, cfg.Node.DBType, knownDBTypes)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -474,7 +438,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Don't allow ban durations that are too short.
 	if cfg.Node.P2P.BanDuration < time.Second {
-		str := "%s: The banduration option may not be less than 1s -- parsed [%v]"
+		str := "%s: The Node.P2P.BanDuration option may not be less than 1s -- parsed [%v]"
 		err := fmt.Errorf(str, funcName, cfg.Node.P2P.BanDuration)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -539,14 +503,13 @@ func LoadConfig() (*node.Config, []string, error) {
 	// we are to connect to.
 	if len(cfg.Node.P2P.Listeners) == 0 {
 		cfg.Node.P2P.Listeners = []string{
-			net.JoinHostPort("", ActiveNetParams.DefaultPort),
+			net.JoinHostPort("", ActiveNetParams.DefaultRPCPort),
 		}
 	}
 
 	// Check to make sure limited and admin users don't have the same username
 	if cfg.Node.RPC.User == cfg.Node.RPC.LimitUser && cfg.Node.RPC.User != "" {
-		str := "%s: --rpcuser and --rpclimituser must not specify the " +
-			"same username"
+		str := "%s: --rpcuser and --rpclimituser must not specify the same username"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -555,8 +518,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Check to make sure limited and admin users don't have the same password
 	if cfg.Node.RPC.Password == cfg.Node.RPC.LimitPass && cfg.Node.RPC.Password != "" {
-		str := "%s: --rpcpass and --rpclimitpass must not specify the " +
-			"same password"
+		str := "%s: --rpcpass and --rpclimitpass must not specify the same password"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -581,7 +543,7 @@ func LoadConfig() (*node.Config, []string, error) {
 		}
 		cfg.Node.RPC.ListenerAddresses = make([]string, 0, len(addrs))
 		for _, addr := range addrs {
-			addr = net.JoinHostPort(addr, ActiveNetParams.rpcPort)
+			addr = net.JoinHostPort(addr, ActiveNetParams.DefaultRPCPort)
 			cfg.Node.RPC.ListenerAddresses = append(cfg.Node.RPC.ListenerAddresses, addr)
 		}
 
@@ -593,8 +555,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	}
 
 	if cfg.Node.RPC.MaxConcurrentReqs < 0 {
-		str := "%s: The rpcmaxwebsocketconcurrentrequests option may " +
-			"not be less than 0 -- parsed [%d]"
+		str := "%s: The Node.RPC.MaxConcurrentReqs option may not be less than 0 -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, cfg.Node.RPC.MaxConcurrentReqs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -605,8 +566,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	if cfg.Node.BeaconChain.BlockMaxSize < blockMaxSizeMin || cfg.Node.BeaconChain.BlockMaxSize >
 		blockMaxSizeMax {
 
-		str := "%s: The blockmaxsize option must be in between %d " +
-			"and %d -- parsed [%d]"
+		str := "%s: The Node.BeaconChain.BlockMaxSize option must be in between %d and %d -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, blockMaxSizeMin,
 			blockMaxSizeMax, cfg.Node.BeaconChain.BlockMaxSize)
 		fmt.Fprintln(os.Stderr, err)
@@ -618,10 +578,8 @@ func LoadConfig() (*node.Config, []string, error) {
 	if cfg.Node.BeaconChain.BlockMaxWeight < blockMaxWeightMin ||
 		cfg.Node.BeaconChain.BlockMaxWeight > blockMaxWeightMax {
 
-		str := "%s: The blockmaxweight option must be in between %d " +
-			"and %d -- parsed [%d]"
-		err := fmt.Errorf(str, funcName, blockMaxWeightMin,
-			blockMaxWeightMax, cfg.Node.BeaconChain.BlockMaxWeight)
+		str := "%s: The Node.BeaconChain.BlockMaxWeigh option must be in between %d and %d -- parsed [%d]"
+		err := fmt.Errorf(str, funcName, blockMaxWeightMin, blockMaxWeightMax, cfg.Node.BeaconChain.BlockMaxWeight)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
@@ -629,8 +587,7 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Limit the max orphan count to a sane vlue.
 	if cfg.Node.BeaconChain.MaxOrphanTxs < 0 {
-		str := "%s: The maxorphantx option may not be less than 0 " +
-			"-- parsed [%d]"
+		str := "%s: The Node.BeaconChain.MaxOrphanTxs option may not be less than 0 -- parsed [%d]"
 		err := fmt.Errorf(str, funcName, cfg.Node.BeaconChain.MaxOrphanTxs)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
@@ -705,13 +662,11 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Add default port to all listener addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.Listeners = normalizeAddresses(cfg.Node.P2P.Listeners,
-		ActiveNetParams.DefaultPort)
+	cfg.Node.P2P.Listeners = normalizeAddresses(cfg.Node.P2P.Listeners, ActiveNetParams.DefaultP2PPort)
 
 	// Add default port to all rpc listener addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.RPC.ListenerAddresses = normalizeAddresses(cfg.Node.RPC.ListenerAddresses,
-		ActiveNetParams.rpcPort)
+	cfg.Node.RPC.ListenerAddresses = normalizeAddresses(cfg.Node.RPC.ListenerAddresses, ActiveNetParams.DefaultRPCPort)
 
 	// Only allow TLS to be disabled if the RPC is bound to localhost
 	// addresses.
@@ -746,9 +701,8 @@ func LoadConfig() (*node.Config, []string, error) {
 
 	// Add default port to all added server addresses if needed and remove
 	// duplicate addresses.
-	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers, ActiveNetParams.DefaultPort)
-	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers,
-		ActiveNetParams.DefaultPort)
+	cfg.Node.P2P.Peers = normalizeAddresses(cfg.Node.P2P.Peers, ActiveNetParams.DefaultP2PPort)
+	cfg.Node.P2P.ConnectPeers = normalizeAddresses(cfg.Node.P2P.ConnectPeers, ActiveNetParams.DefaultP2PPort)
 
 	// --noonion and --onion do not mix.
 	if cfg.Node.P2P.NoOnion && cfg.Node.P2P.OnionProxy != "" {
@@ -887,7 +841,7 @@ func LoadConfig() (*node.Config, []string, error) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		Log.Warn().Msg(configFileError.Error())
+		Log.Error().Msg(configFileError.Error())
 	}
 
 	// buf := bytes.NewBuffer(nil)
@@ -972,9 +926,9 @@ func createDefaultConfigFile(destinationPath string) error {
 	return nil
 }
 
-func defaultCfg(net wire.JaxNet, preCfg *node.Config) node.Config {
+func defaultCfg(net wire.JaxNet) node.Config {
 	if net == wire.TestNet {
-		ActiveNetParams = &testNet3Params
+		ActiveNetParams = &chaincfg.TestNetParams
 	}
 
 	cfg := node.Config{
@@ -996,12 +950,13 @@ func defaultCfg(net wire.JaxNet, preCfg *node.Config) node.Config {
 				SigCacheMaxSize:   defaultSigCacheMaxSize,
 			},
 			P2P: p2p.Config{
-				Listeners:       []string{"127.0.0.1:18444"},
+				Listeners:       []string{"0.0.0.0:" + ActiveNetParams.DefaultP2PPort},
 				BanThreshold:    defaultBanThreshold,
 				BanDuration:     defaultBanDuration,
 				TrickleInterval: defaultTrickleInterval,
 			},
 			RPC: rpc.Config{
+				ListenerAddresses: []string{"127.0.0.1:" + ActiveNetParams.DefaultRPCPort},
 				MaxClients:        defaultMaxRPCClients,
 				MaxWebsockets:     defaultMaxRPCWebsockets,
 				MaxConcurrentReqs: defaultMaxRPCConcurrentReqs,
@@ -1016,13 +971,6 @@ func defaultCfg(net wire.JaxNet, preCfg *node.Config) node.Config {
 		DebugLevel: defaultLogLevel,
 		DataDir:    defaultHomeDir,
 	}
-
-	if preCfg.DataDir != "" {
-		cfg.DataDir = preCfg.DataDir
-	}
-	cfg.Node.RPC.User = preCfg.Node.RPC.User
-	cfg.Node.RPC.Password = preCfg.Node.RPC.Password
-
 	return cfg
 }
 
@@ -1043,12 +991,12 @@ func readAndParseConfigFile(preCfg, cfg *node.Config, serviceOpts serviceOptions
 	if strings.HasSuffix(preCfg.ConfigFile, ".yaml") {
 		_, _ = fmt.Fprintln(os.Stderr, "WARNING! YAML configuration is deprecated and will be removed in next release. Use TOML.")
 
-		err = yaml.NewDecoder(cfgFile).Decode(&cfg)
+		err = yaml.NewDecoder(cfgFile).Decode(cfg)
 		if err != nil {
 			return nil, err
 		}
 	} else if strings.HasSuffix(preCfg.ConfigFile, ".toml") {
-		err = toml.NewDecoder(cfgFile).Decode(&cfg)
+		err = toml.NewDecoder(cfgFile).Decode(cfg)
 		if err != nil {
 			return nil, err
 		}

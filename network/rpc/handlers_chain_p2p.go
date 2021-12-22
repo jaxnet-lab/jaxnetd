@@ -35,7 +35,7 @@ func (server *CommonChainRPC) handleGetConnectionCount(ctx CmdCtx) (interface{},
 func (server *CommonChainRPC) handleAddNode(ctx CmdCtx) (interface{}, error) {
 	c := ctx.Cmd.(*jaxjson.AddNodeCmd)
 
-	addr := normalizeAddress(c.Addr, server.chainProvider.ChainParams.DefaultPort)
+	addr := normalizeAddress(c.Addr, server.chainProvider.ChainParams.DefaultP2PPort)
 	var err error
 	switch c.SubCmd {
 	case "add":
@@ -210,7 +210,7 @@ func (server *CommonChainRPC) handleNode(ctx CmdCtx) (interface{}, error) {
 			err = server.connMgr.DisconnectByID(int32(nodeID))
 		} else {
 			if _, _, errP := net.SplitHostPort(c.Target); errP == nil || net.ParseIP(c.Target) != nil {
-				addr = normalizeAddress(c.Target, params.DefaultPort)
+				addr = normalizeAddress(c.Target, params.DefaultP2PPort)
 				err = server.connMgr.DisconnectByAddr(addr)
 			} else {
 				return nil, &jaxjson.RPCError{
@@ -234,7 +234,7 @@ func (server *CommonChainRPC) handleNode(ctx CmdCtx) (interface{}, error) {
 			err = server.connMgr.RemoveByID(int32(nodeID))
 		} else {
 			if _, _, errP := net.SplitHostPort(c.Target); errP == nil || net.ParseIP(c.Target) != nil {
-				addr = normalizeAddress(c.Target, params.DefaultPort)
+				addr = normalizeAddress(c.Target, params.DefaultP2PPort)
 				err = server.connMgr.RemoveByAddr(addr)
 			} else {
 				return nil, &jaxjson.RPCError{
@@ -251,7 +251,7 @@ func (server *CommonChainRPC) handleNode(ctx CmdCtx) (interface{}, error) {
 		}
 
 	case "connect":
-		addr = normalizeAddress(c.Target, params.DefaultPort)
+		addr = normalizeAddress(c.Target, params.DefaultP2PPort)
 
 		// Default to temporary connections.
 		subCmd := "temp"
