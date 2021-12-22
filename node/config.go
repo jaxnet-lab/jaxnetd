@@ -16,25 +16,27 @@ import (
 )
 
 type Config struct {
-	ConfigFile  string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
-	ShowVersion bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile    string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
+	ShowVersion   bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
+	TestNet       bool   `toml:"-" yaml:"-" long:"testnet" description:"Start node with default testnet settings"`
+	MainNet       bool   `toml:"-" yaml:"-" long:"mainnet" description:"Start node with default mainnet settings"`
+	DropAddrIndex bool   `toml:"-" yaml:"-" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropCfIndex   bool   `toml:"-" yaml:"-" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
+	DropTxIndex   bool   `toml:"-" yaml:"-" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+	RefillTxIndex bool   `toml:"-" yaml:"-" long:"refilltxindex"`
 
-	Node      InstanceConfig     `toml:"node" yaml:"node"`
+	DataDir      string   `toml:"data_dir" yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir       string   `toml:"log_dir" yaml:"log_dir" long:"logdir" description:"Directory to log output."`
+	CPUProfile   string   `toml:"cpu_profile" yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	DebugLevel   string   `toml:"debug_level" yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	Profile      string   `toml:"profile" yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	TorIsolation bool     `toml:"tor_isolation" yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
+	Whitelists   []string `toml:"whitelists" yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
+
 	LogConfig corelog.Config     `toml:"log_config" yaml:"log_config" `
+	Node      InstanceConfig     `toml:"node" yaml:"node"`
 	BTCD      btcd.Configuration `toml:"btcd" yaml:"btcd"`
 
-	DataDir       string   `toml:"data_dir" yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir        string   `toml:"log_dir" yaml:"log_dir" long:"logdir" description:"Directory to log output."`
-	CPUProfile    string   `toml:"cpu_profile" yaml:"cpu_profile" long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	DebugLevel    string   `toml:"debug_level" yaml:"debug_level" short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	Profile       string   `toml:"profile" yaml:"profile" long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	DropAddrIndex bool     `toml:"-" yaml:"-" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropCfIndex   bool     `toml:"-" yaml:"-" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
-	DropTxIndex   bool     `toml:"-" yaml:"-" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
-	TorIsolation  bool     `toml:"tor_isolation" yaml:"tor_isolation" long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
-	Whitelists    []string `toml:"whitelists" yaml:"whitelists" long:"whitelist" description:"Add an IP network or IP that will not be banned. (eg. 192.168.1.0/24 or ::1)"`
-
-	RefillTxIndex bool `toml:"refill_tx_index" yaml:"refill_tx_index"`
 	// NoPeerBloomFilters bool     `yaml:"no_peer_bloom_filters" long:"nopeerbloomfilters" description:"Disable bloom filtering support"`
 	// UserAgentComments  []string `yaml:"user_agent_comments" long:"uacomment" description:"Comment to add to the user agent -- See BIP 14 for more information."`
 }

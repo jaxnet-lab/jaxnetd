@@ -1056,7 +1056,6 @@ func (server *Server) netLookup(host string) ([]net.IP, error) {
 	if strings.HasSuffix(host, ".onion") {
 		return nil, fmt.Errorf("attempt to resolve tor address %s", host)
 	}
-
 	return server.cfg.Lookup(host)
 }
 

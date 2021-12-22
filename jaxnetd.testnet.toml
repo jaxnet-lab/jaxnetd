@@ -1,4 +1,4 @@
-data_dir = "jaxnetd-data/data"
+data_dir = "~/.jaxnetd/data"
 debug_level = "info"
 
 [node]

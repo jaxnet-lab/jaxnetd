@@ -35,8 +35,9 @@ var TestNetParams = Params{
 	Net:            wire.TestNet,
 	DefaultPort:    "18333",
 	DefaultP2PPort: "18444",
-	DNSSeeds:       []DNSSeed{
-		// {"dnsseed.testnet.jaxdevz.space", false}
+	DNSSeeds: []DNSSeed{
+		{"dns-seed.testnet.jaxdevz.space", false},
+		{"dns-seed.testnet.jax.net", false},
 	},
 	IsBeacon:         true,
 	ChainID:          0,
