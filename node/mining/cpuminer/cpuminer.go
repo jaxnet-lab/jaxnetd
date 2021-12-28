@@ -69,14 +69,6 @@ type Config struct {
 	// rules and handling as any other block coming from the network.
 	ProcessBlock func(*jaxutil.Block, chaindata.BehaviorFlags) (bool, error)
 
-	// ConnectedCount defines the function to use to obtain how many other
-	// peers the server is connected to.  This is used by the automatic
-	// persistent mining routine to determine whether or it should attempt
-	// mining.  This is useful because there is no point in mining when not
-	// connected to any peers since there would no be anyone to send any
-	// found blocks to.
-	ConnectedCount func() int32
-
 	// IsCurrent defines the function to use to obtain whether or not the
 	// block chain is current.  This is used by the automatic persistent
 	// mining routine to determine whether or it should attempt mining.

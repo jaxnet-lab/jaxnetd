@@ -74,22 +74,6 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	if chainCtl.cfg.Node.EnableCPUMiner {
-		if len(chainCtl.beacon.chainProvider.MiningAddrs) == 0 {
-			err := errors.New("you need so specify mining addresses in config in order to run CPU miner")
-			return err
-		}
-		chainCtl.InitCPUMiner(func() int32 { return 1 })
-		chainCtl.wg.Add(1)
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
-			defer chainCtl.wg.Done()
-			chainCtl.miner.Run(chainCtl.ctx, wg)
-		}(&wg)
-		wg.Wait()
-	}
-
 	if err := chainCtl.runRPC(chainCtl.ctx, cfg); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("RPC ComposeHandlers error")
 		return err
@@ -106,12 +90,29 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 		chainCtl.beacon.chainProvider.BlockChain().Subscribe(chainCtl.shardsAutorunCallback)
 	}
 
+	if chainCtl.cfg.Node.EnableCPUMiner {
+		if len(chainCtl.beacon.chainProvider.MiningAddrs) == 0 {
+			err := errors.New("you need so specify mining addresses in config in order to run CPU miner")
+			return err
+		}
+
+		chainCtl.InitCPUMiner()
+		chainCtl.wg.Add(1)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer chainCtl.wg.Done()
+			chainCtl.miner.Run(chainCtl.ctx, wg)
+		}(&wg)
+		wg.Wait()
+	}
+
 	<-ctx.Done()
 	chainCtl.wg.Wait()
 	return nil
 }
 
-func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
+func (chainCtl *chainController) InitCPUMiner() {
 	miningAddrs := chainCtl.beacon.chainProvider.MiningAddrs
 	beacon := cpuminer.Config{
 		ChainParams:            chainCtl.beacon.chainProvider.ChainParams,
@@ -119,7 +120,6 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 
 		ProcessBlock:        chainCtl.beacon.chainProvider.SyncManager.ProcessBlock,
 		IsCurrent:           chainCtl.beacon.chainProvider.SyncManager.IsCurrent,
-		ConnectedCount:      connectedCount,
 		AutominingEnabled:   chainCtl.cfg.Node.AutominingEnabled,
 		AutominingThreshold: chainCtl.cfg.Node.AutominingThreshold,
 	}
@@ -132,7 +132,6 @@ func (chainCtl *chainController) InitCPUMiner(connectedCount func() int32) {
 			MiningAddrs:            ro.ctl.chainProvider.MiningAddrs,
 			ProcessBlock:           ro.ctl.chainProvider.SyncManager.ProcessBlock,
 			IsCurrent:              ro.ctl.chainProvider.SyncManager.IsCurrent,
-			ConnectedCount:         connectedCount,
 			AutominingEnabled:      chainCtl.cfg.Node.AutominingEnabled,
 			AutominingThreshold:    chainCtl.cfg.Node.AutominingThreshold,
 		}

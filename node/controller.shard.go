@@ -114,7 +114,7 @@ func (chainCtl *chainController) runShards() error {
 			return err
 		}
 
-		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block, true)
+		chainCtl.runShardRoutine(info.ID, info.P2PInfo, block)
 	}
 
 	return nil
@@ -150,10 +150,10 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 	shardID := chainCtl.shardsIndex.AddShard(block, opts)
 	chainCtl.shardsMutex.Unlock()
 
-	chainCtl.runShardRoutine(shardID, opts, block, true)
+	chainCtl.runShardRoutine(shardID, opts, block)
 }
 
-func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *jaxutil.Block, autoInit bool) {
+func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.ListenOpts, block *jaxutil.Block) {
 	chainCtl.ctlMutex.Lock()
 	defer chainCtl.ctlMutex.Unlock()
 
@@ -198,10 +198,22 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 		chainCtl.shardsMutex.Unlock()
 	}()
 
-	if autoInit {
-		shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), shardCtl.p2pServer.P2PConnManager(), chainCtl.logger)
-		chainCtl.rpc.server.AddShard(shardID, shardRPC)
-	}
+	shardRPC := rpc.NewShardRPC(shardCtl.ChainProvider(), shardCtl.p2pServer.P2PConnManager(), chainCtl.logger)
+	chainCtl.rpc.server.AddShard(shardID, shardRPC)
+
+	// todo: error for one shard
+	//  invalid orange tree: coding bits size must be greater than zero: validation error
+	// if chainCtl.cfg.Node.EnableCPUMiner && chainCtl.miner != nil {
+	// 	chainCtl.miner.AddChain(shardID, cpuminer.Config{
+	// 		ChainParams:            shardCtl.chainProvider.ChainParams,
+	// 		BlockTemplateGenerator: shardCtl.chainProvider.BlkTmplGenerator(),
+	// 		MiningAddrs:            shardCtl.chainProvider.MiningAddrs,
+	// 		ProcessBlock:           shardCtl.chainProvider.SyncManager.ProcessBlock,
+	// 		IsCurrent:              shardCtl.chainProvider.SyncManager.IsCurrent,
+	// 		AutominingEnabled:      chainCtl.cfg.Node.AutominingEnabled,
+	// 		AutominingThreshold:    chainCtl.cfg.Node.AutominingThreshold,
+	// 	})
+	// }
 }
 
 func (chainCtl *chainController) syncShardsIndex() error {
