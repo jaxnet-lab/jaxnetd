@@ -645,7 +645,7 @@ func (r FutureGetTxOutResult) Receive() (*jaxjson.GetTxOutResult, error) {
 	}
 
 	// Unmarshal result as an gettxout result object.
-	var txOutInfo *jaxjson.GetTxOutResult
+	txOutInfo := &jaxjson.GetTxOutResult{}
 	err = txOutInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -1265,7 +1265,7 @@ func (r FutureGetTxResult) Receive() (*jaxjson.GetTxResult, error) {
 	}
 
 	// Unmarshal result as an gettx result object.
-	var txInfo *jaxjson.GetTxResult
+	txInfo := &jaxjson.GetTxResult{}
 	err = txInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
@@ -1309,7 +1309,7 @@ func (r FutureGetChainMetricsResult) Receive() (*jaxjson.GetChainMetricsResult, 
 	}
 
 	// Unmarshal result as an gettx result object.
-	var txInfo *jaxjson.GetChainMetricsResult
+	txInfo := &jaxjson.GetChainMetricsResult{}
 	err = txInfo.UnmarshalJSON(res)
 	if err != nil {
 		return nil, err
