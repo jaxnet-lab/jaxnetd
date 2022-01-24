@@ -124,10 +124,10 @@ nfpms:
       - src: ./jaxnetd.testnet.toml
         dst: /etc/jaxnetd.testnet.toml
         type: config
-      - src: ./scripts/jaxnetd-monitor.service
-        dst: /lib/systemd/system/jaxnetd-monitor.service
+      - src: ./packaging/services/jaxnetd.service
+        dst: /lib/systemd/system/jaxnetd.service
     scripts:
-      postinstall: package_scripts/post-install.sh
+      postinstall: packaging/scripts/post-install.sh
 
 checksum:
   name_template: 'checksums.txt'
