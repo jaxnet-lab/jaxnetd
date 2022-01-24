@@ -32,6 +32,67 @@ builds:
     goarch:
       - amd64
 #      - arm64
+
+  - main: ./database/cmd/dbtool
+    id: "jaxnet-db-tool"
+    binary: "jaxnet-db-tool"
+    ldflags:
+      - -s -w -X gitlab.com/jaxnet/jaxnetd/version.tag={{.Version}}
+        -X gitlab.com/jaxnet/jaxnetd/version.commit={{.Commit}}
+        -X gitlab.com/jaxnet/jaxnetd/version.date={{.Date}}
+        -X gitlab.com/jaxnet/jaxnetd/version.builtBy=goreleaser
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
+  - main: ./database/cmd/inspector
+    id: "jaxnet-db-inspector"
+    binary: "jaxnet-db-inspector"
+    ldflags:
+      - -s -w -X gitlab.com/jaxnet/jaxnetd/version.tag={{.Version}}
+        -X gitlab.com/jaxnet/jaxnetd/version.commit={{.Commit}}
+        -X gitlab.com/jaxnet/jaxnetd/version.date={{.Date}}
+        -X gitlab.com/jaxnet/jaxnetd/version.builtBy=goreleaser
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
+  - main: ./cmd/genaddr
+    id: "jaxnet-genaddr"
+    binary: "jaxnet-genaddr"
+    ldflags:
+      - -s -w -X gitlab.com/jaxnet/jaxnetd/version.tag={{.Version}}
+        -X gitlab.com/jaxnet/jaxnetd/version.commit={{.Commit}}
+        -X gitlab.com/jaxnet/jaxnetd/version.date={{.Date}}
+        -X gitlab.com/jaxnet/jaxnetd/version.builtBy=goreleaser
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
+  - main: ./cmd/difficulty-calc
+    id: "jaxnet-difficulty-calc"
+    binary: "jaxnet-difficulty-calc"
+    ldflags:
+      - -s -w -X gitlab.com/jaxnet/jaxnetd/version.tag={{.Version}}
+        -X gitlab.com/jaxnet/jaxnetd/version.commit={{.Commit}}
+        -X gitlab.com/jaxnet/jaxnetd/version.date={{.Date}}
+        -X gitlab.com/jaxnet/jaxnetd/version.builtBy=goreleaser
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
 archives:
   - replacements:
       darwin: Darwin
@@ -56,6 +117,17 @@ nfpms:
       - deb
       - rpm
       - apk
+    contents:
+      - src: ./jaxnetd.mainnet.toml
+        dst: /etc/jaxnetd.mainnet.toml
+        type: config
+      - src: ./jaxnetd.testnet.toml
+        dst: /etc/jaxnetd.testnet.toml
+        type: config
+      - src: ./scripts/jaxnetd-monitor.service
+        dst: /lib/systemd/system/jaxnetd-monitor.service
+    scripts:
+      postinstall: package_scripts/post-install.sh
 
 checksum:
   name_template: 'checksums.txt'
