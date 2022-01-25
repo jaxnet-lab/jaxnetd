@@ -73,8 +73,8 @@ release:
     - apk add build-base
   script:
     - goreleaser release --rm-dist
-    - package_name=$(find . -type f -iname "*.deb" ) && curl -F package=@"$package_name"  https://$GEMFURY_TOKEN@push.fury.io/jaxnetd/
-    - package_name=$(find . -type f -iname "*.rpm" ) && curl -F package=@"$package_name"  https://$GEMFURY_TOKEN@push.fury.io/jaxnetd/
+    - package_name=$(find . -type f -iname "*.deb" ) && curl -F package=@"$package_name"  https://$GEMFURY_TOKEN@push.fury.io/jaxnet/
+    - package_name=$(find . -type f -iname "*.rpm" ) && curl -F package=@"$package_name"  https://$GEMFURY_TOKEN@push.fury.io/jaxnet/
   tags:
     - docker
   only:
