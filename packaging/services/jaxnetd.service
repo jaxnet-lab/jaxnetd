@@ -1,0 +1,16 @@
+[Unit]
+Description=[JAX] jaxnetd
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Restart=on-failure
+Type=simple
+WorkingDirectory=/var/
+ExecStart=/usr/local/bin/jaxnetd
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=jaxnetd
+
+[Install]
+WantedBy=multi-user.target
