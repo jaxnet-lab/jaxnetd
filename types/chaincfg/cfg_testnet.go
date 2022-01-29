@@ -28,6 +28,7 @@ var (
 // TestNet3Params defines the network parameters for the test Bitcoin network
 // (version 3).  Not to be confused with the regression test network, this
 // network is sometimes simply called "testnet".
+// DEPRECATED use TestNetParams
 var TestNet3Params = TestNetParams
 
 var TestNetParams = Params{
