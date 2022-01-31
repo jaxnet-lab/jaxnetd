@@ -90,7 +90,7 @@ type IWebsocketManager interface {
 	Start(ctx context.Context)
 }
 
-// wsNotificationManager is a connection and notification manager used for
+// WsManager is a connection and notification manager used for
 // websockets.  It allows websocket clients to register for notifications they
 // are interested in.  When an event happens elsewhere in the code such as
 // transactions being added to the memory pool or block connects/disconnects,
@@ -118,7 +118,7 @@ type WsManager struct {
 
 const notificationChanLen = 1000
 
-// newWsNotificationManager returns a new notification manager ready for use.
+// WebSocketManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
 func WebSocketManager(server *MultiChainRPC) *WsManager {
 	if wsManager != nil {
@@ -292,7 +292,7 @@ type wsTransactionNotification struct {
 	Chain  *cprovider.ChainProvider
 }
 
-//// Notification types
+// // Notification types
 type (
 	notificationBlockConnected      wsBlockNotification
 	notificationBlockDisconnected   wsBlockNotification

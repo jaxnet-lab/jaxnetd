@@ -1489,6 +1489,7 @@ func (c *Client) Connect(tries int) error {
 		var wsConn *websocket.Conn
 		wsConn, err = dial(c.config)
 		if err != nil {
+			log.Warn().Err(err).Msgf("Unable to established connection to RPC server %s", c.config.Host)
 			backoff = connectionRetryInterval * time.Duration(i+1)
 			if backoff > time.Minute {
 				backoff = time.Minute
@@ -1500,8 +1501,7 @@ func (c *Client) Connect(tries int) error {
 		// Connection was established.  Set the websocket connection
 		// member of the client and start the goroutines necessary
 		// to run the client.
-		log.Info().Msgf("Established connection to RPC server %s",
-			c.config.Host)
+		log.Info().Msgf("Established connection to RPC server %s", c.config.Host)
 		c.wsConn = wsConn
 		close(c.connEstablished)
 		c.start()

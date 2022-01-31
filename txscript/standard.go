@@ -204,6 +204,22 @@ func GetScriptClass(script []byte) ScriptClass {
 	return typeOfScript(pops)
 }
 
+// NewScriptClass returns the ScriptClass corresponding to the string name
+// provided as argument. ErrUnsupportedScriptType error is returned if the
+// name doesn't correspond to any known ScriptClass.
+//
+// Not to be confused with GetScriptClass.
+func NewScriptClass(name string) (*ScriptClass, error) {
+	for i, n := range scriptClassToName {
+		if n == name {
+			value := ScriptClass(i)
+			return &value, nil
+		}
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrUnsupportedScriptType, name)
+}
+
 // expectedInputs returns the number of arguments required by a script.
 // If the script is of unknown type such that the number can not be determined
 // then -1 is returned. We are an internal function and thus assume that class

@@ -180,8 +180,7 @@ func (chainCtl *chainController) runRPC(ctx context.Context, cfg *Config) error 
 		shardRPCs[shardID] = rpc.NewShardRPC(ro.ctl.ChainProvider(), ro.ctl.p2pServer.P2PConnManager(), chainCtl.logger)
 	}
 
-	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, chainCtl.logger,
-		nodeRPC, beaconRPC, shardRPCs)
+	chainCtl.rpc.server = rpc.NewMultiChainRPC(&cfg.Node.RPC, nodeRPC, beaconRPC, shardRPCs)
 
 	chainCtl.wg.Add(1)
 	go func() {

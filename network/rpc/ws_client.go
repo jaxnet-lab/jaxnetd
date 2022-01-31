@@ -333,11 +333,11 @@ out:
 // websocket client.
 func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	var (
-		result interface{}
-		err    error
+		err      error
+		result   interface{}
+		provider *cprovider.ChainProvider
 	)
 
-	var provider *cprovider.ChainProvider
 	if r.ShardID != 0 {
 		shard, ok := c.manager.server.shardRPCs[r.ShardID]
 		if !ok {
@@ -367,6 +367,7 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 	} else {
 		result, err = c.handleRequestScope(r)
 	}
+
 	reply, err := c.manager.server.createMarshalledReply(r.ID, result, err)
 	if err != nil {
 		c.manager.logger.Error().Str("command", r.Method).Err(err).Msg("Failed to marshal reply command")

@@ -8,6 +8,20 @@ package jaxjson
 // NOTE: This file is intended to house the RPC commands that are supported by
 // a wallet server, but are only available via websockets.
 
+func init() {
+	// The commands in this file are only usable with a wallet server via
+	// websockets.
+	flags := UFWalletOnly | UFWebsocketOnly
+
+	MustRegisterCmd("wallet", "createencryptedwallet", (*CreateEncryptedWalletCmd)(nil), flags)
+	MustRegisterCmd("wallet", "exportwatchingwallet", (*ExportWatchingWalletCmd)(nil), flags)
+	MustRegisterCmd("wallet", "getunconfirmedbalance", (*GetUnconfirmedBalanceCmd)(nil), flags)
+	MustRegisterCmd("wallet", "listaddresstransactions", (*ListAddressTransactionsCmd)(nil), flags)
+	MustRegisterCmd("wallet", "listalltransactions", (*ListAllTransactionsCmd)(nil), flags)
+	MustRegisterCmd("wallet", "recoveraddresses", (*RecoverAddressesCmd)(nil), flags)
+	MustRegisterCmd("wallet", "walletislocked", (*WalletIsLockedCmd)(nil), flags)
+}
+
 // CreateEncryptedWalletCmd defines the createencryptedwallet JSON-RPC command.
 type CreateEncryptedWalletCmd struct {
 	Passphrase string
@@ -112,18 +126,4 @@ type WalletIsLockedCmd struct{}
 // walletislocked JSON-RPC command.
 func NewWalletIsLockedCmd() *WalletIsLockedCmd {
 	return &WalletIsLockedCmd{}
-}
-
-func init() {
-	// The commands in this file are only usable with a wallet server via
-	// websockets.
-	flags := UFWalletOnly | UFWebsocketOnly
-
-	MustRegisterCmd("wallet", "createencryptedwallet", (*CreateEncryptedWalletCmd)(nil), flags)
-	MustRegisterCmd("wallet", "exportwatchingwallet", (*ExportWatchingWalletCmd)(nil), flags)
-	MustRegisterCmd("wallet", "getunconfirmedbalance", (*GetUnconfirmedBalanceCmd)(nil), flags)
-	MustRegisterCmd("wallet", "listaddresstransactions", (*ListAddressTransactionsCmd)(nil), flags)
-	MustRegisterCmd("wallet", "listalltransactions", (*ListAllTransactionsCmd)(nil), flags)
-	MustRegisterCmd("wallet", "recoveraddresses", (*RecoverAddressesCmd)(nil), flags)
-	MustRegisterCmd("wallet", "walletislocked", (*WalletIsLockedCmd)(nil), flags)
 }

@@ -21,7 +21,8 @@ import (
 // *****************************
 
 // FutureGetTransactionResult is a future promise to deliver the result
-// of a GetTransactionAsync RPC invocation (or an applicable error).
+// of a GetTransactionAsync or GetTransactionWatchOnlyAsync RPC invocation
+// (or an applicable error).
 type FutureGetTransactionResult chan *response
 
 // Receive waits for the response promised by the future and returns detailed
@@ -57,12 +58,33 @@ func (c *Client) GetTransactionAsync(txHash *chainhash.Hash) FutureGetTransactio
 	return c.sendCmd(cmd)
 }
 
-// DEPRECATED
 // GetTransaction returns detailed information about a wallet transaction.
 //
 // See GetRawTransaction to return the raw transaction instead.
 func (c *Client) GetTransaction(txHash *chainhash.Hash) (*jaxjson.GetTransactionResult, error) {
 	return c.GetTransactionAsync(txHash).Receive()
+}
+
+// GetTransactionWatchOnlyAsync returns an instance of a type that can be used
+// to get the result of the RPC at some future time by invoking the Receive function on
+// the returned instance.
+//
+// See GetTransactionWatchOnly for the blocking version and more details.
+func (c *Client) GetTransactionWatchOnlyAsync(txHash *chainhash.Hash, watchOnly bool) FutureGetTransactionResult {
+	hash := ""
+	if txHash != nil {
+		hash = txHash.String()
+	}
+
+	cmd := jaxjson.NewGetTransactionCmd(hash, &watchOnly)
+	return c.sendCmd(cmd)
+}
+
+// GetTransactionWatchOnly returns detailed information about a wallet
+// transaction, and allow including watch-only addresses in balance
+// calculation and details.
+func (c *Client) GetTransactionWatchOnly(txHash *chainhash.Hash, watchOnly bool) (*jaxjson.GetTransactionResult, error) {
+	return c.GetTransactionWatchOnlyAsync(txHash, watchOnly).Receive()
 }
 
 // FutureListTransactionsResult is a future promise to deliver the result of a
@@ -141,6 +163,25 @@ func (c *Client) ListTransactionsCountFromAsync(account string, count, from int)
 // See the ListTransactions and ListTransactionsCount functions to use defaults.
 func (c *Client) ListTransactionsCountFrom(account string, count, from int) ([]jaxjson.ListTransactionsResult, error) {
 	return c.ListTransactionsCountFromAsync(account, count, from).Receive()
+}
+
+// ListTransactionsCountFromWatchOnlyAsync returns an instance of a type that can be used
+// to get the result of the RPC at some future time by invoking the Receive
+// function on the returned instance.
+//
+// See ListTransactionsCountFromWatchOnly for the blocking version and more details.
+func (c *Client) ListTransactionsCountFromWatchOnlyAsync(account string, count, from int, watchOnly bool) FutureListTransactionsResult {
+	cmd := jaxjson.NewListTransactionsCmd(&account, &count, &from, &watchOnly)
+	return c.sendCmd(cmd)
+}
+
+// ListTransactionsCountFromWatchOnly returns a list of the most recent transactions up
+// to the passed count while skipping the first 'from' transactions. It will include or
+// exclude transactions from watch-only addresses based on the passed value for the watchOnly parameter
+//
+// See the ListTransactions and ListTransactionsCount functions to use defaults.
+func (c *Client) ListTransactionsCountFromWatchOnly(account string, count, from int, watchOnly bool) ([]jaxjson.ListTransactionsResult, error) {
+	return c.ListTransactionsCountFromWatchOnlyAsync(account, count, from, watchOnly).Receive()
 }
 
 // FutureListUnspentResult is a future promise to deliver the result of a
@@ -222,8 +263,8 @@ func (c *Client) ListUnspent() ([]jaxjson.ListUnspentResult, error) {
 }
 
 // ListUnspentMin returns all unspent transaction outputs known to a wallet,
-// using the specified number of minimum conformations and default number of
-// maximum confiramtions (999999) as a filter.
+// using the specified number of minimum confirmations and default number of
+// maximum confirmations (999999) as a filter.
 func (c *Client) ListUnspentMin(minConf int) ([]jaxjson.ListUnspentResult, error) {
 	return c.ListUnspentMinAsync(minConf).Receive()
 }
@@ -286,6 +327,7 @@ func (c *Client) ListSinceBlockAsync(blockHash *chainhash.Hash) FutureListSinceB
 // minimum confirmations as a filter.
 //
 // See ListSinceBlockMinConf to override the minimum number of confirmations.
+// See ListSinceBlockMinConfWatchOnly to override the minimum number of confirmations and watch only parameter.
 func (c *Client) ListSinceBlock(blockHash *chainhash.Hash) (*jaxjson.ListSinceBlockResult, error) {
 	return c.ListSinceBlockAsync(blockHash).Receive()
 }
@@ -312,6 +354,30 @@ func (c *Client) ListSinceBlockMinConfAsync(blockHash *chainhash.Hash, minConfir
 // See ListSinceBlock to use the default minimum number of confirmations.
 func (c *Client) ListSinceBlockMinConf(blockHash *chainhash.Hash, minConfirms int) (*jaxjson.ListSinceBlockResult, error) {
 	return c.ListSinceBlockMinConfAsync(blockHash, minConfirms).Receive()
+}
+
+// ListSinceBlockMinConfWatchOnlyAsync returns an instance of a type that can be used to
+// get the result of the RPC at some future time by invoking the Receive
+// function on the returned instance.
+//
+// See ListSinceBlockMinConfWatchOnly for the blocking version and more details.
+func (c *Client) ListSinceBlockMinConfWatchOnlyAsync(blockHash *chainhash.Hash, minConfirms int, watchOnly bool) FutureListSinceBlockResult {
+	var hash *string
+	if blockHash != nil {
+		hash = jaxjson.String(blockHash.String())
+	}
+
+	cmd := jaxjson.NewListSinceBlockCmd(hash, &minConfirms, &watchOnly)
+	return c.sendCmd(cmd)
+}
+
+// ListSinceBlockMinConfWatchOnly returns all transactions added in blocks since the
+// specified block hash, or all transactions if it is nil, using the specified
+// number of minimum confirmations as a filter.
+//
+// See ListSinceBlock to use the default minimum number of confirmations and default watch only parameter.
+func (c *Client) ListSinceBlockMinConfWatchOnly(blockHash *chainhash.Hash, minConfirms int, watchOnly bool) (*jaxjson.ListSinceBlockResult, error) {
+	return c.ListSinceBlockMinConfWatchOnlyAsync(blockHash, minConfirms, watchOnly).Receive()
 }
 
 // **************************
@@ -507,7 +573,7 @@ func (c *Client) SendToAddressCommentAsync(address jaxutil.Address,
 // SendToAddressComment sends the passed amount to the given address and stores
 // the provided comment and comment to in the wallet.  The comment parameter is
 // intended to be used for the purpose of the transaction while the commentTo
-// parameter is indended to be used for who the transaction is being sent to.
+// parameter is intended to be used for who the transaction is being sent to.
 //
 // The comments are not part of the transaction and are only internal
 // to the wallet.
@@ -613,7 +679,7 @@ func (c *Client) SendFromCommentAsync(fromAccount string,
 // SendFromComment sends the passed amount to the given address using the
 // provided account as a source of funds and stores the provided comment and
 // comment to in the wallet.  The comment parameter is intended to be used for
-// the purpose of the transaction while the commentTo parameter is indended to
+// the purpose of the transaction while the commentTo parameter is intended to
 // be used for who the transaction is being sent to.  Only funds with the passed
 // number of minimum confirmations will be used.
 //
@@ -872,6 +938,126 @@ func (c *Client) CreateNewAccountAsync(account string) FutureCreateNewAccountRes
 // CreateNewAccount creates a new wallet account.
 func (c *Client) CreateNewAccount(account string) error {
 	return c.CreateNewAccountAsync(account).Receive()
+}
+
+// FutureCreateWalletResult is a future promise to deliver the result of a
+// CreateWalletAsync RPC invocation (or an applicable error).
+type FutureCreateWalletResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// result of creating a new wallet.
+func (r FutureCreateWalletResult) Receive() (*jaxjson.CreateWalletResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var createWalletResult jaxjson.CreateWalletResult
+	err = json.Unmarshal(res, &createWalletResult)
+	if err != nil {
+		return nil, err
+	}
+	return &createWalletResult, nil
+}
+
+// CreateWalletOpt defines a functional-option to be used with CreateWallet
+// method.
+type CreateWalletOpt func(*jaxjson.CreateWalletCmd)
+
+// WithCreateWalletDisablePrivateKeys disables the possibility of private keys
+// to be used with a wallet created using the CreateWallet method. Using this
+// option will make the wallet watch-only.
+func WithCreateWalletDisablePrivateKeys() CreateWalletOpt {
+	return func(c *jaxjson.CreateWalletCmd) {
+		c.DisablePrivateKeys = jaxjson.Bool(true)
+	}
+}
+
+// WithCreateWalletBlank specifies creation of a blank wallet.
+func WithCreateWalletBlank() CreateWalletOpt {
+	return func(c *jaxjson.CreateWalletCmd) {
+		c.Blank = jaxjson.Bool(true)
+	}
+}
+
+// WithCreateWalletPassphrase specifies a passphrase to encrypt the wallet
+// with.
+func WithCreateWalletPassphrase(value string) CreateWalletOpt {
+	return func(c *jaxjson.CreateWalletCmd) {
+		c.Passphrase = jaxjson.String(value)
+	}
+}
+
+// WithCreateWalletAvoidReuse specifies keeping track of coin reuse, and
+// treat dirty and clean coins differently with privacy considerations in mind.
+func WithCreateWalletAvoidReuse() CreateWalletOpt {
+	return func(c *jaxjson.CreateWalletCmd) {
+		c.AvoidReuse = jaxjson.Bool(true)
+	}
+}
+
+// CreateWalletAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See CreateWallet for the blocking version and more details.
+func (c *Client) CreateWalletAsync(name string, opts ...CreateWalletOpt) FutureCreateWalletResult {
+	cmd := jaxjson.NewCreateWalletCmd(name, nil, nil, nil, nil)
+
+	// Apply each specified option to mutate the default command.
+	for _, opt := range opts {
+		opt(cmd)
+	}
+
+	return c.sendCmd(cmd)
+}
+
+// CreateWallet creates a new wallet account, with the possibility to use
+// private keys.
+//
+// Optional parameters can be specified using functional-options pattern. The
+// following functions are available:
+//   * WithCreateWalletDisablePrivateKeys
+//   * WithCreateWalletBlank
+//   * WithCreateWalletPassphrase
+//   * WithCreateWalletAvoidReuse
+func (c *Client) CreateWallet(name string, opts ...CreateWalletOpt) (*jaxjson.CreateWalletResult, error) {
+	return c.CreateWalletAsync(name, opts...).Receive()
+}
+
+// FutureGetAddressInfoResult is a future promise to deliver the result of an
+// GetAddressInfoAsync RPC invocation (or an applicable error).
+type FutureGetAddressInfoResult chan *response
+
+// Receive waits for the response promised by the future and returns the information
+// about the given bitcoin address.
+func (r FutureGetAddressInfoResult) Receive() (*jaxjson.GetAddressInfoResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var getAddressInfoResult jaxjson.GetAddressInfoResult
+	err = json.Unmarshal(res, &getAddressInfoResult)
+	if err != nil {
+		return nil, err
+	}
+	return &getAddressInfoResult, nil
+}
+
+// GetAddressInfoAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetAddressInfo for the blocking version and more details.
+func (c *Client) GetAddressInfoAsync(address string) FutureGetAddressInfoResult {
+	cmd := jaxjson.NewGetAddressInfoCmd(address)
+	return c.sendCmd(cmd)
+}
+
+// GetAddressInfo returns information about the given bitcoin address.
+func (c *Client) GetAddressInfo(address string) (*jaxjson.GetAddressInfoResult, error) {
+	return c.GetAddressInfoAsync(address).Receive()
 }
 
 // FutureGetNewAddressResult is a future promise to deliver the result of a
@@ -1482,7 +1668,6 @@ type FutureGetBalanceParseResult chan *response
 
 // Receive waits for the response promised by the future and returns the
 // available balance from the server for the specified account.
-// nolint: gomnd
 func (r FutureGetBalanceParseResult) Receive() (jaxutil.Amount, error) {
 	res, err := receiveFuture(r)
 	if err != nil {
@@ -1548,6 +1733,43 @@ func (c *Client) GetBalanceMinConf(account string, minConfirms int) (jaxutil.Amo
 		return FutureGetBalanceParseResult(response).Receive()
 	}
 	return c.GetBalanceMinConfAsync(account, minConfirms).Receive()
+}
+
+// FutureGetBalancesResult is a future promise to deliver the result of a
+// GetBalancesAsync RPC invocation (or an applicable error).
+type FutureGetBalancesResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// available balances from the server.
+func (r FutureGetBalancesResult) Receive() (*jaxjson.GetBalancesResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a floating point number.
+	var balances jaxjson.GetBalancesResult
+	err = json.Unmarshal(res, &balances)
+	if err != nil {
+		return nil, err
+	}
+
+	return &balances, nil
+}
+
+// GetBalancesAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetBalances for the blocking version and more details.
+func (c *Client) GetBalancesAsync() FutureGetBalancesResult {
+	cmd := jaxjson.NewGetBalancesCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetBalances returns the available balances from the server.
+func (c *Client) GetBalances() (*jaxjson.GetBalancesResult, error) {
+	return c.GetBalancesAsync().Receive()
 }
 
 // FutureGetReceivedByAccountResult is a future promise to deliver the result of
@@ -1696,6 +1918,7 @@ func (c *Client) GetReceivedByAddressAsync(address jaxutil.Address) FutureGetRec
 	addr := address.EncodeAddress()
 	cmd := jaxjson.NewGetReceivedByAddressCmd(addr, nil)
 	return c.sendCmd(cmd)
+
 }
 
 // GetReceivedByAddress returns the total amount received by the specified
@@ -1959,7 +2182,6 @@ func (r FutureWalletPassphraseChangeResult) Receive() error {
 // function on the returned instance.
 //
 // See WalletPassphraseChange for the blocking version and more details.
-// nolint: predeclared
 func (c *Client) WalletPassphraseChangeAsync(old, new string) FutureWalletPassphraseChangeResult {
 	cmd := jaxjson.NewWalletPassphraseChangeCmd(old, new)
 	return c.sendCmd(cmd)
@@ -1967,7 +2189,6 @@ func (c *Client) WalletPassphraseChangeAsync(old, new string) FutureWalletPassph
 
 // WalletPassphraseChange changes the wallet passphrase from the specified old
 // to new passphrase.
-// nolint: predeclared
 func (c *Client) WalletPassphraseChange(old, new string) error {
 	return c.WalletPassphraseChangeAsync(old, new).Receive()
 }
@@ -2147,6 +2368,44 @@ func (c *Client) ImportAddressRescan(address string, account string, rescan bool
 	return c.ImportAddressRescanAsync(address, account, rescan).Receive()
 }
 
+// FutureImportMultiResult is a future promise to deliver the result of an
+// ImportMultiAsync RPC invocation (or an applicable error).
+type FutureImportMultiResult chan *response
+
+// Receive waits for the response promised by the future and returns the result
+// of importing multiple addresses/scripts.
+func (r FutureImportMultiResult) Receive() (jaxjson.ImportMultiResults, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var importMultiResults jaxjson.ImportMultiResults
+	err = json.Unmarshal(res, &importMultiResults)
+	if err != nil {
+		return nil, err
+	}
+	return importMultiResults, nil
+}
+
+// ImportMultiAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See ImportMulti for the blocking version and more details.
+func (c *Client) ImportMultiAsync(requests []jaxjson.ImportMultiRequest, options *jaxjson.ImportMultiOptions) FutureImportMultiResult {
+	cmd := jaxjson.NewImportMultiCmd(requests, options)
+	return c.sendCmd(cmd)
+}
+
+// ImportMulti imports addresses/scripts, optionally rescanning the blockchain
+// from the earliest creation time of the imported scripts.
+//
+// See jaxjson.ImportMultiRequest for details on the requests parameter.
+func (c *Client) ImportMulti(requests []jaxjson.ImportMultiRequest, options *jaxjson.ImportMultiOptions) (jaxjson.ImportMultiResults, error) {
+	return c.ImportMultiAsync(requests, options).Receive()
+}
+
 // FutureImportPrivKeyResult is a future promise to deliver the result of an
 // ImportPrivKeyAsync RPC invocation (or an applicable error).
 type FutureImportPrivKeyResult chan *response
@@ -2269,7 +2528,7 @@ func (c *Client) ImportPubKeyRescan(pubKey string, rescan bool) error {
 // Miscellaneous Functions
 // ***********************
 
-// NOTE: While getinfo is implemented here (in wallet.go), a jaxnetd chain server
+// NOTE: While getinfo is implemented here (in wallet.go), a btcd chain server
 // will respond to getinfo requests as well, excluding any wallet information.
 
 // FutureGetInfoResult is a future promise to deliver the result of a
@@ -2311,13 +2570,265 @@ func (c *Client) GetInfo() (*jaxjson.InfoWalletResult, error) {
 	return c.GetInfoAsync().Receive()
 }
 
+// FutureImportPubKeyResult is a future promise to deliver the result of an
+// WalletCreateFundedPsbt RPC invocation (or an applicable error).
+type FutureWalletCreateFundedPsbtResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// partially signed transaction in PSBT format along with the resulting fee
+// and change output index.
+func (r FutureWalletCreateFundedPsbtResult) Receive() (*jaxjson.WalletCreateFundedPsbtResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a getinfo result object.
+	var psbtRes jaxjson.WalletCreateFundedPsbtResult
+	err = json.Unmarshal(res, &psbtRes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &psbtRes, nil
+}
+
+// WalletCreateFundedPsbtAsync returns an instance of a type that can be used
+// to get the result of the RPC at some future time by invoking the Receive
+// function on the returned instance.
+//
+// See WalletCreateFundedPsbt for the blocking version and more details.
+func (c *Client) WalletCreateFundedPsbtAsync(
+	inputs []jaxjson.PsbtInput, outputs []jaxjson.PsbtOutput, locktime *uint32,
+	options *jaxjson.WalletCreateFundedPsbtOpts, bip32Derivs *bool,
+) FutureWalletCreateFundedPsbtResult {
+	cmd := jaxjson.NewWalletCreateFundedPsbtCmd(inputs, outputs, locktime, options, bip32Derivs)
+	return c.sendCmd(cmd)
+}
+
+// WalletCreateFundedPsbt creates and funds a transaction in the Partially
+// Signed Transaction format. Inputs will be added if supplied inputs are not
+// enough.
+func (c *Client) WalletCreateFundedPsbt(
+	inputs []jaxjson.PsbtInput, outputs []jaxjson.PsbtOutput, locktime *uint32,
+	options *jaxjson.WalletCreateFundedPsbtOpts, bip32Derivs *bool,
+) (*jaxjson.WalletCreateFundedPsbtResult, error) {
+	return c.WalletCreateFundedPsbtAsync(inputs, outputs, locktime, options, bip32Derivs).Receive()
+}
+
+// FutureWalletProcessPsbtResult is a future promise to deliver the result of a
+// WalletCreateFundedPsb RPC invocation (or an applicable error).
+type FutureWalletProcessPsbtResult chan *response
+
+// Receive waits for the response promised by the future and returns an updated
+// PSBT with signed inputs from the wallet and a boolen indicating if the the
+// transaction has a complete set of signatures.
+func (r FutureWalletProcessPsbtResult) Receive() (*jaxjson.WalletProcessPsbtResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a getinfo result object.
+	var psbtRes jaxjson.WalletProcessPsbtResult
+	err = json.Unmarshal(res, &psbtRes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &psbtRes, nil
+}
+
+// WalletProcessPsbtAsync returns an instance of a type that can be used
+// to get the result of the RPC at some future time by invoking the Receive
+// function on the returned instance.
+//
+// See WalletProcessPsbt for the blocking version and more details.
+func (c *Client) WalletProcessPsbtAsync(
+	psbt string, sign *bool, sighashType SigHashType, bip32Derivs *bool,
+) FutureWalletProcessPsbtResult {
+	cmd := jaxjson.NewWalletProcessPsbtCmd(psbt, sign, jaxjson.String(sighashType.String()), bip32Derivs)
+	return c.sendCmd(cmd)
+}
+
+// WalletProcessPsbt updates a PSBT with input information from our wallet and
+// then signs inputs.
+func (c *Client) WalletProcessPsbt(
+	psbt string, sign *bool, sighashType SigHashType, bip32Derivs *bool,
+) (*jaxjson.WalletProcessPsbtResult, error) {
+	return c.WalletProcessPsbtAsync(psbt, sign, sighashType, bip32Derivs).Receive()
+}
+
+// FutureGetWalletInfoResult is a future promise to deliver the result of an
+// GetWalletInfoAsync RPC invocation (or an applicable error).
+type FutureGetWalletInfoResult chan *response
+
+// Receive waits for the response promised by the future and returns the result
+// of wallet state info.
+func (r FutureGetWalletInfoResult) Receive() (*jaxjson.GetWalletInfoResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var getWalletInfoResult jaxjson.GetWalletInfoResult
+	err = json.Unmarshal(res, &getWalletInfoResult)
+	if err != nil {
+		return nil, err
+	}
+	return &getWalletInfoResult, nil
+}
+
+// GetWalletInfoAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See GetWalletInfo for the blocking version and more details.
+func (c *Client) GetWalletInfoAsync() FutureGetWalletInfoResult {
+	cmd := jaxjson.NewGetWalletInfoCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetWalletInfo returns various wallet state info.
+func (c *Client) GetWalletInfo() (*jaxjson.GetWalletInfoResult, error) {
+	return c.GetWalletInfoAsync().Receive()
+}
+
+// FutureBackupWalletResult is a future promise to deliver the result of an
+// BackupWalletAsync RPC invocation (or an applicable error)
+type FutureBackupWalletResult chan *response
+
+// Receive waits for the response promised by the future
+func (r FutureBackupWalletResult) Receive() error {
+	_, err := receiveFuture(r)
+	return err
+}
+
+// BackupWalletAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See BackupWallet for the blocking version and more details.
+func (c *Client) BackupWalletAsync(destination string) FutureBackupWalletResult {
+	return c.sendCmd(jaxjson.NewBackupWalletCmd(destination))
+}
+
+// BackupWallet safely copies current wallet file to destination, which can
+// be a directory or a path with filename
+func (c *Client) BackupWallet(destination string) error {
+	return c.BackupWalletAsync(destination).Receive()
+}
+
+// FutureDumpWalletResult is a future promise to deliver the result of an
+// DumpWallet RPC invocation (or an applicable error)
+type FutureDumpWalletResult chan *response
+
+// Receive waits for the response promised by the future
+func (r FutureDumpWalletResult) Receive() (*jaxjson.DumpWalletResult, error) {
+	bytes, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var res jaxjson.DumpWalletResult
+	err = json.Unmarshal(bytes, &res)
+	return &res, err
+}
+
+// DumpWalletAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See DumpWalletAsync for the blocking version and more details.
+func (c *Client) DumpWalletAsync(destination string) FutureDumpWalletResult {
+	return c.sendCmd(jaxjson.NewDumpWalletCmd(destination))
+}
+
+// DumpWallet dumps all wallet keys in a human-readable format to a server-side file.
+func (c *Client) DumpWallet(destination string) (*jaxjson.DumpWalletResult, error) {
+	return c.DumpWalletAsync(destination).Receive()
+}
+
+// FutureImportWalletResult is a future promise to deliver the result of an
+// ImportWalletAsync RPC invocation (or an applicable error)
+type FutureImportWalletResult chan *response
+
+// Receive waits for the response promised by the future
+func (r FutureImportWalletResult) Receive() error {
+	_, err := receiveFuture(r)
+	return err
+}
+
+// ImportWalletAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See ImportWallet for the blocking version and more details.
+func (c *Client) ImportWalletAsync(filename string) FutureImportWalletResult {
+	return c.sendCmd(jaxjson.NewImportWalletCmd(filename))
+}
+
+// ImportWallet imports keys from a wallet dump file (see DumpWallet).
+func (c *Client) ImportWallet(filename string) error {
+	return c.ImportWalletAsync(filename).Receive()
+}
+
+// FutureUnloadWalletResult is a future promise to deliver the result of an
+// UnloadWalletAsync RPC invocation (or an applicable error)
+type FutureUnloadWalletResult chan *response
+
+// Receive waits for the response promised by the future
+func (r FutureUnloadWalletResult) Receive() error {
+	_, err := receiveFuture(r)
+	return err
+}
+
+// UnloadWalletAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See UnloadWallet for the blocking version and more details.
+func (c *Client) UnloadWalletAsync(walletName *string) FutureUnloadWalletResult {
+	return c.sendCmd(jaxjson.NewUnloadWalletCmd(walletName))
+}
+
+// UnloadWallet unloads the referenced wallet. If the RPC server URL already
+// contains the name of the wallet, like http://127.0.0.1:8332/wallet/<walletname>,
+// the parameter must be nil, or it'll return an error.
+func (c *Client) UnloadWallet(walletName *string) error {
+	return c.UnloadWalletAsync(walletName).Receive()
+}
+
+// FutureLoadWalletResult is a future promise to deliver the result of an
+// LoadWalletAsync RPC invocation (or an applicable error)
+type FutureLoadWalletResult chan *response
+
+// Receive waits for the response promised by the future
+func (r FutureLoadWalletResult) Receive() (*jaxjson.LoadWalletResult, error) {
+	bytes, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+	var result jaxjson.LoadWalletResult
+	err = json.Unmarshal(bytes, &result)
+	return &result, err
+}
+
+// LoadWalletAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See LoadWallet for the blocking version and more details.
+func (c *Client) LoadWalletAsync(walletName string) FutureLoadWalletResult {
+	return c.sendCmd(jaxjson.NewLoadWalletCmd(walletName))
+}
+
+// LoadWallet loads a wallet from a wallet file or directory.
+func (c *Client) LoadWallet(walletName string) (*jaxjson.LoadWalletResult, error) {
+	return c.LoadWalletAsync(walletName).Receive()
+}
+
 // TODO(davec): Implement
-// backupwallet (NYI in btcwallet)
 // encryptwallet (Won't be supported by btcwallet since it's always encrypted)
-// getwalletinfo (NYI in btcwallet or jaxjson)
 // listaddressgroupings (NYI in btcwallet)
 // listreceivedbyaccount (NYI in btcwallet)
-
-// DUMP
-// importwallet (NYI in btcwallet)
-// dumpwallet (NYI in btcwallet)

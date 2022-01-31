@@ -1,6 +1,6 @@
 // Copyright (c) 2014-2017 The btcsuite developers
 // Copyright (c) 2015-2017 The Decred developers
-// Copyright (c) 2020 The JaxNetwork developers
+// Copyright (c) 2020-2022 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -20,12 +20,13 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
-// ErrWebsocketsRequired is an error to describe the condition where the
-// caller is trying to use a websocket-only feature, such as requesting
-// notifications or other websocket requests when the client is
-// configured to run in HTTP POST mode.
-var ErrWebsocketsRequired = errors.New("a websocket connection is required " +
-	"to use this feature")
+var (
+	// ErrWebsocketsRequired is an error to describe the condition where the
+	// caller is trying to use a websocket-only feature, such as requesting
+	// notifications or other websocket requests when the client is
+	// configured to run in HTTP POST mode.
+	ErrWebsocketsRequired = errors.New("a websocket connection is required to use this feature")
+)
 
 // notificationState is used to track the current state of successfully
 // registered notification so the state can be automatically re-established on
@@ -95,15 +96,14 @@ type NotificationHandlers struct {
 	// function is non-nil.
 	//
 	// Deprecated: Use OnFilteredBlockConnected instead.
-	OnBlockConnected func(shardId uint32, hash *chainhash.Hash, height int32, t time.Time)
+	OnBlockConnected func(chainID uint32, hash *chainhash.Hash, height int32, t time.Time)
 
 	// OnFilteredBlockConnected is invoked when a block is connected to the
 	// longest (best) chain.  It will only be invoked if a preceding call to
 	// NotifyBlocks has been made to register for the notification and the
 	// function is non-nil.  Its parameters differ from OnBlockConnected: it
 	// receives the block's height, header, and relevant transactions.
-	OnFilteredBlockConnected func(height int32, header wire.BlockHeader,
-		txs []*jaxutil.Tx)
+	OnFilteredBlockConnected func(chainID uint32, height int32, header wire.BlockHeader, txs []*jaxutil.Tx)
 
 	// OnBlockDisconnected is invoked when a block is disconnected from the
 	// longest (best) chain.  It will only be invoked if a preceding call to
@@ -111,14 +111,14 @@ type NotificationHandlers struct {
 	// function is non-nil.
 	//
 	// Deprecated: Use OnFilteredBlockDisconnected instead.
-	OnBlockDisconnected func(hash *chainhash.Hash, height int32, t time.Time)
+	OnBlockDisconnected func(chainID uint32, hash *chainhash.Hash, height int32, t time.Time)
 
 	// OnFilteredBlockDisconnected is invoked when a block is disconnected
 	// from the longest (best) chain.  It will only be invoked if a
 	// preceding NotifyBlocks has been made to register for the notification
 	// and the call to function is non-nil.  Its parameters differ from
 	// OnBlockDisconnected: it receives the block's height and header.
-	OnFilteredBlockDisconnected func(height int32, header wire.BlockHeader)
+	OnFilteredBlockDisconnected func(chainID uint32, height int32, header wire.BlockHeader)
 
 	// OnRecvTx is invoked when a transaction that receives funds to a
 	// registered address is received into the memory pool and also
@@ -127,7 +127,7 @@ type NotificationHandlers struct {
 	// made to register for the notification and the function is non-nil.
 	//
 	// Deprecated: Use OnRelevantTxAccepted instead.
-	OnRecvTx func(transaction *jaxutil.Tx, details *jaxjson.BlockDetails)
+	OnRecvTx func(chainID uint32, transaction *jaxutil.Tx, details *jaxjson.BlockDetails)
 
 	// OnRedeemingTx is invoked when a transaction that spends a registered
 	// outpoint is received into the memory pool and also connected to the
@@ -141,14 +141,14 @@ type NotificationHandlers struct {
 	// this to invoked indirectly as the result of a NotifyReceived call.
 	//
 	// Deprecated: Use OnRelevantTxAccepted instead.
-	OnRedeemingTx func(transaction *jaxutil.Tx, details *jaxjson.BlockDetails)
+	OnRedeemingTx func(chainID uint32, transaction *jaxutil.Tx, details *jaxjson.BlockDetails)
 
 	// OnRelevantTxAccepted is invoked when an unmined transaction passes
 	// the client's transaction filter.
 	//
 	// NOTE: This is a btcsuite extension ported from
 	// github.com/decred/dcrrpcclient.
-	OnRelevantTxAccepted func(transaction []byte)
+	OnRelevantTxAccepted func(chainID uint32, transaction []byte)
 
 	// OnRescanFinished is invoked after a rescan finishes due to a previous
 	// call to Rescan or RescanEndHeight.  Finished rescans should be
@@ -157,44 +157,44 @@ type NotificationHandlers struct {
 	// notifications after the rescan request has already returned.
 	//
 	// Deprecated: Not used with RescanBlocks.
-	OnRescanFinished func(hash *chainhash.Hash, height int32, blkTime time.Time)
+	OnRescanFinished func(chainID uint32, hash *chainhash.Hash, height int32, blkTime time.Time)
 
 	// OnRescanProgress is invoked periodically when a rescan is underway.
 	// It will only be invoked if a preceding call to Rescan or
 	// RescanEndHeight has been made and the function is non-nil.
 	//
 	// Deprecated: Not used with RescanBlocks.
-	OnRescanProgress func(hash *chainhash.Hash, height int32, blkTime time.Time)
+	OnRescanProgress func(chainID uint32, hash *chainhash.Hash, height int32, blkTime time.Time)
 
 	// OnTxAccepted is invoked when a transaction is accepted into the
 	// memory pool.  It will only be invoked if a preceding call to
 	// NotifyNewTransactions with the verbose flag set to false has been
 	// made to register for the notification and the function is non-nil.
-	OnTxAccepted func(hash *chainhash.Hash, amount jaxutil.Amount)
+	OnTxAccepted func(chainID uint32, hash *chainhash.Hash, amount jaxutil.Amount)
 
 	// OnTxAccepted is invoked when a transaction is accepted into the
 	// memory pool.  It will only be invoked if a preceding call to
 	// NotifyNewTransactions with the verbose flag set to true has been
 	// made to register for the notification and the function is non-nil.
-	OnTxAcceptedVerbose func(txDetails *jaxjson.TxRawResult)
+	OnTxAcceptedVerbose func(chainID uint32, txDetails *jaxjson.TxRawResult)
 
 	// OnBtcdConnected is invoked when a wallet connects or disconnects from
 	// jaxnetd.
 	//
 	// This will only be available when client is connected to a wallet
-	// server such as btcwallet.
-	OnBtcdConnected func(connected bool)
+	// server such as jaxwallet.
+	OnJaxnetdConnected func(chainID uint32, connected bool)
 
 	// OnAccountBalance is invoked with account balance updates.
 	//
 	// This will only be available when speaking to a wallet server
-	// such as btcwallet.
-	OnAccountBalance func(account string, balance jaxutil.Amount, confirmed bool)
+	// such as jaxwallet.
+	OnAccountBalance func(chainID uint32, account string, balance jaxutil.Amount, confirmed bool)
 
 	// OnWalletLockState is invoked when a wallet is locked or unlocked.
 	//
 	// This will only be available when client is connected to a wallet
-	// server such as btcwallet.
+	// server such as jaxwallet.
 	OnWalletLockState func(locked bool)
 
 	// OnUnknownNotification is invoked when an unrecognized notification
@@ -243,16 +243,14 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		blockHeight, blockHeader, transactions, err :=
-			parseFilteredBlockConnectedParams(ntfn.Params, ntfn.ShardID)
+		blockHeight, blockHeader, transactions, err := parseFilteredBlockConnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"connected notification: %v", err)
 			return
 		}
 
-		c.ntfnHandlers.OnFilteredBlockConnected(blockHeight,
-			blockHeader, transactions)
+		c.ntfnHandlers.OnFilteredBlockConnected(ntfn.ShardID, blockHeight, blockHeader, transactions)
 
 	// OnBlockDisconnected
 	case jaxjson.BlockDisconnectedNtfnMethod:
@@ -269,7 +267,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnBlockDisconnected(blockHash, blockHeight, blockTime)
+		c.ntfnHandlers.OnBlockDisconnected(ntfn.ShardID, blockHash, blockHeight, blockTime)
 
 	// OnFilteredBlockDisconnected
 	case jaxjson.FilteredBlockDisconnectedNtfnMethod:
@@ -287,8 +285,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnFilteredBlockDisconnected(blockHeight,
-			blockHeader)
+		c.ntfnHandlers.OnFilteredBlockDisconnected(ntfn.ShardID, blockHeight, blockHeader)
 
 	// OnRecvTx
 	case jaxjson.RecvTxNtfnMethod:
@@ -305,7 +302,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnRecvTx(tx, block)
+		c.ntfnHandlers.OnRecvTx(ntfn.ShardID, tx, block)
 
 	// OnRedeemingTx
 	case jaxjson.RedeemingTxNtfnMethod:
@@ -322,7 +319,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnRedeemingTx(tx, block)
+		c.ntfnHandlers.OnRedeemingTx(ntfn.ShardID, tx, block)
 
 	// OnRelevantTxAccepted
 	case jaxjson.RelevantTxAcceptedNtfnMethod:
@@ -339,7 +336,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnRelevantTxAccepted(transaction)
+		c.ntfnHandlers.OnRelevantTxAccepted(ntfn.ShardID, transaction)
 
 	// OnRescanFinished
 	case jaxjson.RescanFinishedNtfnMethod:
@@ -356,7 +353,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnRescanFinished(hash, height, blkTime)
+		c.ntfnHandlers.OnRescanFinished(ntfn.ShardID, hash, height, blkTime)
 
 	// OnRescanProgress
 	case jaxjson.RescanProgressNtfnMethod:
@@ -373,7 +370,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnRescanProgress(hash, height, blkTime)
+		c.ntfnHandlers.OnRescanProgress(ntfn.ShardID, hash, height, blkTime)
 
 	// OnTxAccepted
 	case jaxjson.TxAcceptedNtfnMethod:
@@ -390,7 +387,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnTxAccepted(hash, amt)
+		c.ntfnHandlers.OnTxAccepted(ntfn.ShardID, hash, amt)
 
 	// OnTxAcceptedVerbose
 	case jaxjson.TxAcceptedVerboseNtfnMethod:
@@ -407,13 +404,13 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnTxAcceptedVerbose(rawTx)
+		c.ntfnHandlers.OnTxAcceptedVerbose(ntfn.ShardID, rawTx)
 
 	// OnBtcdConnected
-	case jaxjson.BtcdConnectedNtfnMethod:
+	case jaxjson.JaxnetdConnectedNtfnMethod:
 		// Ignore the notification if the client is not interested in
 		// it.
-		if c.ntfnHandlers.OnBtcdConnected == nil {
+		if c.ntfnHandlers.OnJaxnetdConnected == nil {
 			return
 		}
 
@@ -424,7 +421,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnBtcdConnected(connected)
+		c.ntfnHandlers.OnJaxnetdConnected(ntfn.ShardID, connected)
 
 	// OnAccountBalance
 	case jaxjson.AccountBalanceNtfnMethod:
@@ -441,7 +438,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		c.ntfnHandlers.OnAccountBalance(account, bal, conf)
+		c.ntfnHandlers.OnAccountBalance(ntfn.ShardID, account, bal, conf)
 
 	// OnWalletLockState
 	case jaxjson.WalletLockStateNtfnMethod:
@@ -485,9 +482,7 @@ func (e wrongNumParams) Error() string {
 
 // parseChainNtfnParams parses out the block hash and height from the parameters
 // of blockconnected and blockdisconnected notifications.
-func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash,
-	int32, time.Time, error) {
-
+func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash, int32, time.Time, error) {
 	if len(params) != 3 {
 		return nil, 0, time.Time{}, wrongNumParams(len(params))
 	}
@@ -778,7 +773,7 @@ func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*jaxjson.TxRawR
 }
 
 // parseBtcdConnectedNtfnParams parses out the connection status of jaxnetd
-// and btcwallet from the parameters of a jaxnetdconnected notification.
+// and jaxwallet from the parameters of a jaxnetdconnected notification.
 func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 	if len(params) != 1 {
 		return false, wrongNumParams(len(params))

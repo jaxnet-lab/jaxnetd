@@ -20,26 +20,25 @@ func main() {
 	// for notifications.  See the documentation of the rpcclient
 	// NotificationHandlers type for more details about each handler.
 	ntfnHandlers := rpcclient.NotificationHandlers{
-		OnAccountBalance: func(account string, balance jaxutil.Amount, confirmed bool) {
-			log.Printf("New balance for account %s: %v", account,
-				balance)
+		OnAccountBalance: func(chainID uint32, account string, balance jaxutil.Amount, confirmed bool) {
+			log.Printf("New balance for account %s: %v", account, balance)
 		},
 	}
 
-	// Connect to local btcwallet RPC server using websockets.
-	//certHomeDir := jaxutil.AppDataDir("btcwallet", false)
-	//certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
-	//if err != nil {
+	// Connect to local jaxwallet RPC server using websockets.
+	// certHomeDir := jaxutil.AppDataDir("jaxwallet", false)
+	// certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
+	// if err != nil {
 	//	log.Fatal(err)
-	//}
+	// }
 
 	connCfg := &rpcclient.ConnConfig{
-		Endpoint:     "ws",
-		Host:         "0.0.0.0:18444",
-		User:         "somerpc",
-		Pass:         "somerpc",
-		DisableTLS:   true, // Bitcoin core does not provide TLS by default
-		//Certificates: certs,
+		Endpoint:   "ws",
+		Host:       "0.0.0.0:18444",
+		User:       "somerpc",
+		Pass:       "somerpc",
+		DisableTLS: true, // Bitcoin core does not provide TLS by default
+		// Certificates: certs,
 	}
 
 	client, err := rpcclient.New(connCfg, &ntfnHandlers)
