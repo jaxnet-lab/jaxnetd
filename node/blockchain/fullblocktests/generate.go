@@ -309,8 +309,8 @@ func uniqueOpReturnScript() []byte {
 // createCoinbaseTx returns a coinbase transaction paying an appropriate
 // subsidy based on the passed block height.  The coinbase signature script
 // conforms to the requirements of version 2 blocks.
-func (g *testGenerator) createCoinbaseTx(blockHeight int32) *wire.MsgTx {
-	reward := g.blockGen.CalcBlockSubsidy(blockHeight, g.tip.Header)
+func (g *testGenerator) createCoinbaseTx(blockHeight int32, difficulty uint32) *wire.MsgTx {
+	reward := g.blockGen.CalcBlockSubsidy(blockHeight, difficulty, g.tip.Header)
 
 	tx, _ := chaindata.CreateJaxCoinbaseTx(reward, 0, blockHeight,
 		g.chainCtx.ShardID(), g.miner, false, g.chainCtx.IsBeacon())
@@ -554,7 +554,9 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	// Create coinbase transaction for the block using any additional
 	// subsidy if specified.
 	nextHeight := g.tipHeight + 1
-	coinbaseTx := g.createCoinbaseTx(nextHeight)
+	powParams := g.chainCtx.Params().PowParams
+
+	coinbaseTx := g.createCoinbaseTx(nextHeight, powParams.PowLimitBits)
 	txns := []*wire.MsgTx{coinbaseTx}
 	if spend != nil {
 		// Create the transaction with a fee of 1 atom for the
@@ -584,7 +586,6 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 		ts = g.tip.Header.Timestamp().Add(time.Second)
 	}
 
-	powParams := g.chainCtx.Params().PowParams
 	header, _ := g.blockGen.NewBlockHeader(1,
 		nextHeight,
 		g.mmr.CurrentRoot(),
@@ -922,7 +923,7 @@ func newBeaconBlockGen(params *chaincfg.Params) chaindata.ChainBlockGenerator {
 // contains additional information about the expected result, however that
 // information can be ignored when doing comparison tests between two
 // independent versions over the peer-to-peer network.
-//nolint
+// nolint
 func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestInstance, err error) {
 	// In order to simplify the generation code which really should never
 	// fail unless the test code itself is broken, panics are used
@@ -1636,7 +1637,7 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	//   ... -> b43(13)
 	//                 \-> b50(14)
 	g.setTip("b43")
-	coinbaseTx := g.createCoinbaseTx(g.tipHeight + 1)
+	coinbaseTx := g.createCoinbaseTx(g.tipHeight+1, chainCtx.Params().PowParams.PowLimitBits)
 	g.nextBlock("b50", outs[14], additionalTx(coinbaseTx))
 	rejected(chaindata.ErrMultipleCoinbases)
 
@@ -1991,7 +1992,7 @@ func Generate(params *chaincfg.Params, includeLargeReorg bool) (tests [][]TestIn
 	g.setTip("b65")
 	g.nextBlock("b69", outs[20])
 	// todo remove?
-	//g.nextBlock("b69", outs[20], additionalCoinbase(10), additionalSpendFee(10))
+	// g.nextBlock("b69", outs[20], additionalCoinbase(10), additionalSpendFee(10))
 	// todo looks like against JaxNet protocol
 	accepted()
 

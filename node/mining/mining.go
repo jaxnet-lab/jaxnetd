@@ -363,10 +363,6 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	best := g.blockChain.BestSnapshot()
 	nextBlockHeight := best.Height + 1
 	lastBlock, _ := g.blockChain.BlockByHash(&best.Hash)
-	txsCollection, err := g.collectTxsForBlock(payToAddress, nextBlockHeight, burnReward, lastBlock.MsgBlock().Header)
-	if err != nil {
-		return nil, err
-	}
 
 	// Calculate the required difficulty for the block.  The timestamp
 	// is potentially adjusted to ensure it comes after the median time of
@@ -380,6 +376,10 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 	// rule change deployments.
 	nextBlockVersion := g.blockChain.CalcNextBlockVersion()
 
+	txsCollection, err := g.collectTxsForBlock(payToAddress, nextBlockHeight, reqDifficulty, burnReward, lastBlock.MsgBlock().Header)
+	if err != nil {
+		return nil, err
+	}
 	// Create a new block ready to be solved.
 	merkles := chaindata.BuildMerkleTreeStore(txsCollection.BlockTxns, false)
 
@@ -436,7 +436,7 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 
 // nolint: forcetypeassert
 func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32,
-	burnRewardFlags int, prevHeader wire.BlockHeader) (*blockTxsCollection, error) {
+	difficulty uint32, burnRewardFlags int, prevHeader wire.BlockHeader) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -446,7 +446,7 @@ func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, next
 	// same value to the same public key address would otherwise be an
 	// identical transaction for block version 1).
 
-	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, prevHeader)
+	reward := g.blockChain.ChainBlockGenerator().CalcBlockSubsidy(nextHeight, difficulty, prevHeader)
 	burnReward := false
 	switch g.chainCtx.IsBeacon() {
 	case true:

@@ -375,7 +375,7 @@ func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxuti
 		totalSatoshiOut += txOut.Value
 	}
 
-	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Header())
+	reward := b.blockGen.CalcBlockSubsidy(node.Height(), node.Bits(), node.Header())
 
 	expectedSatoshiOut := reward + totalFees
 	if totalSatoshiOut > expectedSatoshiOut {

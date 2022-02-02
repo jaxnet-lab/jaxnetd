@@ -7,6 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.6]
+
+- Configured packaging and publishing
+- Calculate a new difficulty before the coinbase creation and pass difficulty as `CalcBlockSubsidy` argument.
+
 ## [0.4.3]
 
 - Replaced standard `sha256` by  [sha256-simd](https://github.com/minio/sha256-simd).
@@ -114,6 +119,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Improve and extend RPC Api;
 - Added `jaxutils/txmodels` and `jaxutils/txutils` packages for building transactions;
 - Introduces `zerolog` for structured logging and `prometheus` for monitoring.
+
+[0.4.6]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.6
+
+[0.4.4]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.4
 
 [0.4.3]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.3
 

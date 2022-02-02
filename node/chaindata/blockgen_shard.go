@@ -34,7 +34,7 @@ type ChainBlockGenerator interface {
 
 	ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error
 
-	CalcBlockSubsidy(height int32, header wire.BlockHeader) int64
+	CalcBlockSubsidy(height int32, difficulty uint32, header wire.BlockHeader) int64
 }
 
 type BeaconBlockProvider interface {
@@ -107,14 +107,14 @@ func (c *ShardBlockGenerator) ValidateMergeMiningData(header wire.BlockHeader) e
 	return nil
 }
 
-//nolint: forcetypeassert
+// nolint: forcetypeassert
 func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height int32) error {
 	err := c.ValidateMergeMiningData(block.Header)
 	if err != nil {
 		return err
 	}
 
-	expectedReward := c.CalcBlockSubsidy(height, block.Header)
+	expectedReward := c.CalcBlockSubsidy(height, block.Header.Bits(), block.Header)
 
 	shardHeader := block.Header.(*wire.ShardHeader)
 	shardCoinbaseTx := block.Transactions[0]
@@ -123,11 +123,11 @@ func (c *ShardBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height i
 }
 
 // nolint: revive
-func (c *ShardBlockGenerator) CalcBlockSubsidy(height int32, header wire.BlockHeader) int64 {
+func (c *ShardBlockGenerator) CalcBlockSubsidy(height int32, difficulty uint32, header wire.BlockHeader) int64 {
 	relativeBeaconHeight := c.ctx.GenesisBeaconHeight() + (height / 16)
 	kVal := c.beacon.CalcKForHeight(relativeBeaconHeight)
 
-	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), header.Bits(), kVal)
+	reward := CalcShardBlockSubsidy(header.MergeMiningNumber(), difficulty, kVal)
 
 	if c.ctx.Params().Net != wire.MainNet && reward < chaincfg.ShardTestnetBaseReward*chaincfg.JuroPerJAXCoin {
 		return chaincfg.ShardTestnetBaseReward * chaincfg.JuroPerJAXCoin
