@@ -114,6 +114,7 @@ func (bv BVersion) UnsetExpansionApproved() BVersion {
 }
 
 func (bv BVersion) ExpansionMade() bool {
+	// 111 & 100 = 100
 	return bv&ExpansionMade == ExpansionMade
 }
 
