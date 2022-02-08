@@ -4,6 +4,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 // nolint: forcetypeassert
+
 package rpc
 
 // Commands that are available to a limited user

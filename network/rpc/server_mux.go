@@ -57,7 +57,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 
-		server.logger.Info().Msg("Upgrade t o websocket")
+		server.logger.Trace().Msg("Upgrade to websocket")
 		// Attempt to upgrade the connection to a websocket connection
 		// using the default size for read/write bufferserver.
 		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
@@ -69,7 +69,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 		_, _, _ = ws, authenticated, isAdmin
-		server.logger.Info().Msg("WebsocketHandler")
+		server.logger.Trace().Msg("WebsocketHandler")
 		server.WebsocketHandler(ws, r.RemoteAddr, authenticated, isAdmin)
 	}
 }

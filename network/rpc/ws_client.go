@@ -239,7 +239,9 @@ out:
 			c.SendMessage(reply, nil)
 			continue
 		}
+
 		c.manager.logger.Debug().Msg(fmt.Sprintf("Received command <%s> from %s for shard %d", cmd.Method, c.addr, cmd.ShardID))
+
 		// Check auth.  The client is immediately disconnected if the
 		// first request of an unauthentiated websocket client is not
 		// the authenticate request, an authenticate request is received
@@ -383,7 +385,7 @@ func (c *wsClient) serviceRequest(r *ParsedRPCCmd) {
 // manager) which are queuing the data.  The data is passed on to outHandler to
 // actually be written.  It must be run as a goroutine.
 func (c *wsClient) notificationQueueHandler() {
-	c.manager.logger.Info().Msg("Run Handler")
+	c.manager.logger.Debug().Msg("Run Handler")
 	ntfnSentChan := make(chan bool, 1) // nonblocking sync
 
 	// pendingNtfns is used as a queue for notifications that are ready to
@@ -582,15 +584,17 @@ func (c *wsClient) handleRequestScope(r *ParsedRPCCmd) (interface{}, error) {
 	switch r.Scope {
 	case "node":
 		mux = c.manager.server.nodeRPC.Mux
-	case "beacon", "chain":
-		mux = c.manager.server.beaconRPC.Mux
-	case "shard":
-		shardRPC, ok := c.manager.server.shardRPCs[r.ShardID]
-		if !ok {
-			log.Debug().Msgf("Not existing shardID in RPC request %d", r.ShardID)
-			return nil, fmt.Errorf("unknown shardID %d", r.ShardID)
+	case "beacon", "shard", "chain":
+		if r.ShardID == 0 {
+			mux = c.manager.server.beaconRPC.Mux
+		} else {
+			shardRPC, ok := c.manager.server.shardRPCs[r.ShardID]
+			if !ok {
+				log.Debug().Msgf("Not existing shardID in RPC request %d", r.ShardID)
+				return nil, fmt.Errorf("unknown shardID %d", r.ShardID)
+			}
+			mux = shardRPC.Mux
 		}
-		mux = shardRPC.Mux
 	default:
 		log.Debug().Msgf("Unknown RPC request scope %s", r.Scope)
 		return nil, fmt.Errorf("unknown scope %s", r.Scope)

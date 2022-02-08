@@ -99,6 +99,7 @@ type sendPostDetails struct {
 // detect, interpret, and deliver a reply to it.
 type jsonRequest struct {
 	id             uint64
+	shardID        uint32
 	method         string
 	scope          string
 	cmd            interface{}
@@ -979,6 +980,7 @@ func (c *Client) sendCmd(cmd interface{}) chan *response {
 	responseChan := make(chan *response, 1)
 	jReq := &jsonRequest{
 		id:             id,
+		shardID:        shardID,
 		method:         method.Method,
 		scope:          method.Scope,
 		cmd:            cmd,
@@ -1574,8 +1576,7 @@ func (c *Client) BackendVersion() (BackendVersion, error) {
 	// we actually ran into an error.
 	case *jaxjson.RPCError:
 		if err.Code != jaxjson.ErrRPCMethodNotFound.Code {
-			return 0, fmt.Errorf("unable to detect jaxnetd version: "+
-				"%v", err)
+			return 0, fmt.Errorf("unable to detect jaxnetd version: %v", err)
 		}
 
 	default:

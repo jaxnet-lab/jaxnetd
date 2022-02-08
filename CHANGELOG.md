@@ -7,6 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.7]
+- Repaired WebSocket handlers
+
 ## [0.4.6]
 
 - Configured packaging and publishing

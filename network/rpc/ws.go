@@ -50,7 +50,7 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 	}
 
 	// Limit max number of websocket clients.
-	server.logger.Info().Str("remote", remoteAddr).Msg("New websocket client")
+	server.logger.Debug().Str("remote", remoteAddr).Msg("New websocket client")
 	server.logger.Trace().Msg(fmt.Sprintf("%v", server.wsManager))
 
 	server.logger.Debug().Msg("Get num Client")

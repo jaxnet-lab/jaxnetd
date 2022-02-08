@@ -61,6 +61,7 @@ func (c *Client) RawRequestAsync(shardID uint32, scope, method string, params []
 	responseChan := make(chan *response, 1)
 	jReq := &jsonRequest{
 		id:             id,
+		shardID:        shardID,
 		method:         method,
 		scope:          scope,
 		cmd:            nil,

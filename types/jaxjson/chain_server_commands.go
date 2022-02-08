@@ -351,36 +351,36 @@ func (t *TemplateRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// DEPRECATED
 // GetBeaconBlockTemplateCmd defines the getBeaconBlockTemplate JSON-RPC command.
+// DEPRECATED: use GetBlockTemplateCmd
 type GetBeaconBlockTemplateCmd struct {
 	Request *TemplateRequest
 }
 
-// DEPRECATED
 // NewGetBeaconBlockTemplateCmd returns a new instance which can be used to issue a
 // getblocktemplate JSON-RPC command.
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
+// DEPRECATED: use NewGetBlockTemplateCmd
 func NewGetBeaconBlockTemplateCmd(request *TemplateRequest) *GetBeaconBlockTemplateCmd {
 	return &GetBeaconBlockTemplateCmd{
 		Request: request,
 	}
 }
 
-// DEPRECATED
 // GetShardBlockTemplateCmd defines the getShardBlockTemplate JSON-RPC command.
+// DEPRECATED: use GetBlockTemplateCmd
 type GetShardBlockTemplateCmd struct {
 	Request *TemplateRequest
 }
 
-// DEPRECATED
 // NewGetShardBlockTemplateCmd returns a new instance which can be used to issue a
 // getblocktemplate JSON-RPC command.
 //
 // The parameters which are pointers indicate they are optional.  Passing nil
 // for optional parameters will use the default value.
+// DEPRECATED: use NewGetBlockTemplateCmd
 func NewGetShardBlockTemplateCmd(request *TemplateRequest) *GetShardBlockTemplateCmd {
 	return &GetShardBlockTemplateCmd{
 		Request: request,

@@ -329,8 +329,8 @@ func (c *Client) GetBeaconBlockTemplateAsync(reqData *jaxjson.TemplateRequest) F
 	return c.ForBeacon().sendCmd(cmd)
 }
 
-// DEPRECATED will be removed in next release. Use the GetBlockTemplate insead.
 // GetBeaconBlockTemplate deals with generating and returning block templates to the caller.
+// DEPRECATED: use the GetBlockTemplate insead.
 func (c *Client) GetBeaconBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBlockTemplateResult, error) {
 	return c.GetBeaconBlockTemplateAsync(reqData).Receive()
 }

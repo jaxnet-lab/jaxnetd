@@ -268,9 +268,9 @@ func (h *wsHandler) handleRescan(chain *cprovider.ChainProvider, wsc *wsClient, 
 
 	numAddrs := len(cmd.Addresses)
 	if numAddrs == 1 {
-		log.Info().Msg("Beginning rescan for 1 address")
+		log.Debug().Msg("Beginning rescan for 1 address")
 	} else {
-		log.Info().Msgf("Beginning rescan for %d addresses", numAddrs)
+		log.Debug().Msgf("Beginning rescan for %d addresses", numAddrs)
 	}
 
 	// Build lookup maps.
@@ -336,7 +336,7 @@ func (h *wsHandler) handleRescan(chain *cprovider.ChainProvider, wsc *wsClient, 
 			return nil, nil
 		}
 	} else {
-		log.Info().Msgf("Skipping rescan as client has no addrs/utxos")
+		log.Debug().Msgf("Skipping rescan as client has no addrs/utxos")
 
 		// If we didn't actually do a rescan, then we'll give the
 		// client our best known block within the final rescan finished
@@ -371,7 +371,7 @@ func (h *wsHandler) handleRescan(chain *cprovider.ChainProvider, wsc *wsClient, 
 		_ = wsc.QueueNotification(mn)
 	}
 
-	log.Info().Msg("Finished rescan")
+	log.Debug().Msg("Finished rescan")
 	return nil, nil
 }
 
