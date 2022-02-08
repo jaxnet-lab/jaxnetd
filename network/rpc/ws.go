@@ -51,19 +51,19 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 
 	// Limit max number of websocket clients.
 	server.logger.Info().Str("remote", remoteAddr).Msg("New websocket client")
-	server.logger.Info().Msg(fmt.Sprintf("%v", server.wsManager))
+	server.logger.Trace().Msg(fmt.Sprintf("%v", server.wsManager))
 
-	server.logger.Info().Msg("Get num Client")
+	server.logger.Debug().Msg("Get num Client")
 	if server.wsManager.NumClients()+1 > server.cfg.MaxWebsockets {
 
-		server.logger.Info().Str("remote", remoteAddr).Int("MaxNumber", server.cfg.MaxWebsockets).Msg("Max websocket clients exceeded")
+		server.logger.Debug().Str("remote", remoteAddr).Int("MaxNumber", server.cfg.MaxWebsockets).Msg("Max websocket clients exceeded")
 		if err := conn.Close(); err != nil {
 			log.Error().Err(err).Msg("cannot close connection")
 		}
 		return
 	}
 
-	server.logger.Info().Msg("Create new client")
+	server.logger.Debug().Msg("Create new client")
 	// Create a new websocket client to handle the new websocket connection
 	// and wait for it to shutdown.  Once it has shutdown (and hence
 	// disconnected), remove it and any notifications it registered for.
@@ -75,22 +75,22 @@ func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr s
 		}
 		return
 	}
-	server.logger.Info().Msg("Register client")
+	server.logger.Debug().Msg("Register client")
 	server.wsManager.AddClient(client)
-	server.logger.Info().Msg("Start client")
+	server.logger.Debug().Msg("Start client")
 	client.Start()
-	server.logger.Info().Msg("Wait shut down")
+	server.logger.Debug().Msg("Wait shut down")
 	client.WaitForShutdown()
-	server.logger.Info().Msg("Unregister client")
+	server.logger.Debug().Msg("Unregister client")
 	server.wsManager.RemoveClient(client)
-	server.logger.Info().Str("remote", remoteAddr).Msg("Disconnected websocket client")
+	server.logger.Debug().Str("remote", remoteAddr).Msg("Disconnected websocket client")
 }
 
 type IWebsocketManager interface {
 	Start(ctx context.Context)
 }
 
-// wsNotificationManager is a connection and notification manager used for
+// WsManager is a connection and notification manager used for
 // websockets.  It allows websocket clients to register for notifications they
 // are interested in.  When an event happens elsewhere in the code such as
 // transactions being added to the memory pool or block connects/disconnects,
@@ -118,7 +118,7 @@ type WsManager struct {
 
 const notificationChanLen = 1000
 
-// newWsNotificationManager returns a new notification manager ready for use.
+// WebSocketManager returns a new notification manager ready for use.
 // See wsNotificationManager for more details.
 func WebSocketManager(server *MultiChainRPC) *WsManager {
 	if wsManager != nil {
@@ -292,7 +292,7 @@ type wsTransactionNotification struct {
 	Chain  *cprovider.ChainProvider
 }
 
-//// Notification types
+// // Notification types
 type (
 	notificationBlockConnected      wsBlockNotification
 	notificationBlockDisconnected   wsBlockNotification

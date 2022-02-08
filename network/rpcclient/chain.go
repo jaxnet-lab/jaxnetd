@@ -73,9 +73,10 @@ func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
 	if err != nil {
 		return nil, err
 	}
-	return c.RawRequest(cmd, []json.RawMessage{
-		hashJSON, verboseJSON, verboseTxJSON,
-	})
+	return c.RawRequest(0, "", cmd,
+		[]json.RawMessage{
+			hashJSON, verboseJSON, verboseTxJSON,
+		})
 }
 
 // waitForGetBlockRes waits for the response of a getblock request. If the

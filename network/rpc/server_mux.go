@@ -25,8 +25,8 @@ type MultiChainRPC struct {
 	wsManager   *WsManager
 }
 
-func NewMultiChainRPC(config *Config, logger zerolog.Logger,
-	nodeRPC *NodeRPC, beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
+func NewMultiChainRPC(config *Config, nodeRPC *NodeRPC,
+	beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		ServerCore: NewRPCCore(config),
 		nodeRPC:    nodeRPC,
@@ -57,7 +57,7 @@ func (server *MultiChainRPC) WSHandleFunc() func(w http.ResponseWriter, r *http.
 			return
 		}
 
-		server.logger.Info().Msg("Upgrade To websocket")
+		server.logger.Info().Msg("Upgrade t o websocket")
 		// Attempt to upgrade the connection to a websocket connection
 		// using the default size for read/write bufferserver.
 		ws, err := websocket.Upgrade(w, r, nil, 0, 0)

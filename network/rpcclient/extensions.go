@@ -81,20 +81,20 @@ func (r FutureCreateEncryptedWalletResult) Receive() error {
 //
 // See CreateEncryptedWallet for the blocking version and more details.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a jaxwallet extension.
 func (c *Client) CreateEncryptedWalletAsync(passphrase string) FutureCreateEncryptedWalletResult {
 	cmd := jaxjson.NewCreateEncryptedWalletCmd(passphrase)
 	return c.sendCmd(cmd)
 }
 
 // CreateEncryptedWallet requests the creation of an encrypted wallet.  Wallets
-// managed by btcwallet are only written to disk with encrypted private keys,
+// managed by jaxwallet are only written to disk with encrypted private keys,
 // and generating wallets on the fly is impossible as it requires user input for
 // the encryption passphrase.  This RPC specifies the passphrase and instructs
 // the wallet creation.  This may error if a wallet is already opened, or the
 // new wallet cannot be written to disk.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a jaxwallet extension.
 func (c *Client) CreateEncryptedWallet(passphrase string) error {
 	return c.CreateEncryptedWalletAsync(passphrase).Receive()
 }
@@ -140,7 +140,7 @@ func (c *Client) ListAddressTransactionsAsync(addresses []jaxutil.Address, accou
 // ListAddressTransactions returns information about all transactions associated
 // with the provided addresses.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a jaxwallet extension.
 func (c *Client) ListAddressTransactions(addresses []jaxutil.Address, account string) ([]jaxjson.ListTransactionsResult, error) {
 	return c.ListAddressTransactionsAsync(addresses, account).Receive()
 }
@@ -287,7 +287,7 @@ func (r FutureExportWatchingWalletResult) Receive() ([]byte, []byte, error) {
 //
 // See ExportWatchingWallet for the blocking version and more details.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a jaxwallet extension.
 func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingWalletResult {
 	cmd := jaxjson.NewExportWatchingWalletCmd(&account, jaxjson.Bool(true))
 	return c.sendCmd(cmd)
@@ -295,10 +295,10 @@ func (c *Client) ExportWatchingWalletAsync(account string) FutureExportWatchingW
 
 // ExportWatchingWallet returns the raw bytes for a watching-only version of
 // wallet.bin and tx.bin, respectively, for the specified account that can be
-// used by btcwallet to enable a wallet which does not have the private keys
+// used by jaxwallet to enable a wallet which does not have the private keys
 // necessary to spend funds.
 //
-// NOTE: This is a btcwallet extension.
+// NOTE: This is a jaxwallet extension.
 func (c *Client) ExportWatchingWallet(account string) ([]byte, []byte, error) {
 	return c.ExportWatchingWalletAsync(account).Receive()
 }

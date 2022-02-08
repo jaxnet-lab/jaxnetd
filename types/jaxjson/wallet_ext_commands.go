@@ -4,9 +4,21 @@
 // license that can be found in the LICENSE file.
 
 // NOTE: This file is intended to house the RPC commands that are supported by
-// a wallet server with btcwallet extensions.
+// a wallet server with jaxwallet extensions.
 
 package jaxjson
+
+func init() {
+	// The commands in this file are only usable with a wallet server.
+	flags := UFWalletOnly
+
+	MustRegisterCmd("wallet", "createnewaccount", (*CreateNewAccountCmd)(nil), flags)
+	MustRegisterCmd("wallet", "dumpwallet", (*DumpWalletCmd)(nil), flags)
+	MustRegisterCmd("wallet", "importaddress", (*ImportAddressCmd)(nil), flags)
+	MustRegisterCmd("wallet", "importpubkey", (*ImportPubKeyCmd)(nil), flags)
+	MustRegisterCmd("wallet", "importwallet", (*ImportWalletCmd)(nil), flags)
+	MustRegisterCmd("wallet", "renameaccount", (*RenameAccountCmd)(nil), flags)
+}
 
 // CreateNewAccountCmd defines the createnewaccount JSON-RPC command.
 type CreateNewAccountCmd struct {
@@ -92,16 +104,4 @@ func NewRenameAccountCmd(oldAccount, newAccount string) *RenameAccountCmd {
 		OldAccount: oldAccount,
 		NewAccount: newAccount,
 	}
-}
-
-func init() {
-	// The commands in this file are only usable with a wallet server.
-	flags := UFWalletOnly
-
-	MustRegisterCmd("wallet", "createnewaccount", (*CreateNewAccountCmd)(nil), flags)
-	MustRegisterCmd("wallet", "dumpwallet", (*DumpWalletCmd)(nil), flags)
-	MustRegisterCmd("wallet", "importaddress", (*ImportAddressCmd)(nil), flags)
-	MustRegisterCmd("wallet", "importpubkey", (*ImportPubKeyCmd)(nil), flags)
-	MustRegisterCmd("wallet", "importwallet", (*ImportWalletCmd)(nil), flags)
-	MustRegisterCmd("wallet", "renameaccount", (*RenameAccountCmd)(nil), flags)
 }

@@ -15,7 +15,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 )
 
-// TestBtcWalletExtCmds tests all of the btcwallet extended commands marshal and
+// TestBtcWalletExtCmds tests all of the jaxwallet extended commands marshal and
 // unmarshal into valid results include handling of optional fields being
 // omitted in the marshalled command, while optional fields with defaults have
 // the default assigned on unmarshalled commands.

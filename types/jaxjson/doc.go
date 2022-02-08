@@ -23,9 +23,8 @@ discussed below is doing under the hood.
 
 As defined by the JSON-RPC spec, there are effectively two forms of messages on
 the wire:
-
   - Request Objects
-    {"jsonrpc":"1.0","id":"SOMEID","method":"SOMEMETHOD","params":[SOMEPARAMS]}
+    {"jsonrpc":"1.0","id":"SOMEID","scope":"SOMESCOPE","method":"SOMEMETHOD","shard_id":SOMEUINT,"params":[SOMEPARAMS]}
     NOTE: Notifications are the same format except the id field is null.
 
   - Response Objects

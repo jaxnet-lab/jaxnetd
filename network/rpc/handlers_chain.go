@@ -297,7 +297,7 @@ func (server *CommonChainRPC) handleUnimplemented(ctx CmdCtx) (interface{}, erro
 
 // handleAskWallet is the handler for commands that are recognized as valid, but
 // are unable to answer correctly since it involves wallet state.
-// These commands will be implemented in btcwallet.
+// These commands will be implemented in jaxwallet.
 // nolint: unused
 func (server *CommonChainRPC) handleAskWallet(ctx CmdCtx) (interface{}, error) {
 	return nil, ErrRPCNoWallet

@@ -172,12 +172,20 @@ func (k *ExtendedKey) IsPrivate() bool {
 	return k.isPrivate
 }
 
+func (k *ExtendedKey) Version() []byte {
+	return k.version
+}
+
 // Depth returns the current derivation level with respect to the root.
 //
 // The root key has depth zero, and the field has a maximum of 255 due to
 // how depth is serialized.
 func (k *ExtendedKey) Depth() uint8 {
 	return k.depth
+}
+
+func (k *ExtendedKey) ChildIndex() uint32 {
+	return k.childNum
 }
 
 // ParentFingerprint returns a fingerprint of the parent extended key from which
@@ -356,6 +364,36 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 	// This is the function N((k,c)) -> (K, c) from [BIP32].
 	return NewExtendedKey(version, k.pubKeyBytes(), k.chainCode, k.parentFP,
 		k.depth, k.childNum, false), nil
+}
+
+// CloneWithVersion returns a new extended key cloned from this extended key,
+// but using the provided HD version bytes. The version must be a private HD
+// key ID for an extended private key, and a public HD key ID for an extended
+// public key.
+//
+// This method creates a new copy and therefore does not mutate the original
+// extended key instance.
+//
+// Unlike Neuter(), this does NOT convert an extended private key to an
+// extended public key. It is particularly useful for converting between
+// standard BIP0032 extended keys (serializable to xprv/xpub) and keys based
+// on the SLIP132 standard (serializable to yprv/ypub, zprv/zpub, etc.).
+//
+// References:
+//   [SLIP132]: SLIP-0132 - Registered HD version bytes for BIP-0032
+//   https://github.com/satoshilabs/slips/blob/master/slip-0132.md
+func (k *ExtendedKey) CloneWithVersion(version []byte) (*ExtendedKey, error) {
+	if len(version) != 4 {
+		// TODO: The semantically correct error to return here is
+		//  ErrInvalidHDKeyID (introduced in btcsuite/btcd#1617). Update the
+		//  error type once available in a stable btcd / chaincfg release.
+		return nil, chaincfg.ErrUnknownHDKeyID
+	}
+
+	// Initialize a new extended key instance with the same fields as the
+	// current extended private/public key and the provided HD version bytes.
+	return NewExtendedKey(version, k.key, k.chainCode, k.parentFP,
+		k.depth, k.childNum, k.isPrivate), nil
 }
 
 // ECPubKey converts the extended key to a btcec public key and returns it.
