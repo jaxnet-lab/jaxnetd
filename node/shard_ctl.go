@@ -41,7 +41,7 @@ func (index *Index) AddShard(block *jaxutil.Block, opts p2p.ListenOpts) uint32 {
 	if index.LastBeaconHeight < block.Height() {
 		index.LastBeaconHeight = block.Height()
 	}
-	shardID := block.MsgBlock().Header.BeaconHeader().Shards()
+	shardID := index.LastShardID + 1
 	if index.LastShardID < shardID {
 		index.LastShardID = shardID
 	}

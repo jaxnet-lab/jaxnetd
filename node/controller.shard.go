@@ -141,7 +141,7 @@ func (chainCtl *chainController) shardsAutorunCallback(not *blockchain.Notificat
 
 	opts := p2p.ListenOpts{}
 	if err := opts.Update(chainCtl.cfg.Node.P2P.Listeners,
-		block.MsgBlock().Header.BeaconHeader().Shards(), // todo: change this
+		chainCtl.shardsIndex.LastShardID+1,
 		chainCtl.cfg.Node.P2P.ShardDefaultPort); err != nil {
 		chainCtl.logger.Error().Err(err).Msg("unable to get free port")
 	}
@@ -289,6 +289,6 @@ func (chainCtl *chainController) saveNewShard(block *jaxutil.Block) error {
 			return err
 		}
 
-		return chaindata.DBStoreShardGenesisInfo(tx, block.MsgBlock().Header.BeaconHeader().Shards(), block.Height(), block.Hash(), serialID)
+		return chaindata.DBStoreShardGenesisInfo(tx, chainCtl.shardsIndex.LastShardID+1, block.Height(), block.Hash(), serialID)
 	})
 }
