@@ -1,4 +1,10 @@
-# JAX.Network - core difference and feature description
+# JAX.Network
+
+Protocol and feature description
+
+> THIS DOCUMENT IS NOT FINISHED YET
+> 
+> some data and information can be outdated
 
 ## Table of Content
 
@@ -16,10 +22,11 @@
     4. Difficulty Adjustment;
     5. Timestamp Adjustment;
     6. Block Reward;
-4. [Transactions](#Transactions):
+4. [Transactions & Standard Scripts](#Transactions):
     1. [Cross-shard Swap](#cross-shard-swap);
     2. [MultiSig Lock with Refund](#MultiSig-Lock-with-Refund);
     3. [EAD Registration](#ead-registration);
+    4. [Hybrid Time-Lock Contract (HTLC)](#hybrid-time-lock-contract)
 
 ## Transactions
 
@@ -41,8 +48,8 @@ It can contain only TWO or FOUR inputs and TWO or FOUR outputs.
 One pair corresponds to the one chain. The second is for another. The order is not deterministic.
 
 1. Scheme 4x4:
-  - {TxIn_0, TxIn_1, TxOut_0, TxOut_1 } ∈ Shard_X
-  - {TxIn_2, TxIn_3, TxOut_2, TxOut_3 } ∈ Shard_Y
+  - { TxIn_0, TxIn_1, TxOut_0, TxOut_1 } ∈ Shard_X
+  - { TxIn_2, TxIn_3, TxOut_2, TxOut_3 } ∈ Shard_Y
 
 | #   | []TxIn | --- | []TxOut | #   |                        |
 |-----|--------|-----|---------|-----|------------------------|
@@ -52,8 +59,8 @@ One pair corresponds to the one chain. The second is for another. The order is n
 | 3   | TxIn_3 | --> | TxOut_3 | 3   | spend or fee @ Shard Y |
 
 2. Scheme 2x2:
-  - {TxIn_0, TxOut_0 } ∈ Shard_X
-  - {TxIn_1, TxOut_1 } ∈ Shard_Y
+  - { TxIn_0, TxOut_0 } ∈ Shard_X
+  - { TxIn_1, TxOut_1 } ∈ Shard_Y
 
 | #   | []TxIn | --- | []TxOut | #   |                        |
 |-----|--------|-----|---------|-----|------------------------|
@@ -61,8 +68,8 @@ One pair corresponds to the one chain. The second is for another. The order is n
 | 1   | TxIn_1 | --> | TxOut_1 | 1   | spend or fee @ Shard Y |
 
 3. Scheme 4x2:
-  - {TxIn_0, TxIn_1, TxOut_0 } ∈ Shard_X
-  - {TxIn_2, TxIn_3, TxOut_1 } ∈ Shard_Y
+  - { TxIn_0, TxIn_1, TxOut_0 } ∈ Shard_X
+  - { TxIn_2, TxIn_3, TxOut_1 } ∈ Shard_Y
 
 | #   | []TxIn | --- | []TxOut | #   |                        |
 |-----|--------|-----|---------|-----|------------------------|
@@ -154,3 +161,5 @@ p2p manner.
 | .   | ------ | --> | TxOut_1 | 1   |
 | .   | ------ | --> | ....... | .   |
 | .   | ------ | --> | TxOut_N | N   |
+
+### Hybrid Time-Lock Contract
