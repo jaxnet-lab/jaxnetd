@@ -74,7 +74,9 @@ func (msg *MsgGetHeaders) BtcDecode(r io.Reader, pver uint32, enc MessageEncodin
 		if err != nil {
 			return err
 		}
-		msg.AddBlockLocatorMeta(meta)
+		if err = msg.AddBlockLocatorMeta(meta); err != nil {
+			return err
+		}
 	}
 
 	return ReadElement(r, &msg.HashStop)

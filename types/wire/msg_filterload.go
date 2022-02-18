@@ -11,9 +11,9 @@ import (
 )
 
 // BloomUpdateType specifies how the filter is updated when a match is found
-//type BloomUpdateType uint8
+// type BloomUpdateType uint8
 //
-//const (
+// const (
 //	// BloomUpdateNone indicates the filter is not adjusted when a match is
 //	// found.
 //	BloomUpdateNone BloomUpdateType = 0
@@ -28,7 +28,7 @@ import (
 //	// pay-to-pubkey or multisig, the outpoint is serialized and inserted
 //	// into the filter.
 //	BloomUpdateP2PubkeyOnly BloomUpdateType = 2
-//)
+// )
 
 const (
 	// MaxFilterLoadHashFuncs is the maximum number of hash functions to
@@ -118,6 +118,7 @@ func (msg *MsgFilterLoad) Command() string {
 
 // MaxPayloadLength returns the maximum length the payload can be for the
 // receiver.  This is part of the Message interface implementation.
+// nolint:gomnd
 func (msg *MsgFilterLoad) MaxPayloadLength(pver uint32) uint32 {
 	// Num filter bytes (varInt) + filter + 4 bytes hash funcs +
 	// 4 bytes tweak + 1 byte flags.

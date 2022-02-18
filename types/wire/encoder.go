@@ -35,6 +35,7 @@ type Int64Time time.Time
 
 // ReadElement reads the next sequence of bytes from r using little endian
 // depending on the concrete type of element pointed to.
+// nolint:gomnd
 func ReadElement(r io.Reader, element interface{}) error {
 	// Attempt to read the element based on the concrete type via fast
 	// type assertions first.
@@ -166,7 +167,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 
 		bytes := make([]byte, length)
-		_, err = io.ReadFull(r, bytes[:])
+		_, err = io.ReadFull(r, bytes)
 		if err != nil {
 			return err
 		}
@@ -194,6 +195,7 @@ func ReadElements(r io.Reader, elements ...interface{}) error {
 }
 
 // WriteElement writes the little endian representation of element to w.
+// nolint:gomnd
 func WriteElement(w io.Writer, element interface{}) error {
 	// Attempt to write the element based on the concrete type via fast
 	// type assertions first.
@@ -320,6 +322,7 @@ func WriteElements(w io.Writer, elements ...interface{}) error {
 }
 
 // ReadVarInt reads a variable length integer from r and returns it as a uint64.
+// nolint:gomnd
 func ReadVarInt(r io.Reader, pver uint32) (uint64, error) {
 	discriminant, err := BinarySerializer.Uint8(r)
 	if err != nil {
@@ -398,6 +401,7 @@ func PutUint64(w io.Writer, val uint64) error {
 
 // WriteVarInt serializes val to w using a variable number of bytes depending
 // on its value.
+// nolint:gomnd
 func WriteVarInt(w io.Writer, val uint64) error {
 	if val < 0xfd {
 		return BinarySerializer.PutUint8(w, uint8(val))
@@ -428,6 +432,7 @@ func WriteVarInt(w io.Writer, val uint64) error {
 
 // VarIntSerializeSize returns the number of bytes it would take to serialize
 // val as a variable length integer.
+// nolint:gomnd
 func VarIntSerializeSize(val uint64) int {
 	// The value is small enough to be represented by itself, so it's
 	// just 1 byte.

@@ -51,12 +51,10 @@ func NewPsbtInput(nonWitnessUtxo *wire.MsgTx,
 // IsSane returns true only if there are no conflicting values in the Psbt
 // PInput. For segwit v0 no checks are currently implemented.
 func (pi *PInput) IsSane() bool {
-
 	// TODO(guggero): Implement sanity checks for segwit v1. For segwit v0
 	// it is unsafe to only rely on the witness UTXO so we don't check that
 	// only one is set anymore.
 	// See https://github.com/bitcoin/bitcoin/pull/19215.
-
 	return true
 }
 
@@ -235,7 +233,6 @@ func (pi *PInput) deserialize(r io.Reader) error {
 
 // serialize attempts to serialize the target PInput into the passed io.Writer.
 func (pi *PInput) serialize(w io.Writer) error {
-
 	if !pi.IsSane() {
 		return ErrInvalidPsbtFormat
 	}

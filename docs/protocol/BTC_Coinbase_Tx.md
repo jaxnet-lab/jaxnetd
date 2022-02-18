@@ -1,4 +1,5 @@
 # BTC Coinbase Tx
+
 ## Table of Content
 
 1. [Requirements for Inputs](#Requirements-for-Inputs)
@@ -16,7 +17,6 @@
     1. [TYPE_A Example](#TYPE_A-Example)
     2. [TYPE_B Example](#TYPE_B-Example)
     3. [TYPE_C Example](#TYPE_C-Example)
-
 
 > - JAX.Network has two kind of chain: **Beacon Chain** and **Shard Chain**.
 > - **JAXNET** is name of the **Beacon Chain** coins.
@@ -38,7 +38,28 @@ input.
 - **Proof of Inclusion** is an Exclusive Hash of JAX.Net Beacon Block.
 
 They can be at any position of the signature script, but they must follow each other in a
-row. `<marker><beacon_hash><marker>`
+row. `<marker> <beacon_hash> <marker>`
+
+According to rules of the [**_Bitcoin Script Serialization_**](#signature-script) in the raw format before each part
+must be present its length.
+
+```
+<marker> <beacon_hash> <marker>
+
+marker: 6a61786e6574
+hash: 03e818e664515a158c4eb0b99711cae6cee330724fcc76b64f59a1789eabf414
+
+// part of script
+...066a61786e65742003e818e664515a158c4eb0b99711cae6cee330724fcc76b64f59a1789eabf414066a61786e6574...
+
+06 // 0x06 = 6 -- 6 bytes
+6a 61 78 6e 65 74 // marker
+20 // 0x20 = 32 -- 32 bytes
+03 e8 18 e6 64 51 5a 15 8c 4e b0 b9 97 11 ca e6 ce e3 30 72 4f cc 76 b6 4f 59 a1 78 9e ab f4 14 // hash
+06 // 0x06 = 6 -- 6 bytes
+6a 61 78 6e 65 74 // marker
+
+```
 
 Example:
 
@@ -77,7 +98,7 @@ of Burn* and issuance of the JAX coins (in shards). It can have _1, 2, 5, 6, or 
 
 There is only one requirement:
 
-- address of first out MUST have a vanity prefix [`1JAX`](#vanity-address).
+- address of the at least one out MUST have a vanity prefix [`1JAX`](#vanity-address).
   Example: `1JAXmGDsiE2CyK31dYZsMamM18pPebRDAk`
 
 Example of such kind of transaction - [TYPE_A](#type_a-example)
@@ -89,12 +110,15 @@ This kind is a more strict format of Bitcoin coinbase transactions. This type of
 
 There are requirements for outputs:
 
-| Out N | Value                    | Address                                  | Description                                          |
-|-------|--------------------------|------------------------------------------|------------------------------------------------------|
-| 0     | 0                        | [JAX BURN ADDRESS](#jaxnet-burn-address) | This must be [Jaxnet Marker Out](#jaxnet-marker-out) |
-| 1     | block_reward <= 6.25 BTC | any valid btc address                    | This is output handles all block reward              |
-| 2     | block_fee <= 0.5 BTC     | any valid btc address                    | This is output handles fee of all transaction        |
-| 3*    | 0                        | witness commitment                       | Optional output with witness commitment              |
+| Out N | Value                                             | Address                                  | Description                                          |
+|-------|---------------------------------------------------|------------------------------------------|------------------------------------------------------|
+| 0     | 0                                                 | [JAX BURN ADDRESS](#jaxnet-burn-address) | This must be [Jaxnet Marker Out](#jaxnet-marker-out) |
+| 1     | block_reward <= 6.25 BTC                          | any valid btc address                    | This is output handles all block reward              |
+| 2     | block_fee <= 0.5 BTC; if block_reward < 6.25 BTC  | any valid btc address                    | This is output handles fee of all transaction        |
+| 3*    | 0                                                 | witness commitment                       | Optional output with witness commitment              |
+
+> NOTE: if the value of the second output is LESS than **6.25 BTC** (current BTC Block reward),
+> protocol will check that block fee is LESS OR EQUAL than **0.5 BTC**
 
 Example of such kind of transaction - [TYPE_B](#type_b-example)
 
@@ -105,12 +129,15 @@ _3 or 4_ outputs.
 
 There are requirements for outputs:
 
-| Out N | Value                    | Address                                   | Description                                          |
-|-------|--------------------------|-------------------------------------------|------------------------------------------------------|
-| 0     | 0                        | [JAX BURN ADDRESS](#jaxnet-burn-address)  | This must be [Jaxnet Marker Out](#jaxnet-marker-out) |
-| 1     | block_reward <= 6.25 BTC | [JAX BURN ADDRESS](#jaxnet-burn-address)  | This is output "burns" all block reward              |
-| 2     | block_fee <= 0.5 BTC     | any valid btc address                     | This is output handles fee of all transaction        |
-| 3*    | 0                        | witness commitment                        | Optional output with witness commitment              |
+| Out N | Value                                            | Address                                  | Description                                           |
+|-------|--------------------------------------------------|------------------------------------------|-------------------------------------------------------|
+| 0     | 0                                                | [JAX BURN ADDRESS](#jaxnet-burn-address) | This must be [Jaxnet Marker Out](#jaxnet-marker-out)  |
+| 1     | block_reward <= 6.25 BTC                         | [JAX BURN ADDRESS](#jaxnet-burn-address) | This is output "burns" all block reward               |
+| 2     | block_fee <= 0.5 BTC; if block_reward < 6.25 BTC | any valid btc address                    | This is output handles fee of all transaction         |
+| 3*    | 0                                                | witness commitment                       | Optional output with witness commitment               |
+
+> NOTE: if the value of the second output is LESS than **6.25 BTC** (current BTC Block reward),
+> protocol will check that block fee is LESS OR EQUAL than **0.5 BTC**
 
 Example of such kind of transaction - [TYPE_C](#type_c-example)
 
@@ -172,7 +199,7 @@ example: `1JAXmGDsiE2CyK31dYZsMamM18pPebRDAk`.
 | data                                                                         |                          |
 |------------------------------------------------------------------------------|--------------------------|
 | 01 00 00 00                                                                  | version                  |
-| 00 01                                                                        | witess marker bytes      |
+| 00 01                                                                        | witness marker bytes     |
 | 01                                                                           | number of inputs         |
 | 0000000000000000000000000000000000000000000000000000000000000000             | prev_out_hash            |
 | ff ff ff ff                                                                  | prev_out_id              |

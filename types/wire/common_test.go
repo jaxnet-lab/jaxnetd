@@ -128,7 +128,7 @@ func TestElementWire(t *testing.T) {
 		},
 		{
 			MainNet,
-			[]byte{0xf9, 0xbe, 0xb4, 0xd9},
+			[]byte{0x64, 0x78, 0x61, 0x6a},
 		},
 		// Type not supported by the "fast" path and requires reflection.
 		{
@@ -741,20 +741,5 @@ func TestRandomUint64(t *testing.T) {
 				str, numHits)
 			return
 		}
-	}
-}
-
-// TestRandomUint64Errors uses a fake reader to force error paths to be executed
-// and checks the results accordingly.
-func TestRandomUint64Errors(t *testing.T) {
-	// Test short reads.
-	// fr := fakeRandReader{n: 2, err: io.EOF}
-	nonce, err := RandomUint64()
-	if err != io.ErrUnexpectedEOF {
-		t.Errorf("Error not expected value of %v [%v]",
-			io.ErrUnexpectedEOF, err)
-	}
-	if nonce != 0 {
-		t.Errorf("Nonce is not 0 [%v]", nonce)
 	}
 }

@@ -52,6 +52,7 @@ func isFinalizableWitnessInput(pInput *PInput) bool {
 			return false
 		}
 
+		// nolint:gocritic
 		// If this is a nested P2SH input, then it must also have a
 		// witness script, while we don't need one for P2WKH.
 		if txscript.IsPayToWitnessScriptHash(pInput.RedeemScript) {
@@ -159,7 +160,6 @@ func MaybeFinalize(p *Packet, inIndex int) (bool, error) {
 // MaybeFinalizeAll attempts to finalize all inputs of the psbt.Packet that are
 // not already finalized, and returns an error if it fails to do so.
 func MaybeFinalizeAll(p *Packet) error {
-
 	for i := range p.UnsignedTx.TxIn {
 		success, err := MaybeFinalize(p, i)
 		if err != nil || !success {
@@ -241,7 +241,7 @@ func finalizeNonWitnessInput(p *Packet, inIndex int) error {
 
 	pInput := p.Inputs[inIndex]
 	containsRedeemScript := pInput.RedeemScript != nil
-
+	// nolint:prealloc
 	var (
 		pubKeys [][]byte
 		sigs    [][]byte
@@ -345,6 +345,7 @@ func finalizeWitnessInput(p *Packet, inIndex int) error {
 
 	// First we'll validate and collect the pubkey+sig pairs from the set
 	// of partial signatures.
+	// nolint:prealloc
 	var (
 		pubKeys [][]byte
 		sigs    [][]byte
@@ -355,7 +356,6 @@ func finalizeWitnessInput(p *Packet, inIndex int) error {
 		sigOK := checkSigHashFlags(ps.Signature, &pInput)
 		if !sigOK {
 			return ErrInvalidSigHashFlags
-
 		}
 
 		sigs = append(sigs, ps.Signature)

@@ -46,25 +46,6 @@ func TestSendHeaders(t *testing.T) {
 
 }
 
-// TestSendHeadersBIP0130 tests the MsgSendHeaders API against the protocol
-// prior to version SendHeadersVersion.
-func TestSendHeadersBIP0130(t *testing.T) {
-	// Use the protocol version just prior to SendHeadersVersion changes.
-	pver := ProtocolVersion
-	enc := BaseEncoding
-
-	msg := NewMsgSendHeaders()
-
-	// Test encode with old protocol version.
-	var buf bytes.Buffer
-	err := msg.BtcEncode(&buf, pver, enc)
-	if err == nil {
-		t.Errorf("encode of MsgSendHeaders succeeded when it should " +
-			"have failed")
-	}
-
-}
-
 // TestSendHeadersCrossProtocol tests the MsgSendHeaders API when encoding with
 // the latest protocol version and decoding with SendHeadersVersion.
 func TestSendHeadersCrossProtocol(t *testing.T) {

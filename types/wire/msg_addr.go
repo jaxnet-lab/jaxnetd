@@ -103,7 +103,9 @@ func (msg *MsgAddr) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) err
 		if err != nil {
 			return err
 		}
-		msg.AddAddress(na)
+		if err = msg.AddAddress(na); err != nil {
+			return err
+		}
 	}
 
 	count, err = ReadVarInt(r, pver)

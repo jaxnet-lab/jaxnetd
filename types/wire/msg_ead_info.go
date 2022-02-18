@@ -65,7 +65,7 @@ func (msg *EADAddresses) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding
 		return err
 	}
 	msg.ID = alias
-
+	// nolint:gomnd
 	msg.OwnerPubKey, err = ReadVarBytes(r, pver, 65*2, "OwnerPubKey")
 	if err != nil {
 		return err

@@ -215,7 +215,7 @@ func CollectTxHashes(transactions []*MsgTx, witness bool) []chainhash.Hash {
 }
 
 func (h *CoinbaseAux) UpdatedMerkleRoot() chainhash.Hash {
-	if len(h.TxMerkleProof) <= 0 {
+	if len(h.TxMerkleProof) == 0 {
 		return h.Tx.TxHash()
 	}
 

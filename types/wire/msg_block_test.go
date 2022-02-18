@@ -96,7 +96,7 @@ func TestBlockTxHashes(t *testing.T) {
 // TestBlockHash tests the ability to generate the hash of a block accurately.
 func TestBlockHash(t *testing.T) {
 	// Block 1 hash.
-	hashStr := "839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048"
+	hashStr := "837c6583751437a5374a1ceb40f67e9c9b614dc026af0d34e14f601e08d9f52f"
 	wantHash, err := chainhash.NewHashFromStr(hashStr)
 	if err != nil {
 		t.Errorf("NewHashFromStr: %v", err)
@@ -516,6 +516,7 @@ var blockOne = MsgBlock{
 
 // Block one serialized bytes.
 var blockOneBytes = []byte{
+	0x6d,
 	0x01, 0x00, 0x00, 0x00, // Version 1
 	0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72,
 	0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f,

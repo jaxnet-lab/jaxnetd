@@ -219,7 +219,7 @@ func (h *BeaconHeader) BlockHash() chainhash.Hash {
 // This hash needs to be set into Bitcoin coinbase tx, as proof of merge mining.
 func (h *BeaconHeader) BeaconExclusiveHash() chainhash.Hash {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBeaconBlockHeaderPayload))
-	WriteElements(buf,
+	_ = WriteElements(buf,
 		h.version,
 		h.height,
 		&h.prevMMRRoot,

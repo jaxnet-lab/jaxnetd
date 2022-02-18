@@ -9,10 +9,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	rand2 "math/rand"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -164,9 +164,12 @@ func TestTreeEncoding(t *testing.T) {
 }
 
 func TestShardHeaderEncoding(t *testing.T) {
-	sh := ShardHeader{}
+	sh := ShardHeader{
+		chainWeight: big.NewInt(0),
+	}
 	sh.beaconHeader = BeaconHeader{
-		bits: 1,
+		bits:        1,
+		chainWeight: big.NewInt(0),
 	}
 	sh.bits = 3
 	rand.Read(sh.merkleRoot[:])
@@ -184,7 +187,6 @@ func TestShardHeaderEncoding(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	spew.Dump(sh)
 
 	buf1 := bytes.NewBuffer(nil)
 	sh.Write(buf1)
@@ -237,14 +239,17 @@ func TestShardHeaderEncoding(t *testing.T) {
 
 func TestBlockShardHeaderEncoding(t *testing.T) {
 
-	sh := &ShardHeader{}
+	sh := &ShardHeader{
+		chainWeight: big.NewInt(1),
+	}
 	block := &MsgBlock{
 		Header: sh,
 	}
 
 	sh.beaconHeader = BeaconHeader{
-		version: BVersion(7),
-		bits:    1,
+		version:     BVersion(7),
+		bits:        1,
+		chainWeight: big.NewInt(1),
 	}
 	sh.bits = 3
 	rand.Read(sh.merkleRoot[:])
@@ -263,9 +268,6 @@ func TestBlockShardHeaderEncoding(t *testing.T) {
 	wr := bufio.NewWriter(&b)
 
 	bCopy := block.Copy()
-
-	fmt.Println("Clone 1", sh.beaconHeader.treeEncoding)
-	fmt.Println("Clone 2", bCopy.Header.BeaconHeader().treeEncoding)
 
 	if err := bCopy.BtcEncode(wr, 0, BaseEncoding); err != nil {
 		t.Error(err)

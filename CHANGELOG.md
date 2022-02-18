@@ -7,7 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.8]
+
+- **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix
+
 ## [0.4.7]
+
 - Repaired WebSocket handlers
 
 ## [0.4.6]
@@ -122,6 +127,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Improve and extend RPC Api;
 - Added `jaxutils/txmodels` and `jaxutils/txutils` packages for building transactions;
 - Introduces `zerolog` for structured logging and `prometheus` for monitoring.
+
+[0.4.8]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.8
+
+[0.4.7]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.7
 
 [0.4.6]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.6
 

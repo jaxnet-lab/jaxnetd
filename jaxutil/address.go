@@ -753,11 +753,3 @@ func IsJaxnetBurnAddress(address string, params *chaincfg.Params) bool {
 	return bytes.Equal(addr.ScriptAddress(), types.RawJaxBurnScript) ||
 		bytes.Equal(addr.ScriptAddress(), types.RawBCHJaxBurnScript)
 }
-
-func BtcJaxVanityPrefix(pkScript []byte) bool {
-	addr, err := NewAddressPubKeyHash(pkScript, &chaincfg.MainNetParams)
-	if err != nil {
-		return false
-	}
-	return strings.HasPrefix(addr.String(), "1JAX")
-}

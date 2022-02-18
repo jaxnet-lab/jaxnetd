@@ -16,7 +16,7 @@ import (
 // based on the protocol version.
 func maxNetAddressPayload() uint32 {
 	// Services 8 bytes + ip 16 bytes + port 2 bytes.
-	plen := uint32(26)
+	plen := uint32(26) // nolint:gomnd
 
 	// NetAddressTimeVersion added a timestamp field.
 	// Timestamp 4 bytes.

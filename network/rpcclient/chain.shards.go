@@ -367,7 +367,7 @@ func (c *Client) GetShardBlockTemplateAsync(reqData *jaxjson.TemplateRequest) Fu
 }
 
 // GetShardBlockTemplate deals with generating and returning block templates to the caller.
-// DEPRECATED: use the GetBlockTemplate insead.
+// Deprecated: use the GetBlockTemplate insead.
 func (c *Client) GetShardBlockTemplate(reqData *jaxjson.TemplateRequest) (*jaxjson.GetBlockTemplateResult, error) {
 	return c.GetShardBlockTemplateAsync(reqData).Receive()
 }

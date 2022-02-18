@@ -186,7 +186,12 @@ func (msg *MsgBlock) DeserializeTxLoc(r *bytes.Buffer) ([]TxLoc, error) {
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of existing wire protocol functions.
 	var err error
-	if err := msg.Header.Read(r); err != nil {
+	if msg.Header == nil {
+		msg.Header, err = DecodeHeader(r)
+	} else {
+		err = msg.Header.Read(r)
+	}
+	if err != nil {
 		return nil, err
 	}
 

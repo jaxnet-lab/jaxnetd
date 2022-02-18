@@ -222,7 +222,7 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, error) {
 	// Create and populate a messageHeader struct from the raw header bytes.
 	hdr := messageHeader{}
 	var command [CommandSize]byte
-	ReadElements(hr, &hdr.magic, &command, &hdr.length, &hdr.checksum)
+	_ = ReadElements(hr, &hdr.magic, &command, &hdr.length, &hdr.checksum)
 
 	// Strip trailing zeros from command string.
 	hdr.command = string(bytes.TrimRight(command[:], string(rune(0))))
@@ -234,6 +234,7 @@ func readMessageHeader(r io.Reader) (int, *messageHeader, error) {
 // bytes.  This is used to skip payloads when various errors occur and helps
 // prevent rogue nodes from causing massive memory allocation through forging
 // header length.
+// nolint:gomnd
 func discardInput(r io.Reader, n uint32) {
 	maxSize := uint32(10 * 1024) // 10k at a time
 	numReads := n / maxSize
@@ -241,12 +242,12 @@ func discardInput(r io.Reader, n uint32) {
 	if n > 0 {
 		buf := make([]byte, maxSize)
 		for i := uint32(0); i < numReads; i++ {
-			io.ReadFull(r, buf)
+			_, _ = io.ReadFull(r, buf)
 		}
 	}
 	if bytesRemaining > 0 {
 		buf := make([]byte, bytesRemaining)
-		io.ReadFull(r, buf)
+		_, _ = io.ReadFull(r, buf)
 	}
 }
 
@@ -324,7 +325,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 	// rather than directly to the writer since encoder.WriteElements doesn't
 	// return the number of bytes written.
 	hw := bytes.NewBuffer(make([]byte, 0, MessageHeaderSize))
-	WriteElements(hw, hdr.magic, command, hdr.length, hdr.checksum)
+	_ = WriteElements(hw, hdr.magic, command, hdr.length, hdr.checksum)
 
 	// Write header.
 	n, err := w.Write(hw.Bytes())
@@ -413,7 +414,7 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet JaxNet,
 
 	// Test checksum.
 	checksum := chainhash.DoubleHashB(payload)[0:4]
-	if !bytes.Equal(checksum[:], hdr.checksum[:]) {
+	if !bytes.Equal(checksum, hdr.checksum[:]) {
 		str := fmt.Sprintf("payload checksum failed - header "+
 			"indicates %v, but actual checksum is %v.",
 			hdr.checksum, checksum)

@@ -367,7 +367,7 @@ func (msg *MsgTx) Copy() *MsgTx {
 		// Deep copy the old previous outpoint.
 		oldOutPoint := oldTxIn.PreviousOutPoint
 		newOutPoint := OutPoint{}
-		newOutPoint.Hash.SetBytes(oldOutPoint.Hash[:])
+		_ = newOutPoint.Hash.SetBytes(oldOutPoint.Hash[:])
 		newOutPoint.Index = oldOutPoint.Index
 
 		// Deep copy the old signature script.
@@ -452,7 +452,7 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error
 
 		// At the moment, the flag MUST be 0x01. In the future other
 		// flag types may be supported.
-		if flag[0] != 0x01 {
+		if flag[0] != 0x01 { // nolint:gomnd
 			str := fmt.Sprintf("witness tx but flag byte is %x", flag)
 			return Error("MsgTx.BtcDecode", str)
 		}

@@ -56,7 +56,14 @@ func TestMessage(t *testing.T) {
 	msgGetAddr := NewMsgGetAddr()
 	msgAddr := NewMsgAddr()
 	msgGetBlocks := NewMsgGetBlocks(&chainhash.Hash{})
+
 	msgBlock := &blockOne
+	msgBlock.Header.BeaconHeader().treeEncoding = []byte{}
+	msgBlock.Header.BeaconHeader().mergeMiningProof = []chainhash.Hash{}
+	msgBlock.Header.BeaconHeader().mergeMiningProof = []chainhash.Hash{}
+	msgBlock.Header.BeaconHeader().btcAux.CoinbaseAux.Tx.TxIn[0].SignatureScript = []byte{}
+	msgBlock.Header.BeaconHeader().btcAux.CoinbaseAux.Tx.TxOut = []*TxOut{}
+
 	msgInv := NewMsgInv()
 	msgGetData := NewMsgGetData()
 	msgNotFound := NewMsgNotFound()
@@ -70,14 +77,21 @@ func TestMessage(t *testing.T) {
 	msgFilterAdd := NewMsgFilterAdd([]byte{0x01})
 	msgFilterClear := NewMsgFilterClear()
 	msgFilterLoad := NewMsgFilterLoad([]byte{0x01}, 10, 0, BloomUpdateNone)
-	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, time.Now(), 0, big.NewInt(1), 0)
+
+	bh := NewBeaconBlockHeader(1, 1, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{}, chainhash.Hash{},
+		time.Now(), 0, big.NewInt(1), 0)
 	msgMerkleBlock := NewMsgMerkleBlock(bh)
+	msgMerkleBlock.Header.BeaconHeader().treeEncoding = []byte{}
+	msgMerkleBlock.Header.BeaconHeader().mergeMiningProof = []chainhash.Hash{}
+	msgMerkleBlock.Header.BeaconHeader().mergeMiningProof = []chainhash.Hash{}
+	msgMerkleBlock.Header.BeaconHeader().btcAux.CoinbaseAux.Tx.TxIn[0].SignatureScript = []byte{}
+	msgMerkleBlock.Header.BeaconHeader().btcAux.CoinbaseAux.Tx.TxOut = []*TxOut{}
+
 	msgReject := NewMsgReject("block", RejectDuplicate, "duplicate block")
 	msgGetCFilters := NewMsgGetCFilters(GCSFilterRegular, 0, &chainhash.Hash{})
 	msgGetCFHeaders := NewMsgGetCFHeaders(GCSFilterRegular, 0, &chainhash.Hash{})
 	msgGetCFCheckpt := NewMsgGetCFCheckpt(GCSFilterRegular, &chainhash.Hash{})
-	msgCFilter := NewMsgCFilter(GCSFilterRegular, &chainhash.Hash{},
-		[]byte("payload"))
+	msgCFilter := NewMsgCFilter(GCSFilterRegular, &chainhash.Hash{}, []byte("payload"))
 	msgCFHeaders := NewMsgCFHeaders()
 	msgCFCheckpt := NewMsgCFCheckpt(GCSFilterRegular, &chainhash.Hash{}, 0)
 
@@ -88,12 +102,12 @@ func TestMessage(t *testing.T) {
 		btcnet JaxNet  // Network to use for wire encoding
 		bytes  int     // Expected num bytes read/written
 	}{
-		{msgVersion, msgVersion, pver, MainNet, 125},
+		{msgVersion, msgVersion, pver, MainNet, 138},
 		{msgVerack, msgVerack, pver, MainNet, 24},
-		{msgGetAddr, msgGetAddr, pver, MainNet, 24},
-		{msgAddr, msgAddr, pver, MainNet, 25},
+		{msgGetAddr, msgGetAddr, pver, MainNet, 28},
+		{msgAddr, msgAddr, pver, MainNet, 26},
 		{msgGetBlocks, msgGetBlocks, pver, MainNet, 61},
-		{msgBlock, msgBlock, pver, MainNet, 239},
+		{msgBlock, msgBlock, pver, MainNet, 495},
 		{msgInv, msgInv, pver, MainNet, 25},
 		{msgGetData, msgGetData, pver, MainNet, 25},
 		{msgNotFound, msgNotFound, pver, MainNet, 25},
@@ -107,7 +121,7 @@ func TestMessage(t *testing.T) {
 		{msgFilterAdd, msgFilterAdd, pver, MainNet, 26},
 		{msgFilterClear, msgFilterClear, pver, MainNet, 24},
 		{msgFilterLoad, msgFilterLoad, pver, MainNet, 35},
-		{msgMerkleBlock, msgMerkleBlock, pver, MainNet, 110},
+		{msgMerkleBlock, msgMerkleBlock, pver, MainNet, 366},
 		{msgReject, msgReject, pver, MainNet, 79},
 		{msgGetCFilters, msgGetCFilters, pver, MainNet, 61},
 		{msgGetCFHeaders, msgGetCFHeaders, pver, MainNet, 61},

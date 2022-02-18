@@ -84,16 +84,14 @@ func TestPongBIP0031(t *testing.T) {
 	// Ensure max payload is expected value for old protocol version.
 	size := msg.MaxPayloadLength(pver)
 	if size != 0 {
-		t.Errorf("Max length should be 0 for pong protocol version %d.",
-			pver)
+		t.Errorf("Max length should be 0 for pong protocol version %d.", pver)
 	}
 
 	// Test encode with old protocol version.
 	var buf bytes.Buffer
 	err = msg.BtcEncode(&buf, pver, enc)
 	if err == nil {
-		t.Errorf("encode of MsgPong succeeded when it shouldn't have %v",
-			msg)
+		t.Errorf("encode of MsgPong succeeded when it shouldn't have %v", msg)
 	}
 
 	// Test decode with old protocol version.

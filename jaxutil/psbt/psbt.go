@@ -20,12 +20,10 @@ import (
 // a serialized PSBT packet.
 const psbtMagicLength = 5
 
-var (
-	// psbtMagic is the separator
-	psbtMagic = [psbtMagicLength]byte{0x70,
-		0x73, 0x62, 0x74, 0xff, // = "psbt" + 0xff sep
-	}
-)
+// psbtMagic is the separator
+var psbtMagic = [psbtMagicLength]byte{
+	0x70, 0x73, 0x62, 0x74, 0xff, // = "psbt" + 0xff sep
+}
 
 // MaxPsbtValueLength is the size of the largest transaction serialization
 // that could be passed in a NonWitnessUtxo field. This is definitely
@@ -40,32 +38,31 @@ var (
 
 	// ErrInvalidPsbtFormat is a generic error for any situation in which a
 	// provided Psbt serialization does not conform to the rules of BIP174.
-	ErrInvalidPsbtFormat = errors.New("Invalid PSBT serialization format")
+	ErrInvalidPsbtFormat = errors.New("invalid PSBT serialization format")
 
 	// ErrDuplicateKey indicates that a passed Psbt serialization is invalid
 	// due to having the same key repeated in the same key-value pair.
-	ErrDuplicateKey = errors.New("Invalid Psbt due to duplicate key")
+	ErrDuplicateKey = errors.New("invalid Psbt due to duplicate key")
 
 	// ErrInvalidKeydata indicates that a key-value pair in the PSBT
 	// serialization contains data in the key which is not valid.
-	ErrInvalidKeydata = errors.New("Invalid key data")
+	ErrInvalidKeydata = errors.New("invalid key data")
 
 	// ErrInvalidMagicBytes indicates that a passed Psbt serialization is invalid
 	// due to having incorrect magic bytes.
-	ErrInvalidMagicBytes = errors.New("Invalid Psbt due to incorrect magic bytes")
+	ErrInvalidMagicBytes = errors.New("invalid Psbt due to incorrect magic bytes")
 
 	// ErrInvalidRawTxSigned indicates that the raw serialized transaction in the
 	// global section of the passed Psbt serialization is invalid because it
 	// contains scriptSigs/witnesses (i.e. is fully or partially signed), which
 	// is not allowed by BIP174.
-	ErrInvalidRawTxSigned = errors.New("Invalid Psbt, raw transaction must " +
-		"be unsigned.")
+	ErrInvalidRawTxSigned = errors.New("invalid Psbt, raw transaction must be unsigned")
 
 	// ErrInvalidPrevOutNonWitnessTransaction indicates that the transaction
 	// hash (i.e. SHA256^2) of the fully serialized previous transaction
 	// provided in the NonWitnessUtxo key-value field doesn't match the prevout
 	// hash in the UnsignedTx field in the PSBT itself.
-	ErrInvalidPrevOutNonWitnessTransaction = errors.New("Prevout hash does " +
+	ErrInvalidPrevOutNonWitnessTransaction = errors.New("prevout hash does " +
 		"not match the provided non-witness utxo serialization")
 
 	// ErrInvalidSignatureForInput indicates that the signature the user is
@@ -73,34 +70,34 @@ var (
 	// not correspond to the previous transaction hash, or redeem script,
 	// or witness script.
 	// NOTE this does not include ECDSA signature checking.
-	ErrInvalidSignatureForInput = errors.New("Signature does not correspond " +
+	ErrInvalidSignatureForInput = errors.New("signature does not correspond " +
 		"to this input")
 
 	// ErrInputAlreadyFinalized indicates that the PSBT passed to a Finalizer
 	// already contains the finalized scriptSig or witness.
-	ErrInputAlreadyFinalized = errors.New("Cannot finalize PSBT, finalized " +
-		"scriptSig or scriptWitnes already exists")
+	ErrInputAlreadyFinalized = errors.New("cannot finalize PSBT, finalized " +
+		"scriptSig or scriptWitness already exists")
 
 	// ErrIncompletePSBT indicates that the Extractor object
 	// was unable to successfully extract the passed Psbt struct because
 	// it is not complete
-	ErrIncompletePSBT = errors.New("PSBT cannot be extracted as it is " +
+	ErrIncompletePSBT = errors.New("the PSBT cannot be extracted as it is " +
 		"incomplete")
 
 	// ErrNotFinalizable indicates that the PSBT struct does not have
 	// sufficient data (e.g. signatures) for finalization
-	ErrNotFinalizable = errors.New("PSBT is not finalizable")
+	ErrNotFinalizable = errors.New("the PSBT is not finalizable")
 
 	// ErrInvalidSigHashFlags indicates that a signature added to the PSBT
 	// uses Sighash flags that are not in accordance with the requirement
 	// according to the entry in PsbtInSighashType, or otherwise not the
 	// default value (SIGHASH_ALL)
-	ErrInvalidSigHashFlags = errors.New("Invalid Sighash Flags")
+	ErrInvalidSigHashFlags = errors.New("invalid Sighash Flags")
 
 	// ErrUnsupportedScriptType indicates that the redeem script or
 	// scriptwitness given is not supported by this codebase, or is otherwise
 	// not valid.
-	ErrUnsupportedScriptType = errors.New("Unsupported script type")
+	ErrUnsupportedScriptType = errors.New("unsupported script type")
 )
 
 // Unknown is a struct encapsulating a key-value pair for which the key type is
@@ -147,7 +144,6 @@ func validateUnsignedTX(tx *wire.MsgTx) bool {
 // NewFromUnsignedTx creates a new Psbt struct, without any signatures (i.e.
 // only the global section is non-empty) using the passed unsigned transaction.
 func NewFromUnsignedTx(tx *wire.MsgTx) (*Packet, error) {
-
 	if !validateUnsignedTX(tx) {
 		return nil, ErrInvalidRawTxSigned
 	}
@@ -174,7 +170,6 @@ func NewFromUnsignedTx(tx *wire.MsgTx) (*Packet, error) {
 // NOTE: To create a Packet from one's own data, rather than reading in a
 // serialization from a counterparty, one should use a psbt.New.
 func NewFromRawBytes(r io.Reader, b64 bool) (*Packet, error) {
-
 	// If the PSBT is encoded in bas64, then we'll create a new wrapper
 	// reader that'll allow us to incrementally decode the contents of the
 	// io.Reader.
@@ -307,7 +302,6 @@ func NewFromRawBytes(r io.Reader, b64 bool) (*Packet, error) {
 // Serialize creates a binary serialization of the referenced Packet struct
 // with lexicographical ordering (by key) of the subsections.
 func (p *Packet) Serialize(w io.Writer) error {
-
 	// First we write out the precise set of magic bytes that identify a
 	// valid PSBT transaction.
 	if _, err := w.Write(psbtMagic[:]); err != nil {
@@ -391,7 +385,6 @@ func (p *Packet) IsComplete() bool {
 // SanityCheck checks conditions on a PSBT to ensure that it obeys the
 // rules of BIP174, and returns true if so, false if not.
 func (p *Packet) SanityCheck() error {
-
 	if !validateUnsignedTX(p.UnsignedTx) {
 		return ErrInvalidRawTxSigned
 	}

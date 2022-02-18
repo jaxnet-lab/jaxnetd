@@ -68,7 +68,9 @@ func (msg *MsgInv) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) erro
 		if err != nil {
 			return err
 		}
-		msg.AddInvVect(iv)
+		if err = msg.AddInvVect(iv); err != nil {
+			return err
+		}
 	}
 
 	return nil

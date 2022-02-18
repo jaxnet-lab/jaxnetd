@@ -95,6 +95,7 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 		pubKey []byte
 		sig    []byte
 	}
+	// nolint:prealloc
 	var pubsSigs []sigWithPub
 	for i, pub := range expectedPubkeys {
 		pubsSigs = append(pubsSigs, sigWithPub{
@@ -110,6 +111,7 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 		index int
 		value sigWithPub
 	}
+	// nolint:prealloc
 	var positionMap []positionEntry
 
 	// For each pubkey in our pubsSigs slice, we'll now construct a proper
@@ -226,7 +228,6 @@ func serializeKVPairWithType(w io.Writer, kt uint8, keydata []byte,
 // of a separator byte which indicates the end of a given key-value pair list,
 // and the keydata as a byte slice or nil if none is present.
 func getKey(r io.Reader) (int, []byte, error) {
-
 	// For the key, we read the varint separately, instead of using the
 	// available ReadVarBytes, because we have a specific treatment of 0x00
 	// here:
@@ -247,6 +248,7 @@ func getKey(r io.Reader) (int, []byte, error) {
 	// Next, we ready out the designated number of bytes, which may include
 	// a type, key, and optional data.
 	keyTypeAndData := make([]byte, count)
+	// nolint:gocritic
 	if _, err := io.ReadFull(r, keyTypeAndData[:]); err != nil {
 		return -1, nil, err
 	}
@@ -262,7 +264,6 @@ func getKey(r io.Reader) (int, []byte, error) {
 	// Otherwise, we return the key, along with any data that it may
 	// contain.
 	return keyType, keyTypeAndData[1:], nil
-
 }
 
 // readTxOut is a limited version of wire.ReadTxOut, because the latter is not

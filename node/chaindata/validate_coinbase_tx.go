@@ -179,20 +179,39 @@ func validateCoinbaseAux(merkleRoot chainhash.Hash, aux *wire.CoinbaseAux) error
 	return nil
 }
 
+func checkBtcVanityAddress(script []byte) bool {
+	_, address, _, _ := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
+	for _, addr := range address {
+		if strings.HasPrefix(addr.EncodeAddress(), "1JAX") {
+			return true
+		}
+	}
+	return false
+}
+
 // nolint: gomnd
 func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
 		return false, errors.Wrap(err, "invalid btc coinbase aux")
 	}
+
 	btcCoinbaseTx := aux.CoinbaseAux.Tx
 	if len(btcCoinbaseTx.TxOut) != 3 && len(btcCoinbaseTx.TxOut) != 4 {
 		if len(btcCoinbaseTx.TxOut) > 7 {
 			return false, errors.New("must have less than 7 outputs")
 		}
 
-		if !jaxutil.BtcJaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) &&
-			!bch.JaxVanityPrefix(btcCoinbaseTx.TxOut[0].PkScript) {
-			return false, errors.New("first out must start with 1JAX... or bitcoincash:qqjax... ")
+		prefixFound := false
+		for _, out := range btcCoinbaseTx.TxOut {
+			if checkBtcVanityAddress(out.PkScript) ||
+				bch.JaxVanityPrefix(out.PkScript) {
+				prefixFound = true
+				break
+			}
+		}
+
+		if !prefixFound {
+			return false, errors.New("at least one out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 
 		return false, nil
@@ -233,7 +252,7 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
 	return rewardBurned, nil
 }
 
-//nolint: gomnd
+// nolint: gomnd
 func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
 	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
 	if err != nil {

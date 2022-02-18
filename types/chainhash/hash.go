@@ -56,8 +56,7 @@ func (hash *Hash) CloneBytes() []byte {
 func (hash *Hash) SetBytes(newHash []byte) error {
 	nhlen := len(newHash)
 	if nhlen != HashSize {
-		return fmt.Errorf("invalid hash length of %v, want %v", nhlen,
-			HashSize)
+		return fmt.Errorf("invalid hash length of %v, want %v", nhlen, HashSize)
 	}
 	copy(hash[:], newHash)
 

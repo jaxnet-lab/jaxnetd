@@ -118,7 +118,7 @@ func TestAddrWire(t *testing.T) {
 	// Empty address message.
 	noAddr := NewMsgAddr()
 	noAddrEncoded := []byte{
-		0x00, // Varint for number of addresses
+		0x00, 0x00, // Varint for number of addresses
 	}
 
 	// Address message with multiple addresses.
@@ -135,7 +135,7 @@ func TestAddrWire(t *testing.T) {
 		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // SFNodeNetwork
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0xff, 0xff, 0xc0, 0xa8, 0x00, 0x01, // IP 192.168.0.1
-		0x20, 0x8e, // Port 8334 in big-endian
+		0x20, 0x8e, 0x00, // Port 8334 in big-endian
 
 	}
 
@@ -163,15 +163,6 @@ func TestAddrWire(t *testing.T) {
 			ProtocolVersion,
 			BaseEncoding,
 		},
-
-		// // Protocol version MultipleAddressVersion-1 with no addresses.
-		// {
-		// 	noAddr,
-		// 	noAddr,
-		// 	noAddrEncoded,
-		// 	MultipleAddressVersion - 1,
-		// 	BaseEncoding,
-		// },
 	}
 
 	t.Logf("Running %d tests", len(tests))

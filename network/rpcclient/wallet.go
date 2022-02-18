@@ -1918,7 +1918,6 @@ func (c *Client) GetReceivedByAddressAsync(address jaxutil.Address) FutureGetRec
 	addr := address.EncodeAddress()
 	cmd := jaxjson.NewGetReceivedByAddressCmd(addr, nil)
 	return c.sendCmd(cmd)
-
 }
 
 // GetReceivedByAddress returns the total amount received by the specified
@@ -2182,15 +2181,15 @@ func (r FutureWalletPassphraseChangeResult) Receive() error {
 // function on the returned instance.
 //
 // See WalletPassphraseChange for the blocking version and more details.
-func (c *Client) WalletPassphraseChangeAsync(old, new string) FutureWalletPassphraseChangeResult {
-	cmd := jaxjson.NewWalletPassphraseChangeCmd(old, new)
+func (c *Client) WalletPassphraseChangeAsync(old, newPhrase string) FutureWalletPassphraseChangeResult {
+	cmd := jaxjson.NewWalletPassphraseChangeCmd(old, newPhrase)
 	return c.sendCmd(cmd)
 }
 
 // WalletPassphraseChange changes the wallet passphrase from the specified old
 // to new passphrase.
-func (c *Client) WalletPassphraseChange(old, new string) error {
-	return c.WalletPassphraseChangeAsync(old, new).Receive()
+func (c *Client) WalletPassphraseChange(old, newPhrase string) error {
+	return c.WalletPassphraseChangeAsync(old, newPhrase).Receive()
 }
 
 // *************************
