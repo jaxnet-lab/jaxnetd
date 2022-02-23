@@ -192,6 +192,20 @@ func (c *Client) ChainParams() *chaincfg.Params {
 	return c.chainParams
 }
 
+// Config returns a current configuration of the Client.
+func (c *Client) Config() *ConnConfig {
+	return c.config
+}
+
+// ShardID returns shardID for next request, method is idempotent and doesn't reset oneTimeShardID.
+func (c *Client) ShardID() uint32 {
+	shardID := c.shardID
+	if c.oneTimeShardID != nil {
+		shardID = *c.oneTimeShardID
+	}
+	return shardID
+}
+
 // SetShard changes permanent shardID config.
 func (c *Client) SetShard(shardID uint32) *Client {
 	c.shardID = shardID

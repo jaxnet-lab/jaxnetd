@@ -10,6 +10,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.8]
 
 - **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix
+- **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client` 
 
 ## [0.4.7]
 
