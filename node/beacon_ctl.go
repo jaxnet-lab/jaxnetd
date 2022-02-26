@@ -38,7 +38,7 @@ type BeaconCtl struct {
 }
 
 func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) BeaconCtl {
-	logger = logger.With().Str("chain", "beacon").Logger()
+	logger = logger.With().Str("unit", "beacon").Logger()
 	return BeaconCtl{
 		cfg:   cfg,
 		ctx:   ctx,
@@ -47,7 +47,7 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 	}
 }
 
-func (beaconCtl *BeaconCtl) Init() error {
+func (beaconCtl *BeaconCtl) Init(ctx context.Context) (bool, error) {
 	cfg := beaconCtl.cfg
 	params := cfg.Node.ChainParams()
 	if params.Net != wire.MainNet {
@@ -65,13 +65,17 @@ func (beaconCtl *BeaconCtl) Init() error {
 		db, err := beaconCtl.dbCtl.loadBlockDB(cfg.DataDir, beaconChain, cfg.Node)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("Can't load Block db")
-			return err
+			return false, err
+		}
+		canContinue := beaconCtl.dbCtl.sanitizeState(ctx, cfg, db)
+		if !canContinue {
+			return false, nil
 		}
 
 		mAddreses, err := cfg.Node.BeaconChain.ParseMiningAddresses(params)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("Can't parse mining addresses")
-			return err
+			return false, err
 		}
 
 		var mAddress jaxutil.Address
@@ -82,7 +86,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 		btcdProvider, err := btcd.NewBlockProvider(beaconCtl.cfg.BTCD, mAddress)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("Can't init jaxnetdProvider")
-			return err
+			return false, err
 		}
 
 		bsp := chaindata.StateProvider{
@@ -101,7 +105,7 @@ func (beaconCtl *BeaconCtl) Init() error {
 			cfg.Node.BeaconChain, beaconChain, blockGen, db, beaconCtl.log)
 		if err != nil {
 			beaconCtl.log.Error().Err(err).Msg("unable to init ChainProvider for beacon")
-			return err
+			return false, err
 		}
 
 		beaconCtl.chainProvider = chainProvider
@@ -123,14 +127,14 @@ func (beaconCtl *BeaconCtl) Init() error {
 		)
 		if err != nil {
 			beaconCtl.log.Error().Msgf("Unable to start p2pServer on %v: %v", beaconCtl.cfg.Node.P2P.Listeners, err)
-			return err
+			return false, err
 		}
 
 		beaconCtl.p2pServer = p2pServer
 	}
 
 	// todo: improve
-	return beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
+	return true, beaconCtl.chainProvider.SetP2PProvider(beaconCtl.p2pServer)
 }
 
 func (beaconCtl *BeaconCtl) ChainCtx() chainctx.IChainCtx {
@@ -143,30 +147,13 @@ func (beaconCtl *BeaconCtl) ChainProvider() *cprovider.ChainProvider {
 
 // nolint: gomnd
 func (beaconCtl *BeaconCtl) Run(ctx context.Context) {
-	cleanIndexes, err := beaconCtl.dbCtl.cleanIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
-	if cleanIndexes {
-		beaconCtl.log.Info().Msg("clean db indexes")
-		return
-	}
-
-	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("failed to clean indexes")
-		return
-	}
-
-	err = beaconCtl.dbCtl.refillIndexes(ctx, beaconCtl.cfg, beaconCtl.chainProvider.DB)
-	if err != nil {
-		beaconCtl.log.Error().Err(err).Msg("failed to refill indexes")
-		return
-	}
-
 	beaconCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
 
-	beaconCtl.log.Info().Msg("Writing best chain serialIDs to database...")
+	beaconCtl.log.Info().Msg("Writing best unit serialIDs to database...")
 	if err := beaconCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
-		beaconCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
+		beaconCtl.log.Error().Err(err).Msg("Can't save best unit state to db")
 	}
 
 	if beaconCtl.cfg.Node.DumpMMR {

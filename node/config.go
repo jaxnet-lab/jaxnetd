@@ -16,14 +16,16 @@ import (
 )
 
 type Config struct {
-	ConfigFile    string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
-	ShowVersion   bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
-	TestNet       bool   `toml:"-" yaml:"-" long:"testnet" description:"Start node with default testnet settings"`
-	MainNet       bool   `toml:"-" yaml:"-" long:"mainnet" description:"Start node with default mainnet settings"`
-	DropAddrIndex bool   `toml:"-" yaml:"-" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
-	DropCfIndex   bool   `toml:"-" yaml:"-" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
-	DropTxIndex   bool   `toml:"-" yaml:"-" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
-	RefillTxIndex bool   `toml:"-" yaml:"-" long:"refilltxindex"`
+	ConfigFile  string `toml:"-" yaml:"-" short:"C" long:"configfile" description:"Path to configuration file"`
+	ShowVersion bool   `toml:"-" yaml:"-" short:"V" long:"version" description:"Display version information and exit"`
+	TestNet     bool   `toml:"-" yaml:"-" long:"testnet" description:"Start node with default testnet settings"`
+	MainNet     bool   `toml:"-" yaml:"-" long:"mainnet" description:"Start node with default mainnet settings"`
+
+	DropAddrIndex bool `toml:"-" yaml:"-" long:"dropaddrindex" description:"Deletes the address-based transaction index from the database on start up and then exits."`
+	DropCfIndex   bool `toml:"-" yaml:"-" long:"dropcfindex" description:"Deletes the index used for committed filtering (CF) support from the database on start up and then exits."`
+	DropTxIndex   bool `toml:"-" yaml:"-" long:"droptxindex" description:"Deletes the hash-based transaction index from the database on start up and then exits."`
+	RefillTxIndex bool `toml:"-" yaml:"-" long:"refilltxindex"`
+	VerifyState   bool `toml:"-" yaml:"-" long:"verifystate" description:"Tries to load state of each chain. If state is corrupted, system will try to repair it."`
 
 	DataDir      string   `toml:"data_dir" yaml:"data_dir" short:"b" long:"datadir" description:"Directory to store data"`
 	LogDir       string   `toml:"log_dir" yaml:"log_dir" long:"logdir" description:"Directory to log output."`

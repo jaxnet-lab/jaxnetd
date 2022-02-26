@@ -11,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"gitlab.com/jaxnet/jaxnetd/database"
+	"gitlab.com/jaxnet/jaxnetd/node/blockchain"
 	"gitlab.com/jaxnet/jaxnetd/node/blockchain/indexers"
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 )
@@ -74,6 +75,36 @@ func (ctrl *DBCtl) loadBlockDB(dataDir string, chain chainctx.IChainCtx, cfg Ins
 
 	ctrl.logger.Info().Msg("Block database loaded")
 	return db, nil
+}
+
+func (ctrl *DBCtl) sanitizeState(ctx context.Context, cfg *Config, db database.DB) bool {
+	if cfg.VerifyState {
+		err := blockchain.VerifyStateSanity(db)
+		if err != nil {
+			ctrl.logger.Error().Err(err).Msg("Can't load Block db")
+			return false
+		}
+		return false
+	}
+
+	cleanIndexes, err := ctrl.cleanIndexes(ctx, cfg, db)
+	if cleanIndexes {
+		ctrl.logger.Info().Msg("clean db indexes")
+		return false
+	}
+
+	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("failed to clean indexes")
+		return false
+	}
+
+	err = ctrl.refillIndexes(ctx, cfg, db)
+	if err != nil {
+		ctrl.logger.Error().Err(err).Msg("failed to refill indexes")
+		return false
+	}
+
+	return true
 }
 
 // cleanIndexes drops indexes and exit if requested.
@@ -164,7 +195,7 @@ func (ctrl *DBCtl) warnMultipleDBs(dataDir string, chain string, cfg InstanceCon
 	// Warn if there are extra databases.
 	if len(duplicateDBPaths) > 0 {
 		selectedDBPath := ctrl.blockDBPath(dataDir, chain, cfg.DBType)
-		ctrl.logger.Info().Msgf("WARNING: There are multiple block chain databases "+
+		ctrl.logger.Info().Msgf("WARNING: There are multiple block unit databases "+
 			"using different database types.\nYou probably don't "+
 			"want to waste disk space by having more than one.\n"+
 			"Your current database is located at [%v].\nThe "+

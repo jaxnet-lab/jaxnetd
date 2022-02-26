@@ -174,8 +174,16 @@ func (chainCtl *chainController) runShardRoutine(shardID uint32, opts p2p.Listen
 	shardCtl := NewShardCtl(nCtx, chainCtl.logger, chainCtl.cfg, shardChainCtx, opts)
 
 	// gbt worker state was initialized in cprovider.NewChainProvider
-	if err := shardCtl.Init(chainCtl.beacon.chainProvider); err != nil {
+	canContinue, err := shardCtl.Init(nCtx, chainCtl.beacon.chainProvider)
+	if err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Can't init shard chainCtl")
+		chainCtl.exitStatuses <- status{ok: false, unit: shardChainCtx.Name()}
+		cancel()
+		return
+	}
+
+	if !canContinue {
+		chainCtl.exitStatuses <- status{ok: false, unit: shardChainCtx.Name()}
 		cancel()
 		return
 	}

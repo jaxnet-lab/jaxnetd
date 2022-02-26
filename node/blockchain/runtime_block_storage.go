@@ -13,6 +13,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -34,6 +35,18 @@ type rBlockStorage struct {
 	// protected by a combination of the chain lock and the orphan lock.
 	orphanIndex  orphanIndex
 	lastSerialID int64
+}
+
+func newBlocksStorage(db database.DB, params *chaincfg.Params) rBlockStorage {
+	return rBlockStorage{
+		index:     newBlockIndex(db, params),
+		bestChain: newChainView(nil),
+		orphanIndex: orphanIndex{
+			orphans:          make(map[chainhash.Hash]*orphanBlock),
+			actualMMRToBlock: make(map[chainhash.Hash]*orphanBlock),
+			mmrRootsOrphans:  make(map[chainhash.Hash][]*orphanBlock),
+		},
+	}
 }
 
 // blockExists determines whether a block with the given hash exists either in

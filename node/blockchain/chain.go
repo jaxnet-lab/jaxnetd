@@ -147,7 +147,8 @@ type Config struct {
 	// signature cache.
 	HashCache *txscript.HashCache
 
-	DBFullRescan bool
+	DBFullRescan     bool
+	TryToRepairState bool
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -207,19 +208,11 @@ func New(config *Config) (*BlockChain, error) {
 			maxRetargetTimespan: targetTimespan * adjustmentFactor,
 			blocksPerRetarget:   int32(blocksPerRetarget),
 		},
-		blocksDB: rBlockStorage{
-			index:     newBlockIndex(config.DB, params),
-			bestChain: newChainView(nil),
-			orphanIndex: orphanIndex{
-				orphans:          make(map[chainhash.Hash]*orphanBlock),
-				actualMMRToBlock: make(map[chainhash.Hash]*orphanBlock),
-				mmrRootsOrphans:  make(map[chainhash.Hash][]*orphanBlock),
-			},
-		},
-
+		blocksDB:         newBlocksStorage(config.DB, params),
 		warningCaches:    newThresholdCaches(vbNumBits),
 		deploymentCaches: newThresholdCaches(chaincfg.DefinedDeployments),
 		dbFullRescan:     config.DBFullRescan,
+		tryToRepairState: config.TryToRepairState,
 	}
 
 	// Initialize the chain state from the passed database.  When the db
@@ -343,7 +336,8 @@ type BlockChain struct {
 	notifications     []NotificationCallback
 
 	// incidates if we are rescanning the whole db. Needed to enable fast catch-up, with processing only best chain
-	dbFullRescan bool
+	dbFullRescan     bool
+	tryToRepairState bool
 }
 
 // HaveBlock returns whether or not the chain instance has the block represented
@@ -1759,11 +1753,18 @@ func (b *BlockChain) BlockIDsByHash(hash *chainhash.Hash) (int32, int64, int64, 
 
 func (b *BlockChain) SaveBestChainSerialIDs() error {
 	serialIDs := make([]int64, 0, len(b.blocksDB.bestChain.nodes))
-	for i := range b.blocksDB.bestChain.nodes {
-		serialIDs = append(serialIDs, b.blocksDB.bestChain.nodes[i].SerialID())
-	}
 
 	err := b.db.Update(func(dbTx database.Tx) error {
+		for i := range b.blocksDB.bestChain.nodes {
+			serialIDs = append(serialIDs, b.blocksDB.bestChain.nodes[i].SerialID())
+			err := chaindata.DBPutMMRRoot(dbTx,
+				b.blocksDB.bestChain.nodes[i].ActualMMRRoot(),
+				b.blocksDB.bestChain.nodes[i].GetHash())
+			if err != nil {
+				return err
+			}
+		}
+
 		return chaindata.DBPutSerialIDsList(dbTx, serialIDs)
 	})
 	if err != nil {

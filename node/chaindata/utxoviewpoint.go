@@ -35,7 +35,7 @@ const (
 )
 
 // UtxoEntry houses details about an individual transaction output in a utxo
-// view such as whether or not it was contained in a coinbase tx, the height of
+// view such as whether or not it was contained in a coinbase tx, the Height of
 // the block that contains the tx, whether or not it is spent, its public key
 // script, and how much it pays.
 type UtxoEntry struct {
@@ -68,7 +68,7 @@ func (entry *UtxoEntry) IsCoinBase() bool {
 	return entry.packedFlags&tfCoinBase == tfCoinBase
 }
 
-// BlockHeight returns the height of the block containing the output.
+// BlockHeight returns the Height of the block containing the output.
 func (entry *UtxoEntry) BlockHeight() int32 {
 	return entry.blockHeight
 }
@@ -540,7 +540,7 @@ func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil
 			}
 
 			// The legacy v1 spend journal format only stored the
-			// coinbase flag and height when the output was the last
+			// coinbase flag and Height when the output was the last
 			// unspent output of the transaction.  As a result, when
 			// the information is missing, search for it by scanning
 			// all possible outputs of the transaction since it must

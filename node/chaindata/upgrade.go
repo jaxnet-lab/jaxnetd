@@ -59,7 +59,7 @@ type blockChainContext struct {
 // MigrateBlockIndex migrates all block entries from the v1 block index bucket
 // to the v2 bucket. The v1 bucket stores all block entries keyed by block Hash,
 // whereas the v2 bucket stores the exact same values, but keyed instead by
-// block height + Hash.
+// block Height + Hash.
 func MigrateBlockIndex(db database.DB) error {
 	// Hardcoded bucket names so updates to the global values do not affect
 	// old upgrades.
@@ -95,7 +95,7 @@ func MigrateBlockIndex(db database.DB) error {
 			return err
 		}
 
-		// Use the block graph to calculate the height of each block.
+		// Use the block graph to calculate the Height of each block.
 		err = determineBlockHeights(blocksMap)
 		if err != nil {
 			return err
@@ -115,7 +115,7 @@ func MigrateBlockIndex(db database.DB) error {
 			chainContext := blocksMap[hash]
 
 			if chainContext.height == -1 {
-				return fmt.Errorf("unable to calculate chain height for stored block %s", hash)
+				return fmt.Errorf("unable to calculate chain Height for stored block %s", hash)
 			}
 
 			// Mark blocks as valid if they are part of the main chain.
@@ -150,7 +150,7 @@ func MigrateBlockIndex(db database.DB) error {
 
 // readBlockTree reads the old block index bucket and constructs a mapping of
 // each block to its parent block and all child blocks. This mapping represents
-// the full tree of blocks. This function does not populate the height or
+// the full tree of blocks. This function does not populate the Height or
 // mainChain fields of the returned blockChainContext values.
 func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (map[chainhash.Hash]*blockChainContext, error) {
 	blocksMap := make(map[chainhash.Hash]*blockChainContext)
@@ -183,10 +183,10 @@ func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (
 }
 
 // determineBlockHeights takes a map of block hashes to a slice of child hashes
-// and uses it to compute the height for each block. The function assigns a
-// height of 0 to the genesis Hash and explores the tree of blocks
-// breadth-first, assigning a height to every block with a path back to the
-// genesis block. This function modifies the height field on the blocksMap
+// and uses it to compute the Height for each block. The function assigns a
+// Height of 0 to the genesis Hash and explores the tree of blocks
+// breadth-first, assigning a Height to every block with a path back to the
+// genesis block. This function modifies the Height field on the blocksMap
 // entries.
 // nolint: forcetypeassert
 func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) error {
@@ -209,7 +209,7 @@ func determineBlockHeights(blocksMap map[chainhash.Hash]*blockChainContext) erro
 		hash := e.Value.(*chainhash.Hash)
 		height := blocksMap[*hash].height
 
-		// For each block with this one as a parent, assign it a height and
+		// For each block with this one as a parent, assign it a Height and
 		// push to queue for future processing.
 		for _, childHash := range blocksMap[*hash].children {
 			blocksMap[*childHash].height = height + 1
@@ -237,11 +237,11 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //
 // The legacy format is as follows:
 //
-//   <version><height><header code><unspentness bitmap>[<compressed txouts>,...]
+//   <version><Height><header code><unspentness bitmap>[<compressed txouts>,...]
 //
 //   Field                Type     Size
 //   version              VLQ      variable
-//   block height         VLQ      variable
+//   block Height         VLQ      variable
 //   header code          VLQ      variable
 //   unspentness bitmap   []byte   variable
 //   compressed txouts
@@ -277,11 +277,11 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //    010103320496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52
 //    <><><><------------------------------------------------------------------>
 //     | | \--------\                               |
-//     | height     |                      compressed txout 0
+//     | Height     |                      compressed txout 0
 //  version    header code
 //
 //  - version: 1
-//  - height: 1
+//  - Height: 1
 //  - header code: 0x03 (coinbase, output zero unspent, 0 bytes of unspentness)
 //  - unspentness: Nothing since it is zero bytes
 //  - compressed txout 0:
@@ -297,10 +297,10 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //    <><----><><><------------------------------------------><-------------------------------------------->
 //     |    |  | \-------------------\            |                            |
 //  version |  \--------\       unspentness       |                    compressed txout 2
-//        height     header code          compressed txout 0
+//        Height     header code          compressed txout 0
 //
 //  - version: 1
-//  - height: 113931
+//  - Height: 113931
 //  - header code: 0x0a (output zero unspent, 1 byte in unspentness bitmap)
 //  - unspentness: [0x01] (bit 0 is set, so output 0+2 = 2 is unspent)
 //    NOTE: It's +2 since the first two outputs are encoded in the header code
@@ -321,10 +321,10 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //    <><----><><----><-------------------------------------------------->
 //     |    |  |   \-----------------\            |
 //  version |  \--------\       unspentness       |
-//        height     header code          compressed txout 22
+//        Height     header code          compressed txout 22
 //
 //  - version: 1
-//  - height: 338156
+//  - Height: 338156
 //  - header code: 0x10 (2+1 = 3 bytes in unspentness bitmap)
 //    NOTE: It's +1 since neither bit 1 nor 2 are set, so N-1 is encoded.
 //  - unspentness: [0x00 0x00 0x10] (bit 20 is set, so output 20+2 = 22 is unspent)
@@ -344,11 +344,11 @@ func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, error) {
 		return nil, ErrDeserialize("unexpected end of data after version")
 	}
 
-	// Deserialize the block height.
+	// Deserialize the block Height.
 	blockHeight, bytesRead := deserializeVLQ(serialized[offset:])
 	offset += bytesRead
 	if offset >= len(serialized) {
-		return nil, ErrDeserialize("unexpected end of data after height")
+		return nil, ErrDeserialize("unexpected end of data after Height")
 	}
 
 	// Deserialize the header code.

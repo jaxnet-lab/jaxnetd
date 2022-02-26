@@ -84,7 +84,7 @@ const (
 	ErrBadMerkleRoot
 
 	// ErrBadCheckpoint indicates a block that is expected to be at a
-	// checkpoint height does not match the expected one.
+	// checkpoint Height does not match the expected one.
 	ErrBadCheckpoint
 
 	// ErrForkTooOld indicates a block is attempting to fork the block chain
@@ -176,11 +176,11 @@ const (
 	ErrBadCoinbaseValue
 
 	// ErrMissingCoinbaseHeight indicates the coinbase transaction for a
-	// block does not start with the serialized block block height as
+	// block does not start with the serialized block block Height as
 	// required for version 2 and higher blocks.
 	ErrMissingCoinbaseHeight
 
-	// ErrBadCoinbaseHeight indicates the serialized block height in the
+	// ErrBadCoinbaseHeight indicates the serialized block Height in the
 	// coinbase transaction for version 2 and higher blocks does not match
 	// the expected value.
 	ErrBadCoinbaseHeight

@@ -134,7 +134,7 @@ func (c *BeaconBlockGenerator) ValidateJaxAuxRules(block *wire.MsgBlock, height 
 	return err
 }
 
-// CalcBlockSubsidy returns the subsidy amount a block at the provided height
+// CalcBlockSubsidy returns the subsidy amount a block at the provided Height
 // should have. This is mainly used for determining how much the coinbase for
 // newly generated blocks awards as well as validating the coinbase for blocks
 // has the expected value.

@@ -23,7 +23,7 @@ import (
 // shared by all callers.
 type BestState struct {
 	Hash           chainhash.Hash // The hash of the block.
-	Height         int32          // The height of the block.
+	Height         int32          // The Height of the block.
 	Bits           uint32         // The difficulty bits of the block.
 	K              uint32         // The K coefficient.
 	Shards         uint32         // The last known number of Shards.

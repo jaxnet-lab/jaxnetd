@@ -127,18 +127,21 @@ func shardCoreMain() error {
 			Msg("can not do upgrade")
 		return err
 	}
-
+	stopMe := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	sigChan := interruptListener(config.Log.With().Str("ctx", "interruptListener").Logger())
 	go func() {
-		<-sigChan
+		select {
+		case <-stopMe:
+		case <-sigChan:
+		}
 		config.Log.Info().Msg("propagate stop signal")
 		cancel()
 	}()
 
 	controller := node.Controller(config.Log.With().Str("ctx", "NodeController").Logger())
 	// nolint: gocritic
-	if err := controller.Run(ctx, cfg); err != nil {
+	if err := controller.Run(ctx, stopMe, cfg); err != nil {
 		config.Log.Error().Err(err).Msg("Can't run Chains")
 		pprof.StopCPUProfile()
 		os.Exit(osErrorExit)

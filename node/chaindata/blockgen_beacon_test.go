@@ -61,6 +61,6 @@ func Test_calcBlockSubsidy(t *testing.T) {
 	// for h := 1; h <= 262500; h++ {
 	// 	reward := calcBlockSubsidy(int32(h)) / 10000_0000
 	// 	sum += reward
-	// 	println("height", h, "sum", sum, "reward", reward)
+	// 	println("Height", h, "sum", sum, "reward", reward)
 	// }
 }

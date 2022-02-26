@@ -42,11 +42,11 @@ var (
 	BlockIndexBucketName = []byte("blockheaderidx")
 
 	// HashIndexBucketName is the name of the db bucket used to house to the
-	// [block Hash] -> [block height] index.
+	// [block Hash] -> [block Height] index.
 	HashIndexBucketName = []byte("hashidx")
 
 	// HeightIndexBucketName is the name of the db bucket used to house to the
-	// [block height] -> [block Hash] index.
+	// [block Height] -> [block Hash] index.
 	HeightIndexBucketName = []byte("heightidx")
 
 	// ChainStateKeyName is the name of the db key used to store the best
@@ -105,7 +105,7 @@ var (
 	byteOrder = binary.LittleEndian
 )
 
-// ErrNotInMainChain signifies that a block Hash or height that is not in the
+// ErrNotInMainChain signifies that a block Hash or Height that is not in the
 // main chain was requested.
 type ErrNotInMainChain string
 
@@ -198,8 +198,8 @@ func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 // allowed to spend outputs from earlier ones in the same block.
 //
 // The reserved field below used to keep track of the version of the containing
-// transaction when the height in the header code was non-zero, however the
-// height is always non-zero now, but keeping the extra reserved field allows
+// transaction when the Height in the header code was non-zero, however the
+// Height is always non-zero now, but keeping the extra reserved field allows
 // backwards compatibility.
 //
 // The serialized format is:
@@ -215,7 +215,7 @@ func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 //
 // The serialized header code format is:
 //   bit 0 - containing transaction is a coinbase
-//   bits 1-x - height of the block that contains the spent txout
+//   bits 1-x - Height of the block that contains the spent txout
 //
 // Example 1:
 // From block 170 in main blockchain.
@@ -226,7 +226,7 @@ func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 //     | reserved                  compressed txout
 //    header code
 //
-//  - header code: 0x13 (coinbase, height 9)
+//  - header code: 0x13 (coinbase, Height 9)
 //  - reserved: 0x00
 //  - compressed txout 0:
 //    - 0x32: VLQ-encoded compressed amount for 5000000000 (50 BTC)
@@ -243,14 +243,14 @@ func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 //    header code                                          header code
 //
 //  - Last spent output:
-//    - header code: 0x8b9970 (not coinbase, height 100024)
+//    - header code: 0x8b9970 (not coinbase, Height 100024)
 //    - reserved: 0x00
 //    - compressed txout:
 //      - 0x91f20f: VLQ-encoded compressed amount for 34405000000 (344.05 BTC)
 //      - 0x00: special script type pay-to-pubkey-Hash
 //      - 0x6e...86: pubkey Hash
 //  - Second to last spent output:
-//    - header code: 0x8b9970 (not coinbase, height 100024)
+//    - header code: 0x8b9970 (not coinbase, Height 100024)
 //    - reserved: 0x00
 //    - compressed txout:
 //      - 0x86c647: VLQ-encoded compressed amount for 13761000000 (137.61 BTC)
@@ -261,7 +261,7 @@ func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32)
 // SpentTxOut contains a spent transaction output and potentially additional
 // contextual information such as whether or not it was contained in a coinbase
 // transaction, the version of the transaction it was contained in, and which
-// block height the containing transaction was included in.  As described in
+// block Height the containing transaction was included in.  As described in
 // the comments above, the additional contextual information will only be valid
 // when this spent txout is spending the last unspent output of the containing
 // transaction.
@@ -272,7 +272,7 @@ type SpentTxOut struct {
 	// PkScipt is the the public key script for the output.
 	PkScript []byte
 
-	// Height is the height of the the block containing the creating tx.
+	// Height is the Height of the the block containing the creating tx.
 	Height int32
 
 	// Denotes if the creating tx is a coinbase.
@@ -283,7 +283,7 @@ type SpentTxOut struct {
 // serializing the provided stxo entry.
 func spentTxOutHeaderCode(stxo *SpentTxOut) uint64 {
 	// As described in the serialization format comments, the header code
-	// encodes the height shifted over one bit and the coinbase flag in the
+	// encodes the Height shifted over one bit and the coinbase flag in the
 	// lowest bit.
 	headerCode := uint64(stxo.Height) << 1
 	if stxo.IsCoinBase {
@@ -299,7 +299,7 @@ func spentTxOutSerializeSize(stxo *SpentTxOut) int {
 	size := serializeSizeVLQ(spentTxOutHeaderCode(stxo))
 	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
-		// containing transaction version when the height was non-zero,
+		// containing transaction version when the Height was non-zero,
 		// so this is required for backwards compat.
 		size += serializeSizeVLQ(0)
 	}
@@ -315,7 +315,7 @@ func putSpentTxOut(target []byte, stxo *SpentTxOut) int {
 	offset := putVLQ(target, headerCode)
 	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
-		// containing transaction version when the height was non-zero,
+		// containing transaction version when the Height was non-zero,
 		// so this is required for backwards compat.
 		offset += putVLQ(target[offset:], 0)
 	}
@@ -343,12 +343,12 @@ func decodeSpentTxOut(serialized []byte, stxo *SpentTxOut) (int, error) {
 	// Decode the header code.
 	//
 	// Bit 0 indicates containing transaction is a coinbase.
-	// Bits 1-x encode height of containing transaction.
+	// Bits 1-x encode Height of containing transaction.
 	stxo.IsCoinBase = code&0x01 != 0
 	stxo.Height = int32(code >> 1)
 	if stxo.Height > 0 {
 		// The legacy v1 spend journal format conditionally tracked the
-		// containing transaction version when the height was non-zero,
+		// containing transaction version when the Height was non-zero,
 		// so this is required for backwards compat.
 		_, bytesRead := deserializeVLQ(serialized[offset:])
 		offset += bytesRead
@@ -453,7 +453,7 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 // DBFetchSpendJournalEntry fetches the spend journal entry for the passed block
 // and deserializes it into a slice of spent txout entries.
 //
-// NOTE: Legacy entries will not have the coinbase flag or height set unless it
+// NOTE: Legacy entries will not have the coinbase flag or Height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
 func DBFetchSpendJournalEntry(dbTx database.Tx, block *jaxutil.Block) ([]SpentTxOut, error) {
@@ -527,7 +527,7 @@ func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) erro
 //
 // The serialized header code format is:
 //   bit 0 - containing transaction is a coinbase
-//   bits 1-x - height of the block that contains the unspent txout
+//   bits 1-x - Height of the block that contains the unspent txout
 //
 // Example 1:
 // From tx in main blockchain:
@@ -538,7 +538,7 @@ func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) erro
 //     |                                          |
 //   header code                         compressed txout
 //
-//  - header code: 0x03 (coinbase, height 1)
+//  - header code: 0x03 (coinbase, Height 1)
 //  - compressed txout:
 //    - 0x32: VLQ-encoded compressed amount for 5000000000 (50 BTC)
 //    - 0x04: special script type pay-to-pubkey
@@ -553,7 +553,7 @@ func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) erro
 //      |                             |
 //   header code             compressed txout
 //
-//  - header code: 0x8cf316 (not coinbase, height 113931)
+//  - header code: 0x8cf316 (not coinbase, Height 113931)
 //  - compressed txout:
 //    - 0x8009: VLQ-encoded compressed amount for 15000000 (0.15 BTC)
 //    - 0x00: special script type pay-to-pubkey-Hash
@@ -568,7 +568,7 @@ func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) erro
 //      |                             |
 //   header code             compressed txout
 //
-//  - header code: 0xa8a258 (not coinbase, height 338156)
+//  - header code: 0xa8a258 (not coinbase, Height 338156)
 //  - compressed txout:
 //    - 0x8ba5b9e763: VLQ-encoded compressed amount for 366875659 (3.66875659 BTC)
 //    - 0x01: special script type pay-to-script-Hash
@@ -630,7 +630,7 @@ func utxoEntryHeaderCode(entry *UtxoEntry) (uint64, error) {
 	}
 
 	// As described in the serialization format comments, the header code
-	// encodes the height shifted over one bit and the coinbase flag in the
+	// encodes the Height shifted over one bit and the coinbase flag in the
 	// lowest bit.
 	headerCode := uint64(entry.BlockHeight()) << 1
 	if entry.IsCoinBase() {
@@ -682,7 +682,7 @@ func DeserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	// Decode the header code.
 	//
 	// Bit 0 indicates whether the containing transaction is a coinbase.
-	// Bits 1-x encode height of containing transaction.
+	// Bits 1-x encode Height of containing transaction.
 	isCoinBase := code&0x01 != 0
 	blockHeight := int32(code >> 1)
 
@@ -948,16 +948,16 @@ func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, 
 
 // -----------------------------------------------------------------------------
 // The block index consists of two buckets with an entry for every block in the
-// main chain.  One bucket is for the Hash to height mapping and the other is
-// for the height to Hash mapping.
+// main chain.  One bucket is for the Hash to Height mapping and the other is
+// for the Height to Hash mapping.
 //
-// The serialized format for values in the Hash to height bucket is:
-//   <height>
+// The serialized format for values in the Hash to Height bucket is:
+//   <Height>
 //
 //   Field      Type     Size
-//   height     uint32   4 bytes
+//   Height     uint32   4 bytes
 //
-// The serialized format for values in the height to Hash bucket is:
+// The serialized format for values in the Height to Hash bucket is:
 //   <Hash>
 //
 //   Field      Type             Size
@@ -965,37 +965,37 @@ func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, 
 // -----------------------------------------------------------------------------
 
 // DBPutBlockIndex uses an existing database transaction to update or add the
-// block index entries for the Hash to height and height to Hash mappings for
+// block index entries for the Hash to Height and Height to Hash mappings for
 // the provided values.
 func DBPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
-	// Serialize the height for use in the index entries.
+	// Serialize the Height for use in the index entries.
 	var serializedHeight [4]byte
 	byteOrder.PutUint32(serializedHeight[:], uint32(height))
 
-	// Add the block Hash to height mapping to the index.
+	// Add the block Hash to Height mapping to the index.
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
 	if err := hashIndex.Put(hash[:], serializedHeight[:]); err != nil {
 		return err
 	}
 
-	// Add the block height to Hash mapping to the index.
+	// Add the block Height to Hash mapping to the index.
 	heightIndex := meta.Bucket(HeightIndexBucketName)
 	return heightIndex.Put(serializedHeight[:], hash[:])
 }
 
 // DBRemoveBlockIndex uses an existing database transaction remove block index
-// entries from the Hash to height and height to Hash mappings for the provided
+// entries from the Hash to Height and Height to Hash mappings for the provided
 // values.
 func DBRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
-	// Remove the block Hash to height mapping.
+	// Remove the block Hash to Height mapping.
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
 	if err := hashIndex.Delete(hash[:]); err != nil {
 		return err
 	}
 
-	// Remove the block height to Hash mapping.
+	// Remove the block Height to Hash mapping.
 	var serializedHeight [4]byte
 	byteOrder.PutUint32(serializedHeight[:], uint32(height))
 	heightIndex := meta.Bucket(HeightIndexBucketName)
@@ -1003,7 +1003,7 @@ func DBRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) er
 }
 
 // DBFetchHeightByHash uses an existing database transaction to retrieve the
-// height for the provided Hash from the index.
+// Height for the provided Hash from the index.
 func DBFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) {
 	meta := dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
@@ -1017,18 +1017,18 @@ func DBFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) 
 }
 
 // -----------------------------------------------------------------------------
-// The best chain state consists of the best block hash and height, the total
+// The best chain state consists of the best block hash and Height, the total
 // number of transactions up to and including those in the best block, and the
 // accumulated work sum up to and including the best block.
 //
 // The serialized format is:
 //
-//   <block hash><block height><total txns><work sum length><work sum>
+//   <block hash><block Height><total txns><work sum length><work sum>
 //
 //   Field             Type             Size
 //   block hash        chainhash.Hash   chainhash.HashSize
 //   mmr root hash     chainhash.Hash   chainhash.HashSize
-//   block height      uint32           4 bytes
+//   block Height      uint32           4 bytes
 //   last serial id    uint32           8 bytes
 //   total txns        uint64           8 bytes
 //   work sum length   uint32           4 bytes
@@ -1040,7 +1040,7 @@ func DBFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) 
 type BestChainState struct {
 	Hash         chainhash.Hash
 	MMRRoot      chainhash.Hash
-	height       uint32
+	Height       uint32
 	LastSerialID int64
 	TotalTxns    uint64
 	workSum      *big.Int
@@ -1063,7 +1063,7 @@ func serializeBestChainState(state BestChainState) []byte {
 	copy(serializedData[offset:offset+chainhash.HashSize], state.MMRRoot[:])
 	offset += uint32(chainhash.HashSize)
 
-	byteOrder.PutUint32(serializedData[offset:], state.height)
+	byteOrder.PutUint32(serializedData[offset:], state.Height)
 	offset += 4
 
 	byteOrder.PutUint64(serializedData[offset:], uint64(state.LastSerialID))
@@ -1084,7 +1084,7 @@ func serializeBestChainState(state BestChainState) []byte {
 // block.
 func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	// Ensure the serialized data has enough bytes to properly deserialize
-	// the Hash, height, total transactions, and work sum length.
+	// the Hash, Height, total transactions, and work sum length.
 	if len(serializedData) < chainhash.HashSize+16 {
 		return BestChainState{}, database.Error{
 			ErrorCode:   database.ErrCorruption,
@@ -1097,7 +1097,7 @@ func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	offset := uint32(chainhash.HashSize)
 	copy(state.MMRRoot[:], serializedData[offset:offset+chainhash.HashSize])
 	offset += uint32(chainhash.HashSize)
-	state.height = byteOrder.Uint32(serializedData[offset : offset+4])
+	state.Height = byteOrder.Uint32(serializedData[offset : offset+4])
 	offset += 4
 	state.LastSerialID = int64(byteOrder.Uint64(serializedData[offset : offset+8]))
 	offset += 8
@@ -1127,7 +1127,7 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 	serializedData := serializeBestChainState(BestChainState{
 		Hash:         snapshot.Hash,
 		MMRRoot:      snapshot.CurrentMMRRoot,
-		height:       uint32(snapshot.Height),
+		Height:       uint32(snapshot.Height),
 		LastSerialID: snapshot.LastSerialID,
 		TotalTxns:    snapshot.TotalTxns,
 		workSum:      workSum,
@@ -1165,7 +1165,7 @@ func DeserializeBlockRow(blockRow []byte) (wire.BlockHeader, blocknodes.BlockSta
 
 // DBFetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a jaxutil.Block
-// with the height set.
+// with the Height set.
 func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
@@ -1174,7 +1174,7 @@ func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.
 		return nil, err
 	}
 
-	// Create the encapsulated block and set the height appropriately.
+	// Create the encapsulated block and set the Height appropriately.
 	block, err := jaxutil.NewBlockFromBytes(blockBytes)
 	if err != nil {
 		return nil, err
@@ -1228,7 +1228,7 @@ func DBStoreBlock(dbTx database.Tx, block *jaxutil.Block) error {
 }
 
 // blockIndexKey generates the binary key for an entry in the block index
-// bucket. The key is composed of the block height encoded as a big-endian
+// bucket. The key is composed of the block Height encoded as a big-endian
 // 32-bit unsigned int followed by the 32 byte block Hash.
 func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	indexKey := make([]byte, chainhash.HashSize+4)
@@ -1286,7 +1286,7 @@ func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhas
 type ShardInfo struct {
 	// ID of the shard chain.
 	ID uint32
-	// ExpansionHeight chain height of beacon block
+	// ExpansionHeight chain Height of beacon block
 	// when expansion has happened for this shard.
 	ExpansionHeight int32
 	// ExpansionHash hash of beacon block

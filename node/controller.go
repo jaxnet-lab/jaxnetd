@@ -7,6 +7,7 @@ package node
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -44,7 +45,10 @@ type chainController struct {
 
 	// -------------------------------
 
-	miner *cpuminer.CPUMiner
+	miner        *cpuminer.CPUMiner
+	exitStatuses chan status
+	exitError    error
+	stopMe       chan struct{}
 }
 
 // nolint: golint, revive
@@ -62,16 +66,30 @@ func Controller(logger zerolog.Logger) *chainController {
 	return res
 }
 
+type status struct {
+	ok   bool
+	unit string
+}
+
 // nolint
-func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
+func (chainCtl *chainController) Run(ctx context.Context, stopMe chan struct{}, cfg *Config) error {
 	// todo: fix after p2p refactoring
 	cfg.Node.P2P.GetChainPort = chainCtl.ports.Get
 	chainCtl.cfg = cfg
+	chainCtl.stopMe = stopMe
+	// chainCtl.ctx, chainCtl.cancel = ctx, cancel
 	chainCtl.ctx, chainCtl.cancel = context.WithCancel(ctx)
+	chainCtl.exitStatuses = make(chan status)
 
-	if err := chainCtl.runBeacon(chainCtl.ctx, cfg); err != nil {
+	go chainCtl.waitForUnexpectedStop()
+	beaconStarted, err := chainCtl.runBeacon(chainCtl.ctx, cfg)
+	if err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Beacon error")
 		return err
+	}
+
+	if !beaconStarted {
+		return nil
 	}
 
 	if err := chainCtl.runRPC(chainCtl.ctx, cfg); err != nil {
@@ -109,7 +127,7 @@ func (chainCtl *chainController) Run(ctx context.Context, cfg *Config) error {
 
 	<-ctx.Done()
 	chainCtl.wg.Wait()
-	return nil
+	return chainCtl.exitError
 }
 
 func (chainCtl *chainController) InitCPUMiner() {
@@ -141,15 +159,20 @@ func (chainCtl *chainController) InitCPUMiner() {
 		chainCtl.logger.With().Str("ctx", "miner").Logger())
 }
 
-func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) error {
+func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) (bool, error) {
 	if interruptRequested(ctx) {
-		return errors.New("can't create interrupt request")
+		return false, errors.New("can't create interrupt request")
 	}
 
 	chainCtl.beacon = NewBeaconCtl(ctx, chainCtl.logger, cfg)
-	if err := chainCtl.beacon.Init(); err != nil {
+	canContinue, err := chainCtl.beacon.Init(ctx)
+	if err != nil {
 		chainCtl.logger.Error().Err(err).Msg("Can't init Beacon chainCtl")
-		return err
+		return false, err
+	}
+	if !canContinue {
+		chainCtl.exitStatuses <- status{ok: false, unit: "beacon"}
+		return false, nil
 	}
 
 	chainCtl.wg.Add(1)
@@ -158,7 +181,7 @@ func (chainCtl *chainController) runBeacon(ctx context.Context, cfg *Config) err
 		chainCtl.wg.Done()
 	}()
 
-	return nil
+	return true, nil
 }
 
 type rpcRO struct {
@@ -212,5 +235,18 @@ func (chainCtl *chainController) Stats() map[string]float64 {
 		"shards_count":        float64(lastShardID),
 		"active_shards_count": float64(activeShards),
 		"rpc_active_clients":  float64(activeClients),
+	}
+}
+
+func (chainCtl *chainController) waitForUnexpectedStop() {
+	for {
+		select {
+		case s := <-chainCtl.exitStatuses:
+			if !s.ok {
+				chainCtl.logger.Error().Str("unit", s.unit).Msgf("Unexpected stop of the unit")
+				chainCtl.stopMe <- struct{}{}
+				chainCtl.exitError = fmt.Errorf("unexpected stop of the module :%s", s.unit)
+			}
+		}
 	}
 }

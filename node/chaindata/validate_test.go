@@ -3,6 +3,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
+//go:build deprecated_tests
 // +build deprecated_tests
 
 package chaindata
@@ -36,19 +37,19 @@ func TestSequenceLocksActive(t *testing.T) {
 
 		want bool
 	}{
-		// Block based sequence lock with equal block height.
+		// Block based sequence lock with equal block Height.
 		{seqLock: seqLock(1000, -1), blockHeight: 1001, mtp: time.Unix(9, 0), want: true},
 
 		// Time based sequence lock with mtp past the absolute time.
 		{seqLock: seqLock(-1, 30), blockHeight: 2, mtp: time.Unix(31, 0), want: true},
 
-		// Block based sequence lock with current height below seq lock block height.
+		// Block based sequence lock with current Height below seq lock block Height.
 		{seqLock: seqLock(1000, -1), blockHeight: 90, mtp: time.Unix(9, 0), want: false},
 
 		// Time based sequence lock with current time before lock time.
 		{seqLock: seqLock(-1, 30), blockHeight: 2, mtp: time.Unix(29, 0), want: false},
 
-		// Block based sequence lock at the same height, so shouldn't yet be active.
+		// Block based sequence lock at the same Height, so shouldn't yet be active.
 		{seqLock: seqLock(1000, -1), blockHeight: 1000, mtp: time.Unix(9, 0), want: false},
 
 		// Time based sequence lock with current time equal to lock time, so shouldn't yet be active.
@@ -190,23 +191,23 @@ func TestCheckSerializedHeight(t *testing.T) {
 
 	tests := []struct {
 		sigScript  []byte // Serialized data
-		wantHeight int32  // Expected height
+		wantHeight int32  // Expected Height
 		err        error  // Expected error type
 	}{
-		// No serialized height length.
+		// No serialized Height length.
 		{[]byte{}, 0, missingHeightError},
-		// Serialized height length with no height bytes.
+		// Serialized Height length with no Height bytes.
 		{[]byte{0x02}, 0, missingHeightError},
-		// Serialized height length with too few height bytes.
+		// Serialized Height length with too few Height bytes.
 		{[]byte{0x02, 0x4a}, 0, missingHeightError},
-		// Serialized height that needs 2 bytes to encode.
+		// Serialized Height that needs 2 bytes to encode.
 		{[]byte{0x02, 0x4a, 0x52}, 21066, nil},
-		// Serialized height that needs 2 bytes to encode, but backwards
+		// Serialized Height that needs 2 bytes to encode, but backwards
 		// endianness.
 		{[]byte{0x02, 0x4a, 0x52}, 19026, badHeightError},
-		// Serialized height that needs 3 bytes to encode.
+		// Serialized Height that needs 3 bytes to encode.
 		{[]byte{0x03, 0x40, 0x0d, 0x03}, 200000, nil},
-		// Serialized height that needs 3 bytes to encode, but backwards
+		// Serialized Height that needs 3 bytes to encode, but backwards
 		// endianness.
 		{[]byte{0x03, 0x40, 0x0d, 0x03}, 1074594560, badHeightError},
 	}

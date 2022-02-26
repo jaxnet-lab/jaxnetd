@@ -87,7 +87,7 @@ type ShardCtl struct {
 
 func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	chain chainctx.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
-	log = log.With().Str("chain", chain.Name()).Logger()
+	log = log.With().Str("unit", chain.Name()).Logger()
 
 	return &ShardCtl{
 		ctx:       ctx,
@@ -99,12 +99,17 @@ func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	}
 }
 
-func (shardCtl *ShardCtl) Init(beaconBlockGen chaindata.BeaconBlockProvider) error {
+func (shardCtl *ShardCtl) Init(ctx context.Context, beaconBlockGen chaindata.BeaconBlockProvider) (bool, error) {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)
 	if err != nil {
 		shardCtl.log.Error().Err(err).Msg("Can't load Block db")
-		return err
+		return false, err
+	}
+
+	canContinue := shardCtl.dbCtl.sanitizeState(ctx, shardCtl.cfg, db)
+	if !canContinue {
+		return false, nil
 	}
 
 	blockGen := chaindata.NewShardBlockGen(shardCtl.chain, beaconBlockGen)
@@ -113,7 +118,7 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen chaindata.BeaconBlockProvider) err
 		shardCtl.cfg.Node.BeaconChain, shardCtl.chain, blockGen, db, shardCtl.log)
 	if err != nil {
 		shardCtl.log.Error().Err(err).Msg("unable to init ChainProvider for shard")
-		return err
+		return false, err
 	}
 
 	addrManager := addrmgr.New(shardCtl.cfg.DataDir, shardCtl.chain.Name(),
@@ -130,12 +135,11 @@ func (shardCtl *ShardCtl) Init(beaconBlockGen chaindata.BeaconBlockProvider) err
 	shardCtl.p2pServer, err = p2p.NewServer(&shardCtl.cfg.Node.P2P, shardCtl.chainProvider,
 		addrManager, shardCtl.listenCfg)
 	if err != nil {
-		shardCtl.log.Error().Err(err).
-			Msg("Unable to start p2pServer")
-		return err
+		shardCtl.log.Error().Err(err).Msg("Unable to start p2pServer")
+		return false, err
 	}
 
-	return shardCtl.chainProvider.SetP2PProvider(shardCtl.p2pServer)
+	return true, shardCtl.chainProvider.SetP2PProvider(shardCtl.p2pServer)
 }
 
 func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
@@ -144,29 +148,13 @@ func (shardCtl *ShardCtl) ChainProvider() *cprovider.ChainProvider {
 
 // nolint: gomnd
 func (shardCtl *ShardCtl) Run(ctx context.Context) {
-	cleanIndexes, err := shardCtl.dbCtl.cleanIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
-	if cleanIndexes {
-		shardCtl.log.Info().Msg("clean db indexes")
-		return
-	}
-
-	if err != nil {
-		shardCtl.log.Error().Err(err).Msg("failed to clean indexes")
-		return
-	}
-
-	err = shardCtl.dbCtl.refillIndexes(ctx, shardCtl.cfg, shardCtl.chainProvider.DB)
-	if err != nil {
-		shardCtl.log.Error().Err(err).Msg("failed to refill indexes")
-		return
-	}
 	shardCtl.p2pServer.Run(ctx)
 
 	<-ctx.Done()
 
-	shardCtl.log.Info().Msg("Writing best chain serialIDs to database...")
+	shardCtl.log.Info().Msg("Writing best unit serialIDs to database...")
 	if err := shardCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
+		shardCtl.log.Error().Err(err).Msg("Can't save best unit state to db")
 	}
 
 	if shardCtl.cfg.Node.DumpMMR {
@@ -185,7 +173,7 @@ func (shardCtl *ShardCtl) Run(ctx context.Context) {
 
 	shardCtl.log.Info().Msg("Writing bestchain serialIDs to database...")
 	if err := shardCtl.chainProvider.BlockChain().SaveBestChainSerialIDs(); err != nil {
-		shardCtl.log.Error().Err(err).Msg("Can't save best chain state to db")
+		shardCtl.log.Error().Err(err).Msg("Can't save best unit state to db")
 	}
 
 	shardCtl.log.Info().Msg("ShardChain p2p server shutdown complete")

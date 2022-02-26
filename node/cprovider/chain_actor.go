@@ -50,6 +50,7 @@ type ChainRuntimeConfig struct {
 	ExpansionRule      int32    `yaml:"expansion_rule" toml:"expansion_rule"`
 	ExpansionLimit     int32    `yaml:"expansion_limit" toml:"expansion_limit"`
 	DBFullRescan       bool     `yaml:"db_full_rescan" toml:"db_full_rescan"`
+	RepairInvalidState bool     `yaml:"repair_invalid_state" toml:"repair_invalid_state" description:"If state is corrupted, system will try to repair it."`
 }
 
 func (cfg *ChainRuntimeConfig) ParseMiningAddresses(params *chaincfg.Params) ([]jaxutil.Address, error) {
@@ -268,17 +269,18 @@ func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context
 	// Create a new blockchain instance with the appropriate configuration.
 	var err error
 	chainProvider.blockChain, err = blockchain.New(&blockchain.Config{
-		DB:           chainProvider.DB,
-		Interrupt:    ctx.Done(),
-		ChainParams:  chainProvider.ChainParams,
-		Checkpoints:  checkpoints,
-		IndexManager: indexManager,
-		TimeSource:   chainProvider.TimeSource,
-		SigCache:     chainProvider.SigCache,
-		HashCache:    chainProvider.HashCache,
-		ChainCtx:     chainProvider.ChainCtx,
-		BlockGen:     blockGen,
-		DBFullRescan: chainProvider.config.DBFullRescan,
+		DB:               chainProvider.DB,
+		Interrupt:        ctx.Done(),
+		ChainParams:      chainProvider.ChainParams,
+		Checkpoints:      checkpoints,
+		IndexManager:     indexManager,
+		TimeSource:       chainProvider.TimeSource,
+		SigCache:         chainProvider.SigCache,
+		HashCache:        chainProvider.HashCache,
+		ChainCtx:         chainProvider.ChainCtx,
+		BlockGen:         blockGen,
+		DBFullRescan:     chainProvider.config.DBFullRescan,
+		TryToRepairState: chainProvider.config.RepairInvalidState,
 	})
 	if err != nil {
 		return err

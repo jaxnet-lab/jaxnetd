@@ -159,7 +159,7 @@ func (c *ShardBlockGenerator) generateBeaconHeader(nonce uint32, timestamp time.
 }
 
 // CalcShardBlockSubsidy returns reward for shard block.
-// - height is block height;
+// - Height is block Height;
 // - shards is a number of shards that were mined by a miner at the time;
 // - bits is current target;
 // - k is inflation-fix-coefficient.

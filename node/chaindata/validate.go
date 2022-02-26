@@ -33,7 +33,7 @@ const (
 	MaxCoinbaseScriptLen = 100
 
 	// serializedHeightVersion is the block version which changed block
-	// coinbases to start with the serialized block height.
+	// coinbases to start with the serialized block Height.
 	serializedHeightVersion = 2
 
 	// btcBaseSubsidy is the starting subsidy amount for mined blocks.  This
@@ -60,7 +60,7 @@ func newHashFromStr(hexStr string) *chainhash.Hash {
 }
 
 // ShouldHaveSerializedBlockHeight determines if a block should have a
-// serialized block height embedded within the scriptSig of its
+// serialized block Height embedded within the scriptSig of its
 // coinbase transaction. Judgement is based on the block version in the block
 // header. Blocks with version 2 and above satisfy this criteria. See BIP0034
 // for further information.
@@ -106,11 +106,11 @@ func IsCoinBase(tx *jaxutil.Tx) bool {
 
 // SequenceLockActive determines if a transaction's sequence locks have been
 // met, meaning that all the inputs of a given transaction have reached a
-// height or time sufficient for their relative lock-time maturity.
+// Height or time sufficient for their relative lock-time maturity.
 func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
 	medianTimePast time.Time) bool {
 
-	// If either the seconds, or height relative-lock time has not yet
+	// If either the seconds, or Height relative-lock time has not yet
 	// reached, then the transaction is not yet mature according to its
 	// sequence locks.
 	if sequenceLock.Seconds >= medianTimePast.Unix() ||
@@ -153,10 +153,10 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 		return true
 	}
 
-	// The lock time field of a transaction is either a block height at
+	// The lock time field of a transaction is either a block Height at
 	// which the transaction is finalized or a timestamp depending on if the
 	// value is before the txscript.LockTimeThreshold.  When it is under the
-	// threshold it is a block height.
+	// threshold it is a block Height.
 	var blockTimeOrHeight int64
 	if lockTime < txscript.LockTimeThreshold {
 		blockTimeOrHeight = int64(blockHeight)
@@ -180,19 +180,19 @@ func IsFinalizedTransaction(tx *jaxutil.Tx, blockHeight int32, blockTime time.Ti
 	return true
 }
 
-// BtcCalcBlockSubsidy returns the subsidy amount a block at the provided height
+// BtcCalcBlockSubsidy returns the subsidy amount a block at the provided Height
 // should have. This is mainly used for determining how much the coinbase for
 // newly generated blocks awards as well as validating the coinbase for blocks
 // has the expected value.
 //
 // The subsidy is halved every SubsidyReductionInterval blocks.  Mathematically
-// this is: btcBaseSubsidy / 2^(height/SubsidyReductionInterval)
+// this is: btcBaseSubsidy / 2^(Height/SubsidyReductionInterval)
 //
 // At the target block generation rate for the main network, this is
 // approximately every 4 years.
-//nolint: gomnd
+// nolint: gomnd
 func BtcCalcBlockSubsidy(height int32, chainParams *chaincfg.Params) int64 {
-	// Equivalent to: btcBaseSubsidy / 2^(height/subsidyHalvingInterval)
+	// Equivalent to: btcBaseSubsidy / 2^(Height/subsidyHalvingInterval)
 	return btcBaseSubsidy >> uint(height/210000)
 }
 
@@ -588,7 +588,7 @@ func CheckBlockSanity(block *jaxutil.Block, chainParams *chaincfg.Params, timeSo
 	return CheckBlockSanityWF(block, chainParams, timeSource, BFNone)
 }
 
-// ExtractCoinbaseHeight attempts to extract the height of the block from the
+// ExtractCoinbaseHeight attempts to extract the Height of the block from the
 // scriptSig of a coinbase transaction.  Coinbase heights are only present in
 // blocks of version 2 or later.  This was added as part of BIP0034.
 func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
@@ -596,12 +596,12 @@ func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
 	if len(sigScript) < 1 {
 		str := "the coinbase signature script for blocks of " +
 			"version %d or greater must start with the " +
-			"length of the serialized block height"
+			"length of the serialized block Height"
 		str = fmt.Sprintf(str, serializedHeightVersion)
 		return 0, NewRuleError(ErrMissingCoinbaseHeight, str)
 	}
 
-	// Detect the case when the block height is a small integer encoded with
+	// Detect the case when the block Height is a small integer encoded with
 	// as single byte.
 	opcode := int(sigScript[0])
 	if opcode == txscript.OP_0 {
@@ -612,12 +612,12 @@ func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
 	}
 
 	// Otherwise, the opcode is the length of the following bytes which
-	// encode in the block height.
+	// encode in the block Height.
 	serializedLen := int(sigScript[0])
 	if len(sigScript[1:]) < serializedLen {
 		str := "the coinbase signature script for blocks of " +
 			"version %d or greater must start with the " +
-			"serialized block height"
+			"serialized block Height"
 		str = fmt.Sprintf(str, serializedLen)
 		return 0, NewRuleError(ErrMissingCoinbaseHeight, str)
 	}
@@ -630,7 +630,7 @@ func ExtractCoinbaseHeight(coinbaseTx *jaxutil.Tx) (int32, error) {
 }
 
 // CheckSerializedHeight checks if the signature script in the passed
-// transaction starts with the serialized block height of wantHeight.
+// transaction starts with the serialized block Height of wantHeight.
 func CheckSerializedHeight(coinbaseTx *jaxutil.Tx, wantHeight int32) error {
 	serializedHeight, err := ExtractCoinbaseHeight(coinbaseTx)
 	if err != nil {
@@ -639,7 +639,7 @@ func CheckSerializedHeight(coinbaseTx *jaxutil.Tx, wantHeight int32) error {
 
 	if serializedHeight != wantHeight {
 		str := fmt.Sprintf("the coinbase signature script serialized "+
-			"block height is %d when %d was expected",
+			"block Height is %d when %d was expected",
 			serializedHeight, wantHeight)
 		return NewRuleError(ErrBadCoinbaseHeight, str)
 	}
@@ -694,8 +694,8 @@ func CheckTransactionInputs(tx *jaxutil.Tx, txHeight int32, utxoView *UtxoViewpo
 			coinbaseMaturity := int32(chainParams.CoinbaseMaturity)
 			if blocksSincePrev < coinbaseMaturity {
 				str := fmt.Sprintf("tried to spend coinbase "+
-					"transaction output %v from height %v "+
-					"at height %v before required maturity "+
+					"transaction output %v from Height %v "+
+					"at Height %v before required maturity "+
 					"of %v blocks", txIn.PreviousOutPoint,
 					originHeight, txHeight,
 					coinbaseMaturity)

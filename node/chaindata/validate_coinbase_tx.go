@@ -31,7 +31,7 @@ var JaxnetScriptSigMarkerBytes = []byte{0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74}
 
 // StandardCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
-// it starts with the block height that is required by version 2 blocks and adds
+// it starts with the block Height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
 func StandardCoinbaseScript(nextBlockHeight int32, shardID uint32, extraNonce uint64) ([]byte, error) {
 	return txscript.NewScriptBuilder().
@@ -44,7 +44,7 @@ func StandardCoinbaseScript(nextBlockHeight int32, shardID uint32, extraNonce ui
 
 // BTCCoinbaseScript returns a standard script suitable for use as the
 // signature script of the coinbase transaction of a new block.  In particular,
-// it starts with the block height that is required by version 2 blocks and adds
+// it starts with the block Height that is required by version 2 blocks and adds
 // the extra nonce as well as additional coinbase flags.
 func BTCCoinbaseScript(nextBlockHeight int64, extraNonce, beaconHash []byte) ([]byte, error) {
 	return txscript.NewScriptBuilder().
@@ -58,7 +58,7 @@ func BTCCoinbaseScript(nextBlockHeight int64, extraNonce, beaconHash []byte) ([]
 }
 
 // CreateCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
-// based on the passed block height to the provided address.  When the address
+// based on the passed block Height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
 //
 // See the comment for NewBlockTemplate for more information about why the nil

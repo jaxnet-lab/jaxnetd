@@ -27,7 +27,7 @@ type BlockTemplate struct {
 	// transaction in the generated template performs.
 	SigOpCosts []int64
 
-	// Height is the height at which the block template connects to the main
+	// Height is the Height at which the block template connects to the main
 	// chain.
 	Height int32
 

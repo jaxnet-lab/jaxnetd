@@ -20,7 +20,7 @@ import (
 // TestErrNotInMainChain ensures the functions related to ErrNotInMainChain work
 // as expected.
 func TestErrNotInMainChain(t *testing.T) {
-	errStr := "no block at height 1 exists"
+	errStr := "no block at Height 1 exists"
 	err := error(ErrNotInMainChain(errStr))
 
 	// Ensure the stringized output for the error is as expected.
@@ -417,7 +417,7 @@ func TestUtxoSerialization(t *testing.T) {
 		// From tx in main blockchain:
 		// 0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098:0
 		{
-			name: "height 1, coinbase",
+			name: "Height 1, coinbase",
 			entry: &UtxoEntry{
 				amount:      5000000000,
 				pkScript:    hexToBytes("410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604f8141781e62294721166bf621e73a82cbf2342c858eeac"),
@@ -429,7 +429,7 @@ func TestUtxoSerialization(t *testing.T) {
 		// From tx in main blockchain:
 		// 0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098:0
 		{
-			name: "height 1, coinbase, spent",
+			name: "Height 1, coinbase, spent",
 			entry: &UtxoEntry{
 				amount:      5000000000,
 				pkScript:    hexToBytes("410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604f8141781e62294721166bf621e73a82cbf2342c858eeac"),
@@ -441,7 +441,7 @@ func TestUtxoSerialization(t *testing.T) {
 		// From tx in main blockchain:
 		// 8131ffb0a2c945ecaf9b9063e59558784f9c3a74741ce6ae2a18d0571dac15bb:1
 		{
-			name: "height 100001, not coinbase",
+			name: "Height 100001, not coinbase",
 			entry: &UtxoEntry{
 				amount:      1000000,
 				pkScript:    hexToBytes("76a914ee8bd501094a7d5ca318da2506de35e1cb025ddc88ac"),
@@ -453,7 +453,7 @@ func TestUtxoSerialization(t *testing.T) {
 		// From tx in main blockchain:
 		// 8131ffb0a2c945ecaf9b9063e59558784f9c3a74741ce6ae2a18d0571dac15bb:1
 		{
-			name: "height 100001, not coinbase, spent",
+			name: "Height 100001, not coinbase, spent",
 			entry: &UtxoEntry{
 				amount:      1000000,
 				pkScript:    hexToBytes("76a914ee8bd501094a7d5ca318da2506de35e1cb025ddc88ac"),
@@ -516,7 +516,7 @@ func TestUtxoSerialization(t *testing.T) {
 		}
 		if utxoEntry.BlockHeight() != test.entry.BlockHeight() {
 			t.Errorf("DeserializeUtxoEntry #%d (%s) mismatched "+
-				"block height: got %d, want %d", i, test.name,
+				"block Height: got %d, want %d", i, test.name,
 				utxoEntry.BlockHeight(), test.entry.BlockHeight())
 			continue
 		}
@@ -619,7 +619,7 @@ func TestBestChainStateSerialization(t *testing.T) {
 			name: "genesis",
 			state: BestChainState{
 				Hash:      *newHashFromStr("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"),
-				height:    0,
+				Height:    0,
 				TotalTxns: 1,
 				workSum: func() *big.Int {
 					workSum.Add(workSum, pow.CalcWork(486604799))
@@ -632,7 +632,7 @@ func TestBestChainStateSerialization(t *testing.T) {
 			name: "block 1",
 			state: BestChainState{
 				Hash:      *newHashFromStr("00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048"),
-				height:    1,
+				Height:    1,
 				TotalTxns: 2,
 				workSum: func() *big.Int {
 					workSum.Add(workSum, pow.CalcWork(486604799))
