@@ -9,8 +9,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.8]
 
-- **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix
-- **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client` 
+- **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix.
+- **[PROTOCOL FIX]** - it is allowed to set 3 or 4 outputs for TYPE_A coinbase transaction.
+- **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client`. 
 
 ## [0.4.7]
 

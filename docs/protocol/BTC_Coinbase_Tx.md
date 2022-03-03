@@ -76,11 +76,11 @@ signature_script_asm: e1c720 0000000000000000 6a61786e6574 03e818e664515a158c4eb
 There is 3 way to craft a Bitcoin Coinbase Transaction as valid **BTC Coinbase AUX** for the JAX.Network. Difference
 between them only in the set of outputs.
 
-| type   | output count    | allows to do *Proof Of Burn |
-|--------|-----------------|-----------------------------|
-| TYPE_A | 1, 2, 5, 6 or 7 | NO                          |
-| TYPE_B | 3 or 4          | NO                          |
-| TYPE_C | 3 or 4          | YES                         |
+| type   | output count | allows to do *Proof Of Burn |
+|--------|--------------|-----------------------------|
+| TYPE_A | 1..7         | NO                          |
+| TYPE_B | 3 or 4       | NO                          |
+| TYPE_C | 3 or 4       | YES                         |
 
 ONLY a transaction matching one of these can be used as a **BTC Coinbase AUX** to create a valid **BTC AUX** and mine
 the
@@ -93,12 +93,12 @@ If [TYPE_C](#type_c) used as **BTC Coinbase AUX**, BTC and JAXNET block reward w
 
 ### TYPE_A
 
-Bitcoin coinbase transaction WITHOUT [`jaxnet marker out`](#jaxnet-marker-out). This type of coinbase can't cause *Proof
-of Burn* and issuance of the JAX coins (in shards). It can have _1, 2, 5, 6, or 7_ outputs.
+Bitcoin coinbase transaction WITHOUT [`jaxnet marker out`](#jaxnet-marker-out). This type of coinbase can't cause
+*Proof of Burn* and issuance of the JAX coins (in shards). It can have _1, 2, 3, 4, 5, 6, or 7_ outputs.
 
 There is only one requirement:
 
-- address of the at least one out MUST have a vanity prefix [`1JAX`](#vanity-address).
+- address of the at **least one** out MUST have a **vanity prefix** [`1JAX`](#vanity-address).
   Example: `1JAXmGDsiE2CyK31dYZsMamM18pPebRDAk`
 
 Example of such kind of transaction - [TYPE_A](#type_a-example)

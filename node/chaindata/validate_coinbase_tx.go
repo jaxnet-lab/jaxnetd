@@ -190,78 +190,96 @@ func checkBtcVanityAddress(script []byte) bool {
 }
 
 // nolint: gomnd
-func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (rewardBurned bool, err error) {
+func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (bool, error) {
 	if err := validateCoinbaseAux(aux.MerkleRoot, &aux.CoinbaseAux); err != nil {
 		return false, errors.Wrap(err, "invalid btc coinbase aux")
 	}
+	const errMsg = "invalid format of btc aux coinbase tx: "
 
-	btcCoinbaseTx := aux.CoinbaseAux.Tx
-	if len(btcCoinbaseTx.TxOut) != 3 && len(btcCoinbaseTx.TxOut) != 4 {
+	var (
+		err                    error
+		btcCoinbaseTx          = aux.CoinbaseAux.Tx
+		strictLenForTypeB      = len(btcCoinbaseTx.TxOut) == 3 || len(btcCoinbaseTx.TxOut) == 4
+		jaxnetMarkerOutPresent = btcCoinbaseTx.TxOut[0].Value == 0 &&
+			jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[0].PkScript)
+		vanityAddressPresent = jaxnetMarkerOutPresent
+	)
+
+	if !jaxnetMarkerOutPresent {
+		for _, out := range btcCoinbaseTx.TxOut {
+			vanityAddressPresent = checkBtcVanityAddress(out.PkScript) || bch.JaxVanityPrefix(out.PkScript)
+			if vanityAddressPresent {
+				break
+			}
+		}
+	}
+
+	if !strictLenForTypeB {
+		// invalid TYPE_A scheme
 		if len(btcCoinbaseTx.TxOut) > 7 {
 			return false, errors.New("must have less than 7 outputs")
 		}
 
-		prefixFound := false
-		for _, out := range btcCoinbaseTx.TxOut {
-			if checkBtcVanityAddress(out.PkScript) ||
-				bch.JaxVanityPrefix(out.PkScript) {
-				prefixFound = true
-				break
-			}
-		}
-
-		if !prefixFound {
+		// invalid TYPE_A scheme
+		if !vanityAddressPresent {
 			return false, errors.New("at least one out must start with 1JAX... or bitcoincash:qqjax... ")
 		}
 
+		// valid TYPE_A scheme
 		return false, nil
 	}
 
-	const errMsg = "invalid format of btc aux coinbase tx: "
+	var (
+		hugeReward      = btcCoinbaseTx.TxOut[1].Value > 6_2500_0000
+		normalReward    = btcCoinbaseTx.TxOut[1].Value == 6_2500_0000
+		smallReward     = btcCoinbaseTx.TxOut[1].Value < 6_2500_0000
+		normalFee       = btcCoinbaseTx.TxOut[2].Value <= 5000_0000
+		hugeFee         = btcCoinbaseTx.TxOut[2].Value > 5000_0000
+		rewardBurned    = jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[1].PkScript)
+		validWitnessOut = len(btcCoinbaseTx.TxOut) == 3
+	)
 
-	btcJaxNetLinkOut := jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[0].PkScript) &&
-		btcCoinbaseTx.TxOut[0].Value == 0
-
-	if !btcJaxNetLinkOut {
-		err = errors.New(errMsg + "first out must be zero and have JaxNetLink")
-		return false, err
+	if len(btcCoinbaseTx.TxOut) == 4 {
+		nullData := txscript.GetScriptClass(btcCoinbaseTx.TxOut[3].PkScript) == txscript.NullDataTy
+		validWitnessOut = nullData && btcCoinbaseTx.TxOut[3].Value == 0
 	}
 
-	if btcCoinbaseTx.TxOut[1].Value > 6_2500_0000 {
+	//	this is valid TYPE_B and TYPE_C scheme.
+	if jaxnetMarkerOutPresent && (normalReward || (smallReward && normalFee)) && validWitnessOut {
+		return rewardBurned, nil
+	}
+
+	if jaxnetMarkerOutPresent && hugeReward {
 		err = errors.New(errMsg + "reward greater than 6.25 BTC")
 		return false, err
 	}
 
-	if btcCoinbaseTx.TxOut[1].Value < 6_2500_0000 {
-		if btcCoinbaseTx.TxOut[2].Value > 5000_0000 {
-			err = errors.New(errMsg + "fee greater than 0.5 BTC")
-			return false, err
-		}
+	if jaxnetMarkerOutPresent && smallReward && hugeFee {
+		err = errors.New(errMsg + "fee greater than 0.5 BTC")
+		return false, err
 	}
 
-	if len(btcCoinbaseTx.TxOut) == 4 {
-		nullData := txscript.GetScriptClass(btcCoinbaseTx.TxOut[3].PkScript) == txscript.NullDataTy
-		if btcCoinbaseTx.TxOut[3].Value != 0 || !nullData {
-			err = errors.New(errMsg + "4th out can be only NULL_DATA with zero amount")
-			return false, err
-		}
+	if jaxnetMarkerOutPresent && !validWitnessOut {
+		err = errors.New(errMsg + "4th out can be only NULL_DATA with zero amount")
+		return false, err
 	}
 
-	rewardBurned = jaxutil.IsJaxnetBurnRawAddress(btcCoinbaseTx.TxOut[1].PkScript)
+	// additional valid TYPE_A scheme
+	if !jaxnetMarkerOutPresent && vanityAddressPresent {
+		return false, nil
+	}
 
-	return rewardBurned, nil
+	if !jaxnetMarkerOutPresent {
+		err = errors.New(errMsg + "first out must be zero and have JaxNetLink")
+		return false, err
+	}
+
+	return false, errors.New(errMsg + "unexpected scheme")
 }
 
-// nolint: gomnd
-func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
-	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
-	if err != nil {
-		return false, errors.Wrap(err, "invalid btc aux")
-	}
-
-	beaconExclusiveHash := aux.BeaconExclusiveHash()
-	exclusiveHash := hex.EncodeToString(beaconExclusiveHash.CloneBytes())
-	asmString, _ := txscript.DisasmString(aux.BTCAux().CoinbaseAux.Tx.TxIn[0].SignatureScript)
+func validateProofOfInclusion(beaconExclusiveHash chainhash.Hash, signatureScript []byte) bool {
+	exclusiveHash := hex.EncodeToString(beaconExclusiveHash[:])
+	asmString, _ := txscript.DisasmString(signatureScript)
 
 	hashPresent := false
 	chunks := strings.Split(asmString, " ")
@@ -278,6 +296,18 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		break
 	}
 
+	return hashPresent
+}
+
+// nolint: gomnd
+func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expectedReward int64) (bool, error) {
+	btcBurnReward, err := ValidateBTCCoinbase(aux.BTCAux())
+	if err != nil {
+		return false, errors.Wrap(err, "invalid btc aux")
+	}
+
+	hashPresent := validateProofOfInclusion(aux.BeaconExclusiveHash(),
+		aux.BTCAux().CoinbaseAux.Tx.TxIn[0].SignatureScript)
 	if !hashPresent {
 		return false, errors.New("bitcoin coinbase must include beacon exclusive hash")
 	}

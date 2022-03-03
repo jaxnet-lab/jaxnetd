@@ -120,6 +120,16 @@ func TestValidateBTCCoinbase(t *testing.T) {
 			aux: getTypeATx(),
 		},
 		{
+			name: "TYPE_A with 4 outs ", wantRewardBurned: false, wantErr: false,
+			aux: func() *wire.BTCBlockAux {
+				aux := getBTCAux(t, mainnetAddress, &beaconHashStub, false)
+				aux.CoinbaseAux.Tx.TxOut = aux.CoinbaseAux.Tx.TxOut[1:]
+				aux.CoinbaseAux.Tx.AddTxOut(aux.CoinbaseAux.Tx.TxOut[1])
+				updateProofAndRoot(aux)
+				return aux
+			}(),
+		},
+		{
 			name: "TYPE_B valid ", wantRewardBurned: false, wantErr: false,
 			aux: getBTCAux(t, mainnetAddress, &beaconHashStub, false),
 		},
