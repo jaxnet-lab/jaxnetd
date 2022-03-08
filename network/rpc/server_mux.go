@@ -132,6 +132,7 @@ func (server *Mux) HandleCommand(cmd *ParsedRPCCmd, closeChan <-chan struct{}) (
 	server.Log.Debug().Msg("Handle command " + method.String())
 	if ok {
 		return handler(CmdCtx{
+			ID:        cmd.ID,
 			Cmd:       cmd.Cmd,
 			CloseChan: closeChan,
 			AuthCtx:   cmd.AuthCtx,

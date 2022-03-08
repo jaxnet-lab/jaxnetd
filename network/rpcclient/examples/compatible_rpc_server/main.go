@@ -61,6 +61,7 @@ func main() {
 			handlerFunc, ok := cmdHandler.Handlers()[method]
 			if ok {
 				return handlerFunc(rpc.CmdCtx{
+					ID:        cmd.ID,
 					Cmd:       cmd.Cmd,
 					CloseChan: closeChan,
 					AuthCtx:   cmd.AuthCtx,

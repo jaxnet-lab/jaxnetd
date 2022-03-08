@@ -33,6 +33,7 @@ type (
 	}
 
 	CmdCtx struct {
+		ID        interface{}
 		Cmd       interface{}
 		CloseChan <-chan struct{}
 		AuthCtx   interface{}
