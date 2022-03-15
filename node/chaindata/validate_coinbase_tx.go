@@ -306,10 +306,11 @@ func ValidateBeaconCoinbase(aux *wire.BeaconHeader, coinbase *wire.MsgTx, expect
 		return false, errors.Wrap(err, "invalid btc aux")
 	}
 
-	hashPresent := validateProofOfInclusion(aux.BeaconExclusiveHash(),
+	exclusiveHash := aux.BeaconExclusiveHash()
+	hashPresent := validateProofOfInclusion(exclusiveHash,
 		aux.BTCAux().CoinbaseAux.Tx.TxIn[0].SignatureScript)
 	if !hashPresent {
-		return false, errors.New("bitcoin coinbase must include beacon exclusive hash")
+		return false, fmt.Errorf("bitcoin coinbase must include beacon exclusive hash(%s)", exclusiveHash)
 	}
 
 	const errMsg = "invalid format of beacon coinbase tx: "
