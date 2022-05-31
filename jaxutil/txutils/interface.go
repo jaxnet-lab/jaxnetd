@@ -52,7 +52,7 @@ type InMemoryKeystore struct {
 }
 
 func NewInMemoryKeystore(secret string, net chaincfg.NetName) (KeyStoreProvider, error) {
-	kd, err := NewKeyData(secret, net.Params())
+	kd, err := NewKeyData(secret, net.Params(), false, false)
 	return &InMemoryKeystore{kd: *kd}, err
 }
 

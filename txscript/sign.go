@@ -6,6 +6,7 @@
 package txscript
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -22,7 +23,7 @@ import (
 func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	amt int64, subScript []byte, hashType SigHashType,
 	key *btcec.PrivateKey) ([]byte, error) {
-
+	fmt.Println("OUTPUT SCRIPT", hex.EncodeToString(subScript))
 	parsedScript, err := parseScript(subScript)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)

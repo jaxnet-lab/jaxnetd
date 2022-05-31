@@ -63,7 +63,7 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 	}
 
 	if cfg.PrivateKey != "" {
-		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams)
+		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams, false, false)
 		if err != nil {
 			return nil, err
 		}
