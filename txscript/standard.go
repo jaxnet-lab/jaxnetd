@@ -474,6 +474,7 @@ func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
 // specified address.
 func PayToAddrScript(addr jaxutil.Address) ([]byte, error) {
 	const nilAddrErrStr = "unable to generate payment script for nil address"
+	
 	switch addr := addr.(type) {
 	case *jaxutil.AddressPubKeyHash:
 		if addr == nil {
