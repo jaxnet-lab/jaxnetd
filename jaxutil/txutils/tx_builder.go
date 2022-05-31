@@ -8,7 +8,6 @@ package txutils
 
 import (
 	"encoding/hex"
-	"fmt"
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
@@ -353,8 +352,6 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 
 	for _, key := range t.destinations {
 		receiverScript, err := txmodels.GetPayToAddressScript(key.destination, t.net.Params())
-		fmt.Printf("THE DESTINATION %+v\n", key)
-		fmt.Println("THE RECEIVER SCRIPT ", hex.EncodeToString(receiverScript))
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +373,6 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		}
 
 		outPoint := wire.NewOutPoint(utxoTxHash, utxo.OutIndex)
-		fmt.Println("THE UT XO:", utxo.PKScript)
 		txIn := wire.NewTxIn(outPoint, nil, nil)
 		if t.lockTime != 0 {
 			txIn.Sequence = blockchain.LockTimeToSequence(false, t.lockTime)
@@ -434,7 +430,6 @@ func (t *txBuilder) signUTXO(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex
 	return t.signRegularUTXOForTx(msgTx, utxo, inIndex, kdb, utxoScript)
 }
 func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScriptResult, error) {
-	fmt.Println("in enter to signUTXOForTx", utxo.PKScript)
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode PK script")
@@ -457,7 +452,6 @@ func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScr
 // 	- postVerify say to check tx after signing
 func (t *txBuilder) signRegularUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB,
 	scriptPubKey *jaxjson.DecodeScriptResult) error {
-	fmt.Println("in enter to signUTXOForTx", utxo.PKScript)
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode PK script")
@@ -594,7 +588,6 @@ func (t *txBuilder) signWitnessUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortU
 	if err != nil {
 		return err
 	}
-	fmt.Println("ADDRS[0]", addrs[0])
 	privKey, _, err := kdb.GetKey(addrs[0])
 	if err != nil {
 		return err
@@ -613,8 +606,6 @@ func (t *txBuilder) signWitnessUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortU
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("utxo.PkScript", utxo.PKScript)
 
 	msgTx.TxIn[inIndex].Witness, err = txscript.WitnessSignature(msgTx, txscript.NewTxSigHashes(msgTx), inIndex, utxo.Value, witnessProgram, txscript.SigHashAll, privKey, true)
 	if err != nil {
