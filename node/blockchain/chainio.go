@@ -89,7 +89,7 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 // initChainState attempts to load and initialize the chain state from the
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
-// nolint: gocritic
+// nolint: gocritic, unused
 func (b *BlockChain) initChainState() error {
 	var err error
 	b.stateSnapshot, err = initChainState(b.db, &b.blocksDB, b.dbFullRescan)
@@ -102,12 +102,14 @@ func (b *BlockChain) initChainState() error {
 // createChainState initializes both the database and the chain state to the
 // genesis block.  This includes creating the necessary buckets and inserting
 // the genesis block, so it must only be called on an uninitialized database.
+// nolint: unused
 func (b *BlockChain) createChainState() error {
 	var err error
 	b.stateSnapshot, err = createChainState(b.db, &b.blocksDB)
 	return err
 }
 
+// nolint: unused
 func (b *BlockChain) fastInitChainState() (bool, error) {
 	ok, best, err := fastInitChainState(b.db, &b.blocksDB)
 	b.stateSnapshot = best

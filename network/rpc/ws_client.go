@@ -108,8 +108,8 @@ type wsClient struct {
 // incoming and outgoing messages in separate goroutines complete with queuing
 // and asynchrous handling for long-running operations.
 func newWebsocketClient(manager *WsManager, conn *websocket.Conn,
-	remoteAddr string, authenticated bool, isAdmin bool) (*wsClient, error) {
-
+	remoteAddr string, authenticated bool, isAdmin bool,
+) (*wsClient, error) {
 	sessionID, err := wire.RandomUint64()
 	if err != nil {
 		return nil, err

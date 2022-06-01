@@ -43,7 +43,7 @@ func TestOperator_SpendUTXO(t *testing.T) {
 
 	aliceAddr := ""
 	txHash := ""
-	kd, err := NewKeyData("", cfg.NetParams())
+	kd, err := NewKeyData("", cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	tx, err := op.SpendUTXO(*kd, txHash, 0, aliceAddr, 1_0000_0000)
@@ -69,17 +69,17 @@ func TestMakeMultiSigScript(ot *testing.T) {
 		PrivateKey: "",
 	}
 
-	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
-	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	op, err := NewOperator(cfg)
 	assert.NoError(t, err)
 
 	aliceUTXO, _, err := op.TxMan.ForShard(shardID).
-		CollectUTXO(aliceKP.Address.EncodeAddress(), int64(utxoSearchOffset))
+		CollectUTXO(aliceKP.AddressPubKey.EncodeAddress(), int64(utxoSearchOffset))
 	assert.NoError(t, err)
 	// -----------------------------------------------------------------------------------------
 
@@ -230,7 +230,7 @@ func TestMakeSwapTx(ot *testing.T) {
 		PrivateKey: "",
 	}
 
-	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	op, err := NewOperator(cfg)
@@ -330,21 +330,21 @@ func TestMakeMultiSigSwapTx(ot *testing.T) {
 	minerSK := ""
 
 	aliceSk := ""
-	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	bobSk := ""
-	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	fmt.Println("Send deposit to Alice and Bob...")
 	{
-		minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+		minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 		assert.NoError(t, err)
-		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID1, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID1, aliceKP.AddressPubKey.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
-		txHashAtShard2, err := SendTx(op.TxMan, minerKP, shardID2, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard2, err := SendTx(op.TxMan, minerKP, shardID2, aliceKP.AddressPubKey.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
@@ -492,18 +492,18 @@ func TestTimeLockTx(ot *testing.T) {
 	assert.NoError(t, err)
 
 	minerSK := ""
-	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	aliceSk := ""
-	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 	bobSk := ""
-	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	{
-		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, minerKP, shardID, aliceKP.AddressPubKey.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
@@ -513,7 +513,7 @@ func TestTimeLockTx(ot *testing.T) {
 	}
 
 	{
-		txHashAtShard1, err := SendTx(op.TxMan, aliceKP, shardID, bobKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, aliceKP, shardID, bobKP.AddressPubKey.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
@@ -523,7 +523,7 @@ func TestTimeLockTx(ot *testing.T) {
 	}
 
 	{
-		txHashAtShard1, err := SendTx(op.TxMan, bobKP, shardID, aliceKP.Address.EncodeAddress(), OneCoin, 0)
+		txHashAtShard1, err := SendTx(op.TxMan, bobKP, shardID, aliceKP.AddressPubKey.EncodeAddress(), OneCoin, 0)
 		assert.NoError(t, err)
 
 		eGroup := errgroup.Group{}
@@ -551,7 +551,7 @@ func TestEADRegistration(ot *testing.T) {
 	assert.NoError(t, err)
 
 	minerSK := ""
-	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 	assert.NoError(t, err)
 	//
 	{
@@ -572,7 +572,7 @@ func TestEADRegistration(ot *testing.T) {
 			scripts = append(scripts, scriptAddress)
 		}
 
-		senderAddress := minerKP.Address.EncodeAddress()
+		senderAddress := minerKP.AddressPubKey.EncodeAddress()
 		senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
 		assert.NoError(t, err)
@@ -617,7 +617,7 @@ func TestEAD(ot *testing.T) {
 	assert.NoError(t, err)
 
 	minerSK := ""
-	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 	assert.NoError(t, err)
 	//
 	{
@@ -642,7 +642,7 @@ func TestEAD(ot *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		senderAddress := minerKP.Address.EncodeAddress()
+		senderAddress := minerKP.AddressPubKey.EncodeAddress()
 		senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 		err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), shardID, map[string]bool{senderAddress: true})
 		assert.NoError(t, err)
@@ -692,7 +692,7 @@ func TestEADSpend(ot *testing.T) {
 	assert.NoError(t, err)
 
 	minerSK := ""
-	minerKP, err := NewKeyData(minerSK, cfg.NetParams())
+	minerKP, err := NewKeyData(minerSK, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	rawHash := "4b778636e25c58db0477dc111b44c03ba306805d3e447d6180ea1454fdee5e1c"
@@ -700,8 +700,8 @@ func TestEADSpend(ot *testing.T) {
 	txOut, err := op.TxMan.RPC().GetTxOut(hash, 7, false, false)
 	assert.NoError(t, err)
 
-	senderUTXOIndex := txmodels.NewUTXORepo("", minerKP.Address.EncodeAddress())
-	err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), 0, map[string]bool{minerKP.Address.EncodeAddress(): true})
+	senderUTXOIndex := txmodels.NewUTXORepo("", minerKP.AddressPubKey.EncodeAddress())
+	err = senderUTXOIndex.CollectFromRPC(op.TxMan.RPC(), 0, map[string]bool{minerKP.AddressPubKey.EncodeAddress(): true})
 
 	utxo := txmodels.UTXO{
 		TxHash:     rawHash,
@@ -714,8 +714,8 @@ func TestEADSpend(ot *testing.T) {
 
 	tx, err := NewTxBuilder("fastnet").
 		SetUTXOProvider(&senderUTXOIndex).
-		SetChangeDestination(minerKP.Address.EncodeAddress()).
-		SetDestinationWithUTXO(minerKP.Address.EncodeAddress(), utxo.Value, txmodels.EADUTXOs{utxo}).
+		SetChangeDestination(minerKP.AddressPubKey.EncodeAddress()).
+		SetDestinationWithUTXO(minerKP.AddressPubKey.EncodeAddress(), utxo.Value, txmodels.EADUTXOs{utxo}).
 		IntoTx(func(uint32) (int64, int64, error) { return 0, 0, nil }, minerKP)
 	assert.NoError(t, err)
 
@@ -804,13 +804,13 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 	netName := chaincfg.NetName("fastnet")
 	shardID := uint32(0)
 
-	alice, err := GenerateKey(netName.Params())
+	alice, err := GenerateKey(netName.Params(), false)
 	assert.NoError(t, err)
 
-	bob, err := GenerateKey(netName.Params())
+	bob, err := GenerateKey(netName.Params(), false)
 	assert.NoError(t, err)
 
-	eva, err := GenerateKey(netName.Params())
+	eva, err := GenerateKey(netName.Params(), false)
 	assert.NoError(t, err)
 
 	multisig, err := MakeMultiSigLockAddress([]string{alice.AddressPubKey.String(), bob.AddressPubKey.String()}, 2,
@@ -823,8 +823,8 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 	tx, err := NewTxBuilder("fastnet").
 		SetSenders(multisig.Address).
 		AddRedeemScripts(multisig.RedeemScript).
-		SetChangeDestination(alice.Address.EncodeAddress()).
-		SetDestinationWithUTXO(alice.Address.EncodeAddress(), 10, txmodels.UTXORows{{
+		SetChangeDestination(alice.AddressPubKey.EncodeAddress()).
+		SetDestinationWithUTXO(alice.AddressPubKey.EncodeAddress(), 10, txmodels.UTXORows{{
 			ShardID:  shardID,
 			Address:  multisig.Address,
 			TxHash:   "8e8de99c0bf81f95b010e53f74bfd2c4d608227938f279954f062185be052cd6",
@@ -857,15 +857,15 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, hasSignature)
 
-	script, err = txmodels.GetPayToAddressScript(alice.Address.EncodeAddress(), netName.Params())
+	script, err = txmodels.GetPayToAddressScript(alice.AddressPubKey.EncodeAddress(), netName.Params())
 	assert.NoError(t, err)
 
 	tx, err = NewTxBuilder("fastnet").
-		SetSenders(alice.Address.EncodeAddress()).
-		SetChangeDestination(bob.Address.EncodeAddress()).
-		SetDestinationWithUTXO(bob.Address.EncodeAddress(), 10, txmodels.UTXORows{{
+		SetSenders(alice.AddressPubKey.EncodeAddress()).
+		SetChangeDestination(bob.AddressPubKey.EncodeAddress()).
+		SetDestinationWithUTXO(bob.AddressPubKey.EncodeAddress(), 10, txmodels.UTXORows{{
 			ShardID:  shardID,
-			Address:  alice.Address.EncodeAddress(),
+			Address:  alice.AddressPubKey.EncodeAddress(),
 			TxHash:   tx.TxHash().String(),
 			Value:    2000,
 			PKScript: hex.EncodeToString(script),
@@ -886,8 +886,8 @@ func TestCheckIsSignedByPubKey(t *testing.T) {
 	tx, err = NewTxBuilder("fastnet").
 		SetSenders(multisig.Address).
 		AddRedeemScripts(multisig.RedeemScript).
-		SetChangeDestination(alice.Address.EncodeAddress()).
-		SetDestinationWithUTXO(alice.Address.EncodeAddress(), 10, txmodels.UTXORows{{
+		SetChangeDestination(alice.AddressPubKey.EncodeAddress()).
+		SetDestinationWithUTXO(alice.AddressPubKey.EncodeAddress(), 10, txmodels.UTXORows{{
 			ShardID:  shardID,
 			Address:  multisig.Address,
 			TxHash:   "8e8de99c0bf81f95b010e53f74bfd2c4d608227938f279954f062185be052cd6",

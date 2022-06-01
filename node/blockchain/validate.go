@@ -254,7 +254,8 @@ func (b *BlockChain) checkBlockContext(block *jaxutil.Block, prevNode blocknodes
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkConnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
-	view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut) error {
+	view *chaindata.UtxoViewpoint, stxos *[]chaindata.SpentTxOut,
+) error {
 	// If the side chain blocks end up in the database, a call to
 	// CheckBlockSanity should be done here in case a previous version
 	// allowed a block that is no longer valid.  However, since the

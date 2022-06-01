@@ -20,7 +20,8 @@ type POutput struct {
 // redeemScript, witnessScript and Bip32Derivation are all allowed to be
 // `nil`.
 func NewPsbtOutput(redeemScript []byte, witnessScript []byte,
-	bip32Derivation []*Bip32Derivation) *POutput {
+	bip32Derivation []*Bip32Derivation,
+) *POutput {
 	return &POutput{
 		RedeemScript:    redeemScript,
 		WitnessScript:   witnessScript,

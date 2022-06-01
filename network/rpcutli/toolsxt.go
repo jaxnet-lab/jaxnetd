@@ -155,8 +155,8 @@ func (xt ToolsXt) CreateVoutList(mtx *wire.MsgTx, chainParams *chaincfg.Params, 
 // to a raw transaction JSON object.
 func (xt ToolsXt) CreateTxRawResult(chainParams *chaincfg.Params, mtx *wire.MsgTx,
 	txHash string, blkHeader wire.BlockHeader, blkHash string,
-	blkHeight int32, chainHeight int32) (*jaxjson.TxRawResult, error) {
-
+	blkHeight int32, chainHeight int32,
+) (*jaxjson.TxRawResult, error) {
 	mtxHex, err := xt.MessageToHex(mtx)
 	if err != nil {
 		return nil, err
@@ -274,7 +274,8 @@ func WireHeaderToShardJSON(params *chaincfg.Params, header wire.BlockHeader, act
 		shardMerkleProof[i] = sHash.String()
 	}
 
-	beaconTxAux := header.(*wire.ShardHeader).BeaconCoinbaseAux()
+	headerShard, _ := header.(*wire.ShardHeader)
+	beaconTxAux := headerShard.BeaconCoinbaseAux()
 
 	var rawTx string
 	var tx *jaxjson.TxRawResult

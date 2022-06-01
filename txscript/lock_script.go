@@ -153,7 +153,8 @@ func extractHTLCAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (Script
 // signHTLC ...
 // nolint: gomnd
 func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
-	address []jaxutil.Address, kdb KeyDB, sdb ScriptDB) ([]byte, ScriptClass, error) {
+	address []jaxutil.Address, kdb KeyDB, sdb ScriptDB,
+) ([]byte, ScriptClass, error) {
 	// look up key for address
 
 	pops, _ := parseScript(subScript)

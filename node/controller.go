@@ -239,14 +239,11 @@ func (chainCtl *chainController) Stats() map[string]float64 {
 }
 
 func (chainCtl *chainController) waitForUnexpectedStop() {
-	for {
-		select {
-		case s := <-chainCtl.exitStatuses:
-			if !s.ok {
-				chainCtl.logger.Error().Str("unit", s.unit).Msgf("Unexpected stop of the unit")
-				chainCtl.stopMe <- struct{}{}
-				chainCtl.exitError = fmt.Errorf("unexpected stop of the module :%s", s.unit)
-			}
+	for s := range chainCtl.exitStatuses {
+		if !s.ok {
+			chainCtl.logger.Error().Str("unit", s.unit).Msgf("Unexpected stop of the unit")
+			chainCtl.stopMe <- struct{}{}
+			chainCtl.exitError = fmt.Errorf("unexpected stop of the module :%s", s.unit)
 		}
 	}
 }

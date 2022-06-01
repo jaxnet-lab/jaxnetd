@@ -422,7 +422,8 @@ type txInfo struct {
 }
 
 func (server *CommonChainRPC) getTxVerbose(txHash *chainhash.Hash, detailedIn bool,
-	includeOrphan bool) (*jaxjson.TxRawResult, *wire.MsgTx, error) {
+	includeOrphan bool,
+) (*jaxjson.TxRawResult, *wire.MsgTx, error) {
 	txInfo, err := server.getTx(txHash, true, includeOrphan)
 	if err != nil {
 		return nil, nil, err

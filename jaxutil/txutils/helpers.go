@@ -141,7 +141,7 @@ func TxToJSON(mtx *wire.MsgTx, chainParams *chaincfg.Params) jaxjson.TxRawDecode
 }
 
 func SendTx(txMan *TxMan, senderKP *KeyData, shardID uint32, destination string, amount int64, timeLock uint32) (string, error) {
-	senderAddress := senderKP.Address.EncodeAddress()
+	senderAddress := senderKP.AddressPubKey.EncodeAddress()
 	senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 
 	var err error

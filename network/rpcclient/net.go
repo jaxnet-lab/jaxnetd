@@ -81,7 +81,8 @@ func (r FutureNodeResult) Receive() error {
 //
 // See Node for the blocking version and more details.
 func (c *Client) NodeAsync(command jaxjson.NodeSubCmd, host string,
-	connectSubCmd *string) FutureNodeResult {
+	connectSubCmd *string,
+) FutureNodeResult {
 	cmd := jaxjson.NewNodeCmd(command, host, connectSubCmd)
 	return c.sendCmd(cmd)
 }
@@ -94,7 +95,8 @@ func (c *Client) NodeAsync(command jaxjson.NodeSubCmd, host string,
 // whether we are targeting a persistent or non-persistent peer. Passing nil
 // will cause the default value to be used, which currently is "temp".
 func (c *Client) Node(command jaxjson.NodeSubCmd, host string,
-	connectSubCmd *string) error {
+	connectSubCmd *string,
+) error {
 	return c.NodeAsync(command, host, connectSubCmd).Receive()
 }
 

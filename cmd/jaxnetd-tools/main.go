@@ -316,7 +316,7 @@ func (app *App) sendTxCmd(*cli.Context) error {
 	if app.config.Cmd.SendTxs == nil {
 		return cli.NewExitError("invalid configuration - cmd.send_tx is nil", 1)
 	}
-	key, err := txutils.NewKeyData(app.config.Cmd.SendTxs.SenderSecret, app.config.NetParams())
+	key, err := txutils.NewKeyData(app.config.Cmd.SendTxs.SenderSecret, app.config.NetParams(), false)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func (app *App) NewMultiSigTxCmd(c *cli.Context) error {
 
 	fmt.Printf("Craft new mustisig Address\nAddress: %s\nRedeemScript: %s\n", mAddr.Address, mAddr.RedeemScript)
 
-	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams(), false)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}
@@ -439,7 +439,7 @@ func (app *App) AddSignatureToTxCmd(c *cli.Context) error {
 	script := c.String(flagRedeemScript)
 	send := c.Bool(flagSendTx)
 
-	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams(), false)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}
@@ -480,7 +480,7 @@ func (app *App) SpendUTXOCmd(c *cli.Context) error {
 	amount := c.Int64(flagAmount)
 	send := c.Bool(flagAmount)
 
-	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams())
+	signer, err := txutils.NewKeyData(app.config.SenderSecret, app.config.NetParams(), false)
 	if err != nil {
 		return cli.NewExitError(err, 1)
 	}
@@ -553,7 +553,7 @@ func (*App) genKp(*cli.Context) error {
 }
 
 func sendTx(txMan *txutils.TxMan, senderKP *txutils.KeyData, shardID uint32, destination string, amount int64) (string, error) {
-	senderAddress := senderKP.Address.EncodeAddress()
+	senderAddress := senderKP.AddressPubKey.EncodeAddress()
 	senderUTXOIndex := txmodels.NewUTXORepo("", senderAddress)
 
 	var err error

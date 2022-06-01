@@ -247,8 +247,8 @@ func WithKey(key [gcs.KeySize]byte) *GCSBuilder {
 // WithKeyHashPNM creates a GCSBuilder with key derived from the specified
 // chainhash.Hash and the passed probability and estimated filter size.
 func WithKeyHashPNM(keyHash *chainhash.Hash, p uint8, n uint32,
-	m uint64) *GCSBuilder {
-
+	m uint64,
+) *GCSBuilder {
 	return WithKeyPNM(DeriveKey(keyHash), p, n, m)
 }
 

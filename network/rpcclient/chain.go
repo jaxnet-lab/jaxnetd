@@ -59,8 +59,8 @@ func (c *Client) GetBestBlockHash() (*chainhash.Hash, error) {
 // contains two separate bools to denote verbosity, in contract to a single int
 // parameter.
 func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
-	verboseTx bool) ([]byte, error) {
-
+	verboseTx bool,
+) ([]byte, error) {
 	hashJSON, err := json.Marshal(hash)
 	if err != nil {
 		return nil, err
@@ -83,8 +83,8 @@ func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
 // response indicates an invalid parameter was provided, a legacy style of the
 // request is resent and its response is returned instead.
 func (c *Client) waitForGetBlockRes(respChan chan *response, cmd, hash string,
-	verbose, verboseTx bool) ([]byte, error) {
-
+	verbose, verboseTx bool,
+) ([]byte, error) {
 	res, err := receiveFuture(respChan)
 
 	// If we receive an invalid parameter error, then we may be
@@ -193,8 +193,8 @@ func unmarshalPartialGetBlockChainInfoResult(res []byte) (*jaxjson.GetBlockChain
 // unmarshalGetBlockChainInfoResultSoftForks properly unmarshals the softforks
 // related fields into the GetBlockChainInfoResult instance.
 func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *jaxjson.GetBlockChainInfoResult,
-	version BackendVersion, res []byte) error {
-
+	version BackendVersion, res []byte,
+) error {
 	switch version {
 	// Versions of jaxnetd on or after v0.19.0 use the unified format.
 	case JaxnetdPost19:
@@ -920,7 +920,8 @@ func (r FutureGetCFilterResult) Receive() (*wire.MsgCFilter, error) {
 //
 // See GetCFilter for the blocking version and more details.
 func (c *Client) GetCFilterAsync(blockHash *chainhash.Hash,
-	filterType wire.FilterType) FutureGetCFilterResult {
+	filterType wire.FilterType,
+) FutureGetCFilterResult {
 	hash := ""
 	if blockHash != nil {
 		hash = blockHash.String()
@@ -932,7 +933,8 @@ func (c *Client) GetCFilterAsync(blockHash *chainhash.Hash,
 
 // GetCFilter returns a raw filter from the server given its block hash.
 func (c *Client) GetCFilter(blockHash *chainhash.Hash,
-	filterType wire.FilterType) (*wire.MsgCFilter, error) {
+	filterType wire.FilterType,
+) (*wire.MsgCFilter, error) {
 	return c.GetCFilterAsync(blockHash, filterType).Receive()
 }
 
@@ -972,7 +974,8 @@ func (r FutureGetCFilterHeaderResult) Receive() (*wire.MsgCFHeaders, error) {
 //
 // See GetCFilterHeader for the blocking version and more details.
 func (c *Client) GetCFilterHeaderAsync(blockHash *chainhash.Hash,
-	filterType wire.FilterType) FutureGetCFilterHeaderResult {
+	filterType wire.FilterType,
+) FutureGetCFilterHeaderResult {
 	hash := ""
 	if blockHash != nil {
 		hash = blockHash.String()
@@ -985,7 +988,8 @@ func (c *Client) GetCFilterHeaderAsync(blockHash *chainhash.Hash,
 // GetCFilterHeader returns a raw filter header from the server given its block
 // hash.
 func (c *Client) GetCFilterHeader(blockHash *chainhash.Hash,
-	filterType wire.FilterType) (*wire.MsgCFHeaders, error) {
+	filterType wire.FilterType,
+) (*wire.MsgCFHeaders, error) {
 	return c.GetCFilterHeaderAsync(blockHash, filterType).Receive()
 }
 

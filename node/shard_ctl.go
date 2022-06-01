@@ -86,7 +86,8 @@ type ShardCtl struct {
 }
 
 func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
-	chain chainctx.IChainCtx, listenCfg p2p.ListenOpts) *ShardCtl {
+	chain chainctx.IChainCtx, listenCfg p2p.ListenOpts,
+) *ShardCtl {
 	log = log.With().Str("unit", chain.Name()).Logger()
 
 	return &ShardCtl{
@@ -99,6 +100,7 @@ func NewShardCtl(ctx context.Context, log zerolog.Logger, cfg *Config,
 	}
 }
 
+// nolint: contextcheck
 func (shardCtl *ShardCtl) Init(ctx context.Context, beaconBlockGen chaindata.BeaconBlockProvider) (bool, error) {
 	// Load the block database.
 	db, err := shardCtl.dbCtl.loadBlockDB(shardCtl.cfg.DataDir, shardCtl.chain, shardCtl.cfg.Node)

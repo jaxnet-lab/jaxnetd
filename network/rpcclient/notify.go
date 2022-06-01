@@ -275,8 +275,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		blockHeight, blockHeader, err :=
-			parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
+		blockHeight, blockHeader, err := parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
@@ -524,8 +523,8 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash, int32, tim
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage, shardID uint32) (int32,
-	wire.BlockHeader, []*jaxutil.Tx, error) {
-
+	wire.BlockHeader, []*jaxutil.Tx, error,
+) {
 	if len(params) < 3 {
 		return 0, nil, nil, wrongNumParams(len(params))
 	}
@@ -582,7 +581,8 @@ func parseFilteredBlockConnectedParams(params []json.RawMessage, shardID uint32)
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func parseFilteredBlockDisconnectedParams(params []json.RawMessage, shardID uint32) (int32,
-	wire.BlockHeader, error) {
+	wire.BlockHeader, error,
+) {
 	if len(params) < 2 {
 		return 0, nil, wrongNumParams(len(params))
 	}
@@ -633,8 +633,8 @@ func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte
 // the block it's mined in from the parameters of recvtx and redeemingtx
 // notifications.
 func parseChainTxNtfnParams(params []json.RawMessage) (*jaxutil.Tx,
-	*jaxjson.BlockDetails, error) {
-
+	*jaxjson.BlockDetails, error,
+) {
 	if len(params) == 0 || len(params) > 2 {
 		return nil, nil, wrongNumParams(len(params))
 	}
@@ -713,8 +713,8 @@ func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32
 // parseTxAcceptedNtfnParams parses out the transaction hash and total amount
 // from the parameters of a txaccepted notification.
 func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
-	jaxutil.Amount, error) {
-
+	jaxutil.Amount, error,
+) {
 	if len(params) != 2 {
 		return nil, 0, wrongNumParams(len(params))
 	}
@@ -751,8 +751,8 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // parseTxAcceptedVerboseNtfnParams parses out details about a raw transaction
 // from the parameters of a txacceptedverbose notification.
 func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*jaxjson.TxRawResult,
-	error) {
-
+	error,
+) {
 	if len(params) != 1 {
 		return nil, wrongNumParams(len(params))
 	}
@@ -791,8 +791,8 @@ func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 // and whether or not the balance is confirmed or unconfirmed from the
 // parameters of an accountbalance notification.
 func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
-	balance jaxutil.Amount, confirmed bool, err error) {
-
+	balance jaxutil.Amount, confirmed bool, err error,
+) {
 	if len(params) != 3 {
 		return "", 0, false, wrongNumParams(len(params))
 	}
@@ -828,8 +828,8 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 // parseWalletLockStateNtfnParams parses out the account name and locked
 // state of an account from the parameters of a walletlockstate notification.
 func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
-	locked bool, err error) {
-
+	locked bool, err error,
+) {
 	if len(params) != 2 {
 		return "", false, wrongNumParams(len(params))
 	}
@@ -1176,8 +1176,8 @@ func (r FutureRescanResult) Receive() error {
 // Deprecated: Use RescanBlocksAsync instead.
 func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address,
-	outpoints []*wire.OutPoint) FutureRescanResult {
-
+	outpoints []*wire.OutPoint,
+) FutureRescanResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
 		return newFutureError(ErrWebsocketsRequired)
@@ -1241,8 +1241,8 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 // Deprecated: Use RescanBlocks instead.
 func (c *Client) Rescan(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address,
-	outpoints []*wire.OutPoint) error {
-
+	outpoints []*wire.OutPoint,
+) error {
 	return c.RescanAsync(startBlock, addresses, outpoints).Receive()
 }
 
@@ -1257,8 +1257,8 @@ func (c *Client) Rescan(startBlock *chainhash.Hash,
 // Deprecated: Use RescanBlocksAsync instead.
 func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address, outpoints []*wire.OutPoint,
-	endBlock *chainhash.Hash) FutureRescanResult {
-
+	endBlock *chainhash.Hash,
+) FutureRescanResult {
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
 		return newFutureError(ErrWebsocketsRequired)
@@ -1319,8 +1319,8 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 // Deprecated: Use RescanBlocks instead.
 func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address, outpoints []*wire.OutPoint,
-	endBlock *chainhash.Hash) error {
-
+	endBlock *chainhash.Hash,
+) error {
 	return c.RescanEndBlockAsync(startBlock, addresses, outpoints,
 		endBlock).Receive()
 }
@@ -1351,8 +1351,8 @@ func (r FutureLoadTxFilterResult) Receive() error {
 // NOTE: This is a jaxnetd extension ported from github.com/decred/dcrrpcclient
 // and requires a websocket connection.
 func (c *Client) LoadTxFilterAsync(reload bool, addresses []jaxutil.Address,
-	outPoints []wire.OutPoint) FutureLoadTxFilterResult {
-
+	outPoints []wire.OutPoint,
+) FutureLoadTxFilterResult {
 	addrStrs := make([]string, len(addresses))
 	for i, a := range addresses {
 		addrStrs[i] = a.EncodeAddress()

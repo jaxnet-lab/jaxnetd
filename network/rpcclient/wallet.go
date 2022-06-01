@@ -562,8 +562,8 @@ func (c *Client) SendToAddress(address jaxutil.Address, amount jaxutil.Amount) (
 // See SendToAddressComment for the blocking version and more details.
 func (c *Client) SendToAddressCommentAsync(address jaxutil.Address,
 	amount jaxutil.Amount, comment,
-	commentTo string) FutureSendToAddressResult {
-
+	commentTo string,
+) FutureSendToAddressResult {
 	addr := address.EncodeAddress()
 	cmd := jaxjson.NewSendToAddressCmd(addr, amount.ToBTC(), &comment,
 		&commentTo)
@@ -668,8 +668,8 @@ func (c *Client) SendFromMinConf(fromAccount string, toAddress jaxutil.Address, 
 // See SendFromComment for the blocking version and more details.
 func (c *Client) SendFromCommentAsync(fromAccount string,
 	toAddress jaxutil.Address, amount jaxutil.Amount, minConfirms int,
-	comment, commentTo string) FutureSendFromResult {
-
+	comment, commentTo string,
+) FutureSendFromResult {
 	addr := toAddress.EncodeAddress()
 	cmd := jaxjson.NewSendFromCmd(fromAccount, addr, amount.ToBTC(),
 		&minConfirms, &comment, &commentTo)
@@ -689,8 +689,8 @@ func (c *Client) SendFromCommentAsync(fromAccount string,
 // WalletPassphrase function for more details.
 func (c *Client) SendFromComment(fromAccount string, toAddress jaxutil.Address,
 	amount jaxutil.Amount, minConfirms int,
-	comment, commentTo string) (*chainhash.Hash, error) {
-
+	comment, commentTo string,
+) (*chainhash.Hash, error) {
 	return c.SendFromCommentAsync(fromAccount, toAddress, amount,
 		minConfirms, comment, commentTo).Receive()
 }
@@ -752,8 +752,8 @@ func (c *Client) SendMany(fromAccount string, amounts map[jaxutil.Address]jaxuti
 // See SendManyMinConf for the blocking version and more details.
 func (c *Client) SendManyMinConfAsync(fromAccount string,
 	amounts map[jaxutil.Address]jaxutil.Amount,
-	minConfirms int) FutureSendManyResult {
-
+	minConfirms int,
+) FutureSendManyResult {
 	convertedAmounts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
 		convertedAmounts[addr.EncodeAddress()] = amount.ToBTC()
@@ -774,8 +774,8 @@ func (c *Client) SendManyMinConfAsync(fromAccount string,
 // WalletPassphrase function for more details.
 func (c *Client) SendManyMinConf(fromAccount string,
 	amounts map[jaxutil.Address]jaxutil.Amount,
-	minConfirms int) (*chainhash.Hash, error) {
-
+	minConfirms int,
+) (*chainhash.Hash, error) {
 	return c.SendManyMinConfAsync(fromAccount, amounts, minConfirms).Receive()
 }
 
@@ -786,8 +786,8 @@ func (c *Client) SendManyMinConf(fromAccount string,
 // See SendManyComment for the blocking version and more details.
 func (c *Client) SendManyCommentAsync(fromAccount string,
 	amounts map[jaxutil.Address]jaxutil.Amount, minConfirms int,
-	comment string) FutureSendManyResult {
-
+	comment string,
+) FutureSendManyResult {
 	convertedAmounts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
 		convertedAmounts[addr.EncodeAddress()] = amount.ToBTC()
@@ -809,8 +809,8 @@ func (c *Client) SendManyCommentAsync(fromAccount string,
 // WalletPassphrase function for more details.
 func (c *Client) SendManyComment(fromAccount string,
 	amounts map[jaxutil.Address]jaxutil.Amount, minConfirms int,
-	comment string) (*chainhash.Hash, error) {
-
+	comment string,
+) (*chainhash.Hash, error) {
 	return c.SendManyCommentAsync(fromAccount, amounts, minConfirms,
 		comment).Receive()
 }
@@ -1408,8 +1408,8 @@ func (c *Client) Move(fromAccount, toAccount string, amount jaxutil.Amount) (boo
 //
 // See MoveMinConf for the blocking version and more details.
 func (c *Client) MoveMinConfAsync(fromAccount, toAccount string,
-	amount jaxutil.Amount, minConfirms int) FutureMoveResult {
-
+	amount jaxutil.Amount, minConfirms int,
+) FutureMoveResult {
 	cmd := jaxjson.NewMoveCmd(fromAccount, toAccount, amount.ToBTC(),
 		&minConfirms, nil)
 	return c.sendCmd(cmd)
@@ -1431,8 +1431,8 @@ func (c *Client) MoveMinConf(fromAccount, toAccount string, amount jaxutil.Amoun
 //
 // See MoveComment for the blocking version and more details.
 func (c *Client) MoveCommentAsync(fromAccount, toAccount string,
-	amount jaxutil.Amount, minConfirms int, comment string) FutureMoveResult {
-
+	amount jaxutil.Amount, minConfirms int, comment string,
+) FutureMoveResult {
 	cmd := jaxjson.NewMoveCmd(fromAccount, toAccount, amount.ToBTC(),
 		&minConfirms, &comment)
 	return c.sendCmd(cmd)
@@ -1445,8 +1445,8 @@ func (c *Client) MoveCommentAsync(fromAccount, toAccount string,
 //
 // See Move and MoveMinConf to use defaults.
 func (c *Client) MoveComment(fromAccount, toAccount string, amount jaxutil.Amount,
-	minConf int, comment string) (bool, error) {
-
+	minConf int, comment string,
+) (bool, error) {
 	return c.MoveCommentAsync(fromAccount, toAccount, amount, minConf,
 		comment).Receive()
 }

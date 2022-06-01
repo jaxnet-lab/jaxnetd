@@ -52,7 +52,8 @@ func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 // redeemscript fits the standard multisig template used in all P2SH based
 // multisig, given a set of pubkeys for redemption.
 func checkIsMultiSigScript(pubKeys [][]byte, sigs [][]byte,
-	script []byte) bool {
+	script []byte,
+) bool {
 	class := txscript.GetScriptClass(script)
 	// First insist that the script type is multisig.
 	if class != txscript.MultiSigTy {
@@ -81,8 +82,8 @@ func checkIsMultiSigScript(pubKeys [][]byte, sigs [][]byte,
 // function is used to ensure that the signatures will be embedded in the final
 // scriptSig or scriptWitness in the correct order.
 func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
-	sigs [][]byte) ([][]byte, error) {
-
+	sigs [][]byte,
+) ([][]byte, error) {
 	// If this isn't a proper finalized multi-sig script, then we can't
 	// proceed.
 	if !checkIsMultiSigScript(expectedPubkeys, sigs, script) {
@@ -151,8 +152,8 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 // function will only accept witnessScripts of the type M of N multisig. This
 // is used for both p2wsh and nested p2wsh multisig cases.
 func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
-	sigs [][]byte) ([]byte, error) {
-
+	sigs [][]byte,
+) ([]byte, error) {
 	// First using the script as a guide, we'll properly order the sigs
 	// according to how their corresponding pubkeys appear in the
 	// witnessScript.
@@ -210,8 +211,8 @@ func serializeKVpair(w io.Writer, key []byte, value []byte) error {
 // serializeKVPairWithType writes out to the passed writer a type coupled with
 // a key.
 func serializeKVPairWithType(w io.Writer, kt uint8, keydata []byte,
-	value []byte) error {
-
+	value []byte,
+) error {
 	// If the key has no data, then we write a blank slice.
 	if keydata == nil {
 		keydata = []byte{}
@@ -400,8 +401,8 @@ func VerifyInputOutputLen(packet *Packet, needInputs, needOutputs bool) error {
 // serialization, a list of scriptSigs, one per input, and a list of witnesses,
 // one per input.
 func NewFromSignedTx(tx *wire.MsgTx) (*Packet, [][]byte,
-	[]wire.TxWitness, error) {
-
+	[]wire.TxWitness, error,
+) {
 	scriptSigs := make([][]byte, 0, len(tx.TxIn))
 	witnesses := make([]wire.TxWitness, 0, len(tx.TxIn))
 	tx2 := tx.Copy()

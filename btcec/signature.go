@@ -285,7 +285,8 @@ func hashToInt(hash []byte, c elliptic.Curve) *big.Int {
 // case in step 1.6. This counter is used in the bitcoin compressed signature
 // format and thus we match jaxnetd's behaviour here.
 func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
-	iter int, doChecks bool) (*PublicKey, error) {
+	iter int, doChecks bool,
+) (*PublicKey, error) {
 	// 1.1 x = (n * i) + r
 	Rx := new(big.Int).Mul(curve.Params().N,
 		new(big.Int).SetInt64(int64(iter/2)))
@@ -351,7 +352,8 @@ func recoverKeyFromSignature(curve *KoblitzCurve, sig *Signature, msg []byte,
 // <(byte of 27+public key solution)+4 if compressed >< padded bytes for signature R><padded bytes for signature S>
 // where the R and S parameters are padde up to the bitlengh of the curve.
 func SignCompact(curve *KoblitzCurve, key *PrivateKey,
-	hash []byte, isCompressedKey bool) ([]byte, error) {
+	hash []byte, isCompressedKey bool,
+) ([]byte, error) {
 	sig, err := key.Sign(hash)
 	if err != nil {
 		return nil, err
@@ -398,7 +400,8 @@ func SignCompact(curve *KoblitzCurve, key *PrivateKey,
 // key will be returned as well as a boolen if the original key was compressed
 // or not, else an error will be returned.
 func RecoverCompact(curve *KoblitzCurve, signature,
-	hash []byte) (*PublicKey, bool, error) {
+	hash []byte,
+) (*PublicKey, bool, error) {
 	bitlen := (curve.BitSize + 7) / 8
 	if len(signature) != 1+bitlen*2 {
 		return nil, false, errors.New("invalid compact signature size")

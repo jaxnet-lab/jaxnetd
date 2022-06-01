@@ -8,6 +8,7 @@ package txutils
 
 import (
 	"encoding/hex"
+
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
@@ -429,6 +430,7 @@ func (t *txBuilder) signUTXO(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex
 
 	return t.signRegularUTXOForTx(msgTx, utxo, inIndex, kdb, utxoScript)
 }
+
 func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScriptResult, error) {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
@@ -451,7 +453,8 @@ func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScr
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
 func (t *txBuilder) signRegularUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB,
-	scriptPubKey *jaxjson.DecodeScriptResult) error {
+	scriptPubKey *jaxjson.DecodeScriptResult,
+) error {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode PK script")
@@ -583,7 +586,7 @@ func (t *txBuilder) prepareUTXOs() error {
 }
 
 func (t *txBuilder) signWitnessUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) error {
-	pkScript, err := hex.DecodeString(utxo.PKScript)
+	pkScript, _ := hex.DecodeString(utxo.PKScript)
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, t.net.Params())
 	if err != nil {
 		return err

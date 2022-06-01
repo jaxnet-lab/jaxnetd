@@ -63,7 +63,7 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 	}
 
 	if cfg.PrivateKey != "" {
-		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams, false, false)
+		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams, cfg.CompressedPublicKey)
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +177,8 @@ func (client *TxMan) CollectUTXOs(opts UTXOCollectorOpts) (map[uint32]txmodels.U
 }
 
 func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
-	filter map[string]bool, index *txmodels.UTXOIndex) (*txmodels.UTXOIndex, int64, error) {
+	filter map[string]bool, index *txmodels.UTXOIndex,
+) (*txmodels.UTXOIndex, int64, error) {
 	if offset == 0 {
 		offset = 1
 	}
@@ -273,7 +274,8 @@ func (client *TxMan) NetworkFee(shardID uint32) (int64, error) {
 }
 
 func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvider,
-	destinationsScripts ...[]byte) (*txmodels.Transaction, error) {
+	destinationsScripts ...[]byte,
+) (*txmodels.Transaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -293,7 +295,7 @@ prepareUTXO:
 	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true, 0) // ead always works in beacon
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
 
-	utxo, err := utxoPrv.SelectForAmount(amountToSpend, 0, client.key.Address.EncodeAddress())
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, 0, client.key.AddressPubKey.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +322,7 @@ prepareUTXO:
 
 	return &txmodels.Transaction{
 		TxHash:   msgTx.TxHash().String(),
-		Source:   client.key.Address.String(),
+		Source:   client.key.AddressPubKey.String(),
 		SignedTx: EncodeTx(msgTx),
 		RawTX:    msgTx,
 	}, nil
@@ -349,7 +351,7 @@ prepareUTXO:
 	}
 
 	draft.UTXO, err = utxoPrv.SelectForAmount(amount+fee, client.cfg.ShardID,
-		client.key.Address.EncodeAddress())
+		client.key.AddressPubKey.EncodeAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to select UTXO for amount")
 	}
@@ -382,7 +384,7 @@ prepareUTXO:
 
 	return &txmodels.Transaction{
 		TxHash:      msgTx.TxHash().String(),
-		Source:      client.key.Address.String(),
+		Source:      client.key.AddressPubKey.String(),
 		Destination: draft.Destination(),
 		Amount:      amount,
 		SignedTx:    EncodeTx(msgTx),
@@ -405,7 +407,8 @@ prepareUTXO:
 // | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
 // | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
 func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify bool,
-	redeemScripts ...string) (*txmodels.SwapTransaction, error) {
+	redeemScripts ...string,
+) (*txmodels.SwapTransaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -477,7 +480,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 	return &txmodels.SwapTransaction{
 		TxHash:       msgTx.TxHash().String(),
-		Source:       client.key.Address.String(),
+		Source:       client.key.AddressPubKey.String(),
 		Destinations: outIndexes,
 		SignedTx:     EncodeTx(msgTx),
 		RawTX:        msgTx,
@@ -541,7 +544,8 @@ func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows,
 }
 
 func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
-	redeemScripts ...string) (*wire.MsgTx, error) {
+	redeemScripts ...string,
+) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -694,7 +698,8 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
 func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO,
-	inIndex int, postVerify bool) (*wire.MsgTx, []byte, error) {
+	inIndex int, postVerify bool,
+) (*wire.MsgTx, []byte, error) {
 	if client.key == nil {
 		return nil, nil, errors.New("keys not set")
 	}

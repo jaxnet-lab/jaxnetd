@@ -123,7 +123,8 @@ func (pq *txPriorityQueue) Swap(i, j int) {
 // Push pushes the passed item onto the priority queue.  It is part of the
 // heap.Interface implementation.
 func (pq *txPriorityQueue) Push(x interface{}) {
-	pq.items = append(pq.items, x.(*txPrioItem))
+	xConverted, _ := x.(*txPrioItem)
+	pq.items = append(pq.items, xConverted)
 }
 
 // Pop removes the highest priority item (according to Less) from the priority
@@ -284,8 +285,8 @@ type BlkTmplGenerator struct {
 func NewBlkTmplGenerator(policy *Policy,
 	chainCtx chainctx.IChainCtx,
 	txSource TxSource,
-	chain *blockchain.BlockChain) *BlkTmplGenerator {
-
+	chain *blockchain.BlockChain,
+) *BlkTmplGenerator {
 	return &BlkTmplGenerator{
 		policy:     policy,
 		chainCtx:   chainCtx,
@@ -436,7 +437,8 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress jaxutil.Address, burnRe
 
 // nolint: forcetypeassert
 func (g *BlkTmplGenerator) collectTxsForBlock(payToAddress jaxutil.Address, nextHeight int32,
-	difficulty uint32, burnRewardFlags int, prevHeader wire.BlockHeader) (*blockTxsCollection, error) {
+	difficulty uint32, burnRewardFlags int, prevHeader wire.BlockHeader,
+) (*blockTxsCollection, error) {
 	// Create a standard coinbase transaction paying to the provided
 	// address.  NOTE: The coinbase value will be updated to include the
 	// fees from the selected transactions later after they have actually
@@ -889,7 +891,8 @@ func (g *BlkTmplGenerator) UpdateBlockTime(msgBlock *wire.MsgBlock) error {
 // height.  It also recalculates and updates the new merkle root that results
 // from changing the coinbase script.
 func (g *BlkTmplGenerator) UpdateExtraNonce(msgBlock *wire.MsgBlock, blockHeight int32,
-	shardID uint32, extraNonce uint64) error {
+	shardID uint32, extraNonce uint64,
+) error {
 	coinbaseScript, err := chaindata.StandardCoinbaseScript(blockHeight, shardID, extraNonce)
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ package txutils
 
 import (
 	"encoding/hex"
+
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -18,14 +19,13 @@ import (
 
 type KeyData struct {
 	PrivateKey     *btcec.PrivateKey
-	Address        jaxutil.Address
 	AddressPubKey  *jaxutil.AddressPubKey
 	AddressHash    *jaxutil.AddressPubKeyHash
 	WitnessAddress *jaxutil.AddressWitnessPubKeyHash
 	WitnessScript  *jaxutil.AddressWitnessScriptHash
 }
 
-func GenerateKey(networkCfg *chaincfg.Params, compressed, isWitness bool) (*KeyData, error) {
+func GenerateKey(networkCfg *chaincfg.Params, compressed bool) (*KeyData, error) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make privKey")
@@ -50,14 +50,16 @@ func GenerateKey(networkCfg *chaincfg.Params, compressed, isWitness bool) (*KeyD
 	}
 
 	var addressWitness *jaxutil.AddressWitnessPubKeyHash
-	if isWitness {
-		if !compressed {
-			return nil, errors.New("uncompressed keys are not supported for witness addresses")
-		}
-		addressWitness, err = jaxutil.NewAddressWitnessPubKeyHash(jaxutil.Hash160(pkSerialized), networkCfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to parse address witness pubkey hash")
-		}
+
+	// we need to compress the key before creating witness address. Witness addresses are undefined for uncompressed
+	// public keys
+	if !compressed {
+		pkSerialized = pk.SerializeCompressed()
+	}
+
+	addressWitness, err = jaxutil.NewAddressWitnessPubKeyHash(jaxutil.Hash160(pkSerialized), networkCfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to parse address witness pubkey hash")
 	}
 
 	return &KeyData{
@@ -65,11 +67,10 @@ func GenerateKey(networkCfg *chaincfg.Params, compressed, isWitness bool) (*KeyD
 		AddressPubKey:  addressPubKey,
 		AddressHash:    addressPubKeyHash,
 		WitnessAddress: addressWitness,
-		Address:        addressPubKey,
 	}, nil
 }
 
-func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params, compressed, isWitness bool) (*KeyData, error) {
+func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params, compressed bool) (*KeyData, error) {
 	privateKeyBytes, err := hex.DecodeString(privateKeyString)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode private key from hex")
@@ -92,30 +93,28 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params, compressed
 		return nil, errors.Wrap(err, "unable to parse address pub key hash")
 	}
 
-	var addressWitness *jaxutil.AddressWitnessPubKeyHash
-	if isWitness {
-		if !compressed {
-			return nil, errors.New("uncompressed keys are not supported for witness addresses")
-		}
-		addressWitness, err = jaxutil.NewAddressWitnessPubKeyHash(jaxutil.Hash160(publicKeyBytes), networkCfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to parse address witness pubkey hash")
-		}
+	// we need to compress the key before creating witness address. Witness addresses are undefined for uncompressed
+	// public keys
+	if !compressed {
+		publicKeyBytes = publicKey.SerializeCompressed()
+	}
+	addressWitness, err := jaxutil.NewAddressWitnessPubKeyHash(jaxutil.Hash160(publicKeyBytes), networkCfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to parse address witness pubkey hash")
 	}
 
 	return &KeyData{
 		PrivateKey:     privateKey,
 		AddressPubKey:  addressPubKey,
 		AddressHash:    addressPubKeyHash,
-		Address:        addressPubKey,
 		WitnessAddress: addressWitness,
 	}, nil
 }
 
 func (kd *KeyData) GetKey(address jaxutil.Address) (*btcec.PrivateKey, bool, error) {
 	encodedAddress := address.EncodeAddress()
-	if encodedAddress == kd.Address.EncodeAddress() || encodedAddress == kd.AddressPubKey.EncodeAddress() ||
-		encodedAddress == kd.AddressHash.EncodeAddress() || encodedAddress == kd.WitnessAddress.EncodeAddress() {
+	if encodedAddress == kd.AddressPubKey.EncodeAddress() || encodedAddress == kd.AddressHash.EncodeAddress() ||
+		encodedAddress == kd.WitnessAddress.EncodeAddress() {
 		return kd.PrivateKey, false, nil
 	}
 
@@ -175,7 +174,8 @@ type MultiSigLockAddress struct {
 }
 
 func MakeMultiSigLockAddress(keys []string, nRequired int, refundPublicKey string,
-	refundDefferingPeriod int32, net *chaincfg.Params) (*MultiSigLockAddress, error) {
+	refundDefferingPeriod int32, net *chaincfg.Params,
+) (*MultiSigLockAddress, error) {
 	refungAddress, err := AddressPubKeyFromString(refundPublicKey, net)
 	if err != nil {
 		return nil, err

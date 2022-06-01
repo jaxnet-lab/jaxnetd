@@ -36,7 +36,8 @@ type NodeRPC struct {
 }
 
 func NewNodeRPC(beaconChain *cprovider.ChainProvider, shardsMgr ShardManager, logger zerolog.Logger, metricsMgr MetricsManager,
-	cpuMiner *cpuminer.CPUMiner) *NodeRPC {
+	cpuMiner *cpuminer.CPUMiner,
+) *NodeRPC {
 	rpc := &NodeRPC{
 		Mux:         NewRPCMux(logger),
 		shardsMgr:   shardsMgr,

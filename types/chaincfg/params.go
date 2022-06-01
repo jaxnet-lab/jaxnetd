@@ -120,7 +120,6 @@ type GenesisBlockOpts struct {
 }
 
 type PowParams struct {
-
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as an uint256.
 	PowLimit *big.Int

@@ -15,10 +15,11 @@ type NodeRPC struct {
 }
 
 type ManagerCfg struct {
-	Net        string  `json:"net" yaml:"net" toml:"net"`
-	ShardID    uint32  `json:"shard_id" yaml:"shard_id" toml:"shard_id"`
-	RPC        NodeRPC `json:"rpc" yaml:"rpc" toml:"rpc"`
-	PrivateKey string  `json:"private_key" yaml:"private_key" toml:"private_key"`
+	Net                 string  `json:"net" yaml:"net" toml:"net"`
+	ShardID             uint32  `json:"shard_id" yaml:"shard_id" toml:"shard_id"`
+	RPC                 NodeRPC `json:"rpc" yaml:"rpc" toml:"rpc"`
+	PrivateKey          string  `json:"private_key" yaml:"private_key" toml:"private_key"`
+	CompressedPublicKey bool    `json:"compressed_public_key" yaml:"compressed_public_key" toml:"compressed_public_key"`
 }
 
 func (cfg *ManagerCfg) NetParams() *chaincfg.Params {

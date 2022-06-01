@@ -110,7 +110,8 @@ type Server struct {
 // bitcoin network type specified by ChainParams.  Use start to begin accepting
 // connections from peers.
 func NewServer(cfg *Config, chainProvider *cprovider.ChainProvider,
-	amgr *addrmgr.AddrManager, opts ListenOpts) (*Server, error) {
+	amgr *addrmgr.AddrManager, opts ListenOpts,
+) (*Server, error) {
 	logger := chainProvider.Log().With().Str("server", "p2p").Logger()
 	chainCfg := chainProvider.Config()
 

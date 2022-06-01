@@ -52,7 +52,7 @@ type InMemoryKeystore struct {
 }
 
 func NewInMemoryKeystore(secret string, net chaincfg.NetName) (KeyStoreProvider, error) {
-	kd, err := NewKeyData(secret, net.Params(), false, false)
+	kd, err := NewKeyData(secret, net.Params(), false)
 	return &InMemoryKeystore{kd: *kd}, err
 }
 
@@ -73,11 +73,11 @@ func (kp *InMemoryKeystore) AddressPubKey() jaxutil.Address {
 }
 
 func (kp *InMemoryKeystore) Address() jaxutil.Address {
-	return kp.kd.Address
+	return kp.kd.AddressPubKey
 }
 
 func (kp *InMemoryKeystore) AddressString() string {
-	return kp.kd.Address.EncodeAddress()
+	return kp.kd.AddressPubKey.EncodeAddress()
 }
 
 // DEPRECATED

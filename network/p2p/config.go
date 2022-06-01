@@ -96,7 +96,8 @@ func GetFreePort() (port int, err error) {
 	if err != nil {
 		return -1, err
 	}
-	port = ln.Addr().(*net.TCPAddr).Port
+	addr, _ := ln.Addr().(*net.TCPAddr)
+	port = addr.Port
 	err = ln.Close()
 	return
 }
@@ -105,7 +106,8 @@ func GetFreePort() (port int, err error) {
 // addresses to the address manager. Returns the listeners and a NAT interface,
 // which is non-nil if UPnP is in use.
 func initListeners(cfg *Config, defaultPort int, amgr *addrmgr.AddrManager,
-	listenAddrs []string, services wire.ServiceFlag, logger zerolog.Logger) ([]net.Listener, NAT, error) {
+	listenAddrs []string, services wire.ServiceFlag, logger zerolog.Logger,
+) ([]net.Listener, NAT, error) {
 	// Listen for TCP connections at the configured addresses
 	netAddrs, err := ParseListeners(listenAddrs)
 	if err != nil {

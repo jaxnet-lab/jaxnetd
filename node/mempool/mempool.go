@@ -337,8 +337,7 @@ func (mp *TxPool) addOrphan(tx *jaxutil.Tx, tag Tag) {
 	}
 	for _, txIn := range tx.MsgTx().TxIn {
 		if _, exists := mp.orphansByPrev[txIn.PreviousOutPoint]; !exists {
-			mp.orphansByPrev[txIn.PreviousOutPoint] =
-				make(map[chainhash.Hash]*jaxutil.Tx)
+			mp.orphansByPrev[txIn.PreviousOutPoint] = make(map[chainhash.Hash]*jaxutil.Tx)
 		}
 		mp.orphansByPrev[txIn.PreviousOutPoint][*tx.Hash()] = tx
 	}
@@ -617,8 +616,8 @@ func (mp *TxPool) checkPoolDoubleSpend(tx *jaxutil.Tx) (bool, error) {
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) signalsReplacement(tx *jaxutil.Tx,
-	cache map[chainhash.Hash]struct{}) bool {
-
+	cache map[chainhash.Hash]struct{},
+) bool {
 	// If a cache was not provided, we'll initialize one now to use for the
 	// recursive calls.
 	if cache == nil {
@@ -663,8 +662,8 @@ func (mp *TxPool) signalsReplacement(tx *jaxutil.Tx,
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) txAncestors(tx *jaxutil.Tx,
-	cache map[chainhash.Hash]map[chainhash.Hash]*jaxutil.Tx) map[chainhash.Hash]*jaxutil.Tx {
-
+	cache map[chainhash.Hash]map[chainhash.Hash]*jaxutil.Tx,
+) map[chainhash.Hash]*jaxutil.Tx {
 	// If a cache was not provided, we'll initialize one now to use for the
 	// recursive calls.
 	if cache == nil {
@@ -704,8 +703,8 @@ func (mp *TxPool) txAncestors(tx *jaxutil.Tx,
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) txDescendants(tx *jaxutil.Tx,
-	cache map[chainhash.Hash]map[chainhash.Hash]*jaxutil.Tx) map[chainhash.Hash]*jaxutil.Tx {
-
+	cache map[chainhash.Hash]map[chainhash.Hash]*jaxutil.Tx,
+) map[chainhash.Hash]*jaxutil.Tx {
 	// If a cache was not provided, we'll initialize one now to use for the
 	// recursive calls.
 	if cache == nil {
@@ -832,8 +831,8 @@ func (mp *TxPool) FetchTransaction(txHash *chainhash.Hash) (*jaxutil.Tx, error) 
 //
 // This function MUST be called with the mempool lock held (for reads).
 func (mp *TxPool) validateReplacement(tx *jaxutil.Tx,
-	txFee int64) (map[chainhash.Hash]*jaxutil.Tx, error) {
-
+	txFee int64,
+) (map[chainhash.Hash]*jaxutil.Tx, error) {
 	// First, we'll make sure the set of conflicting transactions doesn't
 	// exceed the maximum allowed.
 	conflicts := mp.txConflicts(tx)
@@ -924,7 +923,8 @@ func (mp *TxPool) validateReplacement(tx *jaxutil.Tx,
 // This function MUST be called with the mempool lock held (for writes).
 // nolint: gomnd
 func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
-	isNew, rateLimit, rejectDupOrphans bool) ([]*chainhash.Hash, *TxDesc, error) {
+	isNew, rateLimit, rejectDupOrphans bool,
+) ([]*chainhash.Hash, *TxDesc, error) {
 	txHash := tx.Hash()
 
 	// If a transaction has witness data, and segwit isn't active yet, If

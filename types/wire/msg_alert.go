@@ -283,7 +283,8 @@ func (alert *Alert) Deserialize(r io.Reader, pver uint32) error {
 func NewAlert(version int32, relayUntil int64, expiration int64,
 	id int32, cancel int32, setCancel []int32, minVer int32,
 	maxVer int32, setSubVer []string, priority int32, comment string,
-	statusBar string) *Alert {
+	statusBar string,
+) *Alert {
 	return &Alert{
 		Version:    version,
 		RelayUntil: relayUntil,

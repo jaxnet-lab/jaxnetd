@@ -32,8 +32,8 @@ type PInput struct {
 // being `nil`; otherwise the created PsbtInput object will fail IsSane()
 // checks and will not be usable.
 func NewPsbtInput(nonWitnessUtxo *wire.MsgTx,
-	witnessUtxo *wire.TxOut) *PInput {
-
+	witnessUtxo *wire.TxOut,
+) *PInput {
 	return &PInput{
 		NonWitnessUtxo:     nonWitnessUtxo,
 		WitnessUtxo:        witnessUtxo,

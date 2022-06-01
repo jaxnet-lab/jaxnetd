@@ -21,8 +21,8 @@ import (
 // signs a new sighash digest defined in BIP0143.
 func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	amt int64, subScript []byte, hashType SigHashType,
-	key *btcec.PrivateKey) ([]byte, error) {
-
+	key *btcec.PrivateKey,
+) ([]byte, error) {
 	parsedScript, err := parseScript(subScript)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)
@@ -49,8 +49,8 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 // transaction digest algorithm defined within BIP0143.
 func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64,
 	subscript []byte, hashType SigHashType, privKey *btcec.PrivateKey,
-	compress bool) (wire.TxWitness, error) {
-
+	compress bool,
+) (wire.TxWitness, error) {
 	sig, err := RawTxInWitnessSignature(tx, sigHashes, idx, amt, subscript,
 		hashType, privKey)
 	if err != nil {
@@ -73,8 +73,8 @@ func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64
 // RawTxInSignature returns the serialized ECDSA signature for the input idx of
 // the given transaction, with hashType appended to it.
 func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
-
+	hashType SigHashType, key *btcec.PrivateKey,
+) ([]byte, error) {
 	hash, err := CalcSignatureHash(subScript, hashType, tx, idx)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,8 @@ func p2pkSignatureScript(tx *wire.MsgTx, idx int, subScript []byte, hashType Sig
 // the contract (i.e. nrequired signatures are provided).  Since it is arguably
 // legal to not be able to sign any of the outputs, no error is returned.
 func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
-	addresses []jaxutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
+	addresses []jaxutil.Address, nRequired int, kdb KeyDB,
+) ([]byte, bool) {
 	// We start with a single OP_FALSE to work around the (now standard)
 	// but in the reference implementation that causes a spurious pop at
 	// the end of OP_CHECKMULTISIG.
@@ -156,8 +157,8 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashTyp
 
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
-	ScriptClass, []jaxutil.Address, int, error) {
-
+	ScriptClass, []jaxutil.Address, int, error,
+) {
 	class, addresses, nrequired, err := ExtractPkScriptAddrs(subScript, chainParams)
 	if err != nil {
 		return nil, NonStandardTy, nil, 0, err
@@ -238,8 +239,8 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // an error and results in undefined behaviour.
 func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, class ScriptClass, addresses []jaxutil.Address,
-	nRequired int, sigScript, prevScript []byte) []byte {
-
+	nRequired int, sigScript, prevScript []byte,
+) []byte {
 	// TODO: the scripthash and multisig paths here are overly
 	// inefficient in that they will recompute already known data.
 	// some internal refactoring could probably make this avoid needless
@@ -262,8 +263,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		script := sigPops[len(sigPops)-1].data
 
 		// We already know this information somewhere up the stack.
-		class, addresses, nrequired, _ :=
-			ExtractPkScriptAddrs(script, chainParams)
+		class, addresses, nrequired, _ := ExtractPkScriptAddrs(script, chainParams)
 
 		// regenerate scripts.
 		sigScript, _ := unparseScript(sigPops)
@@ -303,8 +303,8 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // have come from other functions internally and thus are all consistent with
 // each other, behaviour is undefined if this contract is broken.
 func mergeMultiSig(tx *wire.MsgTx, idx int, addresses []jaxutil.Address,
-	nRequired int, pkScript, sigScript, prevScript []byte) []byte {
-
+	nRequired int, pkScript, sigScript, prevScript []byte,
+) []byte {
 	// This is an internal only function and we already parsed this script
 	// as ok for multisig (this is how we got here), so if this fails then
 	// all assumptions are broken and who knows which way is up?
@@ -425,7 +425,8 @@ type KeyClosure func(jaxutil.Address) (*btcec.PrivateKey, bool, error)
 
 // GetKey implements KeyDB by returning the result of calling the closure.
 func (kc KeyClosure) GetKey(address jaxutil.Address) (*btcec.PrivateKey,
-	bool, error) {
+	bool, error,
+) {
 	return kc(address)
 }
 
@@ -452,7 +453,8 @@ func (sc ScriptClosure) GetScript(address jaxutil.Address) ([]byte, error) {
 // signature script.
 func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB,
-	previousScript []byte) ([]byte, error) {
+	previousScript []byte,
+) ([]byte, error) {
 	sigScript, class, addresses, nrequired, err := sign(chainParams, tx,
 		idx, pkScript, hashType, kdb, sdb)
 	if err != nil {

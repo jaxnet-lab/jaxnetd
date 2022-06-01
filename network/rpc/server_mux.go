@@ -26,7 +26,8 @@ type MultiChainRPC struct {
 }
 
 func NewMultiChainRPC(config *Config, nodeRPC *NodeRPC,
-	beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC) *MultiChainRPC {
+	beaconRPC *BeaconRPC, shardRPCs map[uint32]*ShardRPC,
+) *MultiChainRPC {
 	rpc := &MultiChainRPC{
 		ServerCore: NewRPCCore(config),
 		nodeRPC:    nodeRPC,

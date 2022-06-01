@@ -106,7 +106,8 @@ type ChainProvider struct {
 }
 
 func NewChainProvider(ctx context.Context, cfg ChainRuntimeConfig, chainCtx chainctx.IChainCtx,
-	blockGen chaindata.ChainBlockGenerator, db database.DB, log zerolog.Logger) (*ChainProvider, error) {
+	blockGen chaindata.ChainBlockGenerator, db database.DB, log zerolog.Logger,
+) (*ChainProvider, error) {
 	var err error
 
 	chainProvider := &ChainProvider{
@@ -263,7 +264,8 @@ func (chainProvider *ChainProvider) BTC() *btcd.BlockProvider {
 
 // nolint: staticcheck
 func (chainProvider *ChainProvider) initBlockchainAndMempool(ctx context.Context, cfg ChainRuntimeConfig,
-	blockGen chaindata.ChainBlockGenerator) error {
+	blockGen chaindata.ChainBlockGenerator,
+) error {
 	indexManager, checkpoints := chainProvider.initIndexes(cfg)
 
 	// Create a new blockchain instance with the appropriate configuration.
