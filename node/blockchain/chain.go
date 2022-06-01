@@ -390,8 +390,7 @@ func (b *BlockChain) ChainBlockGenerator() chaindata.ChainBlockGenerator {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) CalcSequenceLock(tx *jaxutil.Tx, utxoView *chaindata.UtxoViewpoint,
-	mempool bool,
-) (*chaindata.SequenceLock, error) {
+	mempool bool) (*chaindata.SequenceLock, error) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -404,8 +403,7 @@ func (b *BlockChain) CalcSequenceLock(tx *jaxutil.Tx, utxoView *chaindata.UtxoVi
 // This function MUST be called with the chain state lock held (for writes).
 // nolint: gomnd
 func (b *BlockChain) calcSequenceLock(node blocknodes.IBlockNode, tx *jaxutil.Tx,
-	utxoView *chaindata.UtxoViewpoint, mempool bool,
-) (*chaindata.SequenceLock, error) {
+	utxoView *chaindata.UtxoViewpoint, mempool bool) (*chaindata.SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
 	// at any given height or time. This value is returned as the relative
@@ -556,8 +554,7 @@ func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
-	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut,
-) error {
+	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
 	// Make sure it's extending the end of the best chain.
 	prevHash := node.PrevHash()
 	bestBlockHash := b.blocksDB.bestChain.Tip().GetHash()
@@ -693,8 +690,7 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.Block, view *chaindata.UtxoViewpoint,
-	forkRoot blocknodes.IBlockNode,
-) error {
+	forkRoot blocknodes.IBlockNode) error {
 	// Make sure the node being disconnected is the end of the best chain.
 	h := node.GetHash()
 	th := b.blocksDB.bestChain.Tip().GetHash()
@@ -1453,8 +1449,7 @@ func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) HeightToHashRange(startHeight int32,
-	endHash *chainhash.Hash, maxResults int,
-) ([]chainhash.Hash, error) {
+	endHash *chainhash.Hash, maxResults int) ([]chainhash.Hash, error) {
 	endNode := b.blocksDB.index.LookupNode(endHash)
 	if endNode == nil {
 		return nil, fmt.Errorf("no known block header with hash %v", endHash)
@@ -1492,8 +1487,7 @@ func (b *BlockChain) HeightToHashRange(startHeight int32,
 // endHash where the block height is a positive multiple of interval.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int,
-) ([]chainhash.Hash, error) {
+func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int) ([]chainhash.Hash, error) {
 	endNode := b.blocksDB.index.LookupNode(endHash)
 	if endNode == nil {
 		return nil, fmt.Errorf("no known block header with hash %v", endHash)

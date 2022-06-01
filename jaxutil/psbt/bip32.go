@@ -59,8 +59,7 @@ func readBip32Derivation(path []byte) (uint32, []uint32, error) {
 // bytestring specifying the derivation in the format required by BIP174: //
 // master key fingerprint (4) || child index (4) || child index (4) || ....
 func SerializeBIP32Derivation(masterKeyFingerprint uint32,
-	bip32Path []uint32,
-) []byte {
+	bip32Path []uint32) []byte {
 	var masterKeyBytes [4]byte
 	binary.LittleEndian.PutUint32(masterKeyBytes[:], masterKeyFingerprint)
 

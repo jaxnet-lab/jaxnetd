@@ -32,8 +32,7 @@ type LookupFunc func(string) ([]net.IP, error)
 
 // SeedFromDNS uses DNS seeding to populate the address manager with peers.
 func SeedFromDNS(chainParams *chaincfg.Params, reqServices wire.ServiceFlag,
-	lookupFn LookupFunc, seedFn OnSeed,
-) {
+	lookupFn LookupFunc, seedFn OnSeed) {
 	for _, dnsseed := range chainParams.DNSSeeds {
 		var host string
 		if !dnsseed.HasFiltering || reqServices == wire.SFNodeNetwork {

@@ -460,8 +460,7 @@ func CountSpentOutputs(block *jaxutil.Block) int {
 // using the provided spent txo information, and setting the best Hash for the
 // view to the block before the passed block.
 func (view *UtxoViewpoint) DisconnectTransactions(db database.DB, block *jaxutil.Block,
-	prevHash chainhash.Hash, stxos []SpentTxOut,
-) error {
+	prevHash chainhash.Hash, stxos []SpentTxOut) error {
 	// Sanity check the correct number of stxos are provided.
 	if len(stxos) != CountSpentOutputs(block) {
 		return AssertError("DisconnectTransactions called with bad " +

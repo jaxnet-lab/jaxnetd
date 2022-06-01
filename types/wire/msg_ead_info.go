@@ -20,8 +20,7 @@ type EADAddresses struct {
 }
 
 func (msg *EADAddresses) AddAddress(ip net.IP, url string, port uint16, expiresAt int64, shardID uint32,
-	hash *chainhash.Hash, ind int,
-) {
+	hash *chainhash.Hash, ind int) {
 	addresses := make([]EADAddress, 0, len(msg.Addresses)+1)
 	for _, p := range msg.Addresses {
 		if !p.Eq(ip, url, shardID) {

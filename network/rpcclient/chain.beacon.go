@@ -596,8 +596,7 @@ func (c *Client) GetBeaconBlockVerboseBySerialNumber(serialID int64) (*jaxjson.G
 // request is resent and its response is returned instead.
 // nolint: unparam
 func (c *Client) waitForGetBlockBySerialNumberRes(respChan chan *response, cmd string, serialID int64,
-	verbose, verboseTx bool,
-) ([]byte, error) {
+	verbose, verboseTx bool) ([]byte, error) {
 	res, err := receiveFuture(respChan)
 
 	// If we receive an invalid parameter error, then we may be

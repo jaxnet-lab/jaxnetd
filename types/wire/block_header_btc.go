@@ -119,8 +119,7 @@ func (h *BTCBlockAux) Copy() *BTCBlockAux {
 // block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
 func NewBTCBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
-	bits uint32, nonce uint32,
-) *BTCBlockAux {
+	bits uint32, nonce uint32) *BTCBlockAux {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &BTCBlockAux{

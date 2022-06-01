@@ -56,8 +56,7 @@ type CommonChainRPC struct {
 }
 
 func NewCommonChainRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	logger zerolog.Logger,
-) *CommonChainRPC {
+	logger zerolog.Logger) *CommonChainRPC {
 	rpc := &CommonChainRPC{
 		Mux:           NewRPCMux(logger),
 		connMgr:       connMgr,

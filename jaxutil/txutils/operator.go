@@ -45,8 +45,7 @@ func (app *Operator) AddSignatureToTx(signer KeyData, txBody, redeemScript strin
 }
 
 func (app *Operator) NewMultiSigSpendTx(signer KeyData,
-	txHash, redeemScript string, outIndex uint32, destination string, amount int64,
-) (*txmodels.Transaction, error) {
+	txHash, redeemScript string, outIndex uint32, destination string, amount int64) (*txmodels.Transaction, error) {
 	utxo, err := app.UTXOByHash(txHash, outIndex, redeemScript)
 	if err != nil {
 		return nil, err
@@ -63,8 +62,7 @@ func (app *Operator) NewMultiSigSpendTx(signer KeyData,
 // SpendUTXO creates new transaction that spends UTXO with 'outIndex' from transaction with 'txHash'.
 // Into new transactions will be added one Input and one or two Outputs, if 'amount' less than UTXO value.
 func (app *Operator) SpendUTXO(signer KeyData,
-	txHash string, outIndex uint32, destination string, amount int64,
-) (*txmodels.Transaction, error) {
+	txHash string, outIndex uint32, destination string, amount int64) (*txmodels.Transaction, error) {
 	utxo, err := app.UTXOByHash(txHash, outIndex, "")
 	if err != nil {
 		return nil, err

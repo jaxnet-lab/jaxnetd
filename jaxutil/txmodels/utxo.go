@@ -176,8 +176,7 @@ func (index *UTXOIndex) CollectForAmount(amount int64, shardID uint32) (UTXORows
 }
 
 func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
-	filter map[string]struct{},
-) (UTXORows, int64) {
+	filter map[string]struct{}) (UTXORows, int64) {
 	index.RLock()
 	defer index.RUnlock()
 
@@ -212,8 +211,7 @@ func (index *UTXOIndex) CollectForAmountFiltered(amount int64, shardID uint32,
 }
 
 func (index *UTXOIndex) GetForAmountFiltered(amount int64, shardID uint32,
-	filter map[string]struct{},
-) *UTXO {
+	filter map[string]struct{}) *UTXO {
 	index.RLock()
 	defer index.RUnlock()
 

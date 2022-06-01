@@ -177,8 +177,7 @@ func (client *TxMan) CollectUTXOs(opts UTXOCollectorOpts) (map[uint32]txmodels.U
 }
 
 func (client *TxMan) CollectUTXOIndex(shardID uint32, offset int64,
-	filter map[string]bool, index *txmodels.UTXOIndex,
-) (*txmodels.UTXOIndex, int64, error) {
+	filter map[string]bool, index *txmodels.UTXOIndex) (*txmodels.UTXOIndex, int64, error) {
 	if offset == 0 {
 		offset = 1
 	}
@@ -274,8 +273,7 @@ func (client *TxMan) NetworkFee(shardID uint32) (int64, error) {
 }
 
 func (client *TxMan) NewEADRegistrationTx(amountToLock int64, utxoPrv UTXOProvider,
-	destinationsScripts ...[]byte,
-) (*txmodels.Transaction, error) {
+	destinationsScripts ...[]byte) (*txmodels.Transaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -407,8 +405,7 @@ prepareUTXO:
 // | 0 | TxIn_0 ∈ Shard_X | --> | TxOut_0 ∈ Shard_X | 0 |
 // | 1 | TxIn_1 ∈ Shard_Y | --> | TxOut_1 ∈ Shard_Y | 1 |
 func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify bool,
-	redeemScripts ...string,
-) (*txmodels.SwapTransaction, error) {
+	redeemScripts ...string) (*txmodels.SwapTransaction, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -544,8 +541,7 @@ func (client *TxMan) addInputsAndSign(msgTx *wire.MsgTx, data txmodels.UTXORows,
 }
 
 func (client *TxMan) AddSignatureToSwapTx(msgTx *wire.MsgTx, shards []uint32,
-	redeemScripts ...string,
-) (*wire.MsgTx, error) {
+	redeemScripts ...string) (*wire.MsgTx, error) {
 	if client.key == nil {
 		return nil, errors.New("keys not set")
 	}
@@ -698,8 +694,7 @@ func (client *TxMan) AddSignatureToTx(msgTx *wire.MsgTx, redeemScripts ...string
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
 func (client *TxMan) SignUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO,
-	inIndex int, postVerify bool,
-) (*wire.MsgTx, []byte, error) {
+	inIndex int, postVerify bool) (*wire.MsgTx, []byte, error) {
 	if client.key == nil {
 		return nil, nil, errors.New("keys not set")
 	}

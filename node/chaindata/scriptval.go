@@ -180,8 +180,7 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 // newTxValidator returns a new instance of txValidator to be used for
 // validating transaction scripts asynchronously.
 func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
-	sigCache *txscript.SigCache, hashCache *txscript.HashCache,
-) *txValidator {
+	sigCache *txscript.SigCache, hashCache *txscript.HashCache) *txValidator {
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
@@ -197,8 +196,7 @@ func newTxValidator(utxoView *UtxoViewpoint, flags txscript.ScriptFlags,
 // using multiple goroutines.
 func ValidateTransactionScripts(tx *jaxutil.Tx, utxoView *UtxoViewpoint,
 	flags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache,
-) error {
+	hashCache *txscript.HashCache) error {
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.
 	segwitActive := flags&txscript.ScriptVerifyWitness == txscript.ScriptVerifyWitness
@@ -249,8 +247,7 @@ func ValidateTransactionScripts(tx *jaxutil.Tx, utxoView *UtxoViewpoint,
 // the passed block using multiple goroutines.
 func CheckBlockScripts(block *jaxutil.Block, utxoView *UtxoViewpoint,
 	scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache,
-	hashCache *txscript.HashCache,
-) error {
+	hashCache *txscript.HashCache) error {
 	// First determine if segwit is active according to the scriptFlags. If
 	// it isn't then we don't need to interact with the HashCache.
 	segwitActive := scriptFlags&txscript.ScriptVerifyWitness == txscript.ScriptVerifyWitness

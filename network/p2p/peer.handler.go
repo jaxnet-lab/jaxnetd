@@ -89,8 +89,7 @@ func (server *serverPeerHandler) BanPeer(sp *serverPeer) {
 // pushTxMsg sends a tx message for the provided transaction hash to the
 // connected peer.  An error is returned if the transaction hash is not known.
 func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding,
-) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 	// Attempt to fetch the requested transaction from the pool.  A
 	// call could be made to check for existence first, but simply trying
 	// to fetch a missing transaction results in the same behavior.
@@ -118,8 +117,7 @@ func (server *serverPeerHandler) pushTxMsg(sp *serverPeer, hash *chainhash.Hash,
 // pushBlockMsg sends a block message for the provided block hash to the
 // connected peer.  An error is returned if the block hash is not known.
 func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Hash, doneChan chan<- struct{},
-	waitChan <-chan struct{}, encoding wire.MessageEncoding,
-) error {
+	waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 	// Fetch the raw block bytes from the database.
 	var blockBytes []byte
 	var blockActualMMRRoot chainhash.Hash
@@ -193,8 +191,7 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 // loaded, this call will simply be ignored if there is no filter loaded.  An
 // error is returned if the block hash is not known.
 func (server *serverPeerHandler) pushMerkleBlockMsg(sp *serverPeer, hash *chainhash.Hash,
-	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding,
-) error {
+	doneChan chan<- struct{}, waitChan <-chan struct{}, encoding wire.MessageEncoding) error {
 	// Do not send a response if the peer doesn't have a filter loaded.
 	if !sp.filter.IsLoaded() {
 		if doneChan != nil {

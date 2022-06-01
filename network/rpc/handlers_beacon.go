@@ -28,8 +28,7 @@ type BeaconRPC struct {
 }
 
 func NewBeaconRPC(chainProvider *cprovider.ChainProvider, connMgr netsync.P2PConnManager,
-	logger zerolog.Logger,
-) *BeaconRPC {
+	logger zerolog.Logger) *BeaconRPC {
 	rpc := &BeaconRPC{
 		CommonChainRPC: NewCommonChainRPC(chainProvider, connMgr,
 			logger.With().Str("ctx", "beacon_rpc").Logger()),

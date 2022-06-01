@@ -1127,8 +1127,7 @@ func (sp *serverPeer) OnWrite(_ *peer.Peer, bytesWritten int, msg wire.Message, 
 // 3) Accept the peer if it contains a whitelisted agent.
 // 4) Reject all other peers.
 func (sp *serverPeer) HasUndesiredUserAgent(blacklistedAgents,
-	whitelistedAgents []string,
-) bool {
+	whitelistedAgents []string) bool {
 	agent := sp.UserAgent()
 
 	// First, if peer's user agent contains any blacklisted substring, we

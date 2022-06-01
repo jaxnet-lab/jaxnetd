@@ -416,8 +416,7 @@ func (idx *TxIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash ch
 //
 // This is part of the Indexer interface.
 func (idx *TxIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut,
-) error {
+	stxos []chaindata.SpentTxOut) error {
 	// Remove all of the transactions in the block from the index.
 	if err := dbRemoveTxIndexEntries(dbTx, block); err != nil {
 		return err

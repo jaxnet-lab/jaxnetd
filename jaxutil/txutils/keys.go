@@ -174,8 +174,7 @@ type MultiSigLockAddress struct {
 }
 
 func MakeMultiSigLockAddress(keys []string, nRequired int, refundPublicKey string,
-	refundDefferingPeriod int32, net *chaincfg.Params,
-) (*MultiSigLockAddress, error) {
+	refundDefferingPeriod int32, net *chaincfg.Params) (*MultiSigLockAddress, error) {
 	refungAddress, err := AddressPubKeyFromString(refundPublicKey, net)
 	if err != nil {
 		return nil, err

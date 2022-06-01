@@ -55,8 +55,7 @@ func MultiSigScript(pubkeys []*jaxutil.AddressPubKey, nrequired int, sortKeys bo
 // Otherwise, in case of "refund to owner" (pay-to-pubkey), requires one signature
 // and pubkey is the second to last item on the stack.
 func MultiSigLockScript(pubkeys []*jaxutil.AddressPubKey, sigRequired int,
-	refundAddress *jaxutil.AddressPubKey, refundDeferringPeriod int32, sortKeys bool,
-) ([]byte, error) {
+	refundAddress *jaxutil.AddressPubKey, refundDeferringPeriod int32, sortKeys bool) ([]byte, error) {
 	if len(pubkeys) < sigRequired {
 		str := fmt.Sprintf("unable to generate multisig script with "+
 			"%d required signatures when there are only %d public "+
@@ -164,8 +163,7 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 // OP_ELSE <refund_pubkey> OP_CHECKSIG OP_NIP
 // OP_ENDIF
 func extractMultiSigLockAddrs(pops []parsedOpcode,
-	chainParams *chaincfg.Params,
-) ([]jaxutil.Address, int) {
+	chainParams *chaincfg.Params) ([]jaxutil.Address, int) {
 	// In case of MultiSig activation the number of required signatures is the 5th item
 	// on the stack and the number of public keys is the 5th to last
 	// item on the stack.
@@ -202,8 +200,7 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 // the contract (i.e. nrequired signatures are provided).  Since it is arguably
 // legal to not be able to sign any of the outputs, no error is returned.
 func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
-	addresses []jaxutil.Address, nRequired int, kdb KeyDB,
-) ([]byte, bool) {
+	addresses []jaxutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
 	// here is safe to ignore error, it checked previously.
 	parsed, _ := parseScript(subScript)
 

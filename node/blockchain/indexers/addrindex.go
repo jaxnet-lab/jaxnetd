@@ -158,8 +158,7 @@ func serializeAddrIndexEntry(blockID uint32, txLoc wire.TxLoc) []byte {
 // uses the passed block hash fetching function in order to conver the block ID
 // to the associated block hash.
 func deserializeAddrIndexEntry(serialized []byte, region *database.BlockRegion,
-	fetchBlockHash fetchBlockHashFunc,
-) error {
+	fetchBlockHash fetchBlockHashFunc) error {
 	// Ensure there are enough bytes to decode.
 	if len(serialized) < txEntrySize {
 		return errDeserialize("unexpected end of data")
@@ -187,8 +186,7 @@ func keyForLevel(addrKey [addrKeySize]byte, level uint8) [levelKeySize]byte {
 // dbPutAddrIndexEntry updates the address index to include the provided entry
 // according to the level-based scheme described in detail above.
 func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte,
-	blockID uint32, txLoc wire.TxLoc,
-) error {
+	blockID uint32, txLoc wire.TxLoc) error {
 	// Start with level 0 and its initial max number of entries.
 	curLevel := uint8(0)
 	maxLevelBytes := level0MaxEntries * txEntrySize
@@ -261,8 +259,7 @@ func dbPutAddrIndexEntry(bucket internalBucket, addrKey [addrKeySize]byte,
 // number of entries to skip.
 func dbFetchAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte,
 	numToSkip, numRequested uint32, reverse bool,
-	fetchBlockHash fetchBlockHashFunc,
-) ([]database.BlockRegion, uint32, error) {
+	fetchBlockHash fetchBlockHashFunc) ([]database.BlockRegion, uint32, error) {
 	// When the reverse flag is not set, all levels need to be fetched
 	// because numToSkip and numRequested are counted from the oldest
 	// transactions (highest level) and thus the total count is needed.
@@ -366,8 +363,7 @@ func maxEntriesForLevel(level uint8) int {
 // the address index for the provided key.  An assertion error will be returned
 // if the count exceeds the total number of entries in the index.
 func dbRemoveAddrIndexEntries(bucket internalBucket, addrKey [addrKeySize]byte,
-	count int,
-) error {
+	count int) error {
 	// Nothing to do if no entries are being deleted.
 	if count <= 0 {
 		return nil
@@ -714,8 +710,7 @@ func (idx *AddrIndex) indexPkScript(data writeIndexData, pkScript []byte, txIdx 
 // in the passed block and maps each of them to the associated transaction using
 // the passed map.
 func (idx *AddrIndex) indexBlock(data writeIndexData, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut,
-) {
+	stxos []chaindata.SpentTxOut) {
 	stxoIndex := 0
 	for txIdx, tx := range block.Transactions() {
 		// Coinbases do not reference any inputs.  Since the block is
@@ -788,8 +783,7 @@ func (idx *AddrIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash 
 //
 // This is part of the Indexer interface.
 func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	stxos []chaindata.SpentTxOut,
-) error {
+	stxos []chaindata.SpentTxOut) error {
 	// Build all of the address to transaction mappings in a local map.
 	addrsToTxns := make(writeIndexData)
 	idx.indexBlock(addrsToTxns, block, stxos)
@@ -818,8 +812,7 @@ func (idx *AddrIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 //
 // This function is safe for concurrent access.
 func (idx *AddrIndex) TxRegionsForAddress(dbTx database.Tx, addr jaxutil.Address,
-	numToSkip, numRequested uint32, reverse bool,
-) ([]database.BlockRegion, uint32, error) {
+	numToSkip, numRequested uint32, reverse bool) ([]database.BlockRegion, uint32, error) {
 	addrKey, err := addrToKey(addr)
 	if err != nil {
 		return nil, 0, err

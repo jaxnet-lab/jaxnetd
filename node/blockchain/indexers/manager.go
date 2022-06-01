@@ -96,8 +96,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
 func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
-	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut,
-) error {
+	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
 	// Assert that the block being disconnected is the current tip of the
 	// index.
 	idxKey := indexer.Key()
@@ -495,8 +494,7 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chai
 //
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
-	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut,
-) error {
+	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	for _, index := range m.enabledIndexes {

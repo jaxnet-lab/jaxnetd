@@ -94,8 +94,7 @@ func checkMultiSigLockScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int6
 }
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
-	hashType SigHashType, kdb KeyDB, sdb ScriptDB,
-) error {
+	hashType SigHashType, kdb KeyDB, sdb ScriptDB) error {
 	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
 	if err != nil {

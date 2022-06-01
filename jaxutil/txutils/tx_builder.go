@@ -453,8 +453,7 @@ func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScr
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
 func (t *txBuilder) signRegularUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB,
-	scriptPubKey *jaxjson.DecodeScriptResult,
-) error {
+	scriptPubKey *jaxjson.DecodeScriptResult) error {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode PK script")

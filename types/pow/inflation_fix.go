@@ -47,8 +47,7 @@ const (
 // K1 = 1 / (1 << 60 ) == 2^-60
 var K1 = new(big.Float).Quo(
 	new(big.Float).SetFloat64(1),
-	new(big.Float).SetInt(oneLsh60),
-)
+	new(big.Float).SetInt(oneLsh60))
 
 func BeaconEpoch(height int32) int32 {
 	return (height / KBeaconEpochLen) + 1

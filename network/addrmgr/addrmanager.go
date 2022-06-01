@@ -556,8 +556,7 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 
 // DeserializeNetAddress converts a given address string to a *wire.NetAddress.
 func (a *AddrManager) DeserializeNetAddress(addr string,
-	services wire.ServiceFlag,
-) (*wire.NetAddress, error) {
+	services wire.ServiceFlag) (*wire.NetAddress, error) {
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err

@@ -250,8 +250,7 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 // stale block such as a new block showing up or periodically when there are
 // new transactions and enough time has elapsed without finding a solution.
 func (miner *CPUMiner) solveBlock(job *miningJob,
-	ticker *time.Ticker, quit chan struct{},
-) bool {
+	ticker *time.Ticker, quit chan struct{}) bool {
 	// Choose a random extra nonce offset for this block template and
 	// worker.
 	// enOffset, err := encoder.RandomUint64()

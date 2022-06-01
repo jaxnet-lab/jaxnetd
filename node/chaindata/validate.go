@@ -108,8 +108,7 @@ func IsCoinBase(tx *jaxutil.Tx) bool {
 // met, meaning that all the inputs of a given transaction have reached a
 // Height or time sufficient for their relative lock-time maturity.
 func SequenceLockActive(sequenceLock *SequenceLock, blockHeight int32,
-	medianTimePast time.Time,
-) bool {
+	medianTimePast time.Time) bool {
 	// If either the seconds, or Height relative-lock time has not yet
 	// reached, then the transaction is not yet mature according to its
 	// sequence locks.

@@ -539,8 +539,7 @@ func deserializeOutpoints(serializedOuts []jaxjson.OutPoint) ([]*wire.OutPoint, 
 // final block and block hash that we've scanned will be returned.
 func scanBlockChunks(wsc *wsClient, cmd *jaxjson.RescanCmd, lookups *rescanKeys, minBlock,
 	maxBlock int32, chain *cprovider.ChainProvider) (
-	*jaxutil.Block, *chainhash.Hash, error,
-) {
+	*jaxutil.Block, *chainhash.Hash, error) {
 	// lastBlock and lastBlockHash track the previously-rescanned block.
 	// They equal nil when no previous blocks have been rescanned.
 	var (
@@ -744,8 +743,7 @@ func (r *rescanKeys) unspentSlice() []*wire.OutPoint {
 // range of blocks.  If this condition does not hold true, the JSON-RPC error
 // for an unrecoverable reorganize is returned.
 func recoverFromReorg(chain *cprovider.ChainProvider, minBlock, maxBlock int32,
-	lastBlock *chainhash.Hash,
-) ([]chainhash.Hash, error) {
+	lastBlock *chainhash.Hash) ([]chainhash.Hash, error) {
 	hashList, err := chain.BlockChain().HeightRange(minBlock, maxBlock)
 	if err != nil {
 		log.Error().Msgf("Error looking up block range: %v", err)

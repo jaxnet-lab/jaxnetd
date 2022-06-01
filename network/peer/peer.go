@@ -1900,8 +1900,7 @@ func (peer *Peer) QueueMessage(msg wire.Message, doneChan chan<- struct{}) {
 //
 // This function is safe for concurrent access.
 func (peer *Peer) QueueMessageWithEncoding(msg wire.Message, doneChan chan<- struct{},
-	encoding wire.MessageEncoding,
-) {
+	encoding wire.MessageEncoding) {
 	// Avoid risk of deadlock if goroutine already exited.  The goroutine
 	// we will be sending to hangs around until it knows for a fact that
 	// it is marked as disconnected and *then* it drains the channels.
