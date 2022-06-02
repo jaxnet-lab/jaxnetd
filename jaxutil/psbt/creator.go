@@ -21,7 +21,6 @@ const MinTxVersion = 1
 func New(inputs []*wire.OutPoint,
 	outputs []*wire.TxOut, version int32, nLockTime uint32,
 	nSequences []uint32) (*Packet, error) {
-
 	// Create the new struct; the input and output lists will be empty, the
 	// unsignedTx object must be constructed and serialized, and that
 	// serialization should be entered as the only entry for the

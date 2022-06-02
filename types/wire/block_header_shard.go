@@ -56,7 +56,6 @@ func EmptyShardHeader() *ShardHeader { return &ShardHeader{beaconHeader: *EmptyB
 // block with defaults for the remaining fields.
 func NewShardBlockHeader(height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash, bits uint32,
 	weight *big.Int, bcHeader BeaconHeader, aux CoinbaseAux) *ShardHeader {
-
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &ShardHeader{

@@ -45,7 +45,6 @@ const (
 // insertion (and then finalization) can take place.
 func (u *Updater) Sign(inIndex int, sig []byte, pubKey []byte,
 	redeemScript []byte, witnessScript []byte) (SignOutcome, error) {
-
 	if isFinalized(u.Upsbt, inIndex) {
 		return SignFinalized, nil
 	}

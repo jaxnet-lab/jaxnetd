@@ -96,7 +96,8 @@ func GetFreePort() (port int, err error) {
 	if err != nil {
 		return -1, err
 	}
-	port = ln.Addr().(*net.TCPAddr).Port
+	addr, _ := ln.Addr().(*net.TCPAddr)
+	port = addr.Port
 	err = ln.Close()
 	return
 }

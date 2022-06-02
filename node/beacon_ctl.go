@@ -47,6 +47,7 @@ func NewBeaconCtl(ctx context.Context, logger zerolog.Logger, cfg *Config) Beaco
 	}
 }
 
+// nolint: contextcheck
 func (beaconCtl *BeaconCtl) Init(ctx context.Context) (bool, error) {
 	cfg := beaconCtl.cfg
 	params := cfg.Node.ChainParams()

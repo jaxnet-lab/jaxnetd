@@ -859,7 +859,6 @@ func (vm *Engine) SetAltStack(data [][]byte) {
 // engine according to the description provided by each flag.
 func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags,
 	sigCache *SigCache, hashCache *TxSigHashes, inputAmount int64) (*Engine, error) {
-
 	// The provided transaction input index must refer to a valid input.
 	if txIdx < 0 || txIdx >= len(tx.TxIn) {
 		str := fmt.Sprintf("transaction input index %d is negative or "+

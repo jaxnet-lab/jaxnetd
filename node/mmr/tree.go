@@ -408,9 +408,7 @@ func (t *BlocksMMRTree) rebuildTree(node *TreeLeaf, count uint64) (rootHash chai
 	arraySize := uint64(nextPoT*2 - 1)
 	if len(t.nodes) < nextPoT {
 		blockNodes := make([]*TreeLeaf, arraySize)
-		for i := range t.nodes {
-			blockNodes[i] = t.nodes[i]
-		}
+		copy(blockNodes, t.nodes)
 		t.nodes = blockNodes
 	}
 

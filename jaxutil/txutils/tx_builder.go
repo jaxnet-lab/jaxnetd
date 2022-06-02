@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/txscript"
 	"gitlab.com/jaxnet/jaxnetd/types/chaincfg"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
 )
 
@@ -329,7 +330,7 @@ func (t *txBuilder) craftSwapTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		rows := opts.utxoRows.List()
 		for i := range rows {
 			utxo := rows[i].ToShort()
-			err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+			err := t.signUTXO(msgTx, utxo, txInIndex, kdb)
 			if err != nil {
 				return nil, errors.Wrap(err, "unable to sing utxo")
 			}
@@ -388,7 +389,7 @@ func (t *txBuilder) craftRegularTx(kdb txscript.KeyDB) (*wire.MsgTx, error) {
 		txInIndex := i
 		utxo := au[txInIndex].ToShort()
 
-		err := t.signUTXOForTx(msgTx, utxo, txInIndex, kdb)
+		err := t.signUTXO(msgTx, utxo, txInIndex, kdb)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to sing utxo")
 		}
@@ -415,6 +416,35 @@ func (t *txBuilder) addChangeOut(msgTx *wire.MsgTx, change int64) (*wire.MsgTx, 
 	return msgTx, nil
 }
 
+func (t *txBuilder) signUTXO(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) error {
+	utxoScript, err := t.getUTXOPkScript(utxo)
+	if err != nil {
+		// add some log
+		return err
+	}
+
+	if utxoScript.Type == txscript.WitnessV0PubKeyHashTy.String() ||
+		utxoScript.Type == txscript.WitnessV0ScriptHashTy.String() {
+		return t.signWitnessUTXOForTx(msgTx, utxo, inIndex, kdb)
+	}
+
+	return t.signRegularUTXOForTx(msgTx, utxo, inIndex, kdb, utxoScript)
+}
+
+func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScriptResult, error) {
+	pkScript, err := hex.DecodeString(utxo.PKScript)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode PK script")
+	}
+
+	scriptPubKey, err := DecodeScript(pkScript, t.net.Params())
+	if err != nil {
+		return nil, err
+	}
+
+	return scriptPubKey, nil
+}
+
 // signUTXOForTx performs signing of UTXO, adds this signature to redeemTx.
 // Method also supports signing of multiSig UTXOs, so just provide existing signature as prevScript
 // 	- redeemTx is a transaction that will be sent
@@ -422,15 +452,11 @@ func (t *txBuilder) addChangeOut(msgTx *wire.MsgTx, change int64) (*wire.MsgTx, 
 // 	- inIndex is an index, where placed this UTXO
 // 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
 // 	- postVerify say to check tx after signing
-func (t *txBuilder) signUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) error {
+func (t *txBuilder) signRegularUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB,
+	scriptPubKey *jaxjson.DecodeScriptResult) error {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode PK script")
-	}
-
-	scriptPubKey, err := DecodeScript(pkScript, t.net.Params())
-	if err != nil {
-		return err
 	}
 
 	for _, address := range scriptPubKey.Addresses {
@@ -553,6 +579,39 @@ func (t *txBuilder) prepareUTXOs() error {
 
 		opts.change = opts.utxoRows.GetSum() - needed
 		t.collectedOpts[shardID] = opts
+	}
+
+	return nil
+}
+
+func (t *txBuilder) signWitnessUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB) error {
+	pkScript, _ := hex.DecodeString(utxo.PKScript)
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, t.net.Params())
+	if err != nil {
+		return err
+	}
+	privKey, _, err := kdb.GetKey(addrs[0])
+	if err != nil {
+		return err
+	}
+	pubKey := privKey.PubKey()
+
+	// Once we have the key pair, generate a p2wkh address type, respecting
+	// the compression type of the generated key.
+	pubKeyHash := jaxutil.Hash160(pubKey.SerializeCompressed())
+	p2wkhAddr, err := jaxutil.NewAddressWitnessPubKeyHash(pubKeyHash, t.net.Params())
+	if err != nil {
+		return err
+	}
+
+	witnessProgram, err := txscript.PayToAddrScript(p2wkhAddr)
+	if err != nil {
+		return err
+	}
+
+	msgTx.TxIn[inIndex].Witness, err = txscript.WitnessSignature(msgTx, txscript.NewTxSigHashes(msgTx), inIndex, utxo.Value, witnessProgram, txscript.SigHashAll, privKey, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to sign witness tx output")
 	}
 
 	return nil

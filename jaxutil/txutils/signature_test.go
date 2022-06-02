@@ -28,11 +28,11 @@ func TestAddSignatureToTx(ot *testing.T) {
 	amount := 9 * OneCoin
 
 	aliceSk := "6443fb332e1cbfe456674aacf2be1327b6f9fc9c782061ee04ca35e17608d651"
-	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams())
+	aliceKP, err := NewKeyData(aliceSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	bobSk := "6bb4b4a9d5512c84f14bd38248dafb80c2424ae50a0495be8e4f657d734f1bd4"
-	bobKP, err := NewKeyData(bobSk, cfg.NetParams())
+	bobKP, err := NewKeyData(bobSk, cfg.NetParams(), false)
 	assert.NoError(t, err)
 
 	signers := []string{

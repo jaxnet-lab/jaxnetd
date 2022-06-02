@@ -275,7 +275,6 @@ func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet JaxNet) error {
 // messages.
 func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 	btcnet JaxNet, encoding MessageEncoding) (int, error) {
-
 	totalBytes := 0
 
 	// Enforce max command size.
@@ -352,7 +351,6 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // decoding wire messages.
 func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet JaxNet,
 	enc MessageEncoding) (int, Message, []byte, error) {
-
 	totalBytes := 0
 	n, hdr, err := readMessageHeader(r)
 	totalBytes += n

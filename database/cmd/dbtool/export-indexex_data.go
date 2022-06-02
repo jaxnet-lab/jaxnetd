@@ -192,7 +192,6 @@ type AddressTx struct {
 	TxHash    int
 	OutID     int
 	Direction bool // Direction bool -- true = incoming; false = outgoing
-
 }
 
 func (AddressTx) Header() []string {

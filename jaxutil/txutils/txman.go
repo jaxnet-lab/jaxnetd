@@ -63,7 +63,7 @@ func NewTxMan(cfg ManagerCfg) (*TxMan, error) {
 	}
 
 	if cfg.PrivateKey != "" {
-		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams)
+		client.key, err = NewKeyData(client.cfg.PrivateKey, client.NetParams, cfg.CompressedPublicKey)
 		if err != nil {
 			return nil, err
 		}
@@ -293,7 +293,7 @@ prepareUTXO:
 	fee := EstimateFee(expectedInCount, len(destinationsScripts), feeRate, true, 0) // ead always works in beacon
 	amountToSpend := (amountToLock * int64(len(destinationsScripts))) + fee
 
-	utxo, err := utxoPrv.SelectForAmount(amountToSpend, 0, client.key.Address.EncodeAddress())
+	utxo, err := utxoPrv.SelectForAmount(amountToSpend, 0, client.key.AddressPubKey.EncodeAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ prepareUTXO:
 
 	return &txmodels.Transaction{
 		TxHash:   msgTx.TxHash().String(),
-		Source:   client.key.Address.String(),
+		Source:   client.key.AddressPubKey.String(),
 		SignedTx: EncodeTx(msgTx),
 		RawTX:    msgTx,
 	}, nil
@@ -349,7 +349,7 @@ prepareUTXO:
 	}
 
 	draft.UTXO, err = utxoPrv.SelectForAmount(amount+fee, client.cfg.ShardID,
-		client.key.Address.EncodeAddress())
+		client.key.AddressPubKey.EncodeAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to select UTXO for amount")
 	}
@@ -382,7 +382,7 @@ prepareUTXO:
 
 	return &txmodels.Transaction{
 		TxHash:      msgTx.TxHash().String(),
-		Source:      client.key.Address.String(),
+		Source:      client.key.AddressPubKey.String(),
 		Destination: draft.Destination(),
 		Amount:      amount,
 		SignedTx:    EncodeTx(msgTx),
@@ -477,7 +477,7 @@ func (client *TxMan) NewSwapTx(spendingMap map[string]txmodels.UTXO, postVerify 
 
 	return &txmodels.SwapTransaction{
 		TxHash:       msgTx.TxHash().String(),
-		Source:       client.key.Address.String(),
+		Source:       client.key.AddressPubKey.String(),
 		Destinations: outIndexes,
 		SignedTx:     EncodeTx(msgTx),
 		RawTX:        msgTx,

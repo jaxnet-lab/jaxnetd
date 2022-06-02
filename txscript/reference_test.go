@@ -300,7 +300,6 @@ func parseExpectedResult(expected string) ([]ErrorCode, error) {
 // signature, witness and public key scripts.
 func createSpendingTx(witness [][]byte, sigScript, pkScript []byte,
 	outputValue int64) *wire.MsgTx {
-
 	coinbaseTx := wire.NewMsgTx(wire.TxVersion)
 
 	outPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))

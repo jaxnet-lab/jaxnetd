@@ -143,7 +143,6 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 
 func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 	block *btcdwire.MsgBlock, height int64, err error) {
-
 	// Leaf initialisation.
 	height = c.Height
 
@@ -189,7 +188,6 @@ func unmarshalBits(hexBits string) (bits uint32, err error) {
 
 func unmarshalBitcoinTransactions(coinbaseTx *btcdjson.GetBlockTemplateResultTx,
 	txs []btcdjson.GetBlockTemplateResultTx) ([]*btcdwire.MsgTx, error) {
-
 	unmarshalBitcoinTx := func(txHash string) (tx *btcdwire.MsgTx, err error) {
 		txBinary, err := hex.DecodeString(txHash)
 		if err != nil {

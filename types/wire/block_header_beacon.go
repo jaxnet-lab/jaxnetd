@@ -85,7 +85,6 @@ func EmptyBeaconHeader() *BeaconHeader { return &BeaconHeader{} }
 // block with defaults for the remaining fields.
 func NewBeaconBlockHeader(version BVersion, height int32, blocksMerkleMountainRoot, prevBlock, merkleRootHash chainhash.Hash,
 	mergeMiningRoot chainhash.Hash, timestamp time.Time, bits uint32, chainWeight *big.Int, nonce uint32) *BeaconHeader {
-
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &BeaconHeader{

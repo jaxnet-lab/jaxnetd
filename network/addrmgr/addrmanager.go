@@ -557,7 +557,6 @@ func (a *AddrManager) deserializePeers(filePath string) error {
 // DeserializeNetAddress converts a given address string to a *wire.NetAddress.
 func (a *AddrManager) DeserializeNetAddress(addr string,
 	services wire.ServiceFlag) (*wire.NetAddress, error) {
-
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -810,8 +809,7 @@ func (a *AddrManager) GetAddress() *KnownAddress {
 
 			// Pick a random entry in the list
 			e := a.addrTried[bucket].Front()
-			for i :=
-				a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0; i-- {
+			for i := a.rand.Int63n(int64(a.addrTried[bucket].Len())); i > 0; i-- {
 				e = e.Next()
 			}
 			ka, ok := e.Value.(*KnownAddress)

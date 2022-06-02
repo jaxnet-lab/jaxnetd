@@ -42,7 +42,6 @@ var wsManager *WsManager
 // satisfying the requirement.
 func (server *MultiChainRPC) WebsocketHandler(conn *websocket.Conn, remoteAddr string,
 	authenticated bool, isAdmin bool) {
-
 	// Clear the read deadline that was set before the websocket hijacked
 	// the connection.
 	if err := conn.SetReadDeadline(timeZeroVal); err != nil {
@@ -508,7 +507,6 @@ out:
 // and inputs spending a watched outpoint.
 func (m *WsManager) notifyForTx(chain *cprovider.ChainProvider, ops map[wire.OutPoint]map[chan struct{}]*wsClient,
 	addrs map[string]map[chan struct{}]*wsClient, tx *jaxutil.Tx, block *jaxutil.Block) {
-
 	if len(ops) != 0 {
 		m.notifyForTxIns(chain, ops, tx, block)
 	}
@@ -648,7 +646,6 @@ func blockDetails(block *jaxutil.Block, txIndex int) *jaxjson.BlockDetails {
 // key is removed from the map.
 func (m *WsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*wsClient,
 	wsc *wsClient, op *wire.OutPoint) {
-
 	// Remove the request tracking from the client.
 	delete(wsc.spentRequests, *op)
 
@@ -672,7 +669,6 @@ func (m *WsManager) removeSpentRequest(ops map[wire.OutPoint]map[chan struct{}]*
 // and send a notification when spent to the websocket client wsc.
 func (m *WsManager) addSpentRequests(chain *cprovider.ChainProvider, opMap map[wire.OutPoint]map[chan struct{}]*wsClient,
 	wsc *wsClient, ops []*wire.OutPoint) {
-
 	for _, op := range ops {
 		// Track the request in the client as well so it can be quickly
 		// be removed on disconnect.
@@ -761,7 +757,6 @@ func (m *WsManager) notifyForNewTx(chain *cprovider.ChainProvider, clients map[c
 // nolint: staticcheck
 func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
 	block *jaxutil.Block) {
-
 	// Notify interested websocket clients about the connected block.
 	ntfn := jaxjson.NewBlockConnectedNtfn(block.Hash().String(), block.Height(),
 		block.MsgBlock().Header.Timestamp().Unix())
@@ -781,7 +776,6 @@ func (m *WsManager) notifyBlockConnected(chain *cprovider.ChainProvider, clients
 // block updates when a block is connected to the main BlockChain.
 func (m *WsManager) notifyFilteredBlockConnected(chain *cprovider.ChainProvider, clients map[chan struct{}]*wsClient,
 	block *jaxutil.Block) {
-
 	// Create the common portion of the notification that is the same for
 	// every client.
 	var w bytes.Buffer
@@ -974,7 +968,6 @@ func (m *WsManager) notifyRelevantTxAccepted(chain *cprovider.ChainProvider, tx 
 // spending to any of the addresses in addrs.
 func (m *WsManager) addAddrRequests(addrMap map[string]map[chan struct{}]*wsClient,
 	wsc *wsClient, addrs []string) {
-
 	for _, addr := range addrs {
 		// Track the request in the client as well so it can be quickly be
 		// removed on disconnect.
@@ -997,7 +990,6 @@ func (m *WsManager) addAddrRequests(addrMap map[string]map[chan struct{}]*wsClie
 // any transaction outputs send to addr.
 func (m *WsManager) removeAddrRequest(addrs map[string]map[chan struct{}]*wsClient,
 	wsc *wsClient, addr string) {
-
 	// Remove the request tracking from the client.
 	delete(wsc.addrRequests, addr)
 

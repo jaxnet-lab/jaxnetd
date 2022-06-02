@@ -82,7 +82,6 @@ func checkIsMultiSigScript(pubKeys [][]byte, sigs [][]byte,
 // scriptSig or scriptWitness in the correct order.
 func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 	sigs [][]byte) ([][]byte, error) {
-
 	// If this isn't a proper finalized multi-sig script, then we can't
 	// proceed.
 	if !checkIsMultiSigScript(expectedPubkeys, sigs, script) {
@@ -152,7 +151,6 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 // is used for both p2wsh and nested p2wsh multisig cases.
 func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
 	sigs [][]byte) ([]byte, error) {
-
 	// First using the script as a guide, we'll properly order the sigs
 	// according to how their corresponding pubkeys appear in the
 	// witnessScript.
@@ -211,7 +209,6 @@ func serializeKVpair(w io.Writer, key []byte, value []byte) error {
 // a key.
 func serializeKVPairWithType(w io.Writer, kt uint8, keydata []byte,
 	value []byte) error {
-
 	// If the key has no data, then we write a blank slice.
 	if keydata == nil {
 		keydata = []byte{}
@@ -401,7 +398,6 @@ func VerifyInputOutputLen(packet *Packet, needInputs, needOutputs bool) error {
 // one per input.
 func NewFromSignedTx(tx *wire.MsgTx) (*Packet, [][]byte,
 	[]wire.TxWitness, error) {
-
 	scriptSigs := make([][]byte, 0, len(tx.TxIn))
 	witnesses := make([]wire.TxWitness, 0, len(tx.TxIn))
 	tx2 := tx.Copy()

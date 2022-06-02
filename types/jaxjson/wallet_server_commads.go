@@ -1130,8 +1130,7 @@ type WalletCreateFundedPsbtCmd struct {
 // walletcreatefundedpsbt JSON-RPC command.
 func NewWalletCreateFundedPsbtCmd(
 	inputs []PsbtInput, outputs []PsbtOutput, locktime *uint32,
-	options *WalletCreateFundedPsbtOpts, bip32Derivs *bool,
-) *WalletCreateFundedPsbtCmd {
+	options *WalletCreateFundedPsbtOpts, bip32Derivs *bool) *WalletCreateFundedPsbtCmd {
 	return &WalletCreateFundedPsbtCmd{
 		Inputs:      inputs,
 		Outputs:     outputs,

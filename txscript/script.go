@@ -450,7 +450,6 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // nolint: gocritic
 func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
-
 	// As a sanity check, ensure the passed input index for the transaction
 	// is valid.
 	if idx > len(tx.TxIn)-1 {
@@ -562,7 +561,6 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 // the target transaction observing the desired sig hash type.
 func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType,
 	tx *wire.MsgTx, idx int, amt int64) ([]byte, error) {
-
 	parsedScript, err := parseScript(script)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)

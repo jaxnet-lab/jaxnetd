@@ -290,7 +290,6 @@ func (r FutureCreateRawTransactionResult) Receive() (*wire.MsgTx, error) {
 // See CreateRawTransaction for the blocking version and more details.
 func (c *Client) CreateRawTransactionAsync(inputs []jaxjson.TransactionInput,
 	amounts map[jaxutil.Address]jaxutil.Amount, lockTime *int64) FutureCreateRawTransactionResult {
-
 	convertedAmts := make(map[string]float64, len(amounts))
 	for addr, amount := range amounts {
 		convertedAmts[addr.String()] = amount.ToCoin(c.isForBeacon())
@@ -304,7 +303,6 @@ func (c *Client) CreateRawTransactionAsync(inputs []jaxjson.TransactionInput,
 // empty slice, it is interpreted as an empty slice.
 func (c *Client) CreateRawTransaction(inputs []jaxjson.TransactionInput,
 	amounts map[jaxutil.Address]jaxutil.Amount, lockTime *int64) (*wire.MsgTx, error) {
-
 	return c.CreateRawTransactionAsync(inputs, amounts, lockTime).Receive()
 }
 
@@ -489,7 +487,6 @@ func (c *Client) SignRawTransaction2(tx *wire.MsgTx, inputs []jaxjson.RawTxInput
 func (c *Client) SignRawTransaction3Async(tx *wire.MsgTx,
 	inputs []jaxjson.RawTxInput,
 	privKeysWIF []string) FutureSignRawTransactionResult {
-
 	txHex := ""
 	if tx != nil {
 		// Serialize the transaction and convert to hex string.
@@ -525,7 +522,6 @@ func (c *Client) SignRawTransaction3Async(tx *wire.MsgTx,
 func (c *Client) SignRawTransaction3(tx *wire.MsgTx,
 	inputs []jaxjson.RawTxInput,
 	privKeysWIF []string) (*wire.MsgTx, bool, error) {
-
 	return c.SignRawTransaction3Async(tx, inputs, privKeysWIF).Receive()
 }
 
@@ -537,7 +533,6 @@ func (c *Client) SignRawTransaction3(tx *wire.MsgTx,
 func (c *Client) SignRawTransaction4Async(tx *wire.MsgTx,
 	inputs []jaxjson.RawTxInput, privKeysWIF []string,
 	hashType SigHashType) FutureSignRawTransactionResult {
-
 	txHex := ""
 	if tx != nil {
 		// Serialize the transaction and convert to hex string.
@@ -575,7 +570,6 @@ func (c *Client) SignRawTransaction4Async(tx *wire.MsgTx,
 func (c *Client) SignRawTransaction4(tx *wire.MsgTx,
 	inputs []jaxjson.RawTxInput, privKeysWIF []string,
 	hashType SigHashType) (*wire.MsgTx, bool, error) {
-
 	return c.SignRawTransaction4Async(tx, inputs, privKeysWIF,
 		hashType).Receive()
 }
@@ -674,7 +668,6 @@ func (r FutureSearchRawTransactionsVerboseResult) Receive() ([]*jaxjson.SearchRa
 // See SearchRawTransactionsVerbose for the blocking version and more details.
 func (c *Client) SearchRawTransactionsVerboseAsync(address jaxutil.Address, skip,
 	count int, includePrevOut, reverse bool, filterAddrs *[]string) FutureSearchRawTransactionsVerboseResult {
-
 	addr := address.EncodeAddress()
 	verbose := jaxjson.Int(1)
 	var prevOut *int
@@ -695,7 +688,6 @@ func (c *Client) SearchRawTransactionsVerboseAsync(address jaxutil.Address, skip
 // See SearchRawTransactions to retrieve a list of raw transactions instead.
 func (c *Client) SearchRawTransactionsVerbose(address jaxutil.Address, skip,
 	count int, includePrevOut, reverse bool, filterAddrs []string) ([]*jaxjson.SearchRawTransactionsResult, error) {
-
 	return c.SearchRawTransactionsVerboseAsync(address, skip, count,
 		includePrevOut, reverse, &filterAddrs).Receive()
 }

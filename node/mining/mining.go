@@ -123,7 +123,8 @@ func (pq *txPriorityQueue) Swap(i, j int) {
 // Push pushes the passed item onto the priority queue.  It is part of the
 // heap.Interface implementation.
 func (pq *txPriorityQueue) Push(x interface{}) {
-	pq.items = append(pq.items, x.(*txPrioItem))
+	xConverted, _ := x.(*txPrioItem)
+	pq.items = append(pq.items, xConverted)
 }
 
 // Pop removes the highest priority item (according to Less) from the priority
@@ -285,7 +286,6 @@ func NewBlkTmplGenerator(policy *Policy,
 	chainCtx chainctx.IChainCtx,
 	txSource TxSource,
 	chain *blockchain.BlockChain) *BlkTmplGenerator {
-
 	return &BlkTmplGenerator{
 		policy:     policy,
 		chainCtx:   chainCtx,

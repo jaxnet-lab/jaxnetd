@@ -60,7 +60,6 @@ func (c *Client) GetBestBlockHash() (*chainhash.Hash, error) {
 // parameter.
 func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
 	verboseTx bool) ([]byte, error) {
-
 	hashJSON, err := json.Marshal(hash)
 	if err != nil {
 		return nil, err
@@ -84,7 +83,6 @@ func (c *Client) legacyGetBlockRequest(cmd, hash string, verbose,
 // request is resent and its response is returned instead.
 func (c *Client) waitForGetBlockRes(respChan chan *response, cmd, hash string,
 	verbose, verboseTx bool) ([]byte, error) {
-
 	res, err := receiveFuture(respChan)
 
 	// If we receive an invalid parameter error, then we may be
@@ -194,7 +192,6 @@ func unmarshalPartialGetBlockChainInfoResult(res []byte) (*jaxjson.GetBlockChain
 // related fields into the GetBlockChainInfoResult instance.
 func unmarshalGetBlockChainInfoResultSoftForks(chainInfo *jaxjson.GetBlockChainInfoResult,
 	version BackendVersion, res []byte) error {
-
 	switch version {
 	// Versions of jaxnetd on or after v0.19.0 use the unified format.
 	case JaxnetdPost19:

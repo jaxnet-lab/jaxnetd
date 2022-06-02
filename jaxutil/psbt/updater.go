@@ -82,7 +82,6 @@ func (u *Updater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
 // NOTE: This function does *not* validate the ECDSA signature itself.
 func (u *Updater) addPartialSignature(inIndex int, sig []byte,
 	pubkey []byte) error {
-
 	partialSig := PartialSig{
 		PubKey: pubkey, Signature: sig,
 	}
@@ -230,7 +229,6 @@ func (u *Updater) addPartialSignature(inIndex int, sig []byte,
 // the Psbt fails.
 func (u *Updater) AddInSighashType(sighashType txscript.SigHashType,
 	inIndex int) error {
-
 	u.Upsbt.Inputs[inIndex].SighashType = sighashType
 
 	if err := u.Upsbt.SanityCheck(); err != nil {
@@ -245,7 +243,6 @@ func (u *Updater) AddInSighashType(sighashType txscript.SigHashType,
 // Psbt fails.
 func (u *Updater) AddInRedeemScript(redeemScript []byte,
 	inIndex int) error {
-
 	u.Upsbt.Inputs[inIndex].RedeemScript = redeemScript
 
 	if err := u.Upsbt.SanityCheck(); err != nil {
@@ -261,7 +258,6 @@ func (u *Updater) AddInRedeemScript(redeemScript []byte,
 // Psbt fails.
 func (u *Updater) AddInWitnessScript(witnessScript []byte,
 	inIndex int) error {
-
 	u.Upsbt.Inputs[inIndex].WitnessScript = witnessScript
 
 	if err := u.Upsbt.SanityCheck(); err != nil {
@@ -280,7 +276,6 @@ func (u *Updater) AddInWitnessScript(witnessScript []byte,
 // returned if addition of this key-value pair to the Psbt fails.
 func (u *Updater) AddInBip32Derivation(masterKeyFingerprint uint32,
 	bip32Path []uint32, pubKeyData []byte, inIndex int) error {
-
 	bip32Derivation := Bip32Derivation{
 		PubKey:               pubKeyData,
 		MasterKeyFingerprint: masterKeyFingerprint,
@@ -318,7 +313,6 @@ func (u *Updater) AddInBip32Derivation(masterKeyFingerprint uint32,
 // is returned if addition of this key-value pair to the Psbt fails.
 func (u *Updater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 	bip32Path []uint32, pubKeyData []byte, outIndex int) error {
-
 	bip32Derivation := Bip32Derivation{
 		PubKey:               pubKeyData,
 		MasterKeyFingerprint: masterKeyFingerprint,
@@ -351,7 +345,6 @@ func (u *Updater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 // the output at index outIndex.
 func (u *Updater) AddOutRedeemScript(redeemScript []byte,
 	outIndex int) error {
-
 	u.Upsbt.Outputs[outIndex].RedeemScript = redeemScript
 
 	if err := u.Upsbt.SanityCheck(); err != nil {
@@ -365,7 +358,6 @@ func (u *Updater) AddOutRedeemScript(redeemScript []byte,
 // the output at index outIndex.
 func (u *Updater) AddOutWitnessScript(witnessScript []byte,
 	outIndex int) error {
-
 	u.Upsbt.Outputs[outIndex].WitnessScript = witnessScript
 
 	if err := u.Upsbt.SanityCheck(); err != nil {

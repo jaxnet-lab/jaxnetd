@@ -33,7 +33,6 @@ type PInput struct {
 // checks and will not be usable.
 func NewPsbtInput(nonWitnessUtxo *wire.MsgTx,
 	witnessUtxo *wire.TxOut) *PInput {
-
 	return &PInput{
 		NonWitnessUtxo:     nonWitnessUtxo,
 		WitnessUtxo:        witnessUtxo,

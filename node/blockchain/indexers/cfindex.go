@@ -224,7 +224,6 @@ func (idx *CfIndex) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash ch
 // mapping for every passed block. This is part of the Indexer interface.
 func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	_ []chaindata.SpentTxOut) error {
-
 	for _, key := range cfIndexKeys {
 		err := dbDeleteFilterIdxEntry(dbTx, key, block.Hash())
 		if err != nil {
@@ -253,7 +252,6 @@ func (idx *CfIndex) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 // (eg. filter, filter header, etc) for a filter type and block hash.
 func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
 	filterType wire.FilterType, h *chainhash.Hash) ([]byte, error) {
-
 	if uint8(filterType) > maxFilterType {
 		return nil, errors.New("unsupported filter type")
 	}
@@ -271,7 +269,6 @@ func (idx *CfIndex) entryByBlockHash(filterTypeKeys [][]byte,
 // (eg. filter, filter header, etc) for a filter type and slice of block hashes.
 func (idx *CfIndex) entriesByBlockHashes(filterTypeKeys [][]byte,
 	filterType wire.FilterType, blockHashes []*chainhash.Hash) ([][]byte, error) {
-
 	if uint8(filterType) > maxFilterType {
 		return nil, errors.New("unsupported filter type")
 	}

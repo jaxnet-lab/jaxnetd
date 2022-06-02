@@ -41,7 +41,6 @@ type BestState struct {
 func NewBestState(node blocknodes.IBlockNode, actualMMRRoot chainhash.Hash,
 	blockSize, blockWeight uint64, chainWeight *big.Int, numTxns, totalTxns uint64,
 	medianTime time.Time, lastSerialID int64) *BestState {
-
 	return &BestState{
 		Hash:           node.GetHash(),
 		CurrentMMRRoot: actualMMRRoot,

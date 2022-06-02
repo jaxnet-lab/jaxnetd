@@ -751,7 +751,6 @@ func (tree *SparseMerkleTree) MerkleProofPath(position uint32) ([]chainhash.Hash
 
 func (tree *SparseMerkleTree) ValidateOrangeTree(codingBitsSize uint32, coding []byte, hashes []chainhash.Hash,
 	mmNumber uint32, expectedRoot chainhash.Hash, beacon bool) error {
-
 	// Shortcut method for wrapping various errors into ErrValidation.
 	validationError := func(description string) (err error) {
 		return fmt.Errorf(description+": %v", ErrValidation)
@@ -1033,7 +1032,6 @@ func AggregateOrangeTree(result []byte, coding []byte, codingSize, nShards uint3
 
 func (tree *SparseMerkleTree) ValidateShardMerkleProofPath(position, shardsCount uint32,
 	shardMerkleProof []chainhash.Hash, expectedShardHash, expectedRootHash chainhash.Hash) error {
-
 	height := int(math.Ceil(math.Log2(float64(shardsCount))))
 	if len(shardMerkleProof) != height {
 		return fmt.Errorf("%w: the shardMerkleProof(%d) size must have %d members",

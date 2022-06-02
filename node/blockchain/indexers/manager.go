@@ -97,7 +97,6 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block
 // not the passed block.
 func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *jaxutil.Block,
 	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
-
 	// Assert that the block being disconnected is the current tip of the
 	// index.
 	idxKey := indexer.Key()
@@ -496,7 +495,6 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *jaxutil.Block, hash chai
 // This is part of the blockchain.IndexManager interface.
 func (m *Manager) DisconnectBlock(dbTx database.Tx, block *jaxutil.Block,
 	prevHash chainhash.Hash, stxo []chaindata.SpentTxOut) error {
-
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
@@ -571,7 +569,8 @@ func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan s
 	var subBuckets [][][]byte
 	var subBucketClosure func(database.Tx, []byte, [][]byte) error
 	subBucketClosure = func(dbTx database.Tx,
-		subBucket []byte, tlBucket [][]byte) error {
+		subBucket []byte, tlBucket [][]byte,
+	) error {
 		// Get full bucket name and append to subBuckets for later
 		// deletion.
 		var bucketName [][]byte

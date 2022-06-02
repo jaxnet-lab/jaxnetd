@@ -80,7 +80,6 @@ linters:
     - goconst # : Finds repeated strings that could be replaced by a constant [fast: true, auto-fix: false]
     - gocritic # : Provides many diagnostics that check for bugs, performance and style issues. [fast: false, auto-fix: false]
     - gofmt # : Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification [fast: true, auto-fix: true]
-    - gofumpt # : Gofumpt checks whether code was gofumpt-ed. [fast: true, auto-fix: true]
     - goimports # : In addition to fixing imports, goimports also formats your code in the same style as gofmt. [fast: true, auto-fix: true]
     - gomnd # : An analyzer to detect magic numbers. [fast: true, auto-fix: false]
     - gosec #  (gas): Inspects source code for security problems [fast: false, auto-fix: false]

@@ -302,7 +302,6 @@ func IsDust(txOut *wire.TxOut, minRelayTxFee jaxutil.Amount) bool {
 func checkTransactionStandard(tx *jaxutil.Tx, height int32,
 	medianTimePast time.Time, minRelayTxFee jaxutil.Amount,
 	maxTxVersion int32) error {
-
 	// The transaction must be a currently supported version.
 	msgTx := tx.MsgTx()
 	if msgTx.Version > maxTxVersion || msgTx.Version < wire.TxVerRegular {

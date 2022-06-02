@@ -74,8 +74,7 @@ func MigrateBlockIndex(db database.DB) error {
 
 		log.Info().Msg("Re-indexing block information in the database. This might take a while...")
 
-		v2BlockIdxBucket, err :=
-			dbTx.Metadata().CreateBucketIfNotExists(v2BucketName)
+		v2BlockIdxBucket, err := dbTx.Metadata().CreateBucketIfNotExists(v2BucketName)
 		if err != nil {
 			return err
 		}
@@ -175,8 +174,7 @@ func readBlockTree(chain chainctx.IChainCtx, v1BlockIdxBucket database.Bucket) (
 		}
 
 		blocksMap[blockHash].parent = &prevHash
-		blocksMap[prevHash].children =
-			append(blocksMap[prevHash].children, &blockHash)
+		blocksMap[prevHash].children = append(blocksMap[prevHash].children, &blockHash)
 		return nil
 	})
 	return blocksMap, err
@@ -477,8 +475,7 @@ func UpgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 		// Migrate utxos so long as the max number of utxos for this
 		// batch has not been exceeded.
 		var numUtxos uint32
-		for ok := v1Cursor.First(); ok && numUtxos < maxUtxos; ok =
-			v1Cursor.Next() {
+		for ok := v1Cursor.First(); ok && numUtxos < maxUtxos; ok = v1Cursor.Next() {
 
 			// Old key was the transaction Hash.
 			oldKey := v1Cursor.Key()

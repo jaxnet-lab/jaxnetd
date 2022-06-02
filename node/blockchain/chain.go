@@ -555,7 +555,6 @@ func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Block,
 	view *chaindata.UtxoViewpoint, stxos []chaindata.SpentTxOut) error {
-
 	// Make sure it's extending the end of the best chain.
 	prevHash := node.PrevHash()
 	bestBlockHash := b.blocksDB.bestChain.Tip().GetHash()
@@ -1451,7 +1450,6 @@ func (b *BlockChain) HeightRange(startHeight, endHeight int32) ([]chainhash.Hash
 // This function is safe for concurrent access.
 func (b *BlockChain) HeightToHashRange(startHeight int32,
 	endHash *chainhash.Hash, maxResults int) ([]chainhash.Hash, error) {
-
 	endNode := b.blocksDB.index.LookupNode(endHash)
 	if endNode == nil {
 		return nil, fmt.Errorf("no known block header with hash %v", endHash)
@@ -1489,9 +1487,7 @@ func (b *BlockChain) HeightToHashRange(startHeight int32,
 // endHash where the block height is a positive multiple of interval.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int,
-) ([]chainhash.Hash, error) {
-
+func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int) ([]chainhash.Hash, error) {
 	endNode := b.blocksDB.index.LookupNode(endHash)
 	if endNode == nil {
 		return nil, fmt.Errorf("no known block header with hash %v", endHash)

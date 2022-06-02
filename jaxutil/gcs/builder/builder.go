@@ -248,7 +248,6 @@ func WithKey(key [gcs.KeySize]byte) *GCSBuilder {
 // chainhash.Hash and the passed probability and estimated filter size.
 func WithKeyHashPNM(keyHash *chainhash.Hash, p uint8, n uint32,
 	m uint64) *GCSBuilder {
-
 	return WithKeyPNM(DeriveKey(keyHash), p, n, m)
 }
 

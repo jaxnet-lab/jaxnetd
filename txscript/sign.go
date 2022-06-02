@@ -22,7 +22,6 @@ import (
 func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	amt int64, subScript []byte, hashType SigHashType,
 	key *btcec.PrivateKey) ([]byte, error) {
-
 	parsedScript, err := parseScript(subScript)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output script: %v", err)
@@ -50,7 +49,6 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64,
 	subscript []byte, hashType SigHashType, privKey *btcec.PrivateKey,
 	compress bool) (wire.TxWitness, error) {
-
 	sig, err := RawTxInWitnessSignature(tx, sigHashes, idx, amt, subscript,
 		hashType, privKey)
 	if err != nil {
@@ -74,7 +72,6 @@ func WitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64
 // the given transaction, with hashType appended to it.
 func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
 	hashType SigHashType, key *btcec.PrivateKey) ([]byte, error) {
-
 	hash, err := CalcSignatureHash(subScript, hashType, tx, idx)
 	if err != nil {
 		return nil, err
@@ -157,7 +154,6 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashTyp
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	subScript []byte, hashType SigHashType, kdb KeyDB, sdb ScriptDB) ([]byte,
 	ScriptClass, []jaxutil.Address, int, error) {
-
 	class, addresses, nrequired, err := ExtractPkScriptAddrs(subScript, chainParams)
 	if err != nil {
 		return nil, NonStandardTy, nil, 0, err
@@ -239,7 +235,6 @@ func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 	pkScript []byte, class ScriptClass, addresses []jaxutil.Address,
 	nRequired int, sigScript, prevScript []byte) []byte {
-
 	// TODO: the scripthash and multisig paths here are overly
 	// inefficient in that they will recompute already known data.
 	// some internal refactoring could probably make this avoid needless
@@ -262,8 +257,7 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 		script := sigPops[len(sigPops)-1].data
 
 		// We already know this information somewhere up the stack.
-		class, addresses, nrequired, _ :=
-			ExtractPkScriptAddrs(script, chainParams)
+		class, addresses, nrequired, _ := ExtractPkScriptAddrs(script, chainParams)
 
 		// regenerate scripts.
 		sigScript, _ := unparseScript(sigPops)
@@ -304,7 +298,6 @@ func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
 // each other, behaviour is undefined if this contract is broken.
 func mergeMultiSig(tx *wire.MsgTx, idx int, addresses []jaxutil.Address,
 	nRequired int, pkScript, sigScript, prevScript []byte) []byte {
-
 	// This is an internal only function and we already parsed this script
 	// as ok for multisig (this is how we got here), so if this fails then
 	// all assumptions are broken and who knows which way is up?

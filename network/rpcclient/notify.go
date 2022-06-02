@@ -275,8 +275,7 @@ func (c *Client) handleNotification(ntfn *rawNotification) {
 			return
 		}
 
-		blockHeight, blockHeader, err :=
-			parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
+		blockHeight, blockHeader, err := parseFilteredBlockDisconnectedParams(ntfn.Params, ntfn.ShardID)
 		if err != nil {
 			log.Warn().Msgf("Received invalid filtered block "+
 				"disconnected notification: %v", err)
@@ -525,7 +524,6 @@ func parseChainNtfnParams(params []json.RawMessage) (*chainhash.Hash, int32, tim
 // and requires a websocket connection.
 func parseFilteredBlockConnectedParams(params []json.RawMessage, shardID uint32) (int32,
 	wire.BlockHeader, []*jaxutil.Tx, error) {
-
 	if len(params) < 3 {
 		return 0, nil, nil, wrongNumParams(len(params))
 	}
@@ -634,7 +632,6 @@ func parseRelevantTxAcceptedParams(params []json.RawMessage) (transaction []byte
 // notifications.
 func parseChainTxNtfnParams(params []json.RawMessage) (*jaxutil.Tx,
 	*jaxjson.BlockDetails, error) {
-
 	if len(params) == 0 || len(params) > 2 {
 		return nil, nil, wrongNumParams(len(params))
 	}
@@ -714,7 +711,6 @@ func parseRescanProgressParams(params []json.RawMessage) (*chainhash.Hash, int32
 // from the parameters of a txaccepted notification.
 func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 	jaxutil.Amount, error) {
-
 	if len(params) != 2 {
 		return nil, 0, wrongNumParams(len(params))
 	}
@@ -752,7 +748,6 @@ func parseTxAcceptedNtfnParams(params []json.RawMessage) (*chainhash.Hash,
 // from the parameters of a txacceptedverbose notification.
 func parseTxAcceptedVerboseNtfnParams(params []json.RawMessage) (*jaxjson.TxRawResult,
 	error) {
-
 	if len(params) != 1 {
 		return nil, wrongNumParams(len(params))
 	}
@@ -792,7 +787,6 @@ func parseBtcdConnectedNtfnParams(params []json.RawMessage) (bool, error) {
 // parameters of an accountbalance notification.
 func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 	balance jaxutil.Amount, confirmed bool, err error) {
-
 	if len(params) != 3 {
 		return "", 0, false, wrongNumParams(len(params))
 	}
@@ -829,7 +823,6 @@ func parseAccountBalanceNtfnParams(params []json.RawMessage) (account string,
 // state of an account from the parameters of a walletlockstate notification.
 func parseWalletLockStateNtfnParams(params []json.RawMessage) (account string,
 	locked bool, err error) {
-
 	if len(params) != 2 {
 		return "", false, wrongNumParams(len(params))
 	}
@@ -1177,7 +1170,6 @@ func (r FutureRescanResult) Receive() error {
 func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address,
 	outpoints []*wire.OutPoint) FutureRescanResult {
-
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
 		return newFutureError(ErrWebsocketsRequired)
@@ -1242,7 +1234,6 @@ func (c *Client) RescanAsync(startBlock *chainhash.Hash,
 func (c *Client) Rescan(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address,
 	outpoints []*wire.OutPoint) error {
-
 	return c.RescanAsync(startBlock, addresses, outpoints).Receive()
 }
 
@@ -1258,7 +1249,6 @@ func (c *Client) Rescan(startBlock *chainhash.Hash,
 func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address, outpoints []*wire.OutPoint,
 	endBlock *chainhash.Hash) FutureRescanResult {
-
 	// Not supported in HTTP POST mode.
 	if c.config.HTTPPostMode {
 		return newFutureError(ErrWebsocketsRequired)
@@ -1320,7 +1310,6 @@ func (c *Client) RescanEndBlockAsync(startBlock *chainhash.Hash,
 func (c *Client) RescanEndHeight(startBlock *chainhash.Hash,
 	addresses []jaxutil.Address, outpoints []*wire.OutPoint,
 	endBlock *chainhash.Hash) error {
-
 	return c.RescanEndBlockAsync(startBlock, addresses, outpoints,
 		endBlock).Receive()
 }
@@ -1352,7 +1341,6 @@ func (r FutureLoadTxFilterResult) Receive() error {
 // and requires a websocket connection.
 func (c *Client) LoadTxFilterAsync(reload bool, addresses []jaxutil.Address,
 	outPoints []wire.OutPoint) FutureLoadTxFilterResult {
-
 	addrStrs := make([]string, len(addresses))
 	for i, a := range addresses {
 		addrStrs[i] = a.EncodeAddress()

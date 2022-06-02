@@ -21,15 +21,15 @@ func TestNewKeyData(t *testing.T) {
 
 	private := hex.EncodeToString(key.Serialize())
 	println(private)
-	keyData, err := NewKeyData(private, &chaincfg.SimNetParams)
+	keyData, err := NewKeyData(private, &chaincfg.SimNetParams, false)
 	assert.NoError(t, err)
-	assert.Equal(t, keyData.Address.EncodeAddress(), simNetAddress.EncodeAddress())
+	assert.Equal(t, keyData.AddressPubKey.EncodeAddress(), simNetAddress.EncodeAddress())
 
 	println(fmt.Sprintf("%x", key.Serialize()))
 
-	keyData, err = NewKeyData(fmt.Sprintf("%x", key.Serialize()), &chaincfg.SimNetParams)
+	keyData, err = NewKeyData(fmt.Sprintf("%x", key.Serialize()), &chaincfg.SimNetParams, false)
 	assert.NoError(t, err)
-	assert.Equal(t, keyData.Address.EncodeAddress(), simNetAddress.EncodeAddress())
+	assert.Equal(t, keyData.AddressPubKey.EncodeAddress(), simNetAddress.EncodeAddress())
 
 	MinerSk := ""
 	AliceSk := ""
@@ -37,7 +37,7 @@ func TestNewKeyData(t *testing.T) {
 	EvaSk := ""
 
 	for _, sk := range []string{MinerSk, AliceSk, BobSk, EvaSk} {
-		kd, _ := NewKeyData(sk, &chaincfg.TestNet3Params)
+		kd, _ := NewKeyData(sk, &chaincfg.TestNet3Params, false)
 		println(kd.AddressPubKey.String())
 	}
 }

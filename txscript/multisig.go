@@ -139,16 +139,15 @@ func isMultiSigLock(pops []parsedOpcode) bool {
 	if l < 13 {
 		return false
 	}
-	containsStatements :=
-		isOpCode(pops[0], OP_INPUTAGE) &&
-			isNumber(pops[1].opcode) &&
-			isOpCode(pops[2], OP_LESSTHAN) &&
-			isOpCode(pops[3], OP_IF) &&
-			isOpCode(pops[l-5], OP_ELSE) &&
-			(len(pops[l-4].data) == 33 || len(pops[l-4].data) == 65) &&
-			isOpCode(pops[l-3], OP_CHECKSIG) &&
-			isOpCode(pops[l-2], OP_NIP) &&
-			isOpCode(pops[l-1], OP_ENDIF)
+	containsStatements := isOpCode(pops[0], OP_INPUTAGE) &&
+		isNumber(pops[1].opcode) &&
+		isOpCode(pops[2], OP_LESSTHAN) &&
+		isOpCode(pops[3], OP_IF) &&
+		isOpCode(pops[l-5], OP_ELSE) &&
+		(len(pops[l-4].data) == 33 || len(pops[l-4].data) == 65) &&
+		isOpCode(pops[l-3], OP_CHECKSIG) &&
+		isOpCode(pops[l-2], OP_NIP) &&
+		isOpCode(pops[l-1], OP_ENDIF)
 	if !containsStatements {
 		return false
 	}
@@ -202,7 +201,6 @@ func extractMultiSigLockAddrs(pops []parsedOpcode,
 // legal to not be able to sign any of the outputs, no error is returned.
 func signMultiSigLock(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 	addresses []jaxutil.Address, nRequired int, kdb KeyDB) ([]byte, bool) {
-
 	// here is safe to ignore error, it checked previously.
 	parsed, _ := parseScript(subScript)
 

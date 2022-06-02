@@ -251,7 +251,6 @@ func (miner *CPUMiner) submitBlock(chainID uint32, block *jaxutil.Block) bool {
 // new transactions and enough time has elapsed without finding a solution.
 func (miner *CPUMiner) solveBlock(job *miningJob,
 	ticker *time.Ticker, quit chan struct{}) bool {
-
 	// Choose a random extra nonce offset for this block template and
 	// worker.
 	// enOffset, err := encoder.RandomUint64()
@@ -563,7 +562,8 @@ func (miner *CPUMiner) updateMergedMiningProof(job *miningJob) error {
 		// but the tree expects slots to be indexed from 0.
 		slotIndex := id - 1
 
-		shardBlockHash := shard.block.Header.(*wire.ShardHeader).ExclusiveHash()
+		shardHeader, _ := shard.block.Header.(*wire.ShardHeader)
+		shardBlockHash := shardHeader.ExclusiveHash()
 		err := tree.SetShardHash(slotIndex, shardBlockHash)
 		if err != nil {
 			return err
