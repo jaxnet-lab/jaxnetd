@@ -2,6 +2,8 @@ package mmr
 
 import (
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"log"
 	"testing"
 
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
@@ -28,6 +30,32 @@ func TestTreeContainer_SetNodeToMmrWithReorganization(t *testing.T) {
 	assert.Equal(t, true, ok)
 	assert.Equal(t, mmrContainer.Current().Hash, toInsert.hash)
 	assert.Equal(t, mmrContainer.lastNode.Hash, toInsert.hash)
+}
+
+func BenchmarkMMRTreeConstruction(b *testing.B) {
+	sizes := []struct {
+		name    string
+		MMRSize int64
+	}{
+		{"100 blocks", 100},
+		{"500 blocks", 500},
+		{"1000 blocks", 1000},
+		{"2000 blocks", 2000},
+	}
+
+	var c *TreeContainer
+	log.SetOutput(ioutil.Discard)
+	for _, size := range sizes {
+		c = &TreeContainer{
+			BlocksMMRTree: NewTree(),
+			RootToBlock:   map[chainhash.Hash]chainhash.Hash{},
+		}
+
+		b.Run(size.name, func(b *testing.B) {
+			GenerateBlockNodeChain(c, size.MMRSize)
+		})
+		log.Println(c)
+	}
 }
 
 func generateBlockNodeChain(t *testing.T, c *TreeContainer) []*TBlockNode {

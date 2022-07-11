@@ -17,7 +17,7 @@ import (
 func main() {
 	start := time.Now().UnixNano()
 	var numBlocks int64
-	flag.Int64Var(&numBlocks, "n", 1_000_000, "number of blocks to insert in mmr tree")
+	flag.Int64Var(&numBlocks, "n", 1_000, "number of blocks to insert in mmr tree")
 	flag.Parse()
 
 	c := &mmr.TreeContainer{
