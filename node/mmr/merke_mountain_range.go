@@ -7,10 +7,10 @@
 package mmr
 
 import (
+	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
+	"log"
 	"math"
 	"math/big"
-
-	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
 type Value []byte
@@ -161,4 +161,68 @@ func nextPowerOfTwo(n uint64) int {
 	// Figure out and return the next power of two.
 	exponent := uint(math.Log2(float64(n))) + 1
 	return 1 << exponent // 2^exponent
+}
+
+// GenerateNLeafs - function for testing which generates n leafs to insert in MMR tree, filled with
+// realistic data
+func GenerateNLeafs(n int64) []Leaf {
+	var (
+		prevLeaf Leaf
+		leaf     Leaf
+		leafs    []Leaf
+	)
+
+	prevLeaf = Leaf{
+		Hash:   chainhash.HashH(nil),
+		Weight: big.NewInt(0),
+	}
+	prevLeaf.v = append(prevLeaf.Hash.CloneBytes(), prevLeaf.Weight.Bytes()...)
+	leafs = append(leafs, prevLeaf)
+
+	for i := int64(1); i <= n; i++ {
+		leaf = Leaf{
+			Hash:   chainhash.HashH(prevLeaf.Hash.CloneBytes()),
+			Weight: big.NewInt(i),
+		}
+		leaf.v = append(leaf.Hash.CloneBytes(), prevLeaf.Weight.Bytes()...)
+		leafs = append(leafs, leaf)
+
+		prevLeaf = leaf
+	}
+
+	return leafs
+}
+
+func GenerateBlockNodeChain(c *TreeContainer, n int64) {
+	blocks := GenerateNLeafs(n)
+
+	blockNodes := make([]*TBlockNode, len(blocks))
+
+	genesisBlockNode := &TBlockNode{
+		hash:          blocks[0].Hash,
+		prevMMRRoot:   chainhash.ZeroHash,
+		actualMMRRoot: chainhash.Hash{},
+		height:        0,
+		difficulty:    blocks[0].Weight,
+		parent:        nil,
+	}
+	c.SetNodeToMmrWithReorganization(genesisBlockNode)
+	blockNodes[0] = genesisBlockNode
+
+	for i := 1; i < len(blocks); i++ {
+		prevMMRRoot := c.Current().Hash
+		blNode := &TBlockNode{
+			hash:          blocks[i].Hash,
+			prevMMRRoot:   prevMMRRoot,
+			actualMMRRoot: chainhash.Hash{},
+			height:        int32(i),
+			difficulty:    blocks[i].Weight,
+			parent:        blockNodes[i-1],
+		}
+		ok := c.SetNodeToMmrWithReorganization(blNode)
+		if !ok {
+			log.Fatalf("cannot create tree")
+		}
+		blockNodes[i] = blNode
+	}
 }
