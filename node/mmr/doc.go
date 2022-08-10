@@ -6,10 +6,10 @@
 
 // Package mmr provides implementation of the Merkle Mountain Range.
 //
-// Block Leaf is structure of that contains Block Hash and Block PowWeight aka weight:
+// Block node is structure of that contains Block Hash and Block PowWeight aka weight:
 // 	      block = { hash; weight }
 //
-// How To calculate Root Leaf for two parents:
+// How To calculate Root node for two parents:
 // 	 1. concat hash and weight for each parent
 // 	 2. concat resulting values and hash them.
 // 	 3. sum weights

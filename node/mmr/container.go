@@ -24,25 +24,25 @@ func (mmrTree *TreeContainer) SetNodeQuick(node blocknodes.IBlockNode) {
 	mmrTree.AddBlockWithoutRebuild(node.GetHash(), node.ActualMMRRoot(), node.Height(), node.PowWeight())
 }
 
-func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBlockNode) bool {
-	prevNodesMMRRoot := node.PrevMMRRoot()
+func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(blockNode blocknodes.IBlockNode) bool {
+	prevNodesMMRRoot := blockNode.PrevMMRRoot()
 	currentMMRRoot := mmrTree.CurrentRoot()
 
 	// 1) Good Case: if a new node is next in the current chain,
 	// then just push it to the MMR tree as the last leaf.
 	if prevNodesMMRRoot.IsEqual(&currentMMRRoot) {
-		mmrTree.AddBlock(node.GetHash(), node.PowWeight())
-		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = node.GetHash()
-		node.SetActualMMRRoot(mmrTree.CurrentRoot())
+		mmrTree.AppendBlock(blockNode.GetHash(), blockNode.PowWeight())
+		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = blockNode.GetHash()
+		blockNode.SetActualMMRRoot(mmrTree.CurrentRoot())
 		return true
 	}
 
-	lifoToAdd := []Leaf{
-		{Hash: node.GetHash(), Weight: node.PowWeight()},
+	lifoToAdd := []TreeNode{
+		{Hash: blockNode.GetHash(), Weight: blockNode.PowWeight()},
 	}
 
 	// reject non-genesis block without parent
-	if node.Parent() == nil && node.Height() > 0 {
+	if blockNode.Parent() == nil && blockNode.Height() > 0 {
 		return false
 	}
 
@@ -50,8 +50,8 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 	// then looking for the first ancestor (<fork root>) that is present in current chain,
 	// resetting MMR tree state to this <fork root> as the last leaf
 	// and adding all blocks between <fork root> and a new node.
-	iterNode := node.Parent()
-	iterMMRRoot := node.PrevMMRRoot()
+	iterNode := blockNode.Parent()
+	iterMMRRoot := blockNode.PrevMMRRoot()
 	for iterNode != nil {
 		prevHash := iterNode.GetHash()
 		bNode, topPresent := mmrTree.LookupNodeByRoot(iterMMRRoot)
@@ -65,7 +65,7 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 			break
 		}
 
-		lifoToAdd = append(lifoToAdd, Leaf{Hash: iterNode.GetHash(), Weight: iterNode.PowWeight()})
+		lifoToAdd = append(lifoToAdd, TreeNode{Hash: iterNode.GetHash(), Weight: iterNode.PowWeight()})
 
 		iterMMRRoot = iterNode.PrevMMRRoot()
 		iterNode = iterNode.Parent()
@@ -73,9 +73,9 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(node blocknodes.IBl
 
 	for i := len(lifoToAdd) - 1; i >= 0; i-- {
 		bNode := lifoToAdd[i]
-		mmrTree.AddBlock(bNode.Hash, bNode.Weight)
+		mmrTree.AppendBlock(bNode.Hash, bNode.Weight)
 		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = bNode.Hash
-		node.SetActualMMRRoot(mmrTree.CurrentRoot())
+		blockNode.SetActualMMRRoot(mmrTree.CurrentRoot())
 	}
 
 	return true

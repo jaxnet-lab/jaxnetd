@@ -756,12 +756,13 @@ func (server *CommonChainRPC) handleSubmitBlock(ctx CmdCtx) (interface{}, error)
 
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
-	_, err = server.chainProvider.SyncManager.ProcessBlock(block, chaindata.BFNone)
+	isOrphan, err := server.chainProvider.SyncManager.ProcessBlock(block, chaindata.BFNone)
 	if err != nil {
 		return fmt.Sprintf("rejected: %s", err.Error()), nil
 	}
 
-	server.Log.Info().Msgf("Accepted block %s via submitblock", block.Hash().String())
+	server.Log.Info().Bool("orphan", isOrphan).
+		Msgf("Accepted block %s via submitblock", block.Hash().String())
 	return nil, nil
 }
 

@@ -143,7 +143,7 @@ func (bg *BlockProvider) NewBlockTemplate(burnRewardFlag int, beaconHash chainha
 
 func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 	block *btcdwire.MsgBlock, height int64, err error) {
-	// Leaf initialisation.
+	// node initialisation.
 	height = c.Height
 
 	bitcoinBlock := btcdwire.MsgBlock{}
@@ -155,7 +155,7 @@ func DecodeBitcoinResponse(c *btcdjson.GetBlockTemplateResult) (
 		return
 	}
 
-	// Leaf header processing.
+	// node header processing.
 	previousBlockHash, err := btcdchainhash.NewHashFromStr(c.PreviousHash)
 	if err != nil {
 		return

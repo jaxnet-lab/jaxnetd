@@ -1,11 +1,11 @@
 package mmr
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 

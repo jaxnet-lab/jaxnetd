@@ -468,8 +468,8 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 
 		log.Info().Str("chain", db.Chain().Name()).Msgf("Loading best chain blocks...")
 
-		blocksDB.index.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
-		blocksDB.bestChain.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
+		blocksDB.index.mmrTree.PreAllocateTree(len(bestChain))
+		blocksDB.bestChain.mmrTree.PreAllocateTree(len(bestChain))
 
 		for _, record := range bestChain {
 			parent := lastNode
