@@ -101,7 +101,8 @@ func (t *BlocksMMRTree) appendBlock(hash chainhash.Hash, difficulty *big.Int) {
 		Height: t.nextHeight,
 	}
 
-	t.rootHash = t.rebuildTree(node, node.Height)
+	t.store.appendLeaf(int(node.Height), node)
+	t.rootHash = t.store.calcRoot().Hash
 	t.heightToRoot[node.Height] = t.rootHash
 	t.hashToHeight[hash] = node.Height
 	t.rootToHeight[t.rootHash] = node.Height
@@ -155,7 +156,7 @@ func (t *BlocksMMRTree) AddBlockWithoutRebuild(hash, actualMMR chainhash.Hash, h
 	t.rootToHeight[actualMMR] = height
 	t.heightToRoot[height] = actualMMR
 
-	t.store.setNode(0, int(height), node)
+	t.store.appendLeaf(int(height), node)
 
 	t.rootHash = actualMMR
 	t.lastNode = node
@@ -170,7 +171,10 @@ func (t *BlocksMMRTree) RebuildTreeAndAssert() error {
 	root := t.rebuildTree(t.lastNode, t.lastNode.Height)
 	if !t.rootHash.IsEqual(&root) {
 		t.Unlock()
-		return fmt.Errorf("mmr_root(%s) of tree mismatches with calculated root(%s) ", t.rootHash, root)
+		h1 := t.rootToHeight[t.rootHash]
+		h2 := t.rootToHeight[root]
+		return fmt.Errorf("mmr_root(%s, %d) of tree mismatches with calculated root(%s, %d); %d",
+			t.rootHash, h1, root, h2, t.lastNode.Height)
 	}
 
 	t.Unlock()

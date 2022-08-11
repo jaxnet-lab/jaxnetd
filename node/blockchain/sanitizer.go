@@ -28,8 +28,12 @@ func VerifyStateSanity(db database.DB) error {
 }
 
 func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestState, error) {
-	bestState, _ := initChainState(db, blocksDB, true)
-	err := db.Update(func(dbTx database.Tx) error {
+	bestState, err := initChainState(db, blocksDB, true)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Update(func(dbTx database.Tx) error {
 		serialIDs := make([]int64, 0, len(blocksDB.bestChain.nodes))
 
 		for i, node := range blocksDB.bestChain.nodes {

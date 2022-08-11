@@ -2,8 +2,6 @@
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
-//go:build deprecated_tests
-// +build deprecated_tests
 
 package main
 
@@ -29,7 +27,7 @@ var (
 // loadBlockDB opens the block database and returns a handle to it.
 func loadBlockDB() (database.DB, error) {
 
-	chain := chainctx.NewBeaconChain(&chaincfg.TestNet3Params)
+	chain := chainctx.NewBeaconChain(&chaincfg.TestNetParams)
 	// The database name is based on the database type.
 	dbName := blockDbNamePrefix + "_" + cfg.DBType
 	dbPath := filepath.Join(cfg.DataDir, dbName)
@@ -58,8 +56,8 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 	if latestCheckpoint == nil {
 		// Set the latest checkpoint to the genesis block if there isn't
 		// already one.
-		latestCheckpoint = &chain.Checkpoint{
-			Hash:   *activeNetParams.GenesisHash(),
+		latestCheckpoint = &chaincfg.Checkpoint{
+			Hash:   activeNetParams.GenesisHash(),
 			Height: 0,
 		}
 	}
@@ -90,7 +88,7 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 	defer fmt.Println()
 
 	// Loop backwards through the chain to find checkpoint candidates.
-	candidates := make([]*chain.Checkpoint, 0, cfg.NumCandidates)
+	candidates := make([]*chaincfg.Checkpoint, 0, cfg.NumCandidates)
 	numTested := int32(0)
 	for len(candidates) < cfg.NumCandidates && block.Height() > requiredHeight {
 		// Display progress.
@@ -107,14 +105,14 @@ func findCandidates(chain *blockchain.BlockChain, latestHash *chainhash.Hash) ([
 		// All checks passed, so this node seems like a reasonable
 		// checkpoint candidate.
 		if isCandidate {
-			checkpoint := chain.Checkpoint{
+			checkpoint := chaincfg.Checkpoint{
 				Height: block.Height(),
 				Hash:   block.Hash(),
 			}
 			candidates = append(candidates, &checkpoint)
 		}
 
-		prevHash := block.MsgBlock().Header.PrevBlock()
+		prevHash := block.MsgBlock().Header.PrevBlockHash()
 		block, err = chain.BlockByHash(&prevHash)
 		if err != nil {
 			return nil, err

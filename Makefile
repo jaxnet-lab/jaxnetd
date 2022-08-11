@@ -2,9 +2,12 @@ include builder/Makefile-defaults.mk
 
 all: build
 
+build_all:
+	CGO_ENABLED=0 go build -o ./bin/ ./...
+
 build:
-	go build -o jaxnetd
-	go build -o jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
+	CGO_ENABLED=0 go build -o jaxnetd
+	CGO_ENABLED=0 go build -o jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
 
 clean:
 	go clean
@@ -12,7 +15,7 @@ clean:
 
 .PHONY: all dep build clean
 build_docker_local:
-	docker build --no-cache -t shard-core .
+	docker build --no-cache -t jaxnetd .
 
 up_local: build_docker_local
 	cd utils/docker && docker-compose up -d

@@ -7,6 +7,8 @@
 package mmr
 
 import (
+	"math/big"
+
 	"gitlab.com/jaxnet/jaxnetd/node/blocknodes"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -36,9 +38,14 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(blockNode blocknode
 		blockNode.SetActualMMRRoot(mmrTree.CurrentRoot())
 		return true
 	}
+	type treeNode struct {
+		hash          chainhash.Hash
+		weight        *big.Int
+		actualMMRRoot chainhash.Hash
+	}
 
-	lifoToAdd := []TreeNode{
-		{Hash: blockNode.GetHash(), Weight: blockNode.PowWeight()},
+	lifoToAdd := []treeNode{
+		{hash: blockNode.GetHash(), weight: blockNode.PowWeight(), actualMMRRoot: blockNode.ActualMMRRoot()},
 	}
 
 	// reject non-genesis block without parent
@@ -65,7 +72,10 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(blockNode blocknode
 			break
 		}
 
-		lifoToAdd = append(lifoToAdd, TreeNode{Hash: iterNode.GetHash(), Weight: iterNode.PowWeight()})
+		lifoToAdd = append(lifoToAdd, treeNode{
+			hash:          iterNode.GetHash(),
+			weight:        iterNode.PowWeight(),
+			actualMMRRoot: iterNode.ActualMMRRoot()})
 
 		iterMMRRoot = iterNode.PrevMMRRoot()
 		iterNode = iterNode.Parent()
@@ -73,9 +83,14 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(blockNode blocknode
 
 	for i := len(lifoToAdd) - 1; i >= 0; i-- {
 		bNode := lifoToAdd[i]
-		mmrTree.AppendBlock(bNode.Hash, bNode.Weight)
-		mmrTree.RootToBlock[mmrTree.CurrentRoot()] = bNode.Hash
-		blockNode.SetActualMMRRoot(mmrTree.CurrentRoot())
+		if bNode.actualMMRRoot.IsZero() {
+			mmrTree.AppendBlock(bNode.hash, bNode.weight)
+			mmrTree.RootToBlock[mmrTree.CurrentRoot()] = bNode.hash
+			blockNode.SetActualMMRRoot(mmrTree.CurrentRoot())
+		} else {
+			mmrTree.AddBlockWithoutRebuild(bNode.hash, bNode.actualMMRRoot, mmrTree.nextHeight, bNode.weight)
+			mmrTree.RootToBlock[bNode.actualMMRRoot] = bNode.hash
+		}
 	}
 
 	return true

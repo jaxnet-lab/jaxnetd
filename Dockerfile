@@ -9,7 +9,7 @@ ENV GOPRIVATE=gitlab.com
 
 WORKDIR /shard-core
 ADD . .
-RUN ./build.sh /jaxnetd && go build -o /jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
+RUN ./build.sh /jaxnetd && CGO_ENABLED=0 go build -o /jaxctl gitlab.com/jaxnet/jaxnetd/cmd/jaxctl
 
 # Final stage
 FROM alpine:3.7

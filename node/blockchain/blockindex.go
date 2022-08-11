@@ -194,3 +194,52 @@ func (bi *blockIndex) flushToDB() error {
 	bi.Unlock()
 	return err
 }
+
+func (bi *blockIndex) setFromCache(cache *blockIndexCache, tip blocknodes.IBlockNode) error {
+	bi.Lock()
+	defer bi.Unlock()
+	for hash := range cache.index {
+		bi.index[hash] = cache.index[hash]
+	}
+	for node := range cache.dirty {
+		bi.dirty[node] = struct{}{}
+	}
+
+	bi.mmrTree.SetNodeToMmrWithReorganization(tip)
+	return bi.mmrTree.RebuildTreeAndAssert()
+}
+
+type blockIndexCache struct {
+	sync.RWMutex
+	index map[chainhash.Hash]blocknodes.IBlockNode
+	dirty map[blocknodes.IBlockNode]struct{}
+}
+
+func NewBlockIndexCache() *blockIndexCache {
+	return &blockIndexCache{
+		index: make(map[chainhash.Hash]blocknodes.IBlockNode),
+		dirty: make(map[blocknodes.IBlockNode]struct{}),
+	}
+}
+
+// LookupNode returns the block node identified by the provided hash.  It will
+// return nil if there is no entry for the hash.
+//
+// This function is safe for concurrent access.
+func (bi *blockIndexCache) LookupNode(hash *chainhash.Hash) blocknodes.IBlockNode {
+	bi.RLock()
+	node := bi.index[*hash]
+	bi.RUnlock()
+	return node
+}
+
+// AddNode adds the provided node to the block index and marks it as dirty.
+// Duplicate entries are not checked so it is up to caller to avoid adding them.
+//
+// This function is safe for concurrent access.
+func (bi *blockIndexCache) AddNode(node blocknodes.IBlockNode) {
+	bi.Lock()
+	bi.index[node.GetHash()] = node
+	bi.dirty[node] = struct{}{}
+	bi.Unlock()
+}

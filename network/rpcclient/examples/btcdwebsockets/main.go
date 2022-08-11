@@ -26,7 +26,7 @@ func main() {
 			fmt.Printf("Block connected: shard_id %d : %v (%d) %v \n", shardId, hash, height, t)
 		},
 
-		OnFilteredBlockConnected: func(height int32, header wire.BlockHeader, txns []*jaxutil.Tx) {
+		OnFilteredBlockConnected: func(chainID uint32, height int32, header wire.BlockHeader, txns []*jaxutil.Tx) {
 			fmt.Println("Filtered Block connected")
 			log.Printf("Filtered Block connected: %v (%d) %v",
 				header.BlockHash(), height, header.Timestamp())

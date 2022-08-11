@@ -40,9 +40,10 @@ func TestBlock_Value(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := node{
+			b := TreeNode{
 				Hash:   tt.fields.Hash,
 				Weight: tt.fields.Weight,
+				final:  true,
 			}
 			gotV := b.Bytes()
 			if !reflect.DeepEqual(gotV, tt.wantV) {
