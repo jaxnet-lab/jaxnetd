@@ -6,6 +6,7 @@ package txutils
 
 import (
 	"encoding/hex"
+
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/btcec"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
