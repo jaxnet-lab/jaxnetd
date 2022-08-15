@@ -8,7 +8,6 @@ package txutils
 
 import (
 	"encoding/hex"
-
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil/txmodels"
