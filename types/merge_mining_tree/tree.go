@@ -505,7 +505,8 @@ Exit:
 // CatalanNumbersCoding returns binary (BigEndian) coded orange tree, that is a subset of the current merkle tree.
 // The coding format is the next: <orange tree structure coding>, <sequence of hashes of the orange tree>.
 // Orange tree structure consists of ~2 bits info per node and 1 bit that defines if the node is MH or not.
-//    This data is packed into bits slice and is aligned to the 8 bits (one byte).
+//
+//	This data is packed into bits slice and is aligned to the 8 bits (one byte).
 //
 // Sequence of hashes of the orange tree is a simple bytes slice
 // which is filled with the hashes of the nodes of the orange tree

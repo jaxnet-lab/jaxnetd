@@ -29,14 +29,13 @@ vendor/*
 !vendor/vendor.json
 
 /dist
+/bin
 /tmp
 /spec
 jaxnetd
 *.csv
 *.dat
 
-!/tmp/core_1/jaxcore.yaml
-!/tmp/core_2/jaxcore.yaml
 
 .directory
 

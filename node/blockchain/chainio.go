@@ -9,6 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
+	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
+
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -164,6 +168,8 @@ func initChainState(db database.DB, blocksDB *rBlockStorage, dbFullRescan bool) 
 			return err
 		}
 
+		log.Trace().Str("chain", db.Chain().Name()).Msgf("Deserialized chain state:\n%s", spew.Sdump(state))
+
 		// Load all of the headers from the data for the known best
 		// chain and construct the block index accordingly.  Since the
 		// number of nodes are already known, perform a single alloc
@@ -171,84 +177,30 @@ func initChainState(db database.DB, blocksDB *rBlockStorage, dbFullRescan bool) 
 		// pressure on the GC.
 		log.Info().Str("chain", db.Chain().Name()).Msgf("Loading block index...")
 
-		blockIndexBucket := dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
-
-		var i int32
-		var lastNode blocknodes.IBlockNode
-		cursor := blockIndexBucket.Cursor()
-
-		for ok := cursor.First(); ok; ok = cursor.Next() {
-			header, status, blockSerialID, err := chaindata.DeserializeBlockRow(cursor.Value())
-			if err != nil {
-				return err
-			}
-
-			// Determine the parent block node. Since we iterate block headers
-			// in order of height, if the blocks are mostly linear there is a
-			// very good chance the previous header processed is the parent.
-			var parent blocknodes.IBlockNode
-
-			if lastNode == nil {
-				blockHash := header.BlockHash()
-
-				if !blockHash.IsEqual(db.Chain().Params().GenesisHash()) {
-					return chaindata.AssertError(fmt.Sprintf(
-						"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
-						db.Chain().Params().GenesisHash(), blockHash))
-				}
-			} else if header.PrevBlocksMMRRoot() == blocksDB.index.MMRTreeRoot() {
-				// } else if header.PrevBlockHash() == lastNode.GetHash() {
-				// Since we iterate block headers in order of height, if the
-				// blocks are mostly linear there is a very good chance the
-				// previous header processed is the parent.
-				parent = lastNode
-			} else {
-				prev := header.PrevBlocksMMRRoot()
-				parent = blocksDB.index.LookupNodeByMMRRoot(prev)
-				// hash := header.PrevBlockHash()
-				// parent = blocksDB.index.LookupNode(&hash)
-				if parent == nil {
-					return chaindata.AssertError(fmt.Sprintf(
-						"initChainState: Could not find parent for block %s", header.BlockHash()))
-				}
-			}
-
-			if parent != nil {
-				prevHash := parent.GetHash()
-				bph := header.PrevBlockHash()
-				if !prevHash.IsEqual(&bph) {
-					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-						prevHash, header.PrevBlocksMMRRoot(), bph)
-					return chaindata.AssertError(str)
-				}
-			}
-
-			// Initialize the block node for the block, connect it,
-			// and add it to the block index.
-			node := db.Chain().NewNode(header, parent, blockSerialID)
-			node.SetStatus(status)
-
-			blocksDB.index.addNode(node, false)
-
-			lastNode = node
-			i++
-
-			if i%1000 == 0 {
-				log.Info().Str("chain", db.Chain().Name()).
-					Int32("processed_blocks_count", i).
-					Msgf("Processing raw blocks...")
-			}
+		blockCache, err := loadBlockChainFromDB(db.Chain(), dbTx)
+		if err != nil {
+			return err
 		}
 
 		blocksDB.lastSerialID = state.LastSerialID
 
 		// Set the best chain view to the stored best state.
-		tip := blocksDB.index.LookupNode(&state.Hash)
+		tip := blockCache.LookupNode(&state.Hash)
 		if tip == nil {
 			return chaindata.AssertError(fmt.Sprintf(
-				"initChainState: cannot find chain tip %s in block index", state.Hash))
+				"initChainState: can not find chain tip %s in block index", state.Hash))
 		}
+
+		if err = blocksDB.index.setFromCache(blockCache, tip); err != nil {
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: can not build MMR Tree for the index, %s ", err))
+		}
+
 		blocksDB.bestChain.SetTip(tip)
+		if err = blocksDB.bestChain.mmrTree.RebuildTreeAndAssert(); err != nil {
+			return chaindata.AssertError(fmt.Sprintf(
+				"initChainState: can not build MMR Tree for the bestChain, %s ", err))
+		}
 
 		// Load the raw block bytes for the best block.
 		blockBytes, err := dbTx.FetchBlock(&state.Hash)
@@ -303,6 +255,86 @@ func initChainState(db database.DB, blocksDB *rBlockStorage, dbFullRescan bool) 
 	// attempt to flush the index to the DB. This will only result in a
 	// write if the elements are dirty, so it'll usually be a noop.
 	return stateSnapshot, blocksDB.index.flushToDB()
+}
+
+func loadBlockChainFromDB(chainCtx chainctx.IChainCtx, dbTx database.Tx) (*blockIndexCache, error) {
+	var (
+		i                int32
+		lastNode         blocknodes.IBlockNode
+		genesisHash      = chainCtx.Params().GenesisHash()
+		blockIndexBucket = dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
+		cursor           = blockIndexBucket.Cursor()
+		blocksDB         = newBlockIndexCache()
+	)
+
+	for ok := cursor.First(); ok; ok = cursor.Next() {
+		header, status, blockSerialID, err := chaindata.DeserializeBlockRow(cursor.Value())
+		if err != nil {
+			return nil, err
+		}
+
+		// Determine the parent block node. Since we iterate block headers
+		// in order of height, if the blocks are mostly linear there is a
+		// very good chance the previous header processed is the parent.
+		var parent blocknodes.IBlockNode
+		//nolint: gocritic
+		if lastNode == nil {
+			blockHash := header.BlockHash()
+
+			if !blockHash.IsEqual(genesisHash) {
+				return nil, chaindata.AssertError(fmt.Sprintf(
+					"initChainState: Expected first entry in block index to be genesis block: expected %s, found %s",
+					genesisHash, blockHash))
+			}
+			//} else if header.PrevBlocksMMRRoot() == blocksDB.index.MMRTreeRoot() {
+		} else if header.PrevBlockHash() == lastNode.GetHash() {
+			// Since we iterate block headers in order of height, if the
+			// blocks are mostly linear there is a very good chance the
+			// previous header processed is the parent.
+			parent = lastNode
+		} else {
+			//prev := header.PrevBlocksMMRRoot()
+			//parent = blocksDB.index.LookupNodeByMMRRoot(prev)
+			hash := header.PrevBlockHash()
+			parent = blocksDB.LookupNode(&hash)
+			if parent == nil {
+				return nil, chaindata.AssertError(fmt.Sprintf(
+					"initChainState: Could not find parent for block %s", header.BlockHash()))
+			}
+		}
+
+		if parent != nil {
+			prevHash := parent.GetHash()
+			bph := header.PrevBlockHash()
+			if !prevHash.IsEqual(&bph) {
+				str := fmt.Sprintf(
+					"[loadBlock] hash(%s, %d) of parent resolved by mmr(%s, %d) not match with hash(%s) from header",
+					prevHash, parent.Height(), header.PrevBlocksMMRRoot(), header.Height(), bph)
+				return nil, chaindata.AssertError(str)
+			}
+		}
+
+		// Initialize the block node for the block, connect it,
+		// and add it to the block index.
+		node := chainCtx.NewNode(header, parent, blockSerialID)
+		node.SetStatus(status)
+		h := header.BlockHash()
+		mmrRoot, err := chaindata.DBGetMMRRootForBlock(dbTx, &h)
+		if err == nil {
+			node.SetActualMMRRoot(mmrRoot)
+		}
+
+		blocksDB.AddNode(node)
+		lastNode = node
+		i++
+
+		if i%1000 == 0 {
+			log.Info().Str("chain", chainCtx.Name()).
+				Int32("processed_blocks_count", i).
+				Msgf("Processing raw blocks...")
+		}
+	}
+	return blocksDB, nil
 }
 
 // createChainState initializes both the database and the chain state to the
@@ -468,8 +500,8 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 
 		log.Info().Str("chain", db.Chain().Name()).Msgf("Loading best chain blocks...")
 
-		blocksDB.index.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
-		blocksDB.bestChain.mmrTree.AllocForFastAdd(uint64(len(bestChain)))
+		blocksDB.index.mmrTree.PreAllocateTree(len(bestChain))
+		blocksDB.bestChain.mmrTree.PreAllocateTree(len(bestChain))
 
 		for _, record := range bestChain {
 			parent := lastNode
@@ -488,10 +520,11 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 
 			if parent != nil {
 				prevHash := parent.GetHash()
-				bph := header.PrevBlockHash()
-				if !prevHash.IsEqual(&bph) {
-					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-						prevHash, header.PrevBlocksMMRRoot(), bph)
+				prevBlockHash := header.PrevBlockHash()
+				if !prevHash.IsEqual(&prevBlockHash) {
+					str := fmt.Sprintf(
+						"[fastInit] hash(%s, %d) of parent resolved by mmr(%s, %d) not match with hash(%s) from header",
+						prevHash, parent.Height(), header.PrevBlocksMMRRoot(), header.Height(), prevBlockHash)
 					return chaindata.AssertError(str)
 				}
 			}

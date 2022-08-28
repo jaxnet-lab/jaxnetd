@@ -116,12 +116,12 @@ func (storage *rBlockStorage) getBlockParentHash(prevMMRRoot chainhash.Hash) (ch
 }
 
 func (storage *rBlockStorage) getMMRRootForHash(blockHash chainhash.Hash) (chainhash.Hash, bool) {
-	leaf, found := storage.bestChain.mmrTree.LeafByHash(blockHash)
+	actualRoot, found := storage.bestChain.mmrTree.ActualRootForLeafByHash(blockHash)
 	if !found {
-		leaf, found = storage.index.mmrTree.LeafByHash(blockHash)
+		actualRoot, found = storage.index.mmrTree.ActualRootForLeafByHash(blockHash)
 	}
 
-	return leaf.ActualRoot, found
+	return actualRoot, found
 }
 
 // getReorganizeNodes finds the fork point between the main chain and the passed

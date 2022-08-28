@@ -28,8 +28,12 @@ func VerifyStateSanity(db database.DB) error {
 }
 
 func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestState, error) {
-	bestState, _ := initChainState(db, blocksDB, true)
-	err := db.Update(func(dbTx database.Tx) error {
+	bestState, err := initChainState(db, blocksDB, true)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Update(func(dbTx database.Tx) error {
 		serialIDs := make([]int64, 0, len(blocksDB.bestChain.nodes))
 
 		for i, node := range blocksDB.bestChain.nodes {
@@ -52,7 +56,29 @@ func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindat
 			return err
 		}
 
-		return chaindata.DBPutBestState(dbTx, bestState, blocksDB.bestChain.Tip().WorkSum())
+		tip := blocksDB.bestChain.Tip()
+		bestBlock, err := chaindata.DBFetchBlockByHash(dbTx, tip.GetHash())
+		if err != nil {
+			return err
+		}
+
+		numTxns := uint64(len(bestBlock.Transactions()))
+		blockSize := uint64(bestBlock.MsgBlock().SerializeSize())
+		blockWeight := uint64(chaindata.GetBlockWeight(bestBlock))
+
+		curTotalTxns := bestState.TotalTxns // TODO: fix me
+
+		state := chaindata.NewBestState(tip,
+			blocksDB.bestChain.mmrTree.CurrentRoot(),
+			blockSize,
+			blockWeight,
+			blocksDB.bestChain.mmrTree.CurrenWeight(),
+			numTxns,
+			curTotalTxns,
+			tip.CalcPastMedianTime(),
+			bestState.LastSerialID,
+		)
+		return chaindata.DBPutBestState(dbTx, state, tip.WorkSum())
 	})
 	return bestState, err
 }

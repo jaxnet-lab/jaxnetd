@@ -599,11 +599,14 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 	blockSize := uint64(block.MsgBlock().SerializeSize())
 	blockWeight := uint64(chaindata.GetBlockWeight(block))
 
+	// This node is now the end of the best chain.
+	b.blocksDB.bestChain.SetTip(node)
+
 	state := chaindata.NewBestState(node,
-		b.blocksDB.index.mmrTree.CurrentRoot(),
+		b.blocksDB.bestChain.mmrTree.CurrentRoot(),
 		blockSize,
 		blockWeight,
-		b.blocksDB.index.mmrTree.CurrenWeight(),
+		b.blocksDB.bestChain.mmrTree.CurrenWeight(),
 		numTxns,
 		curTotalTxns+numTxns,
 		node.CalcPastMedianTime(),
@@ -656,15 +659,13 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 		return nil
 	})
 	if err != nil {
+		// TODO: HERE must be disconnect from best chain
 		return err
 	}
 
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.Commit()
-
-	// This node is now the end of the best chain.
-	b.blocksDB.bestChain.SetTip(node)
 
 	// Update the state for the best block.  Notice how this replaces the
 	// entire struct instead of updating the existing one.  This effectively
@@ -717,6 +718,10 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		return err
 	}
 
+	b.blocksDB.index.mmrTree.RmBlock(node.GetHash(), node.Height())
+	// This node's parent is now the end of the best chain.
+	b.blocksDB.bestChain.SetTip(node.Parent())
+
 	// Generate a new best state snapshot that will be used to update the
 	// database and later memory if all database updates are successful.
 	b.stateLock.RLock()
@@ -731,7 +736,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		node.PrevMMRRoot(),
 		blockSize,
 		blockWeight,
-		b.blocksDB.index.mmrTree.CurrenWeight(), // todo: review this
+		b.blocksDB.bestChain.mmrTree.CurrenWeight(), // todo: review this
 		numTxns,
 		newTotalTxns,
 		prevNode.CalcPastMedianTime(),
@@ -806,11 +811,6 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.Commit()
-
-	b.blocksDB.index.mmrTree.RmBlock(node.GetHash(), node.Height())
-
-	// This node's parent is now the end of the best chain.
-	b.blocksDB.bestChain.SetTip(node.Parent())
 
 	// Update the state for the best block.  Notice how this replaces the
 	// entire struct instead of updating the existing one.  This effectively

@@ -1183,6 +1183,25 @@ func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.
 	return block, nil
 }
 
+// DBFetchBlockByHash uses an existing database transaction to retrieve the
+// raw block for the hash, deserialize it, and return a jaxutil.Block
+// with the Height set.
+func DBFetchBlockByHash(dbTx database.Tx, hash chainhash.Hash) (*jaxutil.Block, error) {
+	// Load the raw block bytes from the database.
+	blockBytes, err := dbTx.FetchBlock(&hash)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the encapsulated block and set the Height appropriately.
+	block, err := jaxutil.NewBlockFromBytes(blockBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
 // DBStoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
 func DBStoreBlockNode(dbTx database.Tx, node blocknodes.IBlockNode) error {

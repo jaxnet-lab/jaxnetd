@@ -41,8 +41,8 @@ fi
 go generate ./types/jaxjson/chainsvrresults.go
 
 if [ "$1" != "" ]; then
-  go build -o "${1}" -ldflags "$LD_FLAG" .
+  CGO_ENABLED=0 go build -o "${1}" -ldflags "$LD_FLAG" .
   exit 0
 fi
 
-go build -ldflags "$LD_FLAG" .
+CGO_ENABLED=0 go build -ldflags "$LD_FLAG" .

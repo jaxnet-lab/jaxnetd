@@ -433,7 +433,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			mmrRoot := block.MsgBlock().Header.PrevBlocksMMRRoot()
 			bNode, _ := chain.MMRTree().LookupNodeByRoot(mmrRoot)
 			if bNode == nil {
-				bNode = &mmr.TreeLeaf{}
+				bNode = &mmr.TreeNode{}
 			}
 			prevHash := bNode.Hash
 			if mmrRoot.IsEqual(&zeroHash) {

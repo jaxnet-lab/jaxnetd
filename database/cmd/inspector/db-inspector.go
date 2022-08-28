@@ -61,7 +61,7 @@ func main() {
 			return err
 		}
 		tree := mmr.NewTree()
-		tree.AllocForFastAdd(uint64(len(bestChain)))
+		tree.PreAllocateTree(len(bestChain))
 
 		for i, record := range bestChain {
 			rawBlock, err := dbTx.FetchBlock(record.Hash)

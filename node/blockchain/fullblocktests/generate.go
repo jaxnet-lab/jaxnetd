@@ -202,7 +202,7 @@ type testGenerator struct {
 	mmr                     *mmr.BlocksMMRTree
 	blockToChainWeight      map[chainhash.Hash]*big.Int
 	blockNameToMMRRoot      map[string]chainhash.Hash
-	blockNameToMMRTreeLeafs map[string][]*mmr.TreeLeaf
+	blockNameToMMRTreeLeafs map[string][]*mmr.TreeNode
 
 	// Used for tracking spendable coinbase outputs.
 	spendableOuts     []spendableOut
@@ -225,7 +225,7 @@ func makeTestGenerator(chainCtx chainctx.IChainCtx, blockGen chaindata.ChainBloc
 		return testGenerator{}, err
 	}
 	mmrTree := mmr.NewTree()
-	mmrTree.AddBlock(genesisHash, pow.CalcWork(genesis.Header.Bits()))
+	mmrTree.AppendBlock(genesisHash, pow.CalcWork(genesis.Header.Bits()))
 
 	return testGenerator{
 		chainCtx:                chainCtx,
@@ -236,7 +236,7 @@ func makeTestGenerator(chainCtx chainctx.IChainCtx, blockGen chaindata.ChainBloc
 		mmrRootToBlock:          map[chainhash.Hash]chainhash.Hash{mmrTree.CurrentRoot(): genesisHash},
 		blockToChainWeight:      map[chainhash.Hash]*big.Int{},
 		blockNameToMMRRoot:      map[string]chainhash.Hash{},
-		blockNameToMMRTreeLeafs: map[string][]*mmr.TreeLeaf{},
+		blockNameToMMRTreeLeafs: map[string][]*mmr.TreeNode{},
 		mmr:                     mmrTree,
 		tip:                     genesis,
 		tipName:                 "genesis",
@@ -537,9 +537,9 @@ func (g *testGenerator) blocksByMMMRoot(mmrRoot chainhash.Hash) *wire.MsgBlock {
 // - A coinbase that pays the required subsidy to an OP_TRUE script
 // - When a spendable output is provided:
 //   - A transaction that spends from the provided output the following outputs:
-//     - One that pays the inputs amount minus 1 atom to an OP_TRUE script
-//     - One that contains an OP_RETURN output with a random uint64 in order to
-//       ensure the transaction has a unique hash
+//   - One that pays the inputs amount minus 1 atom to an OP_TRUE script
+//   - One that contains an OP_RETURN output with a random uint64 in order to
+//     ensure the transaction has a unique hash
 //
 // Additionally, if one or more munge functions are specified, they will be
 // invoked with the block prior to solving it.  This provides callers with the
@@ -635,16 +635,16 @@ func (g *testGenerator) nextBlock(blockName string, spend *spendableOut, mungers
 	g.blocksByName[blockName] = &block
 	g.blockHeights[blockName] = nextHeight
 
-	g.mmr.AddBlock(blockHash, pow.CalcWork(header.Bits()))
+	g.mmr.AppendBlock(blockHash, pow.CalcWork(header.Bits()))
 	g.mmrRootToBlock[g.mmr.CurrentRoot()] = blockHash
 	g.blockToChainWeight[blockHash] = g.mmr.CurrenWeight()
 	g.blockNameToMMRRoot[blockName] = g.mmr.CurrentRoot()
 
 	numLeafsInCurMMR := g.mmr.Current().Height
-	var leafsInCurMMR []*mmr.TreeLeaf
+	var leafsInCurMMR []*mmr.TreeNode
 
-	for i := uint64(0); i <= numLeafsInCurMMR; i++ {
-		leafsInCurMMR = append(leafsInCurMMR, g.mmr.Block(int32(i)))
+	for i := int32(0); i <= numLeafsInCurMMR; i++ {
+		leafsInCurMMR = append(leafsInCurMMR, g.mmr.Block(i))
 	}
 
 	g.blockNameToMMRTreeLeafs[blockName] = leafsInCurMMR
@@ -675,7 +675,7 @@ func (g *testGenerator) updateBlockState(oldBlockName string, oldBlockHash chain
 	g.blocks[newBlockHash] = newBlock
 	g.blocksByName[newBlockName] = newBlock
 	g.blockHeights[newBlockName] = blockHeight
-	g.mmr.AddBlock(newBlockHash, pow.CalcWork(newBlock.Header.Bits()))
+	g.mmr.AppendBlock(newBlockHash, pow.CalcWork(newBlock.Header.Bits()))
 	g.mmrRootToBlock[g.mmr.CurrentRoot()] = newBlockHash
 }
 
@@ -692,7 +692,7 @@ func (g *testGenerator) setTip(blockName string) {
 
 	leafs := g.blockNameToMMRTreeLeafs[blockName]
 	for i := range leafs {
-		newMmr.AddBlock(leafs[i].Hash, leafs[i].Weight)
+		newMmr.AppendBlock(leafs[i].Hash, leafs[i].Weight)
 	}
 
 	g.mmr = newMmr

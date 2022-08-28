@@ -6,9 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-## 0.4.9
-- Added witness UTXO spending support for `txbuilder`
-- Added witness address support in `txutils` package
 
 ## [0.4.8]
 
@@ -16,6 +13,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **[PROTOCOL FIX]** - it is allowed to set 3 or 4 outputs for TYPE_A coinbase transaction.
 - **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client`. 
 - Passthrough the request ID into the handler's context.
+- Added witness UTXO spending support for `txbuilder`
+- Added witness address support in `txutils` package
+- 
 
 ## [0.4.7]
 
