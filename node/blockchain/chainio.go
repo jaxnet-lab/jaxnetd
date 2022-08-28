@@ -264,7 +264,7 @@ func loadBlockChainFromDB(chainCtx chainctx.IChainCtx, dbTx database.Tx) (*block
 		genesisHash      = chainCtx.Params().GenesisHash()
 		blockIndexBucket = dbTx.Metadata().Bucket(chaindata.BlockIndexBucketName)
 		cursor           = blockIndexBucket.Cursor()
-		blocksDB         = NewBlockIndexCache()
+		blocksDB         = newBlockIndexCache()
 	)
 
 	for ok := cursor.First(); ok; ok = cursor.Next() {
@@ -277,7 +277,7 @@ func loadBlockChainFromDB(chainCtx chainctx.IChainCtx, dbTx database.Tx) (*block
 		// in order of height, if the blocks are mostly linear there is a
 		// very good chance the previous header processed is the parent.
 		var parent blocknodes.IBlockNode
-
+		//nolint: gocritic
 		if lastNode == nil {
 			blockHash := header.BlockHash()
 

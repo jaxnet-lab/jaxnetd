@@ -215,7 +215,7 @@ type blockIndexCache struct {
 	dirty map[blocknodes.IBlockNode]struct{}
 }
 
-func NewBlockIndexCache() *blockIndexCache {
+func newBlockIndexCache() *blockIndexCache {
 	return &blockIndexCache{
 		index: make(map[chainhash.Hash]blocknodes.IBlockNode),
 		dirty: make(map[blocknodes.IBlockNode]struct{}),

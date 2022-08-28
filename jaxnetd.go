@@ -99,6 +99,7 @@ func shardCoreMain() error {
 			profileRedirect := http.RedirectHandler("/debug/pprof",
 				http.StatusSeeOther)
 			http.Handle("/", profileRedirect)
+			// nolint:gosec
 			err = http.ListenAndServe(listenAddr, nil)
 			if err != nil {
 				config.Log.Error().Err(err).Msg("listen and serve failed")

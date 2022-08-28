@@ -44,8 +44,8 @@ func hashNodes(left, right *TreeNode) (*TreeNode, bool) {
 
 	data := make([]byte, len(lv)+len(rv))
 
-	copy(data[:len(lv)], lv[:])
-	copy(data[len(rv):], rv[:])
+	copy(data[:len(lv)], lv)
+	copy(data[len(rv):], rv)
 
 	return &TreeNode{
 		Hash:   chainhash.HashH(data),

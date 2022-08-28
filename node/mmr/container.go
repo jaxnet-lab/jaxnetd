@@ -63,12 +63,12 @@ func (mmrTree *TreeContainer) SetNodeToMmrWithReorganization(blockNode blocknode
 		prevHash := iterNode.GetHash()
 		bNode, topPresent := mmrTree.LookupNodeByRoot(iterMMRRoot)
 		if topPresent {
-			if !bNode.Hash.IsEqual(&prevHash) || iterNode.Height() != int32(bNode.Height) {
+			if !bNode.Hash.IsEqual(&prevHash) || iterNode.Height() != bNode.Height {
 				// todo: impossible in normal world situation
 				return false
 			}
 
-			mmrTree.ResetRootTo(bNode.Hash, int32(bNode.Height))
+			mmrTree.ResetRootTo(bNode.Hash, bNode.Height)
 			break
 		}
 

@@ -1,8 +1,9 @@
 // Copyright (c) 2017 The btcsuite developers
 // Copyright (c) 2020 The JaxNetwork developers
 // Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-//nolint: gomnd
+//
+
+// nolint: gomnd
 package bech32
 
 import (

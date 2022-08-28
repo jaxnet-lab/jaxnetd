@@ -31,10 +31,7 @@ func newTreeStore(leafCount int) *treeStore {
 
 func newTreeWithLeaves(blocks []*TreeNode) *treeStore {
 	mTree := newTreeStore(len(blocks))
-	for i := range blocks {
-		mTree.nodes[0][i] = blocks[i]
-	}
-
+	copy(mTree.nodes[0], blocks)
 	return mTree
 }
 

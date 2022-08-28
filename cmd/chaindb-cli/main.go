@@ -49,8 +49,8 @@ func main() {
 	checkError(err)
 }
 
-func getChainCtx(beacon chainctx.IChainCtx, beaconDbPath string) (chainctx.IChainCtx, error) {
-	beaconDB, err := database.Open("ffldb", beacon, beaconDbPath)
+func getChainCtx(beacon chainctx.IChainCtx, beaconDBPath string) (chainctx.IChainCtx, error) {
+	beaconDB, err := database.Open("ffldb", beacon, beaconDBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +68,9 @@ func getChainCtx(beacon chainctx.IChainCtx, beaconDbPath string) (chainctx.IChai
 		block, err = chaindata.DBFetchBlockByHash(dbTx, info.ExpansionHash)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	shardChainCtx := chainctx.ShardChain(shardID, chaincfg.NetName(*flagNetName).Params(), block.MsgBlock(), block.Height())
 	return shardChainCtx, nil
