@@ -18,11 +18,12 @@ import (
 )
 
 type KeyData struct {
-	PrivateKey     *btcec.PrivateKey
-	AddressPubKey  *jaxutil.AddressPubKey
-	AddressHash    *jaxutil.AddressPubKeyHash
-	WitnessAddress *jaxutil.AddressWitnessPubKeyHash
-	WitnessScript  *jaxutil.AddressWitnessScriptHash
+	PrivateKey         *btcec.PrivateKey
+	AddressPubKey      *jaxutil.AddressPubKey
+	AddressHash        *jaxutil.AddressPubKeyHash
+	WitnessAddress     *jaxutil.AddressWitnessPubKeyHash
+	WitnessScript      *jaxutil.AddressWitnessScriptHash
+	PubKeyIsCompressed bool
 }
 
 func GenerateKey(networkCfg *chaincfg.Params, compressed bool) (*KeyData, error) {
@@ -104,10 +105,11 @@ func NewKeyData(privateKeyString string, networkCfg *chaincfg.Params, compressed
 	}
 
 	return &KeyData{
-		PrivateKey:     privateKey,
-		AddressPubKey:  addressPubKey,
-		AddressHash:    addressPubKeyHash,
-		WitnessAddress: addressWitness,
+		PrivateKey:         privateKey,
+		AddressPubKey:      addressPubKey,
+		AddressHash:        addressPubKeyHash,
+		WitnessAddress:     addressWitness,
+		PubKeyIsCompressed: compressed,
 	}, nil
 }
 
@@ -115,7 +117,7 @@ func (kd *KeyData) GetKey(address jaxutil.Address) (*btcec.PrivateKey, bool, err
 	encodedAddress := address.EncodeAddress()
 	if encodedAddress == kd.AddressPubKey.EncodeAddress() || encodedAddress == kd.AddressHash.EncodeAddress() ||
 		encodedAddress == kd.WitnessAddress.EncodeAddress() {
-		return kd.PrivateKey, false, nil
+		return kd.PrivateKey, kd.PubKeyIsCompressed, nil
 	}
 
 	return nil, false, errors.New("nope")
