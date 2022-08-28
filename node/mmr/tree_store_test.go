@@ -103,14 +103,10 @@ func Benchmark_calcMMRRootNoRecursion(b *testing.B) {
 		}
 	}
 
-	nodes := make([]*TreeNode, len(blocks))
-	//var tree = newTreeStore(len(blocks))
-
 	var rootLeaf *TreeNode
 	for i := 0; i < b.N; i++ {
-		tree := newTreeWithLeaves(nodes)
+		tree := newTreeWithLeaves(blocks)
 		rootLeaf = tree.calcRoot()
-
 		//	cpu: Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz
 		//	Benchmark_calcMMRRootNoRecursion
 		//	Benchmark_calcMMRRootNoRecursion-8   	    1180	   1426903 ns/op X

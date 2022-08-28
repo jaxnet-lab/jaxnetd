@@ -1186,9 +1186,9 @@ func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.
 // DBFetchBlockByHash uses an existing database transaction to retrieve the
 // raw block for the hash, deserialize it, and return a jaxutil.Block
 // with the Height set.
-func DBFetchBlockByHash(dbTx database.Tx, hash *chainhash.Hash) (*jaxutil.Block, error) {
+func DBFetchBlockByHash(dbTx database.Tx, hash chainhash.Hash) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
-	blockBytes, err := dbTx.FetchBlock(hash)
+	blockBytes, err := dbTx.FetchBlock(&hash)
 	if err != nil {
 		return nil, err
 	}

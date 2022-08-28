@@ -65,7 +65,7 @@ func getChainCtx(beacon chainctx.IChainCtx, beaconDbPath string) (chainctx.IChai
 		shardsData, _ := chaindata.DBGetShardGenesisInfo(dbTx)
 		info := shardsData[shardID]
 
-		block, err = chaindata.DBFetchBlockByHash(dbTx, &info.ExpansionHash)
+		block, err = chaindata.DBFetchBlockByHash(dbTx, info.ExpansionHash)
 		return err
 	})
 

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"gitlab.com/jaxnet/jaxnetd/node/chainctx"
 
 	"github.com/pkg/errors"
@@ -166,6 +168,8 @@ func initChainState(db database.DB, blocksDB *rBlockStorage, dbFullRescan bool) 
 			return err
 		}
 
+		log.Trace().Str("chain", db.Chain().Name()).Msgf("Deserialized chain state:\n%s", spew.Sdump(state))
+
 		// Load all of the headers from the data for the known best
 		// chain and construct the block index accordingly.  Since the
 		// number of nodes are already known, perform a single alloc
@@ -303,8 +307,9 @@ func loadBlockChainFromDB(chainCtx chainctx.IChainCtx, dbTx database.Tx) (*block
 			prevHash := parent.GetHash()
 			bph := header.PrevBlockHash()
 			if !prevHash.IsEqual(&bph) {
-				str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-					prevHash, header.PrevBlocksMMRRoot(), bph)
+				str := fmt.Sprintf(
+					"[loadBlock] hash(%s, %d) of parent resolved by mmr(%s, %d) not match with hash(%s) from header",
+					prevHash, parent.Height(), header.PrevBlocksMMRRoot(), header.Height(), bph)
 				return nil, chaindata.AssertError(str)
 			}
 		}
@@ -515,10 +520,11 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 
 			if parent != nil {
 				prevHash := parent.GetHash()
-				bph := header.PrevBlockHash()
-				if !prevHash.IsEqual(&bph) {
-					str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-						prevHash, header.PrevBlocksMMRRoot(), bph)
+				prevBlockHash := header.PrevBlockHash()
+				if !prevHash.IsEqual(&prevBlockHash) {
+					str := fmt.Sprintf(
+						"[fastInit] hash(%s, %d) of parent resolved by mmr(%s, %d) not match with hash(%s) from header",
+						prevHash, parent.Height(), header.PrevBlocksMMRRoot(), header.Height(), prevBlockHash)
 					return chaindata.AssertError(str)
 				}
 			}

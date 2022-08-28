@@ -56,7 +56,29 @@ func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindat
 			return err
 		}
 
-		return chaindata.DBPutBestState(dbTx, bestState, blocksDB.bestChain.Tip().WorkSum())
+		tip := blocksDB.bestChain.Tip()
+		bestBlock, err := chaindata.DBFetchBlockByHash(dbTx, tip.GetHash())
+		if err != nil {
+			return err
+		}
+
+		numTxns := uint64(len(bestBlock.Transactions()))
+		blockSize := uint64(bestBlock.MsgBlock().SerializeSize())
+		blockWeight := uint64(chaindata.GetBlockWeight(bestBlock))
+
+		curTotalTxns := bestState.TotalTxns // TODO: fix me
+
+		state := chaindata.NewBestState(tip,
+			blocksDB.bestChain.mmrTree.CurrentRoot(),
+			blockSize,
+			blockWeight,
+			blocksDB.bestChain.mmrTree.CurrenWeight(),
+			numTxns,
+			curTotalTxns,
+			tip.CalcPastMedianTime(),
+			bestState.LastSerialID,
+		)
+		return chaindata.DBPutBestState(dbTx, state, tip.WorkSum())
 	})
 	return bestState, err
 }
