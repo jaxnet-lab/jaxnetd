@@ -47,6 +47,8 @@ func main() {
 
 	err = blockchain.VerifyStateSanity(db)
 	checkError(err)
+
+	checkError(db.Close())
 }
 
 func getChainCtx(beacon chainctx.IChainCtx, beaconDBPath string) (chainctx.IChainCtx, error) {

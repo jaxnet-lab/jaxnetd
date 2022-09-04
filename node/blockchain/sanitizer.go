@@ -7,6 +7,8 @@
 package blockchain
 
 import (
+	"time"
+
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
 )
@@ -18,12 +20,25 @@ func VerifyStateSanity(db database.DB) error {
 	blocksDB := newBlocksStorage(db, db.Chain().Params())
 	_, err := initChainState(db, &blocksDB, false)
 	if err == nil {
+		tip := blocksDB.bestChain.Tip()
+		log.Info().Str("hash", tip.GetHash().String()).
+			Str("mmt_root", tip.ActualMMRRoot().String()).
+			Int32("height", tip.Height()).
+			Time("block_time", time.Unix(tip.Timestamp(), 0)).
+			Msg("Best Chain Tip")
 		return nil
 	}
 
 	log.Error().Err(err).Msgf("fast load failed, trying to load with full rescan")
 	blocksDB = newBlocksStorage(db, db.Chain().Params())
 	_, err = tryToLoadAndRepairState(db, &blocksDB)
+
+	tip := blocksDB.bestChain.Tip()
+	log.Info().Str("hash", tip.GetHash().String()).
+		Str("mmt_root", tip.ActualMMRRoot().String()).
+		Int32("height", tip.Height()).
+		Time("block_time", time.Unix(tip.Timestamp(), 0)).
+		Msg("Best Chain Tip")
 	return err
 }
 
