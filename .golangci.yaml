@@ -60,15 +60,12 @@ run:
 linters:
   enable:
     # Enabled by default linters:
-    - deadcode # : Finds unused code [fast: false, auto-fix: false]
     - errcheck # : Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases [fast: false, auto-fix: false]
     - gosimple #  (megacheck): Linter for Go source code that specializes in simplifying a code [fast: false, auto-fix: false]
     - govet #  (vet, vetshadow): Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string [fast: false, auto-fix: false]
     - ineffassign # : Detects when assignments to existing variables are not used [fast: true, auto-fix: false]
-    - structcheck # : Finds unused struct fields [fast: false, auto-fix: false]
     - typecheck # : Like the front-end of a Go compiler, parses and type-checks Go code [fast: false, auto-fix: false]
     - unused #  (megacheck): Checks Go code for unused constants, variables, functions and types [fast: false, auto-fix: false] // last run on friday, ok here
-    - varcheck # : Finds unused global variables and constants [fast: false, auto-fix: false]
 
     # Disabled by default linters:
     - asciicheck # : Simple linter to check that your code does not contain non-ASCII identifiers [fast: true, auto-fix: false]
@@ -81,7 +78,6 @@ linters:
     - gocritic # : Provides many diagnostics that check for bugs, performance and style issues. [fast: false, auto-fix: false]
     - gofmt # : Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification [fast: true, auto-fix: true]
     - goimports # : In addition to fixing imports, goimports also formats your code in the same style as gofmt. [fast: true, auto-fix: true]
-    - gomnd # : An analyzer to detect magic numbers. [fast: true, auto-fix: false]
     - gosec #  (gas): Inspects source code for security problems [fast: false, auto-fix: false]
     - importas # : Enforces consistent import aliases [fast: false, auto-fix: false]
     - makezero # : Finds slice declarations with non-zero initial length [fast: false, auto-fix: false]
@@ -114,6 +110,7 @@ linters:
     - godox # : Tool for detection of FIXME, TODO and other comment keywords [fast: true, auto-fix: false]
     - goerr113 # : Golang linter to check the errors handling expressions [fast: false, auto-fix: false]
     - goheader # : Checks is file header matches to pattern [fast: true, auto-fix: false]
+    - gomnd # : An analyzer to detect magic numbers. [fast: true, auto-fix: false]
     - gomoddirectives # : Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod. [fast: true, auto-fix: false]
     - gomodguard # : Allow and block list linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations. [fast: true, auto-fix: false]
     - goprintffuncname # : Checks that printf-like functions are named with `f` at the end [fast: true, auto-fix: false]
@@ -159,24 +156,6 @@ linters-settings:
   gocritic:
     disabled-checks:
       - commentFormatting
-  gomnd:
-    settings:
-      mnd:
-        - ignored-files:
-          - "btcec/*"
-          - "jaxutil/*"
-          - "txscript/*"
-          - "types/chaincfg/*"
-          - "types/pow/*"
-        - ignored-numbers:
-          - 2
-          - 3
-          - 4
-          - 8
-          - 10
-          - 16
-          - 32
-          - 64
   gosec:
     excludes:
       - G306

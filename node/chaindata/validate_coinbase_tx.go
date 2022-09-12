@@ -7,7 +7,7 @@
 package chaindata
 
 import (
-	"encoding/hex"
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -278,25 +278,19 @@ func ValidateBTCCoinbase(aux *wire.BTCBlockAux) (bool, error) {
 }
 
 func validateProofOfInclusion(beaconExclusiveHash chainhash.Hash, signatureScript []byte) bool {
-	exclusiveHash := hex.EncodeToString(beaconExclusiveHash[:])
-	asmString, _ := txscript.DisasmString(signatureScript)
+	var markerWithLen = make([]byte, 0, 47)
+	markerWithLen = append(markerWithLen,
+		0x06,                               // len of marker
+		0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74, // JaxnetScriptSigMarker
+		0x20, // len of hash - 32 bytes
+	)
+	markerWithLen = append(markerWithLen, beaconExclusiveHash[:]...)
+	markerWithLen = append(markerWithLen,
+		0x06,                               // len of marker
+		0x6a, 0x61, 0x78, 0x6e, 0x65, 0x74, // marker
+	)
 
-	hashPresent := false
-	chunks := strings.Split(asmString, " ")
-	for i, chunk := range chunks {
-		if chunk != JaxnetScriptSigMarker {
-			continue
-		}
-
-		if len(chunks) < i+2 {
-			break
-		}
-
-		hashPresent = (chunks[i+1] == exclusiveHash) && (chunks[i+2] == JaxnetScriptSigMarker)
-		break
-	}
-
-	return hashPresent
+	return bytes.Contains(signatureScript, markerWithLen)
 }
 
 // nolint: gomnd
