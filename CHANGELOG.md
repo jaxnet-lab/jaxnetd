@@ -11,12 +11,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix.
 - **[PROTOCOL FIX]** - it is allowed to set 3 or 4 outputs for TYPE_A coinbase transaction.
+- **[PROTOCOL FIX]** - fixed validation of the SignatureScript in the BTC_AUX, now it works with taproot blocks.
 - **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client`. 
 - Passthrough the request ID into the handler's context.
 - Added witness UTXO spending support for `txbuilder`
 - Added witness address support in `txutils` package
-- 
-
+ 
 ## [0.4.7]
 
 - Repaired WebSocket handlers

@@ -60,7 +60,6 @@ run:
 linters:
   enable:
     # Enabled by default linters:
-
     - errcheck # : Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases [fast: false, auto-fix: false]
     - gosimple #  (megacheck): Linter for Go source code that specializes in simplifying a code [fast: false, auto-fix: false]
     - govet #  (vet, vetshadow): Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string [fast: false, auto-fix: false]
@@ -95,7 +94,6 @@ linters:
   disable:
     # Disabled by default linters:
     - cyclop # : checks function and package cyclomatic complexity [fast: false, auto-fix: false]
-    - deadcode # : Finds unused code [fast: false, auto-fix: false]
     - depguard # : Go linter that checks if package imports are in a list of acceptable packages [fast: false, auto-fix: false]
     - dogsled # : Checks assignments with too many blank identifiers (e.g. x, _, _, _, := f()) [fast: true, auto-fix: false]
     - dupl # : Tool for code clone detection [fast: true, auto-fix: false]
@@ -131,9 +129,6 @@ linters:
     - whitespace # : Tool for detection of leading and trailing whitespace [fast: true, auto-fix: true]
     - wrapcheck # : Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
     - wsl # : Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
-    - structcheck # : Finds unused struct fields [fast: false, auto-fix: false]
-    - varcheck # : Finds unused global variables and constants [fast: false, auto-fix: false]
-
 
 # output configuration options
 output:
@@ -161,24 +156,6 @@ linters-settings:
   gocritic:
     disabled-checks:
       - commentFormatting
-  gomnd:
-    settings:
-      mnd:
-        - ignored-files:
-          - "btcec/*"
-          - "jaxutil/*"
-          - "txscript/*"
-          - "types/chaincfg/*"
-          - "types/pow/*"
-        - ignored-numbers:
-          - 2
-          - 3
-          - 4
-          - 8
-          - 10
-          - 16
-          - 32
-          - 64
   gosec:
     excludes:
       - G306

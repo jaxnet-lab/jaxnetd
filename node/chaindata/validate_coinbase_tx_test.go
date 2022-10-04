@@ -300,3 +300,37 @@ func Test_checkBtcVanityAddress(t *testing.T) {
 		})
 	}
 }
+
+func Test_validateProofOfInclusion(t *testing.T) {
+	hash1 := chainhash.HashH([]byte("beaconExclusiveHash"))
+	validScript, _ := BTCCoinbaseScript(34, []byte{0xCA, 0xFE, 0xFF, 0xAA}, hash1.CloneBytes())
+	invalidScript, _ := BTCCoinbaseScript(34, []byte{0xCA, 0xFE, 0xFF, 0xAA}, []byte{0xCA, 0xFE, 0xFF, 0xAA})
+
+	hash2, _ := chainhash.NewHash(hexToBytes("f2f5965f0915b3357e5393543b0b624e9a8169e480ea741f8d0037d1332dc8e6"))
+	validScript2 := hexToBytes("038a7e0b1362696e616e63652f3839346700010234cc4cbf066a61786e657420f2f5965f0915b3357e5393543b0b624e9a8169e480ea741f8d0037d1332dc8e6066a61786e6574000094e19e520000")
+
+	hash3, _ := chainhash.NewHash(hexToBytes("463ffd0895e326678eb32e793e7edbf7b8e7faa22c3dee24bb3b257f231ee565"))
+	validScript3 := hexToBytes("038a7e0b1362696e616e63652f3839346700010136969299066a61786e657420463ffd0895e326678eb32e793e7edbf7b8e7faa22c3dee24bb3b257f231ee565066a61786e65740000952fdb4b7100")
+
+	tests := []struct {
+		name                string
+		beaconExclusiveHash chainhash.Hash
+		signatureScript     []byte
+		want                bool
+	}{
+		{beaconExclusiveHash: hash1, signatureScript: validScript, want: true},
+		{beaconExclusiveHash: *hash2, signatureScript: validScript, want: false},
+		{beaconExclusiveHash: hash1, signatureScript: invalidScript, want: false},
+
+		{beaconExclusiveHash: *hash2, signatureScript: validScript2, want: true},
+		{beaconExclusiveHash: *hash3, signatureScript: validScript3, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want,
+				validateProofOfInclusion(tt.beaconExclusiveHash, tt.signatureScript),
+				"validateProofOfInclusion(%v, %v)", tt.beaconExclusiveHash, tt.signatureScript)
+		})
+	}
+}
