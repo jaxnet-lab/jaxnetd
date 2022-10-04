@@ -58,7 +58,7 @@ func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindat
 					Msgf("Refill state")
 			}
 			serialIDs = append(serialIDs, blocksDB.bestChain.nodes[i].SerialID())
-			err := chaindata.DBPutMMRRoot(dbTx,
+			err := chaindata.RepoTx(dbTx).PutMMRRoot(
 				blocksDB.bestChain.nodes[i].ActualMMRRoot(),
 				blocksDB.bestChain.nodes[i].GetHash())
 			if err != nil {
@@ -66,13 +66,13 @@ func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindat
 			}
 
 		}
-		err := chaindata.DBPutSerialIDsList(dbTx, serialIDs)
+		err := chaindata.RepoTx(dbTx).PutSerialIDsList(serialIDs)
 		if err != nil {
 			return err
 		}
 
 		tip := blocksDB.bestChain.Tip()
-		bestBlock, err := chaindata.DBFetchBlockByHash(dbTx, tip.GetHash())
+		bestBlock, err := chaindata.RepoTx(dbTx).FetchBlockByHash(tip.GetHash())
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func tryToLoadAndRepairState(db database.DB, blocksDB *rBlockStorage) (*chaindat
 			tip.CalcPastMedianTime(),
 			bestState.LastSerialID,
 		)
-		return chaindata.DBPutBestState(dbTx, state, tip.WorkSum())
+		return chaindata.RepoTx(dbTx).PutBestState(state, tip.WorkSum())
 	})
 	return bestState, err
 }

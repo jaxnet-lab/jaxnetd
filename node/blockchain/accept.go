@@ -49,7 +49,7 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 	// such as making blocks that never become part of the main chain or
 	// blocks that fail to connect available for further analysis.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		return chaindata.DBStoreBlock(dbTx, block)
+		return chaindata.RepoTx(dbTx).DBStoreBlock(block)
 	})
 	if err != nil {
 		return false, err
@@ -73,12 +73,12 @@ func (b *BlockChain) maybeAcceptBlock(block *jaxutil.Block, prevNode blocknodes.
 	}
 
 	err = b.db.Update(func(dbTx database.Tx) error {
-		err := chaindata.DBPutMMRRoot(dbTx, b.blocksDB.index.MMRTreeRoot(), newNode.GetHash())
+		err := chaindata.RepoTx(dbTx).PutMMRRoot(b.blocksDB.index.MMRTreeRoot(), newNode.GetHash())
 		if err != nil {
 			return err
 		}
 
-		return chaindata.DBPutHashToSerialIDWithPrev(dbTx, newNode.GetHash(),
+		return chaindata.RepoTx(dbTx).PutHashToSerialIDWithPrev(newNode.GetHash(),
 			newNode.SerialID(), newNode.Parent().SerialID())
 	})
 

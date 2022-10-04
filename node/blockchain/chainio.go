@@ -36,7 +36,7 @@ func (b *BlockChain) FetchSpendJournal(targetBlock *jaxutil.Block) ([]chaindata.
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 
-		spendEntries, err = chaindata.DBFetchSpendJournalEntry(dbTx, targetBlock)
+		spendEntries, err = chaindata.RepoTx(dbTx).FetchSpendJournalEntry(targetBlock)
 		return err
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func (b *BlockChain) BlockByHeight(blockHeight int32) (*jaxutil.Block, error) {
 	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = chaindata.DBFetchBlockByNode(dbTx, node)
+		block, err = chaindata.RepoTx(dbTx).FetchBlockByNode(node)
 		return err
 	})
 	return block, err
@@ -84,7 +84,7 @@ func (b *BlockChain) BlockByHash(hash *chainhash.Hash) (*jaxutil.Block, error) {
 	var block *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		block, err = chaindata.DBFetchBlockByNode(dbTx, node)
+		block, err = chaindata.RepoTx(dbTx).FetchBlockByNode(node)
 		return err
 	})
 	return block, err
@@ -203,7 +203,7 @@ func initChainState(db database.DB, blocksDB *rBlockStorage, dbFullRescan bool) 
 		}
 
 		// Load the raw block bytes for the best block.
-		blockBytes, err := dbTx.FetchBlock(&state.Hash)
+		blockBytes, err := chaindata.RepoTx(dbTx).FetchBlock(&state.Hash)
 		if err != nil {
 			return err
 		}
@@ -319,7 +319,7 @@ func loadBlockChainFromDB(chainCtx chainctx.IChainCtx, dbTx database.Tx) (*block
 		node := chainCtx.NewNode(header, parent, blockSerialID)
 		node.SetStatus(status)
 		h := header.BlockHash()
-		mmrRoot, err := chaindata.DBGetMMRRootForBlock(dbTx, &h)
+		mmrRoot, err := chaindata.RepoTx(dbTx).GetMMRRootForBlock(&h)
 		if err == nil {
 			node.SetActualMMRRoot(mmrRoot)
 		}
@@ -409,25 +409,25 @@ func createChainState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestS
 			}
 		}
 
-		err := chaindata.DBPutVersion(dbTx, chaindata.UtxoSetVersionKeyName,
+		err := chaindata.RepoTx(dbTx).PutVersion(chaindata.UtxoSetVersionKeyName,
 			chaindata.LatestUtxoSetBucketVersion)
 		if err != nil {
 			return err
 		}
 
-		err = chaindata.DBPutHashToSerialIDWithPrev(dbTx, *genesisBlock.Hash(), 0, 0)
+		err = chaindata.RepoTx(dbTx).PutHashToSerialIDWithPrev(*genesisBlock.Hash(), 0, 0)
 		if err != nil {
 			return err
 		}
 
-		err = chaindata.DBPutVersion(dbTx, chaindata.SpendJournalVersionKeyName,
+		err = chaindata.RepoTx(dbTx).PutVersion(chaindata.SpendJournalVersionKeyName,
 			chaindata.LatestSpendJournalBucketVersion)
 		if err != nil {
 			return err
 		}
 
 		// Save the genesis block to the block index database.
-		err = chaindata.DBStoreBlockNode(dbTx, genesisNode)
+		err = chaindata.RepoTx(dbTx).StoreBlockNode(genesisNode)
 		if err != nil {
 			return err
 		}
@@ -435,13 +435,13 @@ func createChainState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestS
 		h := genesisNode.GetHash()
 		// Add the genesis block hash to height and height to hash
 		// mappings to the index.
-		err = chaindata.DBPutBlockIndex(dbTx, &h, genesisNode.Height())
+		err = chaindata.RepoTx(dbTx).PutBlockIndex(&h, genesisNode.Height())
 		if err != nil {
 			return err
 		}
 
 		// Store the current best chain state into the database.
-		err = chaindata.DBPutBestState(dbTx, stateSnapshot, genesisNode.WorkSum())
+		err = chaindata.RepoTx(dbTx).PutBestState(stateSnapshot, genesisNode.WorkSum())
 		if err != nil {
 			return err
 		}
@@ -449,7 +449,7 @@ func createChainState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestS
 			db.Chain().Name(), genesisBlock.Hash())
 
 		// Store the genesis block into the database.
-		err = chaindata.DBStoreBlock(dbTx, genesisBlock)
+		err = chaindata.RepoTx(dbTx).DBStoreBlock(genesisBlock)
 		if err != nil {
 			return err
 		}
@@ -461,7 +461,7 @@ func createChainState(db database.DB, blocksDB *rBlockStorage) (*chaindata.BestS
 			// Update the utxo set using the state of the utxo view.  This
 			// entails removing all of the utxos spent and adding the new
 			// ones created by the block.
-			err = chaindata.DBPutUtxoView(dbTx, view)
+			err = chaindata.RepoTx(dbTx).PutUtxoView(view)
 			if err != nil {
 				return err
 			}
@@ -484,7 +484,7 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 			return err
 		}
 
-		bestChain, err := chaindata.DBGetBestChainSerialIDs(dbTx)
+		bestChain, err := chaindata.RepoTx(dbTx).GetBestChainSerialIDs()
 		if err != nil {
 			return err
 		}
@@ -493,7 +493,7 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 			return nil
 		}
 
-		mmrRoots, err := chaindata.DBGetBlocksMMRRoots(dbTx)
+		mmrRoots, err := chaindata.RepoTx(dbTx).GetBlocksMMRRoots()
 		if err != nil {
 			return errors.Wrap(err, "can't get blocks mmr roots")
 		}
@@ -506,7 +506,7 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 		for _, record := range bestChain {
 			parent := lastNode
 
-			rawBlock, err := dbTx.FetchBlock(record.Hash)
+			rawBlock, err := chaindata.RepoTx(dbTx).FetchBlock(record.Hash)
 			if err != nil {
 				return errors.Wrap(err, "can't fetch block")
 			}
@@ -570,7 +570,7 @@ func fastInitChainState(db database.DB, blocksDB *rBlockStorage) (bool, *chainda
 		}
 
 		// Load the raw block bytes for the best block.
-		blockBytes, err := dbTx.FetchBlock(&state.Hash)
+		blockBytes, err := chaindata.RepoTx(dbTx).FetchBlock(&state.Hash)
 		if err != nil {
 			return err
 		}

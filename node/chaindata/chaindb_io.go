@@ -137,6 +137,26 @@ func IsDeserializeErr(err error) bool {
 	return ok
 }
 
+type DB struct {
+	db database.DB
+}
+
+func WrapDB(db database.DB) *DB { return &DB{db: db} }
+
+func (d *DB) View(fn func(tx *DBRepoTx) error) error {
+	return d.db.View(func(dbTx database.Tx) error { return fn(RepoTx(dbTx)) })
+}
+
+func (d *DB) Update(fn func(tx *DBRepoTx) error) error {
+	return d.db.Update(func(dbTx database.Tx) error { return fn(RepoTx(dbTx)) })
+}
+
+type DBRepoTx struct {
+	dbTx database.Tx
+}
+
+func RepoTx(dbTx database.Tx) *DBRepoTx { return &DBRepoTx{dbTx: dbTx} }
+
 // dbFetchVersion fetches an individual version with the given key from the
 // metadata bucket.  It is primarily used to track versions on entities such as
 // buckets.  It returns zero if the provided key does not exist.
@@ -152,28 +172,64 @@ func dbFetchVersion(dbTx database.Tx, key []byte) uint32 {
 // DBPutVersion uses an existing database transaction to update the provided
 // key in the metadata bucket to the given version.  It is primarily used to
 // track versions on entities such as buckets.
-func DBPutVersion(dbTx database.Tx, key []byte, version uint32) error {
+func (repo *DBRepoTx) PutVersion(key []byte, version uint32) error {
 	var serialized [4]byte
 	byteOrder.PutUint32(serialized[:], version)
-	return dbTx.Metadata().Put(key, serialized[:])
+	return repo.dbTx.Metadata().Put(key, serialized[:])
 }
 
-// DBFetchOrCreateVersion uses an existing database transaction to attempt to
+// FetchOrCreateVersion uses an existing database transaction to attempt to
 // fetch the provided key from the metadata bucket as a version and in the case
 // it doesn't exist, it adds the entry with the provided default version and
 // returns that.  This is useful during upgrades to automatically handle loading
 // and adding version keys as necessary.
-func DBFetchOrCreateVersion(dbTx database.Tx, key []byte, defaultVersion uint32) (uint32, error) {
-	version := dbFetchVersion(dbTx, key)
+func (repo *DBRepoTx) FetchOrCreateVersion(key []byte, defaultVersion uint32) (uint32, error) {
+	version := dbFetchVersion(repo.dbTx, key)
 	if version == 0 {
 		version = defaultVersion
-		err := DBPutVersion(dbTx, key, version)
+		err := repo.PutVersion(key, version)
 		if err != nil {
 			return 0, err
 		}
 	}
 
 	return version, nil
+}
+
+func (repo *DBRepoTx) StoreBlock(block *jaxutil.Block) error {
+	return repo.dbTx.StoreBlock(block)
+}
+
+func (repo *DBRepoTx) HasBlock(hash *chainhash.Hash) (bool, error) {
+	return repo.dbTx.HasBlock(hash)
+}
+
+func (repo *DBRepoTx) HasBlocks(hashes []chainhash.Hash) ([]bool, error) {
+	return repo.dbTx.HasBlocks(hashes)
+}
+
+func (repo *DBRepoTx) FetchBlockHeader(hash *chainhash.Hash) ([]byte, error) {
+	return repo.dbTx.FetchBlockHeader(hash)
+}
+
+func (repo *DBRepoTx) FetchBlockHeaders(hashes []chainhash.Hash) ([][]byte, error) {
+	return repo.dbTx.FetchBlockHeaders(hashes)
+}
+
+func (repo *DBRepoTx) FetchBlock(hash *chainhash.Hash) ([]byte, error) {
+	return repo.dbTx.FetchBlock(hash)
+}
+
+func (repo *DBRepoTx) FetchBlocks(hashes []chainhash.Hash) ([][]byte, error) {
+	return repo.dbTx.FetchBlocks(hashes)
+}
+
+func (repo *DBRepoTx) FetchBlockRegion(region *database.BlockRegion) ([]byte, error) {
+	return repo.dbTx.FetchBlockRegion(region)
+}
+
+func (repo *DBRepoTx) FetchBlockRegions(regions []database.BlockRegion) ([][]byte, error) {
+	return repo.dbTx.FetchBlockRegions(regions)
 }
 
 // -----------------------------------------------------------------------------
@@ -450,15 +506,15 @@ func serializeSpendJournalEntry(stxos []SpentTxOut) []byte {
 	return serialized
 }
 
-// DBFetchSpendJournalEntry fetches the spend journal entry for the passed block
+// FetchSpendJournalEntry fetches the spend journal entry for the passed block
 // and deserializes it into a slice of spent txout entries.
 //
 // NOTE: Legacy entries will not have the coinbase flag or Height set unless it
 // was the final output spend in the containing transaction.  It is up to the
 // caller to handle this properly by looking the information up in the utxo set.
-func DBFetchSpendJournalEntry(dbTx database.Tx, block *jaxutil.Block) ([]SpentTxOut, error) {
+func (repo *DBRepoTx) FetchSpendJournalEntry(block *jaxutil.Block) ([]SpentTxOut, error) {
 	// Exclude the coinbase transaction since it can't spend anything.
-	spendBucket := dbTx.Metadata().Bucket(SpendJournalBucketName)
+	spendBucket := repo.dbTx.Metadata().Bucket(SpendJournalBucketName)
 	serialized := spendBucket.Get(block.Hash()[:])
 	blockTxns := block.MsgBlock().Transactions[1:]
 	stxos, err := deserializeSpendJournalEntry(serialized, blockTxns)
@@ -480,20 +536,20 @@ func DBFetchSpendJournalEntry(dbTx database.Tx, block *jaxutil.Block) ([]SpentTx
 	return stxos, nil
 }
 
-// DBPutSpendJournalEntry uses an existing database transaction to update the
+// PutSpendJournalEntry uses an existing database transaction to update the
 // spend journal entry for the given block Hash using the provided slice of
 // spent txouts.   The spent txouts slice must contain an entry for every txout
 // the transactions in the block spend in the order they are spent.
-func DBPutSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash, stxos []SpentTxOut) error {
-	spendBucket := dbTx.Metadata().Bucket(SpendJournalBucketName)
+func (repo *DBRepoTx) PutSpendJournalEntry(blockHash *chainhash.Hash, stxos []SpentTxOut) error {
+	spendBucket := repo.dbTx.Metadata().Bucket(SpendJournalBucketName)
 	serialized := serializeSpendJournalEntry(stxos)
 	return spendBucket.Put(blockHash[:], serialized)
 }
 
-// DBRemoveSpendJournalEntry uses an existing database transaction to remove the
+// RemoveSpendJournalEntry uses an existing database transaction to remove the
 // spend journal entry for the passed block Hash.
-func DBRemoveSpendJournalEntry(dbTx database.Tx, blockHash *chainhash.Hash) error {
-	spendBucket := dbTx.Metadata().Bucket(SpendJournalBucketName)
+func (repo *DBRepoTx) RemoveSpendJournalEntry(blockHash *chainhash.Hash) error {
+	spendBucket := repo.dbTx.Metadata().Bucket(SpendJournalBucketName)
 	return spendBucket.Delete(blockHash[:])
 }
 
@@ -706,17 +762,17 @@ func DeserializeUtxoEntry(serialized []byte) (*UtxoEntry, error) {
 	return entry, nil
 }
 
-// dbFetchUtxoEntryByHash attempts to find and fetch a utxo for the given Hash.
+// FetchUtxoEntryByHash attempts to find and fetch a utxo for the given Hash.
 // It uses a cursor and seek to try and do this as efficiently as possible.
 //
 // When there are no entries for the provided Hash, nil will be returned for the
 // both the entry and the error.
-func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry, error) {
+func (repo *DBRepoTx) FetchUtxoEntryByHash(hash *chainhash.Hash) (*UtxoEntry, error) {
 	// Attempt to find an entry by seeking for the Hash along with a zero
 	// index.  Due to the fact the keys are serialized as <Hash><index>,
 	// where the index uses an MSB encoding, if there are any entries for
 	// the Hash at all, one will be found.
-	cursor := dbTx.Metadata().Bucket(UtxoSetBucketName).Cursor()
+	cursor := repo.dbTx.Metadata().Bucket(UtxoSetBucketName).Cursor()
 	key := outpointKey(wire.OutPoint{Hash: *hash, Index: 0})
 	ok := cursor.Seek(*key)
 	recycleOutpointKey(key)
@@ -738,16 +794,16 @@ func dbFetchUtxoEntryByHash(dbTx database.Tx, hash *chainhash.Hash) (*UtxoEntry,
 	return DeserializeUtxoEntry(cursor.Value())
 }
 
-// DBFetchUtxoEntry uses an existing database transaction to fetch the specified
+// FetchUtxoEntry uses an existing database transaction to fetch the specified
 // transaction output from the utxo set.
 //
 // When there is no entry for the provided output, nil will be returned for both
 // the entry and the error.
-func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, error) {
+func (repo *DBRepoTx) FetchUtxoEntry(outpoint wire.OutPoint) (*UtxoEntry, error) {
 	// Fetch the unspent transaction output information for the passed
 	// transaction output.  Return now when there is no entry.
 	key := outpointKey(outpoint)
-	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+	utxoBucket := repo.dbTx.Metadata().Bucket(UtxoSetBucketName)
 	serializedUtxo := utxoBucket.Get(*key)
 	recycleOutpointKey(key)
 	if serializedUtxo == nil {
@@ -780,9 +836,9 @@ func DBFetchUtxoEntry(dbTx database.Tx, outpoint wire.OutPoint) (*UtxoEntry, err
 	return entry, nil
 }
 
-func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEntry, error) {
+func (repo *DBRepoTx) FetchUtxoEntries(limit int) (map[wire.OutPoint]*UtxoEntry, error) {
 	view := make(map[wire.OutPoint]*UtxoEntry, limit)
-	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+	utxoBucket := repo.dbTx.Metadata().Bucket(UtxoSetBucketName)
 	count := 0
 
 	err := utxoBucket.ForEach(func(rawKey, serializedUtxo []byte) error {
@@ -824,12 +880,12 @@ func DBFetchUtxoEntries(dbTx database.Tx, limit int) (map[wire.OutPoint]*UtxoEnt
 	return view, err
 }
 
-// DBPutUtxoView uses an existing database transaction to update the utxo set
+// PutUtxoView uses an existing database transaction to update the utxo set
 // in the database based on the provided utxo view contents and state.  In
 // particular, only the entries that have been marked as modified are written
 // to the database.
-func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
-	utxoBucket := dbTx.Metadata().Bucket(UtxoSetBucketName)
+func (repo *DBRepoTx) PutUtxoView(view *UtxoViewpoint) error {
+	utxoBucket := repo.dbTx.Metadata().Bucket(UtxoSetBucketName)
 	for outpoint, entry := range view.entries {
 		// No need to update the database if the entry was not modified.
 		if entry == nil || !entry.isModified() {
@@ -867,9 +923,9 @@ func DBPutUtxoView(dbTx database.Tx, view *UtxoViewpoint) error {
 	return nil
 }
 
-// DBPutEADAddresses ...
-func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses) error {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
+// PutEADAddresses ...
+func (repo *DBRepoTx) PutEADAddresses(updateSet map[string]*wire.EADAddresses) error {
+	bucket := repo.dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	for owner, entry := range updateSet {
 		if entry == nil {
 			if err := bucket.Delete([]byte(owner)); err != nil {
@@ -894,10 +950,10 @@ func DBPutEADAddresses(dbTx database.Tx, updateSet map[string]*wire.EADAddresses
 	return nil
 }
 
-// DBFetchAllEADAddresses ...
-func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, error) {
+// FetchAllEADAddresses ...
+func (repo *DBRepoTx) FetchAllEADAddresses() (map[string]*wire.EADAddresses, error) {
 	view := map[string]*wire.EADAddresses{}
-	utxoBucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
+	utxoBucket := repo.dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	if utxoBucket == nil {
 		return view, nil
 	}
@@ -924,9 +980,9 @@ func DBFetchAllEADAddresses(dbTx database.Tx) (map[string]*wire.EADAddresses, er
 	return view, err
 }
 
-// DBFetchEADAddresses ...
-func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, error) {
-	bucket := dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
+// FetchEADAddresses ...
+func (repo *DBRepoTx) FetchEADAddresses(ownerPK string) (*wire.EADAddresses, error) {
+	bucket := repo.dbTx.Metadata().Bucket(EADAddressesBucketNameV2)
 	serializedData := bucket.Get([]byte(ownerPK))
 
 	if serializedData == nil {
@@ -964,16 +1020,16 @@ func DBFetchEADAddresses(dbTx database.Tx, ownerPK string) (*wire.EADAddresses, 
 //   Hash       chainhash.Hash   chainhash.HashSize
 // -----------------------------------------------------------------------------
 
-// DBPutBlockIndex uses an existing database transaction to update or add the
+// PutBlockIndex uses an existing database transaction to update or add the
 // block index entries for the Hash to Height and Height to Hash mappings for
 // the provided values.
-func DBPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
+func (repo *DBRepoTx) PutBlockIndex(hash *chainhash.Hash, height int32) error {
 	// Serialize the Height for use in the index entries.
 	var serializedHeight [4]byte
 	byteOrder.PutUint32(serializedHeight[:], uint32(height))
 
 	// Add the block Hash to Height mapping to the index.
-	meta := dbTx.Metadata()
+	meta := repo.dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
 	if err := hashIndex.Put(hash[:], serializedHeight[:]); err != nil {
 		return err
@@ -984,12 +1040,12 @@ func DBPutBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error
 	return heightIndex.Put(serializedHeight[:], hash[:])
 }
 
-// DBRemoveBlockIndex uses an existing database transaction remove block index
+// RemoveBlockIndex uses an existing database transaction remove block index
 // entries from the Hash to Height and Height to Hash mappings for the provided
 // values.
-func DBRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) error {
+func (repo *DBRepoTx) RemoveBlockIndex(hash *chainhash.Hash, height int32) error {
 	// Remove the block Hash to Height mapping.
-	meta := dbTx.Metadata()
+	meta := repo.dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
 	if err := hashIndex.Delete(hash[:]); err != nil {
 		return err
@@ -1002,10 +1058,10 @@ func DBRemoveBlockIndex(dbTx database.Tx, hash *chainhash.Hash, height int32) er
 	return heightIndex.Delete(serializedHeight[:])
 }
 
-// DBFetchHeightByHash uses an existing database transaction to retrieve the
+// FetchHeightByHash uses an existing database transaction to retrieve the
 // Height for the provided Hash from the index.
-func DBFetchHeightByHash(dbTx database.Tx, hash *chainhash.Hash) (int32, error) {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) FetchHeightByHash(hash *chainhash.Hash) (int32, error) {
+	meta := repo.dbTx.Metadata()
 	hashIndex := meta.Bucket(HashIndexBucketName)
 	serializedHeight := hashIndex.Get(hash[:])
 	if serializedHeight == nil {
@@ -1120,9 +1176,9 @@ func DeserializeBestChainState(serializedData []byte) (BestChainState, error) {
 	return state, nil
 }
 
-// DBPutBestState uses an existing database transaction to update the best chain
+// PutBestState uses an existing database transaction to update the best chain
 // state with the given parameters.
-func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
+func (repo *DBRepoTx) PutBestState(snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
 	serializedData := serializeBestChainState(BestChainState{
 		Hash:         snapshot.Hash,
@@ -1134,7 +1190,7 @@ func DBPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) err
 	})
 
 	// Store the current best chain state into the database.
-	return dbTx.Metadata().Put(ChainStateKeyName, serializedData)
+	return repo.dbTx.Metadata().Put(ChainStateKeyName, serializedData)
 }
 
 // DeserializeBlockRow parses a value in the block index bucket into a block
@@ -1163,13 +1219,13 @@ func DeserializeBlockRow(blockRow []byte) (wire.BlockHeader, blocknodes.BlockSta
 	return header, blocknodes.BlockStatus(statusByte), int64(blockSerialID), nil
 }
 
-// DBFetchBlockByNode uses an existing database transaction to retrieve the
+// FetchBlockByNode uses an existing database transaction to retrieve the
 // raw block for the provided node, deserialize it, and return a jaxutil.Block
 // with the Height set.
-func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.Block, error) {
+func (repo *DBRepoTx) FetchBlockByNode(node blocknodes.IBlockNode) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
 	h := node.GetHash()
-	blockBytes, err := dbTx.FetchBlock(&h)
+	blockBytes, err := repo.FetchBlock(&h)
 	if err != nil {
 		return nil, err
 	}
@@ -1183,12 +1239,12 @@ func DBFetchBlockByNode(dbTx database.Tx, node blocknodes.IBlockNode) (*jaxutil.
 	return block, nil
 }
 
-// DBFetchBlockByHash uses an existing database transaction to retrieve the
+// FetchBlockByHash uses an existing database transaction to retrieve the
 // raw block for the hash, deserialize it, and return a jaxutil.Block
 // with the Height set.
-func DBFetchBlockByHash(dbTx database.Tx, hash chainhash.Hash) (*jaxutil.Block, error) {
+func (repo *DBRepoTx) FetchBlockByHash(hash chainhash.Hash) (*jaxutil.Block, error) {
 	// Load the raw block bytes from the database.
-	blockBytes, err := dbTx.FetchBlock(&hash)
+	blockBytes, err := repo.FetchBlock(&hash)
 	if err != nil {
 		return nil, err
 	}
@@ -1202,12 +1258,12 @@ func DBFetchBlockByHash(dbTx database.Tx, hash chainhash.Hash) (*jaxutil.Block, 
 	return block, nil
 }
 
-// DBStoreBlockNode stores the block header and validation status to the block
+// StoreBlockNode stores the block header and validation status to the block
 // index bucket. This overwrites the current entry if there exists one.
-func DBStoreBlockNode(dbTx database.Tx, node blocknodes.IBlockNode) error {
+func (repo *DBRepoTx) StoreBlockNode(node blocknodes.IBlockNode) error {
 	// Serialize block data to be stored.
 
-	w := bytes.NewBuffer(make([]byte, 0, dbTx.Chain().MaxBlockHeaderPayload()+1))
+	w := bytes.NewBuffer(make([]byte, 0, repo.dbTx.Chain().MaxBlockHeaderPayload()+1))
 	header := node.Header()
 	err := header.Write(w)
 	if err != nil {
@@ -1229,21 +1285,21 @@ func DBStoreBlockNode(dbTx database.Tx, node blocknodes.IBlockNode) error {
 	blockHash := node.GetHash()
 	key := blockIndexKey(&blockHash, uint32(node.Height()))
 
-	blockIndexBucket := dbTx.Metadata().Bucket(BlockIndexBucketName)
+	blockIndexBucket := repo.dbTx.Metadata().Bucket(BlockIndexBucketName)
 	return blockIndexBucket.Put(key, value)
 }
 
 // DBStoreBlock stores the provided block in the database if it is not already
 // there. The full block data is written to ffldb.
-func DBStoreBlock(dbTx database.Tx, block *jaxutil.Block) error {
-	hasBlock, err := dbTx.HasBlock(block.Hash())
+func (repo *DBRepoTx) DBStoreBlock(block *jaxutil.Block) error {
+	hasBlock, err := repo.HasBlock(block.Hash())
 	if err != nil {
 		return err
 	}
 	if hasBlock {
 		return nil
 	}
-	return dbTx.StoreBlock(block)
+	return repo.StoreBlock(block)
 }
 
 // blockIndexKey generates the binary key for an entry in the block index
@@ -1256,19 +1312,19 @@ func blockIndexKey(blockHash *chainhash.Hash, blockHeight uint32) []byte {
 	return indexKey
 }
 
-func DBPutMMRRoot(dbTx database.Tx, mmrRoot, blockHash chainhash.Hash) error {
-	blockIndexBucket := dbTx.Metadata().Bucket(MMRRootsToHashBucketName)
+func (repo *DBRepoTx) PutMMRRoot(mmrRoot, blockHash chainhash.Hash) error {
+	blockIndexBucket := repo.dbTx.Metadata().Bucket(MMRRootsToHashBucketName)
 	err := blockIndexBucket.Put(mmrRoot[:], blockHash[:])
 	if err != nil {
 		return err
 	}
 
-	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+	bucket := repo.dbTx.Metadata().Bucket(HashToMMRRootBucketName)
 	return bucket.Put(blockHash[:], mmrRoot[:])
 }
 
-func DBGetBlocksMMRRoots(dbTx database.Tx) (map[chainhash.Hash]chainhash.Hash, error) {
-	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+func (repo *DBRepoTx) GetBlocksMMRRoots() (map[chainhash.Hash]chainhash.Hash, error) {
+	bucket := repo.dbTx.Metadata().Bucket(HashToMMRRootBucketName)
 	res := make(map[chainhash.Hash]chainhash.Hash, 4096) // nolint:gomnd
 	err := bucket.ForEach(func(key, val []byte) error {
 		var keyHash chainhash.Hash
@@ -1290,8 +1346,8 @@ func DBGetBlocksMMRRoots(dbTx database.Tx) (map[chainhash.Hash]chainhash.Hash, e
 	return res, err
 }
 
-func DBGetMMRRootForBlock(dbTx database.Tx, blockHash *chainhash.Hash) (chainhash.Hash, error) {
-	bucket := dbTx.Metadata().Bucket(HashToMMRRootBucketName)
+func (repo *DBRepoTx) GetMMRRootForBlock(blockHash *chainhash.Hash) (chainhash.Hash, error) {
+	bucket := repo.dbTx.Metadata().Bucket(HashToMMRRootBucketName)
 	val := bucket.Get(blockHash[:])
 	if len(val) != chainhash.HashSize {
 		return chainhash.ZeroHash, errors.New("actual root not found for block " + blockHash.String())
@@ -1316,8 +1372,8 @@ type ShardInfo struct {
 	SerialID int64
 }
 
-func DBStoreShardGenesisInfo(dbTx database.Tx, shardID uint32, blockHeight int32, blockHash *chainhash.Hash, blockSerialID int64) error {
-	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+func (repo *DBRepoTx) StoreShardGenesisInfo(shardID uint32, blockHeight int32, blockHash *chainhash.Hash, blockSerialID int64) error {
+	bucket := repo.dbTx.Metadata().Bucket(ShardCreationsBucketName)
 	val := make([]byte, chainhash.HashSize+4+8)
 	copy(val[:chainhash.HashSize], blockHash[:])
 	binary.LittleEndian.PutUint32(val[chainhash.HashSize:chainhash.HashSize+4], uint32(blockHeight))
@@ -1334,16 +1390,16 @@ func DBStoreShardGenesisInfo(dbTx database.Tx, shardID uint32, blockHeight int32
 	return bucket.Put(key, val)
 }
 
-func DBStoreLastShardInfo(dbTx database.Tx, shardID uint32) error {
-	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+func (repo *DBRepoTx) StoreLastShardInfo(shardID uint32) error {
+	bucket := repo.dbTx.Metadata().Bucket(ShardCreationsBucketName)
 	val := make([]byte, 4)
 	binary.LittleEndian.PutUint32(val, shardID)
 
 	return bucket.Put([]byte("last_shard_id"), val)
 }
 
-func DBGetShardGenesisInfo(dbTx database.Tx) (map[uint32]ShardInfo, uint32) {
-	bucket := dbTx.Metadata().Bucket(ShardCreationsBucketName)
+func (repo *DBRepoTx) GetShardGenesisInfo() (map[uint32]ShardInfo, uint32) {
+	bucket := repo.dbTx.Metadata().Bucket(ShardCreationsBucketName)
 	lastShardIDByte := bucket.Get([]byte("last_shard_id"))
 	if len(lastShardIDByte) == 0 {
 		return nil, 0

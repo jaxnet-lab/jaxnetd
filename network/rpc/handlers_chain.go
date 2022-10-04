@@ -226,7 +226,7 @@ func (server *CommonChainRPC) fetchInputTxos(tx *wire.MsgTx) (map[wire.OutPoint]
 		var txBytes []byte
 		err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
 			var err error
-			txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+			txBytes, err = chaindata.RepoTx(dbTx).FetchBlockRegion(blockRegion)
 			return err
 		})
 		if err != nil {

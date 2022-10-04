@@ -313,9 +313,9 @@ func ReinitOrphanTxIndex(db database.DB, interrupt <-chan struct{}) error {
 	}
 
 	var meta []chaindata.SerialIDBlockMeta
-	err = db.View(func(tx database.Tx) error {
+	err = db.View(func(dbTx database.Tx) error {
 		var err error
-		meta, err = chaindata.DBFetchAllBlocksHashBySerialID(tx, 1, true)
+		meta, err = chaindata.RepoTx(dbTx).FetchAllBlocksHashBySerialID(1, true)
 		if err != nil {
 			return err
 		}
@@ -326,13 +326,13 @@ func ReinitOrphanTxIndex(db database.DB, interrupt <-chan struct{}) error {
 		return err
 	}
 
-	return db.Update(func(tx database.Tx) error {
-		err := orphanIndx.Create(tx)
+	return db.Update(func(dbTx database.Tx) error {
+		err := orphanIndx.Create(dbTx)
 		if err != nil {
 			return err
 		}
 		for _, blockMeta := range meta {
-			blockData, err := tx.FetchBlock(&blockMeta.Hash)
+			blockData, err := chaindata.RepoTx(dbTx).FetchBlock(&blockMeta.Hash)
 			if err != nil {
 				return err
 			}
@@ -341,23 +341,23 @@ func ReinitOrphanTxIndex(db database.DB, interrupt <-chan struct{}) error {
 				return err
 			}
 
-			err = orphanIndx.DisconnectBlock(tx, block, nil)
+			err = orphanIndx.DisconnectBlock(dbTx, block, nil)
 			if err != nil {
 				return err
 			}
 		}
 
-		serializedData := tx.Metadata().Get(chaindata.ChainStateKeyName)
+		serializedData := dbTx.Metadata().Get(chaindata.ChainStateKeyName)
 		state, err := chaindata.DeserializeBestChainState(serializedData)
 		if err != nil {
 			return err
 		}
 
-		height, err := chaindata.DBFetchHeightByHash(tx, &state.Hash)
+		height, err := chaindata.RepoTx(dbTx).FetchHeightByHash(&state.Hash)
 		if err != nil {
 			return err
 		}
 
-		return dbPutIndexerTip(tx, orphanTxIndexKey, &state.Hash, height)
+		return dbPutIndexerTip(dbTx, orphanTxIndexKey, &state.Hash, height)
 	})
 }

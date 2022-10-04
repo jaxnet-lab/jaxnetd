@@ -162,7 +162,7 @@ func (server *ShardRPC) getBlockBySerialID(verbosity *int, serialID int64) (inte
 	var hash *chainhash.Hash
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, serialID)
+		hash, _, err = chaindata.RepoTx(dbTx).FetchBlockHashBySerialID(serialID)
 		return err
 	})
 	if err != nil {
@@ -180,7 +180,7 @@ func (server *ShardRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfac
 	var blkBytes []byte
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		blkBytes, err = dbTx.FetchBlock(hash)
+		blkBytes, err = chaindata.RepoTx(dbTx).FetchBlock(hash)
 		return err
 	})
 	if err != nil {
@@ -314,8 +314,8 @@ func (server *ShardRPC) handleGetBlockHeader(ctx CmdCtx) (interface{}, error) {
 	}
 
 	var serialID, prevSerialID int64
-	_ = server.chainProvider.DB.View(func(tx database.Tx) error {
-		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+	_ = server.chainProvider.DB.View(func(dbTx database.Tx) error {
+		serialID, prevSerialID, err = chaindata.RepoTx(dbTx).FetchBlockSerialID(hash)
 		return err
 	})
 

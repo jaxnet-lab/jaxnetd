@@ -65,8 +65,8 @@ func (b *BlockChain) processOrphans(root chainhash.Hash, flags chaindata.Behavio
 			prevHash := prevBlock.GetHash()
 			bph := orphan.block.MsgBlock().Header.PrevBlockHash()
 			if !prevHash.IsEqual(&bph) {
-				str := fmt.Sprintf("hash(%s) of parent resolved by mmr(%s) not match with hash(%s) from header",
-					prevHash, orphan.block.PrevMMRRoot(), bph)
+				str := fmt.Sprintf("hash(%d,%s) of parent resolved by mmr(%s) not match with hash(%d,%s) from header",
+					prevBlock.Height(), prevHash, orphan.block.PrevMMRRoot(), orphan.block.Height(), bph)
 				return chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
 			}
 
@@ -174,7 +174,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 
 	if !prevExists {
 		log.Info().Str("chain", b.chain.Name()).
-			Msgf("Adding orphan block %v with mmr root %v", blockHash, block.PrevMMRRoot())
+			Msgf("Adding orphan block (%d,%v) with prev_mmr_root %v", block.Height(), blockHash, block.PrevMMRRoot())
 		b.blocksDB.addOrphanBlock(block, blockActualMMR)
 		return false, true, nil
 	}
@@ -209,7 +209,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 		return false, false, err
 	}
 
-	log.Debug().Str("chain", b.chain.Name()).Msgf("Accepted block %v", blockHash)
+	log.Info().Str("chain", b.chain.Name()).Msgf("Accepted block (%d,%v)", block.Height(), blockHash)
 
 	return isMainChain, false, nil
 }

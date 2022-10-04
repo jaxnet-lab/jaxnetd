@@ -9,8 +9,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -45,12 +45,12 @@ func main() {
 		fmt.Printf("Genesis=%s\nLastBlock=%s\nMMRRoot=%s\nLastSerialID=%d\n",
 			chain.Params().GenesisHash(), state.Hash, state.MMRRoot, state.LastSerialID)
 
-		bestChain, err := chaindata.DBGetBestChainSerialIDs(dbTx)
+		bestChain, err := chaindata.RepoTx(dbTx).GetBestChainSerialIDs()
 		if err != nil {
 			return err
 		}
 
-		blocksMMRRoots, err := chaindata.DBGetBlocksMMRRoots(dbTx)
+		blocksMMRRoots, err := chaindata.RepoTx(dbTx).GetBlocksMMRRoots()
 		if err != nil {
 			return errors.Wrap(err, "can't get blocks mmr roots")
 		}
@@ -64,7 +64,7 @@ func main() {
 		tree.PreAllocateTree(len(bestChain))
 
 		for i, record := range bestChain {
-			rawBlock, err := dbTx.FetchBlock(record.Hash)
+			rawBlock, err := chaindata.RepoTx(dbTx).FetchBlock(record.Hash)
 			if err != nil {
 				return errors.Wrap(err, "can't fetch header")
 			}
@@ -86,7 +86,7 @@ func main() {
 			}
 		}
 		// nolint:gofumpt,gomnd
-		err = ioutil.WriteFile("DBGetBestChainSerialIDs.csv", buf.Bytes(), 0644)
+		err = os.WriteFile("GetBestChainSerialIDs.csv", buf.Bytes(), 0644)
 		if err != nil {
 			return err
 		}

@@ -233,14 +233,14 @@ func (chainCtl *chainController) syncShardsIndex() error {
 		Shards: map[uint32]ShardInfo{},
 	}
 
-	err := chainCtl.beacon.chainProvider.DB.Update(func(tx database.Tx) error {
-		if tx.Metadata().Bucket(chaindata.ShardCreationsBucketName) == nil {
-			_, err := tx.Metadata().CreateBucket(chaindata.ShardCreationsBucketName)
+	err := chainCtl.beacon.chainProvider.DB.Update(func(dbTx database.Tx) error {
+		if dbTx.Metadata().Bucket(chaindata.ShardCreationsBucketName) == nil {
+			_, err := dbTx.Metadata().CreateBucket(chaindata.ShardCreationsBucketName)
 			return err
 		}
 
 		idx := &Index{Shards: map[uint32]ShardInfo{}}
-		shardsData, lastShardID := chaindata.DBGetShardGenesisInfo(tx)
+		shardsData, lastShardID := chaindata.RepoTx(dbTx).GetShardGenesisInfo()
 		for shardID, data := range shardsData {
 			idx.Shards[shardID] = ShardInfo{
 				ShardInfo: chaindata.ShardInfo{
@@ -292,13 +292,12 @@ func (chainCtl *chainController) syncShardsIndex() error {
 }
 
 func (chainCtl *chainController) saveNewShard(block *jaxutil.Block) error {
-	return chainCtl.beacon.chainProvider.DB.Update(func(tx database.Tx) error {
-		serialID, _, err := chaindata.DBFetchBlockSerialID(tx, block.Hash())
+	return chainCtl.beacon.chainProvider.DB.Update(func(dbTx database.Tx) error {
+		serialID, _, err := chaindata.RepoTx(dbTx).FetchBlockSerialID(block.Hash())
 		if err != nil {
 			return err
 		}
 
-		return chaindata.DBStoreShardGenesisInfo(tx, block.MsgBlock().Header.BeaconHeader().Shards(), block.Height(), block.Hash(), serialID)
-		// return chaindata.DBStoreShardGenesisInfo(tx, chainCtl.shardsIndex.LastShardID+1, block.Height(), block.Hash(), serialID)
+		return chaindata.RepoTx(dbTx).StoreShardGenesisInfo(block.MsgBlock().Header.BeaconHeader().Shards(), block.Height(), block.Hash(), serialID)
 	})
 }

@@ -64,7 +64,7 @@ func (storage *rBlockStorage) blockExists(db database.DB, hash *chainhash.Hash) 
 	var exists bool
 	err := db.View(func(dbTx database.Tx) error {
 		var err error
-		exists, err = dbTx.HasBlock(hash)
+		exists, err = chaindata.RepoTx(dbTx).HasBlock(hash)
 		if err != nil || !exists {
 			return err
 		}
@@ -78,7 +78,7 @@ func (storage *rBlockStorage) blockExists(db database.DB, hash *chainhash.Hash) 
 		// Ultimately the entire block index should be serialized
 		// instead of only the current main chain so it can be consulted
 		// directly.
-		_, err = chaindata.DBFetchHeightByHash(dbTx, hash)
+		_, err = chaindata.RepoTx(dbTx).FetchHeightByHash(hash)
 		if chaindata.IsNotInMainChainErr(err) {
 			exists = false
 			return nil

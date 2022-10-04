@@ -11,18 +11,16 @@
 // SerialIDToPrevBlock is the name of the db bucket used to house the mapping of
 // block serial id to hash and previous serial id.
 //
-//  | bucket                         | Key        | Value           |
-//  | ------------------------------ | ---------- | --------------- |
-//  | SerialIDToPrevBlock            | serialID   | {hash; prev_id} |
-//  | BlockHashToSerialID            | block_hash | serialID        |
-//
+//	| bucket                         | Key        | Value           |
+//	| ------------------------------ | ---------- | --------------- |
+//	| SerialIDToPrevBlock            | serialID   | {hash; prev_id} |
+//	| BlockHashToSerialID            | block_hash | serialID        |
 package chaindata
 
 import (
 	"encoding/binary"
 	"errors"
 
-	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
 
@@ -32,8 +30,8 @@ type SerialIDBlockMeta struct {
 	PrevSerialID int64
 }
 
-func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan bool) ([]SerialIDBlockMeta, error) {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) FetchAllBlocksHashBySerialID(serialID int64, onlyOrphan bool) ([]SerialIDBlockMeta, error) {
+	meta := repo.dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
 	// nolint: gomnd
 	dataList := make([]SerialIDBlockMeta, 0, 256)
@@ -65,8 +63,8 @@ func DBFetchAllBlocksHashBySerialID(dbTx database.Tx, serialID int64, onlyOrphan
 	return dataList, nil
 }
 
-func DBFetchBlockHashBySerialID(dbTx database.Tx, serialID int64) (*chainhash.Hash, int64, error) {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) FetchBlockHashBySerialID(serialID int64) (*chainhash.Hash, int64, error) {
+	meta := repo.dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
 	res := blockSerialIDHashPrevSerialID.Get(i64ToBytes(serialID))
 	if len(res) < chainhash.HashSize+8 {
@@ -82,8 +80,8 @@ func DBFetchBlockHashBySerialID(dbTx database.Tx, serialID int64) (*chainhash.Ha
 	return &hash, bytesToI64(sid), nil
 }
 
-func DBFetchBlockSerialID(dbTx database.Tx, hash *chainhash.Hash) (int64, int64, error) {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) FetchBlockSerialID(hash *chainhash.Hash) (int64, int64, error) {
+	meta := repo.dbTx.Metadata()
 	blockSerialIDBucket := meta.Bucket(BlockHashToSerialID)
 	res := blockSerialIDBucket.Get(hash[:])
 	if len(res) < 8 {
@@ -91,28 +89,29 @@ func DBFetchBlockSerialID(dbTx database.Tx, hash *chainhash.Hash) (int64, int64,
 	}
 
 	id := bytesToI64(res)
-	_, prevID, err := DBFetchBlockHashBySerialID(dbTx, id)
+	_, prevID, err := repo.FetchBlockHashBySerialID(id)
 	return id, prevID, err
 }
 
-func DBPutBlockHashToSerialID(dbTx database.Tx, hash chainhash.Hash, serialID int64) error {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) PutBlockHashToSerialID(hash chainhash.Hash, serialID int64) error {
+	meta := repo.dbTx.Metadata()
 	blockSerialIDBucket := meta.Bucket(BlockHashToSerialID)
 
 	return blockSerialIDBucket.Put(hash[:], i64ToBytes(serialID))
 }
 
 // DBPutHashToSerialIDWithPrev stores block hash with corresponding serialID and serialID of prev_block.
-//  | bucket                         | Key        | Value           |
-//  | ------------------------------ | ---------- | --------------- |
-//  | SerialIDToPrevBlock            | serialID   | {hash; prev_block_id} |
-func DBPutHashToSerialIDWithPrev(dbTx database.Tx, hash chainhash.Hash, serialID, prevSerialID int64) error {
-	err := DBPutBlockHashToSerialID(dbTx, hash, serialID)
+//
+//	| bucket                         | Key        | Value           |
+//	| ------------------------------ | ---------- | --------------- |
+//	| SerialIDToPrevBlock            | serialID   | {hash; prev_block_id} |
+func (repo *DBRepoTx) PutHashToSerialIDWithPrev(hash chainhash.Hash, serialID, prevSerialID int64) error {
+	err := repo.PutBlockHashToSerialID(hash, serialID)
 	if err != nil {
 		return err
 	}
 
-	meta := dbTx.Metadata()
+	meta := repo.dbTx.Metadata()
 	blockSerialIDHashPrevSerialID := meta.Bucket(SerialIDToPrevBlock)
 
 	buf := make([]byte, chainhash.HashSize+8)
@@ -124,8 +123,8 @@ func DBPutHashToSerialIDWithPrev(dbTx database.Tx, hash chainhash.Hash, serialID
 
 const serialIDByteSize = 8
 
-func DBPutSerialIDsList(dbTx database.Tx, serialIDs []int64) error {
-	meta := dbTx.Metadata()
+func (repo *DBRepoTx) PutSerialIDsList(serialIDs []int64) error {
+	meta := repo.dbTx.Metadata()
 	bucket, err := meta.GetOrCreateBucket(BestChainSerialIDsBucketName)
 	if err != nil {
 		return err
@@ -152,9 +151,9 @@ type BestChainBlockRecord struct {
 	Hash     *chainhash.Hash `json:"hash"`
 }
 
-func DBGetBestChainSerialIDs(dbTx database.Tx) ([]BestChainBlockRecord, error) {
+func (repo *DBRepoTx) GetBestChainSerialIDs() ([]BestChainBlockRecord, error) {
 	var res []BestChainBlockRecord
-	meta := dbTx.Metadata()
+	meta := repo.dbTx.Metadata()
 	bucket := meta.Bucket(BestChainSerialIDsBucketName)
 
 	var startOffset int64
@@ -168,7 +167,7 @@ func DBGetBestChainSerialIDs(dbTx database.Tx) ([]BestChainBlockRecord, error) {
 
 	for i := int64(0); i < count; i++ {
 		serialID := bytesToI64(record[startOffset : startOffset+serialIDByteSize])
-		hash, _, err := DBFetchBlockHashBySerialID(dbTx, serialID)
+		hash, _, err := repo.FetchBlockHashBySerialID(serialID)
 		if err != nil {
 			return nil, err
 		}

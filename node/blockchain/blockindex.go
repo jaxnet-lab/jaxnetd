@@ -178,7 +178,7 @@ func (bi *blockIndex) flushToDB() error {
 
 	err := bi.db.Update(func(dbTx database.Tx) error {
 		for node := range bi.dirty {
-			err := chaindata.DBStoreBlockNode(dbTx, node)
+			err := chaindata.RepoTx(dbTx).StoreBlockNode(node)
 			if err != nil {
 				return err
 			}

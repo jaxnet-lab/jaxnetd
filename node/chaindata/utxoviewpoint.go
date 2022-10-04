@@ -435,7 +435,7 @@ func (view *UtxoViewpoint) fetchEntryByHash(db database.DB, hash *chainhash.Hash
 	var entry *UtxoEntry
 	err := db.View(func(dbTx database.Tx) error {
 		var err error
-		entry, err = dbFetchUtxoEntryByHash(dbTx, hash)
+		entry, err = RepoTx(dbTx).FetchUtxoEntryByHash(hash)
 		return err
 	})
 	return entry, err
@@ -643,7 +643,7 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[wire.Out
 	// to unnecessarily avoid attempting to reload it from the database.
 	return db.View(func(dbTx database.Tx) error {
 		for outpoint := range outpoints {
-			entry, err := DBFetchUtxoEntry(dbTx, outpoint)
+			entry, err := RepoTx(dbTx).FetchUtxoEntry(outpoint)
 			if err != nil {
 				return err
 			}
@@ -656,7 +656,7 @@ func (view *UtxoViewpoint) FetchUtxosMain(db database.DB, outpoints map[wire.Out
 		}
 
 		var err error
-		view.eadAddresses.data, err = DBFetchAllEADAddresses(dbTx)
+		view.eadAddresses.data, err = RepoTx(dbTx).FetchAllEADAddresses()
 		if err != nil {
 			return err
 		}

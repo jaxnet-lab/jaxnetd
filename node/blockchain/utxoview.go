@@ -55,7 +55,7 @@ func (b *BlockChain) FetchUtxoEntry(outpoint wire.OutPoint) (*chaindata.UtxoEntr
 	var entry *chaindata.UtxoEntry
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		entry, err = chaindata.DBFetchUtxoEntry(dbTx, outpoint)
+		entry, err = chaindata.RepoTx(dbTx).FetchUtxoEntry(outpoint)
 		return err
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func (b *BlockChain) ListUtxoEntry(limit int) (map[wire.OutPoint]*chaindata.Utxo
 	var entries map[wire.OutPoint]*chaindata.UtxoEntry
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		entries, err = chaindata.DBFetchUtxoEntries(dbTx, limit)
+		entries, err = chaindata.RepoTx(dbTx).FetchUtxoEntries(limit)
 		return err
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func (b *BlockChain) ListEADAddresses() (map[string]*wire.EADAddresses, error) {
 	var entries map[string]*wire.EADAddresses
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		entries, err = chaindata.DBFetchAllEADAddresses(dbTx)
+		entries, err = chaindata.RepoTx(dbTx).FetchAllEADAddresses()
 		return err
 	})
 	if err != nil {

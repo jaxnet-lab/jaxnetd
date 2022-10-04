@@ -39,8 +39,9 @@ const (
 // from the block being located.
 //
 // For example, assume a block chain with a side chain as depicted below:
-// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
-// 	                              \-> 16a -> 17a
+//
+//	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
+//	                              \-> 16a -> 17a
 //
 // The block locator for block 17a would be the hashes of blocks:
 // [17a 16a 15 14 13 12 11 10 9 8 7 6 4 genesis]
@@ -526,7 +527,7 @@ func (b *BlockChain) calcSequenceLock(node blocknodes.IBlockNode, tx *jaxutil.Tx
 // LockTimeToSequence converts the passed relative locktime to a sequence
 // number in accordance to BIP-68.
 // See: https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
-//  * (Compatibility)
+//   - (Compatibility)
 func LockTimeToSequence(isSeconds bool, locktime uint32) uint32 {
 	// If we're expressing the relative lock time in blocks, then the
 	// corresponding sequence number is simply the desired input age.
@@ -616,11 +617,11 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
-		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
+		err = chaindata.RepoTx(dbTx).PutBestState(state, node.WorkSum())
 
 		// Add the block hash and height to the block index which tracks
 		// the main chain.
-		err = chaindata.DBPutBlockIndex(dbTx, block.Hash(), node.Height())
+		err = chaindata.RepoTx(dbTx).PutBlockIndex(block.Hash(), node.Height())
 		if err != nil {
 			return err
 		}
@@ -628,20 +629,20 @@ func (b *BlockChain) connectBlock(node blocknodes.IBlockNode, block *jaxutil.Blo
 		// Update the utxo set using the state of the utxo view.  This
 		// entails removing all of the utxos spent and adding the new
 		// ones created by the block.
-		err = chaindata.DBPutUtxoView(dbTx, view)
+		err = chaindata.RepoTx(dbTx).PutUtxoView(view)
 		if err != nil {
 			return err
 		}
 
 		// Update the ead addresses set using the state of the utxo view.
-		err = chaindata.DBPutEADAddresses(dbTx, view.EADAddressesSet())
+		err = chaindata.RepoTx(dbTx).PutEADAddresses(view.EADAddressesSet())
 		if err != nil {
 			return err
 		}
 
 		// Update the transaction spend journal by adding a record for
 		// the block that contains all txos spent by it.
-		err = chaindata.DBPutSpendJournalEntry(dbTx, block.Hash(), stxos)
+		err = chaindata.RepoTx(dbTx).PutSpendJournalEntry(block.Hash(), stxos)
 		if err != nil {
 			return err
 		}
@@ -705,7 +706,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 	var prevBlock *jaxutil.Block
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		prevBlock, err = chaindata.DBFetchBlockByNode(dbTx, prevNode)
+		prevBlock, err = chaindata.RepoTx(dbTx).FetchBlockByNode(prevNode)
 		return err
 	})
 	if err != nil {
@@ -747,14 +748,14 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		// get block serial id
 
 		// Update best block state.
-		err = chaindata.DBPutBestState(dbTx, state, node.WorkSum())
+		err = chaindata.RepoTx(dbTx).PutBestState(state, node.WorkSum())
 		if err != nil {
 			return err
 		}
 
 		// Remove the block hash and height from the block index which
 		// tracks the main chain.
-		err = chaindata.DBRemoveBlockIndex(dbTx, block.Hash(), node.Height())
+		err = chaindata.RepoTx(dbTx).RemoveBlockIndex(block.Hash(), node.Height())
 		if err != nil {
 			return err
 		}
@@ -762,27 +763,27 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		// Update the utxo set using the state of the utxo view.  This
 		// entails restoring all of the utxos spent and removing the new
 		// ones created by the block.
-		err = chaindata.DBPutUtxoView(dbTx, view)
+		err = chaindata.RepoTx(dbTx).PutUtxoView(view)
 		if err != nil {
 			return err
 		}
 
 		// Update the ead addresses set using the state of the utxo view.
-		err = chaindata.DBPutEADAddresses(dbTx, view.EADAddressesSet())
+		err = chaindata.RepoTx(dbTx).PutEADAddresses(view.EADAddressesSet())
 		if err != nil {
 			return err
 		}
 
 		// Before we delete the spend journal entry for this back,
 		// we'll fetch it as is so the indexers can utilize if needed.
-		stxos, err := chaindata.DBFetchSpendJournalEntry(dbTx, block)
+		stxos, err := chaindata.RepoTx(dbTx).FetchSpendJournalEntry(block)
 		if err != nil {
 			return err
 		}
 
 		// Update the transaction spend journal by removing the record
 		// that contains all txos spent by the block.
-		err = chaindata.DBRemoveSpendJournalEntry(dbTx, block.Hash())
+		err = chaindata.RepoTx(dbTx).RemoveSpendJournalEntry(block.Hash())
 		if err != nil {
 			return err
 		}
@@ -798,7 +799,7 @@ func (b *BlockChain) disconnectBlock(node blocknodes.IBlockNode, block *jaxutil.
 		}
 
 		if forkRoot != nil {
-			return chaindata.DBPutHashToSerialIDWithPrev(dbTx, node.GetHash(),
+			return chaindata.RepoTx(dbTx).PutHashToSerialIDWithPrev(node.GetHash(),
 				node.SerialID(), forkRoot.SerialID())
 		}
 
@@ -903,7 +904,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = chaindata.DBFetchBlockByNode(dbTx, blockNode)
+			block, err = chaindata.RepoTx(dbTx).FetchBlockByNode(blockNode)
 			return err
 		})
 		if err != nil {
@@ -926,7 +927,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		// journal.
 		var stxos []chaindata.SpentTxOut
 		err = b.db.View(func(dbTx database.Tx) error {
-			stxos, err = chaindata.DBFetchSpendJournalEntry(dbTx, block)
+			stxos, err = chaindata.RepoTx(dbTx).FetchSpendJournalEntry(block)
 			return err
 		})
 		if err != nil {
@@ -969,7 +970,7 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 		var block *jaxutil.Block
 		err := b.db.View(func(dbTx database.Tx) error {
 			var err error
-			block, err = chaindata.DBFetchBlockByNode(dbTx, n)
+			block, err = chaindata.RepoTx(dbTx).FetchBlockByNode(n)
 			return err
 		})
 		if err != nil {
@@ -1108,8 +1109,8 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List) error 
 // a reorganization to become the main chain).
 //
 // The flags modify the behavior of this function as follows:
-//  - BFFastAdd: Avoids several expensive transaction validation operations.
-//    This is useful when using checkpoints.
+//   - BFFastAdd: Avoids several expensive transaction validation operations.
+//     This is useful when using checkpoints.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) connectBestChain(node blocknodes.IBlockNode, block *jaxutil.Block, flags chaindata.BehaviorFlags) (bool, error) {
@@ -1246,8 +1247,8 @@ func (b *BlockChain) connectBestChain(node blocknodes.IBlockNode, block *jaxutil
 // isCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function MUST be called with the chain state lock held (for reads).
 // For a development environment (chaincfg.FastNetParams),
@@ -1280,8 +1281,8 @@ func (b *BlockChain) isCurrent() bool {
 // IsCurrent returns whether or not the chain believes it is current.  Several
 // factors are used to guess, but the key factors that allow the chain to
 // believe it is current are:
-//  - Latest block height is after the latest checkpoint (if enabled)
-//  - Latest block has a timestamp newer than 24 hours ago
+//   - Latest block height is after the latest checkpoint (if enabled)
+//   - Latest block has a timestamp newer than 24 hours ago
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) IsCurrent() bool {
@@ -1526,11 +1527,11 @@ func (b *BlockChain) IntervalBlockHashes(endHash *chainhash.Hash, interval int) 
 //
 // In addition, there are two special cases:
 //
-// - When no locators are provided, the stop hash is treated as a request for
-//   that block, so it will either return the node associated with the stop hash
-//   if it is known, or nil if it is unknown
-// - When locators are provided, but none of them are known, nodes starting
-//   after the genesis block will be returned
+//   - When no locators are provided, the stop hash is treated as a request for
+//     that block, so it will either return the node associated with the stop hash
+//     if it is known, or nil if it is unknown
+//   - When locators are provided, but none of them are known, nodes starting
+//     after the genesis block will be returned
 //
 // This is primarily a helper function for the locateBlocks and locateHeaders
 // functions.
@@ -1614,11 +1615,11 @@ func (b *BlockChain) locateBlocks(locator BlockLocator, hashStop *chainhash.Hash
 //
 // In addition, there are two special cases:
 //
-// - When no locators are provided, the stop hash is treated as a request for
-//   that block, so it will either return the stop hash itself if it is known,
-//   or nil if it is unknown
-// - When locators are provided, but none of them are known, hashes starting
-//   after the genesis block will be returned
+//   - When no locators are provided, the stop hash is treated as a request for
+//     that block, so it will either return the stop hash itself if it is known,
+//     or nil if it is unknown
+//   - When locators are provided, but none of them are known, hashes starting
+//     after the genesis block will be returned
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) LocateBlocks(locator BlockLocator, hashStop *chainhash.Hash, maxHashes uint32) []chainhash.Hash {
@@ -1659,11 +1660,11 @@ func (b *BlockChain) locateHeaders(locator BlockLocator, hashStop *chainhash.Has
 //
 // In addition, there are two special cases:
 //
-// - When no locators are provided, the stop hash is treated as a request for
-//   that header, so it will either return the header for the stop hash itself
-//   if it is known, or nil if it is unknown
-// - When locators are provided, but none of them are known, headers starting
-//   after the genesis block will be returned
+//   - When no locators are provided, the stop hash is treated as a request for
+//     that header, so it will either return the header for the stop hash itself
+//     if it is known, or nil if it is unknown
+//   - When locators are provided, but none of them are known, headers starting
+//     after the genesis block will be returned
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) LocateHeaders(locator BlockLocator, hashStop *chainhash.Hash) []wire.HeaderBox {
@@ -1685,7 +1686,7 @@ func (b *BlockChain) maybeUpgradeDBBuckets(interrupt <-chan struct{}) error {
 		// Load the utxo set version from the database or create it and
 		// initialize it to version 1 if it doesn't exist.
 		var err error
-		utxoSetVersion, err = chaindata.DBFetchOrCreateVersion(dbTx,
+		utxoSetVersion, err = chaindata.RepoTx(dbTx).FetchOrCreateVersion(
 			chaindata.UtxoSetVersionKeyName, 1)
 		return err
 	})
@@ -1709,9 +1710,9 @@ func (b *BlockChain) maybeUpgradeDBBuckets(interrupt <-chan struct{}) error {
 func (b *BlockChain) BlockSerialIDByHash(block *chainhash.Hash) (int64, int64, error) {
 	var serialID, prevSerialID int64
 
-	err := b.db.View(func(tx database.Tx) error {
+	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
-		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, block)
+		serialID, prevSerialID, err = chaindata.RepoTx(dbTx).FetchBlockSerialID(block)
 		return err
 	})
 
@@ -1730,9 +1731,9 @@ func (b *BlockChain) BlockIDsByHash(hash *chainhash.Hash) (int32, int64, int64, 
 		// block %s is not in the main chain
 		height = -1
 
-		err = b.db.View(func(tx database.Tx) error {
+		err = b.db.View(func(dbTx database.Tx) error {
 			var err error
-			serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+			serialID, prevSerialID, err = chaindata.RepoTx(dbTx).FetchBlockSerialID(hash)
 			return err
 		})
 		return height, serialID, prevSerialID, err
@@ -1753,7 +1754,7 @@ func (b *BlockChain) SaveBestChainSerialIDs() error {
 	err := b.db.Update(func(dbTx database.Tx) error {
 		for i := range b.blocksDB.bestChain.nodes {
 			serialIDs = append(serialIDs, b.blocksDB.bestChain.nodes[i].SerialID())
-			err := chaindata.DBPutMMRRoot(dbTx,
+			err := chaindata.RepoTx(dbTx).PutMMRRoot(
 				b.blocksDB.bestChain.nodes[i].ActualMMRRoot(),
 				b.blocksDB.bestChain.nodes[i].GetHash())
 			if err != nil {
@@ -1761,7 +1762,7 @@ func (b *BlockChain) SaveBestChainSerialIDs() error {
 			}
 		}
 
-		return chaindata.DBPutSerialIDsList(dbTx, serialIDs)
+		return chaindata.RepoTx(dbTx).PutSerialIDsList(serialIDs)
 	})
 	if err != nil {
 		return err

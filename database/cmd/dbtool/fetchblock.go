@@ -10,6 +10,8 @@ import (
 	"errors"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -51,7 +53,7 @@ func (cmd *fetchBlockCmd) Execute(args []string) error {
 	return db.View(func(tx database.Tx) error {
 		log.Infof("Fetching block %s", blockHash)
 		startTime := time.Now()
-		blockBytes, err := tx.FetchBlock(blockHash)
+		blockBytes, err := chaindata.RepoTx(tx).FetchBlock(blockHash)
 		if err != nil {
 			return err
 		}

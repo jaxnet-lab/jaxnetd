@@ -123,11 +123,11 @@ func (server *serverPeerHandler) pushBlockMsg(sp *serverPeer, hash *chainhash.Ha
 	var blockActualMMRRoot chainhash.Hash
 	err := sp.serverPeerHandler.chain.DB.View(func(dbTx database.Tx) error {
 		var err error
-		blockBytes, err = dbTx.FetchBlock(hash)
+		blockBytes, err = chaindata.RepoTx(dbTx).FetchBlock(hash)
 		if err != nil {
 			return err
 		}
-		blockActualMMRRoot, err = chaindata.DBGetMMRRootForBlock(dbTx, hash)
+		blockActualMMRRoot, err = chaindata.RepoTx(dbTx).GetMMRRootForBlock(hash)
 		return err
 	})
 	if err != nil {

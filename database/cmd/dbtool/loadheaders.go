@@ -9,6 +9,8 @@ import (
 	"errors"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -66,7 +68,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 			blockIdxBucket.ForEach(func(k, v []byte) error {
 				var hash chainhash.Hash
 				copy(hash[:], k)
-				_, err := tx.FetchBlockHeader(&hash)
+				_, err := chaindata.RepoTx(tx).FetchBlockHeader(&hash)
 				if err != nil {
 					return err
 				}
@@ -93,7 +95,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 
 		log.Infof("Loading headers for %d blocks...", len(hashes))
 		startTime := time.Now()
-		hdrs, err := tx.FetchBlockHeaders(hashes)
+		hdrs, err := chaindata.RepoTx(tx).FetchBlockHeaders(hashes)
 		if err != nil {
 			return err
 		}

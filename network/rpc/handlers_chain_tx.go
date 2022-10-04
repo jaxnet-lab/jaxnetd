@@ -381,7 +381,7 @@ func (server *CommonChainRPC) getTx(txHash *chainhash.Hash, mempool, orphan bool
 	var txBytes []byte
 	err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		txBytes, err = dbTx.FetchBlockRegion(blockRegion)
+		txBytes, err = chaindata.RepoTx(dbTx).FetchBlockRegion(blockRegion)
 		return err
 	})
 	if err != nil {
@@ -882,7 +882,7 @@ func (server *CommonChainRPC) handleGetBlockTxOps(ctx CmdCtx) (interface{}, erro
 	var blkBytes []byte
 	err = server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		blkBytes, err = dbTx.FetchBlock(hash)
+		blkBytes, err = chaindata.RepoTx(dbTx).FetchBlock(hash)
 		return err
 	})
 	if err != nil {
@@ -1246,7 +1246,7 @@ func (server *CommonChainRPC) handleSearchRawTransactions(ctx CmdCtx) (interface
 			}
 
 			// Load the raw transaction bytes from the database.
-			serializedTxns, err := dbTx.FetchBlockRegions(regions)
+			serializedTxns, err := chaindata.RepoTx(dbTx).FetchBlockRegions(regions)
 			if err != nil {
 				return err
 			}

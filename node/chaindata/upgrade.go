@@ -235,24 +235,25 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 //
 // The legacy format is as follows:
 //
-//   <version><Height><header code><unspentness bitmap>[<compressed txouts>,...]
+//	<version><Height><header code><unspentness bitmap>[<compressed txouts>,...]
 //
-//   Field                Type     Size
-//   version              VLQ      variable
-//   block Height         VLQ      variable
-//   header code          VLQ      variable
-//   unspentness bitmap   []byte   variable
-//   compressed txouts
-//     compressed amount  VLQ      variable
-//     compressed script  []byte   variable
+//	Field                Type     Size
+//	version              VLQ      variable
+//	block Height         VLQ      variable
+//	header code          VLQ      variable
+//	unspentness bitmap   []byte   variable
+//	compressed txouts
+//	  compressed amount  VLQ      variable
+//	  compressed script  []byte   variable
 //
 // The serialized header code format is:
-//   bit 0 - containing transaction is a coinbase
-//   bit 1 - output zero is unspent
-//   bit 2 - output one is unspent
-//   bits 3-x - number of bytes in unspentness bitmap.  When both bits 1 and 2
-//     are unset, it encodes N-1 since there must be at least one unspent
-//     output.
+//
+//	bit 0 - containing transaction is a coinbase
+//	bit 1 - output zero is unspent
+//	bit 2 - output one is unspent
+//	bits 3-x - number of bytes in unspentness bitmap.  When both bits 1 and 2
+//	  are unset, it encodes N-1 since there must be at least one unspent
+//	  output.
 //
 // The rationale for the header code scheme is as follows:
 //   - Transactions which only pay to a single output and a change output are
@@ -272,65 +273,66 @@ func determineMainChainBlocks(blocksMap map[chainhash.Hash]*blockChainContext, t
 // From tx in main blockchain:
 // Blk 1, 0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098
 //
-//    010103320496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52
-//    <><><><------------------------------------------------------------------>
-//     | | \--------\                               |
-//     | Height     |                      compressed txout 0
-//  version    header code
+//	  010103320496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52
+//	  <><><><------------------------------------------------------------------>
+//	   | | \--------\                               |
+//	   | Height     |                      compressed txout 0
+//	version    header code
 //
-//  - version: 1
-//  - Height: 1
-//  - header code: 0x03 (coinbase, output zero unspent, 0 bytes of unspentness)
-//  - unspentness: Nothing since it is zero bytes
-//  - compressed txout 0:
-//    - 0x32: VLQ-encoded compressed amount for 5000000000 (50 BTC)
-//    - 0x04: special script type pay-to-pubkey
-//    - 0x96...52: x-coordinate of the pubkey
+//	- version: 1
+//	- Height: 1
+//	- header code: 0x03 (coinbase, output zero unspent, 0 bytes of unspentness)
+//	- unspentness: Nothing since it is zero bytes
+//	- compressed txout 0:
+//	  - 0x32: VLQ-encoded compressed amount for 5000000000 (50 BTC)
+//	  - 0x04: special script type pay-to-pubkey
+//	  - 0x96...52: x-coordinate of the pubkey
 //
 // Example 2:
 // From tx in main blockchain:
 // Blk 113931, 4a16969aa4764dd7507fc1de7f0baa4850a246de90c45e59a3207f9a26b5036f
 //
-//    0185f90b0a011200e2ccd6ec7c6e2e581349c77e067385fa8236bf8a800900b8025be1b3efc63b0ad48e7f9f10e87544528d58
-//    <><----><><><------------------------------------------><-------------------------------------------->
-//     |    |  | \-------------------\            |                            |
-//  version |  \--------\       unspentness       |                    compressed txout 2
-//        Height     header code          compressed txout 0
+//	  0185f90b0a011200e2ccd6ec7c6e2e581349c77e067385fa8236bf8a800900b8025be1b3efc63b0ad48e7f9f10e87544528d58
+//	  <><----><><><------------------------------------------><-------------------------------------------->
+//	   |    |  | \-------------------\            |                            |
+//	version |  \--------\       unspentness       |                    compressed txout 2
+//	      Height     header code          compressed txout 0
 //
-//  - version: 1
-//  - Height: 113931
-//  - header code: 0x0a (output zero unspent, 1 byte in unspentness bitmap)
-//  - unspentness: [0x01] (bit 0 is set, so output 0+2 = 2 is unspent)
-//    NOTE: It's +2 since the first two outputs are encoded in the header code
-//  - compressed txout 0:
-//    - 0x12: VLQ-encoded compressed amount for 20000000 (0.2 BTC)
-//    - 0x00: special script type pay-to-pubkey-Hash
-//    - 0xe2...8a: pubkey Hash
-//  - compressed txout 2:
-//    - 0x8009: VLQ-encoded compressed amount for 15000000 (0.15 BTC)
-//    - 0x00: special script type pay-to-pubkey-Hash
-//    - 0xb8...58: pubkey Hash
+//	- version: 1
+//	- Height: 113931
+//	- header code: 0x0a (output zero unspent, 1 byte in unspentness bitmap)
+//	- unspentness: [0x01] (bit 0 is set, so output 0+2 = 2 is unspent)
+//	  NOTE: It's +2 since the first two outputs are encoded in the header code
+//	- compressed txout 0:
+//	  - 0x12: VLQ-encoded compressed amount for 20000000 (0.2 BTC)
+//	  - 0x00: special script type pay-to-pubkey-Hash
+//	  - 0xe2...8a: pubkey Hash
+//	- compressed txout 2:
+//	  - 0x8009: VLQ-encoded compressed amount for 15000000 (0.15 BTC)
+//	  - 0x00: special script type pay-to-pubkey-Hash
+//	  - 0xb8...58: pubkey Hash
 //
 // Example 3:
 // From tx in main blockchain:
 // Blk 338156, 1b02d1c8cfef60a189017b9a420c682cf4a0028175f2f563209e4ff61c8c3620
 //
-//    0193d06c100000108ba5b9e763011dd46a006572d820e448e12d2bbb38640bc718e6
-//    <><----><><----><-------------------------------------------------->
-//     |    |  |   \-----------------\            |
-//  version |  \--------\       unspentness       |
-//        Height     header code          compressed txout 22
+//	  0193d06c100000108ba5b9e763011dd46a006572d820e448e12d2bbb38640bc718e6
+//	  <><----><><----><-------------------------------------------------->
+//	   |    |  |   \-----------------\            |
+//	version |  \--------\       unspentness       |
+//	      Height     header code          compressed txout 22
 //
-//  - version: 1
-//  - Height: 338156
-//  - header code: 0x10 (2+1 = 3 bytes in unspentness bitmap)
-//    NOTE: It's +1 since neither bit 1 nor 2 are set, so N-1 is encoded.
-//  - unspentness: [0x00 0x00 0x10] (bit 20 is set, so output 20+2 = 22 is unspent)
-//    NOTE: It's +2 since the first two outputs are encoded in the header code
-//  - compressed txout 22:
-//    - 0x8ba5b9e763: VLQ-encoded compressed amount for 366875659 (3.66875659 BTC)
-//    - 0x01: special script type pay-to-script-Hash
-//    - 0x1d...e6: script Hash
+//	- version: 1
+//	- Height: 338156
+//	- header code: 0x10 (2+1 = 3 bytes in unspentness bitmap)
+//	  NOTE: It's +1 since neither bit 1 nor 2 are set, so N-1 is encoded.
+//	- unspentness: [0x00 0x00 0x10] (bit 20 is set, so output 20+2 = 22 is unspent)
+//	  NOTE: It's +2 since the first two outputs are encoded in the header code
+//	- compressed txout 22:
+//	  - 0x8ba5b9e763: VLQ-encoded compressed amount for 366875659 (3.66875659 BTC)
+//	  - 0x01: special script type pay-to-script-Hash
+//	  - 0x1d...e6: script Hash
+//
 // nolint: gomnd
 func deserializeUtxoEntryV0(serialized []byte) (map[uint32]*UtxoEntry, error) {
 	// Deserialize the version.
@@ -564,7 +566,7 @@ func UpgradeUtxoSetToV2(db database.DB, interrupt <-chan struct{}) error {
 			return err
 		}
 
-		return DBPutVersion(dbTx, UtxoSetVersionKeyName, 2)
+		return RepoTx(dbTx).PutVersion(UtxoSetVersionKeyName, 2)
 	})
 	if err != nil {
 		return err

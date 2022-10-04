@@ -2,8 +2,9 @@ package jaxjson
 
 import (
 	"encoding/json"
-	"github.com/json-iterator/go"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 var (
@@ -130,7 +131,7 @@ func benchmarkDecodeMediumEasyJSON(b *testing.B) {
 	b.ReportAllocs()
 	var errUnmarshal error
 	for i := 0; i < b.N; i++ {
-		var data GetBeaconBlockTemplateResult
+		var data GetBlockTemplateResult
 		errUnmarshal = data.UnmarshalJSON(beaconBlockTemplateMarshalled)
 	}
 	err = errUnmarshal
@@ -139,7 +140,7 @@ func benchmarkDecodeMediumEasyJSON(b *testing.B) {
 func benchmarkEncodeMediumEasyJSON(b *testing.B) {
 	var (
 		errUnmarshal error
-		data         GetBeaconBlockTemplateResult
+		data         GetBlockTemplateResult
 		marshalled   []byte
 	)
 	jsoniter.Unmarshal(beaconBlockTemplateMarshalled, &data)
@@ -182,7 +183,7 @@ func benchmarkDecodeMediumJSONIter(b *testing.B) {
 	b.ReportAllocs()
 	var errUnmarshal error
 	for i := 0; i < b.N; i++ {
-		var data GetBeaconBlockTemplateResult
+		var data GetBlockTemplateResult
 		errUnmarshal = jsoniter.Unmarshal(beaconBlockTemplateMarshalled, &data)
 	}
 	err = errUnmarshal
@@ -191,7 +192,7 @@ func benchmarkDecodeMediumJSONIter(b *testing.B) {
 func benchmarkEncodeMediumJSONIter(b *testing.B) {
 	var (
 		errUnmarshal error
-		data         GetBeaconBlockTemplateResult
+		data         GetBlockTemplateResult
 		marshalled   []byte
 	)
 	jsoniter.Unmarshal(beaconBlockTemplateMarshalled, &data)
@@ -234,7 +235,7 @@ func benchmarkDecodeMediumJSONStd(b *testing.B) {
 	b.ReportAllocs()
 	var errUnmarshal error
 	for i := 0; i < b.N; i++ {
-		var data GetBeaconBlockTemplateResult
+		var data GetBlockTemplateResult
 		errUnmarshal = json.Unmarshal(beaconBlockTemplateMarshalled, &data)
 	}
 	err = errUnmarshal
@@ -243,7 +244,7 @@ func benchmarkDecodeMediumJSONStd(b *testing.B) {
 func benchmarkEncodeMediumJSONStd(b *testing.B) {
 	var (
 		errUnmarshal error
-		data         GetBeaconBlockTemplateResult
+		data         GetBlockTemplateResult
 		marshalled   []byte
 	)
 	jsoniter.Unmarshal(beaconBlockTemplateMarshalled, &data)

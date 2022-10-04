@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"gitlab.com/jaxnet/jaxnetd/node/chaindata"
+
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 )
@@ -76,7 +78,7 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 			Len:    uint32(regionLen),
 		}
 		startTime := time.Now()
-		regionBytes, err := tx.FetchBlockRegion(&region)
+		regionBytes, err := chaindata.RepoTx(tx).FetchBlockRegion(&region)
 		if err != nil {
 			return err
 		}

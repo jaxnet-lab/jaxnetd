@@ -301,7 +301,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) 
 			// error.
 			var block *jaxutil.Block
 			err := m.db.View(func(dbTx database.Tx) error {
-				blockBytes, err := dbTx.FetchBlock(hash)
+				blockBytes, err := chaindata.RepoTx(dbTx).FetchBlock(hash)
 				if err != nil {
 					return err
 				}

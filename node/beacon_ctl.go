@@ -207,20 +207,20 @@ func (beaconCtl *BeaconCtl) Stats() map[string]float64 {
 }
 
 func (beaconCtl *BeaconCtl) saveShardsIndex() error {
-	err := beaconCtl.chainProvider.DB.Update(func(tx database.Tx) error {
+	err := beaconCtl.chainProvider.DB.Update(func(dbTx database.Tx) error {
 		for _, shardInfo := range beaconCtl.shardsIndex.Shards {
-			serialID, _, err := chaindata.DBFetchBlockSerialID(tx, &shardInfo.ExpansionHash)
+			serialID, _, err := chaindata.RepoTx(dbTx).FetchBlockSerialID(&shardInfo.ExpansionHash)
 			if err != nil {
 				continue
 			}
-			err = chaindata.DBStoreShardGenesisInfo(tx, shardInfo.ID, shardInfo.ExpansionHeight,
-				&shardInfo.ExpansionHash, serialID)
+			err = chaindata.RepoTx(dbTx).StoreShardGenesisInfo(
+				shardInfo.ID, shardInfo.ExpansionHeight, &shardInfo.ExpansionHash, serialID)
 			if err != nil {
 				continue
 			}
 		}
 
-		return chaindata.DBStoreLastShardInfo(tx, beaconCtl.shardsIndex.LastShardID)
+		return chaindata.RepoTx(dbTx).StoreLastShardInfo(beaconCtl.shardsIndex.LastShardID)
 	})
 	if err != nil {
 		beaconCtl.log.Error().Err(err).Msg("unable to write shards index")

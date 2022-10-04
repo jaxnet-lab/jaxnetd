@@ -158,7 +158,7 @@ func (server *BeaconRPC) getBlockBySerialID(verbosity *int, serialID int64) (int
 	var hash *chainhash.Hash
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		hash, _, err = chaindata.DBFetchBlockHashBySerialID(dbTx, serialID)
+		hash, _, err = chaindata.RepoTx(dbTx).FetchBlockHashBySerialID(serialID)
 		return err
 	})
 	if err != nil {
@@ -173,7 +173,7 @@ func (server *BeaconRPC) getBlock(hash *chainhash.Hash, verbosity *int) (interfa
 	var blkBytes []byte
 	err := server.chainProvider.DB.View(func(dbTx database.Tx) error {
 		var err error
-		blkBytes, err = dbTx.FetchBlock(hash)
+		blkBytes, err = chaindata.RepoTx(dbTx).FetchBlock(hash)
 		return err
 	})
 	if err != nil {
@@ -309,7 +309,7 @@ func (server *BeaconRPC) handleGetBlockHeader(ctx CmdCtx) (interface{}, error) {
 	params := server.chainProvider.ChainParams
 	var serialID, prevSerialID int64
 	_ = server.chainProvider.DB.View(func(tx database.Tx) error {
-		serialID, prevSerialID, err = chaindata.DBFetchBlockSerialID(tx, hash)
+		serialID, prevSerialID, err = chaindata.RepoTx(tx).FetchBlockSerialID(hash)
 		return err
 	})
 
