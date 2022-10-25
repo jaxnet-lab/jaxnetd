@@ -754,6 +754,14 @@ func (server *CommonChainRPC) handleSubmitBlock(ctx CmdCtx) (interface{}, error)
 		}
 	}
 
+	server.Log.Info().Uint32("chain_id", server.chainProvider.ChainParams.ChainID).
+		Stringer("hash", block.Hash()).
+		Stringer("pow_hash", block.PowHash()).
+		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
+		Int32("height", block.Height()).
+		Str("action", "received").
+		Msgf("Block received via submitBlock RPC call")
+
 	// Process this block using the same rules as blocks coming from other
 	// nodes.  This will in turn relay it to the network like normal.
 	isOrphan, err := server.chainProvider.SyncManager.ProcessBlock(block, chaindata.BFNone)

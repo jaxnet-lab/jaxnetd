@@ -187,6 +187,13 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 		return false, false, chaindata.NewRuleError(chaindata.ErrInvalidAncestorBlock, str)
 	}
 
+	log.Info().Uint32("chain_id", b.chain.ShardID()).
+		Stringer("hash", block.Hash()).
+		Stringer("pow_hash", block.PowHash()).
+		Int32("height", block.Height()).
+		Str("action", "processed").
+		Msgf("Block processed")
+
 	// The block has passed all context independent checks and appears sane
 	// enough to potentially accept it into the block chain.
 	isMainChain, err := b.maybeAcceptBlock(block, prevBlock, flags)

@@ -1240,6 +1240,11 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	}
 	txD := mp.addTransaction(utxoView, tx, bestHeight, txFee)
 
+	log.Info().Uint32("chain_id", mp.cfg.ChainParams.ChainID).
+		Stringer("tx_hash", tx.Hash()).
+		Str("action", "added_to_pool").
+		Msgf("Added transaction to tx pool")
+
 	log.Debug().Msgf("Accepted transaction %v (pool size: %v)", txHash,
 		len(mp.pool))
 
