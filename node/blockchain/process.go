@@ -192,6 +192,7 @@ func (b *BlockChain) ProcessBlock(block *jaxutil.Block, blockActualMMR chainhash
 		Stringer("pow_hash", block.PowHash()).
 		Int32("height", block.Height()).
 		Str("action", "processed").
+		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 		Msgf("Block processed")
 
 	// The block has passed all context independent checks and appears sane

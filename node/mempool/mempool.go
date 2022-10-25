@@ -1243,6 +1243,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *jaxutil.Tx,
 	log.Info().Uint32("chain_id", mp.cfg.ChainParams.ChainID).
 		Stringer("tx_hash", tx.Hash()).
 		Str("action", "added_to_pool").
+		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 		Msgf("Added transaction to tx pool")
 
 	log.Debug().Msgf("Accepted transaction %v (pool size: %v)", txHash,
