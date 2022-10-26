@@ -536,7 +536,6 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 
 	log.Info().Uint32("chain_id", sm.chain.Chain().ShardID()).
 		Stringer("tx_hash", tmsg.tx.Hash()).
-		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 		Str("action", "received").
 		Msgf("Transaction received via p2p")
 
@@ -850,7 +849,6 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 		Stringer("pow_hash", bmsg.block.PowHash()).
 		Int32("height", bmsg.block.Height()).
 		Str("action", "added_to_chain").
-		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 		Msgf("Block added to chain")
 }
 
@@ -1357,7 +1355,6 @@ out:
 					Stringer("pow_hash", msg.block.PowHash()).
 					Int32("height", msg.block.Height()).
 					Str("action", "added_to_chain").
-					Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 					Msgf("Block added to chain")
 
 				msg.reply <- processBlockResponse{

@@ -757,7 +757,6 @@ func (server *CommonChainRPC) handleSubmitBlock(ctx CmdCtx) (interface{}, error)
 	server.Log.Info().Uint32("chain_id", server.chainProvider.ChainParams.ChainID).
 		Stringer("hash", block.Hash()).
 		Stringer("pow_hash", block.PowHash()).
-		Str("timestamp", time.Now().Format(time.RFC3339Nano)).
 		Int32("height", block.Height()).
 		Str("action", "received").
 		Msgf("Block received via submitBlock RPC call")
