@@ -534,6 +534,11 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
+	log.Info().Uint32("chain_id", sm.chain.Chain().ShardID()).
+		Stringer("tx_hash", tmsg.tx.Hash()).
+		Str("action", "received").
+		Msgf("Transaction received via p2p")
+
 	// NOTE:  BitcoinJ, and possibly other wallets, don't follow the spec of
 	// sending an inventory message and allowing the remote peer to decide
 	// whether or not they want to request the transaction via a getdata
@@ -837,6 +842,14 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 			peer.Addr(), err)
 		return
 	}
+
+	log.Info().Uint32("chain_id", sm.chain.Chain().ShardID()).
+		Stringer("hash", bmsg.block.Hash()).
+		Bool("is_orphan", isOrphan).
+		Stringer("pow_hash", bmsg.block.PowHash()).
+		Int32("height", bmsg.block.Height()).
+		Str("action", "added_to_chain").
+		Msgf("Block added to chain")
 }
 
 // fetchHeaderBlocks creates and sends a request to the syncPeer for the next
@@ -1335,6 +1348,14 @@ out:
 						err:      err,
 					}
 				}
+
+				log.Info().Uint32("chain_id", sm.chain.Chain().ShardID()).
+					Stringer("hash", msg.block.Hash()).
+					Bool("is_orphan", isOrphan).
+					Stringer("pow_hash", msg.block.PowHash()).
+					Int32("height", msg.block.Height()).
+					Str("action", "added_to_chain").
+					Msgf("Block added to chain")
 
 				msg.reply <- processBlockResponse{
 					isOrphan: isOrphan,

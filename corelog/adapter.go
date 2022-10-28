@@ -70,7 +70,7 @@ type Logger struct {
 
 func consoleWriter(unit string, w io.Writer, noColor bool) zerolog.ConsoleWriter {
 	out := zerolog.ConsoleWriter{Out: w, NoColor: noColor}
-	out.TimeFormat = time.RFC3339
+	out.TimeFormat = time.RFC3339Nano
 	out.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("| %-6s| %s |", i, unit))
 	}

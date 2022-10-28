@@ -8,8 +8,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strings"
-
 	"github.com/pkg/errors"
 	"gitlab.com/jaxnet/jaxnetd/database"
 	"gitlab.com/jaxnet/jaxnetd/jaxutil"
@@ -20,6 +18,7 @@ import (
 	"gitlab.com/jaxnet/jaxnetd/types/chainhash"
 	"gitlab.com/jaxnet/jaxnetd/types/jaxjson"
 	"gitlab.com/jaxnet/jaxnetd/types/wire"
+	"strings"
 )
 
 // retrievedTx represents a transaction that was either loaded from the
@@ -533,6 +532,11 @@ func (server *CommonChainRPC) handleSendRawTransaction(ctx CmdCtx) (interface{},
 		}
 	}
 
+	server.Log.Info().Uint32("chain_id", server.chainProvider.ChainParams.ChainID).
+		Stringer("tx_hash", msgTx.TxHash()).
+		Str("action", "received").
+		Msgf("Transaction received via sendRawTransaction RPC call")
+
 	// Use 0 for the tag to represent local beaconChain.
 	tx := jaxutil.NewTx(&msgTx)
 	acceptedTxs, err := server.chainProvider.TxMemPool.ProcessTransaction(tx, false, false, 0)
@@ -579,6 +583,11 @@ func (server *CommonChainRPC) handleSendRawTransaction(ctx CmdCtx) (interface{},
 			Message: "TX rejected: " + err.Error(),
 		}
 	}
+
+	server.Log.Info().Uint32("chain_id", server.chainProvider.ChainParams.ChainID).
+		Stringer("tx_hash", msgTx.TxHash()).
+		Str("action", "processed").
+		Msgf("Transaction processed")
 
 	// When the transaction was accepted it should be the first item in the
 	// returned array of accepted transactions.  The only way this will not
