@@ -392,9 +392,10 @@ func LoadConfig() (*node.Config, []string, error) {
 		os.Exit(0)
 	}
 
-	// Initialize log rotation.  After log rotation has been initialized, the
-	// logger variables may be used.
-	// initLogRotator(filepath.Join(cfg.LogDir, corelog.DefaultLogFile))
+	// if no log config was specified then just set it to default values
+	if cfg.LogConfig == (corelog.Config{}) {
+		cfg.LogConfig = corelog.Config{}.Default()
+	}
 
 	// Parse, validate, and set debug log level(s).
 	cfg.LogConfig.Directory = cfg.LogDir
