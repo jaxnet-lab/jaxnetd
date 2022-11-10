@@ -12,13 +12,11 @@ import (
 //
 // OP_INPUTAGE <lockPeriod> OP_GREATERTHAN
 // OP_IF
-//     OP_DUP  OP_HASH160  <AddressPubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-// or
-//     <AddressPubKey> OP_CHECKSIG
-// or
-//     OP_HASH160  <AddressScriptHash> OP_EQUAL
+// - or <AddressPubKey> OP_CHECKSIG
+// - or OP_DUP OP_HASH160  <AddressPubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
+// - or OP_HASH160  <AddressScriptHash> OP_EQUAL
 // OP_ELSE
-//     OP_RETURN
+// OP_RETURN
 // OP_ENDIF
 // ...
 func HTLCScript(address jaxutil.Address, lockPeriod int32) ([]byte, error) {
@@ -43,6 +41,12 @@ func HTLCScript(address jaxutil.Address, lockPeriod int32) ([]byte, error) {
 		builder.AddOp(OP_HASH160)
 		builder.AddData(addr.ScriptAddress())
 		builder.AddOp(OP_EQUAL)
+	case *jaxutil.AddressWitnessPubKeyHash:
+		builder.AddOp(OP_0)
+		builder.AddData(addr.ScriptAddress())
+	case *jaxutil.AddressWitnessScriptHash:
+		builder.AddOp(OP_0)
+		builder.AddData(addr.ScriptAddress())
 	default:
 		return nil, errors.New("unsupported address type")
 	}
@@ -72,7 +76,11 @@ func HTLCScriptAddress(address jaxutil.Address, lockPeriod int32, params *chainc
 // [ 1] <lockPeriod>
 // [ 2] OP_GREATERTHAN
 // [ 3] OP_IF
-// [--]     todo:
+// [ 4] <AddressPubKey> [5] OP_CHECKSIG
+// [ 4] OP_DUP [5] OP_HASH160 [6] <AddressPubKeyHash> [7] OP_EQUALVERIFY [8] OP_CHECKSIG
+// [ 4] OP_HASH160  [5] <AddressScriptHash> [6] OP_EQUAL
+// [ 4] OP_0 [5] <20-byte hash>
+// [ 4] OP_0 [5] <32-byte hash>
 // [ 9] OP_ELSE
 // [10]     OR_RETURN
 // [11] OP_ENDIF
@@ -94,12 +102,30 @@ func isHTLC(pops []parsedOpcode) (bool, ScriptClass) {
 	}
 
 	switch len(pops) {
-	case 9: // isPubkey
+	case 9: // isPubkey, isWitnessPubKeyHash, isWitnessScriptHash
+		// A pay-to-pubkey-hash script is of thw form:
+		// <AddressPubKey>  OP_CHECKSIG
 		templateMatch = (len(pops[4].data) == 33 || len(pops[4].data) == 65) && pops[5].opcode.value == OP_CHECKSIG
 		if templateMatch {
 			return true, PubKeyTy
 		}
+		// A pay-to-witness-pubkey-hash script is of thw form:
+		//  OP_0 <20-byte hash>
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 20)
+		if templateMatch {
+			return true, WitnessV0PubKeyHashTy
+		}
+
+		// A pay-to-witness-script-hash script is of the form:
+		//  OP_0 <32-byte hash>
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 32)
+		if templateMatch {
+			return true, WitnessV0ScriptHashTy
+		}
+
 	case 10: // isScriptHash
+		// A pay-to-script-hash script is of thw form:
+		// OP_HASH160 <AddressScriptHash> OP_EQUAL
 		templateMatch = pops[4].opcode.value == OP_HASH160 &&
 			pops[5].opcode.value == OP_DATA_20 &&
 			pops[6].opcode.value == OP_EQUAL
@@ -107,6 +133,8 @@ func isHTLC(pops []parsedOpcode) (bool, ScriptClass) {
 			return true, ScriptHashTy
 		}
 	case 12: // isPubkeyHash
+		// A pay-to-pubkey-hash script is of thw form:
+		// OP_DUP OP_HASH160 <AddressPubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
 		templateMatch = pops[4].opcode.value == OP_DUP &&
 			pops[5].opcode.value == OP_HASH160 &&
 			pops[6].opcode.value == OP_DATA_20 &&
@@ -120,9 +148,24 @@ func isHTLC(pops []parsedOpcode) (bool, ScriptClass) {
 	return false, NonStandardTy
 }
 
+func HTLCSubClass(script []byte) ScriptClass {
+	pops, err := parseScript(script)
+	if err != nil {
+		return NonStandardTy
+	}
+
+	_, subType := isHTLC(pops)
+	return subType
+}
+
 func isHTLCWithScriptHash(pops []parsedOpcode) bool {
 	_, innerType := isHTLC(pops)
 	return innerType == ScriptHashTy
+}
+
+func isHTLCWitnessScript(pops []parsedOpcode) bool {
+	_, innerType := isHTLC(pops)
+	return innerType == WitnessV0PubKeyHashTy || innerType == WitnessV0ScriptHashTy
 }
 
 // extractHTLCAddrs ...
@@ -134,7 +177,26 @@ func extractHTLCAddrs(pops []parsedOpcode, chainParams *chaincfg.Params) (Script
 		// OP_INPUTAGE <lockPeriod> OP_GREATERTHAN OP_IF
 		// <pubkey> OP_CHECKSIG
 		// OP_ELSE OP_RETURN OP_ENDIF
-		addr, err = jaxutil.NewAddressPubKey(pops[4].data, chainParams)
+		templateMatch := (len(pops[4].data) == 33 || len(pops[4].data) == 65) && pops[5].opcode.value == OP_CHECKSIG
+		if templateMatch {
+			addr, err = jaxutil.NewAddressPubKey(pops[4].data, chainParams)
+		}
+
+		// OP_INPUTAGE <lockPeriod> OP_GREATERTHAN OP_IF
+		// OP_0 <pubkey-hash>
+		// OP_ELSE OP_RETURN OP_ENDIF
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 20)
+		if templateMatch {
+			addr, err = jaxutil.NewAddressWitnessPubKeyHash(pops[5].data, chainParams)
+		}
+
+		// OP_INPUTAGE <lockPeriod> OP_GREATERTHAN OP_IF
+		// OP_0 <script-hash>
+		// OP_ELSE OP_RETURN OP_ENDIF
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 32)
+		if templateMatch {
+			addr, err = jaxutil.NewAddressWitnessScriptHash(pops[5].data, chainParams)
+		}
 	case 10:
 		// OP_INPUTAGE <lockPeriod> OP_GREATERTHAN OP_IF
 		// OP_HASH160 <scripthash> OP_EQUAL
@@ -159,13 +221,26 @@ func signHTLC(tx *wire.MsgTx, idx int, subScript []byte, hashType SigHashType,
 	pops, _ := parseScript(subScript)
 	switch len(pops) {
 	case 9:
-		key, _, err := kdb.GetKey(address[0])
-		if err != nil {
-			return nil, 0, err
+		// <pubkey> OP_CHECKSIG
+		templateMatch := (len(pops[4].data) == 33 || len(pops[4].data) == 65) && pops[5].opcode.value == OP_CHECKSIG
+		if templateMatch {
+			key, _, err := kdb.GetKey(address[0])
+			if err != nil {
+				return nil, 0, err
+			}
+			sig, err := p2pkSignatureScript(tx, idx, subScript, hashType, key)
+			return sig, HTLCScriptTy, err
 		}
 
-		sig, err := p2pkSignatureScript(tx, idx, subScript, hashType, key)
-		return sig, HTLCScriptTy, err
+		// OP_0 <pubkey-hash> // WitnessPubKeyHash
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 20)
+		if templateMatch {
+		}
+
+		// OP_0 <script-hash> // WitnessScriptHash
+		templateMatch = (pops[4].opcode.value == OP_0) && (len(pops[5].data) == 32)
+		if templateMatch {
+		}
 	case 10:
 		sig, err := sdb.GetScript(address[0])
 		return sig, ScriptHashTy, err

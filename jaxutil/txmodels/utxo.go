@@ -261,7 +261,7 @@ func (utxo *UTXO) CanBeSpend(shardID uint32) bool {
 		utxo.ScriptType != types.JaxBurnAddrTy
 }
 
-func (utxo UTXO) ToShort() ShortUTXO {
+func (utxo *UTXO) ToShort() ShortUTXO {
 	return ShortUTXO{
 		Value:    utxo.Value,
 		PKScript: utxo.PKScript,

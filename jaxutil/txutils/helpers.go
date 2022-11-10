@@ -87,7 +87,7 @@ func (rows UTXOFromRows) SelectForAmount(amount int64, shardID uint32, addresses
 	return collected.List(), nil
 }
 
-// UTXOFromRows is a wrapper for txmodels.UTXO to implement the UTXOProvider.
+// SingleUTXO is a wrapper for txmodels.UTXO to implement the UTXOProvider.
 type SingleUTXO txmodels.UTXO
 
 func (row SingleUTXO) GetForAmount(amount int64, shardID uint32, addresses ...string) (*txmodels.UTXO, error) {

@@ -100,7 +100,7 @@ out:
 			if err := vm.Execute(); err != nil {
 				str := fmt.Sprintf("failed to validate input "+
 					"%s:%d which references output %v - "+
-					"%v (input witness %x, input script "+
+					"error[%v] (input witness %x, input script "+
 					"bytes %x, prev output script bytes %x)",
 					txVI.tx.Hash(), txVI.txInIndex,
 					txIn.PreviousOutPoint, err, witness,

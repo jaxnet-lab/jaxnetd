@@ -95,7 +95,7 @@ func checkMultiSigLockScripts(msg string, tx *wire.MsgTx, idx int, inputAmt int6
 
 func signAndCheck(msg string, tx *wire.MsgTx, idx int, inputAmt int64, pkScript []byte,
 	hashType SigHashType, kdb KeyDB, sdb ScriptDB) error {
-	sigScript, err := SignTxOutput(&chaincfg.TestNet3Params, tx, idx,
+	sigScript, err := SignTxOutput(&chaincfg.TestNetParams, tx, idx,
 		pkScript, hashType, kdb, sdb, nil)
 	if err != nil {
 		return fmt.Errorf("failed to sign output %s: %v", msg, err)
@@ -113,10 +113,8 @@ func genKeys(t *testing.T, msg string) (*btcec.PrivateKey, *jaxutil.AddressPubKe
 
 	}
 
-	pk1 := (*btcec.PublicKey)(&key1.PublicKey).
-		SerializeCompressed()
-	address1, err := jaxutil.NewAddressPubKey(pk1,
-		&chaincfg.TestNet3Params)
+	pk1 := (*btcec.PublicKey)(&key1.PublicKey).SerializeCompressed()
+	address1, err := jaxutil.NewAddressPubKey(pk1, &chaincfg.TestNetParams)
 	if err != nil {
 		t.Errorf("failed to make address for %s: %v",
 			msg, err)

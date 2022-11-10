@@ -7,16 +7,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.10]
+
+- **[PROTOCOL CHANGE]** Add support of the WitnessV0PubKeyHashTy, WitnessV0ScriptHashTy subtypes for the HTLCScriptTy.
+
+## [0.4.9]
+
+- New implementation of the MMR Tree in-memory storage
+- Fixed support of witness addresses and fixed support of the compessed keys
+- Added chaindb-cli to restore node state.
+- Refactored all interactions with the database into methods of the new Repo Wrapper type.
+- Optimized initChainState algorithm.
+- Fixed log rotation and improved some other logs.
+
 ## [0.4.8]
 
 - **[PROTOCOL FIX]** - fixed validation of the jax vanity prefix.
 - **[PROTOCOL FIX]** - it is allowed to set 3 or 4 outputs for TYPE_A coinbase transaction.
 - **[PROTOCOL FIX]** - fixed validation of the SignatureScript in the BTC_AUX, now it works with taproot blocks.
-- **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client`. 
+- **[RPC]** - Added new getters `ShardID() uint32` and `Config() *ConnConfig` to `rpcclient.Client`.
 - Passthrough the request ID into the handler's context.
 - Added witness UTXO spending support for `txbuilder`
 - Added witness address support in `txutils` package
- 
+
 ## [0.4.7]
 
 - Repaired WebSocket handlers
@@ -133,6 +146,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Improve and extend RPC Api;
 - Added `jaxutils/txmodels` and `jaxutils/txutils` packages for building transactions;
 - Introduces `zerolog` for structured logging and `prometheus` for monitoring.
+
+[0.4.10]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.10
+
+[0.4.9]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.9
 
 [0.4.8]: https://gitlab.com/jaxnet/jaxnetd/-/releases/v0.4.8
 

@@ -135,7 +135,7 @@ func IsWitnessProgram(script []byte) bool {
 		return false
 	}
 
-	return isWitnessProgram(pops)
+	return isWitnessProgram(pops) || isHTLCWitnessScript(pops)
 }
 
 // isWitnessProgram returns true if the passed script is a witness program, and
@@ -162,13 +162,14 @@ func ExtractWitnessProgramInfo(script []byte) (int, []byte, error) {
 	// If at this point, the scripts doesn't resemble a witness program,
 	// then we'll exit early as there isn't a valid version or program to
 	// extract.
-	if !isWitnessProgram(pops) {
+	if !isWitnessProgram(pops) && !isHTLCWitnessScript(pops) {
 		return 0, nil, fmt.Errorf("script is not a witness program, " +
 			"unable to extract version or witness program")
 	}
 
-	witnessVersion := asSmallInt(pops[0].opcode)
-	witnessProgram := pops[1].data
+	pg := extractWitnessProgram(pops)
+	witnessVersion := asSmallInt(pg[0].opcode)
+	witnessProgram := pg[1].data
 
 	return witnessVersion, witnessProgram, nil
 }
@@ -330,7 +331,7 @@ func DisasmString(buf []byte) (string, error) {
 	return disbuf.String(), err
 }
 
-// removeOpcode will remove any opcode matching ``opcode'' from the opcode
+// removeOpcode will remove any opcode matching “opcode” from the opcode
 // stream in pkscript
 func removeOpcode(pkscript []parsedOpcode, opcode byte) []parsedOpcode {
 	retScript := make([]parsedOpcode, 0, len(pkscript))
@@ -497,7 +498,9 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	binary.LittleEndian.PutUint32(bIndex[:], txIn.PreviousOutPoint.Index)
 	sigHash.Write(bIndex[:])
 
-	if isWitnessPubKeyHash(subScript) {
+	witnessScript := extractWitnessProgram(subScript)
+
+	if isWitnessPubKeyHash(witnessScript) {
 		// The script code for a p2wkh is a length prefix varint for
 		// the next 25 bytes, followed by a re-creation of the original
 		// p2pkh pk script.
@@ -505,14 +508,14 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 		sigHash.Write([]byte{OP_DUP})
 		sigHash.Write([]byte{OP_HASH160})
 		sigHash.Write([]byte{OP_DATA_20})
-		sigHash.Write(subScript[1].data)
+		sigHash.Write(witnessScript[1].data)
 		sigHash.Write([]byte{OP_EQUALVERIFY})
 		sigHash.Write([]byte{OP_CHECKSIG})
 	} else {
 		// For p2wsh outputs, and future outputs, the script code is
 		// the original script, with all code separators removed,
 		// serialized with a var int length prefix.
-		rawScript, _ := unparseScript(subScript)
+		rawScript, _ := unparseScript(witnessScript)
 		if err := wire.WriteVarBytes(&sigHash, 0, rawScript); err != nil {
 			log.Error().Err(err).Msg("cannot write var bytes")
 		}
@@ -557,6 +560,13 @@ func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	return chainhash.DoubleHashB(sigHash.Bytes()), nil
 }
 
+func extractWitnessProgram(script []parsedOpcode) []parsedOpcode {
+	if len(script) == 9 {
+		return []parsedOpcode{script[4], script[5]}
+	}
+	return script
+}
+
 // CalcWitnessSigHash computes the sighash digest for the specified input of
 // the target transaction observing the desired sig hash type.
 func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType,
@@ -566,8 +576,7 @@ func CalcWitnessSigHash(script []byte, sigHashes *TxSigHashes, hType SigHashType
 		return nil, fmt.Errorf("cannot parse output script: %v", err)
 	}
 
-	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx,
-		amt)
+	return calcWitnessSignatureHash(parsedScript, sigHashes, hType, tx, idx, amt)
 }
 
 // shallowCopyTx creates a shallow copy of the transaction for use when
@@ -647,7 +656,8 @@ func CalcSignatureHash(script []byte, hashType SigHashType, tx *wire.MsgTx, idx 
 // calcSignatureHash will, given a script and hash type for the current script
 // engine instance, calculate the signature hash to be used for signing and
 // verification.
-//  nolint: stylecheck, gocritic
+//
+//	nolint: stylecheck, gocritic
 func calcSignatureHash(script []parsedOpcode, hashType SigHashType, tx *wire.MsgTx, idx int) []byte {
 	// The SigHashSingle signature type signs only the corresponding input
 	// and output (the output with the same index number as the input).

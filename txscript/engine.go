@@ -958,7 +958,7 @@ func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags
 		var witProgram []byte
 
 		switch {
-		case isWitnessProgram(vm.scripts[1]):
+		case isWitnessProgram(vm.scripts[1]) || isHTLCWitnessScript(vm.scripts[1]) :
 			// The scriptSig must be *empty* for all native witness
 			// programs, otherwise we introduce malleability.
 			if len(scriptSig) != 0 {

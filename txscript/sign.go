@@ -27,8 +27,7 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 		return nil, fmt.Errorf("cannot parse output script: %v", err)
 	}
 
-	hash, err := calcWitnessSignatureHash(parsedScript, sigHashes, hashType, tx,
-		idx, amt)
+	hash, err := calcWitnessSignatureHash(parsedScript, sigHashes, hashType, tx, idx, amt)
 	if err != nil {
 		return nil, err
 	}

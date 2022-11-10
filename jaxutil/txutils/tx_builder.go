@@ -423,8 +423,18 @@ func (t *txBuilder) signUTXO(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex
 		return err
 	}
 
-	if utxoScript.Type == txscript.WitnessV0PubKeyHashTy.String() ||
-		utxoScript.Type == txscript.WitnessV0ScriptHashTy.String() {
+	witness := utxoScript.Type == txscript.WitnessV0PubKeyHashTy.String() ||
+		utxoScript.Type == txscript.WitnessV0ScriptHashTy.String()
+	if utxoScript.Type == txscript.HTLCScriptTy.String() {
+		pkScript, _ := hex.DecodeString(utxo.PKScript)
+		subType := txscript.HTLCSubClass(pkScript)
+
+		if subType == txscript.WitnessV0PubKeyHashTy || subType == txscript.WitnessV0ScriptHashTy {
+			witness = true
+		}
+	}
+
+	if witness {
 		return t.signWitnessUTXOForTx(msgTx, utxo, inIndex, kdb)
 	}
 
@@ -447,11 +457,11 @@ func (t *txBuilder) getUTXOPkScript(utxo txmodels.ShortUTXO) (*jaxjson.DecodeScr
 
 // signUTXOForTx performs signing of UTXO, adds this signature to redeemTx.
 // Method also supports signing of multiSig UTXOs, so just provide existing signature as prevScript
-// 	- redeemTx is a transaction that will be sent
-// 	- utxo is output that will be spent
-// 	- inIndex is an index, where placed this UTXO
-// 	- prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
-// 	- postVerify say to check tx after signing
+//   - redeemTx is a transaction that will be sent
+//   - utxo is output that will be spent
+//   - inIndex is an index, where placed this UTXO
+//   - prevScript is a SignatureScript made by one or more previous key in case of multiSig UTXO, otherwise it nil
+//   - postVerify say to check tx after signing
 func (t *txBuilder) signRegularUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortUTXO, inIndex int, kdb txscript.KeyDB,
 	scriptPubKey *jaxjson.DecodeScriptResult) error {
 	pkScript, err := hex.DecodeString(utxo.PKScript)
@@ -609,7 +619,9 @@ func (t *txBuilder) signWitnessUTXOForTx(msgTx *wire.MsgTx, utxo txmodels.ShortU
 		return err
 	}
 
-	msgTx.TxIn[inIndex].Witness, err = txscript.WitnessSignature(msgTx, txscript.NewTxSigHashes(msgTx), inIndex, utxo.Value, witnessProgram, txscript.SigHashAll, privKey, true)
+	msgTx.TxIn[inIndex].Witness, err = txscript.WitnessSignature(msgTx,
+		txscript.NewTxSigHashes(msgTx), inIndex, utxo.Value,
+		witnessProgram, txscript.SigHashAll, privKey, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign witness tx output")
 	}
